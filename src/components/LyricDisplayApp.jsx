@@ -201,7 +201,7 @@ const LyricDisplayApp = () => {
 <div class="border-t border-gray-100 my-10"></div>
 
 <div className="mt-4 text-[12px] text-gray-600 text-left">
-      Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media ©2025.
+      Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.
     </div>
 
       </div>
@@ -218,7 +218,25 @@ const LyricDisplayApp = () => {
         {/* Content Area */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full overflow-y-auto">
           {hasLyrics ? (
-            <div className="p-4 h-full overflow-y-auto">
+            <div
+              className="p-4 h-full overflow-y-auto"
+              onDrop={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file && file.type === 'text/plain') {
+                  await handleFileUpload(file);
+                }
+              }}
+              onDragOver={e => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragEnter={e => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
               <LyricsList
                 lyrics={lyrics}
                 selectedLine={selectedLine}
@@ -227,7 +245,25 @@ const LyricDisplayApp = () => {
             </div>
           ) : (
             /* Empty State - Drag and Drop */
-            <div className="h-full flex items-center justify-center">
+            <div
+              className="h-full flex items-center justify-center"
+              onDrop={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file && file.type === 'text/plain') {
+                  await handleFileUpload(file);
+                }
+              }}
+              onDragOver={e => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragEnter={e => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
               <div className="text-center">
                 <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
                   <Plus className="w-10 h-10 text-gray-400" />
