@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 const fontOptions = [
-  'Bebas Neue', 'Fira Sans', 'Inter', 'Lato', 'Montserrat',
+  'Calibri', 'Bebas Neue', 'Fira Sans', 'Inter', 'Lato', 'Montserrat',
   'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'
 ];
 

@@ -40,6 +40,7 @@ const LyricDisplayApp = () => {
 
   // Font options for dropdown
   const fontOptions = [
+    'Calibri',
     'Bebas Neue',
     'Fira Sans',
     'Inter',
