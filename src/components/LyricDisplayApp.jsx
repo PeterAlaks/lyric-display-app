@@ -198,8 +198,10 @@ const LyricDisplayApp = () => {
           </button>
         </div>
 
+<div class="border-t border-gray-100 my-10"></div>
+
 <div className="mt-4 text-[12px] text-gray-600 text-left">
-      Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media ©2025
+      Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media ©2025.
     </div>
 
       </div>

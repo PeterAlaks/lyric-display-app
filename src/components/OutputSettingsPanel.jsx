@@ -115,7 +115,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
           type="color"
           value={settings.fontColor}
           onChange={(e) => update('fontColor', e.target.value)}
-          className="h-10 w-12 p-1"
+          className="h-9 w-12 p-1"
         />
       </div>
 
@@ -127,7 +127,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             type="color"
             value={settings.dropShadowColor}
             onChange={(e) => update('dropShadowColor', e.target.value)}
-            className="h-10 w-12 p-1"
+            className="h-9 w-12 p-1"
           />
           <Input
             type="number"
@@ -148,7 +148,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             type="color"
             value={settings.backgroundColor}
             onChange={(e) => update('backgroundColor', e.target.value)}
-            className="h-10 w-12 p-1"
+            className="h-9 w-12 p-1"
           />
           <Input
             type="number"
