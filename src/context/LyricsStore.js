@@ -1,5 +1,6 @@
 // Project: Lyric Display App
 // File: src/context/LyricsStore.js
+// This file defines the Zustand store for managing lyrics and output settings.
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
