@@ -19,16 +19,12 @@ const useSocket = (role = 'output') => {
   useEffect(() => {
     // Determine socket URL - fallback chain for different environments
     const getSocketUrl = () => {
-      // Check if running in Electron
-      const isElectron = window.electronAPI || window.navigator.userAgent.includes('Electron');
-      
       // Environment variable (Vite)
       if (import.meta.env.VITE_SOCKET_SERVER_URL) {
         return import.meta.env.VITE_SOCKET_SERVER_URL;
       }
-      
-      // Default fallback
-      return 'http://localhost:4000';
+      // Default fallback: use the same host/port as the loaded page
+      return window.location.origin;
     };
 
     const socketUrl = getSocketUrl();

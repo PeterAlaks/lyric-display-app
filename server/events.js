@@ -21,16 +21,16 @@ export default function registerSocketEvents(io) {
 
     socket.on('lineUpdate', ({ index }) => {
       currentSelectedLine = index;
-      socket.broadcast.emit('lineUpdate', { index });
+      io.emit('lineUpdate', { index });
     });
 
     socket.on('outputToggle', (state) => {
-    io.emit('outputToggle', state);
+      io.emit('outputToggle', state);
     });
 
     socket.on('lyricsLoad', (lyrics) => {
       currentLyrics = lyrics;
-      socket.broadcast.emit('lyricsLoad', lyrics);
+      io.emit('lyricsLoad', lyrics);
     });
 
     socket.on('styleUpdate', ({ output, settings }) => {
@@ -40,7 +40,7 @@ export default function registerSocketEvents(io) {
       if (output === 'output2') {
         currentOutput2Settings = settings;
       }
-      socket.broadcast.emit('styleUpdate', { output, settings });
+      io.emit('styleUpdate', { output, settings });
     });
 
     socket.on('disconnect', () => {

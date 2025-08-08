@@ -69,7 +69,7 @@ const Output1 = () => {
     const opacity = Math.round((dropShadowOpacity / 10) * 255)
       .toString(16)
       .padStart(2, '0');
-    return `0px 0px 10px ${dropShadowColor}${opacity}`;
+    return `0px 8px 10px ${dropShadowColor}${opacity}`;
   };
 
   const getBackground = () => {

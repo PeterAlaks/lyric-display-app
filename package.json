@@ -22,6 +22,7 @@
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
+    "electron-store": "^10.1.0",
     "express": "^4.21.2",
     "lucide-react": "^0.372.0",
     "react": "^18.3.1",
@@ -45,26 +46,32 @@
     "vite": "^4.5.14",
     "wait-on": "^7.2.0"
   },
- "build": {
-  "appId": "com.lyricdisplay",
-  "productName": "LyricDisplay",
-  "files": [
-    "dist/**/*",
-    "server/**/*",
-    "main.js",
-    "package.json",
-    "public/favicon.ico"
-  ],
-  "directories": {
-    "buildResources": "public"
-  },
-  "asarUnpack": [
-    "dist/**/*",
-    "server/**/*"
-  ],
-  "win": {
-    "target": "nsis",
-    "icon": "public/favicon.ico"
+  "build": {
+    "appId": "com.lyricdisplay",
+    "productName": "LyricDisplay",
+    "files": [
+      "dist/**/*",
+      "server/**/*",
+      "main.js",
+      "package.json",
+      "public/favicon.ico"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "asarUnpack": [
+      "dist/**/*",
+      "server/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "server/node_modules",
+        "to": "app.asar.unpacked/server/node_modules"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/favicon.ico"
+    }
   }
-}
 }

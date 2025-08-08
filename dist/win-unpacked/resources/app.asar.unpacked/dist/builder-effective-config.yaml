@@ -13,6 +13,9 @@ files:
 asarUnpack:
   - dist/**/*
   - server/**/*
+extraResources:
+  - from: server/node_modules
+    to: app.asar.unpacked/server/node_modules
 win:
   target: nsis
   icon: public/favicon.ico
