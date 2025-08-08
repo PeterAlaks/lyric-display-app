@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { RefreshCw, Plus } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
@@ -27,6 +27,8 @@ const LyricDisplayApp = () => {
   } = useLyricsStore();
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate } = useSocket('control');
+
+  // Remove previous auto-sync logic. Now handled by refresh button only.
 
   // File upload functionality
   const handleFileUpload = useFileUpload();
@@ -100,7 +102,27 @@ const LyricDisplayApp = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">LyricDisplay</h1>
-          <RefreshCw className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700" />
+          <button
+            className="flex items-center gap-2 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
+            title="Sync current state to outputs"
+            onClick={() => {
+              if (lyrics && lyrics.length > 0) {
+                emitLyricsLoad(lyrics);
+                if (selectedLine !== null && selectedLine !== undefined) {
+                  emitLineUpdate(selectedLine);
+                }
+                if (output1Settings) {
+                  emitStyleUpdate('output1', output1Settings);
+                }
+                if (output2Settings) {
+                  emitStyleUpdate('output2', output2Settings);
+                }
+              }
+            }}
+          >
+            <RefreshCw className="w-5 h-5" />
+            <span className="text-[12px]">Sync Outputs</span>
+          </button>
         </div>
 
         {/* Add Lyrics Button */}
@@ -176,7 +198,7 @@ const LyricDisplayApp = () => {
           </button>
         </div>
 
-<div className="mt-4 text-[10px] text-gray-400 text-left">
+<div className="mt-4 text-[12px] text-gray-600 text-left">
       Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media ©2025
     </div>
 
