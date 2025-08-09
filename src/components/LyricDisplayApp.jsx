@@ -118,6 +118,7 @@ const LyricDisplayApp = () => {
                   emitStyleUpdate('output2', output2Settings);
                 }
               }
+              emitOutputToggle(isOutputOn);
             }}
           >
             <RefreshCw className="w-5 h-5" />

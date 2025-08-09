@@ -4,6 +4,7 @@ let currentLyrics = [];
 let currentSelectedLine = null;
 let currentOutput1Settings = {};
 let currentOutput2Settings = {};
+let currentIsOutputOn = false;
 
 export default function registerSocketEvents(io) {
   io.on('connection', (socket) => {
@@ -16,6 +17,7 @@ export default function registerSocketEvents(io) {
         selectedLine: currentSelectedLine,
         output1Settings: currentOutput1Settings,
         output2Settings: currentOutput2Settings,
+        isOutputOn: currentIsOutputOn,
       });
     });
 
@@ -25,6 +27,7 @@ export default function registerSocketEvents(io) {
     });
 
     socket.on('outputToggle', (state) => {
+      currentIsOutputOn = state;
       io.emit('outputToggle', state);
     });
 
