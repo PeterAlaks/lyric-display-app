@@ -23,6 +23,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "electron-store": "^10.1.0",
+    "electron-updater": "^6.6.2",
     "express": "^4.21.2",
     "lucide-react": "^0.372.0",
     "react": "^18.3.1",
