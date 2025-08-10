@@ -99,7 +99,7 @@ const Output1 = () => {
             backgroundColor: getBackground(),
             padding: `${yMargin}rem ${xMargin}rem`,
           }}
-          className="w-full text-center"
+          className="w-full text-center leading-none"
         >
           {line}
         </div>
