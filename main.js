@@ -1,7 +1,9 @@
-import { app, BrowserWindow, Menu, shell, dialog } from 'electron';
+import { app, BrowserWindow, Menu, shell, dialog, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { fork } from 'child_process';
+import updaterPkg from 'electron-updater';
+const { autoUpdater } = updaterPkg;
 
 const isDev = !app.isPackaged;
 let backendProcess = null;
@@ -20,23 +22,89 @@ function resolveProductionPath(...segments) {
   }
 }
 
+// Start backend process
 function startBackend() {
   const serverPath = resolveProductionPath('server', 'index.js');
   backendProcess = fork(serverPath, [], {
     cwd: path.dirname(serverPath),
     env: { ...process.env, NODE_ENV: isDev ? 'development' : 'production' },
-    stdio: 'inherit',
+    stdio: ['inherit', 'inherit', 'inherit', 'ipc'], // ✅ 'ipc' needed to receive messages
   });
+
   backendProcess.on('error', (err) => {
     console.error('Backend process error:', err);
   });
+
   backendProcess.on('exit', (code) => {
     if (code !== 0) {
       console.error('Backend process exited with code', code);
     }
   });
+
+  // ✅ Listen for "ready" signal from backend
+  backendProcess.on('message', (msg) => {
+    if (msg?.status === 'ready') {
+      console.log('✅ Backend reported ready, starting update check...');
+      checkForUpdates();
+    }
+  });
 }
 
+// Auto-updater setup
+function checkForUpdates() {
+  autoUpdater.autoDownload = false;
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for updates...');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    dialog.showMessageBox({
+      type: 'info',
+      buttons: ['Download', 'Later'],
+      defaultId: 0,
+      message: `Version ${info.version} is available. Do you want to download it now?`,
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.downloadUpdate();
+      }
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('No updates available.');
+  });
+
+  autoUpdater.on('error', (err) => {
+    dialog.showErrorBox('Update Error', err == null ? 'Unknown error' : (err.stack || err).toString());
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    const log_message = `Download speed: ${progress.bytesPerSecond} - Downloaded ${Math.round(progress.percent)}% (${progress.transferred}/${progress.total})`;
+    console.log(log_message);
+    dialog.showMessageBox({
+      type: 'info',
+      message: `Downloading update... ${Math.round(progress.percent)}%`,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      buttons: ['Install and Restart', 'Later'],
+      defaultId: 0,
+      message: 'Update downloaded. Do you want to install it now?',
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.checkForUpdates();
+}
+
+// Create window
 function createWindow(route = '/') {
   const win = new BrowserWindow({
     width: 1280,
@@ -55,7 +123,6 @@ function createWindow(route = '/') {
     win.loadURL(`http://localhost:5173${route}`);
     win.webContents.openDevTools({ mode: 'detach' });
   } else {
-    // Use hash-based routing in production for correct page rendering
     const hashRoute = route === '/' ? '/' : `#${route}`;
     win.loadURL(`http://localhost:4000/${hashRoute}`);
   }
@@ -63,6 +130,7 @@ function createWindow(route = '/') {
   return win;
 }
 
+// Create menu
 function createMenu(mainWindow) {
   const template = [
     {
@@ -147,11 +215,19 @@ function createMenu(mainWindow) {
           click: () => {
             dialog.showMessageBox({
               type: 'info',
-              buttons: ['OK'],
+              buttons: ['OK', 'Check for Updates'],
               title: 'About LyricDisplay',
-              message: 'LyricDisplay\nVersion 1.0.0\nBy Peter Alakembi',
+              message: `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi`,
+            }).then((result) => {
+              if (result.response === 1) {
+                checkForUpdates();
+              }
             });
           },
+        },
+        {
+          label: 'Check for Updates',
+          click: () => checkForUpdates(),
         },
       ],
     },
@@ -160,6 +236,7 @@ function createMenu(mainWindow) {
   Menu.setApplicationMenu(menu);
 }
 
+// App lifecycle
 app.whenReady().then(() => {
   startBackend();
   const mainWindow = createWindow('/');

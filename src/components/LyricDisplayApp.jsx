@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { RefreshCw, Plus } from 'lucide-react';
+import React, { useRef } from 'react';
+import { RefreshCw, Plus, X } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-
 
 // Main App Component
 const LyricDisplayApp = () => {
@@ -28,14 +27,19 @@ const LyricDisplayApp = () => {
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate } = useSocket('control');
 
-  // Remove previous auto-sync logic. Now handled by refresh button only.
-
   // File upload functionality
   const handleFileUpload = useFileUpload();
   const fileInputRef = useRef(null);
 
   // Tabs
   const [activeTab, setActiveTab] = React.useState('output1');
+
+  // Search state
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [highlightedLineIndex, setHighlightedLineIndex] = React.useState(null);
+
+  // Ref for scrollable container
+  const lyricsContainerRef = useRef(null);
 
   // Check if lyrics are loaded
   const hasLyrics = lyrics && lyrics.length > 0;
@@ -65,6 +69,9 @@ const LyricDisplayApp = () => {
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'text/plain') {
+      // Clear search when new file is loaded
+      setSearchQuery('');
+      setHighlightedLineIndex(null);
       await handleFileUpload(file);
     }
   };
@@ -73,6 +80,50 @@ const LyricDisplayApp = () => {
   const handleLineSelect = (index) => {
     selectLine(index);
     emitLineUpdate(index);
+  };
+
+  // Find first match and scroll to it
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setHighlightedLineIndex(null);
+      return;
+    }
+
+    // Find first matching line
+    const firstMatchIndex = lyrics.findIndex(line => 
+      line.toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (firstMatchIndex !== -1) {
+      setHighlightedLineIndex(firstMatchIndex);
+      
+      // Scroll to the matched line
+      setTimeout(() => {
+        const container = lyricsContainerRef.current;
+        if (container) {
+          const lineElements = container.querySelectorAll('[data-line-index]');
+          const targetElement = lineElements[firstMatchIndex];
+          
+          if (targetElement) {
+            targetElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }
+        }
+      }, 50); // Small delay to ensure DOM is updated
+    } else {
+      setHighlightedLineIndex(null);
+      // No matches found - scroll position remains unchanged
+    }
+  };
+
+  // Clear search function
+  const clearSearch = () => {
+    setSearchQuery('');
+    setHighlightedLineIndex(null);
   };
 
   console.log('Toggle emitted:', !isOutputOn)
@@ -151,19 +202,19 @@ const LyricDisplayApp = () => {
 
         {/* Output Toggle */}
         <div className="flex items-center justify-between mb-6">
-  <div className="flex items-center gap-4 mx-2">
-    <Switch
-      checked={isOutputOn}
-      onCheckedChange={handleToggle}
-      className="scale-[1.8] data-[state=checked]:bg-black"
-    />
-    <span className="text-sm text-gray-600 ml-5">
-      {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
-    </span>
-  </div>
-</div>
+          <div className="flex items-center gap-4 mx-2">
+            <Switch
+              checked={isOutputOn}
+              onCheckedChange={handleToggle}
+              className="scale-[1.8] data-[state=checked]:bg-black"
+            />
+            <span className="text-sm text-gray-600 ml-5">
+              {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
+            </span>
+          </div>
+        </div>
 
-<div class="border-t border-gray-100 my-10"></div>
+        <div className="border-t border-gray-100 my-10"></div>
 
         {/* Output Settings */}
         <div className="mb-6">
@@ -199,33 +250,57 @@ const LyricDisplayApp = () => {
           </button>
         </div>
 
-<div class="border-t border-gray-100 my-10"></div>
+        <div className="border-t border-gray-100 my-10"></div>
 
-<div className="mt-4 text-[12px] text-gray-600 text-left">
-      Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.
-    </div>
-
+        <div className="mt-4 text-[12px] text-gray-600 text-left">
+          Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.
+        </div>
       </div>
 
       {/* Right Main Area */}
-      <div className="flex-1 p-6 overflow-y-hidden h-screen">
-        {/* Header */}
-        <div className="mb-6">
+      <div className="flex-1 p-6 flex flex-col h-screen">
+        {/* Fixed Header */}
+        <div className="mb-6 flex-shrink-0">
           <h2 className="text-xl font-semibold text-gray-900">
             {hasLyrics ? lyricsFileName : ''}
           </h2>
+
+          {/* Search Bar */}
+          {hasLyrics && (
+            <div className="mt-3 w-full relative">
+              <Input
+                type="text"
+                placeholder="Search lyrics..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="border border-gray-300 rounded-md w-full pr-10"
+              />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Content Area */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full overflow-y-auto">
+        {/* Scrollable Content Area */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
           {hasLyrics ? (
             <div
-              className="p-4 h-full overflow-y-auto"
+              ref={lyricsContainerRef}
+              className="p-4 flex-1 overflow-y-auto"
               onDrop={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
                 if (file && file.type === 'text/plain') {
+                  setSearchQuery('');
+                  setHighlightedLineIndex(null);
                   await handleFileUpload(file);
                 }
               }}
@@ -242,12 +317,14 @@ const LyricDisplayApp = () => {
                 lyrics={lyrics}
                 selectedLine={selectedLine}
                 onSelectLine={handleLineSelect}
+                searchQuery={searchQuery}
+                highlightedLineIndex={highlightedLineIndex}
               />
             </div>
           ) : (
             /* Empty State - Drag and Drop */
             <div
-              className="h-full flex items-center justify-center"
+              className="flex-1 flex items-center justify-center"
               onDrop={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();

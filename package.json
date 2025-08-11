@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": "Peter Alakembi",
   "main": "main.js",
@@ -12,7 +12,8 @@
     "server": "node server/index.js",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron": "electron .",
-    "electron-pack": "npm run build && electron-builder"
+    "electron-pack": "npm run build && electron-builder",
+    "electron-publish": "npm run build && electron-builder --publish=always"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.5",
@@ -48,31 +49,40 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.lyricdisplay",
-    "productName": "LyricDisplay",
-    "files": [
-      "dist/**/*",
-      "server/**/*",
-      "main.js",
-      "package.json",
-      "public/favicon.ico"
-    ],
-    "directories": {
-      "buildResources": "public"
-    },
-    "asarUnpack": [
-      "dist/**/*",
-      "server/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "server/node_modules",
-        "to": "app.asar.unpacked/server/node_modules"
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "public/favicon.ico"
+  "appId": "com.lyricdisplay",
+  "productName": "LyricDisplay",
+  "files": [
+    "dist/**/*",
+    "server/**/*",
+    "main.js",
+    "package.json",
+    "public/favicon.ico"
+  ],
+  "directories": {
+    "buildResources": "public"
+  },
+  "asarUnpack": [
+    "dist/**/*",
+    "server/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "server/node_modules",
+      "to": "app.asar.unpacked/server/node_modules"
     }
-  }
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "public/favicon.ico"
+  },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "PeterAlaks",
+      "repo": "lyric-display-app",
+      "private": true
+    }
+  ]
+}
+
 }

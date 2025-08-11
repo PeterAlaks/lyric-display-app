@@ -38,4 +38,9 @@ if (!isDev) {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
+
+  // ✅ Notify Electron main process that backend is ready
+  if (process.send) {
+    process.send({ status: 'ready' });
+  }
 });
