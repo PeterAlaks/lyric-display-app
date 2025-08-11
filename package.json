@@ -79,8 +79,7 @@
     {
       "provider": "github",
       "owner": "PeterAlaks",
-      "repo": "lyric-display-app",
-      "private": true
+      "repo": "lyric-display-updates"
     }
   ]
 }

@@ -55,6 +55,7 @@ const Output2 = () => {
     bold,
     italic,
     underline,
+    allCaps,
     fontSize,
     fontColor,
     dropShadowColor,
@@ -79,6 +80,9 @@ const Output2 = () => {
     return `${backgroundColor}${opacity}`;
   };
 
+  // Apply text transformations
+  const displayText = allCaps ? line.toUpperCase() : line;
+
   return (
     <div
       className="w-screen h-screen flex items-center justify-center"
@@ -101,7 +105,7 @@ const Output2 = () => {
           }}
           className="w-full h-full flex items-center justify-center text-center leading-none"
         >
-          {line}
+          {displayText}
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-# Lyric Display App
+# LyricDisplay App
 
 A real-time, multi-output lyric display system with a web-based control panel. Built with React, Vite, Express, and Socket.io, and optionally packaged as a desktop app with Electron. Designed for live performances, streaming, and presentations where dynamic lyric control and display are required.
 
@@ -21,7 +21,7 @@ A real-time, multi-output lyric display system with a web-based control panel. B
 ---
 
 ## Project Overview
-Lyric Display App enables real-time control and display of song lyrics across multiple output screens. The system consists of a web-based control panel for managing lyrics and one or more output pages for displaying lyrics to an audience. Communication between the control panel and output screens is handled via WebSockets (Socket.io).
+LyricDisplay enables real-time control and display of song lyrics across multiple output screens. The system consists of a web-based control panel for managing lyrics and one or more output pages for displaying lyrics to an audience. Communication between the control panel and output screens is handled via WebSockets (Socket.io).
 
 ---
 

@@ -15,7 +15,8 @@ import {
   Move,
   Italic,
   Underline,
-  Bold
+  Bold,
+  CaseUpper
 } from 'lucide-react';
 
 const fontOptions = [
@@ -67,14 +68,15 @@ const OutputSettingsPanel = ({ outputKey }) => {
         </Select>
       </div>
 
-      {/* Bold / Italic / Underline */}
+      {/* Bold / Italic / Underline / All Caps */}
       <div className="flex items-center justify-between gap-4">
         <LabelWithIcon icon={TextQuote} text="Emphasis" />
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             size="icon"
             variant={settings.bold ? 'default' : 'outline'}
             onClick={() => update('bold', !settings.bold)}
+            title="Bold"
           >
             <Bold className="w-4 h-4" />
           </Button>
@@ -82,6 +84,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             size="icon"
             variant={settings.italic ? 'default' : 'outline'}
             onClick={() => update('italic', !settings.italic)}
+            title="Italic"
           >
             <Italic className="w-4 h-4" />
           </Button>
@@ -89,8 +92,17 @@ const OutputSettingsPanel = ({ outputKey }) => {
             size="icon"
             variant={settings.underline ? 'default' : 'outline'}
             onClick={() => update('underline', !settings.underline)}
+            title="Underline"
           >
             <Underline className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant={settings.allCaps ? 'default' : 'outline'}
+            onClick={() => update('allCaps', !settings.allCaps)}
+            title="All Caps"
+          >
+            <CaseUpper className="w-4 h-4" />
           </Button>
         </div>
       </div>

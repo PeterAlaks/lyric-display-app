@@ -1,4 +1,4 @@
-// Project: Lyric Display App
+// Project: LyricDisplay App
 // File: src/context/LyricsStore.js
 // This file defines the Zustand store for managing lyrics and output settings.
 
@@ -22,6 +22,7 @@ const useLyricsStore = create(
         bold: false,
         italic: false,
         underline: false,
+        allCaps: false,
         fontSize: 48,
         fontColor: '#FFFFFF',
         dropShadowColor: '#000000',
@@ -36,6 +37,7 @@ const useLyricsStore = create(
         bold: false,
         italic: false,
         underline: false,
+        allCaps: false,
         fontSize: 48,
         fontColor: '#FFFFFF',
         dropShadowColor: '#000000',

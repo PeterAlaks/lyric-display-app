@@ -1,7 +1,7 @@
 {
   "name": "lyric-display-backend",
   "version": "1.0.0",
-  "description": "Backend for Lyric Display App",
+  "description": "Backend for LyricDisplay",
   "main": "index.js",
   "type": "module",
   "dependencies": {

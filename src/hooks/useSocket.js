@@ -1,4 +1,4 @@
-// Project: Lyric Display App
+// Project: LyricDisplay App
 // File: src/hooks/useSocket.js
 
 import { useEffect, useRef, useState } from 'react';

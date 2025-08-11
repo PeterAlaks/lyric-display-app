@@ -45,14 +45,16 @@ function startBackend() {
   backendProcess.on('message', (msg) => {
     if (msg?.status === 'ready') {
       console.log('✅ Backend reported ready, starting update check...');
-      checkForUpdates();
+      checkForUpdates(false); // silent mode
     }
   });
 }
 
 // Auto-updater setup
-function checkForUpdates() {
+function checkForUpdates(showNoUpdateDialog = false) {
   autoUpdater.autoDownload = false;
+
+  autoUpdater.removeAllListeners();
 
   autoUpdater.on('checking-for-update', () => {
     console.log('Checking for updates...');
@@ -73,6 +75,13 @@ function checkForUpdates() {
 
   autoUpdater.on('update-not-available', () => {
     console.log('No updates available.');
+    if (showNoUpdateDialog) {
+      dialog.showMessageBox({
+        type: 'info',
+        buttons: ['OK'],
+        message: "You're running the latest version of LyricDisplay.",
+      });
+    }
   });
 
   autoUpdater.on('error', (err) => {
@@ -200,7 +209,7 @@ function createMenu(mainWindow) {
         {
           label: 'GitHub Repository',
           click: async () => {
-            await shell.openExternal('https://github.com/PeterAlaks/lyric-display-app');
+            await shell.openExternal('https://github.com/PeterAlaks/lyric-display-updates');
           },
         },
         { type: 'separator' },
@@ -220,14 +229,14 @@ function createMenu(mainWindow) {
               message: `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi`,
             }).then((result) => {
               if (result.response === 1) {
-                checkForUpdates();
+                checkForUpdates(true);
               }
             });
           },
         },
         {
           label: 'Check for Updates',
-          click: () => checkForUpdates(),
+          click: () => checkForUpdates(true),
         },
       ],
     },

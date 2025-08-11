@@ -1,4 +1,4 @@
-// Project: Lyric Display App
+// Project: LyricDisplay App
 // File: src/components/LyricsList.jsx
 
 import React from 'react';
