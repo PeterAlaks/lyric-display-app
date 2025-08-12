@@ -47,8 +47,8 @@ LyricDisplay enables real-time control and display of song lyrics across multipl
 
 ## Screenshots
 <!-- Add screenshots to docs/screenshots/ and update the paths below -->
-![Control Panel](docs/screenshots/control-panel.png)
-![Output Display](docs/screenshots/output-display.png)
+![Control Panel](public/screenshots/Default.png)
+![Control Panel - Lyrics Loaded](public/screenshots/Added%20Lyrics.png)
 
 ---
 
