@@ -7,6 +7,15 @@ const { autoUpdater } = updaterPkg;
 
 const isDev = !app.isPackaged;
 let backendProcess = null;
+let progressWindow = null;
+
+// Only add compatibility flags for older systems in production
+// and only if we detect it's needed
+if (!isDev && process.env.FORCE_COMPATIBILITY) {
+  app.commandLine.appendSwitch('--disable-gpu-sandbox');
+  app.commandLine.appendSwitch('--disable-software-rasterizer');
+  app.commandLine.appendSwitch('--disable-features', 'VizDisplayCompositor');
+}
 
 // ESM __dirname and __filename
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +29,151 @@ function resolveProductionPath(...segments) {
     // Use asar.unpacked path for files excluded from asar
     return path.join(process.resourcesPath, 'app.asar.unpacked', ...segments);
   }
+}
+
+// Create progress window
+function createProgressWindow() {
+  if (progressWindow) return progressWindow;
+
+  progressWindow = new BrowserWindow({
+    width: 400,
+    height: 200,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    alwaysOnTop: true,
+    center: true,
+    show: false,
+    frame: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: resolveProductionPath('progress-preload.js')
+    }
+  });
+
+  progressWindow.setMenuBarVisibility(false);
+  
+  // Load progress HTML
+  const progressHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Downloading Update</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: #f5f5f5;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          height: 160px;
+          box-sizing: border-box;
+        }
+        .container {
+          text-align: center;
+        }
+        .title {
+          font-size: 16px;
+          margin-bottom: 15px;
+          color: #333;
+        }
+        .progress-container {
+          background: #e0e0e0;
+          border-radius: 10px;
+          height: 20px;
+          margin: 15px 0;
+          overflow: hidden;
+          position: relative;
+        }
+        .progress-bar {
+          background: linear-gradient(90deg, #4CAF50, #45a049);
+          height: 100%;
+          width: 0%;
+          transition: width 0.3s ease;
+          border-radius: 10px;
+        }
+        .progress-text {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 12px;
+          font-weight: bold;
+          color: #333;
+        }
+        .details {
+          font-size: 12px;
+          color: #666;
+          margin-top: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="title">Downloading Update...</div>
+        <div class="progress-container">
+          <div class="progress-bar" id="progressBar"></div>
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+        <div class="details" id="details">Preparing download...</div>
+      </div>
+      <script>
+        console.log('Progress window script loaded');
+        
+        // Wait for DOM and electronAPI to be ready
+        window.addEventListener('DOMContentLoaded', () => {
+          console.log('DOM loaded, setting up progress listener');
+          
+          if (window.electronAPI && window.electronAPI.onProgressUpdate) {
+            window.electronAPI.onProgressUpdate((progress) => {
+              console.log('Progress received in renderer:', progress);
+              
+              const progressBar = document.getElementById('progressBar');
+              const progressText = document.getElementById('progressText');
+              const details = document.getElementById('details');
+              
+              if (progressBar && progressText && details) {
+                const percent = Math.round(progress.percent);
+                progressBar.style.width = percent + '%';
+                progressText.textContent = percent + '%';
+                
+                const speed = (progress.bytesPerSecond / 1024 / 1024).toFixed(1);
+                const transferred = (progress.transferred / 1024 / 1024).toFixed(1);
+                const total = (progress.total / 1024 / 1024).toFixed(1);
+                
+                details.textContent = \`\${speed} MB/s - \${transferred} MB / \${total} MB\`;
+                console.log('UI updated to:', percent + '%');
+              } else {
+                console.error('Progress elements not found');
+              }
+            });
+          } else {
+            console.error('electronAPI not available');
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `;
+
+  progressWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(progressHTML)}`);
+  
+  progressWindow.on('closed', () => {
+    progressWindow = null;
+  });
+
+  return progressWindow;
+}
+
+// Close progress window
+function closeProgressWindow() {
+  if (progressWindow && !progressWindow.isDestroyed()) {
+    progressWindow.close();
+  }
+  progressWindow = null;
 }
 
 // Start backend process
@@ -68,6 +222,8 @@ function checkForUpdates(showNoUpdateDialog = false) {
       message: `Version ${info.version} is available. Do you want to download it now?`,
     }).then((result) => {
       if (result.response === 0) {
+        // Create and show progress window before starting download
+        createProgressWindow().show();
         autoUpdater.downloadUpdate();
       }
     });
@@ -85,19 +241,29 @@ function checkForUpdates(showNoUpdateDialog = false) {
   });
 
   autoUpdater.on('error', (err) => {
+    // Close progress window on error
+    closeProgressWindow();
+    
     dialog.showErrorBox('Update Error', err == null ? 'Unknown error' : (err.stack || err).toString());
   });
 
   autoUpdater.on('download-progress', (progress) => {
     const log_message = `Download speed: ${progress.bytesPerSecond} - Downloaded ${Math.round(progress.percent)}% (${progress.transferred}/${progress.total})`;
     console.log(log_message);
-    dialog.showMessageBox({
-      type: 'info',
-      message: `Downloading update... ${Math.round(progress.percent)}%`,
-    });
+    
+    // Update progress window if it exists - with debug logging
+    if (progressWindow && !progressWindow.isDestroyed()) {
+      console.log('Sending progress to window:', Math.round(progress.percent) + '%');
+      progressWindow.webContents.send('progress-update', progress);
+    } else {
+      console.log('Progress window not available');
+    }
   });
 
   autoUpdater.on('update-downloaded', () => {
+    // Close progress window
+    closeProgressWindow();
+    
     dialog.showMessageBox({
       type: 'info',
       buttons: ['Install and Restart', 'Later'],

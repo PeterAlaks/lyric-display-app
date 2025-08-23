@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "1.0.1",
+  "version": "1.0.7",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": "Peter Alakembi",
   "main": "main.js",
@@ -49,39 +49,38 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-  "appId": "com.lyricdisplay",
-  "productName": "LyricDisplay",
-  "files": [
-    "dist/**/*",
-    "server/**/*",
-    "main.js",
-    "package.json",
-    "public/favicon.ico"
-  ],
-  "directories": {
-    "buildResources": "public"
-  },
-  "asarUnpack": [
-    "dist/**/*",
-    "server/**/*"
-  ],
-  "extraResources": [
-    {
-      "from": "server/node_modules",
-      "to": "app.asar.unpacked/server/node_modules"
-    }
-  ],
-  "win": {
-    "target": "nsis",
-    "icon": "public/favicon.ico"
-  },
-  "publish": [
-    {
-      "provider": "github",
-      "owner": "PeterAlaks",
-      "repo": "lyric-display-updates"
-    }
-  ]
-}
-
+    "appId": "com.lyricdisplay",
+    "productName": "LyricDisplay",
+    "files": [
+      "dist/**/*",
+      "server/**/*",
+      "main.js",
+      "package.json",
+      "public/favicon.ico"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "asarUnpack": [
+      "dist/**/*",
+      "server/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "server/node_modules",
+        "to": "app.asar.unpacked/server/node_modules"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/favicon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "PeterAlaks",
+        "repo": "lyric-display-updates"
+      }
+    ]
+  }
 }

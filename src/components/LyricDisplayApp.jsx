@@ -50,6 +50,7 @@ const LyricDisplayApp = () => {
     'Calibri',
     'Bebas Neue',
     'Fira Sans',
+    'GarnetCapitals',
     'Inter',
     'Lato',
     'Montserrat',
