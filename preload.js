@@ -1,28 +1,26 @@
+// preload.js (CommonJS)
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   toggleDarkMode: () => ipcRenderer.invoke('toggle-dark-mode'),
   getDarkMode: () => ipcRenderer.invoke('get-dark-mode'),
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
-  
-  // Listen for dark mode toggle from menu
-  onDarkModeToggle: (callback) => {
-    ipcRenderer.on('toggle-dark-mode', callback);
-  },
-  
-  // File operations for New Song Canvas
+
+  onDarkModeToggle: (callback) => ipcRenderer.on('toggle-dark-mode', callback),
+
   showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
-  
-  // Remove listeners
+
+  onProgressUpdate: (callback) => {
+    ipcRenderer.removeAllListeners('progress-update');
+    ipcRenderer.on('progress-update', (event, progress) => callback(progress));
+  },
+
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
   }
 });
 
-// Store API for menu to access current state
 contextBridge.exposeInMainWorld('electronStore', {
   getDarkMode: () => {
     try {

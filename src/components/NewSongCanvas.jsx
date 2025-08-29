@@ -369,18 +369,40 @@ const NewSongCanvas = () => {
           <div className="w-[72px]"></div>
         </div>
         <div className="flex items-center justify-center gap-4">
-          <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost">
-            <Scissors className="w-4 h-4" /> Cut
-          </Button>
-          <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost">
-            <Copy className="w-4 h-4" /> Copy
-          </Button>
-          <Button onClick={handlePaste} variant="ghost">
-            <ClipboardPaste className="w-4 h-4" /> Paste
-          </Button>
-          <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost">
-            <Wand2 className="w-4 h-4" /> Cleanup
-          </Button>
+          <Button 
+  onClick={handleCut} 
+  disabled={isContentEmpty} 
+  variant="ghost"
+  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+>
+  <Scissors className="w-4 h-4" /> Cut
+</Button>
+
+<Button 
+  onClick={handleCopy} 
+  disabled={isContentEmpty} 
+  variant="ghost"
+  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+>
+  <Copy className="w-4 h-4" /> Copy
+</Button>
+
+<Button 
+  onClick={handlePaste} 
+  variant="ghost"
+  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+>
+  <ClipboardPaste className="w-4 h-4" /> Paste
+</Button>
+
+<Button 
+  onClick={handleCleanup} 
+  disabled={isContentEmpty} 
+  variant="ghost"
+  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+>
+  <Wand2 className="w-4 h-4" /> Cleanup
+</Button>
           <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
           <Button
             onClick={handleSave}

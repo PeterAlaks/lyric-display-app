@@ -50,7 +50,7 @@ function createProgressWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('progress-preload.js')
+      preload: resolveProductionPath('preload.js')
     }
   });
 
@@ -289,7 +289,7 @@ function createWindow(route = '/') {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js') // Add preload for IPC communication
+      preload: resolveProductionPath('preload.js')
     },
     show: false,
     icon: path.join(__dirname, 'public', 'favicon.ico'),
