@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, shell, dialog, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { fork } from 'child_process';
+import { writeFile } from 'fs/promises';
 import updaterPkg from 'electron-updater';
 const { autoUpdater } = updaterPkg;
 
@@ -467,6 +468,27 @@ ipcMain.handle('get-dark-mode', () => {
 ipcMain.handle('set-dark-mode', (event, isDark) => {
   updateDarkModeMenu();
   return true;
+});
+
+// IPC handlers for file operations (New Song Canvas)
+ipcMain.handle('show-save-dialog', async (event, options) => {
+  try {
+    const result = await dialog.showSaveDialog(mainWindow, options);
+    return result;
+  } catch (error) {
+    console.error('Error showing save dialog:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('write-file', async (event, filePath, content) => {
+  try {
+    await writeFile(filePath, content, 'utf8');
+    return { success: true };
+  } catch (error) {
+    console.error('Error writing file:', error);
+    throw error;
+  }
 });
 
 // App lifecycle

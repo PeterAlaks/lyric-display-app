@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('toggle-dark-mode', callback);
   },
   
+  // File operations for New Song Canvas
+  showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
+  writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
+  
   // Remove listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Scissors, 
@@ -11,58 +11,116 @@ import {
 } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useFileUpload from '../hooks/useFileUpload';
-import { parseLyrics } from '../utils/parseLyrics';
 import { Button } from "@/components/ui/button";
 
 // Auto-formatting utility function
+// Auto-formatting utility function with bracket-aware spacing
 const formatLyrics = (text) => {
   const religiousWords = ['jesus', 'jesu', 'yesu', 'jehovah', 'god', 'yahweh'];
-  
+
+  // Split into lines
   const lines = text.split(/\r?\n/);
   const formattedLines = [];
-  
-  lines.forEach(line => {
-    let trimmedLine = line.trim();
-    if (trimmedLine.length === 0) return;
-    
-    // Remove punctuation from line beginning
-    trimmedLine = trimmedLine.replace(/^[.,\-]+/, '');
-    
-    // Capitalize first letter of line
-    if (trimmedLine.length > 0) {
-      trimmedLine = trimmedLine.charAt(0).toUpperCase() + trimmedLine.slice(1);
-    }
-    
-    // Capitalize first letter of religious words
+
+  // Reuse your isTranslationLine logic
+  const isTranslationLine = (line) => {
+    if (!line || typeof line !== 'string') return false;
+
+    const trimmed = line.trim();
+    if (trimmed.length <= 2) return false; // must have content
+
+    const bracketPairs = [['[', ']'], ['(', ')'], ['{', '}'], ['<', '>']];
+    return bracketPairs.some(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (!line) continue;
+
+    // Remove leading punctuation (periods, commas, hyphens)
+    line = line.replace(/^[.,\-]+/, '');
+    // Remove all periods
+    line = line.replace(/\./g, '');
+    // Capitalize first letter
+    line = line.charAt(0).toUpperCase() + line.slice(1);
+
+    // Capitalize religious words
     religiousWords.forEach(word => {
       const regex = new RegExp(`\\b${word}\\b`, 'gi');
-      trimmedLine = trimmedLine.replace(regex, (match) => {
-        return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
-      });
+      line = line.replace(regex, match => match.charAt(0).toUpperCase() + match.slice(1).toLowerCase());
     });
-    
-    formattedLines.push(trimmedLine);
-    formattedLines.push(''); // Add empty line after each lyric line
-  });
-  
-  // Remove trailing empty line
+
+    formattedLines.push(line);
+
+    // Look ahead: add blank line unless next line is a translation
+    const nextLine = lines[i + 1] || '';
+    if (!isTranslationLine(nextLine)) {
+      formattedLines.push('');
+    }
+  }
+
+  // Remove last empty line if exists
   if (formattedLines[formattedLines.length - 1] === '') {
     formattedLines.pop();
   }
-  
+
   return formattedLines.join('\n');
+};
+
+
+/**
+ * Reconstructs editable text from processed lyrics array
+ * Properly handles both string lines and grouped objects
+ */
+const reconstructEditableText = (lyrics) => {
+  if (!lyrics || lyrics.length === 0) return '';
+  
+  return lyrics.map(line => {
+    if (typeof line === 'string') {
+      return line;
+    } else if (line && line.type === 'group') {
+      // Reconstruct original format: main line + translation line with blank line after
+      return `${line.mainLine}\n${line.translation}`;
+    }
+    return '';
+  }).join('\n\n'); // Double newline to maintain spacing between sections
 };
 
 const NewSongCanvas = () => {
   const navigate = useNavigate();
-  const { darkMode, setLyrics, selectLine, setLyricsFileName } = useLyricsStore();
+  const location = useLocation();
+  const isEditMode = new URLSearchParams(location.search).get("mode") === "edit";
+
+  const { 
+    darkMode, 
+    setDarkMode, 
+    lyrics, 
+    lyricsFileName, 
+    rawLyricsContent, 
+    setRawLyricsContent 
+  } = useLyricsStore();
+
   const handleFileUpload = useFileUpload();
   const textareaRef = useRef(null);
-  const fileInputRef = useRef(null);
-  
+
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
 
+  useEffect(() => {
+    if (window.electronAPI) {
+      const handleDarkModeToggle = () => {
+        const newDarkMode = !darkMode;
+        setDarkMode(newDarkMode);
+        window.electronAPI.setDarkMode(newDarkMode);
+      };
+      window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
+      window.electronAPI.setDarkMode(darkMode);
+      return () => {
+        window.electronAPI.removeAllListeners('toggle-dark-mode');
+      };
+    }
+  }, [darkMode, setDarkMode]);
+  
   // Focus textarea on mount
   useEffect(() => {
     if (textareaRef.current) {
@@ -70,12 +128,35 @@ const NewSongCanvas = () => {
     }
   }, []);
 
+  // Fixed logic for populating the editor
+  useEffect(() => {
+    if (isEditMode) {
+      // Priority 1: Use rawLyricsContent if available (preserves original formatting)
+      if (rawLyricsContent) {
+        setContent(rawLyricsContent);
+      } 
+      // Priority 2: Reconstruct from processed lyrics array
+      else if (lyrics && lyrics.length > 0) {
+        setContent(reconstructEditableText(lyrics));
+      } 
+      // Priority 3: Empty content if nothing available
+      else {
+        setContent('');
+      }
+      setFileName(lyricsFileName || '');
+    } else {
+      // For a new song, ensure everything is clear
+      setContent('');
+      setFileName('');
+      setRawLyricsContent(''); // Clear any previous raw content
+    }
+  }, [isEditMode, lyrics, lyricsFileName, rawLyricsContent, setRawLyricsContent]);
+
   // Handle back navigation
   const handleBack = () => {
     navigate('/');
   };
 
-  // Toolbar button handlers
   const handleCut = async () => {
     if (textareaRef.current) {
       const start = textareaRef.current.selectionStart;
@@ -138,13 +219,13 @@ const NewSongCanvas = () => {
     setContent(formattedContent);
   };
 
+  // Simplified save function
   const handleSave = async () => {
     if (!content.trim()) {
       alert('Please enter some lyrics before saving.');
       return;
     }
 
-    // Use Electron's save dialog if available
     if (window.electronAPI && window.electronAPI.showSaveDialog) {
       try {
         const result = await window.electronAPI.showSaveDialog({
@@ -154,16 +235,8 @@ const NewSongCanvas = () => {
         
         if (!result.canceled) {
           await window.electronAPI.writeFile(result.filePath, content);
-          const baseName = result.filePath.split('/').pop().replace(/\.txt$/i, '');
+          const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
           setFileName(baseName);
-          
-          // Auto-load the saved file
-          const blob = new Blob([content], { type: 'text/plain' });
-          const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
-          await handleFileUpload(file);
-          
-          // Navigate back to main app
-          navigate('/');
         }
       } catch (err) {
         console.error('Failed to save file:', err);
@@ -183,23 +256,69 @@ const NewSongCanvas = () => {
     }
   };
 
-  const handleLoad = () => {
-    fileInputRef.current?.click();
-  };
+  // Simplified save and load function
+  const handleSaveAndLoad = async () => {
+    if (!content.trim()) {
+      alert('Please enter some lyrics before saving and loading.');
+      return;
+    }
 
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'text/plain') {
+    if (window.electronAPI && window.electronAPI.showSaveDialog) {
       try {
-        // Use parseLyrics to maintain consistency with app's file processing
-        const lyricsArray = await parseLyrics(file);
-        // Convert parsed array back to text for editing
-        setContent(lyricsArray.join('\n'));
-        const baseName = file.name.replace(/\.txt$/i, '');
-        setFileName(baseName);
+        const result = await window.electronAPI.showSaveDialog({
+          defaultPath: fileName || 'untitled.txt',
+          filters: [{ name: 'Text Files', extensions: ['txt'] }]
+        });
+        
+        if (!result.canceled) {
+          // Save the file
+          await window.electronAPI.writeFile(result.filePath, content);
+          const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
+          
+          // Create a simple File object for processing
+          const blob = new Blob([content], { type: 'text/plain' });
+          const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
+          
+          // Store raw content before processing
+          setRawLyricsContent(content);
+          
+          // Process and load into store
+          await handleFileUpload(file);
+          
+          // Navigate back to control panel
+          navigate('/');
+        }
       } catch (err) {
-        console.error('Failed to load file:', err);
-        alert('Failed to load file. Please try again.');
+        console.error('Failed to save and load file:', err);
+        alert('Failed to save and load file. Please try again.');
+      }
+    } else {
+      // Fallback for non-Electron environments
+      try {
+        const baseName = fileName || 'lyrics';
+        const blob = new Blob([content], { type: 'text/plain' });
+        const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
+        
+        // Store raw content before processing
+        setRawLyricsContent(content);
+        
+        // Process and load into store
+        await handleFileUpload(file);
+        
+        // Still trigger download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        navigate('/');
+      } catch (err) {
+        console.error('Failed to process lyrics:', err);
+        alert('Failed to process lyrics. Please try again.');
       }
     }
   };
@@ -216,7 +335,6 @@ const NewSongCanvas = () => {
     
     setContent(newContent);
     
-    // Set cursor position after pasted content
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
@@ -225,11 +343,12 @@ const NewSongCanvas = () => {
     }, 0);
   };
 
+  const isContentEmpty = !content.trim();
+
   return (
     <div className={`flex flex-col h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {/* Fixed Header */}
       <div className={`shadow-sm border-b p-4 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        {/* Top Row - Back button and Title */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={handleBack}
@@ -244,78 +363,35 @@ const NewSongCanvas = () => {
           </button>
           
           <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            New Song Canvas
+            {isEditMode ? "Edit Song Canvas" : "New Song Canvas"}
           </h1>
           
-          <div className="w-[72px]"></div> {/* Spacer for center alignment */}
+          <div className="w-[72px]"></div>
         </div>
-
-        {/* Toolbar */}
         <div className="flex items-center justify-center gap-4">
-          <Button
-            onClick={handleCut}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
-              darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-            variant="ghost"
-          >
-            <Scissors className="w-4 h-4" />
-            Cut
+          <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost">
+            <Scissors className="w-4 h-4" /> Cut
           </Button>
-
-          <Button
-            onClick={handleCopy}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
-              darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-            variant="ghost"
-          >
-            <Copy className="w-4 h-4" />
-            Copy
+          <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost">
+            <Copy className="w-4 h-4" /> Copy
           </Button>
-
-          <Button
-            onClick={handlePaste}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
-              darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-            variant="ghost"
-          >
-            <ClipboardPaste className="w-4 h-4" />
-            Paste
+          <Button onClick={handlePaste} variant="ghost">
+            <ClipboardPaste className="w-4 h-4" /> Paste
           </Button>
-
-          <Button
-            onClick={handleCleanup}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
-              darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-            variant="ghost"
-          >
-            <Wand2 className="w-4 h-4" />
-            Cleanup
+          <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost">
+            <Wand2 className="w-4 h-4" /> Cleanup
           </Button>
-
           <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
-
           <Button
             onClick={handleSave}
+            disabled={isContentEmpty}
             className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200"
           >
-            <Save className="w-4 h-4" />
-            Save
+            <Save className="w-4 h-4" /> Save
           </Button>
-
           <Button
-            onClick={handleLoad}
+            onClick={handleSaveAndLoad}
+            disabled={isContentEmpty}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
               darkMode
                 ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
@@ -323,17 +399,14 @@ const NewSongCanvas = () => {
             }`}
             variant="ghost"
           >
-            <FolderOpen className="w-4 h-4" />
-            Load
+            <FolderOpen className="w-4 h-4" /> Save and Load
           </Button>
         </div>
       </div>
-
+      
       {/* Main Content Area */}
       <div className="flex-1 p-6">
-        <div className={`h-full rounded-lg border ${
-          darkMode ? 'border-gray-600' : 'border-gray-300'
-        }`}>
+        <div className={`h-full rounded-lg border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
           <textarea
             ref={textareaRef}
             value={content}
@@ -349,15 +422,6 @@ const NewSongCanvas = () => {
           />
         </div>
       </div>
-
-      {/* Hidden file input */}
-      <input
-        type="file"
-        accept=".txt"
-        ref={fileInputRef}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
     </div>
   );
 };

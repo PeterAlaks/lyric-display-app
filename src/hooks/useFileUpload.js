@@ -4,24 +4,36 @@ import useLyricsStore from '../context/LyricsStore';
 import useSocket from './useSocket';
 
 const useFileUpload = () => {
-  const { setLyrics, selectLine, setLyricsFileName } = useLyricsStore(); // 👈 include setter
+  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName } = useLyricsStore();
   const { emitLyricsLoad } = useSocket();
 
   const handleFileUpload = useCallback(async (file) => {
     try {
+      // Parse the file to get both raw text and processed lines
       const parsed = await parseLyrics(file);
 
-      setLyrics(parsed);
+      // Store the processed lines for display in the control panel
+      setLyrics(parsed.processedLines);
+      
+      // Store the original raw text for editing purposes
+      // This preserves the exact original formatting
+      setRawLyricsContent(parsed.rawText);
+      
+      // Clear any selected line
       selectLine(null);
-      emitLyricsLoad(parsed);
+      
+      // Emit to connected outputs
+      emitLyricsLoad(parsed.processedLines);
 
-      // 👇 Set the filename without the .txt extension
+      // Set the filename
       const baseName = file.name.replace(/\.txt$/i, '');
       setLyricsFileName(baseName);
+      
     } catch (err) {
       console.error('Failed to read lyrics file:', err);
+      alert('Failed to process lyrics file. Please check the file format and try again.');
     }
-  }, [setLyrics, selectLine, setLyricsFileName, emitLyricsLoad]);
+  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, emitLyricsLoad]);
 
   return handleFileUpload;
 };

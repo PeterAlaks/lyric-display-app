@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
+import { getLineOutputText } from '../utils/parseLyrics';
 
 const Output1 = () => {
   const { socket } = useSocket('output');
@@ -14,7 +15,10 @@ const Output1 = () => {
     selectLine,
     updateOutputSettings,
   } = useLyricsStore();
-  const line = lyrics[selectedLine] || '';
+  
+  // Get the current line and process it for output
+  const currentLine = lyrics[selectedLine];
+  const line = getLineOutputText(currentLine) || '';
 
   useEffect(() => {
     if (!socket) return;
@@ -38,15 +42,11 @@ const Output1 = () => {
         updateOutputSettings('output1', settings);
       }
     });
-    // socket.on('outputToggle', (state) => {
-    //   setIsOutputOn(state); // Zustand global update
-    // });
     return () => {
       socket.off('currentState');
       socket.off('lineUpdate');
       socket.off('lyricsLoad');
       socket.off('styleUpdate');
-      // socket.off('outputToggle');
     };
   }, [socket, selectLine, setLyrics, updateOutputSettings, setIsOutputOn]);
 
@@ -80,8 +80,34 @@ const Output1 = () => {
     return `${backgroundColor}${opacity}`;
   };
 
-  // Apply text transformations
-  const displayText = allCaps ? line.toUpperCase() : line;
+  // Apply text transformations and handle multi-line content
+  const processDisplayText = (text) => {
+    return allCaps ? text.toUpperCase() : text;
+  };
+
+  // Render multi-line content with proper styling for translations
+  const renderContent = () => {
+    const processedText = processDisplayText(line);
+    
+    // Check if we have line breaks (from grouped content)
+    if (processedText.includes('\n')) {
+      const lines = processedText.split('\n');
+      return (
+        <div className="space-y-1">
+          {lines.map((lineText, index) => (
+            <div 
+              key={index} 
+              className={index > 0 ? 'opacity-90' : 'font-medium'}
+            >
+              {lineText}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return processedText;
+  };
 
   return (
     <div
@@ -90,7 +116,7 @@ const Output1 = () => {
         backgroundColor: 'transparent',
       }}
     >
-      {isOutputOn && (
+      {isOutputOn && line && (
         <div
           style={{
             fontFamily: fontStyle,
@@ -105,7 +131,7 @@ const Output1 = () => {
           }}
           className="w-full text-center leading-none"
         >
-          {displayText}
+          {renderContent()}
         </div>
       )}
     </div>

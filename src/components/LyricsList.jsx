@@ -4,6 +4,7 @@
 import React from 'react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
+import { getLineDisplayText, getLineSearchText } from '../utils/parseLyrics';
 
 const LyricsList = ({ 
   lyrics: propLyrics, 
@@ -76,16 +77,37 @@ const LyricsList = ({
 
   return (
     <div className="space-y-2">
-      {lyrics.map((line, index) => (
-        <div
-          key={index}
-          data-line-index={index}
-          className={getLineClassName(index)}
-          onClick={() => handleLineClick(index)}
-        >
-          {highlightSearchTerm(line, searchQuery)}
-        </div>
-      ))}
+      {lyrics.map((line, index) => {
+        // Handle both string lines and grouped line objects
+        const renderContent = () => {
+          if (line && line.type === 'group') {
+            // Grouped line with translation
+            return (
+              <div className="space-y-1">
+                <div className="font-medium">
+                  {highlightSearchTerm(line.mainLine, searchQuery)}
+                </div>
+                <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} italic`}>
+                  {highlightSearchTerm(line.translation, searchQuery)}
+                </div>
+              </div>
+            );
+          }
+          // Regular string line
+          return highlightSearchTerm(line, searchQuery);
+        };
+
+        return (
+          <div
+            key={line && line.type === 'group' ? line.id : `line_${index}`}
+            data-line-index={index}
+            className={getLineClassName(index)}
+            onClick={() => handleLineClick(index)}
+          >
+            {renderContent()}
+          </div>
+        );
+      })}
     </div>
   );
 };

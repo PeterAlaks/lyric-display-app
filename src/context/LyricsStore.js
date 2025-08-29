@@ -7,13 +7,17 @@ import { persist } from 'zustand/middleware';
 
 const useLyricsStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       lyrics: [],
+      rawLyricsContent: '',
       selectedLine: null,
       lyricsFileName: '',
       isOutputOn: true,
       darkMode: false,
+      
+      // Actions
       setLyrics: (lines) => set({ lyrics: lines }),
+      setRawLyricsContent: (content) => set({ rawLyricsContent: content }),
       setLyricsFileName: (name) => set({ lyricsFileName: name }),
       selectLine: (index) => set({ selectedLine: index }),
       setIsOutputOn: (state) => set({ isOutputOn: state }),
@@ -61,6 +65,7 @@ const useLyricsStore = create(
       name: 'lyrics-store',
       partialize: (state) => ({
         lyrics: state.lyrics,
+        rawLyricsContent: state.rawLyricsContent,
         selectedLine: state.selectedLine,
         lyricsFileName: state.lyricsFileName,
         isOutputOn: state.isOutputOn,

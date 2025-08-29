@@ -1,9 +1,11 @@
 import React, { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
 import LyricsList from './LyricsList';
+import { getLineSearchText } from '../utils/parseLyrics';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -12,6 +14,8 @@ import { Button } from "@/components/ui/button";
 
 // Main App Component
 const LyricDisplayApp = () => {
+  const navigate = useNavigate();
+  
   // Global state management
   const {
     isOutputOn,
@@ -93,26 +97,27 @@ const LyricDisplayApp = () => {
 
   // Handle create new song
   const handleCreateNewSong = () => {
-    // TODO: Open NewSongCanvas component
-    console.log('Create new song clicked');
+     navigate('/new-song?mode=new');
   };
 
   // Handle edit current lyrics
   const handleEditLyrics = () => {
-    // TODO: Open NewSongCanvas with current lyrics pre-populated
-    console.log('Edit lyrics clicked');
+     navigate('/new-song?mode=edit');
   };
 
   // Handle file input change
   const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'text/plain') {
-      // Clear search when new file is loaded
-      setSearchQuery('');
-      setHighlightedLineIndex(null);
-      await handleFileUpload(file);
-    }
-  };
+  const file = event.target.files?.[0];
+  if (file && file.type === 'text/plain') {
+    // Clear search when new file is loaded
+    setSearchQuery('');
+    setHighlightedLineIndex(null);
+    setCurrentMatchIndex(0);
+    setTotalMatches(0);
+    setAllMatchIndices([]);
+    await handleFileUpload(file);
+  }
+};
 
   // Handle line selection
   const handleLineSelect = (index) => {
@@ -122,19 +127,21 @@ const LyricDisplayApp = () => {
 
   // Find all matching lines
   const findAllMatches = (query) => {
-    if (!query.trim() || !lyrics || lyrics.length === 0) {
-      return [];
+  if (!query.trim() || !lyrics || lyrics.length === 0) {
+    return [];
+  }
+
+  const matchIndices = [];
+  lyrics.forEach((line, index) => {
+    // Use the helper function to get searchable text for both string and group types
+    const searchText = getLineSearchText(line);
+    if (searchText.toLowerCase().includes(query.toLowerCase())) {
+      matchIndices.push(index);
     }
+  });
 
-    const matchIndices = [];
-    lyrics.forEach((line, index) => {
-      if (line.toLowerCase().includes(query.toLowerCase())) {
-        matchIndices.push(index);
-      }
-    });
-
-    return matchIndices;
-  };
+  return matchIndices;
+};
 
   // Scroll to specific line
   const scrollToLine = (lineIndex) => {
@@ -299,7 +306,7 @@ const LyricDisplayApp = () => {
             onClick={openFileDialog}
           >
             <FolderOpen className="w-5 h-5" />
-            Load lyrics file
+            Load lyrics file (.txt)
           </button>
           <button
             className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${
