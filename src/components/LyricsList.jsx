@@ -12,7 +12,12 @@ const LyricsList = ({
   searchQuery = '', 
   highlightedLineIndex = null 
 }) => {
-  const { lyrics: storeLyrics, selectedLine: storeSelectedLine, selectLine } = useLyricsStore();
+  const { 
+    lyrics: storeLyrics, 
+    selectedLine: storeSelectedLine, 
+    selectLine,
+    darkMode 
+  } = useLyricsStore();
   const { emitLineUpdate } = useSocket();
 
   // Use props if provided, fallback to store (maintains backward compatibility)
@@ -58,8 +63,12 @@ const LyricsList = ({
       // Highlighted search result (yellow/orange)
       baseClasses += 'bg-orange-200 text-orange-900 border-2 border-orange-400';
     } else {
-      // Default styling
-      baseClasses += 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+      // Default styling with dark mode support
+      if (darkMode) {
+        baseClasses += 'bg-gray-700 text-gray-100 hover:bg-gray-600';
+      } else {
+        baseClasses += 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+      }
     }
     
     return baseClasses;

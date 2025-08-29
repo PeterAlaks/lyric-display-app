@@ -12,10 +12,12 @@ const useLyricsStore = create(
       selectedLine: null,
       lyricsFileName: '',
       isOutputOn: true,
+      darkMode: false,
       setLyrics: (lines) => set({ lyrics: lines }),
       setLyricsFileName: (name) => set({ lyricsFileName: name }),
       selectLine: (index) => set({ selectedLine: index }),
       setIsOutputOn: (state) => set({ isOutputOn: state }),
+      setDarkMode: (mode) => set({ darkMode: mode }),
 
       output1Settings: {
         fontStyle: 'Bebas Neue',
@@ -62,6 +64,7 @@ const useLyricsStore = create(
         selectedLine: state.selectedLine,
         lyricsFileName: state.lyricsFileName,
         isOutputOn: state.isOutputOn,
+        darkMode: state.darkMode,
         output1Settings: state.output1Settings,
         output2Settings: state.output2Settings,
       }),

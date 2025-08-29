@@ -8,6 +8,7 @@ const { autoUpdater } = updaterPkg;
 const isDev = !app.isPackaged;
 let backendProcess = null;
 let progressWindow = null;
+let mainWindow = null; // Track main window for menu updates
 
 // Only add compatibility flags for older systems in production
 // and only if we detect it's needed
@@ -287,6 +288,7 @@ function createWindow(route = '/') {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: resolveProductionPath('preload.js') // Add preload for IPC communication
     },
     show: false,
     icon: path.join(__dirname, 'public', 'favicon.ico'),
@@ -302,11 +304,23 @@ function createWindow(route = '/') {
     win.loadURL(`http://localhost:4000/${hashRoute}`);
   }
 
+  // Set as main window if it's the control panel
+  if (route === '/') {
+    mainWindow = win;
+  }
+
   return win;
 }
 
+// Handle dark mode toggle from menu
+function toggleDarkMode() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('toggle-dark-mode');
+  }
+}
+
 // Create menu
-function createMenu(mainWindow) {
+function createMenu(win) {
   const template = [
     {
       label: 'File',
@@ -348,6 +362,13 @@ function createMenu(mainWindow) {
       submenu: [
         { role: 'reload' },
         { role: 'toggledevtools' },
+        { type: 'separator' },
+        {
+          label: 'Dark Mode',
+          type: 'checkbox',
+          checked: false,
+          click: toggleDarkMode,
+        },
         { type: 'separator' },
         { role: 'resetzoom' },
         { role: 'zoomin' },
@@ -407,15 +428,52 @@ function createMenu(mainWindow) {
       ],
     },
   ];
+  
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+  
+  // Update menu checkbox based on current dark mode state
+  updateDarkModeMenu();
 }
+
+// Update dark mode menu checkbox
+function updateDarkModeMenu() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.executeJavaScript(`
+      window.electronStore?.getDarkMode?.() || false
+    `).then(isDark => {
+      const menu = Menu.getApplicationMenu();
+      if (menu) {
+        const viewMenu = menu.items.find(item => item.label === 'View');
+        if (viewMenu) {
+          const darkModeItem = viewMenu.submenu.items.find(item => item.label === 'Dark Mode');
+          if (darkModeItem) {
+            darkModeItem.checked = isDark;
+          }
+        }
+      }
+    }).catch(err => {
+      console.log('Could not get dark mode state:', err);
+    });
+  }
+}
+
+// IPC handlers for dark mode communication
+ipcMain.handle('get-dark-mode', () => {
+  // This will be handled by the renderer process
+  return false;
+});
+
+ipcMain.handle('set-dark-mode', (event, isDark) => {
+  updateDarkModeMenu();
+  return true;
+});
 
 // App lifecycle
 app.whenReady().then(() => {
   startBackend();
-  const mainWindow = createWindow('/');
-  createMenu(mainWindow);
+  const mainWin = createWindow('/');
+  createMenu(mainWin);
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow('/');

@@ -27,7 +27,8 @@ const fontOptions = [
 const OutputSettingsPanel = ({ outputKey }) => {
   const {
     [outputKey + 'Settings']: settings,
-    updateOutputSettings
+    updateOutputSettings,
+    darkMode
   } = useLyricsStore();
   const { emitStyleUpdate } = useSocket('control');
 
@@ -40,14 +41,16 @@ const OutputSettingsPanel = ({ outputKey }) => {
   // Reusable label with icon
   const LabelWithIcon = ({ icon: Icon, text }) => (
     <div className="flex items-center gap-2 min-w-[140px]">
-      <Icon className="w-4 h-4 text-gray-500" />
-      <label className="text-sm text-gray-700">{text}</label>
+      <Icon className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+      <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{text}</label>
     </div>
   );
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+      <h3 className={`text-sm font-medium uppercase tracking-wide ${
+        darkMode ? 'text-gray-400' : 'text-gray-500'
+      }`}>
         {outputKey.toUpperCase()} SETTINGS
       </h3>
 
@@ -55,12 +58,21 @@ const OutputSettingsPanel = ({ outputKey }) => {
       <div className="flex items-center justify-between gap-4">
         <LabelWithIcon icon={Type} text="Font Style" />
         <Select value={settings.fontStyle} onValueChange={(val) => update('fontStyle', val)}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className={`w-full ${
+            darkMode 
+              ? 'bg-gray-700 border-gray-600 text-gray-200' 
+              : 'bg-white border-gray-300'
+          }`}>
             <SelectValue placeholder="Select font" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
             {fontOptions.map((font) => (
-              <SelectItem key={font} value={font} style={{ fontFamily: font }}>
+              <SelectItem 
+                key={font} 
+                value={font} 
+                style={{ fontFamily: font }}
+                className={darkMode ? 'text-gray-200 hover:bg-gray-600' : ''}
+              >
                 {font}
               </SelectItem>
             ))}
@@ -77,6 +89,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             variant={settings.bold ? 'default' : 'outline'}
             onClick={() => update('bold', !settings.bold)}
             title="Bold"
+            className={!settings.bold && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
           >
             <Bold className="w-4 h-4" />
           </Button>
@@ -85,6 +98,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             variant={settings.italic ? 'default' : 'outline'}
             onClick={() => update('italic', !settings.italic)}
             title="Italic"
+            className={!settings.italic && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
           >
             <Italic className="w-4 h-4" />
           </Button>
@@ -93,6 +107,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             variant={settings.underline ? 'default' : 'outline'}
             onClick={() => update('underline', !settings.underline)}
             title="Underline"
+            className={!settings.underline && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
           >
             <Underline className="w-4 h-4" />
           </Button>
@@ -101,6 +116,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             variant={settings.allCaps ? 'default' : 'outline'}
             onClick={() => update('allCaps', !settings.allCaps)}
             title="All Caps"
+            className={!settings.allCaps && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
           >
             <CaseUpper className="w-4 h-4" />
           </Button>
@@ -116,7 +132,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
           onChange={(e) => update('fontSize', parseInt(e.target.value))}
           min="24"
           max="100"
-          className="w-24"
+          className={`w-24 ${
+            darkMode 
+              ? 'bg-gray-700 border-gray-600 text-gray-200' 
+              : 'bg-white border-gray-300'
+          }`}
         />
       </div>
 
@@ -127,7 +147,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
           type="color"
           value={settings.fontColor}
           onChange={(e) => update('fontColor', e.target.value)}
-          className="h-9 w-12 p-1"
+          className={`h-9 w-12 p-1 ${
+            darkMode 
+              ? 'bg-gray-700 border-gray-600' 
+              : 'bg-white border-gray-300'
+          }`}
         />
       </div>
 
@@ -139,7 +163,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
             type="color"
             value={settings.dropShadowColor}
             onChange={(e) => update('dropShadowColor', e.target.value)}
-            className="h-9 w-12 p-1"
+            className={`h-9 w-12 p-1 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600' 
+                : 'bg-white border-gray-300'
+            }`}
           />
           <Input
             type="number"
@@ -147,7 +175,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
             onChange={(e) => update('dropShadowOpacity', parseInt(e.target.value))}
             min="0"
             max="10"
-            className="w-20"
+            className={`w-20 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-gray-200' 
+                : 'bg-white border-gray-300'
+            }`}
           />
         </div>
       </div>
@@ -160,7 +192,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
             type="color"
             value={settings.backgroundColor}
             onChange={(e) => update('backgroundColor', e.target.value)}
-            className="h-9 w-12 p-1"
+            className={`h-9 w-12 p-1 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600' 
+                : 'bg-white border-gray-300'
+            }`}
           />
           <Input
             type="number"
@@ -168,7 +204,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
             onChange={(e) => update('backgroundOpacity', parseInt(e.target.value))}
             min="0"
             max="10"
-            className="w-20"
+            className={`w-20 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-gray-200' 
+                : 'bg-white border-gray-300'
+            }`}
           />
         </div>
       </div>
@@ -181,13 +221,21 @@ const OutputSettingsPanel = ({ outputKey }) => {
             type="number"
             value={settings.xMargin}
             onChange={(e) => update('xMargin', parseFloat(e.target.value))}
-            className="w-20"
+            className={`w-20 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-gray-200' 
+                : 'bg-white border-gray-300'
+            }`}
           />
           <Input
             type="number"
             value={settings.yMargin}
             onChange={(e) => update('yMargin', parseFloat(e.target.value))}
-            className="w-20"
+            className={`w-20 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-gray-200' 
+                : 'bg-white border-gray-300'
+            }`}
           />
         </div>
       </div>

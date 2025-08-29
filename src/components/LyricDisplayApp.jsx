@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { RefreshCw, Plus, X } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
@@ -22,8 +22,30 @@ const LyricDisplayApp = () => {
     selectLine,
     output1Settings,
     output2Settings,
-    updateOutputSettings
+    updateOutputSettings,
+    darkMode,
+    setDarkMode
   } = useLyricsStore();
+
+  // Handle dark mode toggle from Electron menu
+  React.useEffect(() => {
+    if (window.electronAPI) {
+      const handleDarkModeToggle = () => {
+        const newDarkMode = !darkMode;
+        setDarkMode(newDarkMode);
+        window.electronAPI.setDarkMode(newDarkMode);
+      };
+
+      window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
+
+      // Update menu state on mount
+      window.electronAPI.setDarkMode(darkMode);
+
+      return () => {
+        window.electronAPI.removeAllListeners('toggle-dark-mode');
+      };
+    }
+  }, [darkMode, setDarkMode]);
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate } = useSocket('control');
 
@@ -34,9 +56,12 @@ const LyricDisplayApp = () => {
   // Tabs
   const [activeTab, setActiveTab] = React.useState('output1');
 
-  // Search state
+  // Search state - Enhanced navigation
   const [searchQuery, setSearchQuery] = React.useState('');
   const [highlightedLineIndex, setHighlightedLineIndex] = React.useState(null);
+  const [currentMatchIndex, setCurrentMatchIndex] = React.useState(0);
+  const [totalMatches, setTotalMatches] = React.useState(0);
+  const [allMatchIndices, setAllMatchIndices] = React.useState([]);
 
   // Ref for scrollable container
   const lyricsContainerRef = useRef(null);
@@ -66,6 +91,18 @@ const LyricDisplayApp = () => {
     fileInputRef.current?.click();
   };
 
+  // Handle create new song
+  const handleCreateNewSong = () => {
+    // TODO: Open NewSongCanvas component
+    console.log('Create new song clicked');
+  };
+
+  // Handle edit current lyrics
+  const handleEditLyrics = () => {
+    // TODO: Open NewSongCanvas with current lyrics pre-populated
+    console.log('Edit lyrics clicked');
+  };
+
   // Handle file input change
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -83,41 +120,111 @@ const LyricDisplayApp = () => {
     emitLineUpdate(index);
   };
 
-  // Find first match and scroll to it
+  // Find all matching lines
+  const findAllMatches = (query) => {
+    if (!query.trim() || !lyrics || lyrics.length === 0) {
+      return [];
+    }
+
+    const matchIndices = [];
+    lyrics.forEach((line, index) => {
+      if (line.toLowerCase().includes(query.toLowerCase())) {
+        matchIndices.push(index);
+      }
+    });
+
+    return matchIndices;
+  };
+
+  // Scroll to specific line
+  const scrollToLine = (lineIndex) => {
+    setTimeout(() => {
+      const container = lyricsContainerRef.current;
+      if (container) {
+        const lineElements = container.querySelectorAll('[data-line-index]');
+        const targetElement = lineElements[lineIndex];
+        
+        if (targetElement) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      }
+    }, 50);
+  };
+
+  // Navigate to specific match
+  const navigateToMatch = (matchIndex) => {
+    if (allMatchIndices.length === 0) return;
+
+    const clampedIndex = Math.max(0, Math.min(matchIndex, allMatchIndices.length - 1));
+    const lineIndex = allMatchIndices[clampedIndex];
+    
+    setCurrentMatchIndex(clampedIndex);
+    setHighlightedLineIndex(lineIndex);
+    scrollToLine(lineIndex);
+  };
+
+  // Navigate to next match
+  const navigateToNextMatch = () => {
+    if (allMatchIndices.length === 0) return;
+    
+    const nextIndex = currentMatchIndex >= allMatchIndices.length - 1 ? 0 : currentMatchIndex + 1;
+    navigateToMatch(nextIndex);
+  };
+
+  // Navigate to previous match
+  const navigateToPreviousMatch = () => {
+    if (allMatchIndices.length === 0) return;
+    
+    const prevIndex = currentMatchIndex <= 0 ? allMatchIndices.length - 1 : currentMatchIndex - 1;
+    navigateToMatch(prevIndex);
+  };
+
+  // Handle keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.shiftKey && searchQuery && allMatchIndices.length > 0) {
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          navigateToPreviousMatch();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          navigateToNextMatch();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchQuery, allMatchIndices, currentMatchIndex]);
+
+  // Enhanced search handler
   const handleSearch = (query) => {
     setSearchQuery(query);
     
     if (!query.trim()) {
       setHighlightedLineIndex(null);
+      setCurrentMatchIndex(0);
+      setTotalMatches(0);
+      setAllMatchIndices([]);
       return;
     }
 
-    // Find first matching line
-    const firstMatchIndex = lyrics.findIndex(line => 
-      line.toLowerCase().includes(query.toLowerCase())
-    );
+    // Find all matches
+    const matchIndices = findAllMatches(query);
+    setAllMatchIndices(matchIndices);
+    setTotalMatches(matchIndices.length);
 
-    if (firstMatchIndex !== -1) {
-      setHighlightedLineIndex(firstMatchIndex);
-      
-      // Scroll to the matched line
-      setTimeout(() => {
-        const container = lyricsContainerRef.current;
-        if (container) {
-          const lineElements = container.querySelectorAll('[data-line-index]');
-          const targetElement = lineElements[firstMatchIndex];
-          
-          if (targetElement) {
-            targetElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center'
-            });
-          }
-        }
-      }, 50); // Small delay to ensure DOM is updated
+    if (matchIndices.length > 0) {
+      // Start with first match
+      setCurrentMatchIndex(0);
+      setHighlightedLineIndex(matchIndices[0]);
+      scrollToLine(matchIndices[0]);
     } else {
       setHighlightedLineIndex(null);
-      // No matches found - scroll position remains unchanged
+      setCurrentMatchIndex(0);
     }
   };
 
@@ -125,6 +232,9 @@ const LyricDisplayApp = () => {
   const clearSearch = () => {
     setSearchQuery('');
     setHighlightedLineIndex(null);
+    setCurrentMatchIndex(0);
+    setTotalMatches(0);
+    setAllMatchIndices([]);
   };
 
   console.log('Toggle emitted:', !isOutputOn)
@@ -148,14 +258,18 @@ const LyricDisplayApp = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
+    <div className={`flex h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {/* Left Sidebar - Control Panel */}
-      <div className="w-[420px] bg-white shadow-lg p-6 overflow-y-auto">
+      <div className={`w-[420px] shadow-lg p-6 overflow-y-auto ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">LyricDisplay</h1>
+          <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>LyricDisplay</h1>
           <button
-            className="flex items-center gap-2 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
+            className={`flex items-center gap-2 px-3 py-1 rounded font-medium transition-colors ${
+              darkMode 
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
             title="Sync current state to outputs"
             onClick={() => {
               if (lyrics && lyrics.length > 0) {
@@ -178,14 +292,27 @@ const LyricDisplayApp = () => {
           </button>
         </div>
 
-        {/* Add Lyrics Button */}
-        <button
-          className="w-full mb-3 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
-          onClick={openFileDialog}
-        >
-          <Plus className="w-5 h-5" />
-          Add lyrics file (.txt)
-        </button>
+        {/* Load and Create Buttons */}
+        <div className="flex gap-3 mb-3">
+          <button
+            className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
+            onClick={openFileDialog}
+          >
+            <FolderOpen className="w-5 h-5" />
+            Load lyrics file
+          </button>
+          <button
+            className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${
+              darkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+            onClick={handleCreateNewSong}
+            title="Create new lyrics"
+          >
+            <FileText className="w-5 h-5" />
+          </button>
+        </div>
         <input
           type="file"
           accept=".txt"
@@ -196,26 +323,32 @@ const LyricDisplayApp = () => {
 
         {/* Current File Indicator */}
         {hasLyrics && (
-          <div className="mb-6 text-sm font-semibold text-gray-600">
+          <div className={`mb-6 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {lyricsFileName}
           </div>
         )}
 
         {/* Output Toggle */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4 mx-2">
-            <Switch
-              checked={isOutputOn}
-              onCheckedChange={handleToggle}
-              className="scale-[1.8] data-[state=checked]:bg-black"
-            />
-            <span className="text-sm text-gray-600 ml-5">
-              {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
-            </span>
-          </div>
-        </div>
+  <div className="flex items-center gap-4 mx-2">
+    <Switch
+      checked={isOutputOn}
+      onCheckedChange={handleToggle}
+      className={`
+        scale-[1.8]
+        ${darkMode
+          ? "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600"
+          : "data-[state=checked]:bg-black"}
+      `}
+    />
+    <span className={`text-sm ml-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+      {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
+    </span>
+  </div>
+</div>
 
-        <div className="border-t border-gray-100 my-10"></div>
+
+        <div className={`border-t my-10 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
         {/* Output Settings */}
         <div className="mb-6">
@@ -228,11 +361,13 @@ const LyricDisplayApp = () => {
         </div>
 
         {/* Output Tabs */}
-        <div className="flex rounded-lg overflow-hidden border border-gray-200">
+        <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
           <button
             className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
               activeTab === 'output1'
                 ? 'bg-black text-white'
+                : darkMode
+                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
             onClick={() => setActiveTab('output1')}
@@ -243,6 +378,8 @@ const LyricDisplayApp = () => {
             className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
               activeTab === 'output2'
                 ? 'bg-black text-white'
+                : darkMode
+                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
             onClick={() => setActiveTab('output2')}
@@ -251,9 +388,9 @@ const LyricDisplayApp = () => {
           </button>
         </div>
 
-        <div className="border-t border-gray-100 my-10"></div>
+        <div className={`border-t my-10 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
-        <div className="mt-4 text-[12px] text-gray-600 text-left">
+        <div className={`mt-4 text-[12px] text-left ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.
         </div>
       </div>
@@ -262,35 +399,103 @@ const LyricDisplayApp = () => {
       <div className="flex-1 p-6 flex flex-col h-screen">
         {/* Fixed Header */}
         <div className="mb-6 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {hasLyrics ? lyricsFileName : ''}
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              {hasLyrics ? lyricsFileName : ''}
+            </h2>
+            {hasLyrics && (
+              <button
+                onClick={handleEditLyrics}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
+                  darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              >
+                <Edit className="w-4 h-4" />
+                Edit
+              </button>
+            )}
+          </div>
 
           {/* Search Bar */}
           {hasLyrics && (
-            <div className="mt-3 w-full relative">
-              <Input
-                type="text"
-                placeholder="Search lyrics..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="border border-gray-300 rounded-md w-full pr-10"
-              />
+            <div className="mt-3 w-full">
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Search lyrics..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className={`border rounded-md w-full pr-24 ${
+                    darkMode 
+                      ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400' 
+                      : 'border-gray-300 bg-white'
+                  }`}
+                />
+                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                  {searchQuery && allMatchIndices.length > 0 && (
+                    <>
+                      <button
+                        onClick={navigateToPreviousMatch}
+                        className={`p-1 rounded transition-colors ${
+                          darkMode 
+                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        }`}
+                        title="Previous match (Shift+Up)"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={navigateToNextMatch}
+                        className={`p-1 rounded transition-colors ${
+                          darkMode 
+                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        }`}
+                        title="Next match (Shift+Down)"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                  {searchQuery && (
+                    <button
+                      onClick={clearSearch}
+                      className={`p-1 rounded transition-colors ${
+                        darkMode 
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      }`}
+                      title="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Match Counter */}
               {searchQuery && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className={`mt-2 text-sm ${
+                  darkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                  {totalMatches > 0 ? (
+                    `Showing result ${currentMatchIndex + 1} of ${totalMatches} matches`
+                  ) : (
+                    'No matches found'
+                  )}
+                </div>
               )}
             </div>
           )}
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
+        <div className={`rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden ${
+          darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
+        }`}>
           {hasLyrics ? (
             <div
               ref={lyricsContainerRef}
@@ -344,10 +549,14 @@ const LyricDisplayApp = () => {
               }}
             >
               <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-                  <Plus className="w-10 h-10 text-gray-400" />
+                <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                  darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                }`}>
+                  <FolderOpen className={`w-10 h-10 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} />
                 </div>
-                <p className="text-gray-500 text-lg">Drag and drop TXT lyric files here</p>
+                <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Drag and drop TXT lyric files here
+                </p>
               </div>
             </div>
           )}
