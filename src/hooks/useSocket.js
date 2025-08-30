@@ -147,6 +147,7 @@ const useSocket = (role = 'output') => {
   };
 
   return {
+    socket: socketRef.current,
     emitLineUpdate,
     emitLyricsLoad,
     emitStyleUpdate,

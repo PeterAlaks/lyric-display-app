@@ -5,6 +5,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleDarkMode: () => ipcRenderer.invoke('toggle-dark-mode'),
   getDarkMode: () => ipcRenderer.invoke('get-dark-mode'),
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
+  syncNativeDarkMode: (isDark) => ipcRenderer.invoke('sync-native-dark-mode', isDark),
+  loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
+  newLyricsFile: () => ipcRenderer.invoke('new-lyrics-file'),
+  onTriggerFileLoad: (callback) => {
+    ipcRenderer.removeAllListeners('trigger-file-load');
+    ipcRenderer.on('trigger-file-load', callback);
+  },
+  
+  onNavigateToNewSong: (callback) => {
+    ipcRenderer.removeAllListeners('navigate-to-new-song');
+    ipcRenderer.on('navigate-to-new-song', callback);
+  },
 
   onDarkModeToggle: (callback) => ipcRenderer.on('toggle-dark-mode', callback),
 

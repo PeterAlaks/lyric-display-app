@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Type,
   Paintbrush,
+  Contrast,
   TextCursorInput,
   TextQuote,
   Square,
@@ -157,7 +158,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Drop Shadow */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={TextQuote} text="Drop Shadow" />
+        <LabelWithIcon icon={Contrast} text="Drop Shadow" />
         <div className="flex gap-2 items-center">
           <Input
             type="color"

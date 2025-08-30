@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, shell, dialog, ipcMain, nativeTheme } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { fork } from 'child_process';
@@ -180,29 +180,57 @@ function closeProgressWindow() {
 
 // Start backend process
 function startBackend() {
-  const serverPath = resolveProductionPath('server', 'index.js');
-  backendProcess = fork(serverPath, [], {
-    cwd: path.dirname(serverPath),
-    env: { ...process.env, NODE_ENV: isDev ? 'development' : 'production' },
-    stdio: ['inherit', 'inherit', 'inherit', 'ipc'], // ✅ 'ipc' needed to receive messages
-  });
+  return new Promise((resolve, reject) => {
+    const serverPath = resolveProductionPath('server', 'index.js');
+    backendProcess = fork(serverPath, [], {
+      cwd: path.dirname(serverPath),
+      env: { ...process.env, NODE_ENV: isDev ? 'development' : 'production' },
+      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+    });
 
-  backendProcess.on('error', (err) => {
-    console.error('Backend process error:', err);
-  });
+    let isResolved = false;
+    const timeout = setTimeout(() => {
+      if (!isResolved) {
+        console.log('Backend startup timeout, proceeding anyway...');
+        isResolved = true;
+        resolve();
+      }
+    }, 10000); // 10 second timeout
 
-  backendProcess.on('exit', (code) => {
-    if (code !== 0) {
-      console.error('Backend process exited with code', code);
-    }
-  });
+    backendProcess.on('error', (err) => {
+      console.error('Backend process error:', err);
+      if (!isResolved) {
+        isResolved = true;
+        clearTimeout(timeout);
+        reject(err);
+      }
+    });
 
-  // ✅ Listen for "ready" signal from backend
-  backendProcess.on('message', (msg) => {
-    if (msg?.status === 'ready') {
-      console.log('✅ Backend reported ready, starting update check...');
-      checkForUpdates(false); // silent mode
-    }
+    backendProcess.on('exit', (code) => {
+      if (code !== 0) {
+        console.error('Backend process exited with code', code);
+      }
+    });
+
+    // Listen for "ready" signal from backend
+    backendProcess.on('message', (msg) => {
+      if (msg?.status === 'ready' && !isResolved) {
+        console.log('✅ Backend reported ready');
+        isResolved = true;
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+
+    // Fallback: if no message received in reasonable time, proceed anyway
+    setTimeout(() => {
+      if (!isResolved) {
+        console.log('Backend ready message not received, proceeding...');
+        isResolved = true;
+        clearTimeout(timeout);
+        resolve();
+      }
+    }, 5000); // 5 second fallback
   });
 }
 
@@ -291,17 +319,38 @@ function createWindow(route = '/') {
       contextIsolation: true,
       preload: resolveProductionPath('preload.js')
     },
-    show: false,
+    show: false, // Keep this false initially
     icon: path.join(__dirname, 'public', 'favicon.ico'),
+    backgroundColor: isDev ? '#ffffff' : '#f9fafb', // Light gray background while loading
   });
 
-  win.once('ready-to-show', () => win.show());
+  // Show window when ready to show, with a small delay to ensure content is loaded
+  win.once('ready-to-show', () => {
+    setTimeout(() => {
+      win.show();
+      if (isDev) {
+        win.webContents.openDevTools({ mode: 'detach' });
+      }
+    }, 100); // Small delay to ensure content is ready
+  });
 
+  // Handle loading and navigation
   if (isDev) {
     win.loadURL(`http://localhost:5173${route}`);
-    win.webContents.openDevTools({ mode: 'detach' });
   } else {
     const hashRoute = route === '/' ? '/' : `#${route}`;
+    
+    // Add error handling for production loading
+    win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load:', errorCode, errorDescription, validatedURL);
+      
+      // Retry loading after a short delay
+      setTimeout(() => {
+        console.log('Retrying load...');
+        win.loadURL(`http://localhost:4000/${hashRoute}`);
+      }, 1000);
+    });
+    
     win.loadURL(`http://localhost:4000/${hashRoute}`);
   }
 
@@ -317,6 +366,11 @@ function createWindow(route = '/') {
 function toggleDarkMode() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('toggle-dark-mode');
+    
+    // Also update the menu checkbox immediately
+    setTimeout(() => {
+      updateDarkModeMenu();
+    }, 100);
   }
 }
 
@@ -327,6 +381,25 @@ function createMenu(win) {
       label: 'File',
       submenu: [
         {
+          label: 'Load Lyrics File',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('trigger-file-load');
+            }
+          },
+        },
+        {
+          label: 'New Lyrics File',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('navigate-to-new-song');
+            }
+          },
+        },
+        { type: 'separator' },
+        {
           label: 'Preview Output 1',
           accelerator: 'CmdOrCtrl+1',
           click: () => createWindow('/output1'),
@@ -335,12 +408,6 @@ function createMenu(win) {
           label: 'Preview Output 2',
           accelerator: 'CmdOrCtrl+2',
           click: () => createWindow('/output2'),
-        },
-        { type: 'separator' },
-        {
-          label: 'Open Project Folder',
-          accelerator: 'CmdOrCtrl+O',
-          click: () => shell.openPath(__dirname),
         },
         { type: 'separator' },
         { role: 'quit' },
@@ -443,6 +510,9 @@ function updateDarkModeMenu() {
     mainWindow.webContents.executeJavaScript(`
       window.electronStore?.getDarkMode?.() || false
     `).then(isDark => {
+      // Sync native theme
+      nativeTheme.themeSource = isDark ? 'dark' : 'light';
+      
       const menu = Menu.getApplicationMenu();
       if (menu) {
         const viewMenu = menu.items.find(item => item.label === 'View');
@@ -491,14 +561,96 @@ ipcMain.handle('write-file', async (event, filePath, content) => {
   }
 });
 
+ipcMain.handle('load-lyrics-file', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [{ name: 'Text Files', extensions: ['txt'] }]
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      const fs = await import('fs/promises');
+      const content = await fs.readFile(result.filePaths[0], 'utf8');
+      const fileName = result.filePaths[0].split(/[\\/]/).pop();
+      
+      return {
+        success: true,
+        content,
+        fileName
+      };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    console.error('Error loading lyrics file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('new-lyrics-file', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('navigate-to-new-song');
+  }
+});
+
+ipcMain.handle('sync-native-dark-mode', (event, isDark) => {
+  try {
+    nativeTheme.themeSource = isDark ? 'dark' : 'light';
+    return { success: true };
+  } catch (error) {
+    console.error('Error syncing native dark mode:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // App lifecycle
-app.whenReady().then(() => {
-  startBackend();
-  const mainWin = createWindow('/');
-  createMenu(mainWin);
+app.whenReady().then(async () => {
+  try {
+    // Start backend and wait for it to be ready
+    await startBackend();
+    console.log('✅ Backend started successfully');
+    
+    // Small additional delay to ensure server is fully listening
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Now create the main window
+    const mainWin = createWindow('/');
+    createMenu(mainWin);
+    
+    // Initialize native theme based on system preference
+    nativeTheme.themeSource = 'system';
+    
+    // Listen for system theme changes
+    nativeTheme.on('updated', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        updateDarkModeMenu();
+      }
+    });
+
+    // Start update check after everything is ready
+    setTimeout(() => {
+      if (!isDev) {
+        checkForUpdates(false); // silent mode
+      }
+    }, 2000);
+
+  } catch (error) {
+    console.error('Failed to start backend:', error);
+    
+    // Create window anyway but with error handling
+    const mainWin = createWindow('/');
+    createMenu(mainWin);
+    
+    dialog.showErrorBox(
+      'Startup Error', 
+      'There was an issue starting the backend server. Some features may not work properly.'
+    );
+  }
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow('/');
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow('/');
+    }
   });
 });
 

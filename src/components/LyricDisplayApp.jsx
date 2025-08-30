@@ -32,24 +32,49 @@ const LyricDisplayApp = () => {
   } = useLyricsStore();
 
   // Handle dark mode toggle from Electron menu
-  React.useEffect(() => {
-    if (window.electronAPI) {
-      const handleDarkModeToggle = () => {
-        const newDarkMode = !darkMode;
-        setDarkMode(newDarkMode);
-        window.electronAPI.setDarkMode(newDarkMode);
-      };
+ React.useEffect(() => {
+  if (window.electronAPI) {
+    const handleDarkModeToggle = () => {
+      const newDarkMode = !darkMode;
+      setDarkMode(newDarkMode);
+      window.electronAPI.setDarkMode(newDarkMode);
+      // Sync with native theme
+      window.electronAPI.syncNativeDarkMode(newDarkMode);
+    };
 
-      window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
+    window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
+    window.electronAPI.setDarkMode(darkMode);
+    // Sync initial state with native theme
+    window.electronAPI.syncNativeDarkMode(darkMode);
 
-      // Update menu state on mount
-      window.electronAPI.setDarkMode(darkMode);
+    return () => {
+      window.electronAPI.removeAllListeners('toggle-dark-mode');
+    };
+  }
+}, [darkMode, setDarkMode]);
 
-      return () => {
-        window.electronAPI.removeAllListeners('toggle-dark-mode');
-      };
-    }
-  }, [darkMode, setDarkMode]);
+  // Menu event handlers
+React.useEffect(() => {
+  if (window.electronAPI) {
+    // Handle Ctrl+O - Load Lyrics File
+    const handleTriggerFileLoad = () => {
+      fileInputRef.current?.click();
+    };
+
+    // Handle Ctrl+N - New Lyrics File
+    const handleNavigateToNewSong = () => {
+      navigate('/new-song?mode=new');
+    };
+
+    window.electronAPI.onTriggerFileLoad(handleTriggerFileLoad);
+    window.electronAPI.onNavigateToNewSong(handleNavigateToNewSong);
+
+    return () => {
+      window.electronAPI.removeAllListeners('trigger-file-load');
+      window.electronAPI.removeAllListeners('navigate-to-new-song');
+    };
+  }
+}, [navigate]);
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate } = useSocket('control');
 
