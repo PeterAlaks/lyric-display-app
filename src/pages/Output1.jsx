@@ -221,24 +221,24 @@ const Output1 = () => {
         backgroundColor: 'transparent',
       }}
     >
-      {isOutputOn && line && (
-        <div
-          style={{
-            fontFamily: fontStyle,
-            fontSize: `${fontSize}px`,
-            fontWeight: bold ? 'bold' : 'normal',
-            fontStyle: italic ? 'italic' : 'normal',
-            textDecoration: underline ? 'underline' : 'none',
-            color: fontColor,
-            textShadow: getTextShadow(),
-            backgroundColor: getBackground(),
-            padding: `${yMargin}rem ${xMargin}rem`,
-          }}
-          className="w-full text-center leading-none"
-        >
-          {renderContent()}
-        </div>
-      )}
+     <div
+        style={{
+          fontFamily: fontStyle,
+          fontSize: `${fontSize}px`,
+          fontWeight: bold ? 'bold' : 'normal',
+          fontStyle: italic ? 'italic' : 'normal',
+          textDecoration: underline ? 'underline' : 'none',
+          color: fontColor,
+          textShadow: getTextShadow(),
+          backgroundColor: getBackground(),
+          padding: `${yMargin}rem ${xMargin}rem`,
+          opacity: isOutputOn && line ? 1 : 0,
+          pointerEvents: isOutputOn && line ? 'auto' : 'none',
+        }}
+        className="w-full text-center leading-none transition-opacity duration-500 ease-in-out"
+>
+  {renderContent()}
+</div>
     </div>
   );
 };
