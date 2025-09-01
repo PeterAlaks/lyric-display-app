@@ -1,179 +1,273 @@
-# LyricDisplay App
+# LyricDisplay
 
-A real-time, multi-output lyric display system with a web-based control panel. Built with React, Vite, Express, and Socket.io, and optionally packaged as a desktop app with Electron. Designed for live performances, streaming, and presentations where dynamic lyric control and display are required.
+> Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
----
+**Version:** 2.1.1  
+**Author:** Peter Alakembi  
+**Built for:** Victory City Media  
 
-## Table of Contents
-- [Project Overview](#project-overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Screenshots](#screenshots)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Folder Structure](#folder-structure)
-- [Technologies Used](#technologies-used)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+## Overview
 
----
+LyricDisplay is a comprehensive Electron-based application designed for professional live production environments. It provides real-time lyric synchronization across multiple transparent output displays, making it ideal for church services, concerts, and live streaming setups where lyrics need to be displayed both in-house and for broadcast.
 
-## Project Overview
-LyricDisplay enables real-time control and display of song lyrics across multiple output screens. The system consists of a web-based control panel for managing lyrics and one or more output pages for displaying lyrics to an audience. Communication between the control panel and output screens is handled via WebSockets (Socket.io).
+## Key Features
 
----
+### 🎯 Multi-Output Display System
+- **Dual Independent Outputs**: Two separate output windows with individual styling controls
+- **Transparent Backgrounds**: Perfect for OBS/VMIX browser source capture
+- **Real-time Synchronization**: Instant updates across all connected displays
+- **Browser Source Compatible**: Works seamlessly with popular streaming software
 
-## Features
-- Real-time lyric updates across multiple output screens
-- Web-based control panel for managing lyrics and settings
-- Multiple output pages (e.g., Output1, Output2) for different displays
-- Customizable output settings (font, color, etc.)
-- Responsive, modern UI using Radix UI and Tailwind CSS
-- State management with Zustand
-- Backend server with Express and Socket.io
-- Electron packaging for desktop deployment
+### 📝 Advanced Lyric Management
+- **Smart Text Processing**: Automatic formatting with religious word capitalization
+- **Translation Support**: Groups main lyrics with bracketed translations `[Like this]`
+- **Live Editing Canvas**: Built-in editor with formatting tools and auto-cleanup
+- **Search & Navigation**: Advanced search with match highlighting and keyboard navigation
 
----
+### 🎨 Comprehensive Styling Engine
+- **13 Professional Fonts**: Including custom GarnetCapitals font
+- **Typography Controls**: Bold, italic, underline, and all-caps options
+- **Color Customization**: Independent font and drop shadow colors
+- **Background Controls**: Adjustable opacity and color settings
+- **Precise Positioning**: X/Y margin controls for pixel-perfect placement
 
-## Architecture
-- **Frontend:** React (Vite), Zustand, Radix UI, Tailwind CSS
-- **Backend:** Node.js, Express, Socket.io
-- **Desktop:** Electron (optional)
-- **Communication:** WebSockets for real-time updates
+### 🔧 Professional Features
+- **Auto-Updates**: Seamless background updates via GitHub releases
+- **Dark Mode**: System-integrated dark/light theme switching
+- **Keyboard Shortcuts**: Full menu-driven workflow
+- **Cross-Platform**: Windows, macOS, and Linux support
+- **Socket.io Backend**: Reliable real-time communication
 
----
+## Installation
 
-## Screenshots
-<!-- Add screenshots to docs/screenshots/ and update the paths below -->
-![Control Panel](public/screenshots/Default.png)
-![Control Panel - Lyrics Loaded](public/screenshots/Added%20Lyrics.png)
+### Pre-built Releases (Recommended)
+1. Download the latest release from [GitHub Releases](https://github.com/PeterAlaks/lyric-display-updates/releases)
+2. Run the installer for your platform
+3. Launch LyricDisplay
 
----
+### Development Setup
+```bash
+# Clone the repository
+git clone https://github.com/PeterAlaks/lyric-display-app.git
+cd lyric-display-app
 
-## Getting Started
+# Install dependencies
+npm install
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v16 or higher recommended)
-- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
-
-### Installation
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/PeterAlaks/lyric-display-app.git
-   cd lyric-display-app
-   ```
-2. Install dependencies for both the main app and backend server:
-   ```sh
-   npm install
-   cd server && npm install && cd ..
-   ```
-
----
-
-## Usage
-
-### Development
-Start the frontend and backend in separate terminals:
-```sh
-# Terminal 1: Start the frontend (Vite)
-npm run dev
-
-# Terminal 2: Start the backend server
-npm run server
-```
-- The frontend will be available at [http://localhost:5173](http://localhost:5173)
-- The backend server will run on the port specified in `.env` (default: 3001)
-
-### Production Build
-To build the frontend for production:
-```sh
-npm run build
-```
-To preview the production build:
-```sh
-npm run preview
-```
-
-### Electron Desktop App
-To run in Electron (development):
-```sh
+# Development mode
 npm run electron-dev
-```
-To package as a desktop app:
-```sh
+
+# Build for production
 npm run electron-pack
 ```
 
----
+## Quick Start Guide
+
+### 1. Loading Lyrics
+- **File Menu → Load Lyrics File** (Ctrl/Cmd+O)
+- **Drag & Drop**: Drop .txt files directly into the main panel
+- **New Song Canvas**: Create and format lyrics from scratch (Ctrl/Cmd+N)
+
+### 2. Setting Up Outputs
+1. Configure **Output 1** and **Output 2** settings independently
+2. Use **File Menu → Preview Output 1/2** (Ctrl/Cmd+1/2) to open display windows
+3. Position output windows on target screens/capture sources
+4. Toggle **Display Output** switch to control visibility
+
+### 3. Live Operation
+- Click lyric lines to select and display them
+- Use search bar to quickly find specific lyrics
+- Navigate matches with Shift+Up/Down arrows
+- Toggle output on/off with the main switch
+
+## File Format
+
+LyricDisplay accepts plain text (.txt) files with the following format:
+
+```
+First verse line
+[Translation or alternative text]
+
+Second verse line
+Another line without translation
+
+Chorus line one
+[Chorus translation]
+```
+
+**Formatting Rules:**
+- Empty lines separate verse sections
+- Bracketed lines `[like this]` are treated as translations
+- Two consecutive lines where the second is bracketed will be grouped
+- Automatic cleanup removes periods, capitalizes religious terms
+
+## Technical Architecture
+
+### Frontend Stack
+- **React 18** with React Router for SPA navigation
+- **Tailwind CSS** for responsive styling
+- **Radix UI** components for accessibility
+- **Zustand** for state management with persistence
+- **Lucide React** for modern iconography
+
+### Backend Infrastructure
+- **Express.js** server for static file serving
+- **Socket.io** for real-time WebSocket communication
+- **Node.js** child processes for backend management
+
+### Desktop Integration
+- **Electron 37** for cross-platform desktop application
+- **Auto-updater** with GitHub releases integration
+- **Native menus** with keyboard shortcuts
+- **System theme** synchronization
 
 ## Configuration
-- Environment variables can be set in a `.env` file in the project root.
-- Example variables:
-  ```env
-  VITE_API_URL=http://localhost:3001
-  PORT=3001
-  ```
-- The backend server also supports a `.env` file in the `server/` directory.
 
----
+### Output Settings
+Each output can be independently configured:
 
-## Folder Structure
+| Setting | Description | Range |
+|---------|-------------|-------|
+| Font Style | Typography selection | 13 available fonts |
+| Font Size | Text size in pixels | 24-100px |
+| Font Color | Text color picker | Full spectrum |
+| Drop Shadow | Shadow color and intensity | 0-10 opacity |
+| Background | Background color and opacity | 0-10 opacity |
+| Margins | X/Y positioning offsets | Decimal values |
+| Emphasis | Bold, italic, underline, caps | Toggle options |
+
+### Storage & Persistence
+- Settings automatically saved using Zustand persistence
+- Cross-session state restoration
+- Electron-store integration for native preferences
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| Ctrl/Cmd+O | Load lyrics file |
+| Ctrl/Cmd+N | New song canvas |
+| Ctrl/Cmd+1 | Preview Output 1 |
+| Ctrl/Cmd+2 | Preview Output 2 |
+| Shift+↑/↓ | Navigate search results |
+
+## Use Cases
+
+### Church Services
+- Display hymns and worship songs simultaneously in-house and online
+- Support for multiple languages with translation grouping
+- Quick song switching during live services
+
+### Live Streaming
+- OBS/VMIX browser source integration
+- Transparent overlays for professional broadcasts
+- Real-time lyric synchronization for worship leaders
+
+### Concerts & Events
+- Multi-screen lyric coordination
+- Custom styling to match event branding
+- Reliable real-time performance
+
+## Browser Source Setup
+
+### OBS Studio Integration
+1. Add **Browser Source** to your scene
+2. Set URL to: `http://localhost:4000/#/output1` or `http://localhost:4000/#/output2`
+3. Set dimensions to match your canvas (1920x1080 recommended)
+4. Enable **Shutdown source when not visible** for performance
+5. **Refresh browser when scene becomes active** for reliability
+
+### VMIX Integration
+- Add **Web Browser** input
+- Use same URL format as OBS
+- Configure as overlay for professional broadcast mixing
+
+## Development
+
+### Project Structure
 ```
 lyric-display-app/
+├── src/                    # React frontend source
+│   ├── components/         # Reusable UI components
+│   ├── pages/             # Route-based page components
+│   ├── hooks/             # Custom React hooks
+│   ├── context/           # Zustand store definitions
+│   └── utils/             # Utility functions
+├── server/                # Express.js backend
 ├── public/                # Static assets
-├── src/
-│   ├── components/        # UI components (LyricDisplayApp, LyricsList, OutputSettingsPanel, etc.)
-│   ├── context/           # Zustand store (LyricsStore.js)
-│   ├── hooks/             # Custom hooks (useSocket, useFileUpload)
-│   ├── lib/               # Utility libraries
-│   ├── pages/             # Main pages (ControlPanel, Output1, Output2)
-│   ├── utils/             # Utility functions (parseLyrics.js)
-│   └── main.jsx           # App entry point
-├── server/                # Express/Socket.io backend
-│   ├── index.js           # Server entry point
-│   ├── events.js          # Socket event handlers
-│   └── package.json       # Backend dependencies
-├── dist/                  # Build output (gitignored)
-├── .env                   # Environment variables
-├── .gitignore             # Git ignore rules
 ├── main.js                # Electron main process
-├── package.json           # Main app dependencies and scripts
-├── README.md              # Project documentation
-└── ...
+├── preload.js             # Electron preload script
+└── package.json           # Dependencies and scripts
 ```
 
----
+### Available Scripts
+```bash
+npm run dev              # Vite development server
+npm run server           # Backend server only
+npm run electron-dev     # Full Electron development
+npm run build            # Production build
+npm run electron-pack    # Package Electron app
+```
 
-## Technologies Used
-- React, Zustand, Radix UI, Tailwind CSS
-- Vite (build tool)
-- Node.js, Express, Socket.io
-- Electron (for desktop app)
-- JavaScript (ES6+)
-
----
-
-## Contributing
-
-Contributions are welcome! Please:
+### Contributing
 1. Fork the repository
-2. Create a new branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -am 'Add new feature'`)
-4. Push to your branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Implement changes with proper testing
+4. Submit pull request with detailed description
 
-Please follow the [Contributor Covenant](https://www.contributor-covenant.org/) code of conduct.
+## Troubleshooting
+
+### Common Issues
+
+**Output windows not displaying:**
+- Verify backend server is running (check console logs)
+- Ensure Socket.io connection is established
+- Try refreshing browser sources in OBS/VMIX
+
+**Auto-updater not working:**
+- Check internet connection
+- Verify GitHub repository access
+- Review console logs for specific errors
+
+**Styling not applying:**
+- Confirm Socket.io communication
+- Use "Sync Outputs" button to force state refresh
+- Check browser console for JavaScript errors
+
+### Performance Optimization
+- Close unused output windows when not needed
+- Use hardware acceleration in streaming software
+- Monitor CPU usage during extended sessions
+
+## License & Credits
+
+**Copyright © 2025 Victory City Media. All Rights Reserved.**
+
+**Developers:**
+- Peter Alakembi (Lead Developer)
+- David Okaliwe (Co-Developer)
+
+**Links:**
+- [GitHub Repository](https://github.com/PeterAlaks/lyric-display-updates)
+- [Developer Portfolio](https://linktr.ee/peteralaks)
+- [Documentation](https://github.com/PeterAlaks/lyric-display-app#readme)
+
+## Support
+
+For technical support, feature requests, or bug reports:
+- Open an issue on GitHub
+- Check existing documentation
+- Review troubleshooting section
+
+## Version History
+
+**v2.1.1** - Current Release
+- Enhanced stability and performance
+- Improved Socket.io reliability
+- Advanced search and navigation features
+- Professional styling engine
+- Auto-update functionality
 
 ---
 
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-## Contact
-- GitHub Issues: [https://github.com/PeterAlaks/lyric-display-app/issues](https://github.com/PeterAlaks/lyric-display-app/issues)
-- Maintainer: Peter Alakembi ([GitHub Profile](https://github.com/PeterAlaks))
+*LyricDisplay - Powering worship experiences worldwide*
