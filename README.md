@@ -70,9 +70,8 @@ npm run electron-pack
 
 ### 2. Setting Up Outputs
 1. Configure **Output 1** and **Output 2** settings independently
-2. Use **File Menu → Preview Output 1/2** (Ctrl/Cmd+1/2) to open display windows
-3. Position output windows on target screens/capture sources
-4. Toggle **Display Output** switch to control visibility
+2. Use **File Menu → Preview Output 1/2** (Ctrl/Cmd+1/2) to open and preview display outputs in windows
+3. Toggle **Display Output** switch to control visibility
 
 ### 3. Live Operation
 - Click lyric lines to select and display them
@@ -187,26 +186,44 @@ Each output can be independently configured:
 ### Project Structure
 ```
 lyric-display-app/
-├── src/                   # React frontend source
-│   ├── assets/            # Fonts, etc.
-│   ├── components/        # Reusable UI components
-│   ├── pages/             # Route-based page components
-│   ├── hooks/             # Custom React hooks
-│   ├── context/           # Zustand store definitions
-│   ├── utils/             # Utility functions
-│   ├── hooks/             # Extra Utility functions
-|   ├──App.jsx             # React app main component
-|   ├──main.jsx            # App entry point
-|   └──index.css           # Global CSS
-├── server/                # Express.js backend
-|   ├── index.js           # Main backend server
-|   ├── events.js          # Backend communication events
-|   └── package.json       # Backend dependencies
-├── public/                # Static assets
-|   └── index.html         # Browser web app entry point
-├── main.js                # Electron main process
-├── preload.js             # Electron preload script
-└── package.json           # Dependencies and scripts
+├── public/                                 # Static assets
+|   └── index.html                          # Browser web app entry point
+├── server/                                 # Express.js backend
+|   ├── index.js                            # Main backend server
+|   ├── events.js                           # Backend communication events
+|   └── package.json                        # Backend dependencies
+├── src/                                    # React frontend source
+│   ├── assets/                             # Fonts, etc.
+│   ├── components/                         # Reusable UI components
+|   |   ├── ui/
+|   |   ├── LyricDisplayApp.jsx             # Main control panel UI
+|   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
+|   |   ├── NewSongCanvas.jsx               # New/edit song text editor
+|   |   └── OutputSettingsPanel.jsx         # Settings panel interface
+│   ├── context/
+|   |   └── LyricsStore.js                  # Zustand store definitions
+│   ├── hooks/
+|   |   ├── useFileUpload.js                # Custom React hook for file uploads
+|   |   └── useSocket.js                    # Custom React hook for Socket.IO client
+│   ├── lib/
+|   |   └── utils.js                        # Utility functions
+│   ├── pages/                              # Route-based page components
+|   |   ├── ControlPanel.jsx                # Control panel page wrapper
+|   |   ├── Output1.jsx                     # Output 1 display
+|   |   └── Output2.jsx                     # Output 2 display
+│   ├── utils/
+|   |   └── parseLyrics.js                  # Text file parser
+|   ├── App.jsx                             # React app main component
+|   ├── main.jsx                            # App entry point
+|   └── index.css                           # Global CSS
+├── .env                                    # Environment variables file
+├── index.html                              # Alternative browser web app entry point
+├── main.js                                 # Electron main process
+├── package.json                            # Dependencies and scripts
+├── postcss.config.js                       # PostCSS configurations
+├── preload.js                              # Electron preload script
+├── tailwind.config.js                      # Tailwind configurations
+└── vite.config.js                          # Vite configurations
 ```
 
 ### Available Scripts
