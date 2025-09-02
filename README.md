@@ -173,7 +173,7 @@ Each output can be independently configured:
 ### OBS Studio Integration
 1. Add **Browser Source** to your scene
 2. Set URL to: `http://localhost:4000/#/output1` or `http://localhost:4000/#/output2`
-3. Set dimensions to match your canvas (1920x1080 recommended)
+3. Set dimensions to match your canvas (1920 x <=300 pixels recommended)
 4. Enable **Shutdown source when not visible** for performance
 5. **Refresh browser when scene becomes active** for reliability
 
@@ -187,14 +187,23 @@ Each output can be independently configured:
 ### Project Structure
 ```
 lyric-display-app/
-├── src/                    # React frontend source
-│   ├── components/         # Reusable UI components
+├── src/                   # React frontend source
+│   ├── assets/            # Fonts, etc.
+│   ├── components/        # Reusable UI components
 │   ├── pages/             # Route-based page components
 │   ├── hooks/             # Custom React hooks
 │   ├── context/           # Zustand store definitions
-│   └── utils/             # Utility functions
+│   ├── utils/             # Utility functions
+│   ├── hooks/             # Extra Utility functions
+|   ├──App.jsx             # React app main component
+|   ├──main.jsx            # App entry point
+|   └──index.css           # Global CSS
 ├── server/                # Express.js backend
+|   ├── index.js           # Main backend server
+|   ├── events.js          # Backend communication events
+|   └── package.json       # Backend dependencies
 ├── public/                # Static assets
+|   └── index.html         # Browser web app entry point
 ├── main.js                # Electron main process
 ├── preload.js             # Electron preload script
 └── package.json           # Dependencies and scripts
@@ -244,7 +253,7 @@ npm run electron-pack    # Package Electron app
 **Copyright © 2025 Victory City Media. All Rights Reserved.**
 
 **Developers:**
-- Peter Alakembi (Lead Developer)
+- Peter Alakembi (Lead Designer and Developer)
 - David Okaliwe (Co-Developer)
 
 **Links:**
