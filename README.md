@@ -11,26 +11,26 @@ LyricDisplay is a comprehensive Electron-based application designed for professi
 
 ## Key Features
 
-### 🎯 Multi-Output Display System
+### Multi-Output Display System
 - **Dual Independent Outputs**: Two separate output windows with individual styling controls
 - **Transparent Backgrounds**: Perfect for OBS/VMIX browser source capture
 - **Real-time Synchronization**: Instant updates across all connected displays
 - **Browser Source Compatible**: Works seamlessly with popular streaming software
 
-### 📝 Advanced Lyric Management
+### Advanced Lyric Management
 - **Smart Text Processing**: Automatic formatting with religious word capitalization
 - **Translation Support**: Groups main lyrics with bracketed translations `[Like this]`
 - **Live Editing Canvas**: Built-in editor with formatting tools and auto-cleanup
 - **Search & Navigation**: Advanced search with match highlighting and keyboard navigation
 
-### 🎨 Comprehensive Styling Engine
+### Comprehensive Styling Engine
 - **13 Professional Fonts**: Including custom GarnetCapitals font
 - **Typography Controls**: Bold, italic, underline, and all-caps options
 - **Color Customization**: Independent font and drop shadow colors
 - **Background Controls**: Adjustable opacity and color settings
 - **Precise Positioning**: X/Y margin controls for pixel-perfect placement
 
-### 🔧 Professional Features
+### Professional Features
 - **Auto-Updates**: Seamless background updates via GitHub releases
 - **Dark Mode**: System-integrated dark/light theme switching
 - **Keyboard Shortcuts**: Full menu-driven workflow
