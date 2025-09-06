@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown, List, Globe } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown, List, Globe, Plus } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
@@ -23,6 +23,7 @@ const LyricDisplayApp = () => {
     setIsOutputOn,
     lyrics,
     lyricsFileName,
+    rawLyricsContent,
     selectedLine,
     selectLine,
     output1Settings,
@@ -33,6 +34,8 @@ const LyricDisplayApp = () => {
     isDesktopApp,
     setlistModalOpen,
     setSetlistModalOpen,
+    setlistFiles,
+    isSetlistFull,
   } = useLyricsStore();
 
   // Handle dark mode toggle from Electron menu
@@ -80,7 +83,7 @@ const LyricDisplayApp = () => {
     }
   }, [navigate]);
 
-  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist } = useSocket('control');
+  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd } = useSocket('control');
 
   // File upload functionality
   const handleFileUpload = useFileUpload();
@@ -308,6 +311,35 @@ const LyricDisplayApp = () => {
     emitOutputToggle(!isOutputOn);
   };
 
+  // Check if current file is already in setlist
+  const isFileAlreadyInSetlist = () => {
+    if (!lyricsFileName) return false;
+    return setlistFiles.some(file => file.displayName === lyricsFileName);
+  };
+
+  // Handle add to setlist
+  const handleAddToSetlist = () => {
+    if (!isDesktopApp || !hasLyrics || !rawLyricsContent || !lyricsFileName) return;
+
+    if (isSetlistFull()) {
+      alert('Setlist is full. Maximum 25 files allowed.');
+      return;
+    }
+
+    if (isFileAlreadyInSetlist()) {
+      alert('This file is already in the setlist.');
+      return;
+    }
+
+    const fileData = [{
+      name: `${lyricsFileName}.txt`,
+      content: rawLyricsContent,
+      lastModified: Date.now()
+    }];
+
+    emitSetlistAdd(fileData);
+  };
+
   // If not desktop app, show mobile layout
   if (!isDesktopApp) {
     return <MobileLayout />;
@@ -417,7 +449,7 @@ const LyricDisplayApp = () => {
               className={`
                 scale-[1.8]
                 ${darkMode
-                  ? "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600"
+                  ? "data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600"
                   : "data-[state=checked]:bg-black"}
               `}
             />
@@ -481,16 +513,45 @@ const LyricDisplayApp = () => {
               {hasLyrics ? lyricsFileName : ''}
             </h2>
             {hasLyrics && (
-              <button
-                onClick={handleEditLyrics}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-              >
-                <Edit className="w-4 h-4" />
-                Edit
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Add to Setlist Button */}
+                <button
+                  onClick={handleAddToSetlist}
+                  disabled={!isDesktopApp || isSetlistFull() || isFileAlreadyInSetlist()}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${!isDesktopApp || isSetlistFull() || isFileAlreadyInSetlist()
+                    ? darkMode
+                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : darkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  title={
+                    !isDesktopApp
+                      ? 'Only available on desktop app'
+                      : isSetlistFull()
+                        ? 'Setlist is full (25 files maximum)'
+                        : isFileAlreadyInSetlist()
+                          ? 'File already in setlist'
+                          : 'Add current file to setlist'
+                  }
+                >
+                  <Plus className="w-4 h-4" />
+                  Add to Setlist
+                </button>
+
+                {/* Edit Button */}
+                <button
+                  onClick={handleEditLyrics}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit
+                </button>
+              </div>
             )}
           </div>
 

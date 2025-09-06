@@ -9,25 +9,25 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 
 
   useEffect(() => {
-  if (!isOpen) return;
+    if (!isOpen) return;
 
-  const getLocalIP = async () => {
-    try {
-      if (window.electronAPI && window.electronAPI.getLocalIP) {
-        const ip = await window.electronAPI.getLocalIP();
-        setLocalIP(ip);
-      } else {
-        // Fallback for non-Electron environments (web browsers)
+    const getLocalIP = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.getLocalIP) {
+          const ip = await window.electronAPI.getLocalIP();
+          setLocalIP(ip);
+        } else {
+          // Fallback for non-Electron environments (web browsers)
+          setLocalIP('localhost');
+        }
+      } catch (error) {
+        console.error('Error getting local IP:', error);
         setLocalIP('localhost');
       }
-    } catch (error) {
-      console.error('Error getting local IP:', error);
-      setLocalIP('localhost');
-    }
-  };
+    };
 
-  getLocalIP();
-}, [isOpen]);
+    getLocalIP();
+  }, [isOpen]);
 
   // Generate QR code when we have the IP
   useEffect(() => {
@@ -35,14 +35,14 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 
     const generateQRCode = async () => {
       setIsGenerating(true);
-      
+
       try {
         const url = `http://${localIP}:4000/`;
-        
+
         // Simple QR code generation using a service (you might want to use a library instead)
         // For production, consider using the 'qrcode' npm package
         const qrServiceUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-        
+
         // For a more robust solution, you could use the qrcode npm package:
         /*
         const QRCode = require('qrcode');
@@ -56,7 +56,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
         });
         setQRCodeDataURL(dataURL);
         */
-        
+
         setQRCodeDataURL(qrServiceUrl);
       } catch (error) {
         console.error('Error generating QR code:', error);
@@ -75,17 +75,17 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Dialog */}
       <div className={`
         relative w-full max-w-md mx-4 rounded-xl shadow-2xl p-6
         ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
       `}>
-        
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
@@ -104,7 +104,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 
         {/* Content */}
         <div className="text-center space-y-4">
-          
+
           {/* QR Code */}
           <div className={`
             mx-auto w-52 h-52 flex items-center justify-center rounded-lg border-2 border-dashed
@@ -118,8 +118,8 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
                 </span>
               </div>
             ) : qrCodeDataURL ? (
-              <img 
-                src={qrCodeDataURL} 
+              <img
+                src={qrCodeDataURL}
                 alt="QR Code for mobile connection"
                 className="w-48 h-48 rounded"
               />
@@ -153,12 +153,11 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
           <Button
             onClick={() => {
               navigator.clipboard.writeText(connectionURL).then(() => {
-              
-                console.log('URL copied to clipboard');
+                console.log("URL copied to clipboard");
               });
             }}
             variant="outline"
-            className="w-full"
+            className="w-full text-black border-gray-300 hover:bg-gray-100 dark:text-white dark:border-gray-600 dark:hover:bg-gray-800"
           >
             Copy URL to Clipboard
           </Button>

@@ -171,15 +171,15 @@ const SetlistModal = () => {
                 onClick={handleFileSelect}
                 disabled={isSetlistFull() || isLoading}
                 variant="ghost"
-                size="icon"
                 className={`
-                    w-10 h-10
-                  ${isSetlistFull() ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
-                `}
+    flex items-center gap-2 px-3 py-2
+    ${isSetlistFull() ? 'opacity-50 cursor-not-allowed' : ''}
+    ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
+  `}
                 title={isSetlistFull() ? 'Setlist is full (25 files)' : 'Add files to setlist'}
               >
-                <Plus className="w-6 h-6" />
+                <Plus className="w-4 h-4" />
+                Add Files
               </Button>
             )}
 
@@ -209,8 +209,8 @@ const SetlistModal = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`pl-10 pr-10 ${darkMode
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                  : 'bg-white border-gray-300'
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                : 'bg-white border-gray-300'
                 }`}
             />
             {searchQuery && (
