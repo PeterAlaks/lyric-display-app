@@ -144,8 +144,8 @@ const MobileLayout = () => {
       {/* Fixed Header */}
       <div
         className={`shadow-sm border-b px-6 py-6 flex-shrink-0 ${darkMode
-            ? 'bg-gray-800 border-gray-700'
-            : 'bg-white border-gray-200'
+          ? 'bg-gray-800 border-gray-700'
+          : 'bg-white border-gray-200'
           }`}
       >
         {/* Top Row - Title and Controls */}
@@ -161,8 +161,8 @@ const MobileLayout = () => {
             <button
               onClick={handleOpenSetlist}
               className={`p-2.5 rounded-lg transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               title="Open setlist"
             >
@@ -172,8 +172,8 @@ const MobileLayout = () => {
             <button
               onClick={handleSyncOutputs}
               className={`p-2.5 rounded-lg transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               title="Sync outputs"
             >
@@ -188,8 +188,8 @@ const MobileLayout = () => {
             checked={isOutputOn}
             onCheckedChange={handleToggle}
             className={`scale-[1.5] ${darkMode
-                ? 'data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600'
-                : 'data-[state=checked]:bg-black'
+              ? 'data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600'
+              : 'data-[state=checked]:bg-black'
               }`}
           />
           <span
@@ -204,8 +204,8 @@ const MobileLayout = () => {
         {hasLyrics && (
           <div
             className={`px-4 py-3 text-sm font-semibold border-t mt-4 ${darkMode
-                ? 'text-gray-300 border-gray-600'
-                : 'text-gray-600 border-gray-200'
+              ? 'text-gray-300 border-gray-600'
+              : 'text-gray-600 border-gray-200'
               }`}
           >
             {lyricsFileName}
@@ -217,16 +217,16 @@ const MobileLayout = () => {
       <div className="flex-1 p-4 flex flex-col min-h-0">
         <div
           className={`rounded-xl shadow-sm border flex-1 flex flex-col overflow-hidden ${darkMode
-              ? 'bg-gray-800 border-gray-600'
-              : 'bg-white border-gray-200'
+            ? 'bg-gray-800 border-gray-600'
+            : 'bg-white border-gray-200'
             }`}
         >
           {hasLyrics ? (
             <>
               {/* Fixed Search Bar */}
               <div className={`border-b px-4 py-4 flex-shrink-0 ${darkMode
-                  ? 'border-gray-600 bg-gray-800'
-                  : 'border-gray-200 bg-white'
+                ? 'border-gray-600 bg-gray-800'
+                : 'border-gray-200 bg-white'
                 }`}>
                 <div className="relative">
                   <Input
@@ -235,8 +235,8 @@ const MobileLayout = () => {
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
                     className={`w-full pr-24 ${darkMode
-                        ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400'
-                        : 'border-gray-300 bg-white'
+                      ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400'
+                      : 'border-gray-300 bg-white'
                       }`}
                   />
                   {searchQuery && (
@@ -246,8 +246,8 @@ const MobileLayout = () => {
                           <button
                             onClick={navigateToPreviousMatch}
                             className={`p-1.5 rounded-md transition-colors ${darkMode
-                                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
-                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
+                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                               }`}
                             title="Previous match"
                             disabled={allMatchIndices.length === 0}
@@ -257,8 +257,8 @@ const MobileLayout = () => {
                           <button
                             onClick={navigateToNextMatch}
                             className={`p-1.5 rounded-md transition-colors ${darkMode
-                                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
-                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
+                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                               }`}
                             title="Next match"
                             disabled={allMatchIndices.length === 0}
@@ -270,8 +270,8 @@ const MobileLayout = () => {
                       <button
                         onClick={clearSearch}
                         className={`p-1.5 rounded-md transition-colors ${darkMode
-                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
-                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                           }`}
                         title="Clear search"
                       >
@@ -340,8 +340,8 @@ const MobileLayout = () => {
       {/* Fixed Footer */}
       <div
         className={`px-4 py-3 text-center text-xs border-t flex-shrink-0 ${darkMode
-            ? 'text-gray-400 bg-gray-800 border-gray-700'
-            : 'text-gray-600 bg-gray-50 border-gray-200'
+          ? 'text-gray-400 bg-gray-800 border-gray-700'
+          : 'text-gray-600 bg-gray-50 border-gray-200'
           }`}
       >
         Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.

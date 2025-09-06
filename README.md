@@ -197,8 +197,12 @@ lyric-display-app/
 |   |   ├── ui/
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
+|   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
 |   |   ├── NewSongCanvas.jsx               # New/edit song text editor
-|   |   └── OutputSettingsPanel.jsx         # Settings panel interface
+|   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
+|   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
+|   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
+|   |   └── SetlistModal.jsx                # Setlist Modal
 │   ├── context/
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/

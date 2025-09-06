@@ -1,12 +1,13 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown, List } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown, List, Globe } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
 import LyricsList from './LyricsList';
 import MobileLayout from './MobileLayout';
 import SetlistModal from './SetlistModal';
+import OnlineLyricsSearchModal from './OnlineLyricsSearchModal';
 import { getLineSearchText } from '../utils/parseLyrics';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import { Input } from "@/components/ui/input";
@@ -88,6 +89,9 @@ const LyricDisplayApp = () => {
   // Tabs
   const [activeTab, setActiveTab] = React.useState('output1');
 
+  // Online lyrics search modal state
+  const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
+
   // Search state - Enhanced navigation
   const [searchQuery, setSearchQuery] = React.useState('');
   const [highlightedLineIndex, setHighlightedLineIndex] = React.useState(null);
@@ -136,6 +140,15 @@ const LyricDisplayApp = () => {
   // Handle setlist modal
   const handleOpenSetlist = () => {
     setSetlistModalOpen(true);
+  };
+
+  // Handle online lyrics search modal
+  const handleOpenOnlineLyricsSearch = () => {
+    setOnlineLyricsModalOpen(true);
+  };
+
+  const handleCloseOnlineLyricsSearch = () => {
+    setOnlineLyricsModalOpen(false);
   };
 
   // Handle file input change
@@ -308,11 +321,23 @@ const LyricDisplayApp = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>LyricDisplay</h1>
           <div className="flex items-center gap-2">
+            {/* Online Lyrics Search Button */}
+            <button
+              className={`p-2 rounded font-medium transition-colors ${darkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              title="Search online for lyrics"
+              onClick={handleOpenOnlineLyricsSearch}
+            >
+              <Globe className="w-5 h-5" />
+            </button>
+
             {/* Setlist Button */}
             <button
               className={`p-2 rounded font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               title="Open setlist"
               onClick={handleOpenSetlist}
@@ -323,8 +348,8 @@ const LyricDisplayApp = () => {
             {/* Sync Outputs Button - Icon Only */}
             <button
               className={`p-2 rounded font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               title="Sync current state to outputs"
               onClick={() => {
@@ -359,8 +384,8 @@ const LyricDisplayApp = () => {
           </button>
           <button
             className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               }`}
             onClick={handleCreateNewSong}
             title="Create new lyrics"
@@ -418,10 +443,10 @@ const LyricDisplayApp = () => {
         <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
           <button
             className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${activeTab === 'output1'
-                ? 'bg-black text-white'
-                : darkMode
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              ? 'bg-black text-white'
+              : darkMode
+                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
             onClick={() => setActiveTab('output1')}
           >
@@ -429,10 +454,10 @@ const LyricDisplayApp = () => {
           </button>
           <button
             className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${activeTab === 'output2'
-                ? 'bg-black text-white'
-                : darkMode
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              ? 'bg-black text-white'
+              : darkMode
+                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
             onClick={() => setActiveTab('output2')}
           >
@@ -459,8 +484,8 @@ const LyricDisplayApp = () => {
               <button
                 onClick={handleEditLyrics}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
               >
                 <Edit className="w-4 h-4" />
@@ -479,8 +504,8 @@ const LyricDisplayApp = () => {
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   className={`border rounded-md w-full pr-24 ${darkMode
-                      ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                      : 'border-gray-300 bg-white'
+                    ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
+                    : 'border-gray-300 bg-white'
                     }`}
                 />
                 <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
@@ -489,8 +514,8 @@ const LyricDisplayApp = () => {
                       <button
                         onClick={navigateToPreviousMatch}
                         className={`p-1 rounded transition-colors ${darkMode
-                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                           }`}
                         title="Previous match (Shift+Up)"
                       >
@@ -499,8 +524,8 @@ const LyricDisplayApp = () => {
                       <button
                         onClick={navigateToNextMatch}
                         className={`p-1 rounded transition-colors ${darkMode
-                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                           }`}
                         title="Next match (Shift+Down)"
                       >
@@ -512,8 +537,8 @@ const LyricDisplayApp = () => {
                     <button
                       onClick={clearSearch}
                       className={`p-1 rounded transition-colors ${darkMode
-                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                         }`}
                       title="Clear search"
                     >
@@ -609,6 +634,13 @@ const LyricDisplayApp = () => {
 
       {/* Setlist Modal */}
       <SetlistModal />
+
+      {/* Online Lyrics Search Modal */}
+      <OnlineLyricsSearchModal
+        isOpen={onlineLyricsModalOpen}
+        onClose={handleCloseOnlineLyricsSearch}
+        darkMode={darkMode}
+      />
     </div>
   );
 };

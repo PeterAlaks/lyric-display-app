@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Scissors, 
-  Copy, 
-  ClipboardPaste, 
-  Wand2, 
-  Save, 
-  FolderOpen 
+import {
+  ArrowLeft,
+  Scissors,
+  Copy,
+  ClipboardPaste,
+  Wand2,
+  Save,
+  FolderOpen
 } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useFileUpload from '../hooks/useFileUpload';
@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 // Auto-formatting utility function
 // Auto-formatting utility function with bracket-aware spacing
 const formatLyrics = (text) => {
-  const religiousWords = ['jesus', 'jesu', 'yesu', 'jehovah', 'god', 'yahweh'];
+  const religiousWords = ['jesus', 'jesu', 'yesu', 'jehovah', 'god', 'yahweh', 'lord', 'christ'];
 
   // Split into lines
   const lines = text.split(/\r?\n/);
@@ -42,6 +42,8 @@ const formatLyrics = (text) => {
     line = line.replace(/^[.,\-]+/, '');
     // NEW: specifically remove leading ellipses (.., ..., .... etc.) while keeping the rest of the line
     line = line.replace(/^\.+/, '');
+    // NEW: also remove the Unicode ellipsis symbol "…"
+    line = line.replace(/^[․‥…]+/, '');
     // Remove all periods
     line = line.replace(/\./g, '');
     // Capitalize first letter
@@ -77,7 +79,7 @@ const formatLyrics = (text) => {
  */
 const reconstructEditableText = (lyrics) => {
   if (!lyrics || lyrics.length === 0) return '';
-  
+
   return lyrics.map(line => {
     if (typeof line === 'string') {
       return line;
@@ -94,13 +96,13 @@ const NewSongCanvas = () => {
   const location = useLocation();
   const isEditMode = new URLSearchParams(location.search).get("mode") === "edit";
 
-  const { 
-    darkMode, 
-    setDarkMode, 
-    lyrics, 
-    lyricsFileName, 
-    rawLyricsContent, 
-    setRawLyricsContent 
+  const {
+    darkMode,
+    setDarkMode,
+    lyrics,
+    lyricsFileName,
+    rawLyricsContent,
+    setRawLyricsContent
   } = useLyricsStore();
 
   const handleFileUpload = useFileUpload();
@@ -111,48 +113,48 @@ const NewSongCanvas = () => {
   const [title, setTitle] = useState(''); // NEW: title state for the input field
 
   useEffect(() => {
-  if (window.electronAPI) {
-    const handleDarkModeToggle = () => {
-      const newDarkMode = !darkMode;
-      setDarkMode(newDarkMode);
-      window.electronAPI.setDarkMode(newDarkMode);
-      // Sync with native theme
-      window.electronAPI.syncNativeDarkMode(newDarkMode);
-    };
-    window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
-    window.electronAPI.setDarkMode(darkMode);
-    // Sync initial state with native theme
-    window.electronAPI.syncNativeDarkMode(darkMode);
-    return () => {
-      window.electronAPI.removeAllListeners('toggle-dark-mode');
-    };
-  }
-}, [darkMode, setDarkMode]);
+    if (window.electronAPI) {
+      const handleDarkModeToggle = () => {
+        const newDarkMode = !darkMode;
+        setDarkMode(newDarkMode);
+        window.electronAPI.setDarkMode(newDarkMode);
+        // Sync with native theme
+        window.electronAPI.syncNativeDarkMode(newDarkMode);
+      };
+      window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
+      window.electronAPI.setDarkMode(darkMode);
+      // Sync initial state with native theme
+      window.electronAPI.syncNativeDarkMode(darkMode);
+      return () => {
+        window.electronAPI.removeAllListeners('toggle-dark-mode');
+      };
+    }
+  }, [darkMode, setDarkMode]);
 
-React.useEffect(() => {
-  if (window.electronAPI) {
-    // Handle Ctrl+N - New Lyrics File (clear canvas when already on new song page)
-    const handleNavigateToNewSong = () => {
-      if (!isEditMode) {
-        // If already in new mode, just clear content
-        setContent('');
-        setFileName('');
-        setTitle(''); // NEW: clear title when creating a new song
-        setRawLyricsContent('');
-      } else {
-        // If in edit mode, navigate to new mode
-        navigate('/new-song?mode=new');
-      }
-    };
+  React.useEffect(() => {
+    if (window.electronAPI) {
+      // Handle Ctrl+N - New Lyrics File (clear canvas when already on new song page)
+      const handleNavigateToNewSong = () => {
+        if (!isEditMode) {
+          // If already in new mode, just clear content
+          setContent('');
+          setFileName('');
+          setTitle(''); // NEW: clear title when creating a new song
+          setRawLyricsContent('');
+        } else {
+          // If in edit mode, navigate to new mode
+          navigate('/new-song?mode=new');
+        }
+      };
 
-    window.electronAPI.onNavigateToNewSong(handleNavigateToNewSong);
+      window.electronAPI.onNavigateToNewSong(handleNavigateToNewSong);
 
-    return () => {
-      window.electronAPI.removeAllListeners('navigate-to-new-song');
-    };
-  }
-}, [isEditMode, navigate, setRawLyricsContent]);
-  
+      return () => {
+        window.electronAPI.removeAllListeners('navigate-to-new-song');
+      };
+    }
+  }, [isEditMode, navigate, setRawLyricsContent]);
+
   // Focus textarea on mount
   useEffect(() => {
     if (textareaRef.current) {
@@ -166,11 +168,11 @@ React.useEffect(() => {
       // Priority 1: Use rawLyricsContent if available (preserves original formatting)
       if (rawLyricsContent) {
         setContent(rawLyricsContent);
-      } 
+      }
       // Priority 2: Reconstruct from processed lyrics array
       else if (lyrics && lyrics.length > 0) {
         setContent(reconstructEditableText(lyrics));
-      } 
+      }
       // Priority 3: Empty content if nothing available
       else {
         setContent('');
@@ -196,7 +198,7 @@ React.useEffect(() => {
       const start = textareaRef.current.selectionStart;
       const end = textareaRef.current.selectionEnd;
       const selectedText = content.substring(start, end);
-      
+
       if (selectedText) {
         try {
           await navigator.clipboard.writeText(selectedText);
@@ -216,7 +218,7 @@ React.useEffect(() => {
       const start = textareaRef.current.selectionStart;
       const end = textareaRef.current.selectionEnd;
       const selectedText = content.substring(start, end);
-      
+
       if (selectedText) {
         try {
           await navigator.clipboard.writeText(selectedText);
@@ -233,13 +235,13 @@ React.useEffect(() => {
       if (textareaRef.current) {
         const start = textareaRef.current.selectionStart;
         const end = textareaRef.current.selectionEnd;
-        
+
         // Apply formatting to pasted content
         const formattedText = formatLyrics(clipboardText);
-        
+
         const newContent = content.substring(0, start) + formattedText + content.substring(end);
         setContent(newContent);
-        
+
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(start + formattedText.length, start + formattedText.length);
       }
@@ -266,7 +268,7 @@ React.useEffect(() => {
           defaultPath: (title && `${title}.txt`) || fileName || 'untitled.txt',
           filters: [{ name: 'Text Files', extensions: ['txt'] }]
         });
-        
+
         if (!result.canceled) {
           await window.electronAPI.writeFile(result.filePath, content);
           const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
@@ -304,22 +306,22 @@ React.useEffect(() => {
           defaultPath: (title && `${title}.txt`) || fileName || 'untitled.txt',
           filters: [{ name: 'Text Files', extensions: ['txt'] }]
         });
-        
+
         if (!result.canceled) {
           // Save the file
           await window.electronAPI.writeFile(result.filePath, content);
           const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
-          
+
           // Create a simple File object for processing
           const blob = new Blob([content], { type: 'text/plain' });
           const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
-          
+
           // Store raw content before processing
           setRawLyricsContent(content);
-          
+
           // Process and load into store
           await handleFileUpload(file);
-          
+
           // Navigate back to control panel
           navigate('/');
         }
@@ -333,13 +335,13 @@ React.useEffect(() => {
         const baseName = title || fileName || 'lyrics';
         const blob = new Blob([content], { type: 'text/plain' });
         const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
-        
+
         // Store raw content before processing
         setRawLyricsContent(content);
-        
+
         // Process and load into store
         await handleFileUpload(file);
-        
+
         // Still trigger download
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -349,7 +351,7 @@ React.useEffect(() => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         navigate('/');
       } catch (err) {
         console.error('Failed to process lyrics:', err);
@@ -363,13 +365,13 @@ React.useEffect(() => {
     e.preventDefault();
     const clipboardText = e.clipboardData.getData('text');
     const formattedText = formatLyrics(clipboardText);
-    
+
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
     const newContent = content.substring(0, start) + formattedText + content.substring(end);
-    
+
     setContent(newContent);
-    
+
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
@@ -388,57 +390,56 @@ React.useEffect(() => {
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={handleBack}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
-              darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
-          
+
           <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {isEditMode ? "Edit Song Canvas" : "New Song Canvas"}
           </h1>
-          
+
           <div className="w-[72px]"></div>
         </div>
         <div className="flex items-center justify-center gap-4">
-          <Button 
-  onClick={handleCut} 
-  disabled={isContentEmpty} 
-  variant="ghost"
-  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
->
-  <Scissors className="w-4 h-4" /> Cut
-</Button>
+          <Button
+            onClick={handleCut}
+            disabled={isContentEmpty}
+            variant="ghost"
+            className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+          >
+            <Scissors className="w-4 h-4" /> Cut
+          </Button>
 
-<Button 
-  onClick={handleCopy} 
-  disabled={isContentEmpty} 
-  variant="ghost"
-  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
->
-  <Copy className="w-4 h-4" /> Copy
-</Button>
+          <Button
+            onClick={handleCopy}
+            disabled={isContentEmpty}
+            variant="ghost"
+            className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+          >
+            <Copy className="w-4 h-4" /> Copy
+          </Button>
 
-<Button 
-  onClick={handlePaste} 
-  variant="ghost"
-  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
->
-  <ClipboardPaste className="w-4 h-4" /> Paste
-</Button>
+          <Button
+            onClick={handlePaste}
+            variant="ghost"
+            className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+          >
+            <ClipboardPaste className="w-4 h-4" /> Paste
+          </Button>
 
-<Button 
-  onClick={handleCleanup} 
-  disabled={isContentEmpty} 
-  variant="ghost"
-  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
->
-  <Wand2 className="w-4 h-4" /> Cleanup
-</Button>
+          <Button
+            onClick={handleCleanup}
+            disabled={isContentEmpty}
+            variant="ghost"
+            className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+          >
+            <Wand2 className="w-4 h-4" /> Cleanup
+          </Button>
           <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
 
           {/* Title Input Field */}
@@ -448,35 +449,33 @@ React.useEffect(() => {
             onChange={(e) => setTitle(e.target.value)}
             maxLength={65}
             placeholder="Enter song title..."
-            className={`px-3 py-1.5 rounded-md max-w-sm ${
-            darkMode
-            ? "bg-gray-700 text-gray-200 placeholder-gray-400 border border-gray-600 focus:ring-2 focus:ring-blue-500"
-            : "bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:ring-2 focus:ring-blue-500"
-            }`}
-/>
+            className={`px-3 py-1.5 rounded-md max-w-sm ${darkMode
+              ? "bg-gray-700 text-gray-200 placeholder-gray-400 border border-gray-600 focus:ring-2 focus:ring-blue-500"
+              : "bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:ring-2 focus:ring-blue-500"
+              }`}
+          />
 
           <Button
-          onClick={handleSave}
-          disabled={isContentEmpty || isTitleEmpty}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
-          darkMode
-          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-          variant="ghost"
+            onClick={handleSave}
+            disabled={isContentEmpty || isTitleEmpty}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            variant="ghost"
           >
-          <Save className="w-4 h-4" /> Save
+            <Save className="w-4 h-4" /> Save
           </Button>
           <Button
-          onClick={handleSaveAndLoad}
-          disabled={isContentEmpty || isTitleEmpty}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200"
+            onClick={handleSaveAndLoad}
+            disabled={isContentEmpty || isTitleEmpty}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200"
           >
-          <FolderOpen className="w-4 h-4" /> Save and Load
+            <FolderOpen className="w-4 h-4" /> Save and Load
           </Button>
         </div>
       </div>
-      
+
       {/* Main Content Area */}
       <div className="flex-1 p-6">
         <div className={`h-full rounded-lg border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
@@ -486,11 +485,10 @@ React.useEffect(() => {
             onChange={(e) => setContent(e.target.value)}
             onPaste={handleTextareaPaste}
             placeholder="Start typing your lyrics here, or paste existing content..."
-            className={`w-full h-full p-6 rounded-lg resize-none outline-none font-mono text-base leading-relaxed ${
-              darkMode 
-                ? 'bg-gray-800 text-gray-200 placeholder-gray-500' 
-                : 'bg-white text-gray-900 placeholder-gray-400'
-            }`}
+            className={`w-full h-full p-6 rounded-lg resize-none outline-none font-mono text-base leading-relaxed ${darkMode
+              ? 'bg-gray-800 text-gray-200 placeholder-gray-500'
+              : 'bg-white text-gray-900 placeholder-gray-400'
+              }`}
             spellCheck={false}
           />
         </div>

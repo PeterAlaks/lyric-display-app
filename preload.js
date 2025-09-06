@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('trigger-file-load');
     ipcRenderer.on('trigger-file-load', callback);
   },
-  
+
   onNavigateToNewSong: (callback) => {
     ipcRenderer.removeAllListeners('navigate-to-new-song');
     ipcRenderer.on('navigate-to-new-song', callback);

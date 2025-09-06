@@ -124,11 +124,14 @@ const useSocket = (role = 'output') => {
         }
       }
 
-      // Always update settings and setlist
+      // Always update settings, setlist, and output toggle state
       if (state.output1Settings) updateOutputSettings('output1', state.output1Settings);
       if (state.output2Settings) updateOutputSettings('output2', state.output2Settings);
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
+      if (typeof state.isOutputOn === 'boolean' && !isDesktopApp) {
+        useLyricsStore.getState().setIsOutputOn(state.isOutputOn);
+      }
     });
 
     // App-specific event handlers
@@ -213,10 +216,6 @@ const useSocket = (role = 'output') => {
       if (state.output2Settings) updateOutputSettings('output2', state.output2Settings);
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
-
-      // DON'T sync isOutputOn from periodic updates - let local client control it
-      // Remove or comment out this line:
-      // if (typeof state.isOutputOn === 'boolean') useLyricsStore.getState().setIsOutputOn(state.isOutputOn);
     });
 
     socketRef.current.on('fileNameUpdate', (fileName) => {

@@ -38,10 +38,10 @@ function resolveProductionPath(...segments) {
 // Get local IP address
 function getLocalIPAddress() {
   const interfaces = os.networkInterfaces();
-  
+
   for (const interfaceName of Object.keys(interfaces)) {
     const networkInterface = interfaces[interfaceName];
-    
+
     for (const connection of networkInterface) {
       // Skip internal/loopback addresses
       if (connection.family === 'IPv4' && !connection.internal) {
@@ -49,7 +49,7 @@ function getLocalIPAddress() {
       }
     }
   }
-  
+
   return 'localhost'; // Fallback
 }
 
@@ -75,7 +75,7 @@ function createProgressWindow() {
   });
 
   progressWindow.setMenuBarVisibility(false);
-  
+
   // Load progress HTML
   const progressHTML = `
     <!DOCTYPE html>
@@ -182,7 +182,7 @@ function createProgressWindow() {
   `;
 
   progressWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(progressHTML)}`);
-  
+
   progressWindow.on('closed', () => {
     progressWindow = null;
   });
@@ -225,15 +225,15 @@ function createQRCodeDialog() {
   });
 
   qrCodeWindow.setMenuBarVisibility(false);
-  
+
   // Load QR Code dialog HTML
   if (isDev) {
     qrCodeWindow.loadURL('http://localhost:5173/qr-dialog');
   } else {
     qrCodeWindow.loadURL('http://localhost:4000/#/qr-dialog');
   }
-  
-   qrCodeWindow.once('ready-to-show', () => {
+
+  qrCodeWindow.once('ready-to-show', () => {
     const localIP = getLocalIPAddress();
     qrCodeWindow.webContents.send('set-local-ip', localIP);
     qrCodeWindow.show();
@@ -341,14 +341,14 @@ function checkForUpdates(showNoUpdateDialog = false) {
   autoUpdater.on('error', (err) => {
     // Close progress window on error
     closeProgressWindow();
-    
+
     dialog.showErrorBox('Update Error', err == null ? 'Unknown error' : (err.stack || err).toString());
   });
 
   autoUpdater.on('download-progress', (progress) => {
     const log_message = `Download speed: ${progress.bytesPerSecond} - Downloaded ${Math.round(progress.percent)}% (${progress.transferred}/${progress.total})`;
     console.log(log_message);
-    
+
     // Update progress window if it exists - with debug logging
     if (progressWindow && !progressWindow.isDestroyed()) {
       console.log('Sending progress to window:', Math.round(progress.percent) + '%');
@@ -361,7 +361,7 @@ function checkForUpdates(showNoUpdateDialog = false) {
   autoUpdater.on('update-downloaded', () => {
     // Close progress window
     closeProgressWindow();
-    
+
     dialog.showMessageBox({
       type: 'info',
       buttons: ['Install and Restart', 'Later'],
@@ -407,18 +407,18 @@ function createWindow(route = '/') {
     win.loadURL(`http://localhost:5173${route}`);
   } else {
     const hashRoute = route === '/' ? '/' : `#${route}`;
-    
+
     // Add error handling for production loading
     win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       console.error('Failed to load:', errorCode, errorDescription, validatedURL);
-      
+
       // Retry loading after a short delay
       setTimeout(() => {
         console.log('Retrying load...');
         win.loadURL(`http://localhost:4000/${hashRoute}`);
       }, 1000);
     });
-    
+
     win.loadURL(`http://localhost:4000/${hashRoute}`);
   }
 
@@ -434,7 +434,7 @@ function createWindow(route = '/') {
 function toggleDarkMode() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('toggle-dark-mode');
-    
+
     // Also update the menu checkbox immediately
     setTimeout(() => {
       updateDarkModeMenu();
@@ -473,8 +473,8 @@ function createMenu(win) {
         },
         { type: 'separator' },
         {
-        label: 'Connect Mobile Controller',
-        click: () => showQRCodeDialog(),
+          label: 'Connect Mobile Controller',
+          click: () => showQRCodeDialog(),
         },
         { type: 'separator' },
         {
@@ -574,10 +574,10 @@ function createMenu(win) {
       ],
     },
   ];
-  
+
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
-  
+
   // Update menu checkbox based on current dark mode state
   updateDarkModeMenu();
 }
@@ -590,7 +590,7 @@ function updateDarkModeMenu() {
     `).then(isDark => {
       // Sync native theme
       nativeTheme.themeSource = isDark ? 'dark' : 'light';
-      
+
       const menu = Menu.getApplicationMenu();
       if (menu) {
         const viewMenu = menu.items.find(item => item.label === 'View');
@@ -645,19 +645,19 @@ ipcMain.handle('load-lyrics-file', async () => {
       properties: ['openFile'],
       filters: [{ name: 'Text Files', extensions: ['txt'] }]
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
       const fs = await import('fs/promises');
       const content = await fs.readFile(result.filePaths[0], 'utf8');
       const fileName = result.filePaths[0].split(/[\\/]/).pop();
-      
+
       return {
         success: true,
         content,
         fileName
       };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     console.error('Error loading lyrics file:', error);
@@ -692,17 +692,17 @@ app.whenReady().then(async () => {
     // Start backend and wait for it to be ready
     await startBackend();
     console.log('✅ Backend started successfully');
-    
+
     // Small additional delay to ensure server is fully listening
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Now create the main window
     const mainWin = createWindow('/');
     createMenu(mainWin);
-    
+
     // Initialize native theme based on system preference
     nativeTheme.themeSource = 'system';
-    
+
     // Listen for system theme changes
     nativeTheme.on('updated', () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -719,13 +719,13 @@ app.whenReady().then(async () => {
 
   } catch (error) {
     console.error('Failed to start backend:', error);
-    
+
     // Create window anyway but with error handling
     const mainWin = createWindow('/');
     createMenu(mainWin);
-    
+
     dialog.showErrorBox(
-      'Startup Error', 
+      'Startup Error',
       'There was an issue starting the backend server. Some features may not work properly.'
     );
   }
@@ -743,8 +743,8 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   if (qrCodeWindow && !qrCodeWindow.isDestroyed()) {
-  qrCodeWindow.close();
-}
+    qrCodeWindow.close();
+  }
   if (backendProcess) {
     backendProcess.kill();
   }
