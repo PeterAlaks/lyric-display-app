@@ -1,21 +1,21 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown, List } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
 import LyricsList from './LyricsList';
+import MobileLayout from './MobileLayout';
+import SetlistModal from './SetlistModal';
 import { getLineSearchText } from '../utils/parseLyrics';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 
 // Main App Component
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
-  
+
   // Global state management
   const {
     isOutputOn,
@@ -28,55 +28,58 @@ const LyricDisplayApp = () => {
     output2Settings,
     updateOutputSettings,
     darkMode,
-    setDarkMode
+    setDarkMode,
+    isDesktopApp,
+    setlistModalOpen,
+    setSetlistModalOpen,
   } = useLyricsStore();
 
   // Handle dark mode toggle from Electron menu
- React.useEffect(() => {
-  if (window.electronAPI) {
-    const handleDarkModeToggle = () => {
-      const newDarkMode = !darkMode;
-      setDarkMode(newDarkMode);
-      window.electronAPI.setDarkMode(newDarkMode);
-      // Sync with native theme
-      window.electronAPI.syncNativeDarkMode(newDarkMode);
-    };
+  React.useEffect(() => {
+    if (window.electronAPI) {
+      const handleDarkModeToggle = () => {
+        const newDarkMode = !darkMode;
+        setDarkMode(newDarkMode);
+        window.electronAPI.setDarkMode(newDarkMode);
+        // Sync with native theme
+        window.electronAPI.syncNativeDarkMode(newDarkMode);
+      };
 
-    window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
-    window.electronAPI.setDarkMode(darkMode);
-    // Sync initial state with native theme
-    window.electronAPI.syncNativeDarkMode(darkMode);
+      window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
+      window.electronAPI.setDarkMode(darkMode);
+      // Sync initial state with native theme
+      window.electronAPI.syncNativeDarkMode(darkMode);
 
-    return () => {
-      window.electronAPI.removeAllListeners('toggle-dark-mode');
-    };
-  }
-}, [darkMode, setDarkMode]);
+      return () => {
+        window.electronAPI.removeAllListeners('toggle-dark-mode');
+      };
+    }
+  }, [darkMode, setDarkMode]);
 
   // Menu event handlers
-React.useEffect(() => {
-  if (window.electronAPI) {
-    // Handle Ctrl+O - Load Lyrics File
-    const handleTriggerFileLoad = () => {
-      fileInputRef.current?.click();
-    };
+  React.useEffect(() => {
+    if (window.electronAPI) {
+      // Handle Ctrl+O - Load Lyrics File
+      const handleTriggerFileLoad = () => {
+        fileInputRef.current?.click();
+      };
 
-    // Handle Ctrl+N - New Lyrics File
-    const handleNavigateToNewSong = () => {
-      navigate('/new-song?mode=new');
-    };
+      // Handle Ctrl+N - New Lyrics File
+      const handleNavigateToNewSong = () => {
+        navigate('/new-song?mode=new');
+      };
 
-    window.electronAPI.onTriggerFileLoad(handleTriggerFileLoad);
-    window.electronAPI.onNavigateToNewSong(handleNavigateToNewSong);
+      window.electronAPI.onTriggerFileLoad(handleTriggerFileLoad);
+      window.electronAPI.onNavigateToNewSong(handleNavigateToNewSong);
 
-    return () => {
-      window.electronAPI.removeAllListeners('trigger-file-load');
-      window.electronAPI.removeAllListeners('navigate-to-new-song');
-    };
-  }
-}, [navigate]);
+      return () => {
+        window.electronAPI.removeAllListeners('trigger-file-load');
+        window.electronAPI.removeAllListeners('navigate-to-new-song');
+      };
+    }
+  }, [navigate]);
 
-  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate } = useSocket('control');
+  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist } = useSocket('control');
 
   // File upload functionality
   const handleFileUpload = useFileUpload();
@@ -122,27 +125,32 @@ React.useEffect(() => {
 
   // Handle create new song
   const handleCreateNewSong = () => {
-     navigate('/new-song?mode=new');
+    navigate('/new-song?mode=new');
   };
 
   // Handle edit current lyrics
   const handleEditLyrics = () => {
-     navigate('/new-song?mode=edit');
+    navigate('/new-song?mode=edit');
+  };
+
+  // Handle setlist modal
+  const handleOpenSetlist = () => {
+    setSetlistModalOpen(true);
   };
 
   // Handle file input change
   const handleFileChange = async (event) => {
-  const file = event.target.files?.[0];
-  if (file && file.type === 'text/plain') {
-    // Clear search when new file is loaded
-    setSearchQuery('');
-    setHighlightedLineIndex(null);
-    setCurrentMatchIndex(0);
-    setTotalMatches(0);
-    setAllMatchIndices([]);
-    await handleFileUpload(file);
-  }
-};
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/plain') {
+      // Clear search when new file is loaded
+      setSearchQuery('');
+      setHighlightedLineIndex(null);
+      setCurrentMatchIndex(0);
+      setTotalMatches(0);
+      setAllMatchIndices([]);
+      await handleFileUpload(file);
+    }
+  };
 
   // Handle line selection
   const handleLineSelect = (index) => {
@@ -152,21 +160,21 @@ React.useEffect(() => {
 
   // Find all matching lines
   const findAllMatches = (query) => {
-  if (!query.trim() || !lyrics || lyrics.length === 0) {
-    return [];
-  }
-
-  const matchIndices = [];
-  lyrics.forEach((line, index) => {
-    // Use the helper function to get searchable text for both string and group types
-    const searchText = getLineSearchText(line);
-    if (searchText.toLowerCase().includes(query.toLowerCase())) {
-      matchIndices.push(index);
+    if (!query.trim() || !lyrics || lyrics.length === 0) {
+      return [];
     }
-  });
 
-  return matchIndices;
-};
+    const matchIndices = [];
+    lyrics.forEach((line, index) => {
+      // Use the helper function to get searchable text for both string and group types
+      const searchText = getLineSearchText(line);
+      if (searchText.toLowerCase().includes(query.toLowerCase())) {
+        matchIndices.push(index);
+      }
+    });
+
+    return matchIndices;
+  };
 
   // Scroll to specific line
   const scrollToLine = (lineIndex) => {
@@ -175,7 +183,7 @@ React.useEffect(() => {
       if (container) {
         const lineElements = container.querySelectorAll('[data-line-index]');
         const targetElement = lineElements[lineIndex];
-        
+
         if (targetElement) {
           targetElement.scrollIntoView({
             behavior: 'smooth',
@@ -192,7 +200,7 @@ React.useEffect(() => {
 
     const clampedIndex = Math.max(0, Math.min(matchIndex, allMatchIndices.length - 1));
     const lineIndex = allMatchIndices[clampedIndex];
-    
+
     setCurrentMatchIndex(clampedIndex);
     setHighlightedLineIndex(lineIndex);
     scrollToLine(lineIndex);
@@ -201,7 +209,7 @@ React.useEffect(() => {
   // Navigate to next match
   const navigateToNextMatch = () => {
     if (allMatchIndices.length === 0) return;
-    
+
     const nextIndex = currentMatchIndex >= allMatchIndices.length - 1 ? 0 : currentMatchIndex + 1;
     navigateToMatch(nextIndex);
   };
@@ -209,7 +217,7 @@ React.useEffect(() => {
   // Navigate to previous match
   const navigateToPreviousMatch = () => {
     if (allMatchIndices.length === 0) return;
-    
+
     const prevIndex = currentMatchIndex <= 0 ? allMatchIndices.length - 1 : currentMatchIndex - 1;
     navigateToMatch(prevIndex);
   };
@@ -235,7 +243,7 @@ React.useEffect(() => {
   // Enhanced search handler
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
+
     if (!query.trim()) {
       setHighlightedLineIndex(null);
       setCurrentMatchIndex(0);
@@ -269,8 +277,6 @@ React.useEffect(() => {
     setAllMatchIndices([]);
   };
 
-  console.log('Toggle emitted:', !isOutputOn)
-
   // Get current settings based on active tab
   const getCurrentSettings = () => {
     return activeTab === 'output1' ? output1Settings : output2Settings;
@@ -289,6 +295,11 @@ React.useEffect(() => {
     emitOutputToggle(!isOutputOn);
   };
 
+  // If not desktop app, show mobile layout
+  if (!isDesktopApp) {
+    return <MobileLayout />;
+  }
+
   return (
     <div className={`flex h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {/* Left Sidebar - Control Panel */}
@@ -296,32 +307,45 @@ React.useEffect(() => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>LyricDisplay</h1>
-          <button
-            className={`flex items-center gap-2 px-3 py-1 rounded font-medium transition-colors ${
-              darkMode 
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-            title="Sync current state to outputs"
-            onClick={() => {
-              if (lyrics && lyrics.length > 0) {
-                emitLyricsLoad(lyrics);
-                if (selectedLine !== null && selectedLine !== undefined) {
-                  emitLineUpdate(selectedLine);
+          <div className="flex items-center gap-2">
+            {/* Setlist Button */}
+            <button
+              className={`p-2 rounded font-medium transition-colors ${darkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              title="Open setlist"
+              onClick={handleOpenSetlist}
+            >
+              <List className="w-5 h-5" />
+            </button>
+
+            {/* Sync Outputs Button - Icon Only */}
+            <button
+              className={`p-2 rounded font-medium transition-colors ${darkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              title="Sync current state to outputs"
+              onClick={() => {
+                if (lyrics && lyrics.length > 0) {
+                  emitLyricsLoad(lyrics);
+                  if (selectedLine !== null && selectedLine !== undefined) {
+                    emitLineUpdate(selectedLine);
+                  }
+                  if (output1Settings) {
+                    emitStyleUpdate('output1', output1Settings);
+                  }
+                  if (output2Settings) {
+                    emitStyleUpdate('output2', output2Settings);
+                  }
                 }
-                if (output1Settings) {
-                  emitStyleUpdate('output1', output1Settings);
-                }
-                if (output2Settings) {
-                  emitStyleUpdate('output2', output2Settings);
-                }
-              }
-              emitOutputToggle(isOutputOn);
-            }}
-          >
-            <RefreshCw className="w-5 h-5" />
-            <span className="text-[12px]">Sync Outputs</span>
-          </button>
+                emitOutputToggle(isOutputOn);
+              }}
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Load and Create Buttons */}
@@ -334,11 +358,10 @@ React.useEffect(() => {
             Load lyrics file (.txt)
           </button>
           <button
-            className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${
-              darkMode
+            className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
                 ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-            }`}
+              }`}
             onClick={handleCreateNewSong}
             title="Create new lyrics"
           >
@@ -362,23 +385,22 @@ React.useEffect(() => {
 
         {/* Output Toggle */}
         <div className="flex items-center justify-between mb-6">
-  <div className="flex items-center gap-4 mx-2">
-    <Switch
-      checked={isOutputOn}
-      onCheckedChange={handleToggle}
-      className={`
-        scale-[1.8]
-        ${darkMode
-          ? "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600"
-          : "data-[state=checked]:bg-black"}
-      `}
-    />
-    <span className={`text-sm ml-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-      {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
-    </span>
-  </div>
-</div>
-
+          <div className="flex items-center gap-4 mx-2">
+            <Switch
+              checked={isOutputOn}
+              onCheckedChange={handleToggle}
+              className={`
+                scale-[1.8]
+                ${darkMode
+                  ? "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600"
+                  : "data-[state=checked]:bg-black"}
+              `}
+            />
+            <span className={`text-sm ml-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
+            </span>
+          </div>
+        </div>
 
         <div className={`border-t my-10 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
@@ -395,25 +417,23 @@ React.useEffect(() => {
         {/* Output Tabs */}
         <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
           <button
-            className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
-              activeTab === 'output1'
+            className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${activeTab === 'output1'
                 ? 'bg-black text-white'
                 : darkMode
-                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
             onClick={() => setActiveTab('output1')}
           >
             Output 1
           </button>
           <button
-            className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
-              activeTab === 'output2'
+            className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${activeTab === 'output2'
                 ? 'bg-black text-white'
                 : darkMode
-                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
             onClick={() => setActiveTab('output2')}
           >
             Output 2
@@ -438,11 +458,10 @@ React.useEffect(() => {
             {hasLyrics && (
               <button
                 onClick={handleEditLyrics}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  darkMode
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
                     ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
+                  }`}
               >
                 <Edit className="w-4 h-4" />
                 Edit
@@ -459,33 +478,30 @@ React.useEffect(() => {
                   placeholder="Search lyrics..."
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className={`border rounded-md w-full pr-24 ${
-                    darkMode 
-                      ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400' 
+                  className={`border rounded-md w-full pr-24 ${darkMode
+                      ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
                       : 'border-gray-300 bg-white'
-                  }`}
+                    }`}
                 />
                 <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
                   {searchQuery && allMatchIndices.length > 0 && (
                     <>
                       <button
                         onClick={navigateToPreviousMatch}
-                        className={`p-1 rounded transition-colors ${
-                          darkMode 
-                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                        className={`p-1 rounded transition-colors ${darkMode
+                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                             : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                        }`}
+                          }`}
                         title="Previous match (Shift+Up)"
                       >
                         <ChevronUp className="w-4 h-4" />
                       </button>
                       <button
                         onClick={navigateToNextMatch}
-                        className={`p-1 rounded transition-colors ${
-                          darkMode 
-                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                        className={`p-1 rounded transition-colors ${darkMode
+                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                             : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                        }`}
+                          }`}
                         title="Next match (Shift+Down)"
                       >
                         <ChevronDown className="w-4 h-4" />
@@ -495,11 +511,10 @@ React.useEffect(() => {
                   {searchQuery && (
                     <button
                       onClick={clearSearch}
-                      className={`p-1 rounded transition-colors ${
-                        darkMode 
-                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                      className={`p-1 rounded transition-colors ${darkMode
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                           : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                      }`}
+                        }`}
                       title="Clear search"
                     >
                       <X className="w-4 h-4" />
@@ -507,12 +522,11 @@ React.useEffect(() => {
                   )}
                 </div>
               </div>
-              
+
               {/* Match Counter */}
               {searchQuery && (
-                <div className={`mt-2 text-sm ${
-                  darkMode ? 'text-gray-400' : 'text-gray-500'
-                }`}>
+                <div className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
                   {totalMatches > 0 ? (
                     `Showing result ${currentMatchIndex + 1} of ${totalMatches} matches`
                   ) : (
@@ -525,9 +539,8 @@ React.useEffect(() => {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className={`rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden ${
-          darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
-        }`}>
+        <div className={`rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
+          }`}>
           {hasLyrics ? (
             <div
               ref={lyricsContainerRef}
@@ -581,9 +594,8 @@ React.useEffect(() => {
               }}
             >
               <div className="text-center">
-                <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
-                  darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                }`}>
+                <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                  }`}>
                   <FolderOpen className={`w-10 h-10 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} />
                 </div>
                 <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -594,6 +606,9 @@ React.useEffect(() => {
           )}
         </div>
       </div>
+
+      {/* Setlist Modal */}
+      <SetlistModal />
     </div>
   );
 };

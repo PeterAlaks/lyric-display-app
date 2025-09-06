@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   syncNativeDarkMode: (isDark) => ipcRenderer.invoke('sync-native-dark-mode', isDark),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
   newLyricsFile: () => ipcRenderer.invoke('new-lyrics-file'),
+  getLocalIP: () => ipcRenderer.invoke('get-local-ip'),
   onTriggerFileLoad: (callback) => {
     ipcRenderer.removeAllListeners('trigger-file-load');
     ipcRenderer.on('trigger-file-load', callback);

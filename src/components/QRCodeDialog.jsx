@@ -1,0 +1,172 @@
+import React, { useState, useEffect } from 'react';
+import { X, Smartphone, Wifi } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+
+const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
+  const [localIP, setLocalIP] = useState('');
+  const [qrCodeDataURL, setQRCodeDataURL] = useState('');
+  const [isGenerating, setIsGenerating] = useState(true);
+
+
+  useEffect(() => {
+  if (!isOpen) return;
+
+  const getLocalIP = async () => {
+    try {
+      if (window.electronAPI && window.electronAPI.getLocalIP) {
+        const ip = await window.electronAPI.getLocalIP();
+        setLocalIP(ip);
+      } else {
+        // Fallback for non-Electron environments (web browsers)
+        setLocalIP('localhost');
+      }
+    } catch (error) {
+      console.error('Error getting local IP:', error);
+      setLocalIP('localhost');
+    }
+  };
+
+  getLocalIP();
+}, [isOpen]);
+
+  // Generate QR code when we have the IP
+  useEffect(() => {
+    if (!localIP || !isOpen) return;
+
+    const generateQRCode = async () => {
+      setIsGenerating(true);
+      
+      try {
+        const url = `http://${localIP}:4000/`;
+        
+        // Simple QR code generation using a service (you might want to use a library instead)
+        // For production, consider using the 'qrcode' npm package
+        const qrServiceUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+        
+        // For a more robust solution, you could use the qrcode npm package:
+        /*
+        const QRCode = require('qrcode');
+        const dataURL = await QRCode.toDataURL(url, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: darkMode ? '#FFFFFF' : '#000000',
+            light: darkMode ? '#374151' : '#FFFFFF'
+          }
+        });
+        setQRCodeDataURL(dataURL);
+        */
+        
+        setQRCodeDataURL(qrServiceUrl);
+      } catch (error) {
+        console.error('Error generating QR code:', error);
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    generateQRCode();
+  }, [localIP, isOpen, darkMode]);
+
+  if (!isOpen) return null;
+
+  const connectionURL = `http://${localIP}:4000/`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Dialog */}
+      <div className={`
+        relative w-full max-w-md mx-4 rounded-xl shadow-2xl p-6
+        ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
+      `}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Smartphone className="w-6 h-6" />
+            Connect Mobile Controller
+          </h2>
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="icon"
+            className={darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="text-center space-y-4">
+          
+          {/* QR Code */}
+          <div className={`
+            mx-auto w-52 h-52 flex items-center justify-center rounded-lg border-2 border-dashed
+            ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-50'}
+          `}>
+            {isGenerating ? (
+              <div className="flex flex-col items-center gap-2">
+                <Wifi className={`w-8 h-8 animate-pulse ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Generating QR Code...
+                </span>
+              </div>
+            ) : qrCodeDataURL ? (
+              <img 
+                src={qrCodeDataURL} 
+                alt="QR Code for mobile connection"
+                className="w-48 h-48 rounded"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <X className={`w-8 h-8 ${darkMode ? 'text-red-400' : 'text-red-500'}`} />
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Failed to generate QR Code
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Instructions */}
+          <div className="space-y-2">
+            <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Scan QR code with your mobile device or visit:
+            </p>
+            <div className={`
+              px-3 py-2 rounded-md text-sm font-mono break-all
+              ${darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'}
+            `}>
+              {connectionURL}
+            </div>
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Make sure your mobile device is connected to the same network
+            </p>
+          </div>
+
+          {/* Copy URL Button */}
+          <Button
+            onClick={() => {
+              navigator.clipboard.writeText(connectionURL).then(() => {
+              
+                console.log('URL copied to clipboard');
+              });
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            Copy URL to Clipboard
+          </Button>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default QRCodeDialog;

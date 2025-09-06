@@ -4,12 +4,14 @@ import { fileURLToPath } from 'url';
 import { fork } from 'child_process';
 import { writeFile } from 'fs/promises';
 import updaterPkg from 'electron-updater';
+import os from 'os';
 const { autoUpdater } = updaterPkg;
 
 const isDev = !app.isPackaged;
 let backendProcess = null;
 let progressWindow = null;
 let mainWindow = null; // Track main window for menu updates
+let qrCodeWindow = null;
 
 // Only add compatibility flags for older systems in production
 // and only if we detect it's needed
@@ -31,6 +33,24 @@ function resolveProductionPath(...segments) {
     // Use asar.unpacked path for files excluded from asar
     return path.join(process.resourcesPath, 'app.asar.unpacked', ...segments);
   }
+}
+
+// Get local IP address
+function getLocalIPAddress() {
+  const interfaces = os.networkInterfaces();
+  
+  for (const interfaceName of Object.keys(interfaces)) {
+    const networkInterface = interfaces[interfaceName];
+    
+    for (const connection of networkInterface) {
+      // Skip internal/loopback addresses
+      if (connection.family === 'IPv4' && !connection.internal) {
+        return connection.address;
+      }
+    }
+  }
+  
+  return 'localhost'; // Fallback
 }
 
 // Create progress window
@@ -176,6 +196,54 @@ function closeProgressWindow() {
     progressWindow.close();
   }
   progressWindow = null;
+}
+
+// Create QR Code dialog window
+function createQRCodeDialog() {
+  if (qrCodeWindow) {
+    qrCodeWindow.focus();
+    return qrCodeWindow;
+  }
+
+  qrCodeWindow = new BrowserWindow({
+    width: 450,
+    height: 550,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    alwaysOnTop: true,
+    center: true,
+    show: false,
+    frame: true,
+    parent: mainWindow, // Make it a child window
+    modal: true, // Make it modal
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: resolveProductionPath('preload.js')
+    }
+  });
+
+  qrCodeWindow.setMenuBarVisibility(false);
+  
+  // Load QR Code dialog HTML
+  if (isDev) {
+    qrCodeWindow.loadURL('http://localhost:5173/qr-dialog');
+  } else {
+    qrCodeWindow.loadURL('http://localhost:4000/#/qr-dialog');
+  }
+  
+   qrCodeWindow.once('ready-to-show', () => {
+    const localIP = getLocalIPAddress();
+    qrCodeWindow.webContents.send('set-local-ip', localIP);
+    qrCodeWindow.show();
+  });
+
+  qrCodeWindow.on('closed', () => {
+    qrCodeWindow = null;
+  });
+
+  return qrCodeWindow;
 }
 
 // Start backend process
@@ -374,6 +442,11 @@ function toggleDarkMode() {
   }
 }
 
+// Show QR Code dialog
+function showQRCodeDialog() {
+  createQRCodeDialog();
+}
+
 // Create menu
 function createMenu(win) {
   const template = [
@@ -397,6 +470,11 @@ function createMenu(win) {
               mainWindow.webContents.send('navigate-to-new-song');
             }
           },
+        },
+        { type: 'separator' },
+        {
+        label: 'Connect Mobile Controller',
+        click: () => showQRCodeDialog(),
         },
         { type: 'separator' },
         {
@@ -603,6 +681,11 @@ ipcMain.handle('sync-native-dark-mode', (event, isDark) => {
   }
 });
 
+// Add IPC handler for IP address
+ipcMain.handle('get-local-ip', () => {
+  return getLocalIPAddress();
+});
+
 // App lifecycle
 app.whenReady().then(async () => {
   try {
@@ -659,6 +742,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  if (qrCodeWindow && !qrCodeWindow.isDestroyed()) {
+  qrCodeWindow.close();
+}
   if (backendProcess) {
     backendProcess.kill();
   }

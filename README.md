@@ -2,7 +2,6 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 2.1.1  
 **Author:** Peter Alakembi  
 **Built for:** Victory City Media  
 
@@ -284,15 +283,6 @@ For technical support, feature requests, or bug reports:
 - Open an issue on GitHub
 - Check existing documentation
 - Review troubleshooting section
-
-## Version History
-
-**v2.1.1** - Current Release
-- Enhanced stability and performance
-- Improved Socket.io reliability
-- Advanced search and navigation features
-- Professional styling engine
-- Auto-update functionality
 
 ---
 
