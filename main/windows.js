@@ -1,0 +1,49 @@
+import { BrowserWindow, shell } from 'electron';
+import path from 'path';
+import { isDev, resolveProductionPath, appRoot } from './paths.js';
+
+export function createWindow(route = '/') {
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: resolveProductionPath('preload.js')
+    },
+    show: false,
+    icon: path.join(appRoot, 'public', 'favicon.ico'),
+    backgroundColor: isDev ? '#ffffff' : '#f9fafb',
+  });
+
+  win.once('ready-to-show', () => {
+    setTimeout(() => {
+      try { win.show(); } catch {}
+      if (isDev) {
+        try { win.webContents.openDevTools({ mode: 'detach' }); } catch {}
+      }
+    }, 100);
+  });
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    try { shell.openExternal(url); } catch (e) { console.error('Failed to open external URL:', url, e); }
+    return { action: 'deny' };
+  });
+
+  if (isDev) {
+    win.loadURL(`http://localhost:5173${route}`);
+  } else {
+    const hashRoute = route === '/' ? '/' : `#${route}`;
+    win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load:', errorCode, errorDescription, validatedURL);
+      setTimeout(() => {
+        console.log('Retrying load...');
+        try { win.loadURL(`http://localhost:4000/${hashRoute}`); } catch {}
+      }, 1000);
+    });
+    win.loadURL(`http://localhost:4000/${hashRoute}`);
+  }
+
+  return win;
+}
+

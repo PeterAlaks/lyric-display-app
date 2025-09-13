@@ -55,6 +55,7 @@
     "files": [
       "dist/**/*",
       "server/**/*",
+      "main/**/*",
       "main.js",
       "preload.js",
       "package.json",
