@@ -15,9 +15,13 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode }) => {
         // Construct search query - only append "lyrics" if not already present
         const finalQuery = hasLyrics ? searchQuery : `${searchQuery} lyrics`;
 
-        // Open Google search in new tab
+        // Open Google search in in-app browser (Electron) or fallback to new tab
         const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(finalQuery)}`;
-        window.open(googleSearchUrl, '_blank');
+        if (window.electronAPI && window.electronAPI.openInAppBrowser) {
+            window.electronAPI.openInAppBrowser(googleSearchUrl);
+        } else {
+            window.open(googleSearchUrl, '_blank');
+        }
 
         // Close modal and clear input
         setSearchQuery('');

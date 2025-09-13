@@ -202,11 +202,18 @@ lyric-display-app/
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
+|   |   ├── SearchBar.jsx                   # Search bar component for control panel
 |   |   └── SetlistModal.jsx                # Setlist Modal
 │   ├── context/
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/
+|   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
+|   |   ├── useEditorClipboard.js           # Hook for cut, copy and paste handlers
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
+|   |   ├── useMenuShortcuts.js             # Hook for handling menu navigation/shortcuts
+|   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
+|   |   ├── useSearch.js                    # Hook for search bar functionality
+|   |   ├── useSetlistActions.js            # Hook for setlist action functionality
 |   |   └── useSocket.js                    # Custom React hook for Socket.IO client
 │   ├── lib/
 |   |   └── utils.js                        # Utility functions
@@ -215,6 +222,7 @@ lyric-display-app/
 |   |   ├── Output1.jsx                     # Output 1 display
 |   |   └── Output2.jsx                     # Output 2 display
 │   ├── utils/
+|   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
 |   |   └── parseLyrics.js                  # Text file parser
 |   ├── App.jsx                             # React app main component
 |   ├── main.jsx                            # App entry point

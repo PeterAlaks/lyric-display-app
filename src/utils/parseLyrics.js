@@ -34,7 +34,7 @@ export const parseLyrics = (file) => {
  * @param {string} rawText - The original file content
  * @returns {Array} - Array of strings and group objects
  */
-function processRawTextToLines(rawText) {
+export function processRawTextToLines(rawText) {
   // Split by lines but preserve structure to identify clusters
   const allLines = rawText.split(/\r?\n/);
   

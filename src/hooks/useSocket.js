@@ -37,11 +37,11 @@ const useSocket = (role = 'output') => {
     // Socket configuration options
     const socketOptions = {
       transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
-      timeout: 20000,
+      timeout: 30000,
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      maxReconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      reconnectionAttempts: 3,
+      maxReconnectionAttempts: 5,
     };
 
     socketRef.current = io(socketUrl, socketOptions);

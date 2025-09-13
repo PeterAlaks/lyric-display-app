@@ -9,6 +9,7 @@ let currentIsOutputOn = false;
 let setlistFiles = []; // New: Store setlist files (max 25)
 let connectedClients = new Map(); // Track client types
 
+
 export default function registerSocketEvents(io) {
   io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
@@ -18,20 +19,7 @@ export default function registerSocketEvents(io) {
       connectedClients.set(socket.id, { type, socket });
       console.log(`Client ${socket.id} identified as: ${type}`);
 
-      // Send initial state including setlist
-      const currentState = {
-        lyrics: currentLyrics,
-        selectedLine: currentSelectedLine,
-        output1Settings: currentOutput1Settings,
-        output2Settings: currentOutput2Settings,
-        isOutputOn: currentIsOutputOn,
-        setlistFiles: setlistFiles,
-        lyricsFileName: currentLyricsFileName || '',
-        isDesktopClient: type === 'desktop',
-        timestamp: Date.now()
-      };
-
-      socket.emit('currentState', currentState);
+      socket.emit('currentState', buildCurrentState({ type }));
     });
 
     // Enhanced state request handler with setlist
@@ -39,19 +27,7 @@ export default function registerSocketEvents(io) {
       console.log('State requested by:', socket.id);
 
       const clientInfo = connectedClients.get(socket.id);
-      const currentState = {
-        lyrics: currentLyrics,
-        selectedLine: currentSelectedLine,
-        output1Settings: currentOutput1Settings,
-        output2Settings: currentOutput2Settings,
-        isOutputOn: currentIsOutputOn,
-        setlistFiles: setlistFiles,
-        lyricsFileName: currentLyricsFileName,
-        isDesktopClient: clientInfo?.type === 'desktop',
-        timestamp: Date.now()
-      };
-
-      socket.emit('currentState', currentState);
+      socket.emit('currentState', buildCurrentState(clientInfo));
       console.log('Current state sent to:', socket.id, `(${currentLyrics.length} lyrics, ${setlistFiles.length} setlist items)`);
     });
 
@@ -231,18 +207,7 @@ export default function registerSocketEvents(io) {
     const stateBroadcastInterval = setInterval(() => {
       if (socket.connected) {
         const clientInfo = connectedClients.get(socket.id);
-        const currentState = {
-          lyrics: currentLyrics,
-          selectedLine: currentSelectedLine,
-          output1Settings: currentOutput1Settings,
-          output2Settings: currentOutput2Settings,
-          isOutputOn: currentIsOutputOn,
-          setlistFiles: setlistFiles,
-          lyricsFileName: currentLyricsFileName,
-          isDesktopClient: clientInfo?.type === 'desktop',
-          timestamp: Date.now()
-        };
-        socket.emit('periodicStateSync', currentState);
+        socket.emit('periodicStateSync', buildCurrentState(clientInfo));
       }
     }, 30000);
 
@@ -254,17 +219,29 @@ export default function registerSocketEvents(io) {
   });
 }
 
-// Helper function to process raw text (same as parseLyrics utility)
+function buildCurrentState(clientInfo) {
+  return {
+    lyrics: currentLyrics,
+    selectedLine: currentSelectedLine,
+    output1Settings: currentOutput1Settings,
+    output2Settings: currentOutput2Settings,
+    isOutputOn: currentIsOutputOn,
+    setlistFiles,
+    lyricsFileName: currentLyricsFileName || '',
+    isDesktopClient: clientInfo?.type === 'desktop',
+    timestamp: Date.now(),
+  };
+}
+
+// Helper function to process raw text (same rules as client)
 function processRawTextToLines(rawText) {
   const allLines = rawText.split(/\r?\n/);
 
-  // Identify clusters: groups of consecutive non-empty lines separated by empty lines
   const clusters = [];
   let currentCluster = [];
 
   for (let i = 0; i < allLines.length; i++) {
     const line = allLines[i].trim();
-
     if (line.length > 0) {
       currentCluster.push({ line, originalIndex: i });
     } else {
@@ -274,14 +251,11 @@ function processRawTextToLines(rawText) {
       }
     }
   }
-
   if (currentCluster.length > 0) {
     clusters.push(currentCluster);
   }
 
-  // Process each cluster according to grouping rules
   const result = [];
-
   clusters.forEach((cluster, clusterIndex) => {
     if (cluster.length === 2 && isTranslationLine(cluster[1].line)) {
       const groupedLine = {
@@ -306,18 +280,8 @@ function processRawTextToLines(rawText) {
 
 function isTranslationLine(line) {
   if (!line || typeof line !== 'string') return false;
-
   const trimmed = line.trim();
   if (trimmed.length <= 2) return false;
-
-  const bracketPairs = [
-    ['[', ']'],
-    ['(', ')'],
-    ['{', '}'],
-    ['<', '>']
-  ];
-
-  return bracketPairs.some(
-    ([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close)
-  );
+  const bracketPairs = [ ['[', ']'], ['(', ')'], ['{', '}'], ['<', '>'] ];
+  return bracketPairs.some(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
 }

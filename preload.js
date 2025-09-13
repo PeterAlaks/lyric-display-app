@@ -29,6 +29,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('progress-update', (event, progress) => callback(progress));
   },
 
+  openInAppBrowser: (url) => ipcRenderer.invoke('open-in-app-browser', url),
+
+  // In-app browser controls
+  browserBack: () => ipcRenderer.send('browser-nav', 'back'),
+  browserForward: () => ipcRenderer.send('browser-nav', 'forward'),
+  browserReload: () => ipcRenderer.send('browser-nav', 'reload'),
+  browserNavigate: (url) => ipcRenderer.send('browser-nav', 'navigate', url),
+  browserOpenExternal: () => ipcRenderer.send('browser-open-external'),
+  onBrowserLocation: (callback) => {
+    ipcRenderer.removeAllListeners('browser-location');
+    ipcRenderer.on('browser-location', (_e, url) => callback(url));
+  },
+
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
   }

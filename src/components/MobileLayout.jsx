@@ -1,12 +1,12 @@
-import React, { useRef } from 'react';
-import { List, RefreshCw, ChevronUp, ChevronDown, X } from 'lucide-react';
+import React from 'react';
+import { List, RefreshCw } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import LyricsList from './LyricsList';
-import { getLineSearchText } from '../utils/parseLyrics';
 import SetlistModal from './SetlistModal';
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
+import useSearch from '../hooks/useSearch';
+import SearchBar from './SearchBar';
 
 const MobileLayout = () => {
   const {
@@ -24,12 +24,17 @@ const MobileLayout = () => {
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad } = useSocket('control');
 
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [highlightedLineIndex, setHighlightedLineIndex] = React.useState(null);
-  const [currentMatchIndex, setCurrentMatchIndex] = React.useState(0);
-  const [totalMatches, setTotalMatches] = React.useState(0);
-  const [allMatchIndices, setAllMatchIndices] = React.useState([]);
-  const lyricsContainerRef = useRef(null);
+  const {
+    containerRef: lyricsContainerRef,
+    searchQuery,
+    highlightedLineIndex,
+    currentMatchIndex,
+    totalMatches,
+    handleSearch,
+    clearSearch,
+    navigateToNextMatch,
+    navigateToPreviousMatch,
+  } = useSearch(lyrics);
 
   const hasLyrics = lyrics && lyrics.length > 0;
 
@@ -43,84 +48,7 @@ const MobileLayout = () => {
     emitOutputToggle(!isOutputOn);
   };
 
-  const findAllMatches = (query) => {
-    if (!query.trim() || !lyrics || lyrics.length === 0) return [];
-
-    const matchIndices = [];
-    lyrics.forEach((line, index) => {
-      const searchText = getLineSearchText(line);
-      if (searchText.toLowerCase().includes(query.toLowerCase())) {
-        matchIndices.push(index);
-      }
-    });
-    return matchIndices;
-  };
-
-  const scrollToLine = (lineIndex) => {
-    setTimeout(() => {
-      const container = lyricsContainerRef.current;
-      if (container) {
-        const lineElements = container.querySelectorAll('[data-line-index]');
-        const targetElement = lineElements[lineIndex];
-        if (targetElement) {
-          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    }, 50);
-  };
-
-  const navigateToMatch = (matchIndex) => {
-    if (allMatchIndices.length === 0) return;
-    const clampedIndex = Math.max(0, Math.min(matchIndex, allMatchIndices.length - 1));
-    const lineIndex = allMatchIndices[clampedIndex];
-    setCurrentMatchIndex(clampedIndex);
-    setHighlightedLineIndex(lineIndex);
-    scrollToLine(lineIndex);
-  };
-
-  const navigateToNextMatch = () => {
-    if (allMatchIndices.length === 0) return;
-    const nextIndex =
-      currentMatchIndex >= allMatchIndices.length - 1 ? 0 : currentMatchIndex + 1;
-    navigateToMatch(nextIndex);
-  };
-
-  const navigateToPreviousMatch = () => {
-    if (allMatchIndices.length === 0) return;
-    const prevIndex =
-      currentMatchIndex <= 0 ? allMatchIndices.length - 1 : currentMatchIndex - 1;
-    navigateToMatch(prevIndex);
-  };
-
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-    if (!query.trim()) {
-      setHighlightedLineIndex(null);
-      setCurrentMatchIndex(0);
-      setTotalMatches(0);
-      setAllMatchIndices([]);
-      return;
-    }
-    const matchIndices = findAllMatches(query);
-    setAllMatchIndices(matchIndices);
-    setTotalMatches(matchIndices.length);
-    if (matchIndices.length > 0) {
-      setCurrentMatchIndex(0);
-      setHighlightedLineIndex(matchIndices[0]);
-      scrollToLine(matchIndices[0]);
-    } else {
-      setHighlightedLineIndex(null);
-      setCurrentMatchIndex(0);
-    }
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
-    setHighlightedLineIndex(null);
-    setCurrentMatchIndex(0);
-    setTotalMatches(0);
-    setAllMatchIndices([]);
-  };
+  // Search logic handled via useSearch hook
 
   const handleOpenSetlist = () => {
     setSetlistModalOpen(true);
@@ -228,66 +156,16 @@ const MobileLayout = () => {
                 ? 'border-gray-600 bg-gray-800'
                 : 'border-gray-200 bg-white'
                 }`}>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="Search lyrics..."
-                    value={searchQuery}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className={`w-full pr-24 ${darkMode
-                      ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400'
-                      : 'border-gray-300 bg-white'
-                      }`}
-                  />
-                  {searchQuery && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                      {allMatchIndices.length > 0 && (
-                        <>
-                          <button
-                            onClick={navigateToPreviousMatch}
-                            className={`p-1.5 rounded-md transition-colors ${darkMode
-                              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                              }`}
-                            title="Previous match"
-                            disabled={allMatchIndices.length === 0}
-                          >
-                            <ChevronUp className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={navigateToNextMatch}
-                            className={`p-1.5 rounded-md transition-colors ${darkMode
-                              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                              }`}
-                            title="Next match"
-                            disabled={allMatchIndices.length === 0}
-                          >
-                            <ChevronDown className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={clearSearch}
-                        className={`p-1.5 rounded-md transition-colors ${darkMode
-                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600'
-                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          }`}
-                        title="Clear search"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {searchQuery && (
-                  <div className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'
-                    }`}>
-                    {totalMatches > 0
-                      ? `Showing result ${currentMatchIndex + 1} of ${totalMatches} matches`
-                      : 'No matches found'}
-                  </div>
-                )}
+                <SearchBar
+                  darkMode={darkMode}
+                  searchQuery={searchQuery}
+                  onSearch={handleSearch}
+                  totalMatches={totalMatches}
+                  currentMatchIndex={currentMatchIndex}
+                  onPrev={navigateToPreviousMatch}
+                  onNext={navigateToNextMatch}
+                  onClear={clearSearch}
+                />
               </div>
 
               {/* Scrollable Lyrics List */}

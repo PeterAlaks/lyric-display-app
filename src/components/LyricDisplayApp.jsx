@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, X, Edit, ChevronUp, ChevronDown, List, Globe, Plus } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, Edit, List, Globe, Plus } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
@@ -8,10 +8,14 @@ import LyricsList from './LyricsList';
 import MobileLayout from './MobileLayout';
 import SetlistModal from './SetlistModal';
 import OnlineLyricsSearchModal from './OnlineLyricsSearchModal';
-import { getLineSearchText } from '../utils/parseLyrics';
 import OutputSettingsPanel from './OutputSettingsPanel';
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import useDarkModeSync from '../hooks/useDarkModeSync';
+import useMenuShortcuts from '../hooks/useMenuShortcuts';
+import useSearch from '../hooks/useSearch';
+import useOutputSettings from '../hooks/useOutputSettings';
+import useSetlistActions from '../hooks/useSetlistActions';
+import SearchBar from './SearchBar';
 
 // Main App Component
 const LyricDisplayApp = () => {
@@ -38,72 +42,41 @@ const LyricDisplayApp = () => {
     isSetlistFull,
   } = useLyricsStore();
 
-  // Handle dark mode toggle from Electron menu
-  React.useEffect(() => {
-    if (window.electronAPI) {
-      const handleDarkModeToggle = () => {
-        const newDarkMode = !darkMode;
-        setDarkMode(newDarkMode);
-        window.electronAPI.setDarkMode(newDarkMode);
-        // Sync with native theme
-        window.electronAPI.syncNativeDarkMode(newDarkMode);
-      };
+  // Handle dark mode sync with Electron
+  useDarkModeSync(darkMode, setDarkMode);
 
-      window.electronAPI.onDarkModeToggle(handleDarkModeToggle);
-      window.electronAPI.setDarkMode(darkMode);
-      // Sync initial state with native theme
-      window.electronAPI.syncNativeDarkMode(darkMode);
-
-      return () => {
-        window.electronAPI.removeAllListeners('toggle-dark-mode');
-      };
-    }
-  }, [darkMode, setDarkMode]);
-
-  // Menu event handlers
-  React.useEffect(() => {
-    if (window.electronAPI) {
-      // Handle Ctrl+O - Load Lyrics File
-      const handleTriggerFileLoad = () => {
-        fileInputRef.current?.click();
-      };
-
-      // Handle Ctrl+N - New Lyrics File
-      const handleNavigateToNewSong = () => {
-        navigate('/new-song?mode=new');
-      };
-
-      window.electronAPI.onTriggerFileLoad(handleTriggerFileLoad);
-      window.electronAPI.onNavigateToNewSong(handleNavigateToNewSong);
-
-      return () => {
-        window.electronAPI.removeAllListeners('trigger-file-load');
-        window.electronAPI.removeAllListeners('navigate-to-new-song');
-      };
-    }
-  }, [navigate]);
+  // Menu shortcuts from Electron
+  const fileInputRef = useRef(null);
+  useMenuShortcuts(navigate, fileInputRef);
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd } = useSocket('control');
 
   // File upload functionality
   const handleFileUpload = useFileUpload();
-  const fileInputRef = useRef(null);
 
-  // Tabs
-  const [activeTab, setActiveTab] = React.useState('output1');
+  // Output tabs and settings helpers
+  const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({
+    output1Settings,
+    output2Settings,
+    updateOutputSettings,
+    emitStyleUpdate,
+  });
 
   // Online lyrics search modal state
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
 
-  // Search state - Enhanced navigation
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [highlightedLineIndex, setHighlightedLineIndex] = React.useState(null);
-  const [currentMatchIndex, setCurrentMatchIndex] = React.useState(0);
-  const [totalMatches, setTotalMatches] = React.useState(0);
-  const [allMatchIndices, setAllMatchIndices] = React.useState([]);
-
-  // Ref for scrollable container
-  const lyricsContainerRef = useRef(null);
+  // Search state and helpers
+  const {
+    containerRef: lyricsContainerRef,
+    searchQuery,
+    highlightedLineIndex,
+    currentMatchIndex,
+    totalMatches,
+    handleSearch,
+    clearSearch,
+    navigateToNextMatch,
+    navigateToPreviousMatch,
+  } = useSearch(lyrics);
 
   // Check if lyrics are loaded
   const hasLyrics = lyrics && lyrics.length > 0;
@@ -158,12 +131,7 @@ const LyricDisplayApp = () => {
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'text/plain') {
-      // Clear search when new file is loaded
-      setSearchQuery('');
-      setHighlightedLineIndex(null);
-      setCurrentMatchIndex(0);
-      setTotalMatches(0);
-      setAllMatchIndices([]);
+      clearSearch();
       await handleFileUpload(file);
     }
   };
@@ -174,136 +142,9 @@ const LyricDisplayApp = () => {
     emitLineUpdate(index);
   };
 
-  // Find all matching lines
-  const findAllMatches = (query) => {
-    if (!query.trim() || !lyrics || lyrics.length === 0) {
-      return [];
-    }
+  // Search behavior moved to hook
 
-    const matchIndices = [];
-    lyrics.forEach((line, index) => {
-      // Use the helper function to get searchable text for both string and group types
-      const searchText = getLineSearchText(line);
-      if (searchText.toLowerCase().includes(query.toLowerCase())) {
-        matchIndices.push(index);
-      }
-    });
-
-    return matchIndices;
-  };
-
-  // Scroll to specific line
-  const scrollToLine = (lineIndex) => {
-    setTimeout(() => {
-      const container = lyricsContainerRef.current;
-      if (container) {
-        const lineElements = container.querySelectorAll('[data-line-index]');
-        const targetElement = lineElements[lineIndex];
-
-        if (targetElement) {
-          targetElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
-        }
-      }
-    }, 50);
-  };
-
-  // Navigate to specific match
-  const navigateToMatch = (matchIndex) => {
-    if (allMatchIndices.length === 0) return;
-
-    const clampedIndex = Math.max(0, Math.min(matchIndex, allMatchIndices.length - 1));
-    const lineIndex = allMatchIndices[clampedIndex];
-
-    setCurrentMatchIndex(clampedIndex);
-    setHighlightedLineIndex(lineIndex);
-    scrollToLine(lineIndex);
-  };
-
-  // Navigate to next match
-  const navigateToNextMatch = () => {
-    if (allMatchIndices.length === 0) return;
-
-    const nextIndex = currentMatchIndex >= allMatchIndices.length - 1 ? 0 : currentMatchIndex + 1;
-    navigateToMatch(nextIndex);
-  };
-
-  // Navigate to previous match
-  const navigateToPreviousMatch = () => {
-    if (allMatchIndices.length === 0) return;
-
-    const prevIndex = currentMatchIndex <= 0 ? allMatchIndices.length - 1 : currentMatchIndex - 1;
-    navigateToMatch(prevIndex);
-  };
-
-  // Handle keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.shiftKey && searchQuery && allMatchIndices.length > 0) {
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          navigateToPreviousMatch();
-        } else if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          navigateToNextMatch();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [searchQuery, allMatchIndices, currentMatchIndex]);
-
-  // Enhanced search handler
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-
-    if (!query.trim()) {
-      setHighlightedLineIndex(null);
-      setCurrentMatchIndex(0);
-      setTotalMatches(0);
-      setAllMatchIndices([]);
-      return;
-    }
-
-    // Find all matches
-    const matchIndices = findAllMatches(query);
-    setAllMatchIndices(matchIndices);
-    setTotalMatches(matchIndices.length);
-
-    if (matchIndices.length > 0) {
-      // Start with first match
-      setCurrentMatchIndex(0);
-      setHighlightedLineIndex(matchIndices[0]);
-      scrollToLine(matchIndices[0]);
-    } else {
-      setHighlightedLineIndex(null);
-      setCurrentMatchIndex(0);
-    }
-  };
-
-  // Clear search function
-  const clearSearch = () => {
-    setSearchQuery('');
-    setHighlightedLineIndex(null);
-    setCurrentMatchIndex(0);
-    setTotalMatches(0);
-    setAllMatchIndices([]);
-  };
-
-  // Get current settings based on active tab
-  const getCurrentSettings = () => {
-    return activeTab === 'output1' ? output1Settings : output2Settings;
-  };
-
-  // Update settings based on active tab
-  const updateSettings = (newSettings) => {
-    const outputKey = activeTab === 'output1' ? 'output1' : 'output2';
-    updateOutputSettings(outputKey, newSettings);
-    emitStyleUpdate(outputKey, newSettings);
-  };
+  // Settings helpers moved to hook
 
   // Handle output toggle
   const handleToggle = () => {
@@ -311,34 +152,8 @@ const LyricDisplayApp = () => {
     emitOutputToggle(!isOutputOn);
   };
 
-  // Check if current file is already in setlist
-  const isFileAlreadyInSetlist = () => {
-    if (!lyricsFileName) return false;
-    return setlistFiles.some(file => file.displayName === lyricsFileName);
-  };
-
-  // Handle add to setlist
-  const handleAddToSetlist = () => {
-    if (!isDesktopApp || !hasLyrics || !rawLyricsContent || !lyricsFileName) return;
-
-    if (isSetlistFull()) {
-      alert('Setlist is full. Maximum 25 files allowed.');
-      return;
-    }
-
-    if (isFileAlreadyInSetlist()) {
-      alert('This file is already in the setlist.');
-      return;
-    }
-
-    const fileData = [{
-      name: `${lyricsFileName}.txt`,
-      content: rawLyricsContent,
-      lastModified: Date.now()
-    }];
-
-    emitSetlistAdd(fileData);
-  };
+  // Setlist actions
+  const { isFileAlreadyInSetlist, handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
   // If not desktop app, show mobile layout
   if (!isDesktopApp) {
@@ -517,8 +332,8 @@ const LyricDisplayApp = () => {
                 {/* Add to Setlist Button */}
                 <button
                   onClick={handleAddToSetlist}
-                  disabled={!isDesktopApp || isSetlistFull() || isFileAlreadyInSetlist()}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${!isDesktopApp || isSetlistFull() || isFileAlreadyInSetlist()
+                  disabled={addDisabled}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${addDisabled
                     ? darkMode
                       ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                       : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -526,15 +341,7 @@ const LyricDisplayApp = () => {
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                     }`}
-                  title={
-                    !isDesktopApp
-                      ? 'Only available on desktop app'
-                      : isSetlistFull()
-                        ? 'Setlist is full (25 files maximum)'
-                        : isFileAlreadyInSetlist()
-                          ? 'File already in setlist'
-                          : 'Add current file to setlist'
-                  }
+                  title={addTitle}
                 >
                   <Plus className="w-4 h-4" />
                   Add to Setlist
@@ -558,68 +365,16 @@ const LyricDisplayApp = () => {
           {/* Search Bar */}
           {hasLyrics && (
             <div className="mt-3 w-full">
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="Search lyrics..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className={`border rounded-md w-full pr-24 ${darkMode
-                    ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                    : 'border-gray-300 bg-white'
-                    }`}
-                />
-                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-                  {searchQuery && allMatchIndices.length > 0 && (
-                    <>
-                      <button
-                        onClick={navigateToPreviousMatch}
-                        className={`p-1 rounded transition-colors ${darkMode
-                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          }`}
-                        title="Previous match (Shift+Up)"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={navigateToNextMatch}
-                        className={`p-1 rounded transition-colors ${darkMode
-                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          }`}
-                        title="Next match (Shift+Down)"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                  {searchQuery && (
-                    <button
-                      onClick={clearSearch}
-                      className={`p-1 rounded transition-colors ${darkMode
-                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                        }`}
-                      title="Clear search"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Match Counter */}
-              {searchQuery && (
-                <div className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                  {totalMatches > 0 ? (
-                    `Showing result ${currentMatchIndex + 1} of ${totalMatches} matches`
-                  ) : (
-                    'No matches found'
-                  )}
-                </div>
-              )}
+              <SearchBar
+                darkMode={darkMode}
+                searchQuery={searchQuery}
+                onSearch={handleSearch}
+                totalMatches={totalMatches}
+                currentMatchIndex={currentMatchIndex}
+                onPrev={navigateToPreviousMatch}
+                onNext={navigateToNextMatch}
+                onClear={clearSearch}
+              />
             </div>
           )}
         </div>
@@ -636,8 +391,7 @@ const LyricDisplayApp = () => {
                 e.stopPropagation();
                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
                 if (file && file.type === 'text/plain') {
-                  setSearchQuery('');
-                  setHighlightedLineIndex(null);
+                  clearSearch();
                   await handleFileUpload(file);
                 }
               }}
