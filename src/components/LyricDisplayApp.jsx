@@ -16,6 +16,7 @@ import useSearch from '../hooks/useSearch';
 import useOutputSettings from '../hooks/useOutputSettings';
 import useSetlistActions from '../hooks/useSetlistActions';
 import SearchBar from './SearchBar';
+import useToast from '../hooks/useToast';
 
 // Main App Component
 const LyricDisplayApp = () => {
@@ -30,6 +31,9 @@ const LyricDisplayApp = () => {
     rawLyricsContent,
     selectedLine,
     selectLine,
+    setLyrics,
+    setRawLyricsContent,
+    setLyricsFileName,
     output1Settings,
     output2Settings,
     updateOutputSettings,
@@ -49,7 +53,7 @@ const LyricDisplayApp = () => {
   const fileInputRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd } = useSocket('control');
+  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd } = useSocket('control');
 
   // File upload functionality
   const handleFileUpload = useFileUpload();
@@ -80,6 +84,7 @@ const LyricDisplayApp = () => {
 
   // Check if lyrics are loaded
   const hasLyrics = lyrics && lyrics.length > 0;
+  const { showToast } = useToast();
 
   // Font options for dropdown
   const fontOptions = [
@@ -130,7 +135,8 @@ const LyricDisplayApp = () => {
   // Handle file input change
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
-    if (file && file.type === 'text/plain') {
+    const name = file?.name?.toLowerCase?.() || '';
+    if (file && (file.type === 'text/plain' || name.endsWith('.txt') || name.endsWith('.lrc'))) {
       clearSearch();
       await handleFileUpload(file);
     }
@@ -227,7 +233,7 @@ const LyricDisplayApp = () => {
             onClick={openFileDialog}
           >
             <FolderOpen className="w-5 h-5" />
-            Load lyrics file (.txt)
+            Load lyrics file (.txt, .lrc)
           </button>
           <button
             className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
@@ -242,7 +248,7 @@ const LyricDisplayApp = () => {
         </div>
         <input
           type="file"
-          accept=".txt"
+          accept=".txt,.lrc"
           ref={fileInputRef}
           style={{ display: 'none' }}
           onChange={handleFileChange}
@@ -332,16 +338,13 @@ const LyricDisplayApp = () => {
                 {/* Add to Setlist Button */}
                 <button
                   onClick={handleAddToSetlist}
-                  disabled={addDisabled}
+                  aria-disabled={addDisabled}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${addDisabled
-                    ? darkMode
-                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : darkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
+                    : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
                     }`}
                   title={addTitle}
+                  style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
                 >
                   <Plus className="w-4 h-4" />
                   Add to Setlist
@@ -390,7 +393,8 @@ const LyricDisplayApp = () => {
                 e.preventDefault();
                 e.stopPropagation();
                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                if (file && file.type === 'text/plain') {
+                const name = file?.name?.toLowerCase?.() || '';
+                if (file && (file.type === 'text/plain' || name.endsWith('.txt') || name.endsWith('.lrc'))) {
                   clearSearch();
                   await handleFileUpload(file);
                 }
@@ -420,7 +424,8 @@ const LyricDisplayApp = () => {
                 e.preventDefault();
                 e.stopPropagation();
                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                if (file && file.type === 'text/plain') {
+                const name = file?.name?.toLowerCase?.() || '';
+                if (file && (file.type === 'text/plain' || name.endsWith('.txt') || name.endsWith('.lrc'))) {
                   await handleFileUpload(file);
                 }
               }}

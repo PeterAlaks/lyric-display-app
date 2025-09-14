@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 
 const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [visible, setVisible] = useState(false);
+    const [exiting, setExiting] = useState(false);
+    const [entering, setEntering] = useState(false);
+
+    useLayoutEffect(() => {
+        if (isOpen) {
+            setVisible(true);
+            setExiting(false);
+            setEntering(true);
+            const raf = requestAnimationFrame(() => setEntering(false));
+            return () => cancelAnimationFrame(raf);
+        } else {
+            setEntering(false);
+            setExiting(true);
+            const t = setTimeout(() => { setExiting(false); setVisible(false); }, 300);
+            return () => clearTimeout(t);
+        }
+    }, [isOpen]);
 
     const handleSearch = () => {
         if (!searchQuery.trim()) return;
@@ -34,12 +52,13 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode }) => {
         }
     };
 
-    if (!isOpen) return null;
+    if (!visible) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+            <div className={`absolute inset-0 bg-black transition-opacity duration-300 ${(exiting || entering) ? 'opacity-0' : 'opacity-50'}`} onClick={() => onClose()} />
             <div className={`rounded-lg shadow-xl w-96 max-w-[90vw] mx-4 ${darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
-                }`}>
+                } transition-all duration-300 ease-out ${(exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}>
                 {/* Header */}
                 <div className={`flex items-center justify-between p-6 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'
                     }`}>

@@ -6,6 +6,8 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   const [localIP, setLocalIP] = useState('');
   const [qrCodeDataURL, setQRCodeDataURL] = useState('');
   const [isGenerating, setIsGenerating] = useState(true);
+  const [exiting, setExiting] = useState(false);
+  const [entering, setEntering] = useState(false);
 
 
   useEffect(() => {
@@ -68,7 +70,21 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     generateQRCode();
   }, [localIP, isOpen, darkMode]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setExiting(false);
+      setEntering(true);
+      const raf = requestAnimationFrame(() => setEntering(false));
+      return () => cancelAnimationFrame(raf);
+    } else if (!exiting) {
+      setExiting(true);
+      // Match transition duration for smooth unmount
+      const t = setTimeout(() => setExiting(false), 300);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
+
+  if (!(isOpen || exiting || entering)) return null;
 
   const connectionURL = `http://${localIP}:4000/`;
 
@@ -76,7 +92,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+        className={`absolute inset-0 bg-black backdrop-blur-sm transition-opacity duration-300 ${(exiting || entering) ? 'opacity-0' : 'opacity-50'}`}
         onClick={onClose}
       />
 
@@ -84,6 +100,8 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
       <div className={`
         relative w-full max-w-md mx-4 rounded-xl shadow-2xl p-6
         ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
+        transition-all duration-300 ease-out
+        ${(exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100'}
       `}>
 
         {/* Header */}

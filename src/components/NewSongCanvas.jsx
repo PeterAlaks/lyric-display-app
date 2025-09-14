@@ -20,7 +20,7 @@ import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
 const NewSongCanvas = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isEditMode = new URLSearchParams(location.search).get("mode") === "edit";
+  const editMode = new URLSearchParams(location.search).get("mode") === "edit";
 
   const {
     darkMode,
@@ -44,7 +44,7 @@ const NewSongCanvas = () => {
     if (window.electronAPI) {
       // Handle Ctrl+N - New Lyrics File (clear canvas when already on new song page)
       const handleNavigateToNewSong = () => {
-        if (!isEditMode) {
+        if (!editMode) {
           setContent('');
           setFileName('');
           setTitle('');
@@ -60,7 +60,7 @@ const NewSongCanvas = () => {
         window.electronAPI.removeAllListeners('navigate-to-new-song');
       };
     }
-  }, [isEditMode, navigate, setRawLyricsContent]);
+  }, [editMode, navigate, setRawLyricsContent]);
 
   // Focus textarea on mount
   useEffect(() => {
@@ -71,26 +71,27 @@ const NewSongCanvas = () => {
 
   // Populate editor when in edit mode and relevant data changes
   useEffect(() => {
-    if (!isEditMode) return;
+    if (!editMode) return;
     if (rawLyricsContent) {
       setContent(rawLyricsContent);
     } else if (lyrics && lyrics.length > 0) {
-      setContent(reconstructEditableText(lyrics));
+      const text = reconstructEditableText(lyrics);
+      setContent(text);
     } else {
       setContent('');
     }
     setFileName(lyricsFileName || '');
     setTitle(lyricsFileName || '');
-  }, [isEditMode, lyrics, lyricsFileName, rawLyricsContent]);
+  }, [editMode, lyrics, lyricsFileName, rawLyricsContent]);
 
   // Clear editor when switching to new mode (only on transition)
   useEffect(() => {
-    if (isEditMode) return;
+    if (editMode) return;
     setContent('');
     setFileName('');
     setTitle('');
     setRawLyricsContent('');
-  }, [isEditMode, setRawLyricsContent]);
+  }, [editMode, setRawLyricsContent]);
 
   // Clipboard + formatting handlers
   const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef });
@@ -159,9 +160,9 @@ const NewSongCanvas = () => {
           const blob = new Blob([content], { type: 'text/plain' });
           const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
 
-          setRawLyricsContent(content);
-          await handleFileUpload(file);
-          navigate('/');
+        setRawLyricsContent(content);
+        await handleFileUpload(file);
+        navigate('/');
         }
       } catch (err) {
         console.error('Failed to save and load file:', err);
@@ -185,6 +186,8 @@ const NewSongCanvas = () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
+        baseContentRef.current = content;
+        safeToLeaveRef.current = true;
         navigate('/');
       } catch (err) {
         console.error('Failed to process lyrics:', err);
@@ -195,6 +198,7 @@ const NewSongCanvas = () => {
 
   const isContentEmpty = !content.trim();
   const isTitleEmpty = !title.trim();
+
 
   return (
     <div className={`flex flex-col h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
@@ -213,7 +217,7 @@ const NewSongCanvas = () => {
           </button>
 
           <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {isEditMode ? "Edit Song Canvas" : "New Song Canvas"}
+            {editMode ? "Edit Song Canvas" : "New Song Canvas"}
           </h1>
 
           <div className="w-[72px]"></div>

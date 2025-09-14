@@ -31,6 +31,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   openInAppBrowser: (url) => ipcRenderer.invoke('open-in-app-browser', url),
 
+  // Updater events and actions
+  onUpdateAvailable: (callback) => {
+    const channel = 'updater:update-available';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, info) => callback(info));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  onUpdateDownloaded: (callback) => {
+    const channel = 'updater:update-downloaded';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e) => callback());
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  onUpdateError: (callback) => {
+    const channel = 'updater:update-error';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, msg) => callback(msg));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  requestUpdateDownload: () => ipcRenderer.invoke('updater:download'),
+  requestInstallAndRestart: () => ipcRenderer.invoke('updater:install'),
+
+  // Menu-triggered shortcuts help
+  onOpenShortcutsHelp: (callback) => {
+    const channel = 'open-shortcuts-help';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+
   // In-app browser controls
   browserBack: () => ipcRenderer.send('browser-nav', 'back'),
   browserForward: () => ipcRenderer.send('browser-nav', 'forward'),

@@ -69,7 +69,19 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
       },
       {
         label: 'Window',
-        submenu: [ { role: 'minimize' }, { role: 'close' } ],
+        submenu: [
+          { role: 'minimize' },
+          {
+            label: 'Keyboard Shortcuts...',
+            click: () => {
+              try {
+                const win = getMainWindow?.();
+                if (win && !win.isDestroyed()) win.webContents.send('open-shortcuts-help');
+              } catch {}
+            }
+          },
+          { role: 'close' }
+        ],
       },
       {
         label: 'Help',
@@ -99,4 +111,3 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
 
   return { createMenu, updateDarkModeMenu, toggleDarkMode };
 }
-

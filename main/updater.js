@@ -1,4 +1,4 @@
-import { dialog } from 'electron';
+import { dialog, BrowserWindow } from 'electron';
 import updaterPkg from 'electron-updater';
 import { createProgressWindow, closeProgressWindow, getProgressWindow } from './progressWindow.js';
 
@@ -13,16 +13,9 @@ export function checkForUpdates(showNoUpdateDialog = false) {
   });
 
   autoUpdater.on('update-available', (info) => {
-    dialog.showMessageBox({
-      type: 'info',
-      buttons: ['Download', 'Later'],
-      defaultId: 0,
-      message: `Version ${info.version} is available. Do you want to download it now?`,
-    }).then((result) => {
-      if (result.response === 0) {
-        createProgressWindow().show();
-        autoUpdater.downloadUpdate();
-      }
+    // Notify renderer to show toast with actions
+    BrowserWindow.getAllWindows().forEach(win => {
+      try { win.webContents.send('updater:update-available', { version: info?.version }); } catch {}
     });
   });
 
@@ -35,7 +28,8 @@ export function checkForUpdates(showNoUpdateDialog = false) {
 
   autoUpdater.on('error', (err) => {
     closeProgressWindow();
-    dialog.showErrorBox('Update Error', err == null ? 'Unknown error' : (err.stack || err).toString());
+    const msg = err == null ? 'Unknown error' : (err.stack || err).toString();
+    BrowserWindow.getAllWindows().forEach(win => { try { win.webContents.send('updater:update-error', msg); } catch {} });
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -49,13 +43,8 @@ export function checkForUpdates(showNoUpdateDialog = false) {
 
   autoUpdater.on('update-downloaded', () => {
     closeProgressWindow();
-    dialog.showMessageBox({ type: 'info', buttons: ['Install and Restart', 'Later'], defaultId: 0, message: 'Update downloaded. Do you want to install it now?' }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    });
+    BrowserWindow.getAllWindows().forEach(win => { try { win.webContents.send('updater:update-downloaded'); } catch {} });
   });
 
   autoUpdater.checkForUpdates();
 }
-

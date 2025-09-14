@@ -1,7 +1,7 @@
 // Project: LyricDisplay App
 // File: src/hooks/useSocket.js
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import useLyricsStore from '../context/LyricsStore';
 
@@ -20,14 +20,23 @@ const useSocket = (role = 'output') => {
     setRawLyricsContent,
   } = useLyricsStore();
 
+  const setlistNameRef = useRef(new Map());
+
   useEffect(() => {
     // Determine socket URL - fallback chain for different environments
     const getSocketUrl = () => {
-      // Environment variable (Vite)
+      // Explicit env override (Vite)
       if (import.meta.env.VITE_SOCKET_SERVER_URL) {
         return import.meta.env.VITE_SOCKET_SERVER_URL;
       }
-      // Default fallback: use the same host/port as the loaded page
+      // Dev mode (vite) usually runs at 5173, backend is 4000
+      const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
+      if (isDev) return 'http://localhost:4000';
+      // If running inside Electron (desktop app), use backend port 4000
+      if (window.electronAPI) {
+        return 'http://localhost:4000';
+      }
+      // Default fallback: same origin (web build)
       return window.location.origin;
     };
 
@@ -159,6 +168,14 @@ const useSocket = (role = 'output') => {
 
     // New setlist event handlers
     socketRef.current.on('setlistUpdate', (files) => {
+      try {
+        const map = new Map();
+        (files || []).forEach(f => { if (f && f.id) map.set(f.id, f.displayName || ''); });
+        // Merge with previous map to preserve names for IDs that might be removed
+        const prev = setlistNameRef.current || new Map();
+        prev.forEach((name, id) => { if (!map.has(id)) map.set(id, name); });
+        setlistNameRef.current = map;
+      } catch {}
       setSetlistFiles(files);
       // Do NOT clear lyrics, selectedLine, or output settings here!
     });
@@ -180,11 +197,14 @@ const useSocket = (role = 'output') => {
 
     socketRef.current.on('setlistRemoveSuccess', (fileId) => {
       console.log(`Removed file ${fileId} from setlist`);
+      try {
+        const name = setlistNameRef.current.get(fileId) || '';
+        window.dispatchEvent(new CustomEvent('setlist-remove-success', { detail: { fileId, name } }));
+      } catch {}
     });
 
     socketRef.current.on('setlistError', (error) => {
       console.error('Setlist error:', error);
-      // You could also show a toast notification here
     });
 
     socketRef.current.on('setlistClearSuccess', () => {
@@ -234,87 +254,87 @@ const useSocket = (role = 'output') => {
   }, [role, setLyrics, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
 
   // Emit functions with error handling
-  const emitLineUpdate = (index) => {
+  const emitLineUpdate = useCallback((index) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('lineUpdate', { index });
       console.log('Emitted line update:', index);
     } else {
       console.warn('Cannot emit line update - socket not connected');
     }
-  };
+  }, []);
 
-  const emitLyricsLoad = (lyrics) => {
+  const emitLyricsLoad = useCallback((lyrics) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('lyricsLoad', lyrics);
       console.log('Emitted lyrics load:', lyrics?.length, 'lines');
     } else {
       console.warn('Cannot emit lyrics load - socket not connected');
     }
-  };
+  }, []);
 
-  const emitStyleUpdate = (output, settings) => {
+  const emitStyleUpdate = useCallback((output, settings) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('styleUpdate', { output, settings });
       console.log('Emitted style update for', output);
     } else {
       console.warn('Cannot emit style update - socket not connected');
     }
-  };
+  }, []);
 
-  const emitOutputToggle = (state) => {
+  const emitOutputToggle = useCallback((state) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('outputToggle', state);
       console.log('Emitted output toggle:', state);
     } else {
       console.warn('Cannot emit output toggle - socket not connected');
     }
-  };
+  }, []);
 
   // New setlist emit functions
-  const emitSetlistAdd = (files) => {
+  const emitSetlistAdd = useCallback((files) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('setlistAdd', files);
       console.log('Emitted setlist add:', files?.length, 'files');
     } else {
       console.warn('Cannot emit setlist add - socket not connected');
     }
-  };
+  }, []);
 
-  const emitSetlistRemove = (fileId) => {
+  const emitSetlistRemove = useCallback((fileId) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('setlistRemove', fileId);
       console.log('Emitted setlist remove:', fileId);
     } else {
       console.warn('Cannot emit setlist remove - socket not connected');
     }
-  };
+  }, []);
 
-  const emitSetlistLoad = (fileId) => {
+  const emitSetlistLoad = useCallback((fileId) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('setlistLoad', fileId);
       console.log('Emitted setlist load:', fileId);
     } else {
       console.warn('Cannot emit setlist load - socket not connected');
     }
-  };
+  }, []);
 
-  const emitRequestSetlist = () => {
+  const emitRequestSetlist = useCallback(() => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('requestSetlist');
       console.log('Emitted request setlist');
     } else {
       console.warn('Cannot emit request setlist - socket not connected');
     }
-  };
+  }, []);
 
-  const emitSetlistClear = () => {
+  const emitSetlistClear = useCallback(() => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('setlistClear');
       console.log('Emitted setlist clear');
     } else {
       console.warn('Cannot emit setlist clear - socket not connected');
     }
-  };
+  }, []);
 
   // Force reconnect function (useful for troubleshooting)
   const forceReconnect = () => {

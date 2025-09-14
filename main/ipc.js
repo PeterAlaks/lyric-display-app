@@ -1,6 +1,9 @@
 import { ipcMain, dialog, nativeTheme } from 'electron';
 import { writeFile } from 'fs/promises';
 import { getLocalIPAddress } from './utils.js';
+import updaterPkg from 'electron-updater';
+import { createProgressWindow } from './progressWindow.js';
+const { autoUpdater } = updaterPkg;
 
 export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu }) {
   // Dark mode query and update hooks
@@ -28,7 +31,7 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   ipcMain.handle('load-lyrics-file', async () => {
     try {
       const win = getMainWindow?.();
-      const result = await dialog.showOpenDialog(win || undefined, { properties: ['openFile'], filters: [{ name: 'Text Files', extensions: ['txt'] }] });
+      const result = await dialog.showOpenDialog(win || undefined, { properties: ['openFile'], filters: [{ name: 'Text Files', extensions: ['txt','lrc'] }] });
       if (!result.canceled && result.filePaths.length > 0) {
         const fs = await import('fs/promises');
         const content = await fs.readFile(result.filePaths[0], 'utf8');
@@ -59,5 +62,18 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   ipcMain.handle('open-in-app-browser', (_event, url) => {
     openInAppBrowser?.(url || 'https://www.google.com');
   });
-}
 
+
+  // Updater controls
+  ipcMain.handle('updater:download', async () => {
+    try {
+      createProgressWindow().show();
+      await autoUpdater.downloadUpdate();
+      return { success: true };
+    } catch (e) { return { success: false, error: e?.message || String(e) }; }
+  });
+  ipcMain.handle('updater:install', async () => {
+    try { autoUpdater.quitAndInstall(); return { success: true }; }
+    catch (e) { return { success: false, error: e?.message || String(e) }; }
+  });
+}

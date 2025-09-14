@@ -72,4 +72,3 @@ app.on('before-quit', () => {
   try { closeQRCodeDialog(); } catch {}
   try { stopBackend(); } catch {}
 });
-

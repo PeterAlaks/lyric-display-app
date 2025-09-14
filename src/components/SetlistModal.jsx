@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
+import useToast from '../hooks/useToast';
 import { X, Plus, Search, Trash2, Clock } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
@@ -21,9 +22,11 @@ const SetlistModal = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const { showToast } = useToast();
 
   // Filter setlist files based on search query
-  const filteredFiles = setlistFiles.filter(file =>
+  const list = Array.isArray(setlistFiles) ? setlistFiles : [];
+  const filteredFiles = list.filter(file =>
     file.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -134,13 +137,33 @@ const SetlistModal = () => {
     setSearchQuery(''); // Clear search when closing
   };
 
-  if (!setlistModalOpen) return null;
+  // Animate mount/unmount (internal visibility decoupled from store)
+  const [visible, setVisible] = useState(false);
+  const [exiting, setExiting] = useState(false);
+  const [entering, setEntering] = useState(false);
+  useLayoutEffect(() => {
+    if (setlistModalOpen) {
+      setVisible(true);
+      setExiting(false);
+      setEntering(true);
+      const raf = requestAnimationFrame(() => setEntering(false));
+      return () => cancelAnimationFrame(raf);
+    } else {
+      // trigger exit animation then hide after duration
+      setEntering(false);
+      setExiting(true);
+      const t = setTimeout(() => { setExiting(false); setVisible(false); }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [setlistModalOpen]);
+
+  if (!visible) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+        className={`absolute inset-0 bg-black backdrop-blur-sm transition-opacity duration-300 ${exiting || entering ? 'opacity-0' : 'opacity-50'}`}
         onClick={closeModal}
       />
 
@@ -150,6 +173,8 @@ const SetlistModal = () => {
         ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
         md:mx-auto md:w-full md:max-w-2xl md:max-h-[80vh] md:rounded-xl
         sm:mx-2 sm:max-w-full sm:h-full sm:max-h-full sm:rounded-none
+        transition-all duration-300 ease-out
+        ${(exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100'}
         `}>
 
         {/* Fixed Header */}
@@ -226,8 +251,8 @@ const SetlistModal = () => {
 
           {searchQuery && (
             <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {filteredFiles.length > 0
-                ? `Showing ${filteredFiles.length} of ${setlistFiles.length} files`
+          {filteredFiles.length > 0
+                ? `Showing ${filteredFiles.length} of ${list.length} files`
                 : 'No files match your search'
               }
             </p>
@@ -342,4 +367,17 @@ const SetlistModal = () => {
   );
 };
 
-export default SetlistModal;
+// Listen for setlist remove success to show toast
+export default function SetlistModalWithToasts(props) {
+  const { showToast } = useToast();
+  useEffect(() => {
+    const handler = (e) => {
+      const name = e?.detail?.name || e?.detail?.fileId || '';
+      showToast({ title: 'Removed from setlist', message: String(name), variant: 'success' });
+    };
+    window.addEventListener('setlist-remove-success', handler);
+    return () => window.removeEventListener('setlist-remove-success', handler);
+  }, [showToast]);
+  return <SetlistModal {...props} />;
+}
+export { SetlistModal };
