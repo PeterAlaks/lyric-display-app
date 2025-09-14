@@ -49,10 +49,11 @@ const NewSongCanvas = () => {
       // Handle Ctrl+N - New Lyrics File (clear canvas when already on new song page)
       const handleNavigateToNewSong = () => {
         if (!editMode) {
+          // Clear only local editor state; preserve global rawLyricsContent
+          // so the previously loaded song remains available when returning.
           setContent('');
           setFileName('');
           setTitle('');
-          setRawLyricsContent('');
         } else {
           navigate('/new-song?mode=new');
         }
@@ -99,13 +100,14 @@ const NewSongCanvas = () => {
   // Clear editor when switching to new mode (only on transition)
   useEffect(() => {
     if (editMode) return;
+    // When entering new mode, clear only local editor fields.
+    // Do not clear global rawLyricsContent so control panel state persists.
     setContent('');
     setFileName('');
     setTitle('');
-    setRawLyricsContent('');
     baseContentRef.current = '';
     baseTitleRef.current = '';
-  }, [editMode, setRawLyricsContent]);
+  }, [editMode]);
 
   // Clipboard + formatting handlers
   const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef });
