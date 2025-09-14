@@ -43,7 +43,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
           },
         ];
       }
-      const pad = '\u2003\u2003\u2003\u2003'; // a few EM spaces to gently widen menu
+      const pad = '\u2003\u2003\u2003\u2003';
       const items = recentFiles.map((fp) => ({
         label: path.basename(fp) + pad,
         sublabel: fp,

@@ -185,6 +185,18 @@ Each output can be independently configured:
 ### Project Structure
 ```
 lyric-display-app/
+├── main/                                   # Electron main script modules
+|   ├── backend.js                          # Backend server starter
+|   ├── inAppBrowser.js                     # In-App browser window configuration and styling
+|   ├── ipc.js                              # IPC handlers
+|   ├── menu.js                             # Window menu builder
+|   ├── paths.js                            # Production paths resolver
+|   ├── progressWindow.js                   # App updater dialog window configuration and styling
+|   ├── qrCodeWindow.js                     # QR Code modal window configuration and styling
+|   ├── recents.js                          # Module to manage recently opened files
+|   ├── updater.js                          # Module to manage app updates
+|   ├── utils.js                            # Utility file to get local IP address
+|   └── windows.js                          # Main window builder
 ├── public/                                 # Static assets
 |   └── index.html                          # Browser web app entry point
 ├── server/                                 # Express.js backend
@@ -193,8 +205,10 @@ lyric-display-app/
 |   └── package.json                        # Backend dependencies
 ├── src/                                    # React frontend source
 │   ├── assets/                             # Fonts, etc.
-│   ├── components/                         # Reusable UI components
-|   |   ├── ui/
+│   ├── components/
+|   |   ├── ui/                             # Shadcn UI components
+|   |   ├── toast/
+|   |   |   └── ToastProvider.jsx           # Toast notifications component
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
@@ -203,7 +217,8 @@ lyric-display-app/
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
-|   |   └── SetlistModal.jsx                # Setlist Modal
+|   |   ├── SetlistModal.jsx                # Setlist Modal
+|   |   └── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
 │   ├── context/
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/
@@ -214,7 +229,8 @@ lyric-display-app/
 |   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
 |   |   ├── useSearch.js                    # Hook for search bar functionality
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
-|   |   └── useSocket.js                    # Custom React hook for Socket.IO client
+|   |   ├── useSocket.js                    # Custom React hook for Socket.IO client
+|   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
 |   |   └── utils.js                        # Utility functions
 │   ├── pages/                              # Route-based page components
@@ -223,7 +239,9 @@ lyric-display-app/
 |   |   └── Output2.jsx                     # Output 2 display
 │   ├── utils/
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
-|   |   └── parseLyrics.js                  # Text file parser
+|   |   ├── parseLrc.js                     # LRC file parser
+|   |   ├── parseLyrics.js                  # Text file parser
+|   |   └── toastSounds.js                  # Toast notifications tones utility
 |   ├── App.jsx                             # React app main component
 |   ├── main.jsx                            # App entry point
 |   └── index.css                           # Global CSS

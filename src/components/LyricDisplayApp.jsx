@@ -232,10 +232,6 @@ const LyricDisplayApp = () => {
     emitLineUpdate(index);
   };
 
-  // Search behavior moved to hook
-
-  // Settings helpers moved to hook
-
   // Handle output toggle
   const handleToggle = () => {
     setIsOutputOn(!isOutputOn);

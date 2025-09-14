@@ -48,8 +48,6 @@ const MobileLayout = () => {
     emitOutputToggle(!isOutputOn);
   };
 
-  // Search logic handled via useSearch hook
-
   const handleOpenSetlist = () => {
     setSetlistModalOpen(true);
   };
