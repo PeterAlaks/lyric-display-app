@@ -1,4 +1,5 @@
 import { ipcMain, dialog, nativeTheme } from 'electron';
+import { addRecent } from './recents.js';
 import { writeFile } from 'fs/promises';
 import { getLocalIPAddress } from './utils.js';
 import updaterPkg from 'electron-updater';
@@ -34,9 +35,11 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       const result = await dialog.showOpenDialog(win || undefined, { properties: ['openFile'], filters: [{ name: 'Text Files', extensions: ['txt','lrc'] }] });
       if (!result.canceled && result.filePaths.length > 0) {
         const fs = await import('fs/promises');
-        const content = await fs.readFile(result.filePaths[0], 'utf8');
-        const fileName = result.filePaths[0].split(/[\\/]/).pop();
-        return { success: true, content, fileName };
+        const filePath = result.filePaths[0];
+        const content = await fs.readFile(filePath, 'utf8');
+        const fileName = filePath.split(/[\\/]/).pop();
+        try { await addRecent(filePath); } catch {}
+        return { success: true, content, fileName, filePath };
       }
       return { success: false, canceled: true };
     } catch (error) {
@@ -61,6 +64,12 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
 
   ipcMain.handle('open-in-app-browser', (_event, url) => {
     openInAppBrowser?.(url || 'https://www.google.com');
+  });
+
+  // Recent files management
+  ipcMain.handle('add-recent-file', async (_event, filePath) => {
+    try { await addRecent(filePath); return { success: true }; }
+    catch (e) { return { success: false, error: e?.message || String(e) }; }
   });
 
 

@@ -1,4 +1,7 @@
-import { Menu, nativeTheme } from 'electron';
+import { Menu, nativeTheme, dialog } from 'electron';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { getRecents, subscribe, clearRecents } from './recents.js';
 
 export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, checkForUpdates }) {
   function updateDarkModeMenu() {
@@ -26,7 +29,48 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
     }
   }
 
-  function createMenu() {
+  async function createMenu() {
+    const recentFiles = await getRecents();
+
+    const buildRecentSubmenu = () => {
+      if (!recentFiles || recentFiles.length === 0) {
+        return [
+          { label: 'No recent files', enabled: false },
+          { type: 'separator' },
+          {
+            label: 'Clear Recent Files',
+            enabled: false,
+          },
+        ];
+      }
+      const pad = '\u2003\u2003\u2003\u2003'; // a few EM spaces to gently widen menu
+      const items = recentFiles.map((fp) => ({
+        label: path.basename(fp) + pad,
+        sublabel: fp,
+        click: async () => {
+          try {
+            const win = getMainWindow?.();
+            const content = await fs.readFile(fp, 'utf8');
+            const fileName = path.basename(fp);
+            if (win && !win.isDestroyed()) {
+              win.webContents.send('open-lyrics-from-path', { content, fileName, filePath: fp });
+            }
+          } catch (e) {
+            const win = getMainWindow?.();
+            if (win && !win.isDestroyed()) {
+              try { win.webContents.send('open-lyrics-from-path-error', { filePath: fp }); } catch {}
+            }
+          }
+        }
+      }));
+
+      items.push({ type: 'separator' });
+      items.push({
+        label: 'Clear Recent Files',
+        click: async () => { await clearRecents(); createMenu(); },
+      });
+      return items;
+    };
     const template = [
       {
         label: 'File',
@@ -40,6 +84,10 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
             label: 'New Lyrics File',
             accelerator: 'CmdOrCtrl+N',
             click: () => { const win = getMainWindow?.(); if (win && !win.isDestroyed()) win.webContents.send('navigate-to-new-song'); },
+          },
+          {
+            label: 'Open Recent',
+            submenu: buildRecentSubmenu(),
           },
           { type: 'separator' },
           { label: 'Connect Mobile Controller', click: () => showQRCodeDialog?.() },
@@ -108,6 +156,11 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
     Menu.setApplicationMenu(menu);
     updateDarkModeMenu();
   }
+
+  // Rebuild menu when recents change
+  try {
+    subscribe(() => { createMenu(); });
+  } catch {}
 
   return { createMenu, updateDarkModeMenu, toggleDarkMode };
 }

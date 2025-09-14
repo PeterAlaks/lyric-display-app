@@ -17,6 +17,8 @@ import useOutputSettings from '../hooks/useOutputSettings';
 import useSetlistActions from '../hooks/useSetlistActions';
 import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
+import { processRawTextToLines } from '../utils/parseLyrics';
+import { parseLrcText } from '../utils/parseLrc';
 
 // Main App Component
 const LyricDisplayApp = () => {
@@ -86,6 +88,77 @@ const LyricDisplayApp = () => {
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast } = useToast();
 
+  const processLoadedLyrics = React.useCallback(async ({ content, fileName, filePath }) => {
+    try {
+      const lower = (fileName || '').toLowerCase();
+      let processedLines = [];
+      let rawText = content || '';
+      if (lower.endsWith('.lrc')) {
+        const parsed = parseLrcText(content || '');
+        processedLines = parsed.processedLines;
+        rawText = parsed.rawText;
+      } else {
+        processedLines = processRawTextToLines(content || '');
+      }
+
+      setLyrics(processedLines);
+      setRawLyricsContent(rawText);
+      selectLine(null);
+      const baseName = (fileName || '').replace(/\.(txt|lrc)$/i, '');
+      setLyricsFileName(baseName);
+
+      // Emit to connected outputs and broadcast filename
+      emitLyricsLoad(processedLines);
+      if (socket && socket.connected && baseName) {
+        socket.emit('fileNameUpdate', baseName);
+      }
+
+      // Ensure file is in recent list
+      try {
+        if (filePath && window?.electronAPI?.addRecentFile) {
+          await window.electronAPI.addRecentFile(filePath);
+        }
+      } catch {}
+
+      showToast({ title: 'File loaded', message: `${lower.endsWith('.lrc') ? 'LRC' : 'Text'}: ${baseName}`, variant: 'success' });
+    } catch (err) {
+      console.error('Failed to open file:', err);
+      showToast({ title: 'Failed to open file', message: 'The file could not be processed.', variant: 'error' });
+    }
+  }, [emitLyricsLoad, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, showToast, socket]);
+
+  // Handle opening lyrics directly from a file path via menu (recent files)
+  React.useEffect(() => {
+    if (!window?.electronAPI?.onOpenLyricsFromPath) return;
+    const off = window.electronAPI.onOpenLyricsFromPath(async (payload) => {
+      await processLoadedLyrics(payload || {});
+    });
+    return () => { try { off?.(); } catch {} };
+  }, [processLoadedLyrics]);
+
+  // Show toast if a recent file no longer exists
+  React.useEffect(() => {
+    if (!window?.electronAPI?.onOpenLyricsFromPathError) return;
+    const off = window.electronAPI.onOpenLyricsFromPathError(({ filePath }) => {
+      showToast({
+        title: 'File not found',
+        message: `The file could not be opened. It may have been moved or deleted.\n${filePath || ''}`,
+        variant: 'error'
+      });
+    });
+    return () => { try { off?.(); } catch {} };
+  }, [showToast]);
+
+  // Handle load triggered from File menu using native dialog (renderer dispatches DOM event)
+  React.useEffect(() => {
+    const listener = (e) => {
+      const payload = e?.detail || {};
+      processLoadedLyrics(payload);
+    };
+    window.addEventListener('lyrics-opened', listener);
+    return () => window.removeEventListener('lyrics-opened', listener);
+  }, [processLoadedLyrics]);
+
   // Font options for dropdown
   const fontOptions = [
     'Arial',
@@ -104,7 +177,18 @@ const LyricDisplayApp = () => {
   ];
 
   // Handle file upload button click
-  const openFileDialog = () => {
+  const openFileDialog = async () => {
+    try {
+      if (window?.electronAPI?.loadLyricsFile) {
+        const result = await window.electronAPI.loadLyricsFile();
+        if (result && result.success && result.content) {
+          const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath };
+          window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
+          return;
+        }
+        if (result && result.canceled) return;
+      }
+    } catch {}
     fileInputRef.current?.click();
   };
 

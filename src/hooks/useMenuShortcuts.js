@@ -4,7 +4,22 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
   useEffect(() => {
     if (!window.electronAPI) return;
 
-    const handleTriggerFileLoad = () => {
+    const handleTriggerFileLoad = async () => {
+      try {
+        if (window.electronAPI?.loadLyricsFile) {
+          const result = await window.electronAPI.loadLyricsFile();
+          if (result && result.success && result.content) {
+            const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath };
+            // Dispatch a DOM event so the main app can process it centrally
+            window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
+            return;
+          }
+          if (result && result.canceled) return; // user canceled
+        }
+      } catch (e) {
+        // Fallback to legacy file input on any error
+      }
+      // Fallback: open the hidden file input
       fileInputRef?.current?.click();
     };
 
@@ -23,4 +38,3 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
 };
 
 export default useMenuShortcuts;
-

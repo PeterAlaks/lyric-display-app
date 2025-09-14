@@ -54,6 +54,14 @@ const useFileUpload = () => {
         socket.emit('fileNameUpdate', baseName);
       }
 
+      // Add to recent files (Electron only)
+      try {
+        const filePath = file?.path;
+        if (filePath && window?.electronAPI?.addRecentFile) {
+          await window.electronAPI.addRecentFile(filePath);
+        }
+      } catch {}
+
       showToast({ title: 'File loaded', message: `${isLrc ? 'LRC' : 'Text'}: ${baseName}`, variant: 'success' });
 
     } catch (err) {

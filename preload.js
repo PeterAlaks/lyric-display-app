@@ -30,6 +30,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   openInAppBrowser: (url) => ipcRenderer.invoke('open-in-app-browser', url),
+  addRecentFile: (filePath) => ipcRenderer.invoke('add-recent-file', filePath),
+  onOpenLyricsFromPath: (callback) => {
+    const channel = 'open-lyrics-from-path';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, payload) => callback(payload));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
 
   // Updater events and actions
   onUpdateAvailable: (callback) => {
@@ -58,6 +65,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const channel = 'open-shortcuts-help';
     ipcRenderer.removeAllListeners(channel);
     ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  onOpenLyricsFromPathError: (callback) => {
+    const channel = 'open-lyrics-from-path-error';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, payload) => callback(payload));
     return () => ipcRenderer.removeAllListeners(channel);
   },
 

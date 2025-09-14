@@ -16,6 +16,7 @@ import useEditorClipboard from '../hooks/useEditorClipboard';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
+import useToast from '../hooks/useToast';
 
 const NewSongCanvas = () => {
   const navigate = useNavigate();
@@ -33,12 +34,15 @@ const NewSongCanvas = () => {
 
   const handleFileUpload = useFileUpload();
   const textareaRef = useRef(null);
+  const baseContentRef = useRef('');
+  const baseTitleRef = useRef('');
 
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [title, setTitle] = useState('');
 
   useDarkModeSync(darkMode, setDarkMode);
+  const { showToast } = useToast();
 
   React.useEffect(() => {
     if (window.electronAPI) {
@@ -82,6 +86,14 @@ const NewSongCanvas = () => {
     }
     setFileName(lyricsFileName || '');
     setTitle(lyricsFileName || '');
+    // Set baselines for unsaved changes guard
+    const nextContent = rawLyricsContent
+      ? rawLyricsContent
+      : (lyrics && lyrics.length > 0)
+        ? reconstructEditableText(lyrics)
+        : '';
+    baseContentRef.current = nextContent || '';
+    baseTitleRef.current = (lyricsFileName || '') || '';
   }, [editMode, lyrics, lyricsFileName, rawLyricsContent]);
 
   // Clear editor when switching to new mode (only on transition)
@@ -91,6 +103,8 @@ const NewSongCanvas = () => {
     setFileName('');
     setTitle('');
     setRawLyricsContent('');
+    baseContentRef.current = '';
+    baseTitleRef.current = '';
   }, [editMode, setRawLyricsContent]);
 
   // Clipboard + formatting handlers
@@ -98,6 +112,20 @@ const NewSongCanvas = () => {
 
   // Back navigation
   const handleBack = () => {
+    const hasChanges = (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
+    if (hasChanges) {
+      showToast({
+        title: 'Unsaved changes',
+        message: 'You have unsaved changes. Discard them?',
+        variant: 'warn',
+        duration: 0,
+        actions: [
+          { label: 'Yes, discard', onClick: () => navigate('/') },
+          { label: 'Cancel', onClick: () => {} },
+        ],
+      });
+      return;
+    }
     navigate('/');
   };
 
@@ -120,6 +148,9 @@ const NewSongCanvas = () => {
           const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
           setFileName(baseName);
           setTitle(baseName);
+          // Update baselines after successful save
+          baseContentRef.current = content;
+          baseTitleRef.current = baseName;
         }
       } catch (err) {
         console.error('Failed to save file:', err);
@@ -136,6 +167,9 @@ const NewSongCanvas = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      // Update baselines after successful download
+      baseContentRef.current = content;
+      baseTitleRef.current = title || fileName || 'lyrics';
     }
   };
 
@@ -160,9 +194,10 @@ const NewSongCanvas = () => {
           const blob = new Blob([content], { type: 'text/plain' });
           const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
 
-        setRawLyricsContent(content);
-        await handleFileUpload(file);
-        navigate('/');
+          setRawLyricsContent(content);
+          await handleFileUpload(file);
+          try { if (window.electronAPI?.addRecentFile) { await window.electronAPI.addRecentFile(result.filePath); } } catch {}
+          navigate('/');
         }
       } catch (err) {
         console.error('Failed to save and load file:', err);
@@ -187,7 +222,6 @@ const NewSongCanvas = () => {
         URL.revokeObjectURL(url);
 
         baseContentRef.current = content;
-        safeToLeaveRef.current = true;
         navigate('/');
       } catch (err) {
         console.error('Failed to process lyrics:', err);
