@@ -60,8 +60,12 @@ function ShortcutsHelpModal({ onClose }) {
             <span className="opacity-90">Ctrl/Cmd + 2</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Close Modals</span>
-            <span className="opacity-90">Esc</span>
+            <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Navigate Previous Search Results</span>
+            <span className="opacity-90">Shift + Up Arrow</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Navigate Next Search Results</span>
+            <span className="opacity-90">Shift + Down Arrow</span>
           </div>
         </div>
       </div>
