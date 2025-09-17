@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": "Peter Alakembi",
   "main": "main.js",
