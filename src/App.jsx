@@ -8,7 +8,9 @@ import QRCodeDialog from './components/QRCodeDialog';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
+import { ModalProvider } from '@/components/modal/ModalProvider';
 import useToast from '@/hooks/useToast';
+import ElectronModalBridge from './components/ElectronModalBridge';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
 
@@ -25,21 +27,24 @@ const QRDialogPage = () => {
 export default function App() {
   const { darkMode } = useLyricsStore();
   return (
-    <ToastProvider isDark={!!darkMode}>
-      <AppErrorBoundary>
-        <UpdaterToastBridge />
-        <ShortcutsHelpBridge />
-        <Router>
-          <Routes>
-            <Route path="/" element={<ControlPanel />} />
-            <Route path="/output1" element={<Output1 />} />
-            <Route path="/output2" element={<Output2 />} />
-            <Route path="/new-song" element={<NewSongCanvas />} />
-            <Route path="/qr-dialog" element={<QRDialogPage />} />
-          </Routes>
-        </Router>
-      </AppErrorBoundary>
-    </ToastProvider>
+    <ModalProvider isDark={!!darkMode}>
+      <ToastProvider isDark={!!darkMode}>
+        <AppErrorBoundary>
+          <ElectronModalBridge />
+          <UpdaterToastBridge />
+          <ShortcutsHelpBridge />
+          <Router>
+            <Routes>
+              <Route path="/" element={<ControlPanel />} />
+              <Route path="/output1" element={<Output1 />} />
+              <Route path="/output2" element={<Output2 />} />
+              <Route path="/new-song" element={<NewSongCanvas />} />
+              <Route path="/qr-dialog" element={<QRDialogPage />} />
+            </Routes>
+          </Router>
+        </AppErrorBoundary>
+      </ToastProvider>
+    </ModalProvider>
   );
 }
 
@@ -107,4 +112,5 @@ class AppErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
 

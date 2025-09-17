@@ -1,4 +1,5 @@
 import { app, dialog } from 'electron';
+import { requestRendererModal } from './modalBridge.js';
 import path from 'path';
 import { promises as fs } from 'fs';
 
@@ -39,8 +40,22 @@ async function persist() {
   } catch (e) {
     // Best effort — do not crash app on failure
     try {
-      await dialog.showErrorBox('Recent Files Error', 'Could not persist recent files list.');
-    } catch {}
+      await requestRendererModal({
+        title: 'Recent files error',
+        description: 'Could not persist recent files list.',
+        variant: 'error',
+        actions: [
+          { label: 'Dismiss', value: { response: 0 }, variant: 'destructive' },
+        ],
+      }, {
+        fallback: () => {
+          dialog.showErrorBox('Recent Files Error', 'Could not persist recent files list.');
+          return { response: 0 };
+        },
+      });
+    } catch {
+      try { dialog.showErrorBox('Recent Files Error', 'Could not persist recent files list.'); } catch {}
+    }
   }
 }
 
@@ -81,4 +96,5 @@ export function subscribe(callback) {
   }
   return () => {};
 }
+
 

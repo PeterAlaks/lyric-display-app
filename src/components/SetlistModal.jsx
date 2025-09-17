@@ -3,6 +3,7 @@ import useToast from '../hooks/useToast';
 import { X, Plus, Search, Trash2, Clock } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
+import useModal from '../hooks/useModal';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,7 @@ const SetlistModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
   const { showToast } = useToast();
+  const { showModal } = useModal();
 
   // Filter setlist files based on search query
   const list = Array.isArray(setlistFiles) ? setlistFiles : [];
@@ -51,7 +53,12 @@ const SetlistModal = () => {
     }
 
     if (isSetlistFull()) {
-      alert('Setlist is full. Maximum 25 files allowed.');
+      showModal({
+        title: 'Setlist is full',
+        description: 'You already have the maximum of 25 songs in the setlist.',
+        variant: 'warn',
+        dismissLabel: 'Got it',
+      });
       return;
     }
 
@@ -66,14 +73,26 @@ const SetlistModal = () => {
     // Check if adding these files would exceed limit
     const availableSlots = getAvailableSetlistSlots();
     if (files.length > availableSlots) {
-      alert(`Can only add ${availableSlots} more files. Setlist limit is 25 files.`);
+      showModal({
+        title: 'Setlist limit reached',
+        description: availableSlots === 0
+          ? 'No slots are left. Remove a song before adding new ones.'
+          : `You can add ${availableSlots} more ${availableSlots === 1 ? 'song' : 'songs'} right now.`,
+        variant: 'warn',
+        dismissLabel: 'Okay',
+      });
       return;
     }
 
     // Validate all files are .txt
     const invalidFiles = files.filter(file => !file.name.toLowerCase().endsWith('.txt'));
     if (invalidFiles.length > 0) {
-      alert('Only .txt files are supported for setlist.');
+      showModal({
+        title: 'Unsupported files',
+        description: 'Only .txt lyric files can be added to the setlist.',
+        variant: 'error',
+        dismissLabel: 'Understood',
+      });
       return;
     }
 
@@ -105,7 +124,12 @@ const SetlistModal = () => {
 
     } catch (error) {
       console.error('Error processing files:', error);
-      alert('Failed to process some files. Please try again.');
+      showModal({
+        title: 'File processing error',
+        description: 'Some files could not be added. Please try again.',
+        variant: 'error',
+        dismissLabel: 'Close',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -381,3 +405,4 @@ export default function SetlistModalWithToasts(props) {
   return <SetlistModal {...props} />;
 }
 export { SetlistModal };
+

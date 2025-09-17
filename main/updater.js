@@ -1,4 +1,5 @@
 import { dialog, BrowserWindow } from 'electron';
+import { requestRendererModal } from './modalBridge.js';
 import updaterPkg from 'electron-updater';
 import { createProgressWindow, closeProgressWindow, getProgressWindow } from './progressWindow.js';
 
@@ -22,7 +23,20 @@ export function checkForUpdates(showNoUpdateDialog = false) {
   autoUpdater.on('update-not-available', () => {
     console.log('No updates available.');
     if (showNoUpdateDialog) {
-      dialog.showMessageBox({ type: 'info', buttons: ['OK'], message: "You're running the latest version of LyricDisplay." });
+      requestRendererModal({
+        title: 'Up to date',
+        description: "You're running the latest version of LyricDisplay.",
+        variant: 'info',
+        actions: [
+          { label: 'OK', value: { response: 0 } },
+        ],
+      }, {
+        fallback: () => dialog
+          .showMessageBox({ type: 'info', buttons: ['OK'], message: "You're running the latest version of LyricDisplay." })
+          .then((res) => ({ response: res.response })),
+      }).catch(() => {
+        dialog.showMessageBox({ type: 'info', buttons: ['OK'], message: "You're running the latest version of LyricDisplay." });
+      });
     }
   });
 

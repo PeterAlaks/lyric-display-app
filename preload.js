@@ -87,7 +87,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
-  }
+  },
+
+  onModalRequest: (callback) => {
+    const channel = 'modal-bridge:request';
+    ipcRenderer.removeAllListeners(channel);
+    const handler = (_event, payload) => callback?.(payload);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
+  },
+  resolveModalRequest: (id, result) => ipcRenderer.invoke('modal-bridge:resolve', { id, result }),
+  rejectModalRequest: (id, error) => ipcRenderer.invoke('modal-bridge:reject', { id, error: error?.message || error || 'cancelled' })
 });
 
 contextBridge.exposeInMainWorld('electronStore', {
@@ -100,3 +110,8 @@ contextBridge.exposeInMainWorld('electronStore', {
     }
   }
 });
+
+
+
+
+

@@ -1,0 +1,344 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+export const ModalContext = createContext(null);
+
+let modalIdSeq = 1;
+const animationDuration = 220;
+
+const variantPalette = (variant, isDark) => {
+  switch (variant) {
+    case 'success':
+      return {
+        accent: isDark ? 'text-emerald-300' : 'text-emerald-600',
+        badge: isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-500/10 text-emerald-600',
+        ring: isDark ? 'ring-emerald-500/40' : 'ring-emerald-500/20',
+      };
+    case 'warn':
+    case 'warning':
+      return {
+        accent: isDark ? 'text-amber-300' : 'text-amber-600',
+        badge: isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-500/10 text-amber-600',
+        ring: isDark ? 'ring-amber-500/40' : 'ring-amber-500/20',
+      };
+    case 'error':
+    case 'danger':
+    case 'destructive':
+      return {
+        accent: isDark ? 'text-rose-300' : 'text-rose-600',
+        badge: isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-500/10 text-rose-600',
+        ring: isDark ? 'ring-rose-500/50' : 'ring-rose-500/20',
+      };
+    default:
+      return {
+        accent: isDark ? 'text-blue-300' : 'text-blue-600',
+        badge: isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-500/10 text-blue-600',
+        ring: isDark ? 'ring-blue-500/35' : 'ring-blue-500/20',
+      };
+  }
+};
+
+const variantIcon = (variant) => {
+  switch (variant) {
+    case 'success':
+      return CheckCircle2;
+    case 'warn':
+    case 'warning':
+      return AlertTriangle;
+    case 'error':
+    case 'danger':
+    case 'destructive':
+      return XCircle;
+    default:
+      return Info;
+  }
+};
+
+export function ModalProvider({ children, isDark = false }) {
+  const [modals, setModals] = useState([]);
+  const resolverMap = useRef(new Map());
+  const removalTimers = useRef(new Map());
+  const bodyOverflowRef = useRef(null);
+
+  const showModal = useCallback((config = {}) => {
+    const id = modalIdSeq++;
+    const normalizedVariant = (config.variant || 'info').toLowerCase();
+    const modal = {
+      id,
+      variant: normalizedVariant,
+      title: config.title || '',
+      description: config.description ?? config.message ?? '',
+      body: config.body,
+      dismissible: config.dismissible !== false,
+      actions: Array.isArray(config.actions)
+        ? config.actions.map((action) => ({ ...action }))
+        : [],
+      entering: true,
+      exiting: false,
+      allowBackdropClose: config.allowBackdropClose ?? config.dismissible !== false,
+      onClose: config.onClose,
+      className: config.className,
+      size: config.size || 'md',
+      icon: config.icon || null,
+    };
+
+    if (modal.actions.length === 0) {
+      modal.actions = [
+        {
+          label: config.dismissLabel || 'Okay',
+          value: 'dismiss',
+          variant: 'default',
+          autoFocus: true,
+        },
+      ];
+    }
+
+    return new Promise((resolve) => {
+      resolverMap.current.set(id, resolve);
+      setModals((prev) => [...prev, modal]);
+      requestAnimationFrame(() => {
+        setModals((prev) => prev.map((m) => (m.id === id ? { ...m, entering: false } : m)));
+      });
+    });
+  }, []);
+
+  const finalizeRemoval = useCallback((id) => {
+    setModals((prev) => prev.filter((m) => m.id !== id));
+    removalTimers.current.delete(id);
+  }, []);
+
+  const closeModal = useCallback((id, result, opts = {}) => {
+    setModals((prev) => prev.map((m) => (m.id === id ? { ...m, exiting: true } : m)));
+
+    if (!removalTimers.current.has(id)) {
+      const timer = setTimeout(() => finalizeRemoval(id), animationDuration);
+      removalTimers.current.set(id, timer);
+    }
+
+    const resolver = resolverMap.current.get(id);
+    if (resolver) {
+      try {
+        resolver(result);
+      } catch { }
+      resolverMap.current.delete(id);
+    }
+
+    const currentModal = modals.find((m) => m.id === id);
+    if (currentModal && typeof currentModal.onClose === 'function') {
+      try {
+        currentModal.onClose(result, opts);
+      } catch { }
+    }
+  }, [finalizeRemoval, modals]);
+
+  useEffect(() => () => {
+    removalTimers.current.forEach((timer) => clearTimeout(timer));
+    removalTimers.current.clear();
+    resolverMap.current.clear();
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const { body } = document;
+    if (!body) return undefined;
+
+    if (modals.length > 0) {
+      if (bodyOverflowRef.current === null) {
+        bodyOverflowRef.current = body.style.overflow;
+      }
+      body.style.overflow = 'hidden';
+      return () => {
+        body.style.overflow = bodyOverflowRef.current ?? '';
+        bodyOverflowRef.current = null;
+      };
+    }
+
+    return undefined;
+  }, [modals.length]);
+
+  useEffect(() => {
+    if (modals.length === 0) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        const top = modals[modals.length - 1];
+        if (top && top.dismissible) {
+          event.preventDefault();
+          closeModal(top.id, { dismissed: true, reason: 'escape' });
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeModal, modals]);
+
+  const contextValue = useMemo(
+    () => ({ showModal, closeModal }),
+    [showModal, closeModal]
+  );
+
+  const content = modals.length > 0 ? (
+    <div className="pointer-events-none fixed inset-0 z-[1300] flex flex-col">
+      {modals.map((modal, index) => {
+        const palette = variantPalette(modal.variant, isDark);
+        const IconComponent = variantIcon(modal.variant);
+        const zIndex = 1300 + index;
+        const isTopModal = index === modals.length - 1;
+        const sizeClass =
+          modal.size === 'lg'
+            ? 'max-w-3xl'
+            : modal.size === 'sm'
+              ? 'max-w-md'
+              : 'max-w-2xl';
+        const anyAutoFocus = modal.actions.some((action) => action.autoFocus);
+        const overlayStateClass = modal.entering || modal.exiting ? 'opacity-0' : 'opacity-100';
+        const panelStateClass = modal.entering || modal.exiting
+          ? 'translate-y-8 opacity-0 scale-95'
+          : 'translate-y-0 opacity-100 scale-100';
+
+        return (
+          <div
+            key={modal.id}
+            className="pointer-events-none fixed inset-0 flex flex-col"
+            style={{ zIndex }}
+            aria-modal="true"
+            role="dialog"
+            aria-labelledby={`modal-${modal.id}-title`}
+            aria-describedby={`modal-${modal.id}-description`}
+          >
+            <div
+              className={cn(
+                'pointer-events-auto absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200',
+                overlayStateClass
+              )}
+              onClick={() => {
+                if (modal.dismissible && modal.allowBackdropClose && isTopModal) {
+                  closeModal(modal.id, { dismissed: true, reason: 'backdrop' });
+                }
+              }}
+            />
+
+            <div className="pointer-events-none relative flex min-h-full items-center justify-center px-4 py-10">
+              <div
+                className={cn(
+                  'pointer-events-auto w-full transform rounded-2xl border shadow-2xl ring-1 transition-all duration-200',
+                  isDark ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200',
+                  palette.ring,
+                  panelStateClass,
+                  sizeClass,
+                  modal.className
+                )}
+              >
+                <div className="flex items-start gap-4 px-6 py-6">
+                  <div className={cn('flex h-11 w-11 items-center justify-center rounded-xl', palette.badge)}>
+                    {modal.icon ? modal.icon : <IconComponent className={cn('h-6 w-6', palette.accent)} aria-hidden />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {modal.title && (
+                      <h2 id={`modal-${modal.id}-title`} className="text-xl font-semibold tracking-tight">
+                        {modal.title}
+                      </h2>
+                    )}
+                    {(modal.description || modal.body) && (
+                      <div
+                        id={`modal-${modal.id}-description`}
+                        className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-300"
+                      >
+                        {modal.description && <p className="whitespace-pre-wrap">{modal.description}</p>}
+                        {modal.body && (
+                          <div className="mt-3 text-sm text-gray-500 dark:text-gray-300">
+                            {typeof modal.body === 'function'
+                              ? modal.body({ close: (value) => closeModal(modal.id, value) })
+                              : modal.body}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {modal.actions.length > 0 && (
+                      <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+                        {modal.actions.map((action, idx) => {
+                          const buttonVariant = isDark
+                            ? (action.variant || (action.destructive ? 'destructive' : 'outline'))
+                            : (action.variant || (action.destructive ? 'destructive' : idx === 0 ? 'default' : 'outline'));
+                          const darkTextClass = isDark
+                            ? buttonVariant === 'destructive'
+                              ? 'dark:text-red-200 dark:hover:text-red-100'
+                              : 'bg-transparent border border-gray-500 text-white hover:text-white hover:border-gray-400 hover:bg-gray-800/40'
+                            : '';
+                          return (
+                            <Button
+                              key={`${modal.id}-action-${idx}`}
+                              type="button"
+                              variant={buttonVariant}
+                              onClick={async () => {
+                                if (!isTopModal || action.disabled) return;
+                                let shouldClose = action.closeOnClick !== false;
+                                let actionResult = action.value ?? action.label ?? true;
+                                if (typeof action.onSelect === 'function') {
+                                  try {
+                                    const maybe = await action.onSelect();
+                                    if (typeof maybe !== 'undefined') {
+                                      actionResult = maybe;
+                                    }
+                                  } catch (error) {
+                                    console.error('Modal action handler failed', error);
+                                  }
+                                }
+                                if (shouldClose) {
+                                  closeModal(modal.id, actionResult, { actionIndex: idx });
+                                }
+                              }}
+                              className={cn('min-w-[96px] justify-center', darkTextClass, action.className)}
+                              autoFocus={action.autoFocus ?? (!anyAutoFocus && idx === 0)}
+                              disabled={action.disabled}
+                            >
+                              {action.label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  {modal.dismissible && (
+                    <button
+                      type="button"
+                      className={cn(
+                        'relative -mr-2 -mt-2 rounded-full p-2 transition-colors',
+                        isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-black/5'
+                      )}
+                      onClick={() => {
+                        if (isTopModal) {
+                          closeModal(modal.id, { dismissed: true, reason: 'close-button' });
+                        }
+                      }}
+                      aria-label="Close dialog"
+                    >
+                      <X className="h-5 w-5" aria-hidden />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  ) : null;
+
+  return (
+    <ModalContext.Provider value={contextValue}>
+      {children}
+      {typeof document !== 'undefined' ? createPortal(content, document.body) : null}
+    </ModalContext.Provider>
+  );
+}
+
+export function useModalContext() {
+  const ctx = useContext(ModalContext);
+  if (!ctx) {
+    throw new Error('useModalContext must be used within a ModalProvider');
+  }
+  return ctx;
+}

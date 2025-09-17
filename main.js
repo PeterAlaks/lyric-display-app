@@ -1,4 +1,5 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
+import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { startBackend, stopBackend } from './main/backend.js';
 import { createWindow } from './main/windows.js';
@@ -18,6 +19,7 @@ if (!isDev && process.env.FORCE_COMPATIBILITY) {
 }
 
 const getMainWindow = () => mainWindow;
+initModalBridge(getMainWindow);
 const showQRCodeDialog = () => createQRCodeDialog(getMainWindow());
 
 const menuAPI = makeMenuAPI({
@@ -29,6 +31,7 @@ const menuAPI = makeMenuAPI({
   },
   showQRCodeDialog,
   checkForUpdates,
+  showInAppModal: requestRendererModal,
 });
 
 registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu: menuAPI.updateDarkModeMenu });
@@ -56,7 +59,23 @@ app.whenReady().then(async () => {
     mainWindow = createWindow('/');
     menuAPI.createMenu();
     const { dialog } = await import('electron');
-    dialog.showErrorBox('Startup Error', 'There was an issue starting the backend server. Some features may not work properly.');
+    await requestRendererModal({
+      title: 'Startup Error',
+      description: 'There was an issue starting the backend server. Some features may not work properly.',
+      variant: 'error',
+      dismissible: true,
+      actions: [
+        { label: 'OK', value: { response: 0 }, variant: 'destructive' },
+      ],
+    }, {
+      fallback: () => {
+        dialog.showErrorBox('Startup Error', 'There was an issue starting the backend server. Some features may not work properly.');
+        return { response: 0 };
+      },
+      timeout: 12000,
+    }).catch(() => {
+      dialog.showErrorBox('Startup Error', 'There was an issue starting the backend server. Some features may not work properly.');
+    });
   }
 
   app.on('activate', function () {
@@ -72,3 +91,4 @@ app.on('before-quit', () => {
   try { closeQRCodeDialog(); } catch {}
   try { stopBackend(); } catch {}
 });
+

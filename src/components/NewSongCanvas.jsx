@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
 import useToast from '../hooks/useToast';
+import useModal from '../hooks/useModal';
 
 const NewSongCanvas = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ const NewSongCanvas = () => {
 
   useDarkModeSync(darkMode, setDarkMode);
   const { showToast } = useToast();
+  const { showModal } = useModal();
 
   React.useEffect(() => {
     if (window.electronAPI) {
@@ -134,7 +136,12 @@ const NewSongCanvas = () => {
   // Save file
   const handleSave = async () => {
     if (!content.trim() || !title.trim()) {
-      alert('Please enter a title and some lyrics before saving.');
+      showModal({
+        title: 'Missing song details',
+        description: 'Enter both a song title and lyrics before saving.',
+        variant: 'warn',
+        dismissLabel: 'Will do',
+      });
       return;
     }
 
@@ -150,13 +157,17 @@ const NewSongCanvas = () => {
           const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
           setFileName(baseName);
           setTitle(baseName);
-          // Update baselines after successful save
           baseContentRef.current = content;
           baseTitleRef.current = baseName;
         }
       } catch (err) {
         console.error('Failed to save file:', err);
-        alert('Failed to save file. Please try again.');
+        showModal({
+          title: 'Save failed',
+          description: 'We could not save the lyric file. Please try again.',
+          variant: 'error',
+          dismissLabel: 'Close',
+        });
       }
     } else {
       // Fallback: download file
@@ -169,16 +180,19 @@ const NewSongCanvas = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      // Update baselines after successful download
       baseContentRef.current = content;
       baseTitleRef.current = title || fileName || 'lyrics';
     }
   };
-
   // Save and load into app
   const handleSaveAndLoad = async () => {
     if (!content.trim() || !title.trim()) {
-      alert('Please enter a title and some lyrics before saving and loading.');
+      showModal({
+        title: 'Missing song details',
+        description: 'Enter both a song title and lyrics before saving and loading.',
+        variant: 'warn',
+        dismissLabel: 'Got it',
+      });
       return;
     }
 
@@ -198,12 +212,22 @@ const NewSongCanvas = () => {
 
           setRawLyricsContent(content);
           await handleFileUpload(file);
-          try { if (window.electronAPI?.addRecentFile) { await window.electronAPI.addRecentFile(result.filePath); } } catch {}
+          try {
+            if (window.electronAPI?.addRecentFile) {
+              await window.electronAPI.addRecentFile(result.filePath);
+            }
+          } catch {}
+
           navigate('/');
         }
       } catch (err) {
         console.error('Failed to save and load file:', err);
-        alert('Failed to save and load file. Please try again.');
+        showModal({
+          title: 'Save and load failed',
+          description: 'We could not save and reload the lyrics. Please try again.',
+          variant: 'error',
+          dismissLabel: 'Close',
+        });
       }
     } else {
       try {
@@ -227,7 +251,12 @@ const NewSongCanvas = () => {
         navigate('/');
       } catch (err) {
         console.error('Failed to process lyrics:', err);
-        alert('Failed to process lyrics. Please try again.');
+        showModal({
+          title: 'Processing error',
+          description: 'We could not process the lyrics. Please try again.',
+          variant: 'error',
+          dismissLabel: 'Close',
+        });
       }
     }
   };

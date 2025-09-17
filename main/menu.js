@@ -3,7 +3,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { getRecents, subscribe, clearRecents } from './recents.js';
 
-export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, checkForUpdates }) {
+export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, checkForUpdates, showInAppModal }) {
   function updateDarkModeMenu() {
     const win = getMainWindow?.();
     if (win && !win.isDestroyed()) {
@@ -142,9 +142,33 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
             label: 'About App',
             click: async () => {
               const { app, dialog } = await import('electron');
-              dialog.showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message: `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi` }).then((result) => {
-                if (result.response === 1) { checkForUpdates?.(true); }
-              });
+              const message = `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi`;
+
+              const result = await (showInAppModal
+                ? showInAppModal(
+                    {
+                      title: 'About LyricDisplay',
+                      description: message,
+                      variant: 'info',
+                      actions: [
+                        { label: 'OK', value: { response: 0 }, variant: 'outline' },
+                        { label: 'Check for Updates', value: { response: 1 } },
+                      ],
+                    },
+                    {
+                      fallback: () => dialog
+                        .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                        .then((res) => ({ response: res.response })),
+                    }
+                  )
+                : dialog
+                    .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                    .then((res) => ({ response: res.response }))
+              );
+
+              if ((result?.response ?? -1) === 1) {
+                checkForUpdates?.(true);
+              }
             },
           },
           { label: 'Check for Updates', click: () => checkForUpdates?.(true) },
@@ -164,3 +188,6 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
 
   return { createMenu, updateDarkModeMenu, toggleDarkMode };
 }
+
+
+

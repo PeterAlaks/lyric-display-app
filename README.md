@@ -190,6 +190,7 @@ lyric-display-app/
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
 |   ├── ipc.js                              # IPC handlers
 |   ├── menu.js                             # Window menu builder
+|   ├── modalBridge.js                      # Global modal bridge for electron main process
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
 |   ├── qrCodeWindow.js                     # QR Code modal window configuration and styling
@@ -207,8 +208,11 @@ lyric-display-app/
 │   ├── assets/                             # Fonts, etc.
 │   ├── components/
 |   |   ├── ui/                             # Shadcn UI components
+|   |   ├── modal/
+|   |   |   └── ModalProvider.jsx           # Global modal component
 |   |   ├── toast/
 |   |   |   └── ToastProvider.jsx           # Toast notifications component
+|   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
@@ -226,6 +230,7 @@ lyric-display-app/
 |   |   ├── useEditorClipboard.js           # Hook for cut, copy and paste handlers
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
 |   |   ├── useMenuShortcuts.js             # Hook for handling menu navigation/shortcuts
+|   |   ├── useModal.js                     # Global modal hook
 |   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
 |   |   ├── useSearch.js                    # Hook for search bar functionality
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
