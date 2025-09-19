@@ -26,6 +26,10 @@ const TOKEN_EXPIRY = secrets.TOKEN_EXPIRY || process.env.TOKEN_EXPIRY || '24h';
 const ADMIN_TOKEN_EXPIRY = secrets.ADMIN_TOKEN_EXPIRY || process.env.ADMIN_TOKEN_EXPIRY || '7d';
 
 global.controllerJoinCode = String(Math.floor(100000 + Math.random() * 900000));
+const VALID_CLIENT_TYPES = ['desktop', 'web', 'output1', 'output2', 'mobile'];
+const CONTROLLER_CLIENT_TYPES = ['web', 'mobile'];
+const isControllerClient = (clientType) => CONTROLLER_CLIENT_TYPES.includes(clientType);
+
 
 const app = express();
 const server = http.createServer(app);
@@ -56,22 +60,34 @@ const generateToken = (payload, expiresIn = TOKEN_EXPIRY) => {
 };
 
 const verifyToken = (token) => {
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (error) {
-    // Try with previous secret during rotation grace period
-    if (secrets.previousSecret && secrets.previousSecretExpiry) {
-      const graceExpiry = new Date(secrets.previousSecretExpiry);
-      if (new Date() < graceExpiry) {
-        try {
-          return jwt.verify(token, secrets.previousSecret);
-        } catch (previousError) {
-          return null;
-        }
-      }
+  const decode = (secret) => {
+    try {
+      return jwt.verify(token, secret);
+    } catch (error) {
+      return null;
     }
+  };
+
+  let decoded = decode(JWT_SECRET);
+
+  if (!decoded && secrets.previousSecret && secrets.previousSecretExpiry) {
+    const graceExpiry = new Date(secrets.previousSecretExpiry);
+    if (new Date() < graceExpiry) {
+      decoded = decode(secrets.previousSecret);
+    }
+  }
+
+  if (!decoded) {
     return null;
   }
+
+  if (isControllerClient(decoded.clientType)) {
+    if (decoded.joinCode !== global.controllerJoinCode) {
+      return null;
+    }
+  }
+
+  return decoded;
 };
 
 // Authentication endpoints
@@ -84,11 +100,9 @@ app.post('/api/auth/token', (req, res) => {
     });
   }
 
-  const validClientTypes = ['desktop', 'web', 'output1', 'output2', 'mobile'];
-  const controllerClientTypes = ['web', 'mobile'];
-  if (!validClientTypes.includes(clientType)) {
+  if (!VALID_CLIENT_TYPES.includes(clientType)) {
     return res.status(400).json({
-      error: 'Invalid client type. Must be one of: ' + validClientTypes.join(', ')
+      error: 'Invalid client type. Must be one of: ' + VALID_CLIENT_TYPES.join(', ')
     });
   }
 
@@ -97,24 +111,23 @@ app.post('/api/auth/token', (req, res) => {
     const isDev = process.env.NODE_ENV === 'development' || !isProduction;
 
     if (isProduction && adminKey !== secrets.ADMIN_ACCESS_KEY) {
-      console.warn(`❌ Desktop token request denied - invalid admin key from ${req.ip}`);
+      console.warn(`Desktop token request denied - invalid admin key from ${req.ip}`);
       return res.status(403).json({
         error: 'Admin access key required for desktop client tokens'
       });
     }
 
     if (isDev && !adminKey) {
-      console.warn('⚠️  Desktop token issued without admin key (development mode)');
+      console.warn('Desktop token issued without admin key (development mode)');
     } else if (isDev && adminKey && adminKey !== secrets.ADMIN_ACCESS_KEY) {
-      console.warn('⚠️  Desktop token issued with incorrect admin key (development mode - allowing anyway)');
+      console.warn('Desktop token issued with incorrect admin key (development mode - allowing anyway)');
     }
-  } else if (controllerClientTypes.includes(clientType)) {
+  } else if (isControllerClient(clientType)) {
     if (!joinCode || joinCode !== global.controllerJoinCode) {
-      console.warn(`❌ Controller token denied - bad join code from ${req.ip}`);
+      console.warn(`Controller token denied - bad join code from ${req.ip}`);
       return res.status(403).json({ error: 'Join code required or invalid' });
     }
   }
-
 
   try {
     const payload = {
@@ -124,6 +137,10 @@ app.post('/api/auth/token', (req, res) => {
       permissions: getClientPermissions(clientType),
       issuedAt: Date.now()
     };
+
+    if (isControllerClient(clientType)) {
+      payload.joinCode = global.controllerJoinCode;
+    }
 
     const expiresIn = clientType === 'desktop' ? ADMIN_TOKEN_EXPIRY : TOKEN_EXPIRY;
     const token = generateToken(payload, expiresIn);
@@ -168,6 +185,10 @@ app.post('/api/auth/refresh', (req, res) => {
       permissions: decoded.permissions,
       issuedAt: Date.now()
     };
+
+    if (isControllerClient(decoded.clientType)) {
+      newPayload.joinCode = global.controllerJoinCode;
+    }
 
     const expiresIn = decoded.clientType === 'desktop' ? ADMIN_TOKEN_EXPIRY : TOKEN_EXPIRY;
     const newToken = generateToken(newPayload, expiresIn);
@@ -354,13 +375,13 @@ app.use((err, req, res, next) => {
 server.listen(PORT, '0.0.0.0', () => {
   const secretsStatus = secretManager.getSecretsStatus();
 
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`🔐 Authentication enabled with JWT`);
-  console.log(`🛡️  Rate limiting active for auth endpoints`);
-  console.log(`📁 Secrets loaded from: ${secretsStatus.configPath}`);
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log('Authentication enabled with JWT');
+  console.log('Rate limiting active for auth endpoints');
+  console.log(`Secrets loaded from: ${secretsStatus.configPath}`);
 
   if (secretsStatus.needsRotation) {
-    console.log(`⚠️  JWT secret is ${secretsStatus.daysSinceRotation} days old - consider rotation`);
+    console.log(`JWT secret is ${secretsStatus.daysSinceRotation} days old - consider rotation`);
   }
 
   if (process.send) {
