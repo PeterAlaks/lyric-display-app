@@ -186,6 +186,7 @@ Each output can be independently configured:
 ```
 lyric-display-app/
 ├── main/                                   # Electron main script modules
+|   ├── adminKey.js                         # Admin access key module
 |   ├── backend.js                          # Backend server starter
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
 |   ├── ipc.js                              # IPC handlers
@@ -193,7 +194,6 @@ lyric-display-app/
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
-|   ├── qrCodeWindow.js                     # QR Code modal window configuration and styling
 |   ├── recents.js                          # Module to manage recently opened files
 |   ├── updater.js                          # Module to manage app updates
 |   ├── utils.js                            # Utility file to get local IP address
@@ -201,9 +201,10 @@ lyric-display-app/
 ├── public/                                 # Static assets
 |   └── index.html                          # Browser web app entry point
 ├── server/                                 # Express.js backend
-|   ├── index.js                            # Main backend server
 |   ├── events.js                           # Backend communication events
+|   ├── index.js                            # Main backend server
 |   └── package.json                        # Backend dependencies
+|   └── secretManager.js                    # Module handling the secure management of app secrets
 ├── src/                                    # React frontend source
 │   ├── assets/                             # Fonts, etc.
 │   ├── components/
@@ -212,7 +213,9 @@ lyric-display-app/
 |   |   |   └── ModalProvider.jsx           # Global modal component
 |   |   ├── toast/
 |   |   |   └── ToastProvider.jsx           # Toast notifications component
+|   |   ├── AuthStatusIndicator.jsx         # Authentication status component
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
+|   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
@@ -220,12 +223,14 @@ lyric-display-app/
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
+|   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
 |   |   ├── SetlistModal.jsx                # Setlist Modal
 |   |   └── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
 │   ├── context/
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/
+|   |   ├── useAuth.js                      # Authenticator hook for socket connections
 |   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
 |   |   ├── useEditorClipboard.js           # Hook for cut, copy and paste handlers
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
@@ -234,7 +239,8 @@ lyric-display-app/
 |   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
 |   |   ├── useSearch.js                    # Hook for search bar functionality
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
-|   |   ├── useSocket.js                    # Custom React hook for Socket.IO client
+|   |   ├── useSocket.js                    # Main React hook for Socket.IO client
+|   |   ├── useSocketEvents.js              # Socket events hook
 |   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
 |   |   └── utils.js                        # Utility functions
@@ -243,7 +249,9 @@ lyric-display-app/
 |   |   ├── Output1.jsx                     # Output 1 display
 |   |   └── Output2.jsx                     # Output 2 display
 │   ├── utils/
+|   |   ├── logger.js                       # Simple event and error logger utility
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
+|   |   ├── network.js                      # Network utility for backend URL resolution
 |   |   ├── parseLrc.js                     # LRC file parser
 |   |   ├── parseLyrics.js                  # Text file parser
 |   |   └── toastSounds.js                  # Toast notifications tones utility
