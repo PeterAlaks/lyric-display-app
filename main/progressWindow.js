@@ -3,8 +3,13 @@ import { resolveProductionPath } from './paths.js';
 
 let progressWindow = null;
 
-export function createProgressWindow() {
-  if (progressWindow) return progressWindow;
+export function createProgressWindow({ parent } = {}) {
+  if (progressWindow) {
+    if (parent && !progressWindow.isDestroyed()) {
+      try { progressWindow.setParentWindow(parent); } catch {}
+    }
+    return progressWindow;
+  }
 
   progressWindow = new BrowserWindow({
     width: 400,
@@ -12,7 +17,9 @@ export function createProgressWindow() {
     resizable: false,
     minimizable: false,
     maximizable: false,
-    alwaysOnTop: true,
+    skipTaskbar: true,
+    parent: parent ?? undefined,
+    modal: false,
     center: true,
     show: false,
     frame: true,
@@ -23,7 +30,6 @@ export function createProgressWindow() {
     }
   });
 
-  progressWindow.setAlwaysOnTop(true, 'normal');
   progressWindow.setMenuBarVisibility(false);
 
   const progressHTML = `

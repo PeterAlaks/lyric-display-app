@@ -4,7 +4,6 @@ import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { startBackend, stopBackend } from './main/backend.js';
 import { createWindow } from './main/windows.js';
-import { createQRCodeDialog, closeQRCodeDialog } from './main/qrCodeWindow.js';
 import { checkForUpdates } from './main/updater.js';
 import { registerIpcHandlers } from './main/ipc.js';
 import { openInAppBrowser, registerInAppBrowserIpc } from './main/inAppBrowser.js';
@@ -22,8 +21,6 @@ if (!isDev && process.env.FORCE_COMPATIBILITY) {
 
 const getMainWindow = () => mainWindow;
 initModalBridge(getMainWindow);
-const showQRCodeDialog = () => createQRCodeDialog(getMainWindow());
-
 const menuAPI = makeMenuAPI({
   getMainWindow,
   createWindow: (route) => {
@@ -31,7 +28,6 @@ const menuAPI = makeMenuAPI({
     if (route === '/') mainWindow = win;
     return win;
   },
-  showQRCodeDialog,
   checkForUpdates,
   showInAppModal: requestRendererModal,
 });
@@ -50,8 +46,7 @@ app.whenReady().then(async () => {
     console.log('Backend started successfully');
     // Additional delay to ensure server is fully listening on port 4000
     await new Promise(resolve => setTimeout(resolve, 2000));
-
-   const adminKey = await getAdminKeyWithRetry();
+    const adminKey = await getAdminKeyWithRetry();
     if (adminKey) {
       console.log('Admin key loaded and cached');
     } else {
@@ -102,7 +97,5 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 app.on('before-quit', () => {
-  try { closeQRCodeDialog(); } catch { }
   try { stopBackend(); } catch { }
 });
-

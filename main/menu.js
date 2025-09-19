@@ -3,7 +3,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { getRecents, subscribe, clearRecents } from './recents.js';
 
-export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, checkForUpdates, showInAppModal }) {
+export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, showInAppModal }) {
   function updateDarkModeMenu() {
     const win = getMainWindow?.();
     if (win && !win.isDestroyed()) {
@@ -90,7 +90,15 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
             submenu: buildRecentSubmenu(),
           },
           { type: 'separator' },
-          { label: 'Connect Mobile Controller', click: () => showQRCodeDialog?.() },
+          {
+            label: 'Connect Mobile Controller',
+            click: () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                try { win.webContents.send('open-qr-dialog'); } catch {}
+              }
+            }
+          },
           { type: 'separator' },
           { label: 'Preview Output 1', accelerator: 'CmdOrCtrl+1', click: () => createWindow?.('/output1') },
           { label: 'Preview Output 2', accelerator: 'CmdOrCtrl+2', click: () => createWindow?.('/output2') },
@@ -188,6 +196,3 @@ export function makeMenuAPI({ getMainWindow, createWindow, showQRCodeDialog, che
 
   return { createMenu, updateDarkModeMenu, toggleDarkMode };
 }
-
-
-

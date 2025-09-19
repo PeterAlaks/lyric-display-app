@@ -1,27 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import QRCode from 'qrcode';
 import { X, Smartphone, Wifi } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { resolveBackendUrl } from "../utils/network";
+
+const ANIMATION_DURATION = 300;
 
 const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   const [localIP, setLocalIP] = useState('');
   const [qrCodeDataURL, setQRCodeDataURL] = useState('');
   const [isGenerating, setIsGenerating] = useState(true);
+  const [visible, setVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [entering, setEntering] = useState(false);
 
   const [joinCode, setJoinCode] = useState(null);
-
-  const resolveJoinCodeBaseUrl = useCallback(() => {
-    if (import.meta.env.DEV) {
-      return 'http://localhost:4000';
-    }
-    const origin = window.location?.origin;
-    if (origin && origin.startsWith('http')) {
-      return origin;
-    }
-    return 'http://127.0.0.1:4000';
-  }, []);
 
   const refreshJoinCode = useCallback(async () => {
     try {
@@ -33,7 +26,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
         }
       }
 
-      const response = await fetch(`${resolveJoinCodeBaseUrl()}/api/auth/join-code`);
+      const response = await fetch(resolveBackendUrl('/api/auth/join-code'));
       if (!response.ok) {
         throw new Error(`Failed to fetch join code: ${response.status}`);
       }
@@ -42,8 +35,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     } catch (error) {
       console.warn('Failed to load join code for QR dialog', error);
     }
-  }, [resolveJoinCodeBaseUrl]);
-
+  }, [resolveBackendUrl]);
   useEffect(() => {
     if (isOpen) {
       refreshJoinCode();
@@ -119,21 +111,31 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     generateQRCode();
   }, [localIP, isOpen, darkMode]);
 
-  useEffect(() => {
+
+  useLayoutEffect(() => {
     if (isOpen) {
+      setVisible(true);
       setExiting(false);
       setEntering(true);
       const raf = requestAnimationFrame(() => setEntering(false));
       return () => cancelAnimationFrame(raf);
-    } else if (!exiting) {
-      setExiting(true);
-      // Match transition duration for smooth unmount
-      const t = setTimeout(() => setExiting(false), 300);
-      return () => clearTimeout(t);
     }
-  }, [isOpen]);
 
-  if (!(isOpen || exiting || entering)) return null;
+    if (!visible) {
+      return undefined;
+    }
+
+    setEntering(false);
+    setExiting(true);
+    const timeout = setTimeout(() => {
+      setExiting(false);
+      setVisible(false);
+    }, ANIMATION_DURATION);
+
+    return () => clearTimeout(timeout);
+  }, [isOpen, visible]);
+
+  if (!visible) return null;
 
   const connectionURL = `http://${localIP}:4000/?client=mobile`;
 
@@ -247,5 +249,4 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 };
 
 export default QRCodeDialog;
-
 

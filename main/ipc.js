@@ -134,7 +134,15 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   // Updater controls
   ipcMain.handle('updater:download', async () => {
     try {
-      createProgressWindow().show();
+      const parent = getMainWindow?.();
+      const progress = createProgressWindow({ parent });
+      if (progress && !progress.isDestroyed()) {
+        if (parent && typeof parent.isMinimized === 'function' && parent.isMinimized()) {
+          try { progress.minimize(); } catch {}
+        } else {
+          try { progress.show(); } catch {}
+        }
+      }
       await autoUpdater.downloadUpdate();
       return { success: true };
     } catch (e) { return { success: false, error: e?.message || String(e) }; }

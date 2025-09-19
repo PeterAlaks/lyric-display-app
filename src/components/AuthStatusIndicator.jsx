@@ -3,23 +3,13 @@ import React, { useCallback, useEffect } from 'react';
 import { Shield, ShieldAlert, ShieldCheck, RefreshCw } from 'lucide-react';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
+import { resolveBackendUrl } from '../utils/network';
 
 const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshToken, darkMode = false }) => {
   const { showToast } = useToast();
   const { showModal } = useModal();
 
   const [joinCode, setJoinCode] = React.useState(null);
-
-  const resolveJoinCodeBaseUrl = useCallback(() => {
-    if (import.meta.env.DEV) {
-      return 'http://localhost:4000';
-    }
-    const origin = window.location?.origin;
-    if (origin && origin.startsWith('http')) {
-      return origin;
-    }
-    return 'http://127.0.0.1:4000';
-  }, []);
 
   const refreshJoinCode = useCallback(async () => {
     try {
@@ -31,7 +21,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
         }
       }
 
-      const response = await fetch(`${resolveJoinCodeBaseUrl()}/api/auth/join-code`);
+      const response = await fetch(resolveBackendUrl('/api/auth/join-code'));
       if (!response.ok) {
         throw new Error(`Failed to fetch join code: ${response.status}`);
       }
@@ -40,7 +30,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     } catch (error) {
       console.warn('Failed to load join code', error);
     }
-  }, [resolveJoinCodeBaseUrl]);
+  }, [resolveBackendUrl]);
 
   useEffect(() => {
     refreshJoinCode();
@@ -234,5 +224,4 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
 };
 
 export default AuthStatusIndicator;
-
 

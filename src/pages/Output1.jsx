@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
+import { logDebug, logError } from '../utils/logger';
 
 const Output1 = () => {
   const { socket, isConnected, connectionStatus, isAuthenticated } = useSocket('output1');
@@ -28,16 +29,16 @@ const Output1 = () => {
     const maxRetries = 3;
 
     if (!socket || !socket.connected || !isAuthenticated) {
-      console.log('Output1: Cannot request state - socket not connected or authenticated');
+      logDebug('Output1: Cannot request state - socket not connected or authenticated');
       return;
     }
 
     if (retryCount >= maxRetries) {
-      console.error('Output1: Max retries reached for state request');
+      logError('Output1: Max retries reached for state request');
       return;
     }
 
-    console.log(`Output1: Requesting current state (attempt ${retryCount + 1})`);
+    logDebug(`Output1: Requesting current state (attempt ${retryCount + 1})`);
     socket.emit('requestCurrentState');
 
     // Set timeout for response
@@ -46,7 +47,7 @@ const Output1 = () => {
     }
 
     stateRequestTimeoutRef.current = setTimeout(() => {
-      console.log(`Output1: State request timeout (attempt ${retryCount + 1}), retrying...`);
+      logDebug(`Output1: State request timeout (attempt ${retryCount + 1}), retrying...`);
       requestCurrentStateWithRetry(retryCount + 1);
     }, 3000); // 3 second timeout per attempt
   }, [socket]);
@@ -57,7 +58,7 @@ const Output1 = () => {
 
     // Set up event listeners
     const handleCurrentState = (state) => {
-      console.log('Output1: Received current state:', state);
+      logDebug('Output1: Received current state:', state);
       setLastSyncTime(Date.now());
 
       // Clear any pending timeout
@@ -74,25 +75,25 @@ const Output1 = () => {
     };
 
     const handleLineUpdate = ({ index }) => {
-      console.log('Output1: Received line update:', index);
+      logDebug('Output1: Received line update:', index);
       selectLine(index);
     };
 
     const handleLyricsLoad = (newLyrics) => {
-      console.log('Output1: Received lyrics load:', newLyrics?.length, 'lines');
+      logDebug('Output1: Received lyrics load:', newLyrics?.length, 'lines');
       setLyrics(newLyrics);
       selectLine(null);
     };
 
     const handleStyleUpdate = ({ output, settings }) => {
       if (output === 'output1') {
-        console.log('Output1: Received style update');
+        logDebug('Output1: Received style update');
         updateOutputSettings('output1', settings);
       }
     };
 
     const handleOutputToggle = (state) => {
-      console.log('Output1: Received output toggle:', state);
+      logDebug('Output1: Received output toggle:', state);
       setIsOutputOn(state);
     };
 
@@ -122,7 +123,7 @@ const Output1 = () => {
 
   // Monitor connection status and re-request state on connection
   useEffect(() => {
-    console.log(`Output1 connection status: ${connectionStatus}`);
+    logDebug(`Output1 connection status: ${connectionStatus}`);
 
     if (connectionStatus === 'connected' && socket) {
       setTimeout(() => requestCurrentStateWithRetry(0), 200);
@@ -134,7 +135,7 @@ const Output1 = () => {
     if (!isConnected) return;
 
     const syncCheckInterval = setInterval(() => {
-      console.log('Output1: Periodic sync check');
+      logDebug('Output1: Periodic sync check');
       if (socket && socket.connected) {
         requestCurrentStateWithRetry(0);
       }

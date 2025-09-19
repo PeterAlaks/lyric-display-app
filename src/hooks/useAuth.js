@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
+import { logDebug, logError, logWarn } from '../utils/logger';
+import { resolveBackendOrigin } from '../utils/network';
 
 class AuthService {
   constructor() {
@@ -10,10 +12,7 @@ class AuthService {
   }
 
   getServerUrl() {
-    if (import.meta.env.DEV) {
-      return 'http://localhost:4000';
-    }
-    return window.location.origin;
+    return resolveBackendOrigin();
   }
 
   generateDeviceId() {
@@ -94,7 +93,7 @@ class AuthService {
       try {
         window.dispatchEvent(new CustomEvent('request-join-code', { detail }));
       } catch (error) {
-        console.warn('Failed to dispatch join code request modal:', error);
+        logWarn('Failed to dispatch join code request modal:', error);
         settle(null);
         return;
       }
@@ -111,13 +110,13 @@ class AuthService {
       try {
         return await window.electronAPI.getAdminKey();
       } catch (error) {
-        console.warn('Failed to get admin key from Electron API:', error);
+        logWarn('Failed to get admin key from Electron API:', error);
       }
     }
 
     // Fallback to environment variable for development
     if (import.meta.env.DEV && import.meta.env.VITE_ADMIN_KEY) {
-      console.warn('Using admin key from environment variable (development only)');
+      logWarn('Using admin key from environment variable (development only)');
       return import.meta.env.VITE_ADMIN_KEY;
     }
 
@@ -149,9 +148,9 @@ class AuthService {
       const adminKey = await this.getAdminKey();
       if (adminKey) {
         baseBody.adminKey = adminKey;
-        console.log('Including admin key in token request');
+        logDebug('Including admin key in token request');
       } else {
-        console.warn('No admin key available for desktop client token request');
+        logWarn('No admin key available for desktop client token request');
       }
     }
 
@@ -233,7 +232,7 @@ class AuthService {
         localStorage.setItem('lyric_display_client_type', clientType);
         this.serverValidated = true;
 
-        console.log(`Authentication token obtained for ${clientType} client`);
+        logDebug(`Authentication token obtained for ${clientType} client`);
         return this.token;
       } catch (error) {
         lastError = error;
@@ -243,7 +242,7 @@ class AuthService {
 
     if (lastError) {
       const message = lastError?.message || String(lastError);
-      console.error('Token request failed:', message);
+      logError('Token request failed:', message);
 
       if (message.startsWith('ADMIN_KEY_REQUIRED:')) {
         window.dispatchEvent(new CustomEvent('admin-key-error', {
@@ -279,7 +278,7 @@ class AuthService {
       const data = await response.json();
       return !!data.valid;
     } catch (error) {
-      console.error('Token validation request failed:', error);
+      logError('Token validation request failed:', error);
       return false;
     }
   }
@@ -318,7 +317,7 @@ class AuthService {
         localStorage.setItem('lyric_display_token_expiry', this.tokenExpiry.toString());
         this.serverValidated = true;
 
-        console.log('Authentication token refreshed');
+        logDebug('Authentication token refreshed');
         return this.token;
       } finally {
         this.refreshPromise = null;
@@ -384,7 +383,7 @@ class AuthService {
     if (!this.serverValidated) {
       const stillValid = await this.validateToken(this.token);
       if (!stillValid) {
-        console.warn('Stored token failed server validation, requesting new token');
+        logWarn('Stored token failed server validation, requesting new token');
         this.clearStoredToken();
         return await this.requestToken(clientType);
       }
@@ -395,7 +394,7 @@ class AuthService {
       try {
         return await this.refreshToken();
       } catch (error) {
-        console.log('Token refresh failed, requesting new token');
+        logDebug('Token refresh failed, requesting new token');
         this.clearStoredToken();
         return await this.requestToken(clientType);
       }
@@ -419,10 +418,10 @@ const useAuth = () => {
   const refreshAuthToken = useCallback(async () => {
     try {
       await authServiceRef.current.refreshToken();
-      console.log('Token refreshed successfully');
+      logDebug('Token refreshed successfully');
       return true;
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      logError('Token refresh failed:', error);
       setAuthStatus('failed');
       return false;
     }

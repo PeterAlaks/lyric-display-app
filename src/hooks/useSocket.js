@@ -4,7 +4,10 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import useAuth from './useAuth';
+import { resolveBackendOrigin } from '../utils/network';
 import useSocketEvents from './useSocketEvents';
+
+import { logDebug, logError, logWarn } from '../utils/logger';
 
 const useSocket = (role = 'output') => {
   const socketRef = useRef(null);
@@ -35,15 +38,7 @@ const useSocket = (role = 'output') => {
     return 'web';
   }, [role]);
 
-  const getSocketUrl = useCallback(() => {
-    if (import.meta.env.VITE_SOCKET_SERVER_URL) {
-      return import.meta.env.VITE_SOCKET_SERVER_URL;
-    }
-    const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
-    if (isDev) return 'http://localhost:4000';
-    if (window.electronAPI) return 'http://localhost:4000';
-    return window.location.origin;
-  }, []);
+  const getSocketUrl = useCallback(() => resolveBackendOrigin(), []);
 
   const startHeartbeat = useCallback(() => {
     if (heartbeatIntervalRef.current) {
@@ -89,7 +84,7 @@ const useSocket = (role = 'output') => {
 
         token = await Promise.race([tokenPromise, timeoutPromise]);
       } catch (tokenError) {
-        console.error('Token acquisition failed:', tokenError);
+        logError('Token acquisition failed:', tokenError);
         throw tokenError;
       }
 
@@ -98,7 +93,7 @@ const useSocket = (role = 'output') => {
       }
 
       const socketUrl = getSocketUrl();
-      console.log('Connecting socket to:', socketUrl, '(with auth)');
+      logDebug('Connecting socket to:', socketUrl, '(with auth)');
 
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
@@ -135,13 +130,13 @@ const useSocket = (role = 'output') => {
 
       setAuthStatus('authenticated');
     } catch (error) {
-      console.error('Socket connection failed:', error);
+      logError('Socket connection failed:', error);
       setAuthStatus('failed');
       setConnectionStatus('error');
 
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = setTimeout(() => {
-        console.log('Retrying socket connection...');
+        logDebug('Retrying socket connection...');
         connectSocketInternal();
       }, 5000);
     }
@@ -167,17 +162,17 @@ const useSocket = (role = 'output') => {
   const createEmitFunction = useCallback((eventName) => {
     return (...args) => {
       if (!socketRef.current || !socketRef.current.connected) {
-        console.warn(`Cannot emit ${eventName} - socket not connected`);
+        logWarn(`Cannot emit ${eventName} - socket not connected`);
         return false;
       }
 
       if (authStatus !== 'authenticated') {
-        console.warn(`Cannot emit ${eventName} - not authenticated (status: ${authStatus})`);
+        logWarn(`Cannot emit ${eventName} - not authenticated (status: ${authStatus})`);
         return false;
       }
 
       socketRef.current.emit(eventName, ...args);
-      console.log(`Emitted ${eventName}:`, ...args);
+      logDebug(`Emitted ${eventName}:`, ...args);
       return true;
     };
   }, [authStatus]);
@@ -215,7 +210,7 @@ const useSocket = (role = 'output') => {
   const emitSetlistClear = useCallback(createEmitFunction('setlistClear'), [createEmitFunction]);
 
   const forceReconnect = useCallback(() => {
-    console.log('Force reconnecting...');
+    logDebug('Force reconnecting...');
     if (socketRef.current) {
       socketRef.current.removeAllListeners();
       socketRef.current.disconnect();

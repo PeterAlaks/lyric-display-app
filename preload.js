@@ -69,6 +69,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, callback);
     return () => ipcRenderer.removeAllListeners(channel);
   },
+  onOpenQRCodeDialog: (callback) => {
+    const channel = 'open-qr-dialog';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
   onOpenLyricsFromPathError: (callback) => {
     const channel = 'open-lyrics-from-path-error';
     ipcRenderer.removeAllListeners(channel);
@@ -112,8 +118,3 @@ contextBridge.exposeInMainWorld('electronStore', {
     }
   }
 });
-
-
-
-
-

@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import ControlPanel from './pages/ControlPanel';
 import Output1 from './pages/Output1';
 import Output2 from './pages/Output2';
 import NewSongCanvas from './components/NewSongCanvas';
-import QRCodeDialog from './components/QRCodeDialog';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import JoinCodePromptBridge from './components/JoinCodePromptBridge';
 import useLyricsStore from './context/LyricsStore';
@@ -12,18 +11,9 @@ import { ToastProvider } from '@/components/toast/ToastProvider';
 import { ModalProvider } from '@/components/modal/ModalProvider';
 import useToast from '@/hooks/useToast';
 import ElectronModalBridge from './components/ElectronModalBridge';
+import QRCodeDialogBridge from './components/QRCodeDialogBridge';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
-
-// QR Dialog Page Component
-const QRDialogPage = () => {
-  const { darkMode } = useLyricsStore();
-  return (
-    <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <QRCodeDialog isOpen={true} onClose={() => window.close()} darkMode={darkMode} />
-    </div>
-  );
-};
 
 export default function App() {
   const { darkMode } = useLyricsStore();
@@ -34,6 +24,7 @@ export default function App() {
           <ElectronModalBridge />
           <JoinCodePromptBridge />
           <UpdaterToastBridge />
+          <QRCodeDialogBridge />
           <ShortcutsHelpBridge />
           <Router>
             <Routes>
@@ -41,7 +32,6 @@ export default function App() {
               <Route path="/output1" element={<Output1 />} />
               <Route path="/output2" element={<Output2 />} />
               <Route path="/new-song" element={<NewSongCanvas />} />
-              <Route path="/qr-dialog" element={<QRDialogPage />} />
             </Routes>
           </Router>
         </AppErrorBoundary>
