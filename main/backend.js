@@ -8,9 +8,14 @@ let backendProcess = null;
 export function startBackend() {
   return new Promise((resolve, reject) => {
     const serverPath = resolveProductionPath('server', 'index.js');
+    const configPath = resolveProductionPath('config');
     backendProcess = fork(serverPath, [], {
       cwd: path.dirname(serverPath),
-      env: { ...process.env, NODE_ENV: app.isPackaged ? 'production' : 'development' },
+      env: {
+        ...process.env,
+        NODE_ENV: app.isPackaged ? 'production' : 'development',
+        CONFIG_PATH: configPath
+      },
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     });
 
@@ -60,7 +65,7 @@ export function startBackend() {
 
 export function stopBackend() {
   if (backendProcess) {
-    try { backendProcess.kill(); } catch {}
+    try { backendProcess.kill(); } catch { }
     backendProcess = null;
   }
 }

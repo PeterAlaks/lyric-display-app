@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
   syncNativeDarkMode: (isDark) => ipcRenderer.invoke('sync-native-dark-mode', isDark),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
+  getAdminKey: () => ipcRenderer.invoke('get-admin-key'),
+  getDesktopJWT: (payload) => ipcRenderer.invoke('get-desktop-jwt', payload),
   newLyricsFile: () => ipcRenderer.invoke('new-lyrics-file'),
   getLocalIP: () => ipcRenderer.invoke('get-local-ip'),
   onTriggerFileLoad: (callback) => {

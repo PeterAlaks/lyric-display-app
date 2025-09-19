@@ -22,7 +22,7 @@ const MobileLayout = () => {
     setlistFiles,
   } = useLyricsStore();
 
-  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad } = useSocket('control');
+  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus } = useSocket('control');
 
   const {
     containerRef: lyricsContainerRef,
@@ -39,6 +39,9 @@ const MobileLayout = () => {
   const hasLyrics = lyrics && lyrics.length > 0;
 
   const handleLineSelect = (index) => {
+    if (!isAuthenticated) {
+      return;
+    }
     selectLine(index);
     emitLineUpdate(index);
   };
@@ -53,6 +56,9 @@ const MobileLayout = () => {
   };
 
   const handleSyncOutputs = () => {
+    if (!isAuthenticated) {
+      return;
+    }
     if (lyrics && lyrics.length > 0) {
       emitLyricsLoad(lyrics);
       if (selectedLine !== null && selectedLine !== undefined) {

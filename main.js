@@ -1,4 +1,5 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
+import path from 'path';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { startBackend, stopBackend } from './main/backend.js';
@@ -8,6 +9,7 @@ import { checkForUpdates } from './main/updater.js';
 import { registerIpcHandlers } from './main/ipc.js';
 import { openInAppBrowser, registerInAppBrowserIpc } from './main/inAppBrowser.js';
 import { makeMenuAPI } from './main/menu.js';
+import { getAdminKeyWithRetry } from './main/adminKey.js';
 
 let mainWindow = null;
 
@@ -38,11 +40,23 @@ registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu: menuA
 registerInAppBrowserIpc();
 
 app.whenReady().then(async () => {
+  if (!process.env.CONFIG_PATH) {
+    const userDataDir = app.getPath('userData');
+    process.env.CONFIG_PATH = path.join(userDataDir, 'config');
+  }
+
   try {
     await startBackend();
     console.log('Backend started successfully');
     // Additional delay to ensure server is fully listening on port 4000
     await new Promise(resolve => setTimeout(resolve, 2000));
+
+   const adminKey = await getAdminKeyWithRetry();
+    if (adminKey) {
+      console.log('Admin key loaded and cached');
+    } else {
+      console.warn('Could not load admin key - desktop authentication may fail in production');
+    }
 
     mainWindow = createWindow('/');
     menuAPI.createMenu();
@@ -88,7 +102,7 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 app.on('before-quit', () => {
-  try { closeQRCodeDialog(); } catch {}
-  try { stopBackend(); } catch {}
+  try { closeQRCodeDialog(); } catch { }
+  try { stopBackend(); } catch { }
 });
 

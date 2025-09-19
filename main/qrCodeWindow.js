@@ -11,8 +11,8 @@ export function createQRCodeDialog(parent) {
   }
 
   qrCodeWindow = new BrowserWindow({
-    width: 450,
-    height: 550,
+    width: 520,
+    height: 640,
     resizable: false,
     minimizable: false,
     maximizable: false,

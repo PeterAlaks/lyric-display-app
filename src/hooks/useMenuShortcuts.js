@@ -17,7 +17,7 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
           if (result && result.canceled) return; // user canceled
         }
       } catch (e) {
-        // Fallback to legacy file input on any error
+        // Fallback to built-in file input on any error
       }
       // Fallback: open the hidden file input
       fileInputRef?.current?.click();

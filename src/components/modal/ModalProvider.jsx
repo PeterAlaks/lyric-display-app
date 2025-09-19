@@ -191,7 +191,12 @@ export function ModalProvider({ children, isDark = false }) {
             ? 'max-w-3xl'
             : modal.size === 'sm'
               ? 'max-w-md'
-              : 'max-w-2xl';
+              : modal.size === 'xs'
+                ? 'max-w-sm'
+                : modal.size === 'auto'
+                  ? 'max-w-xl'
+                  : 'max-w-2xl';
+        const widthClass = modal.size === 'auto' ? 'w-auto max-w-full' : 'w-full';
         const anyAutoFocus = modal.actions.some((action) => action.autoFocus);
         const overlayStateClass = modal.entering || modal.exiting ? 'opacity-0' : 'opacity-100';
         const panelStateClass = modal.entering || modal.exiting
@@ -223,9 +228,10 @@ export function ModalProvider({ children, isDark = false }) {
             <div className="pointer-events-none relative flex min-h-full items-center justify-center px-4 py-10">
               <div
                 className={cn(
-                  'pointer-events-auto w-full transform rounded-2xl border shadow-2xl ring-1 transition-all duration-200',
+                  'pointer-events-auto transform rounded-2xl border shadow-2xl ring-1 transition-all duration-200',
                   isDark ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200',
                   palette.ring,
+                  widthClass,
                   panelStateClass,
                   sizeClass,
                   modal.className
@@ -342,3 +348,8 @@ export function useModalContext() {
   }
   return ctx;
 }
+
+
+
+
+

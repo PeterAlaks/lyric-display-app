@@ -1,348 +1,229 @@
 // Project: LyricDisplay App
 // File: src/hooks/useSocket.js
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { io } from 'socket.io-client';
-import useLyricsStore from '../context/LyricsStore';
+import useAuth from './useAuth';
+import useSocketEvents from './useSocketEvents';
 
 const useSocket = (role = 'output') => {
   const socketRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const heartbeatIntervalRef = useRef(null);
+
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
+
   const {
-    setLyrics,
-    selectLine,
-    updateOutputSettings,
-    output1Settings,
-    output2Settings,
-    setSetlistFiles,
-    setIsDesktopApp,
-    setLyricsFileName,
-    setRawLyricsContent,
-  } = useLyricsStore();
+    authStatus,
+    setAuthStatus,
+    ensureValidToken,
+    refreshAuthToken,
+    clearAuthToken,
+  } = useAuth();
 
-  const setlistNameRef = useRef(new Map());
+  const {
+    registerAuthenticatedHandlers,
+  } = useSocketEvents(role);
 
-  useEffect(() => {
-    // Determine socket URL - fallback chain for different environments
-    const getSocketUrl = () => {
-      // Explicit env override (Vite)
-      if (import.meta.env.VITE_SOCKET_SERVER_URL) {
-        return import.meta.env.VITE_SOCKET_SERVER_URL;
-      }
-      // Dev mode (vite) usually runs at 5173, backend is 4000
-      const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
-      if (isDev) return 'http://localhost:4000';
-      // If running inside Electron (desktop app), use backend port 4000
-      if (window.electronAPI) {
-        return 'http://localhost:4000';
-      }
-      // Default fallback: same origin (web build)
-      return window.location.origin;
-    };
+  const getClientType = useCallback(() => {
+    if (window.electronAPI) return 'desktop';
+    if (role === 'output1') return 'output1';
+    if (role === 'output2') return 'output2';
+    if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      return 'mobile';
+    }
+    return 'web';
+  }, [role]);
 
-    const socketUrl = getSocketUrl();
-    console.log('Connecting to socket server:', socketUrl);
+  const getSocketUrl = useCallback(() => {
+    if (import.meta.env.VITE_SOCKET_SERVER_URL) {
+      return import.meta.env.VITE_SOCKET_SERVER_URL;
+    }
+    const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
+    if (isDev) return 'http://localhost:4000';
+    if (window.electronAPI) return 'http://localhost:4000';
+    return window.location.origin;
+  }, []);
 
-    // Socket configuration options
-    const socketOptions = {
-      transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
-      timeout: 30000,
-      reconnection: true,
-      reconnectionDelay: 2000,
-      reconnectionAttempts: 3,
-      maxReconnectionAttempts: 5,
-    };
-
-    socketRef.current = io(socketUrl, socketOptions);
-
-    // Detect client type and send to server
-    const isDesktopApp = window.electronAPI !== undefined;
-    setIsDesktopApp(isDesktopApp);
-
-    // Connection event handlers
-    socketRef.current.on('connect', () => {
-      console.log('Socket connected:', socketRef.current.id);
-      setConnectionStatus('connected');
-
-      // Identify client type to server
-      socketRef.current.emit('clientConnect', {
-        type: isDesktopApp ? 'desktop' : 'web'
-      });
-
-      // If this is desktop app, broadcast current state to sync other clients
-      if (isDesktopApp) {
-        setTimeout(() => {
-          const currentState = useLyricsStore.getState();
-          if (currentState.lyrics.length > 0) {
-            socketRef.current.emit('lyricsLoad', currentState.lyrics);
-            if (currentState.lyricsFileName) {
-              socketRef.current.emit('fileNameUpdate', currentState.lyricsFileName);
-            }
-            if (typeof currentState.selectedLine === 'number') {
-              socketRef.current.emit('lineUpdate', { index: currentState.selectedLine });
-            }
-            socketRef.current.emit('outputToggle', currentState.isOutputOn);
-          }
-        }, 1000);
-      }
-
-      // Request current state for all clients
-      setTimeout(() => {
-        socketRef.current.emit('requestCurrentState');
-      }, 500);
-    });
-
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
-      setConnectionStatus('disconnected');
-    });
-
-    socketRef.current.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      setConnectionStatus('error');
-    });
-
-    socketRef.current.on('reconnect', (attemptNumber) => {
-      console.log('Socket reconnected after', attemptNumber, 'attempts');
-      setConnectionStatus('connected');
-
-      // Re-identify client type after reconnection
-      socketRef.current.emit('clientConnect', {
-        type: isDesktopApp ? 'desktop' : 'web'
-      });
-    });
-
-    socketRef.current.on('reconnect_attempt', (attemptNumber) => {
-      console.log('Socket reconnection attempt:', attemptNumber);
-      setConnectionStatus('reconnecting');
-    });
-
-    socketRef.current.on('currentState', (state) => {
-      console.log('Received enhanced current state:', state);
-
-      // Always sync lyrics and filename if server has them
-      if (state.lyrics && state.lyrics.length > 0) {
-        setLyrics(state.lyrics);
-        if (state.lyricsFileName) {
-          setLyricsFileName(state.lyricsFileName);
-        }
-
-        // Also sync selected line when we have lyrics
-        if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
-          selectLine(state.selectedLine);
-        }
-      }
-
-      // Always update settings, setlist, and output toggle state
-      if (state.output1Settings) updateOutputSettings('output1', state.output1Settings);
-      if (state.output2Settings) updateOutputSettings('output2', state.output2Settings);
-      if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
-      if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
-      if (typeof state.isOutputOn === 'boolean' && !isDesktopApp) {
-        useLyricsStore.getState().setIsOutputOn(state.isOutputOn);
-      }
-    });
-
-    // App-specific event handlers
-    if (role === 'output') {
-      socketRef.current.on('lineUpdate', ({ index }) => {
-        console.log('Received line update:', index);
-        selectLine(index);
-      });
-
-      socketRef.current.on('lyricsLoad', (lyrics) => {
-        console.log('Received lyrics load:', lyrics?.length, 'lines');
-        setLyrics(lyrics);
-      });
-
-      socketRef.current.on('styleUpdate', ({ output, settings }) => {
-        console.log('Received style update for', output, ':', settings);
-        updateOutputSettings(output, settings);
-      });
-
-      socketRef.current.on('outputToggle', (state) => {
-        console.log('Received output toggle:', state);
-        useLyricsStore.getState().setIsOutputOn(state);
-      });
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
     }
 
-    // New setlist event handlers
-    socketRef.current.on('setlistUpdate', (files) => {
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (socketRef.current && socketRef.current.connected) {
+        socketRef.current.emit('heartbeat');
+      }
+    }, 30000);
+  }, []);
+
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
+  const handleAuthError = useCallback((errorMessage, dispatchEvent = true) => {
+    setAuthStatus('failed');
+    clearAuthToken();
+
+    if (dispatchEvent && errorMessage) {
+      window.dispatchEvent(new CustomEvent('auth-error', {
+        detail: { message: errorMessage },
+      }));
+    }
+  }, [clearAuthToken, setAuthStatus]);
+
+  const connectSocketInternal = useCallback(async () => {
+    try {
+      setAuthStatus('authenticating');
+      const clientType = getClientType();
+
+      let token;
       try {
-        const map = new Map();
-        (files || []).forEach(f => { if (f && f.id) map.set(f.id, f.displayName || ''); });
-        // Merge with previous map to preserve names for IDs that might be removed
-        const prev = setlistNameRef.current || new Map();
-        prev.forEach((name, id) => { if (!map.has(id)) map.set(id, name); });
-        setlistNameRef.current = map;
-      } catch {}
-      setSetlistFiles(files);
-      // Do NOT clear lyrics, selectedLine, or output settings here!
-    });
+        const tokenPromise = ensureValidToken(clientType);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Token request timeout')), 10000)
+        );
 
-    socketRef.current.on('setlistLoadSuccess', ({ fileId, fileName, linesCount, rawContent }) => {
-      console.log(`Setlist file loaded: ${fileName} (${linesCount} lines)`);
-      setLyricsFileName(fileName);
-      selectLine(null);
-
-      // IMPORTANT: Set raw content for editing
-      if (rawContent) {
-        setRawLyricsContent(rawContent);
-      }
-    });
-
-    socketRef.current.on('setlistAddSuccess', ({ addedCount, totalCount }) => {
-      console.log(`Added ${addedCount} files to setlist. Total: ${totalCount}`);
-    });
-
-    socketRef.current.on('setlistRemoveSuccess', (fileId) => {
-      console.log(`Removed file ${fileId} from setlist`);
-      try {
-        const name = setlistNameRef.current.get(fileId) || '';
-        window.dispatchEvent(new CustomEvent('setlist-remove-success', { detail: { fileId, name } }));
-      } catch {}
-    });
-
-    socketRef.current.on('setlistError', (error) => {
-      console.error('Setlist error:', error);
-    });
-
-    socketRef.current.on('setlistClearSuccess', () => {
-      console.log('Setlist cleared successfully');
-    });
-
-    // Handle periodic state sync
-    socketRef.current.on('periodicStateSync', (state) => {
-      console.log('Received periodic state sync');
-
-      // Don't override lyrics if we already have different content
-      if (state.lyrics && state.lyrics.length > 0) {
-        const currentLyrics = useLyricsStore.getState().lyrics;
-        if (currentLyrics.length === 0) {
-          setLyrics(state.lyrics);
-        }
+        token = await Promise.race([tokenPromise, timeoutPromise]);
+      } catch (tokenError) {
+        console.error('Token acquisition failed:', tokenError);
+        throw tokenError;
       }
 
-      // Only sync selectedLine if it makes sense
-      if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
-        const currentLyrics = useLyricsStore.getState().lyrics;
-        if (state.selectedLine < currentLyrics.length) {
-          selectLine(state.selectedLine);
-        }
+      if (!token) {
+        throw new Error('Authentication token was not provided');
       }
 
-      // Settings are always safe to sync
-      if (state.output1Settings) updateOutputSettings('output1', state.output1Settings);
-      if (state.output2Settings) updateOutputSettings('output2', state.output2Settings);
-      if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
-      if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
-    });
+      const socketUrl = getSocketUrl();
+      console.log('Connecting socket to:', socketUrl, '(with auth)');
 
-    socketRef.current.on('fileNameUpdate', (fileName) => {
-      console.log('Received filename update:', fileName);
-      setLyricsFileName(fileName);
-    });
-
-    // Cleanup function
-    return () => {
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
         socketRef.current.disconnect();
-        console.log('Socket disconnected and cleaned up');
+      }
+
+      const socketOptions = {
+        transports: ['websocket', 'polling'],
+        timeout: 30000,
+        reconnection: false,
+        forceNew: true,
+        auth: { token },
+      };
+
+      socketRef.current = io(socketUrl, socketOptions);
+
+      if (socketRef.current) {
+        const socket = socketRef.current;
+        const resolvedClientType = getClientType();
+        const isDesktopApp = resolvedClientType === 'desktop';
+
+        registerAuthenticatedHandlers({
+          socket,
+          clientType: resolvedClientType,
+          isDesktopApp,
+          reconnectTimeoutRef,
+          startHeartbeat,
+          stopHeartbeat,
+          setConnectionStatus,
+          requestReconnect: () => connectSocketInternal(),
+          handleAuthError,
+        });
+      }
+
+      setAuthStatus('authenticated');
+    } catch (error) {
+      console.error('Socket connection failed:', error);
+      setAuthStatus('failed');
+      setConnectionStatus('error');
+
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log('Retrying socket connection...');
+        connectSocketInternal();
+      }, 5000);
+    }
+  }, [getClientType, ensureValidToken, getSocketUrl, registerAuthenticatedHandlers, startHeartbeat, stopHeartbeat, handleAuthError, setAuthStatus, setConnectionStatus]);
+
+  const connectSocket = useCallback(connectSocketInternal, [connectSocketInternal]);
+
+  useEffect(() => {
+    connectSocket();
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      stopHeartbeat();
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
       }
     };
-  }, [role, setLyrics, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
+  }, [connectSocket, stopHeartbeat]);
 
-  // Emit functions with error handling
-  const emitLineUpdate = useCallback((index) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('lineUpdate', { index });
-      console.log('Emitted line update:', index);
-    } else {
-      console.warn('Cannot emit line update - socket not connected');
+  const createEmitFunction = useCallback((eventName) => {
+    return (...args) => {
+      if (!socketRef.current || !socketRef.current.connected) {
+        console.warn(`Cannot emit ${eventName} - socket not connected`);
+        return false;
+      }
+
+      if (authStatus !== 'authenticated') {
+        console.warn(`Cannot emit ${eventName} - not authenticated (status: ${authStatus})`);
+        return false;
+      }
+
+      socketRef.current.emit(eventName, ...args);
+      console.log(`Emitted ${eventName}:`, ...args);
+      return true;
+    };
+  }, [authStatus]);
+
+  const rawEmitLineUpdate = useMemo(() => createEmitFunction('lineUpdate'), [createEmitFunction]);
+
+  const emitLineUpdate = useCallback((value) => {
+    const payload = (value && typeof value === 'object' && !Array.isArray(value))
+      ? ('index' in value ? value : { index: value })
+      : { index: value };
+    return rawEmitLineUpdate(payload);
+  }, [rawEmitLineUpdate]);
+
+  const emitLyricsLoad = useCallback(createEmitFunction('lyricsLoad'), [createEmitFunction]);
+  const rawEmitStyleUpdate = useMemo(() => createEmitFunction('styleUpdate'), [createEmitFunction]);
+
+  const emitStyleUpdate = useCallback((outputOrPayload, maybeSettings) => {
+    if (outputOrPayload && typeof outputOrPayload === 'object' && !Array.isArray(outputOrPayload)) {
+      if ('output' in outputOrPayload && 'settings' in outputOrPayload) {
+        return rawEmitStyleUpdate(outputOrPayload);
+      }
     }
-  }, []);
 
-  const emitLyricsLoad = useCallback((lyrics) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('lyricsLoad', lyrics);
-      console.log('Emitted lyrics load:', lyrics?.length, 'lines');
-    } else {
-      console.warn('Cannot emit lyrics load - socket not connected');
-    }
-  }, []);
+    return rawEmitStyleUpdate({
+      output: outputOrPayload,
+      settings: maybeSettings,
+    });
+  }, [rawEmitStyleUpdate]);
 
-  const emitStyleUpdate = useCallback((output, settings) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('styleUpdate', { output, settings });
-      console.log('Emitted style update for', output);
-    } else {
-      console.warn('Cannot emit style update - socket not connected');
-    }
-  }, []);
+  const emitOutputToggle = useCallback(createEmitFunction('outputToggle'), [createEmitFunction]);
+  const emitSetlistAdd = useCallback(createEmitFunction('setlistAdd'), [createEmitFunction]);
+  const emitSetlistRemove = useCallback(createEmitFunction('setlistRemove'), [createEmitFunction]);
+  const emitSetlistLoad = useCallback(createEmitFunction('setlistLoad'), [createEmitFunction]);
+  const emitRequestSetlist = useCallback(createEmitFunction('requestSetlist'), [createEmitFunction]);
+  const emitSetlistClear = useCallback(createEmitFunction('setlistClear'), [createEmitFunction]);
 
-  const emitOutputToggle = useCallback((state) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('outputToggle', state);
-      console.log('Emitted output toggle:', state);
-    } else {
-      console.warn('Cannot emit output toggle - socket not connected');
-    }
-  }, []);
-
-  // New setlist emit functions
-  const emitSetlistAdd = useCallback((files) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('setlistAdd', files);
-      console.log('Emitted setlist add:', files?.length, 'files');
-    } else {
-      console.warn('Cannot emit setlist add - socket not connected');
-    }
-  }, []);
-
-  const emitSetlistRemove = useCallback((fileId) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('setlistRemove', fileId);
-      console.log('Emitted setlist remove:', fileId);
-    } else {
-      console.warn('Cannot emit setlist remove - socket not connected');
-    }
-  }, []);
-
-  const emitSetlistLoad = useCallback((fileId) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('setlistLoad', fileId);
-      console.log('Emitted setlist load:', fileId);
-    } else {
-      console.warn('Cannot emit setlist load - socket not connected');
-    }
-  }, []);
-
-  const emitRequestSetlist = useCallback(() => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('requestSetlist');
-      console.log('Emitted request setlist');
-    } else {
-      console.warn('Cannot emit request setlist - socket not connected');
-    }
-  }, []);
-
-  const emitSetlistClear = useCallback(() => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('setlistClear');
-      console.log('Emitted setlist clear');
-    } else {
-      console.warn('Cannot emit setlist clear - socket not connected');
-    }
-  }, []);
-
-  // Force reconnect function (useful for troubleshooting)
-  const forceReconnect = () => {
+  const forceReconnect = useCallback(() => {
+    console.log('Force reconnecting...');
     if (socketRef.current) {
+      socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
-      socketRef.current.connect();
     }
-  };
+    setConnectionStatus('disconnected');
+    setAuthStatus('pending');
+    connectSocket();
+  }, [connectSocket, setAuthStatus]);
 
   return {
     socket: socketRef.current,
@@ -356,8 +237,11 @@ const useSocket = (role = 'output') => {
     emitRequestSetlist,
     emitSetlistClear,
     connectionStatus,
+    authStatus,
     forceReconnect,
+    refreshAuthToken,
     isConnected: connectionStatus === 'connected',
+    isAuthenticated: authStatus === 'authenticated',
   };
 };
 

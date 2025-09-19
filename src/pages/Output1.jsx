@@ -4,7 +4,7 @@ import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 
 const Output1 = () => {
-  const { socket, isConnected, connectionStatus } = useSocket('output');
+  const { socket, isConnected, connectionStatus, isAuthenticated } = useSocket('output1');
   const {
     lyrics,
     selectedLine,
@@ -15,10 +15,10 @@ const Output1 = () => {
     selectLine,
     updateOutputSettings,
   } = useLyricsStore();
-  
+
   const stateRequestTimeoutRef = useRef(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
-  
+
   // Get the current line and process it for output
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
@@ -26,9 +26,9 @@ const Output1 = () => {
   // Robust state request function with retry logic
   const requestCurrentStateWithRetry = useCallback((retryCount = 0) => {
     const maxRetries = 3;
-    
-    if (!socket || !socket.connected) {
-      console.log('Output1: Cannot request state - socket not connected');
+
+    if (!socket || !socket.connected || !isAuthenticated) {
+      console.log('Output1: Cannot request state - socket not connected or authenticated');
       return;
     }
 
@@ -44,7 +44,7 @@ const Output1 = () => {
     if (stateRequestTimeoutRef.current) {
       clearTimeout(stateRequestTimeoutRef.current);
     }
-    
+
     stateRequestTimeoutRef.current = setTimeout(() => {
       console.log(`Output1: State request timeout (attempt ${retryCount + 1}), retrying...`);
       requestCurrentStateWithRetry(retryCount + 1);
@@ -59,13 +59,13 @@ const Output1 = () => {
     const handleCurrentState = (state) => {
       console.log('Output1: Received current state:', state);
       setLastSyncTime(Date.now());
-      
+
       // Clear any pending timeout
       if (stateRequestTimeoutRef.current) {
         clearTimeout(stateRequestTimeoutRef.current);
         stateRequestTimeoutRef.current = null;
       }
-      
+
       // Apply received state
       if (state.lyrics) setLyrics(state.lyrics);
       if (state.selectedLine !== undefined) selectLine(state.selectedLine);
@@ -123,7 +123,7 @@ const Output1 = () => {
   // Monitor connection status and re-request state on connection
   useEffect(() => {
     console.log(`Output1 connection status: ${connectionStatus}`);
-    
+
     if (connectionStatus === 'connected' && socket) {
       setTimeout(() => requestCurrentStateWithRetry(0), 200);
     }
@@ -189,30 +189,30 @@ const Output1 = () => {
 
   // Render multi-line content with proper styling for translations
   const renderContent = () => {
-  const processedText = processDisplayText(line);
-  
-  // Check if we have line breaks (from grouped content)
-  if (processedText.includes('\n')) {
-    const lines = processedText.split('\n');
-    return (
-      <div className="space-y-1">
-        {lines.map((lineText, index) => (
-          <div 
-            key={index} 
-            className={index > 0 ? 'font-medium' : 'font-medium'}
-            style={{
-              color: index > 0 ? '#FBBF24' : 'inherit'
-            }}
-          >
-            {lineText}
-          </div>
-        ))}
-      </div>
-    );
-  }
-  
-  return processedText;
-};
+    const processedText = processDisplayText(line);
+
+    // Check if we have line breaks (from grouped content)
+    if (processedText.includes('\n')) {
+      const lines = processedText.split('\n');
+      return (
+        <div className="space-y-1">
+          {lines.map((lineText, index) => (
+            <div
+              key={index}
+              className={index > 0 ? 'font-medium' : 'font-medium'}
+              style={{
+                color: index > 0 ? '#FBBF24' : 'inherit'
+              }}
+            >
+              {lineText}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return processedText;
+  };
 
   return (
     <div
@@ -221,7 +221,7 @@ const Output1 = () => {
         backgroundColor: 'transparent',
       }}
     >
-     <div
+      <div
         style={{
           fontFamily: fontStyle,
           fontSize: `${fontSize}px`,
@@ -236,9 +236,9 @@ const Output1 = () => {
           pointerEvents: isOutputOn && line ? 'auto' : 'none',
         }}
         className="w-full text-center leading-none transition-opacity duration-500 ease-in-out"
->
-  {renderContent()}
-</div>
+      >
+        {renderContent()}
+      </div>
     </div>
   );
 };

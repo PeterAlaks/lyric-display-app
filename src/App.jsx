@@ -6,6 +6,7 @@ import Output2 from './pages/Output2';
 import NewSongCanvas from './components/NewSongCanvas';
 import QRCodeDialog from './components/QRCodeDialog';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
+import JoinCodePromptBridge from './components/JoinCodePromptBridge';
 import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
 import { ModalProvider } from '@/components/modal/ModalProvider';
@@ -31,6 +32,7 @@ export default function App() {
       <ToastProvider isDark={!!darkMode}>
         <AppErrorBoundary>
           <ElectronModalBridge />
+          <JoinCodePromptBridge />
           <UpdaterToastBridge />
           <ShortcutsHelpBridge />
           <Router>
@@ -112,5 +114,3 @@ class AppErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-
-

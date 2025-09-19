@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import QRCode from 'qrcode';
 import { X, Smartphone, Wifi } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +10,62 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   const [exiting, setExiting] = useState(false);
   const [entering, setEntering] = useState(false);
 
+  const [joinCode, setJoinCode] = useState(null);
+
+  const resolveJoinCodeBaseUrl = useCallback(() => {
+    if (import.meta.env.DEV) {
+      return 'http://localhost:4000';
+    }
+    const origin = window.location?.origin;
+    if (origin && origin.startsWith('http')) {
+      return origin;
+    }
+    return 'http://127.0.0.1:4000';
+  }, []);
+
+  const refreshJoinCode = useCallback(async () => {
+    try {
+      if (window.electronAPI?.getJoinCode) {
+        const code = await window.electronAPI.getJoinCode();
+        if (code) {
+          setJoinCode(code);
+          return;
+        }
+      }
+
+      const response = await fetch(`${resolveJoinCodeBaseUrl()}/api/auth/join-code`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch join code: ${response.status}`);
+      }
+      const payload = await response.json();
+      setJoinCode(payload?.joinCode || null);
+    } catch (error) {
+      console.warn('Failed to load join code for QR dialog', error);
+    }
+  }, [resolveJoinCodeBaseUrl]);
+
+  useEffect(() => {
+    if (isOpen) {
+      refreshJoinCode();
+    }
+  }, [isOpen, refreshJoinCode]);
+
+  useEffect(() => {
+    const handleJoinCodeUpdated = (event) => {
+      const nextCode = event?.detail?.joinCode;
+      if (typeof nextCode === 'string') {
+        setJoinCode(nextCode);
+      } else {
+        setJoinCode(null);
+        if (isOpen) {
+          refreshJoinCode();
+        }
+      }
+    };
+
+    window.addEventListener('join-code-updated', handleJoinCodeUpdated);
+    return () => window.removeEventListener('join-code-updated', handleJoinCodeUpdated);
+  }, [isOpen, refreshJoinCode]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -39,27 +96,19 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
       setIsGenerating(true);
 
       try {
-        const url = `http://${localIP}:4000/`;
+        const url = `http://${localIP}:4000/?client=mobile`;
 
-        // Simple QR code generation using a service (you might want to use a library instead)
-        // For production, consider using the 'qrcode' npm package
-        const qrServiceUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-
-        // For a more robust solution, you could use the qrcode npm package:
-        /*
-        const QRCode = require('qrcode');
         const dataURL = await QRCode.toDataURL(url, {
           width: 200,
           margin: 2,
           color: {
             dark: darkMode ? '#FFFFFF' : '#000000',
-            light: darkMode ? '#374151' : '#FFFFFF'
-          }
+            light: darkMode ? '#1F2937' : '#FFFFFF'
+          },
+          errorCorrectionLevel: 'M'
         });
-        setQRCodeDataURL(dataURL);
-        */
 
-        setQRCodeDataURL(qrServiceUrl);
+        setQRCodeDataURL(dataURL);
       } catch (error) {
         console.error('Error generating QR code:', error);
       } finally {
@@ -86,7 +135,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 
   if (!(isOpen || exiting || entering)) return null;
 
-  const connectionURL = `http://${localIP}:4000/`;
+  const connectionURL = `http://${localIP}:4000/?client=mobile`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -165,6 +214,17 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Make sure your mobile device is connected to the same network
             </p>
+            {joinCode && (
+              <div
+                className={`
+      mt-3 px-3 py-2 rounded-md text-sm font-mono
+      ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-100 text-yellow-800'}
+    `}
+              >
+                Join Code: {joinCode}
+              </div>
+            )}
+
           </div>
 
           {/* Copy URL Button */}
@@ -187,3 +247,5 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 };
 
 export default QRCodeDialog;
+
+

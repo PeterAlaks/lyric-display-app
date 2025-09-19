@@ -4,6 +4,7 @@ import { RefreshCw, FolderOpen, FileText, Edit, List, Globe, Plus } from 'lucide
 import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import useFileUpload from '../hooks/useFileUpload';
+import AuthStatusIndicator from './AuthStatusIndicator';
 import LyricsList from './LyricsList';
 import MobileLayout from './MobileLayout';
 import SetlistModal from './SetlistModal';
@@ -55,7 +56,7 @@ const LyricDisplayApp = () => {
   const fileInputRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd } = useSocket('control');
+  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated } = useSocket('control');
 
   // File upload functionality
   const handleFileUpload = useFileUpload();
@@ -118,7 +119,7 @@ const LyricDisplayApp = () => {
         if (filePath && window?.electronAPI?.addRecentFile) {
           await window.electronAPI.addRecentFile(filePath);
         }
-      } catch {}
+      } catch { }
 
       showToast({ title: 'File loaded', message: `${lower.endsWith('.lrc') ? 'LRC' : 'Text'}: ${baseName}`, variant: 'success' });
     } catch (err) {
@@ -133,7 +134,7 @@ const LyricDisplayApp = () => {
     const off = window.electronAPI.onOpenLyricsFromPath(async (payload) => {
       await processLoadedLyrics(payload || {});
     });
-    return () => { try { off?.(); } catch {} };
+    return () => { try { off?.(); } catch { } };
   }, [processLoadedLyrics]);
 
   // Show toast if a recent file no longer exists
@@ -146,7 +147,7 @@ const LyricDisplayApp = () => {
         variant: 'error'
       });
     });
-    return () => { try { off?.(); } catch {} };
+    return () => { try { off?.(); } catch { } };
   }, [showToast]);
 
   // Handle load triggered from File menu using native dialog (renderer dispatches DOM event)
@@ -178,6 +179,15 @@ const LyricDisplayApp = () => {
 
   // Handle file upload button click
   const openFileDialog = async () => {
+    if (!isAuthenticated) {
+      showToast({
+        title: 'Authentication Required',
+        message: 'Please wait for authentication to complete before loading files.',
+        variant: 'warning'
+      });
+      return;
+    }
+
     try {
       if (window?.electronAPI?.loadLyricsFile) {
         const result = await window.electronAPI.loadLyricsFile();
@@ -188,7 +198,7 @@ const LyricDisplayApp = () => {
         }
         if (result && result.canceled) return;
       }
-    } catch {}
+    } catch { }
     fileInputRef.current?.click();
   };
 
@@ -234,6 +244,15 @@ const LyricDisplayApp = () => {
 
   // Handle output toggle
   const handleToggle = () => {
+    if (!isConnected || !isAuthenticated) {
+      showToast({
+        title: 'Connection Required',
+        message: 'Cannot control output - not connected or authenticated.',
+        variant: 'warning'
+      });
+      return;
+    }
+
     setIsOutputOn(!isOutputOn);
     emitOutputToggle(!isOutputOn);
   };
@@ -286,6 +305,15 @@ const LyricDisplayApp = () => {
                 }`}
               title="Sync current state to outputs"
               onClick={() => {
+                if (!isConnected || !isAuthenticated) {
+                  showToast({
+                    title: 'Cannot Sync',
+                    message: 'Not connected or authenticated.',
+                    variant: 'warning'
+                  });
+                  return;
+                }
+
                 if (lyrics && lyrics.length > 0) {
                   emitLyricsLoad(lyrics);
                   if (selectedLine !== null && selectedLine !== undefined) {
@@ -303,6 +331,15 @@ const LyricDisplayApp = () => {
             >
               <RefreshCw className="w-5 h-5" />
             </button>
+
+            {/* Authentication Status Indicator */}
+            <AuthStatusIndicator
+              authStatus={authStatus}
+              connectionStatus={connectionStatus}
+              onRetry={forceReconnect}
+              onRefreshToken={refreshAuthToken}
+              darkMode={darkMode}
+            />
           </div>
         </div>
 
@@ -400,7 +437,7 @@ const LyricDisplayApp = () => {
 
         <div className={`border-t my-10 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
-        <div className={`mt-4 text-[12px] text-left ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        <div className={`mt-4 text-[12px] text-left space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.
         </div>
       </div>
