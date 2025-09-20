@@ -204,6 +204,7 @@ lyric-display-app/
 ├── server/                                 # Express.js backend
 |   ├── events.js                           # Backend communication events
 |   ├── index.js                            # Main backend server
+|   ├── joinCodeGuard.js                    # Guard/limiter for join code attempts by secondary controllers
 |   └── package.json                        # Backend dependencies
 |   └── secretManager.js                    # Module handling the secure management of app secrets
 ├── src/                                    # React frontend source
