@@ -2,40 +2,40 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Author:** Peter Alakembi  
-**Built for:** Victory City Media  
+**Author:** Peter Alakembi
+**Co-Contributor:** David Okaliwe
 
 ## Overview
 
-LyricDisplay is a comprehensive Electron-based application designed for professional live production environments. It provides real-time lyric synchronization across multiple transparent output displays, making it ideal for church services, concerts, and live streaming setups where lyrics need to be displayed both in-house and for broadcast.
+LyricDisplay is a comprehensive Electron-based application designed for use in professional live production environments alongside streaming/recording software. It provides real-time lyric synchronization across multiple transparent output displays, making it ideal for church services, concerts, and live streaming setups where lyrics need to be displayed both in-house and for broadcast.
 
 ## Key Features
 
 ### Multi-Output Display System
-- **Dual Independent Outputs**: Two separate output windows with individual styling controls
+- **Dual Independent Outputs**: Two separate output pages with individual styling controls
 - **Transparent Backgrounds**: Perfect for OBS/VMIX browser source capture
 - **Real-time Synchronization**: Instant updates across all connected displays
 - **Browser Source Compatible**: Works seamlessly with popular streaming software
 
 ### Advanced Lyric Management
-- **Smart Text Processing**: Automatic formatting with religious word capitalization
-- **Translation Support**: Groups main lyrics with bracketed translations `[Like this]`
+- **Smart Text Processing**: Automatic formatting for cleaning up lyric files
+- **Translation Support**: Displays translation lines where available (lines wrapped in brackets below main lyric line) 
 - **Live Editing Canvas**: Built-in editor with formatting tools and auto-cleanup
 - **Search & Navigation**: Advanced search with match highlighting and keyboard navigation
 
 ### Comprehensive Styling Engine
-- **13 Professional Fonts**: Including custom GarnetCapitals font
+- **13 Professional Fonts**: 13 pro fonts from Google Fonts
 - **Typography Controls**: Bold, italic, underline, and all-caps options
 - **Color Customization**: Independent font and drop shadow colors
 - **Background Controls**: Adjustable opacity and color settings
-- **Precise Positioning**: X/Y margin controls for pixel-perfect placement
+- **Padding Adjustments**: X/Y margin controls for proper padding control
 
 ### Professional Features
 - **Auto-Updates**: Seamless background updates via GitHub releases
 - **Dark Mode**: System-integrated dark/light theme switching
 - **Keyboard Shortcuts**: Full menu-driven workflow
 - **Cross-Platform**: Windows, macOS, and Linux support
-- **Socket.io Backend**: Reliable real-time communication
+- **Socket.io Backend**: Secure and reliable real-time communication
 
 ## Installation
 
@@ -94,10 +94,10 @@ Chorus line one
 ```
 
 **Formatting Rules:**
-- Empty lines separate verse sections
-- Bracketed lines `[like this]` are treated as translations
+
+- Bracketed lines `[like this]`, `(this)` or `{this}` are treated as translation lines
 - Two consecutive lines where the second is bracketed will be grouped
-- Automatic cleanup removes periods, capitalizes religious terms
+- Auto cleanup removes periods and other special characters, capitalizes first letter of words like God, Jesus, etc.
 
 ## Technical Architecture
 
@@ -171,9 +171,10 @@ Each output can be independently configured:
 ### OBS Studio Integration
 1. Add **Browser Source** to your scene
 2. Set URL to: `http://localhost:4000/#/output1` or `http://localhost:4000/#/output2`
-3. Set dimensions to match your canvas (1920 x <=300 pixels recommended)
-4. Enable **Shutdown source when not visible** for performance
-5. **Refresh browser when scene becomes active** for reliability
+3. Replace `localhost` with the control panel PC's local IP if capturing display from another system across a network
+4. Set dimensions to match your canvas (1920 x <=300 pixels recommended)
+5. Enable **Shutdown source when not visible** for performance
+6. **Refresh browser when scene becomes active** for reliability
 
 ### VMIX Integration
 - Add **Web Browser** input
@@ -309,7 +310,7 @@ npm run electron-pack    # Package Electron app
 
 ## License & Credits
 
-**Copyright © 2025 Victory City Media. All Rights Reserved.**
+**Copyright © 2025. All Rights Reserved.**
 
 **Developers:**
 - Peter Alakembi (Lead Designer and Developer)
