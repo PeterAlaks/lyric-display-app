@@ -30,15 +30,16 @@ const JoinCodePromptBridge = () => {
       };
 
       const isLocked = reason === 'locked';
+      const descriptionText = isLocked
+        ? ''
+        : reason === 'invalid'
+          ? 'The previous join code was rejected. Enter the new 6-digit code displayed on the desktop control panel.'
+          : 'Enter the 6-digit join code displayed on the desktop control panel to authorize this device.';
 
       try {
         const result = await showModal({
           title: isLocked ? 'Join Code Locked' : 'Enter Controller Join Code',
-          description: isLocked
-            ? 'Too many invalid join code attempts. Please wait for the countdown to finish before trying again.'
-            : reason === 'invalid'
-              ? 'The previous join code was rejected. Enter the new 6-digit code displayed on the desktop control panel.'
-              : 'Enter the 6-digit join code displayed on the desktop control panel to authorize this device.',
+          description: descriptionText,
           variant: isLocked || reason === 'invalid' ? 'warning' : 'info',
           dismissible: !isLocked,
           allowBackdropClose: !isLocked,
@@ -129,11 +130,6 @@ const JoinCodeForm = ({ defaultValue = '', reason, onSubmit, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-gray-600 dark:text-gray-300">
-        {reason === 'invalid'
-          ? 'The previous join code was rejected. Enter the new 6-digit code displayed on the desktop controller.'
-          : 'Enter the 6-digit join code displayed on the desktop control panel to authorize this device.'}
-      </p>
       <div className="space-y-2">
         <Input
           value={value}

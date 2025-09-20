@@ -3,6 +3,8 @@ import { logDebug, logError, logWarn } from '../utils/logger';
 import { readSecureToken, writeSecureToken, clearSecureToken } from '../utils/secureTokenStore';
 import { resolveBackendOrigin } from '../utils/network';
 
+const LOCKOUT_STORAGE_KEY = 'lyric_display_join_code_lock_until';
+
 class AuthService {
   constructor() {
     this.token = null;
@@ -13,6 +15,7 @@ class AuthService {
     this.joinCodeTimer = null;
     this.tokenRequestPromise = null;
     this.lastClientType = null;
+    this.lockoutUntil = null;
   }
 
   getServerUrl() {
@@ -66,6 +69,46 @@ class AuthService {
     }
   }
 
+  getActiveLockout() {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    const raw = localStorage.getItem(LOCKOUT_STORAGE_KEY);
+    if (!raw) {
+      this.lockoutUntil = null;
+      return null;
+    }
+    const unlockAt = Number(raw);
+    if (!Number.isFinite(unlockAt)) {
+      this.clearLockout();
+      return null;
+    }
+    const remaining = unlockAt - Date.now();
+    if (remaining <= 0) {
+      this.clearLockout();
+      return null;
+    }
+    this.lockoutUntil = unlockAt;
+    return { retryAfterMs: remaining, unlockAt };
+  }
+
+  setLockout(retryAfterMs) {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    const duration = Math.max(0, Number(retryAfterMs) || 0);
+    if (duration <= 0) {
+      this.clearLockout();
+      return null;
+    }
+    const unlockAt = Date.now() + duration;
+    localStorage.setItem(LOCKOUT_STORAGE_KEY, String(unlockAt));
+    this.lockoutUntil = unlockAt;
+    return unlockAt;
+  }
+
+  clearLockout() {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+    this.lockoutUntil = null;
+  }
+
   async promptForJoinCode(reason = 'missing', options = {}) {
     if (typeof window === 'undefined' || !window.dispatchEvent) {
       return null;
@@ -83,6 +126,31 @@ class AuthService {
 
     if (this.joinCodeRequest) {
       return this.joinCodeRequest;
+    }
+
+    let storedLock = this.getActiveLockout();
+
+    if (reason === 'locked') {
+      const candidateMs = Number(lockInfo?.retryAfterMs);
+      if (Number.isFinite(candidateMs) && candidateMs > 0) {
+        this.setLockout(candidateMs);
+        storedLock = this.getActiveLockout();
+      } else if (Number.isFinite(candidateMs) && candidateMs <= 0) {
+        this.clearLockout();
+        storedLock = null;
+      }
+      if (storedLock) {
+        lockInfo = { retryAfterMs: storedLock.retryAfterMs };
+      } else if (Number.isFinite(candidateMs)) {
+        lockInfo = { retryAfterMs: Math.max(0, candidateMs) };
+      } else {
+        lockInfo = null;
+      }
+      prefill = '';
+    } else if (storedLock) {
+      reason = 'locked';
+      lockInfo = { retryAfterMs: storedLock.retryAfterMs };
+      prefill = '';
     }
 
     this.joinCodeRequest = new Promise((resolve) => {
@@ -234,8 +302,7 @@ class AuthService {
             if (requiresJoinCode) {
               if (response.status === 403 && message.includes('Join code')) {
                 this.clearStoredJoinCode();
-                const previousCode = joinCode;
-                joinCode = await this.promptForJoinCode('invalid', { prefill: previousCode || '' });
+                joinCode = await this.promptForJoinCode('invalid');
                 if (!joinCode) {
                   throw new Error('JOIN_CODE_REQUIRED: Join code was not provided');
                 }
@@ -244,6 +311,7 @@ class AuthService {
 
               if (response.status === 423) {
                 const retryAfterMs = Number(errorPayload?.retryAfterMs) || 0;
+                this.setLockout(retryAfterMs);
                 this.clearStoredJoinCode();
                 await this.promptForJoinCode('locked', { lockInfo: { retryAfterMs } });
                 joinCode = null;
@@ -261,6 +329,7 @@ class AuthService {
           this.lastClientType = clientType;
           await writeSecureToken({ clientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
           this.serverValidated = true;
+          this.clearLockout();
 
           logDebug(`Authentication token obtained for ${clientType} client`);
           return this.token;

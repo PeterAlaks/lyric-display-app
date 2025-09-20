@@ -155,12 +155,6 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
 
     let description = `Connection Status: ${connectionStatus}\nAuthentication Status: ${authStatus}`;
 
-    if (joinCode) {
-      description += `\n\nController Join Code: ${joinCode}`;
-    } else {
-      description += '\n\nController Join Code: Not available';
-    }
-
     if (authStatus === 'authenticated' && connectionStatus === 'connected') {
       description += '\n\nYour connection is secured with JWT tokens and has full permissions.';
     } else if (authStatus === 'failed') {
@@ -200,12 +194,28 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
       variant: 'secondary'
     });
 
+    const modalBody = joinCode ? (
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+          Controller Join Code
+        </p>
+        <p className="text-lg font-semibold tracking-[0.3em] text-gray-900 dark:text-gray-100 tabular-nums">
+          {joinCode}
+        </p>
+      </div>
+    ) : (
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Controller join code not available.
+      </p>
+    );
+
     showModal({
       title: 'Connection Status',
       description,
       variant: getStatusVariant(),
       actions,
-      icon: getStatusIcon()
+      icon: getStatusIcon(),
+      body: modalBody
     });
   };
 

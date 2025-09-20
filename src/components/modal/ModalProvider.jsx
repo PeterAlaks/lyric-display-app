@@ -66,6 +66,7 @@ export function ModalProvider({ children, isDark = false }) {
   const showModal = useCallback((config = {}) => {
     const id = modalIdSeq++;
     const normalizedVariant = (config.variant || 'info').toLowerCase();
+    const hasExplicitActions = Array.isArray(config.actions);
     const modal = {
       id,
       variant: normalizedVariant,
@@ -73,7 +74,7 @@ export function ModalProvider({ children, isDark = false }) {
       description: config.description ?? config.message ?? '',
       body: config.body,
       dismissible: config.dismissible !== false,
-      actions: Array.isArray(config.actions)
+      actions: hasExplicitActions
         ? config.actions.map((action) => ({ ...action }))
         : [],
       entering: true,
@@ -85,7 +86,7 @@ export function ModalProvider({ children, isDark = false }) {
       icon: config.icon || null,
     };
 
-    if (modal.actions.length === 0) {
+    if (!hasExplicitActions && modal.actions.length === 0) {
       modal.actions = [
         {
           label: config.dismissLabel || 'Okay',
