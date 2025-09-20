@@ -2,6 +2,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  tokenStore: {
+    get: (payload) => ipcRenderer.invoke('token-store:get', payload),
+    set: (payload) => ipcRenderer.invoke('token-store:set', payload),
+    clear: (payload) => ipcRenderer.invoke('token-store:clear', payload)
+  },
   toggleDarkMode: () => ipcRenderer.invoke('toggle-dark-mode'),
   getDarkMode: () => ipcRenderer.invoke('get-dark-mode'),
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
@@ -118,3 +123,4 @@ contextBridge.exposeInMainWorld('electronStore', {
     }
   }
 });
+

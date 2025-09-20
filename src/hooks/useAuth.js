@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { logDebug, logError, logWarn } from '../utils/logger';
+import { readSecureToken, writeSecureToken, clearSecureToken } from '../utils/secureTokenStore';
 import { resolveBackendOrigin } from '../utils/network';
 
 class AuthService {
@@ -9,6 +10,9 @@ class AuthService {
     this.refreshPromise = null;
     this.serverValidated = false;
     this.joinCodeRequest = null;
+    this.joinCodeTimer = null;
+    this.tokenRequestPromise = null;
+    this.lastClientType = null;
   }
 
   getServerUrl() {
@@ -62,9 +66,19 @@ class AuthService {
     }
   }
 
-  async promptForJoinCode(reason = 'missing', prefill = '') {
+  async promptForJoinCode(reason = 'missing', options = {}) {
     if (typeof window === 'undefined' || !window.dispatchEvent) {
       return null;
+    }
+
+    let prefill = '';
+    let lockInfo = null;
+
+    if (typeof options === 'string') {
+      prefill = options;
+    } else if (options && typeof options === 'object') {
+      prefill = typeof options.prefill === 'string' ? options.prefill : '';
+      lockInfo = options.lockInfo || null;
     }
 
     if (this.joinCodeRequest) {
@@ -77,6 +91,10 @@ class AuthService {
         if (settled) return;
         settled = true;
         this.joinCodeRequest = null;
+        if (this.joinCodeTimer) {
+          clearTimeout(this.joinCodeTimer);
+          this.joinCodeTimer = null;
+        }
         if (typeof value === 'string') {
           resolve(value.trim() || null);
         } else {
@@ -87,6 +105,7 @@ class AuthService {
       const detail = {
         reason,
         prefill,
+        lockInfo,
         resolve: (value) => settle(value),
       };
 
@@ -98,7 +117,11 @@ class AuthService {
         return;
       }
 
-      setTimeout(() => settle(null), 60000);
+      const timeoutMs = lockInfo?.retryAfterMs
+        ? Math.max(Number(lockInfo.retryAfterMs) + 1000, 1000)
+        : 60000;
+
+      this.joinCodeTimer = setTimeout(() => settle(null), timeoutMs);
     });
 
     return this.joinCodeRequest;
@@ -124,139 +147,142 @@ class AuthService {
   }
 
   async requestToken(clientType = 'web') {
-    const deviceId = this.generateDeviceId();
-    const sessionId = this.generateSessionId();
-
-    const baseBody = {
-      clientType,
-      deviceId,
-      sessionId
-    };
-
-    if (clientType === 'desktop') {
-      // Ask main process to mint the JWT instead of exposing admin key
-      if (window.electronAPI?.getDesktopJWT) {
-        const jwt = await window.electronAPI.getDesktopJWT({ deviceId, sessionId });
-        if (jwt) {
-          this.token = jwt;
-          this.tokenExpiry = Date.now() + (this.parseExpiryTime('7d') * 1000);
-          localStorage.setItem('lyric_display_token', this.token);
-          return this.token;
-        }
-      }
-
-      const adminKey = await this.getAdminKey();
-      if (adminKey) {
-        baseBody.adminKey = adminKey;
-        logDebug('Including admin key in token request');
-      } else {
-        logWarn('No admin key available for desktop client token request');
-      }
+    if (this.tokenRequestPromise) {
+      return this.tokenRequestPromise;
     }
 
-    const requiresJoinCode = this.requiresJoinCode(clientType);
-    let joinCode = null;
-
-    if (requiresJoinCode) {
-      joinCode = this.getStoredJoinCode();
-      if (!joinCode) {
-        joinCode = await this.promptForJoinCode('missing');
-      }
-
-      if (!joinCode) {
-        throw new Error('JOIN_CODE_REQUIRED: Join code was not provided');
-      }
-
-      this.storeJoinCode(joinCode);
-    }
-
-    const attempts = requiresJoinCode ? 2 : 1;
-    let lastError = null;
-
-    for (let attempt = 0; attempt < attempts; attempt++) {
-      const requestBody = { ...baseBody };
-
-      if (requiresJoinCode && joinCode) {
-        requestBody.joinCode = joinCode;
-      }
-
+    this.tokenRequestPromise = (async () => {
       try {
-        const response = await fetch(`${this.getServerUrl()}/api/auth/token`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody)
-        });
+        const deviceId = this.generateDeviceId();
+        const sessionId = this.generateSessionId();
 
-        if (!response.ok) {
-          let errorPayload = null;
+        const baseBody = {
+          clientType,
+          deviceId,
+          sessionId
+        };
 
-          try {
-            errorPayload = await response.json();
-          } catch {
-            errorPayload = null;
+        if (clientType === 'desktop') {
+          if (window.electronAPI?.getDesktopJWT) {
+            const jwt = await window.electronAPI.getDesktopJWT({ deviceId, sessionId });
+            if (jwt) {
+              this.token = jwt;
+              this.tokenExpiry = Date.now() + (this.parseExpiryTime('7d') * 1000);
+              this.lastClientType = clientType;
+              await writeSecureToken({ clientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
+              return this.token;
+            }
           }
 
-          const message = errorPayload?.error || 'Token request failed';
-
-          if (response.status === 403 && message.includes('Admin access key')) {
-            throw new Error('ADMIN_KEY_REQUIRED: ' + message);
+          const adminKey = await this.getAdminKey();
+          if (adminKey) {
+            baseBody.adminKey = adminKey;
+            logDebug('Including admin key in token request');
+          } else {
+            logWarn('No admin key available for desktop client token request');
           }
+        }
 
-          if (requiresJoinCode && response.status === 403 && message.includes('Join code')) {
-            this.clearStoredJoinCode();
+        const requiresJoinCode = this.requiresJoinCode(clientType);
+        let joinCode = requiresJoinCode ? this.getStoredJoinCode() : null;
 
-            if (attempt === attempts - 1) {
-              throw new Error('JOIN_CODE_INVALID: ' + message);
+        while (true) {
+          const requestBody = { ...baseBody };
+
+          if (requiresJoinCode) {
+            if (!joinCode) {
+              joinCode = await this.promptForJoinCode('missing');
             }
 
-            joinCode = await this.promptForJoinCode('invalid', joinCode || '');
             if (!joinCode) {
               throw new Error('JOIN_CODE_REQUIRED: Join code was not provided');
             }
 
             this.storeJoinCode(joinCode);
-            continue;
+            requestBody.joinCode = joinCode;
           }
 
-          throw new Error(message);
+          let response;
+          try {
+            response = await fetch(`${this.getServerUrl()}/api/auth/token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestBody)
+            });
+          } catch (networkError) {
+            logError('Token request failed:', networkError);
+            throw new Error('Token request failed');
+          }
+
+          if (!response.ok) {
+            let errorPayload = null;
+
+            try {
+              errorPayload = await response.json();
+            } catch {
+              errorPayload = null;
+            }
+
+            const message = errorPayload?.error || 'Token request failed';
+
+            if (response.status === 403 && message.includes('Admin access key')) {
+              throw new Error('ADMIN_KEY_REQUIRED: ' + message);
+            }
+
+            if (requiresJoinCode) {
+              if (response.status === 403 && message.includes('Join code')) {
+                this.clearStoredJoinCode();
+                const previousCode = joinCode;
+                joinCode = await this.promptForJoinCode('invalid', { prefill: previousCode || '' });
+                if (!joinCode) {
+                  throw new Error('JOIN_CODE_REQUIRED: Join code was not provided');
+                }
+                continue;
+              }
+
+              if (response.status === 423) {
+                const retryAfterMs = Number(errorPayload?.retryAfterMs) || 0;
+                this.clearStoredJoinCode();
+                await this.promptForJoinCode('locked', { lockInfo: { retryAfterMs } });
+                joinCode = null;
+                continue;
+              }
+            }
+
+            throw new Error(message);
+          }
+
+          const data = await response.json();
+          this.token = data.token;
+          this.tokenExpiry = Date.now() + (this.parseExpiryTime(data.expiresIn) * 1000);
+
+          this.lastClientType = clientType;
+          await writeSecureToken({ clientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
+          this.serverValidated = true;
+
+          logDebug(`Authentication token obtained for ${clientType} client`);
+          return this.token;
         }
-
-        const data = await response.json();
-        this.token = data.token;
-        this.tokenExpiry = Date.now() + (this.parseExpiryTime(data.expiresIn) * 1000);
-
-        localStorage.setItem('lyric_display_token', this.token);
-        localStorage.setItem('lyric_display_token_expiry', this.tokenExpiry.toString());
-        localStorage.setItem('lyric_display_client_type', clientType);
-        this.serverValidated = true;
-
-        logDebug(`Authentication token obtained for ${clientType} client`);
-        return this.token;
       } catch (error) {
-        lastError = error;
-        break;
+        const message = error?.message || String(error);
+        if (message.startsWith('ADMIN_KEY_REQUIRED:')) {
+          window.dispatchEvent(new CustomEvent('admin-key-error', {
+            detail: {
+              message: message.replace('ADMIN_KEY_REQUIRED: ', ''),
+              isProduction: !import.meta.env.DEV,
+            },
+          }));
+        }
+        throw error;
       }
+    })();
+    try {
+      return await this.tokenRequestPromise;
+    } finally {
+      this.tokenRequestPromise = null;
     }
-
-    if (lastError) {
-      const message = lastError?.message || String(lastError);
-      logError('Token request failed:', message);
-
-      if (message.startsWith('ADMIN_KEY_REQUIRED:')) {
-        window.dispatchEvent(new CustomEvent('admin-key-error', {
-          detail: {
-            message: message.replace('ADMIN_KEY_REQUIRED: ', ''),
-            isProduction: !import.meta.env.DEV
-          },
-        }));
-      }
-
-      throw lastError;
-    }
-
-    throw new Error('Token request failed');
   }
 
   async validateToken(token) {
@@ -310,11 +336,12 @@ class AuthService {
         }
 
         const data = await response.json();
+        const resolvedClientType = data.clientType || this.lastClientType || 'web';
         this.token = data.token;
         this.tokenExpiry = Date.now() + (this.parseExpiryTime(data.expiresIn) * 1000);
-
-        localStorage.setItem('lyric_display_token', this.token);
-        localStorage.setItem('lyric_display_token_expiry', this.tokenExpiry.toString());
+        this.lastClientType = resolvedClientType;
+        const deviceId = this.generateDeviceId();
+        await writeSecureToken({ clientType: resolvedClientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
         this.serverValidated = true;
 
         logDebug('Authentication token refreshed');
@@ -327,28 +354,43 @@ class AuthService {
     return this.refreshPromise;
   }
 
-  loadStoredToken() {
-    const stored = localStorage.getItem('lyric_display_token');
-    const expiry = localStorage.getItem('lyric_display_token_expiry');
+  async loadStoredToken(clientType = 'web') {
+    const deviceId = this.generateDeviceId();
 
-    if (stored && expiry) {
-      const expiryTime = parseInt(expiry);
-      if (Date.now() < expiryTime - 60000) {
-        this.token = stored;
-        this.tokenExpiry = expiryTime;
-        return true;
+    try {
+      const stored = await readSecureToken({ clientType, deviceId });
+      if (!stored?.token) {
+        return false;
       }
-      this.clearStoredToken();
+
+      const expiresAt = typeof stored.expiresAt === 'number' ? stored.expiresAt : null;
+      if (expiresAt && Date.now() >= (expiresAt - 60000)) {
+        await clearSecureToken({ clientType, deviceId });
+        return false;
+      }
+
+      this.token = stored.token;
+      this.tokenExpiry = expiresAt;
+      this.lastClientType = stored.clientType || clientType || this.lastClientType;
+      return true;
+    } catch (error) {
+      logWarn('Failed to load stored token:', error);
+      return false;
     }
-    return false;
   }
 
   clearStoredToken() {
-    localStorage.removeItem('lyric_display_token');
-    localStorage.removeItem('lyric_display_token_expiry');
+    const deviceId = this.generateDeviceId();
+    const clientType = this.lastClientType || 'web';
+
+    clearSecureToken({ clientType, deviceId }).catch((error) => {
+      logWarn('Failed to clear secure token store:', error);
+    });
+
     this.token = null;
     this.tokenExpiry = null;
     this.serverValidated = false;
+    this.lastClientType = null;
   }
 
   isTokenValid() {
@@ -375,7 +417,7 @@ class AuthService {
   }
 
   async ensureValidToken(clientType = 'web') {
-    const hasStoredToken = this.loadStoredToken();
+    const hasStoredToken = await this.loadStoredToken(clientType);
     if (!hasStoredToken || !this.isTokenValid()) {
       return await this.requestToken(clientType);
     }

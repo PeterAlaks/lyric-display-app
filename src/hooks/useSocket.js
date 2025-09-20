@@ -77,12 +77,7 @@ const useSocket = (role = 'output') => {
 
       let token;
       try {
-        const tokenPromise = ensureValidToken(clientType);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Token request timeout')), 10000)
-        );
-
-        token = await Promise.race([tokenPromise, timeoutPromise]);
+        token = await ensureValidToken(clientType);
       } catch (tokenError) {
         logError('Token acquisition failed:', tokenError);
         throw tokenError;

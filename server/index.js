@@ -1,4 +1,4 @@
-// server/index.js - Updated with Simple Secret Management
+﻿// server/index.js - Updated with Simple Secret Management
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import registerSocketEvents from './events.js';
+import { assertJoinCodeAllowed, recordJoinCodeAttempt, getJoinCodeGuardSnapshot } from './joinCodeGuard.js';
 import SimpleSecretManager from './secretManager.js';
 
 // Load environment variables first
@@ -123,10 +124,25 @@ app.post('/api/auth/token', (req, res) => {
       console.warn('Desktop token issued with incorrect admin key (development mode - allowing anyway)');
     }
   } else if (isControllerClient(clientType)) {
+    const guardContext = { ip: req.ip, deviceId, sessionId };
+
     if (!joinCode || joinCode !== global.controllerJoinCode) {
+      recordJoinCodeAttempt({ ...guardContext, success: false });
+      const guardStatus = assertJoinCodeAllowed(guardContext);
+
+      if (!guardStatus.allowed) {
+        console.warn(`Controller token request locked out for ${req.ip} (${deviceId})`);
+        return res.status(423).json({
+          error: 'Too many invalid join code attempts. Try again later.',
+          retryAfterMs: guardStatus.retryAfterMs,
+        });
+      }
+
       console.warn(`Controller token denied - bad join code from ${req.ip}`);
       return res.status(403).json({ error: 'Join code required or invalid' });
     }
+
+    recordJoinCodeAttempt({ ...guardContext, success: true });
   }
 
   try {
@@ -341,6 +357,7 @@ const isDev = process.env.NODE_ENV === 'development';
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   const secretsStatus = secretManager.getSecretsStatus();
+  const joinCodeMetrics = getJoinCodeGuardSnapshot();
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -348,7 +365,8 @@ app.get('/api/health', (req, res) => {
     security: {
       secretsLoaded: secretsStatus.exists,
       daysSinceRotation: secretsStatus.daysSinceRotation,
-      needsRotation: secretsStatus.needsRotation
+      needsRotation: secretsStatus.needsRotation,
+      joinCodeGuard: joinCodeMetrics,
     }
   });
 });
@@ -388,3 +406,6 @@ server.listen(PORT, '0.0.0.0', () => {
     process.send({ status: 'ready' });
   }
 });
+
+
+

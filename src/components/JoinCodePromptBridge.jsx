@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { KeyRound } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { KeyRound, Lock } from 'lucide-react';
 import useModal from '@/hooks/useModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,50 +15,78 @@ const JoinCodePromptBridge = () => {
 
       const reason = detail.reason || 'missing';
       const prefill = typeof detail.prefill === 'string' ? detail.prefill : '';
+      const lockInfo = detail.lockInfo || null;
       let settled = false;
 
-      const settle = (value) => {
+            const settle = (value) => {
         if (settled) return;
         settled = true;
-        resolver(typeof value === 'string' ? value : null);
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          resolver(trimmed.length > 0 ? trimmed : null);
+        } else {
+          resolver(null);
+        }
       };
+
+      const isLocked = reason === 'locked';
 
       try {
         const result = await showModal({
-          title: 'Enter Controller Join Code',
-          description: reason === 'invalid'
-            ? 'The previous join code was rejected. Enter the new 6-digit code displayed on the desktop control panel.'
-            : 'Enter the 6-digit join code displayed on the desktop control panel to authorize this device.',
-          variant: reason === 'invalid' ? 'warning' : 'info',
-          dismissible: true,
-          allowBackdropClose: false,
-          icon: <KeyRound className="h-6 w-6" aria-hidden />,
-          actions: [
-            {
-              label: 'Hidden dismiss',
-              variant: 'secondary',
-              className: 'hidden',
-              closeOnClick: true,
-            },
-          ],
+          title: isLocked ? 'Join Code Locked' : 'Enter Controller Join Code',
+          description: isLocked
+            ? 'Too many invalid join code attempts. Please wait for the countdown to finish before trying again.'
+            : reason === 'invalid'
+              ? 'The previous join code was rejected. Enter the new 6-digit code displayed on the desktop control panel.'
+              : 'Enter the 6-digit join code displayed on the desktop control panel to authorize this device.',
+          variant: isLocked || reason === 'invalid' ? 'warning' : 'info',
+          dismissible: !isLocked,
+          allowBackdropClose: !isLocked,
+          icon: isLocked
+            ? <Lock className="h-6 w-6" aria-hidden />
+            : <KeyRound className="h-6 w-6" aria-hidden />,
+          actions: isLocked
+            ? []
+            : [
+                {
+                  label: 'Hidden dismiss',
+                  variant: 'secondary',
+                  className: 'hidden',
+                  closeOnClick: true,
+                },
+              ],
           body: ({ close }) => (
-            <JoinCodeForm
-              defaultValue={prefill}
-              reason={reason}
-              onSubmit={(code) => {
-                settle(code);
-                close({ joinCode: code });
-              }}
-              onCancel={() => {
-                settle(null);
-                close({ cancelled: true });
-              }}
-            />
+            isLocked ? (
+              <JoinCodeLockView
+                lockInfo={lockInfo}
+                onUnlock={() => {
+                  settle(null);
+                  close({ unlocked: true });
+                }}
+              />
+            ) : (
+              <JoinCodeForm
+                defaultValue={prefill}
+                reason={reason}
+                onSubmit={(code) => {
+                  settle(code);
+                  close({ joinCode: code });
+                }}
+                onCancel={() => {
+                  settle(null);
+                  close({ cancelled: true });
+                }}
+              />
+            )
           ),
         });
 
         if (!settled) {
-          settle(result && typeof result.joinCode === 'string' ? result.joinCode : null);
+          if (result && typeof result.joinCode === 'string') {
+            settle(result.joinCode);
+          } else {
+            settle(null);
+          }
         }
       } catch (error) {
         console.warn('Join code modal closed with error:', error);
@@ -74,12 +102,14 @@ const JoinCodePromptBridge = () => {
 };
 
 const JoinCodeForm = ({ defaultValue = '', reason, onSubmit, onCancel }) => {
-  const [value, setValue] = React.useState(defaultValue ?? '');
-  const [error, setError] = React.useState('');
+  const initialError = reason === 'invalid' ? 'That join code was rejected. Try again.' : '';
+  const [value, setValue] = useState(defaultValue ?? '');
+  const [error, setError] = useState(initialError);
 
   useEffect(() => {
     setValue(defaultValue ?? '');
-  }, [defaultValue]);
+    setError(reason === 'invalid' ? 'That join code was rejected. Try again.' : '');
+  }, [defaultValue, reason]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -134,7 +164,57 @@ const JoinCodeForm = ({ defaultValue = '', reason, onSubmit, onCancel }) => {
   );
 };
 
+const JoinCodeLockView = ({ lockInfo, onUnlock }) => {
+  const retryAfterMs = Math.max(0, Number(lockInfo?.retryAfterMs) || 0);
+  const [remainingMs, setRemainingMs] = useState(retryAfterMs);
+  const unlockedRef = useRef(false);
+
+  useEffect(() => {
+    setRemainingMs(retryAfterMs);
+    unlockedRef.current = false;
+
+    if (retryAfterMs <= 0) {
+      unlockedRef.current = true;
+      onUnlock?.();
+      return;
+    }
+
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, retryAfterMs - elapsed);
+      setRemainingMs(remaining);
+      if (remaining <= 0) {
+        window.clearInterval(interval);
+        if (!unlockedRef.current) {
+          unlockedRef.current = true;
+          onUnlock?.();
+        }
+      }
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [retryAfterMs, onUnlock]);
+
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+  const formattedCountdown = `${minutes}:${seconds}`;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600 dark:text-gray-300">
+        Too many invalid join code attempts. Please wait for the timer to complete before trying again.
+      </p>
+      <div className="flex justify-center">
+        <span className="text-3xl font-semibold text-gray-800 dark:text-gray-100 tabular-nums">
+          {formattedCountdown}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export default JoinCodePromptBridge;
-
-
-

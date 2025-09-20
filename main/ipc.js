@@ -2,6 +2,7 @@ import { ipcMain, dialog, nativeTheme } from 'electron';
 import { addRecent } from './recents.js';
 import { writeFile } from 'fs/promises';
 import { getLocalIPAddress } from './utils.js';
+import * as secureTokenStore from './secureTokenStore.js';
 import updaterPkg from 'electron-updater';
 import { createProgressWindow } from './progressWindow.js';
 import { getAdminKey } from './adminKey.js';
@@ -110,8 +111,34 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       return null;
     }
   });
+  ipcMain.handle('token-store:get', async (_event, payload) => {
+    try {
+      return await secureTokenStore.readToken(payload || {});
+    } catch (error) {
+      console.error('Error retrieving token from secure store:', error);
+      return null;
+    }
+  });
 
+  ipcMain.handle('token-store:set', async (_event, payload) => {
+    try {
+      await secureTokenStore.writeToken(payload || {});
+      return { success: true };
+    } catch (error) {
+      console.error('Error writing token to secure store:', error);
+      return { success: false, error: error.message };
+    }
+  });
 
+  ipcMain.handle('token-store:clear', async (_event, payload) => {
+    try {
+      await secureTokenStore.clearToken(payload || {});
+      return { success: true };
+    } catch (error) {
+      console.error('Error clearing token from secure store:', error);
+      return { success: false, error: error.message };
+    }
+  });
   ipcMain.handle('get-join-code', async () => {
     try {
       const response = await fetch('http://127.0.0.1:4000/api/auth/join-code');
