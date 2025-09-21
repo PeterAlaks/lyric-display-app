@@ -199,7 +199,10 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
           Controller Join Code
         </p>
-        <p className="text-lg font-semibold tracking-[0.3em] text-gray-900 dark:text-gray-100 tabular-nums">
+        <p
+          className={`text-lg font-semibold tracking-[0.3em] tabular-nums ${darkMode ? 'text-white' : 'text-gray-900'
+            }`}
+        >
           {joinCode}
         </p>
       </div>
