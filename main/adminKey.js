@@ -1,49 +1,82 @@
 // main/adminKey.js
 import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
-import { app } from 'electron';
-import { resolveProductionPath } from './paths.js';
+import { getDefaultConfigDir, decryptJson } from '../server/secretManager.js';
+
+let keytar = null;
+try {
+  // Try to import keytar in main process
+  ({ default: keytar } = await import('keytar').catch(() => ({ default: null })));
+} catch {
+  keytar = null;
+}
+
+const SERVICE_NAME = 'LyricDisplay';
+const ACCOUNT_NAME = 'server-secrets';
 
 let cachedAdminKey = null;
+
+function loadAdminKeySync() {
+  try {
+    // Try keytar first (synchronous only)
+    if (keytar && keytar.getPasswordSync) {
+      try {
+        const keytarData = keytar.getPasswordSync(SERVICE_NAME, ACCOUNT_NAME);
+        if (keytarData) {
+          const parsed = JSON.parse(keytarData);
+          console.log('Admin key loaded from keytar (main process)');
+          return parsed.ADMIN_ACCESS_KEY;
+        }
+      } catch (keytarError) {
+        console.warn('Keytar read failed in main process, falling back to file:', keytarError.message);
+      }
+    }
+
+    // Fall back to encrypted file
+    const configDir = process.env.CONFIG_PATH || getDefaultConfigDir();
+    const secretsPath = path.join(configDir, 'secrets.json');
+    const keyPath = path.join(configDir, 'secrets.key');
+    
+    console.log('Main process config dir:', configDir);
+    console.log('Secrets file exists:', fs.existsSync(secretsPath));
+    console.log('Key file exists:', fs.existsSync(keyPath));
+    
+    if (!fs.existsSync(secretsPath) || !fs.existsSync(keyPath)) {
+      console.log('Admin key files missing');
+      return null;
+    }
+    
+    const wrapped = JSON.parse(fs.readFileSync(secretsPath, 'utf8'));
+    const key = fs.readFileSync(keyPath);
+    const decrypted = decryptJson(wrapped, key);
+    console.log('Admin key loaded from encrypted file (main process)');
+    return decrypted.ADMIN_ACCESS_KEY;
+    
+  } catch (error) {
+    console.error('Failed to load admin key in main process:', error.message);
+    return null;
+  }
+}
 
 export function getAdminKey() {
   if (cachedAdminKey) {
     return cachedAdminKey;
   }
 
-  try {
-    // Get config path using same logic as backend
-    const configPath = resolveProductionPath('config');
-    const secretsPath = path.join(configPath, 'secrets.json');
-
-    if (!fs.existsSync(secretsPath)) {
-      console.warn('Secrets file not found. Backend may not have started yet.');
-      return null;
-    }
-
-    const secretsData = fs.readFileSync(secretsPath, 'utf8');
-    const secrets = JSON.parse(secretsData);
-
-    if (!secrets.ADMIN_ACCESS_KEY) {
-      console.error('ADMIN_ACCESS_KEY not found in secrets file');
-      return null;
-    }
-
-    cachedAdminKey = secrets.ADMIN_ACCESS_KEY;
-    console.log('Admin key loaded successfully');
-    return cachedAdminKey;
-
-  } catch (error) {
-    console.error('Failed to load admin key:', error.message);
-    return null;
+  cachedAdminKey = loadAdminKeySync();
+  if (cachedAdminKey) {
+    console.log('Admin key loaded and cached successfully');
+  } else {
+    console.log('Failed to load admin key');
   }
+  return cachedAdminKey;
 }
 
 export function clearAdminKeyCache() {
   cachedAdminKey = null;
 }
 
-// Retry logic for initial startup when secrets file might not exist yet
 export async function getAdminKeyWithRetry(maxRetries = 5, delay = 1000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const key = getAdminKey();

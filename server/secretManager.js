@@ -1,15 +1,25 @@
 // server/secretManager.js
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import os from 'os';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+
+let keytar = null;
+try {
+  ({ default: keytar } = await import('keytar').catch(() => ({ default: null })));
+} catch {
+  keytar = null;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const SERVICE_NAME = 'LyricDisplay';
+const ACCOUNT_NAME = 'server-secrets';
 const APP_CONFIG_DIR_NAME = 'LyricDisplay';
 
+// ---------- Paths / dirs ----------
 const getDefaultConfigDir = () => {
   const homeDir = typeof os.homedir === 'function' ? os.homedir() : (process.env.HOME || process.cwd());
 
@@ -27,102 +37,203 @@ const getDefaultConfigDir = () => {
   return path.join(base, APP_CONFIG_DIR_NAME.toLowerCase().replace(/\s+/g, '-'), 'config');
 };
 
+const keyFileName = 'secrets.key';
+const encFileName = 'secrets.json';
 
+// ---------- File helpers ----------
+function ensureDir700(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true, mode: 0o700 });
+  }
+}
+
+// ---------- AES-GCM encrypted file store ----------
+function getKeyPath(configDir) {
+  return path.join(configDir, keyFileName);
+}
+
+function getEncPath(configDir) {
+  return path.join(configDir, encFileName);
+}
+
+function getOrCreateAesKey(configDir) {
+  const keyPath = getKeyPath(configDir);
+  if (fs.existsSync(keyPath)) {
+    const key = fs.readFileSync(keyPath);
+    if (key && key.length === 32) return key;
+  }
+  const key = crypto.randomBytes(32);
+  fs.writeFileSync(keyPath, key, { mode: 0o600 });
+  return key;
+}
+
+function encryptJson(payload, key) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const data = Buffer.from(JSON.stringify(payload), 'utf8');
+  const enc = Buffer.concat([cipher.update(data), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return { __enc: true, iv: iv.toString('base64'), tag: tag.toString('base64'), data: enc.toString('base64') };
+}
+
+export function decryptJson(wrapped, key) {
+  if (!wrapped || wrapped.__enc !== true) throw new Error('Invalid encrypted payload');
+  const iv = Buffer.from(wrapped.iv, 'base64');
+  const tag = Buffer.from(wrapped.tag, 'base64');
+  const enc = Buffer.from(wrapped.data, 'base64');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  const dec = Buffer.concat([decipher.update(enc), decipher.final()]);
+  return JSON.parse(dec.toString('utf8'));
+}
+
+// Export the config directory function
+export { getDefaultConfigDir };
+
+// ---------- Secret Manager ----------
 class SimpleSecretManager {
   constructor() {
-    const legacyConfigDir = path.join(__dirname, '..', 'config');
-    const legacySecretsPath = path.join(legacyConfigDir, 'secrets.json');
-
     let configDir;
     if (process.env.CONFIG_PATH) {
       configDir = process.env.CONFIG_PATH;
     } else {
-      const secureDir = getDefaultConfigDir();
-      const secureSecretsPath = path.join(secureDir, 'secrets.json');
-
-      if (fs.existsSync(legacySecretsPath)) {
-        try {
-          if (!fs.existsSync(path.dirname(secureSecretsPath))) {
-            fs.mkdirSync(path.dirname(secureSecretsPath), { recursive: true, mode: 0o700 });
-          }
-          fs.copyFileSync(legacySecretsPath, secureSecretsPath);
-          fs.unlinkSync(legacySecretsPath);
-          console.log('Migrated secrets to secure directory:', secureSecretsPath);
-        } catch (migrationError) {
-          console.error('Failed to migrate legacy secrets file:', migrationError);
-        }
-      }
-
-      configDir = secureDir;
+      configDir = getDefaultConfigDir();
     }
 
-    this.secretsPath = path.join(configDir, 'secrets.json');
-    console.log('Secrets path:', this.secretsPath);
-    this.ensureSecretsDirectory();
-  }
+    this.configDir = configDir;
+    ensureDir700(this.configDir);
 
-  ensureSecretsDirectory() {
-    const configDir = path.dirname(this.secretsPath);
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
-    }
+    this.secretsPath = getEncPath(this.configDir);
+
+    console.log('Secrets path (encrypted):', this.secretsPath);
+    console.log('Keytar available:', !!keytar);
   }
 
   generateJWTSecret() {
     return crypto.randomBytes(32).toString('hex');
   }
 
-  loadSecrets() {
-    try {
-      if (!fs.existsSync(this.secretsPath)) {
-        console.log('No secrets file found, creating with new JWT secret...');
-        return this.createDefaultSecrets();
-      }
-
-      const secretsData = fs.readFileSync(this.secretsPath, 'utf8');
-      const secrets = JSON.parse(secretsData);
-
-      // Validate required secrets exist
-      if (!secrets.JWT_SECRET) {
-        console.warn('JWT_SECRET missing from secrets file, generating new one...');
-        secrets.JWT_SECRET = this.generateJWTSecret();
-        this.saveSecrets(secrets);
-      }
-
-      console.log('✅ Secrets loaded successfully');
-      return secrets;
-
-    } catch (error) {
-      console.error('❌ Error loading secrets:', error.message);
-      console.log('Creating new secrets file...');
-      return this.createDefaultSecrets();
-    }
-  }
-
-  createDefaultSecrets() {
-    const defaultSecrets = {
+  _defaultSecrets() {
+    const now = new Date().toISOString();
+    return {
       JWT_SECRET: this.generateJWTSecret(),
       ADMIN_ACCESS_KEY: crypto.randomBytes(32).toString('hex'),
       TOKEN_EXPIRY: '24h',
       ADMIN_TOKEN_EXPIRY: '7d',
       RATE_LIMIT_WINDOW_MS: 900000,
       RATE_LIMIT_MAX_REQUESTS: 50,
-      created: new Date().toISOString(),
-      lastRotated: new Date().toISOString(),
-      rotationNote: "Rotate JWT_SECRET every 6-12 months for security"
+      created: now,
+      lastRotated: now,
+      rotationNote: 'Rotate JWT_SECRET every 6-12 months for security'
     };
+  }
 
-    this.saveSecrets(defaultSecrets);
-    return defaultSecrets;
+  _normalizeSecrets(obj) {
+    const now = new Date().toISOString();
+    return {
+      JWT_SECRET: obj?.JWT_SECRET || this.generateJWTSecret(),
+      ADMIN_ACCESS_KEY: obj?.ADMIN_ACCESS_KEY || crypto.randomBytes(32).toString('hex'),
+      TOKEN_EXPIRY: obj?.TOKEN_EXPIRY || '24h',
+      ADMIN_TOKEN_EXPIRY: obj?.ADMIN_TOKEN_EXPIRY || '7d',
+      RATE_LIMIT_WINDOW_MS: Number.isFinite(obj?.RATE_LIMIT_WINDOW_MS) ? obj.RATE_LIMIT_WINDOW_MS : 900000,
+      RATE_LIMIT_MAX_REQUESTS: Number.isFinite(obj?.RATE_LIMIT_MAX_REQUESTS) ? obj.RATE_LIMIT_MAX_REQUESTS : 50,
+      created: obj?.created || now,
+      lastRotated: obj?.lastRotated || now,
+      rotationNote: obj?.rotationNote || 'Rotate JWT_SECRET every 6-12 months for security',
+      previousSecret: obj?.previousSecret,
+      previousSecretExpiry: obj?.previousSecretExpiry
+    };
+  }
+
+  // Synchronous keytar operations
+  _readFromKeytarSync() {
+    if (!keytar) return null;
+    try {
+      // Use synchronous version if available
+      if (keytar.getPasswordSync) {
+        return keytar.getPasswordSync(SERVICE_NAME, ACCOUNT_NAME);
+      }
+      // If only async version available, return null to fall back to file
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  _writeToKeytarSync(dataStr) {
+    if (!keytar) return false;
+    try {
+      // Use synchronous version if available
+      if (keytar.setPasswordSync) {
+        keytar.setPasswordSync(SERVICE_NAME, ACCOUNT_NAME, dataStr);
+        return true;
+      }
+      // If only async version available, skip keytar storage
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  // Main synchronous loading method
+  loadSecrets() {
+    try {
+      // Try keytar first (synchronous only)
+      const keytarData = this._readFromKeytarSync();
+      if (keytarData) {
+        try {
+          const parsed = JSON.parse(keytarData);
+          const normalized = this._normalizeSecrets(parsed);
+          console.log('Secrets loaded from keytar');
+          return normalized;
+        } catch (e) {
+          console.warn('Keytar data corrupted, falling back to encrypted file');
+        }
+      }
+
+      // Try encrypted file
+      if (fs.existsSync(this.secretsPath)) {
+        const wrapped = JSON.parse(fs.readFileSync(this.secretsPath, 'utf8'));
+        const key = getOrCreateAesKey(this.configDir);
+        const decrypted = decryptJson(wrapped, key);
+        const normalized = this._normalizeSecrets(decrypted);
+        
+        // Try to sync to keytar for next time
+        this._writeToKeytarSync(JSON.stringify(normalized));
+        
+        console.log('Secrets loaded from encrypted file');
+        return normalized;
+      }
+
+      // Create new secrets
+      const defaults = this._defaultSecrets();
+      this.saveSecrets(defaults);
+      console.log('Created new encrypted secrets');
+      return defaults;
+
+    } catch (error) {
+      console.error('Error loading secrets:', error.message);
+      throw new Error('Failed to load secrets: ' + error.message);
+    }
   }
 
   saveSecrets(secrets) {
     try {
-      const secretsData = JSON.stringify(secrets, null, 2);
-      fs.writeFileSync(this.secretsPath, secretsData, { mode: 0o600 });
-      console.log('✅ Secrets saved successfully');
+      const normalized = this._normalizeSecrets(secrets);
+      const dataStr = JSON.stringify(normalized);
+
+      // Try to save to keytar first
+      const keytarSuccess = this._writeToKeytarSync(dataStr);
+      
+      // Always save to encrypted file as backup
+      const key = getOrCreateAesKey(this.configDir);
+      const wrapped = encryptJson(normalized, key);
+      fs.writeFileSync(this.secretsPath, JSON.stringify(wrapped, null, 2), { mode: 0o600 });
+      
+      console.log(`Secrets saved - Keytar: ${keytarSuccess ? 'yes' : 'no'}, File: yes`);
+      return normalized;
     } catch (error) {
-      console.error('❌ Error saving secrets:', error.message);
+      console.error('Error saving secrets:', error.message);
       throw error;
     }
   }
@@ -134,54 +245,31 @@ class SimpleSecretManager {
 
       secrets.JWT_SECRET = this.generateJWTSecret();
       secrets.lastRotated = new Date().toISOString();
-      secrets.previousSecret = oldSecret; // Keep old secret for 24h grace period
+      secrets.previousSecret = oldSecret;
       secrets.previousSecretExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
       this.saveSecrets(secrets);
-
-      console.log('✅ JWT Secret rotated successfully');
-      console.log('⚠️  Server restart required for changes to take effect');
-      console.log('⚠️  Old tokens will remain valid for 24 hours');
-
       return secrets;
     } catch (error) {
-      console.error('❌ Error rotating JWT secret:', error);
+      console.error('Error rotating JWT secret:', error);
       throw error;
     }
   }
-
-  validateSecret(token, secrets) {
-    try {
-      // Try current secret first
-      return jwt.verify(token, secrets.JWT_SECRET);
-    } catch (error) {
-      // If current secret fails and we have a previous secret within grace period
-      if (secrets.previousSecret && secrets.previousSecretExpiry) {
-        const graceExpiry = new Date(secrets.previousSecretExpiry);
-        if (new Date() < graceExpiry) {
-          try {
-            return jwt.verify(token, secrets.previousSecret);
-          } catch (previousError) {
-            throw error; // Throw original error
-          }
-        }
-      }
-      throw error;
-    }
-  }
-
   getSecretsStatus() {
     try {
       const secrets = this.loadSecrets();
       const lastRotated = new Date(secrets.lastRotated);
       const daysSinceRotation = Math.floor((Date.now() - lastRotated.getTime()) / (1000 * 60 * 60 * 24));
 
+      const backend = keytar ? 'keytar+encrypted-file' : 'encrypted-file';
+
       return {
         exists: true,
         lastRotated: secrets.lastRotated,
         daysSinceRotation,
-        needsRotation: daysSinceRotation > 180, // 6 months
+        needsRotation: daysSinceRotation > 180,
         configPath: this.secretsPath,
+        storageBackend: backend,
         hasGraceSecret: !!(secrets.previousSecret && secrets.previousSecretExpiry)
       };
     } catch (error) {

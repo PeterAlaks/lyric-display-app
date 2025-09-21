@@ -195,7 +195,8 @@ lyric-display-app/
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
-|   ├── recents.js                          # Module to manage recently opened files
+|   ├── recents.js                          # Module for token storage
+|   ├── secureTokenStore.js                 # Main token storage for desktop app
 |   ├── updater.js                          # Module to manage app updates
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
@@ -245,7 +246,7 @@ lyric-display-app/
 |   |   ├── useSocketEvents.js              # Socket events hook
 |   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
-|   |   └── utils.js                        # Utility functions
+|   |   └── utils.js                        # UI library utility functions
 │   ├── pages/                              # Route-based page components
 |   |   ├── ControlPanel.jsx                # Control panel page wrapper
 |   |   ├── Output1.jsx                     # Output 1 display
@@ -256,6 +257,7 @@ lyric-display-app/
 |   |   ├── network.js                      # Network utility for backend URL resolution
 |   |   ├── parseLrc.js                     # LRC file parser
 |   |   ├── parseLyrics.js                  # Text file parser
+|   |   ├── secureTokenStore.js             # Secure token storage utility
 |   |   └── toastSounds.js                  # Toast notifications tones utility
 |   ├── App.jsx                             # React app main component
 |   ├── main.jsx                            # App entry point

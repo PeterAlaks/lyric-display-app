@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 // Initialize secret manager
 const secretManager = new SimpleSecretManager();
-const secrets = secretManager.loadSecrets();
+const secrets = await secretManager.loadSecrets();
 
 // Use secrets from secure storage, with .env fallbacks for development
 const JWT_SECRET = secrets.JWT_SECRET;

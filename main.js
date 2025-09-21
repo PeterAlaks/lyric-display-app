@@ -36,11 +36,6 @@ registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu: menuA
 registerInAppBrowserIpc();
 
 app.whenReady().then(async () => {
-  if (!process.env.CONFIG_PATH) {
-    const userDataDir = app.getPath('userData');
-    process.env.CONFIG_PATH = path.join(userDataDir, 'config');
-  }
-
   try {
     await startBackend();
     console.log('Backend started successfully');

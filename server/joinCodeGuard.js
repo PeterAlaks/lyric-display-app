@@ -1,6 +1,6 @@
-const FAILURE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const FAILURE_WINDOW_MS = 10 * 60 * 1000;
 const MAX_FAILURES = 5;
-const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_MS = 15 * 60 * 1000;
 
 const resolveKey = ({ ip, deviceId, sessionId }) => {
   const address = (ip || '').trim() || 'unknown-ip';
