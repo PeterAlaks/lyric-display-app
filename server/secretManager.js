@@ -1,4 +1,3 @@
-// server/secretManager.js
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -21,7 +20,26 @@ const APP_CONFIG_DIR_NAME = 'LyricDisplay';
 
 // ---------- Paths / dirs ----------
 const getDefaultConfigDir = () => {
-  const homeDir = typeof os.homedir === 'function' ? os.homedir() : (process.env.HOME || process.cwd());
+  let homeDir;
+
+  if (process.platform === 'win32') {
+    homeDir = process.env.USERPROFILE || process.env.HOME;
+  } else {
+    homeDir = process.env.HOME;
+  }
+
+  if (!homeDir && typeof os.homedir === 'function') {
+    try {
+      homeDir = os.homedir();
+    } catch (error) {
+      console.warn('os.homedir() failed:', error.message);
+    }
+  }
+
+  if (!homeDir) {
+    console.warn('Could not determine home directory, using current working directory');
+    homeDir = process.cwd();
+  }
 
   if (process.platform === 'win32') {
     const base = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
@@ -101,12 +119,14 @@ class SimpleSecretManager {
     }
 
     this.configDir = configDir;
-    ensureDir700(this.configDir);
-
     this.secretsPath = getEncPath(this.configDir);
 
+    console.log('Config directory resolved to:', this.configDir);
     console.log('Secrets path (encrypted):', this.secretsPath);
     console.log('Keytar available:', !!keytar);
+  }
+  ensureConfigDir() {
+    ensureDir700(this.configDir);
   }
 
   generateJWTSecret() {
@@ -146,40 +166,30 @@ class SimpleSecretManager {
   }
 
   // Synchronous keytar operations
-  _readFromKeytarSync() {
+  async _readFromKeytar() {
     if (!keytar) return null;
     try {
-      // Use synchronous version if available
-      if (keytar.getPasswordSync) {
-        return keytar.getPasswordSync(SERVICE_NAME, ACCOUNT_NAME);
-      }
-      // If only async version available, return null to fall back to file
-      return null;
+      return await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
     } catch {
       return null;
     }
   }
 
-  _writeToKeytarSync(dataStr) {
+  async _writeToKeytar(dataStr) {
     if (!keytar) return false;
     try {
-      // Use synchronous version if available
-      if (keytar.setPasswordSync) {
-        keytar.setPasswordSync(SERVICE_NAME, ACCOUNT_NAME, dataStr);
-        return true;
-      }
-      // If only async version available, skip keytar storage
-      return false;
+      await keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, dataStr);
+      return true;
     } catch {
       return false;
     }
   }
 
   // Main synchronous loading method
-  loadSecrets() {
+  async loadSecrets() {
     try {
-      // Try keytar first (synchronous only)
-      const keytarData = this._readFromKeytarSync();
+      // Try keytar first
+      const keytarData = await this._readFromKeytar();
       if (keytarData) {
         try {
           const parsed = JSON.parse(keytarData);
@@ -191,23 +201,22 @@ class SimpleSecretManager {
         }
       }
 
-      // Try encrypted file
+      this.ensureConfigDir();
+      
       if (fs.existsSync(this.secretsPath)) {
         const wrapped = JSON.parse(fs.readFileSync(this.secretsPath, 'utf8'));
         const key = getOrCreateAesKey(this.configDir);
         const decrypted = decryptJson(wrapped, key);
         const normalized = this._normalizeSecrets(decrypted);
-        
-        // Try to sync to keytar for next time
-        this._writeToKeytarSync(JSON.stringify(normalized));
-        
+
+        await this._writeToKeytar(JSON.stringify(normalized));
+
         console.log('Secrets loaded from encrypted file');
         return normalized;
       }
 
-      // Create new secrets
       const defaults = this._defaultSecrets();
-      this.saveSecrets(defaults);
+      await this.saveSecrets(defaults);
       console.log('Created new encrypted secrets');
       return defaults;
 
@@ -217,19 +226,21 @@ class SimpleSecretManager {
     }
   }
 
-  saveSecrets(secrets) {
+  async saveSecrets(secrets) {
     try {
+      this.ensureConfigDir();
+
       const normalized = this._normalizeSecrets(secrets);
       const dataStr = JSON.stringify(normalized);
 
       // Try to save to keytar first
-      const keytarSuccess = this._writeToKeytarSync(dataStr);
-      
+      const keytarSuccess = await this._writeToKeytar(dataStr);
+
       // Always save to encrypted file as backup
       const key = getOrCreateAesKey(this.configDir);
       const wrapped = encryptJson(normalized, key);
       fs.writeFileSync(this.secretsPath, JSON.stringify(wrapped, null, 2), { mode: 0o600 });
-      
+
       console.log(`Secrets saved - Keytar: ${keytarSuccess ? 'yes' : 'no'}, File: yes`);
       return normalized;
     } catch (error) {
@@ -255,6 +266,7 @@ class SimpleSecretManager {
       throw error;
     }
   }
+
   getSecretsStatus() {
     try {
       const secrets = this.loadSecrets();

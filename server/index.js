@@ -371,6 +371,50 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/health/ready', (req, res) => {
+  try {
+    // Verify all critical components are initialized
+    const checks = {
+      serverListening: true, // If we can respond, server is listening
+      secretsLoaded: !!secrets.JWT_SECRET,
+      joinCodeGenerated: !!global.controllerJoinCode,
+      socketIOReady: !!(io && io.engine),
+      rateLimiterActive: !!tokenRateLimit,
+    };
+
+    const allChecksPass = Object.values(checks).every(check => check === true);
+
+    if (allChecksPass) {
+      res.json({
+        status: 'ready',
+        serverListening: true,
+        timestamp: new Date().toISOString(),
+        checks,
+        uptime: process.uptime(),
+        port: PORT
+      });
+    } else {
+      res.status(503).json({
+        status: 'not_ready',
+        serverListening: true,
+        timestamp: new Date().toISOString(),
+        checks,
+        failedChecks: Object.entries(checks)
+          .filter(([_, passed]) => !passed)
+          .map(([check]) => check)
+      });
+    }
+  } catch (error) {
+    console.error('Health ready check error:', error);
+    res.status(503).json({
+      status: 'error',
+      serverListening: true,
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
 // In production, serve the React frontend
 if (!isDev) {
   const frontendPath = path.join(__dirname, '..', 'dist');
@@ -402,10 +446,16 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`JWT secret is ${secretsStatus.daysSinceRotation} days old - consider rotation`);
   }
 
+  // Enhanced ready signal with verification
+  console.log('Server fully initialized and listening on port', PORT);
+
   if (process.send) {
-    process.send({ status: 'ready' });
+    // Send ready signal to parent process (Electron main)
+    process.send({
+      status: 'ready',
+      port: PORT,
+      timestamp: new Date().toISOString(),
+      pid: process.pid
+    });
   }
 });
-
-
-

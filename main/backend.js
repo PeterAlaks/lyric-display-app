@@ -1,3 +1,4 @@
+// main/backend.js - Enhanced with proper health check verification
 import path from 'path';
 import { fork } from 'child_process';
 import { resolveProductionPath } from './paths.js';
@@ -5,10 +6,43 @@ import { app } from 'electron';
 
 let backendProcess = null;
 
+// Health check function with retry logic
+async function waitForBackendHealth(maxAttempts = 20, intervalMs = 500) {
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      const response = await fetch('http://127.0.0.1:4000/api/health/ready', {
+        method: 'GET',
+        timeout: 2000, // 2 second timeout per request
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'ready' && data.serverListening) {
+          console.log(`Backend health check passed after ${attempts + 1} attempts`);
+          return true;
+        }
+      }
+    } catch (error) {
+      // Expected during startup - server not ready yet
+      console.log(`Health check attempt ${attempts + 1}/${maxAttempts}: ${error.message}`);
+    }
+
+    attempts++;
+    // Add jitter to prevent thundering herd
+    const jitter = Math.random() * 200;
+    await new Promise(resolve => setTimeout(resolve, intervalMs + jitter));
+  }
+
+  console.warn(`Backend health check failed after ${maxAttempts} attempts`);
+  return false;
+}
+
 export function startBackend() {
   return new Promise((resolve, reject) => {
     const serverPath = resolveProductionPath('server', 'index.js');
-    
+
     backendProcess = fork(serverPath, [], {
       cwd: path.dirname(serverPath),
       env: {
@@ -19,13 +53,26 @@ export function startBackend() {
     });
 
     let isResolved = false;
-    const timeout = setTimeout(() => {
+
+    // Extended timeout for complete startup
+    const timeout = setTimeout(async () => {
       if (!isResolved) {
-        console.log('Backend startup timeout, proceeding anyway...');
-        isResolved = true;
-        resolve();
+        console.log('Backend process timeout, attempting health check...');
+
+        // Try health check even if process didn't signal ready
+        const isHealthy = await waitForBackendHealth(10, 1000);
+
+        if (isHealthy) {
+          console.log('Backend is healthy despite missing ready signal');
+          isResolved = true;
+          resolve();
+        } else {
+          console.error('Backend failed to become ready within timeout');
+          isResolved = true;
+          reject(new Error('Backend startup timeout'));
+        }
       }
-    }, 10000);
+    }, 15000); // Increased to 15 seconds for slower systems
 
     backendProcess.on('error', (err) => {
       console.error('Backend process error:', err);
@@ -36,35 +83,67 @@ export function startBackend() {
       }
     });
 
-    backendProcess.on('exit', (code) => {
-      if (code !== 0) {
-        console.error('Backend process exited with code', code);
+    backendProcess.on('exit', (code, signal) => {
+      console.log(`Backend process exited with code ${code}, signal: ${signal}`);
+      if (!isResolved && code !== 0) {
+        isResolved = true;
+        clearTimeout(timeout);
+        reject(new Error(`Backend process exited with code ${code}`));
       }
     });
 
-    backendProcess.on('message', (msg) => {
+    // Enhanced ready message handling
+    backendProcess.on('message', async (msg) => {
       if (msg?.status === 'ready' && !isResolved) {
-        console.log('Backend reported ready');
-        isResolved = true;
-        clearTimeout(timeout);
-        resolve();
+        console.log('Backend reported ready, verifying health...');
+
+        // Double-check with health endpoint
+        const isHealthy = await waitForBackendHealth(5, 200);
+
+        if (isHealthy) {
+          console.log('Backend startup completed successfully');
+          isResolved = true;
+          clearTimeout(timeout);
+          resolve();
+        } else {
+          console.warn('Backend reported ready but health check failed, retrying...');
+          // Continue waiting for timeout to handle this case
+        }
       }
     });
 
-    setTimeout(() => {
+    // Fallback health check after initial process startup
+    setTimeout(async () => {
       if (!isResolved) {
-        console.log('Backend ready message not received, proceeding...');
-        isResolved = true;
-        clearTimeout(timeout);
-        resolve();
+        console.log('Attempting early health check...');
+        const isHealthy = await waitForBackendHealth(3, 500);
+
+        if (isHealthy) {
+          console.log('Early health check succeeded');
+          isResolved = true;
+          clearTimeout(timeout);
+          resolve();
+        }
       }
-    }, 5000);
+    }, 3000);
   });
 }
 
 export function stopBackend() {
   if (backendProcess) {
-    try { backendProcess.kill(); } catch { }
+    try {
+      backendProcess.kill('SIGTERM');
+
+      // Force kill after 5 seconds if graceful shutdown fails
+      setTimeout(() => {
+        if (backendProcess && !backendProcess.killed) {
+          console.log('Force killing backend process');
+          backendProcess.kill('SIGKILL');
+        }
+      }, 5000);
+    } catch (error) {
+      console.error('Error stopping backend:', error);
+    }
     backendProcess = null;
   }
 }

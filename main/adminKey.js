@@ -17,12 +17,12 @@ const ACCOUNT_NAME = 'server-secrets';
 
 let cachedAdminKey = null;
 
-function loadAdminKeySync() {
+async function loadAdminKey() {
   try {
-    // Try keytar first (synchronous only)
-    if (keytar && keytar.getPasswordSync) {
+    // Try keytar first
+    if (keytar) {
       try {
-        const keytarData = keytar.getPasswordSync(SERVICE_NAME, ACCOUNT_NAME);
+        const keytarData = await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
         if (keytarData) {
           const parsed = JSON.parse(keytarData);
           console.log('Admin key loaded from keytar (main process)');
@@ -37,34 +37,34 @@ function loadAdminKeySync() {
     const configDir = process.env.CONFIG_PATH || getDefaultConfigDir();
     const secretsPath = path.join(configDir, 'secrets.json');
     const keyPath = path.join(configDir, 'secrets.key');
-    
+
     console.log('Main process config dir:', configDir);
     console.log('Secrets file exists:', fs.existsSync(secretsPath));
     console.log('Key file exists:', fs.existsSync(keyPath));
-    
+
     if (!fs.existsSync(secretsPath) || !fs.existsSync(keyPath)) {
       console.log('Admin key files missing');
       return null;
     }
-    
+
     const wrapped = JSON.parse(fs.readFileSync(secretsPath, 'utf8'));
     const key = fs.readFileSync(keyPath);
     const decrypted = decryptJson(wrapped, key);
     console.log('Admin key loaded from encrypted file (main process)');
     return decrypted.ADMIN_ACCESS_KEY;
-    
+
   } catch (error) {
     console.error('Failed to load admin key in main process:', error.message);
     return null;
   }
 }
 
-export function getAdminKey() {
+export async function getAdminKey() {
   if (cachedAdminKey) {
     return cachedAdminKey;
   }
 
-  cachedAdminKey = loadAdminKeySync();
+  cachedAdminKey = await loadAdminKey();
   if (cachedAdminKey) {
     console.log('Admin key loaded and cached successfully');
   } else {
@@ -79,7 +79,7 @@ export function clearAdminKeyCache() {
 
 export async function getAdminKeyWithRetry(maxRetries = 5, delay = 1000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const key = getAdminKey();
+    const key = await getAdminKey();
     if (key) {
       return key;
     }

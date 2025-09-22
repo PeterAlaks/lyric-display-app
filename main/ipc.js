@@ -78,7 +78,7 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
 
   ipcMain.handle('get-admin-key', async () => {
     try {
-      const adminKey = getAdminKey();
+      const adminKey = await getAdminKey();
       if (!adminKey) {
         console.warn('Admin key not available for renderer process');
       }
@@ -92,7 +92,7 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
 
   ipcMain.handle('get-desktop-jwt', async (_event, { deviceId, sessionId }) => {
     try {
-      const adminKey = getAdminKey();
+      const adminKey = await getAdminKey();
       const resp = await fetch('http://127.0.0.1:4000/api/auth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,6 +111,7 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       return null;
     }
   });
+
   ipcMain.handle('token-store:get', async (_event, payload) => {
     try {
       return await secureTokenStore.readToken(payload || {});
@@ -165,9 +166,9 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       const progress = createProgressWindow({ parent });
       if (progress && !progress.isDestroyed()) {
         if (parent && typeof parent.isMinimized === 'function' && parent.isMinimized()) {
-          try { progress.minimize(); } catch {}
+          try { progress.minimize(); } catch { }
         } else {
-          try { progress.show(); } catch {}
+          try { progress.show(); } catch { }
         }
       }
       await autoUpdater.downloadUpdate();
