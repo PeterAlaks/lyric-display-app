@@ -202,7 +202,7 @@ class SimpleSecretManager {
       }
 
       this.ensureConfigDir();
-      
+
       if (fs.existsSync(this.secretsPath)) {
         const wrapped = JSON.parse(fs.readFileSync(this.secretsPath, 'utf8'));
         const key = getOrCreateAesKey(this.configDir);
