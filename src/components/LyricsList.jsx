@@ -6,18 +6,18 @@ import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import { getLineDisplayText, getLineSearchText } from '../utils/parseLyrics';
 
-const LyricsList = ({ 
-  lyrics: propLyrics, 
-  selectedLine: propSelectedLine, 
-  onSelectLine, 
-  searchQuery = '', 
-  highlightedLineIndex = null 
+const LyricsList = ({
+  lyrics: propLyrics,
+  selectedLine: propSelectedLine,
+  onSelectLine,
+  searchQuery = '',
+  highlightedLineIndex = null
 }) => {
-  const { 
-    lyrics: storeLyrics, 
-    selectedLine: storeSelectedLine, 
+  const {
+    lyrics: storeLyrics,
+    selectedLine: storeSelectedLine,
     selectLine,
-    darkMode 
+    darkMode
   } = useLyricsStore();
   const { emitLineUpdate } = useSocket();
 
@@ -56,7 +56,7 @@ const LyricsList = ({
   // Function to get line styling based on state
   const getLineClassName = (index) => {
     let baseClasses = 'p-3 rounded cursor-pointer transition-colors ';
-    
+
     if (index === selectedLine) {
       // Selected line (blue)
       baseClasses += 'bg-blue-400 text-white';
@@ -71,7 +71,7 @@ const LyricsList = ({
         baseClasses += 'bg-gray-100 text-gray-700 hover:bg-gray-200';
       }
     }
-    
+
     return baseClasses;
   };
 

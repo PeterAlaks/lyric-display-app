@@ -211,11 +211,11 @@ lyric-display-app/
 ├── src/                                    # React frontend source
 │   ├── assets/                             # Fonts, etc.
 │   ├── components/
-|   |   ├── ui/                             # Shadcn UI components
 |   |   ├── modal/
 |   |   |   └── ModalProvider.jsx           # Global modal component
 |   |   ├── toast/
 |   |   |   └── ToastProvider.jsx           # Toast notifications component
+|   |   ├── ui/                             # Shadcn UI components
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
 |   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
@@ -252,6 +252,7 @@ lyric-display-app/
 |   |   ├── Output1.jsx                     # Output 1 display
 |   |   └── Output2.jsx                     # Output 2 display
 │   ├── utils/
+|   |   ├── connectionManager.js            # Socket connection management hook
 |   |   ├── logger.js                       # Simple event and error logger utility
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
 |   |   ├── network.js                      # Network utility for backend URL resolution
