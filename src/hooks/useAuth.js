@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { logDebug, logError, logWarn } from '../utils/logger';
 import { readSecureToken, writeSecureToken, clearSecureToken } from '../utils/secureTokenStore';
 import { resolveBackendOrigin } from '../utils/network';
@@ -16,6 +16,8 @@ class AuthService {
     this.tokenRequestPromise = null;
     this.lastClientType = null;
     this.lockoutUntil = null;
+    this.waitingForAdminKey = false;
+    this.adminKeyAvailablePromise = null;
   }
 
   getServerUrl() {
@@ -69,6 +71,94 @@ class AuthService {
     }
   }
 
+  alertAdminKeyRequired(rawMessage) {
+    if (typeof window === 'undefined') return;
+    const normalized = typeof rawMessage === 'string'
+      ? rawMessage.replace(/^ADMIN_KEY_REQUIRED:\s*/, '').trim()
+      : '';
+    const message = normalized || 'Administrator key is required to authenticate this desktop client.';
+    const detail = {
+      message,
+      isProduction: !import.meta.env.DEV,
+      timestamp: Date.now()
+    };
+    window.dispatchEvent(new CustomEvent('admin-key-required', { detail }));
+    window.dispatchEvent(new CustomEvent('admin-key-error', { detail }));
+    window.dispatchEvent(new CustomEvent('auth-error', { detail: { message } }));
+  }
+
+  waitForAdminKeyAvailability(timeoutMs = 120000) {
+    if (typeof window === 'undefined' || !window.electronAPI?.onAdminKeyAvailable) {
+      return Promise.resolve(false);
+    }
+
+    if (this.adminKeyAvailablePromise) {
+      return this.adminKeyAvailablePromise;
+    }
+
+    this.waitingForAdminKey = true;
+
+    this.adminKeyAvailablePromise = new Promise((resolve) => {
+      let settled = false;
+      let unsubscribe;
+      let timerId;
+
+      const settle = (result) => {
+        if (settled) return;
+        settled = true;
+        if (typeof unsubscribe === 'function') {
+          try {
+            unsubscribe();
+          } catch {
+            // noop
+          }
+        }
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+        this.adminKeyAvailablePromise = null;
+        this.waitingForAdminKey = false;
+        resolve(result);
+      };
+
+      try {
+        unsubscribe = window.electronAPI.onAdminKeyAvailable(() => {
+          logDebug('Admin key availability event received');
+          settle(true);
+        });
+      } catch (error) {
+        logWarn('Failed to subscribe to admin key availability events:', error);
+        settle(false);
+        return;
+      }
+
+      if (timeoutMs > 0) {
+        timerId = setTimeout(() => {
+          logWarn('Timed out waiting for admin key availability event');
+          settle(false);
+        }, timeoutMs);
+        if (timerId && typeof timerId.unref === 'function') {
+          timerId.unref();
+        }
+      }
+    });
+
+    return this.adminKeyAvailablePromise;
+  }
+
+  async handleAdminKeyRequired(message) {
+    this.alertAdminKeyRequired(message);
+    logWarn('Admin key required for desktop authentication; awaiting availability');
+    const available = await this.waitForAdminKeyAvailability();
+    if (!available) {
+      logWarn('Admin key was not provided before timeout');
+      return false;
+    }
+    logDebug('Admin key became available, retrying token request');
+    return true;
+  }
+
   getActiveLockout() {
     if (typeof window === 'undefined' || !window.localStorage) return null;
     const raw = localStorage.getItem(LOCKOUT_STORAGE_KEY);
@@ -107,6 +197,8 @@ class AuthService {
     if (typeof window === 'undefined' || !window.localStorage) return;
     localStorage.removeItem(LOCKOUT_STORAGE_KEY);
     this.lockoutUntil = null;
+    this.waitingForAdminKey = false;
+    this.adminKeyAvailablePromise = null;
   }
 
   async promptForJoinCode(reason = 'missing', options = {}) {
@@ -296,6 +388,10 @@ class AuthService {
             const message = errorPayload?.error || 'Token request failed';
 
             if (response.status === 403 && message.includes('Admin access key')) {
+              const shouldRetryAdminKey = await this.handleAdminKeyRequired('ADMIN_KEY_REQUIRED: ' + message);
+              if (shouldRetryAdminKey) {
+                continue;
+              }
               throw new Error('ADMIN_KEY_REQUIRED: ' + message);
             }
 
@@ -337,12 +433,7 @@ class AuthService {
       } catch (error) {
         const message = error?.message || String(error);
         if (message.startsWith('ADMIN_KEY_REQUIRED:')) {
-          window.dispatchEvent(new CustomEvent('admin-key-error', {
-            detail: {
-              message: message.replace('ADMIN_KEY_REQUIRED: ', ''),
-              isProduction: !import.meta.env.DEV,
-            },
-          }));
+          this.alertAdminKeyRequired(message);
         }
         throw error;
       }
@@ -541,6 +632,32 @@ const useAuth = () => {
   const clearAuthToken = useCallback(() => {
     authServiceRef.current.clearStoredToken();
   }, []);
+
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleAdminKeyRequired = () => {
+      setAuthStatus('admin-key-required');
+    };
+    window.addEventListener('admin-key-required', handleAdminKeyRequired);
+    return () => {
+      window.removeEventListener('admin-key-required', handleAdminKeyRequired);
+    };
+  }, [setAuthStatus]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const api = window.electronAPI;
+    if (!api?.onAdminKeyAvailable) return undefined;
+    const unsubscribe = api.onAdminKeyAvailable(() => {
+      setAuthStatus((prev) => (prev === 'admin-key-required' ? 'authenticating' : prev));
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [setAuthStatus]);
 
   return {
     authStatus,

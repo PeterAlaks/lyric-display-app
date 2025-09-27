@@ -36,6 +36,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('progress-update', (event, progress) => callback(progress));
   },
 
+
+  onAdminKeyAvailable: (callback) => {
+    const channel = 'admin-key:available';
+    const handler = (_event, payload) => callback?.(payload);
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
+  },
+
   openInAppBrowser: (url) => ipcRenderer.invoke('open-in-app-browser', url),
   addRecentFile: (filePath) => ipcRenderer.invoke('add-recent-file', filePath),
   onOpenLyricsFromPath: (callback) => {

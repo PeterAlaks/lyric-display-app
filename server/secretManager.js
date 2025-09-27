@@ -94,6 +94,25 @@ function encryptJson(payload, key) {
   return { __enc: true, iv: iv.toString('base64'), tag: tag.toString('base64'), data: enc.toString('base64') };
 }
 
+
+function persistEncryptedSecrets(configDir, secretsPath, secrets) {
+  try {
+    ensureDir700(configDir);
+    const keyPath = getKeyPath(configDir);
+    const key = getOrCreateAesKey(configDir);
+    const wrapped = encryptJson(secrets, key);
+    fs.writeFileSync(secretsPath, JSON.stringify(wrapped, null, 2), { mode: 0o600 });
+    const stats = fs.existsSync(secretsPath) ? fs.statSync(secretsPath) : null;
+    const modeOctal = stats ? (stats.mode & 0o777).toString(8).padStart(3, '0') : 'n/a';
+    const sizeInfo = stats ? `, size ${stats.size} bytes` : '';
+    console.log(`Encrypted secrets backup refreshed at ${secretsPath} (mode ${modeOctal}${sizeInfo}); key path ${keyPath}`);
+    return { success: true, path: secretsPath, stats };
+  } catch (error) {
+    console.error(`Failed to persist encrypted secrets backup at ${secretsPath}:`, error.message);
+    return { success: false, error };
+  }
+}
+
 export function decryptJson(wrapped, key) {
   if (!wrapped || wrapped.__enc !== true) throw new Error('Invalid encrypted payload');
   const iv = Buffer.from(wrapped.iv, 'base64');
@@ -194,7 +213,12 @@ class SimpleSecretManager {
         try {
           const parsed = JSON.parse(keytarData);
           const normalized = this._normalizeSecrets(parsed);
-          console.log('Secrets loaded from keytar');
+          const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
+          if (backupResult.success) {
+            console.log('Secrets loaded from keytar; encrypted backup refreshed');
+          } else {
+            console.warn('Secrets loaded from keytar but encrypted backup refresh failed');
+          }
           return normalized;
         } catch (e) {
           console.warn('Keytar data corrupted, falling back to encrypted file');
@@ -237,11 +261,13 @@ class SimpleSecretManager {
       const keytarSuccess = await this._writeToKeytar(dataStr);
 
       // Always save to encrypted file as backup
-      const key = getOrCreateAesKey(this.configDir);
-      const wrapped = encryptJson(normalized, key);
-      fs.writeFileSync(this.secretsPath, JSON.stringify(wrapped, null, 2), { mode: 0o600 });
+      const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
+      console.log(`Secrets saved - Keytar: ${keytarSuccess ? 'yes' : 'no'}, File: ${backupResult.success ? 'yes' : 'no'}`);
 
-      console.log(`Secrets saved - Keytar: ${keytarSuccess ? 'yes' : 'no'}, File: yes`);
+      if (!backupResult.success) {
+        throw backupResult.error || new Error('Failed to persist encrypted secrets backup');
+      }
+
       return normalized;
     } catch (error) {
       console.error('Error saving secrets:', error.message);

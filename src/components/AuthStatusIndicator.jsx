@@ -106,7 +106,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') {
       return <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />;
     }
-    if (authStatus === 'failed' || connectionStatus === 'error') {
+    if (authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error') {
       return <ShieldAlert className="w-5 h-5 text-red-500" />;
     }
     return <Shield className="w-5 h-5 text-gray-400" />;
@@ -125,6 +125,9 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     if (authStatus === 'failed') {
       return 'Authentication Failed';
     }
+    if (authStatus === 'admin-key-required') {
+      return 'Admin Key Required';
+    }
     if (connectionStatus === 'error') {
       return 'Connection Error';
     }
@@ -141,7 +144,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') {
       return 'warning';
     }
-    if (authStatus === 'failed' || connectionStatus === 'error') {
+    if (authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error') {
       return 'error';
     }
     return 'info';
@@ -150,7 +153,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
   const showAuthModal = () => {
     refreshJoinCode();
     const statusText = getStatusText();
-    const showRetryButton = authStatus === 'failed' || connectionStatus === 'error';
+    const showRetryButton = authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error';
     const showRefreshButton = authStatus === 'authenticated' && connectionStatus === 'connected';
 
     let description = `Connection Status: ${connectionStatus}\nAuthentication Status: ${authStatus}`;
@@ -159,6 +162,8 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
       description += '\n\nYour connection is secured with JWT tokens and has full permissions.';
     } else if (authStatus === 'failed') {
       description += '\n\nAuthentication failed. Please retry to obtain a new token.';
+    } else if (authStatus === 'admin-key-required') {
+      description += '\n\nThe desktop app is waiting for the administrator key. Add or restore the secure secrets data on the host machine, then retry.';
     } else if (connectionStatus === 'error') {
       description += '\n\nConnection to the backend failed. Check the server status and try again.';
     } else if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') {

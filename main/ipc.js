@@ -1,16 +1,31 @@
-import { ipcMain, dialog, nativeTheme } from 'electron';
+import { ipcMain, dialog, nativeTheme, BrowserWindow } from 'electron';
 import { addRecent } from './recents.js';
 import { writeFile } from 'fs/promises';
 import { getLocalIPAddress } from './utils.js';
 import * as secureTokenStore from './secureTokenStore.js';
 import updaterPkg from 'electron-updater';
 import { createProgressWindow } from './progressWindow.js';
-import { getAdminKey } from './adminKey.js';
+import { getAdminKey, onAdminKeyAvailable } from './adminKey.js';
 const { autoUpdater } = updaterPkg;
 
 let cachedJoinCode = null;
 
 export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu }) {
+  const broadcastAdminKeyAvailable = (adminKey) => {
+    const payload = { hasKey: Boolean(adminKey) };
+    const windows = BrowserWindow.getAllWindows();
+    for (const win of windows) {
+      if (!win || win.isDestroyed()) continue;
+      try {
+        win.webContents.send('admin-key:available', payload);
+      } catch (error) {
+        console.warn('Failed to notify renderer about admin key availability:', error);
+      }
+    }
+  };
+
+  onAdminKeyAvailable(broadcastAdminKeyAvailable);
+
   // Dark mode query and update hooks
   ipcMain.handle('get-dark-mode', () => {
     return false;

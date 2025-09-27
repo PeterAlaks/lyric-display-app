@@ -12,6 +12,25 @@ import { getAdminKeyWithRetry } from './main/adminKey.js';
 
 let mainWindow = null;
 
+
+async function handleMissingAdminKey() {
+  const message = 'Lyric Display requires the administrative key to unlock local access.';
+  console.error('[Main] Admin key unavailable after retries; keeping renderer hidden.');
+  try {
+    const { dialog } = await import('electron');
+    dialog.showErrorBox('Admin Key Required', `${message}\n\nRestore the secure secrets store and restart the application.`);
+  } catch (error) {
+    console.error('Failed to present admin key error dialog:', error);
+  }
+  try {
+    if (typeof app.hide === 'function') {
+      app.hide();
+    }
+  } catch {}
+  app.exitCode = 1;
+  app.quit();
+}
+
 // Optional compatibility flags in production only when requested
 if (!isDev && process.env.FORCE_COMPATIBILITY) {
   app.commandLine.appendSwitch('--disable-gpu-sandbox');
@@ -42,11 +61,12 @@ app.whenReady().then(async () => {
     // Additional delay to ensure server is fully listening on port 4000
     await new Promise(resolve => setTimeout(resolve, 2000));
     const adminKey = await getAdminKeyWithRetry();
-    if (adminKey) {
-      console.log('Admin key loaded and cached');
-    } else {
-      console.warn('Could not load admin key - desktop authentication may fail in production');
+    if (!adminKey) {
+      await handleMissingAdminKey();
+      return;
     }
+
+    console.log('Admin key loaded and cached');
 
     mainWindow = createWindow('/');
     menuAPI.createMenu();
