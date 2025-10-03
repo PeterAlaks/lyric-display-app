@@ -1,4 +1,4 @@
-﻿// server/index.js - Updated with Simple Secret Management
+// server/index.js - Updated with Simple Secret Management
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
@@ -434,7 +434,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   const secretsStatus = secretManager.getSecretsStatus();
 
   console.log(`Server running at http://localhost:${PORT}`);

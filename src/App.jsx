@@ -54,7 +54,7 @@ function UpdaterToastBridge() {
         duration: 7000,
         actions: [
           { label: 'Update Now', onClick: () => window.electronAPI.requestUpdateDownload?.() },
-          { label: 'Later', onClick: () => {} },
+          { label: 'Later', onClick: () => { } },
         ],
       });
     });
@@ -66,12 +66,19 @@ function UpdaterToastBridge() {
         duration: 0,
         actions: [
           { label: 'Install and Restart', onClick: () => window.electronAPI.requestInstallAndRestart?.() },
-          { label: 'Later', onClick: () => {} },
+          { label: 'Later', onClick: () => { } },
         ],
       });
     });
     const offErr = window.electronAPI.onUpdateError?.((msg) => {
-      showToast({ title: 'Update error', message: msg || 'Something went wrong.', variant: 'error', duration: 6000 });
+      const detail = msg ? String(msg) : '';
+      try { console.warn('Update check failed:', detail); } catch { }
+      showToast({
+        title: 'Unable to check for updates',
+        message: 'We could not reach the update service. Please check your internet connection and try again later.',
+        variant: 'warning',
+        duration: 7000,
+      });
     });
     return () => { offAvail?.(); offDownloaded?.(); offErr?.(); };
   }, [showToast]);
@@ -88,7 +95,7 @@ class AppErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
   componentDidCatch(error, info) {
-    try { console.error('AppErrorBoundary', error, info); } catch {}
+    try { console.error('AppErrorBoundary', error, info); } catch { }
   }
   render() {
     if (this.state.hasError) {
@@ -104,3 +111,7 @@ class AppErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+
+
+

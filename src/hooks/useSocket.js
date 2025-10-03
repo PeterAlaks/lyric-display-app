@@ -7,6 +7,8 @@ import useSocketEvents from './useSocketEvents';
 import { connectionManager } from '../utils/connectionManager';
 import { logDebug, logError, logWarn } from '../utils/logger';
 
+const LONG_BACKOFF_WARNING_MS = 4000;
+
 const useSocket = (role = 'output') => {
   const socketRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
@@ -56,6 +58,24 @@ const useSocket = (role = 'output') => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
+  const emitBackoffWarning = useCallback((detail) => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.dispatchEvent(new CustomEvent('connection-backoff-warning', { detail }));
+    } catch (error) {
+      logDebug('Failed to dispatch connection backoff warning', error);
+    }
+  }, []);
+
+  const clearBackoffWarning = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.dispatchEvent(new CustomEvent('connection-backoff-clear'));
+    } catch (error) {
+      logDebug('Failed to clear connection backoff warning', error);
     }
   }, []);
 
@@ -114,29 +134,52 @@ const useSocket = (role = 'output') => {
 
     if (!canConnect.allowed) {
       if (canConnect.reason === 'max_attempts_reached') {
-        logError(`Max connection attempts reached for ${clientId}`);
+        logError('Max connection attempts reached for ' + clientId);
         setConnectionStatus('error');
         setAuthStatus('failed');
+        clearBackoffWarning();
         return;
       }
 
       if (canConnect.reason === 'already_connecting') {
-        logDebug(`Connection already in progress for ${clientId}`);
+        logDebug('Connection already in progress for ' + clientId);
         return;
       }
 
-      // Schedule retry for backoff cases
-      if (canConnect.reason === 'global_backoff' || canConnect.reason === 'client_backoff') {
-        const retryDelay = canConnect.remainingMs || 1000;
-        logDebug(`Scheduling retry for ${clientId} in ${retryDelay}ms due to ${canConnect.reason}`);
-
-        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connectSocketInternal();
-        }, retryDelay);
+      if (canConnect.reason !== 'global_backoff' && canConnect.reason !== 'client_backoff') {
+        logDebug('Connection attempt blocked for ' + clientId + ' (' + canConnect.reason + ')');
+        clearBackoffWarning();
         return;
       }
+
+      const state = connectionManager.getConnectionState(clientId);
+      const retryDelay = canConnect.remainingMs || Math.max(0, state.backoffUntil ? state.backoffUntil - Date.now() : 1000);
+
+      if (retryDelay >= LONG_BACKOFF_WARNING_MS) {
+        emitBackoffWarning({
+          scope: canConnect.reason === 'global_backoff' ? 'global' : 'client',
+          remainingMs: retryDelay,
+          reason: canConnect.reason,
+          clientId,
+          attempts: state.attemptCount,
+          timestamp: Date.now(),
+        });
+      } else {
+        clearBackoffWarning();
+      }
+
+      logDebug('Scheduling retry for ' + clientId + ' in ' + retryDelay + 'ms due to ' + canConnect.reason);
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connectSocketInternal();
+      }, retryDelay);
+      return;
     }
+
+    clearBackoffWarning();
 
     try {
       // Record attempt start with connection manager
@@ -245,30 +288,84 @@ const useSocket = (role = 'output') => {
     handleAuthError,
     setAuthStatus,
     setConnectionStatus,
-    cleanupSocket
+    cleanupSocket,
+    emitBackoffWarning,
+    clearBackoffWarning
   ]);
 
   // Centralized retry scheduling
   const scheduleRetry = useCallback(() => {
-    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
 
     const canConnect = connectionManager.canAttemptConnection(clientId);
-    if (!canConnect.allowed && canConnect.reason === 'max_attempts_reached') {
-      logError(`Max retries reached for ${clientId}, giving up`);
+
+    if (!canConnect.allowed) {
+      if (canConnect.reason === 'max_attempts_reached') {
+        logError('Max connection attempts reached for ' + clientId);
+        setConnectionStatus('error');
+        setAuthStatus('failed');
+        clearBackoffWarning();
+        return;
+      }
+
+      if (canConnect.reason === 'already_connecting') {
+        logDebug('Connection already in progress for ' + clientId);
+        return;
+      }
+
+      if (canConnect.reason !== 'global_backoff' && canConnect.reason !== 'client_backoff') {
+        logDebug('Connection attempt blocked for ' + clientId + ' (' + canConnect.reason + ')');
+        clearBackoffWarning();
+        return;
+      }
+
+      const state = connectionManager.getConnectionState(clientId);
+      const retryDelay = canConnect.remainingMs || Math.max(0, state.backoffUntil ? state.backoffUntil - Date.now() : 1000);
+
+      if (retryDelay >= LONG_BACKOFF_WARNING_MS) {
+        emitBackoffWarning({
+          scope: canConnect.reason === 'global_backoff' ? 'global' : 'client',
+          remainingMs: retryDelay,
+          reason: canConnect.reason,
+          clientId,
+          attempts: state.attemptCount,
+          timestamp: Date.now(),
+        });
+      } else {
+        clearBackoffWarning();
+      }
+
+      logDebug('Scheduling retry for ' + clientId + ' in ' + retryDelay + 'ms due to ' + canConnect.reason);
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connectSocketInternal();
+      }, retryDelay);
       return;
     }
 
-    // Use connection manager's backoff calculation
+    clearBackoffWarning();
+
     const state = connectionManager.getConnectionState(clientId);
     const delay = state.backoffUntil ? Math.max(0, state.backoffUntil - Date.now()) : 1000;
 
-    logDebug(`Scheduling retry for ${clientId} in ${delay}ms`);
+    logDebug('Scheduling retry for ' + clientId + ' in ' + delay + 'ms');
     reconnectTimeoutRef.current = setTimeout(() => {
       connectSocketInternal();
     }, delay);
-  }, [clientId, connectSocketInternal]);
+  }, [clientId, connectSocketInternal, clearBackoffWarning, emitBackoffWarning]);
 
   const connectSocket = useCallback(connectSocketInternal, [connectSocketInternal]);
+
+  useEffect(() => {
+    return () => {
+      clearBackoffWarning();
+    };
+  }, [clearBackoffWarning]);
 
   useEffect(() => {
     // Add staggered delay for different client types to prevent connection storms
@@ -359,13 +456,14 @@ const useSocket = (role = 'output') => {
     cleanupSocket().then(() => {
       setConnectionStatus('disconnected');
       setAuthStatus('pending');
+      clearBackoffWarning();
 
       // Small delay to ensure cleanup is complete
       setTimeout(() => {
         connectSocket();
       }, 100);
     });
-  }, [clientId, cleanupSocket, connectSocket, setAuthStatus]);
+  }, [clientId, cleanupSocket, connectSocket, clearBackoffWarning, setAuthStatus]);
 
   return {
     socket: socketRef.current,

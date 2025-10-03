@@ -29,6 +29,165 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
     }
   }
 
+  const BACKOFF_WARNING_THRESHOLD_MS = 4000;
+
+  const formatDuration = (ms) => {
+    if (!Number.isFinite(ms) || ms <= 0) return "0s";
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes > 0) {
+      return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    }
+    return `${seconds}s`;
+  };
+
+  const buildDiagnosticsDescription = (stats) => {
+    if (!stats) {
+      return "Connection diagnostics are not available yet.";
+    }
+
+    const lines = [];
+
+    if (stats.globalBackoffActive) {
+      lines.push("LyricDisplay paused automatic reconnecting after several failed attempts.");
+      lines.push("Next automatic retry: about " + formatDuration(stats.globalBackoffRemainingMs) + ".");
+    } else {
+      lines.push("LyricDisplay is ready to reconnect immediately if needed.");
+    }
+
+    lines.push("Failed attempts this session: " + stats.globalFailures);
+
+    const clientEntries = Object.entries(stats.clients || {});
+    if (clientEntries.length > 0) {
+      lines.push("", "Client details:");
+      clientEntries.forEach(([id, info]) => {
+        const statusLabel = info.status === "connected"
+          ? "connected"
+          : info.status === "disconnected"
+            ? "waiting to retry"
+            : info.status || "unknown";
+        const backoffLabel = info.backoffRemaining > 0
+          ? "next retry in " + formatDuration(info.backoffRemaining)
+          : "no waiting period";
+        const attemptLabel = info.attempts > 0
+          ? info.attempts + " recent " + (info.attempts === 1 ? "attempt" : "attempts")
+          : "no recent attempts";
+        lines.push(" - " + id + ": " + statusLabel + ", " + backoffLabel + ", " + attemptLabel);
+      });
+    } else {
+      lines.push("", "No clients are queued for retry right now.");
+    }
+
+    return lines.join("\n");
+  };
+
+  async function openConnectionDiagnostics() {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) {
+      await dialog.showMessageBox({
+        type: "info",
+        buttons: ["Close"],
+        defaultId: 0,
+        message: "Open the main window to view connection diagnostics.",
+      });
+      return;
+    }
+
+    let statsResult;
+    try {
+      statsResult = await win.webContents.executeJavaScript(`
+        (function () {
+          try {
+            const data = window.connectionManager?.getStats?.();
+            return data ? JSON.parse(JSON.stringify(data)) : null;
+          } catch (error) {
+            return { __error: error?.message || String(error) };
+          }
+        })();
+      `, true);
+    } catch (error) {
+      console.error("Failed to query connection diagnostics:", error);
+      await dialog.showMessageBox({
+        type: "error",
+        buttons: ["Close"],
+        defaultId: 0,
+        title: "Connection Diagnostics",
+        message: "Failed to retrieve diagnostics from the renderer process.",
+        detail: error?.message || String(error),
+      });
+      return;
+    }
+
+    if (!statsResult) {
+      await dialog.showMessageBox({
+        type: "info",
+        buttons: ["Close"],
+        defaultId: 0,
+        title: "Connection Diagnostics",
+        message: "Diagnostics are not available yet.",
+      });
+      return;
+    }
+
+    if (statsResult.__error) {
+      await dialog.showMessageBox({
+        type: "error",
+        buttons: ["Close"],
+        defaultId: 0,
+        title: "Connection Diagnostics",
+        message: "Failed to read diagnostics.",
+        detail: statsResult.__error,
+      });
+      return;
+    }
+
+    const stats = statsResult;
+    const description = buildDiagnosticsDescription(stats);
+    const hasClientBackoff = Object.values(stats.clients || {}).some(
+      (info) => (info?.backoffRemaining ?? 0) >= BACKOFF_WARNING_THRESHOLD_MS
+    );
+    const variant = stats.globalBackoffActive || hasClientBackoff ? "warning" : "info";
+
+    const fallbackDialog = () =>
+      dialog.showMessageBox({
+        type: variant === "warning" ? "warning" : "info",
+        buttons: ["Close"],
+        defaultId: 0,
+        title: "Connection Diagnostics",
+        message:
+          variant === "warning" ? "LyricDisplay is waiting briefly before trying again." : "LyricDisplay is ready to reconnect immediately if needed.",
+        detail: description,
+      });
+
+    if (typeof showInAppModal === "function") {
+      try {
+        await showInAppModal(
+          {
+            title: "Connection Diagnostics",
+            description,
+            variant,
+            size: "auto",
+            actions: [
+              {
+                label: "Close",
+                value: 0,
+                variant: variant === "warning" ? "secondary" : "primary",
+                autoFocus: true,
+              },
+            ],
+          },
+          { fallback: fallbackDialog, timeout: 600000 }
+        );
+      } catch (error) {
+        console.warn("Renderer modal unavailable, falling back to native dialog:", error);
+        await fallbackDialog();
+      }
+    } else {
+      await fallbackDialog();
+    }
+  }
+
   async function createMenu() {
     const recentFiles = await getRecents();
 
@@ -58,7 +217,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
           } catch (e) {
             const win = getMainWindow?.();
             if (win && !win.isDestroyed()) {
-              try { win.webContents.send('open-lyrics-from-path-error', { filePath: fp }); } catch {}
+              try { win.webContents.send('open-lyrics-from-path-error', { filePath: fp }); } catch { }
             }
           }
         }
@@ -95,7 +254,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
             click: () => {
               const win = getMainWindow?.();
               if (win && !win.isDestroyed()) {
-                try { win.webContents.send('open-qr-dialog'); } catch {}
+                try { win.webContents.send('open-qr-dialog'); } catch { }
               }
             }
           },
@@ -108,7 +267,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
       },
       {
         label: 'Edit',
-        submenu: [ { role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' } ],
+        submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }],
       },
       {
         label: 'View',
@@ -133,7 +292,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
               try {
                 const win = getMainWindow?.();
                 if (win && !win.isDestroyed()) win.webContents.send('open-shortcuts-help');
-              } catch {}
+              } catch { }
             }
           },
           { role: 'close' }
@@ -144,6 +303,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
         submenu: [
           { label: 'Documentation', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-updates#readme'); } },
           { label: 'GitHub Repository', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-updates'); } },
+          { label: 'Connection Diagnostics...', click: openConnectionDiagnostics },
           { type: 'separator' },
           { label: 'More About Author', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://linktr.ee/peteralaks'); } },
           {
@@ -152,23 +312,24 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
               const { app, dialog } = await import('electron');
               const message = `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi`;
 
-              const result = await (showInAppModal
+                            const result = await (showInAppModal
                 ? showInAppModal(
-                    {
-                      title: 'About LyricDisplay',
-                      description: message,
-                      variant: 'info',
-                      actions: [
-                        { label: 'OK', value: { response: 0 }, variant: 'outline' },
-                        { label: 'Check for Updates', value: { response: 1 } },
-                      ],
-                    },
-                    {
-                      fallback: () => dialog
-                        .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
-                        .then((res) => ({ response: res.response })),
-                    }
-                  )
+                  {
+                    title: 'About LyricDisplay',
+                    description: message,
+                    variant: 'info',
+                    actions: [
+                      { label: 'OK', value: { response: 0 }, variant: 'outline' },
+                      { label: 'Check for Updates', value: { response: 1 } },
+                    ],
+                  },
+                  {
+                    fallback: () => dialog
+                      .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                      .then((res) => ({ response: res.response })),
+                    timeout: 600000,
+                  }
+                )
                 : dialog
                     .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
                     .then((res) => ({ response: res.response }))
@@ -192,7 +353,10 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
   // Rebuild menu when recents change
   try {
     subscribe(() => { createMenu(); });
-  } catch {}
+  } catch { }
 
   return { createMenu, updateDarkModeMenu, toggleDarkMode };
 }
+
+
+

@@ -217,6 +217,7 @@ lyric-display-app/
 |   |   |   └── ToastProvider.jsx           # Toast notifications component
 |   |   ├── ui/                             # Shadcn UI components
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
+|   |   ├── ConnectionBackoffBanner.jsx     # Global connection backoff modal component
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
 |   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI

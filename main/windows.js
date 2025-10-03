@@ -18,9 +18,9 @@ export function createWindow(route = '/') {
 
   win.once('ready-to-show', () => {
     setTimeout(() => {
-      try { win.show(); } catch {}
+      try { win.show(); } catch { }
       if (isDev) {
-        try { win.webContents.openDevTools({ mode: 'detach' }); } catch {}
+        try { win.webContents.openDevTools({ mode: 'detach' }); } catch { }
       }
     }, 100);
   });
@@ -34,16 +34,16 @@ export function createWindow(route = '/') {
     win.loadURL(`http://localhost:5173${route}`);
   } else {
     const hashRoute = route === '/' ? '/' : `#${route}`;
+    const baseUrl = 'http://127.0.0.1:4000';
     win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
       console.error('Failed to load:', errorCode, errorDescription, validatedURL);
       setTimeout(() => {
         console.log('Retrying load...');
-        try { win.loadURL(`http://localhost:4000/${hashRoute}`); } catch {}
+        try { win.loadURL(`${baseUrl}${hashRoute}`); } catch { }
       }, 1000);
     });
-    win.loadURL(`http://localhost:4000/${hashRoute}`);
+    win.loadURL(`${baseUrl}${hashRoute}`);
   }
 
   return win;
 }
-

@@ -1,4 +1,4 @@
-// src/utils/connectionManager.js - New centralized connection management
+// src/utils/connectionManager.js - Centralized connection management for sockets
 import { logDebug, logError, logWarn } from './logger';
 
 class ConnectionManager {
@@ -7,7 +7,7 @@ class ConnectionManager {
     this.globalBackoffState = {
       failureCount: 0,
       lastFailureTime: null,
-      backoffUntil: null
+      backoffUntil: null,
     };
   }
 
@@ -19,32 +19,38 @@ class ConnectionManager {
     return Math.floor(exponential + jitter);
   }
 
+  getGlobalBackoffRemaining() {
+    if (!this.globalBackoffState.backoffUntil) {
+      return 0;
+    }
+    const remaining = this.globalBackoffState.backoffUntil - Date.now();
+    if (remaining <= 0) {
+      this.globalBackoffState.backoffUntil = null;
+      return 0;
+    }
+    return remaining;
+  }
+
   // Check if we should delay connection attempts globally
   shouldGloballyDelay() {
-    if (!this.globalBackoffState.backoffUntil) return false;
-
-    const now = Date.now();
-    if (now < this.globalBackoffState.backoffUntil) {
-      const remaining = this.globalBackoffState.backoffUntil - now;
+    const remaining = this.getGlobalBackoffRemaining();
+    if (remaining > 0) {
       logDebug(`Global backoff active, ${remaining}ms remaining`);
       return true;
     }
-
-    // Clear expired backoff
-    this.globalBackoffState.backoffUntil = null;
     return false;
   }
 
   // Record a global connection failure
   recordGlobalFailure() {
-    this.globalBackoffState.failureCount++;
+    this.globalBackoffState.failureCount += 1;
     this.globalBackoffState.lastFailureTime = Date.now();
 
     // Apply global backoff after multiple rapid failures
     if (this.globalBackoffState.failureCount >= 3) {
-      const backoffDelay = this.calculateBackoff(this.globalBackoffState.failureCount - 3, 2000);
-      this.globalBackoffState.backoffUntil = Date.now() + backoffDelay;
-      logWarn(`Applied global connection backoff: ${backoffDelay}ms`);
+      const delay = this.calculateBackoff(this.globalBackoffState.failureCount - 3, 2000);
+      this.globalBackoffState.backoffUntil = Date.now() + delay;
+      logWarn(`Applied global connection backoff: ${delay}ms`);
     }
   }
 
@@ -55,6 +61,7 @@ class ConnectionManager {
     }
     this.globalBackoffState.failureCount = 0;
     this.globalBackoffState.backoffUntil = null;
+    this.globalBackoffState.lastFailureTime = null;
   }
 
   // Get connection state for a specific client
@@ -75,30 +82,27 @@ class ConnectionManager {
 
   // Check if connection should be attempted for specific client
   canAttemptConnection(clientId) {
-    // Check global backoff first
-    if (this.shouldGloballyDelay()) {
-      return { allowed: false, reason: 'global_backoff' };
+    const globalRemaining = this.getGlobalBackoffRemaining();
+    if (globalRemaining > 0) {
+      return { allowed: false, reason: 'global_backoff', remainingMs: globalRemaining };
     }
 
     const state = this.getConnectionState(clientId);
 
-    // Check if already at max attempts
     if (state.attemptCount >= state.maxAttempts) {
-      return { allowed: false, reason: 'max_attempts_reached' };
+      return { allowed: false, reason: 'max_attempts_reached', remainingMs: 0 };
     }
 
-    // Check if currently connecting
     if (state.isConnecting) {
-      return { allowed: false, reason: 'already_connecting' };
+      return { allowed: false, reason: 'already_connecting', remainingMs: 0 };
     }
 
-    // Check client-specific backoff
-    if (state.backoffUntil && Date.now() < state.backoffUntil) {
-      const remaining = state.backoffUntil - Date.now();
-      return { allowed: false, reason: 'client_backoff', remainingMs: remaining };
+    const clientRemaining = state.backoffUntil ? Math.max(0, state.backoffUntil - Date.now()) : 0;
+    if (clientRemaining > 0) {
+      return { allowed: false, reason: 'client_backoff', remainingMs: clientRemaining };
     }
 
-    return { allowed: true };
+    return { allowed: true, reason: null, remainingMs: 0 };
   }
 
   // Start connection attempt for client
@@ -106,7 +110,7 @@ class ConnectionManager {
     const state = this.getConnectionState(clientId);
 
     state.isConnecting = true;
-    state.attemptCount++;
+    state.attemptCount += 1;
     state.lastAttemptTime = Date.now();
 
     // Set client-specific backoff for next attempt
@@ -144,29 +148,50 @@ class ConnectionManager {
 
   // Clean up connection tracking for client
   cleanup(clientId) {
-    if (this.connections.has(clientId)) {
-      const state = this.connections.get(clientId);
-      state.isConnecting = false;
-      state.connectionPromise = null;
-      logDebug(`Cleaned up connection state for ${clientId}`);
+    if (!this.connections.has(clientId)) {
+      return;
+    }
+
+    const state = this.connections.get(clientId);
+    state.isConnecting = false;
+    state.connectionPromise = null;
+    this.connections.delete(clientId);
+    logDebug(`Cleaned up connection state for ${clientId}`);
+
+    if (this.connections.size === 0) {
+      if (this.globalBackoffState.failureCount > 0 || this.globalBackoffState.backoffUntil) {
+        logDebug('No remaining clients, clearing global backoff state');
+      }
+      this.globalBackoffState.failureCount = 0;
+      this.globalBackoffState.backoffUntil = null;
+      this.globalBackoffState.lastFailureTime = null;
     }
   }
 
   // Get connection statistics
   getStats() {
+    const globalRemaining = this.getGlobalBackoffRemaining();
+    const globalBackoffActive = globalRemaining > 0;
+
     const stats = {
       totalClients: this.connections.size,
       globalFailures: this.globalBackoffState.failureCount,
-      globalBackoffActive: this.shouldGloballyDelay(),
-      clients: {}
+      globalBackoffActive,
+      globalBackoffRemainingMs: globalRemaining,
+      globalBackoffUntil: this.globalBackoffState.backoffUntil,
+      lastFailureTime: this.globalBackoffState.lastFailureTime,
+      clients: {},
     };
 
     this.connections.forEach((state, clientId) => {
+      const remaining = state.backoffUntil ? Math.max(0, state.backoffUntil - Date.now()) : 0;
       stats.clients[clientId] = {
         status: state.status,
         attempts: state.attemptCount,
         isConnecting: state.isConnecting,
-        backoffRemaining: state.backoffUntil ? Math.max(0, state.backoffUntil - Date.now()) : 0
+        backoffRemaining: remaining,
+        lastAttemptTime: state.lastAttemptTime,
+        nextAttemptAt: state.backoffUntil,
       };
     });
 
@@ -179,7 +204,7 @@ class ConnectionManager {
     this.globalBackoffState = {
       failureCount: 0,
       lastFailureTime: null,
-      backoffUntil: null
+      backoffUntil: null,
     };
     logDebug('Connection manager reset');
   }
@@ -191,4 +216,14 @@ export const connectionManager = new ConnectionManager();
 // Export for debugging
 if (typeof window !== 'undefined') {
   window.connectionManager = connectionManager;
+  if (!window.__connectionManagerUnloadAttached) {
+    window.addEventListener('beforeunload', () => {
+      try {
+        connectionManager.reset();
+      } catch (error) {
+        logDebug('Failed to reset connection manager on unload', error);
+      }
+    });
+    window.__connectionManagerUnloadAttached = true;
+  }
 }

@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "3.6.1",
+  "version": "3.8.2",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": "Peter Alakembi",
   "main": "main.js",
@@ -90,8 +90,7 @@
       "target": {
         "target": "nsis",
         "arch": [
-          "x64",
-          "ia32"
+          "x64"
         ]
       },
       "icon": "public/favicon.ico",
