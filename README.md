@@ -218,6 +218,7 @@ lyric-display-app/
 |   |   ├── ui/                             # Shadcn UI components
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
 |   |   ├── ConnectionBackoffBanner.jsx     # Global connection backoff modal component
+|   |   ├── DraftApprovalModal.jsx          # Approval modal component for lyric drafts submitted from secondary controllers
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
 |   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
@@ -232,6 +233,7 @@ lyric-display-app/
 |   |   ├── SetlistModal.jsx                # Setlist Modal
 |   |   └── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
 │   ├── context/
+|   |   ├── ControlSocketProvider.jsx       # Control socket provider
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/
 |   |   ├── useAuth.js                      # Authenticator hook for socket connections
@@ -245,6 +247,7 @@ lyric-display-app/
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
 |   |   ├── useSocket.js                    # Main React hook for Socket.IO client
 |   |   ├── useSocketEvents.js              # Socket events hook
+|   |   ├── useSyncTimer.js                 # Last synced timer hook
 |   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
 |   |   └── utils.js                        # UI library utility functions

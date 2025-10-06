@@ -2,12 +2,12 @@ import { useCallback } from 'react';
 import { parseLyrics } from '../utils/parseLyrics';
 import { parseLrc } from '../utils/parseLrc';
 import useLyricsStore from '../context/LyricsStore';
-import useSocket from './useSocket';
+import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 
 const useFileUpload = () => {
   const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName } = useLyricsStore();
-  const { emitLyricsLoad, socket } = useSocket(); // Add socket to destructuring
+  const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
 
   const MAX_FILE_SIZE_MB = 2;
@@ -60,7 +60,7 @@ const useFileUpload = () => {
         if (filePath && window?.electronAPI?.addRecentFile) {
           await window.electronAPI.addRecentFile(filePath);
         }
-      } catch {}
+      } catch { }
 
       showToast({ title: 'File loaded', message: `${isLrc ? 'LRC' : 'Text'}: ${baseName}`, variant: 'success' });
 

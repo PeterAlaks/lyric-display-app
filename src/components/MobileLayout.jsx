@@ -1,46 +1,32 @@
 import React from 'react';
-import { List, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { List, RefreshCw, FileText } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
-import useSocket from '../hooks/useSocket';
+import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
 import SetlistModal from './SetlistModal';
 import { Switch } from "@/components/ui/switch";
 import useSearch from '../hooks/useSearch';
 import SearchBar from './SearchBar';
+import { useSyncTimer } from '../hooks/useSyncTimer';
 
 const MobileLayout = () => {
-  const {
-    isOutputOn,
-    setIsOutputOn,
-    lyrics,
-    lyricsFileName,
-    selectedLine,
-    selectLine,
-    darkMode,
-    setlistModalOpen,
-    setSetlistModalOpen,
-    setlistFiles,
-  } = useLyricsStore();
+  const { isOutputOn, setIsOutputOn, lyrics, lyricsFileName, selectedLine, selectLine, darkMode, setlistModalOpen, setSetlistModalOpen, setlistFiles, } = useLyricsStore();
 
-  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus } = useSocket('control');
+  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus, ready, lastSyncTime } = useControlSocket();
+
+  const secondsAgo = useSyncTimer(lastSyncTime);
 
   const {
-    containerRef: lyricsContainerRef,
-    searchQuery,
-    highlightedLineIndex,
-    currentMatchIndex,
-    totalMatches,
-    handleSearch,
-    clearSearch,
-    navigateToNextMatch,
-    navigateToPreviousMatch,
-  } = useSearch(lyrics);
+    containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch, } = useSearch(lyrics);
 
   const hasLyrics = lyrics && lyrics.length > 0;
 
+  const navigate = useNavigate();
+
   const handleLineSelect = (index) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !ready) {
       return;
     }
     selectLine(index);
@@ -57,7 +43,7 @@ const MobileLayout = () => {
   };
 
   const handleSyncOutputs = () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !ready) {
       return;
     }
     if (lyrics && lyrics.length > 0) {
@@ -85,12 +71,18 @@ const MobileLayout = () => {
         >
           {/* Top Row - Title and Controls */}
           <div className="flex items-center justify-between mb-6">
-            <h1
-              className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'
-                }`}
-            >
-              LyricDisplay
-            </h1>
+            <div>
+              <h1
+                className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
+              >
+                LyricDisplay
+              </h1>
+              {lastSyncTime && (
+                <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Last synced {secondsAgo}s ago
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               {/* Setlist Button */}
               <button
@@ -106,16 +98,29 @@ const MobileLayout = () => {
               {/* Sync Outputs Button */}
               <button
                 onClick={handleSyncOutputs}
-                className={`p-2.5 rounded-lg transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                disabled={!isAuthenticated || !ready}
+                className={`p-2.5 rounded-lg transition-colors ${(!isAuthenticated || !ready)
+                  ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
+                  : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
                   }`}
-                title="Sync outputs"
+                title={(!isAuthenticated || !ready) ? "Cannot sync - not ready" : "Sync outputs"}
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
             </div>
           </div>
+
+          {/* Compose New Lyrics Button - Full Width */}
+          <button
+            onClick={() => navigate('/new-song?mode=compose')}
+            className={`w-full py-3 px-4 mb-6 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${darkMode
+              ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+              : 'bg-gradient-to-r from-blue-400 to-purple-600 hover:from-blue-500 hover:to-purple-700 text-white'
+              }`}
+          >
+            <FileText className="w-5 h-5" />
+            Compose New Lyrics
+          </button>
 
           {/* Toggle Row */}
           <div className="flex items-center justify-center gap-4 mb-4">

@@ -217,13 +217,28 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
               Make sure your mobile device is connected to the same network
             </p>
             {joinCode && (
-              <div
-                className={`
-      mt-3 px-3 py-2 rounded-md text-sm font-mono
-      ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-100 text-yellow-800'}
-    `}
-              >
-                Join Code: {joinCode}
+              <div className="mt-3 space-y-2">
+                <div
+                  className={`
+        px-3 py-2 rounded-md text-sm font-mono flex items-center justify-between
+        ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-100 text-yellow-800'}
+      `}
+                >
+                  <span>Join Code: {joinCode}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(joinCode).then(() => {
+                        console.log("Join code copied to clipboard");
+                      });
+                    }}
+                    className={`ml-2 px-2 py-1 rounded text-xs font-medium transition-colors ${darkMode
+                      ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      }`}
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
             )}
 

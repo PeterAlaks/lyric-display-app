@@ -12,6 +12,7 @@ import { ModalProvider } from '@/components/modal/ModalProvider';
 import useToast from '@/hooks/useToast';
 import ElectronModalBridge from './components/ElectronModalBridge';
 import QRCodeDialogBridge from './components/QRCodeDialogBridge';
+import { ControlSocketProvider } from './context/ControlSocketProvider';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
 
@@ -28,10 +29,18 @@ export default function App() {
           <ShortcutsHelpBridge />
           <Router>
             <Routes>
-              <Route path="/" element={<ControlPanel />} />
+              <Route path="/" element={
+                <ControlSocketProvider>
+                  <ControlPanel />
+                </ControlSocketProvider>
+              } />
               <Route path="/output1" element={<Output1 />} />
               <Route path="/output2" element={<Output2 />} />
-              <Route path="/new-song" element={<NewSongCanvas />} />
+              <Route path="/new-song" element={
+                <ControlSocketProvider>
+                  <NewSongCanvas />
+                </ControlSocketProvider>
+              } />
             </Routes>
           </Router>
         </AppErrorBoundary>
@@ -111,7 +120,3 @@ class AppErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-
-
-
-

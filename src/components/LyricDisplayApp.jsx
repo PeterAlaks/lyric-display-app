@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FolderOpen, FileText, Edit, List, Globe, Plus } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
-import useSocket from '../hooks/useSocket';
+import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import AuthStatusIndicator from './AuthStatusIndicator';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
@@ -10,6 +10,7 @@ import LyricsList from './LyricsList';
 import MobileLayout from './MobileLayout';
 import SetlistModal from './SetlistModal';
 import OnlineLyricsSearchModal from './OnlineLyricsSearchModal';
+import DraftApprovalModal from './DraftApprovalModal';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import { Switch } from "@/components/ui/switch";
 import useDarkModeSync from '../hooks/useDarkModeSync';
@@ -21,34 +22,14 @@ import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
 import { processRawTextToLines } from '../utils/parseLyrics';
 import { parseLrcText } from '../utils/parseLrc';
+import { useSyncTimer } from '../hooks/useSyncTimer';
 
 // Main App Component
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   // Global state management
-  const {
-    isOutputOn,
-    setIsOutputOn,
-    lyrics,
-    lyricsFileName,
-    rawLyricsContent,
-    selectedLine,
-    selectLine,
-    setLyrics,
-    setRawLyricsContent,
-    setLyricsFileName,
-    output1Settings,
-    output2Settings,
-    updateOutputSettings,
-    darkMode,
-    setDarkMode,
-    isDesktopApp,
-    setlistModalOpen,
-    setSetlistModalOpen,
-    setlistFiles,
-    isSetlistFull,
-  } = useLyricsStore();
+  const { isOutputOn, setIsOutputOn, lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, output1Settings, output2Settings, updateOutputSettings, darkMode, setDarkMode, isDesktopApp, setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull } = useLyricsStore();
 
   // Handle dark mode sync with Electron
   useDarkModeSync(darkMode, setDarkMode);
@@ -57,34 +38,21 @@ const LyricDisplayApp = () => {
   const fileInputRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated } = useSocket('control');
+  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready, lastSyncTime } = useControlSocket();
+
+  const secondsAgo = useSyncTimer(lastSyncTime);
 
   // File upload functionality
   const handleFileUpload = useFileUpload();
 
   // Output tabs and settings helpers
-  const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({
-    output1Settings,
-    output2Settings,
-    updateOutputSettings,
-    emitStyleUpdate,
-  });
+  const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({ output1Settings, output2Settings, updateOutputSettings, emitStyleUpdate, });
 
   // Online lyrics search modal state
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
 
   // Search state and helpers
-  const {
-    containerRef: lyricsContainerRef,
-    searchQuery,
-    highlightedLineIndex,
-    currentMatchIndex,
-    totalMatches,
-    handleSearch,
-    clearSearch,
-    navigateToNextMatch,
-    navigateToPreviousMatch,
-  } = useSearch(lyrics);
+  const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
 
   // Check if lyrics are loaded
   const hasLyrics = lyrics && lyrics.length > 0;
@@ -162,21 +130,7 @@ const LyricDisplayApp = () => {
   }, [processLoadedLyrics]);
 
   // Font options for dropdown
-  const fontOptions = [
-    'Arial',
-    'Calibri',
-    'Bebas Neue',
-    'Fira Sans',
-    'GarnetCapitals',
-    'Inter',
-    'Lato',
-    'Montserrat',
-    'Noto Sans',
-    'Open Sans',
-    'Poppins',
-    'Roboto',
-    'Work Sans'
-  ];
+  const fontOptions = ['Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat', 'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'];
 
   // Handle file upload button click
   const openFileDialog = async () => {
@@ -245,7 +199,7 @@ const LyricDisplayApp = () => {
 
   // Handle output toggle
   const handleToggle = () => {
-    if (!isConnected || !isAuthenticated) {
+    if (!isConnected || !isAuthenticated || !ready) {
       showToast({
         title: 'Connection Required',
         message: 'Cannot control output - not connected or authenticated.',
@@ -269,6 +223,7 @@ const LyricDisplayApp = () => {
   return (
     <>
       <ConnectionBackoffBanner darkMode={darkMode} />
+      {isDesktopApp && <DraftApprovalModal darkMode={darkMode} />}
       <div className={`flex h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Control Panel */}
         <div className={`w-[420px] shadow-lg p-6 overflow-y-auto ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -302,11 +257,12 @@ const LyricDisplayApp = () => {
 
               {/* Sync Outputs Button - Icon Only */}
               <button
-                className={`p-2 rounded font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                disabled={!isConnected || !isAuthenticated || !ready}
+                className={`p-2 rounded font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
+                  ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
+                  : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
                   }`}
-                title="Sync current state to outputs"
+                title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync current state to outputs"}
                 onClick={() => {
                   if (!isConnected || !isAuthenticated) {
                     showToast({
@@ -330,6 +286,7 @@ const LyricDisplayApp = () => {
                     }
                   }
                   emitOutputToggle(isOutputOn);
+                  window.dispatchEvent(new CustomEvent('sync-completed'));
                 }}
               >
                 <RefreshCw className="w-5 h-5" />
@@ -439,6 +396,13 @@ const LyricDisplayApp = () => {
           </div>
 
           <div className={`border-t my-10 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+
+          {/* Last Synced Indicator */}
+          {lastSyncTime && (
+            <div className={`mt-3 text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              Last synced {secondsAgo}s ago
+            </div>
+          )}
 
           <div className={`mt-4 text-[12px] text-left space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.

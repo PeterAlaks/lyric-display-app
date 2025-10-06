@@ -199,17 +199,47 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
       variant: 'secondary'
     });
 
+    const handleCopyJoinCode = () => {
+      if (joinCode) {
+        navigator.clipboard.writeText(joinCode).then(() => {
+          showToast({
+            title: 'Copied',
+            message: 'Join code copied to clipboard',
+            variant: 'success',
+            duration: 2000,
+          });
+        }).catch(() => {
+          showToast({
+            title: 'Copy failed',
+            message: 'Could not copy join code',
+            variant: 'error',
+          });
+        });
+      }
+    };
+
     const modalBody = joinCode ? (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
           Controller Join Code
         </p>
-        <p
-          className={`text-lg font-semibold tracking-[0.3em] tabular-nums ${darkMode ? 'text-white' : 'text-gray-900'
-            }`}
-        >
-          {joinCode}
-        </p>
+        <div className="flex items-center gap-3">
+          <p
+            className={`text-lg font-semibold tracking-[0.3em] tabular-nums flex-1 ${darkMode ? 'text-white' : 'text-gray-900'
+              }`}
+          >
+            {joinCode}
+          </p>
+          <button
+            onClick={handleCopyJoinCode}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${darkMode
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+          >
+            Copy
+          </button>
+        </div>
       </div>
     ) : (
       <p className="text-sm text-gray-500 dark:text-gray-400">

@@ -2,23 +2,15 @@ import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from
 import useToast from '../hooks/useToast';
 import { X, Plus, Search, Trash2, Clock } from 'lucide-react';
 import useLyricsStore from '../context/LyricsStore';
-import useSocket from '../hooks/useSocket';
+import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const SetlistModal = () => {
-  const {
-    setlistModalOpen,
-    setSetlistModalOpen,
-    setlistFiles,
-    darkMode,
-    isDesktopApp,
-    isSetlistFull,
-    getAvailableSetlistSlots,
-  } = useLyricsStore();
+  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, darkMode, isDesktopApp, isSetlistFull, getAvailableSetlistSlots, } = useLyricsStore();
 
-  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad } = useSocket('control');
+  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad } = useControlSocket();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -275,7 +267,7 @@ const SetlistModal = () => {
 
           {searchQuery && (
             <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          {filteredFiles.length > 0
+              {filteredFiles.length > 0
                 ? `Showing ${filteredFiles.length} of ${list.length} files`
                 : 'No files match your search'
               }

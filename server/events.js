@@ -157,8 +157,8 @@ export default function registerSocketEvents(io, { hasPermission }) {
 
     // Load file from setlist with permission check
     socket.on('setlistLoad', (fileId) => {
-      if (!hasPermission(socket, 'lyrics:write')) {
-        socket.emit('permissionError', 'Insufficient permissions to load lyrics');
+      if (!hasPermission(socket, 'setlist:read')) {
+        socket.emit('permissionError', 'Insufficient permissions to read setlist');
         return;
       }
 
@@ -272,6 +272,83 @@ export default function registerSocketEvents(io, { hasPermission }) {
       io.emit('fileNameUpdate', fileName);
     });
 
+    socket.on('lyricsDraftSubmit', ({ title, rawText, processedLines }) => {
+      if (!hasPermission(socket, 'lyrics:draft')) {
+        socket.emit('permissionError', 'Insufficient permissions to submit drafts');
+        return;
+      }
+
+      console.log(`Lyrics draft submitted by ${clientType} client: "${title}" (${processedLines?.length || 0} lines)`);
+
+      // Broadcast draft to all desktop clients for approval
+      const desktopClients = Array.from(connectedClients.values()).filter(c => c.type === 'desktop');
+
+      if (desktopClients.length === 0) {
+        socket.emit('draftError', 'No desktop client available to approve draft');
+        return;
+      }
+
+      const draftPayload = {
+        title: title || 'Untitled',
+        rawText: rawText || '',
+        processedLines: processedLines || [],
+        submittedBy: {
+          clientType,
+          deviceId,
+          sessionId,
+          timestamp: Date.now()
+        }
+      };
+
+      desktopClients.forEach(client => {
+        if (client.socket && client.socket.connected) {
+          client.socket.emit('lyricsDraftReceived', draftPayload);
+        }
+      });
+
+      socket.emit('draftSubmitted', { success: true, title });
+    });
+
+    // Draft approval from desktop
+    socket.on('lyricsDraftApprove', ({ title, rawText, processedLines }) => {
+      if (!hasPermission(socket, 'lyrics:write')) {
+        socket.emit('permissionError', 'Insufficient permissions to approve drafts');
+        return;
+      }
+
+      currentLyrics = processedLines || [];
+      currentSelectedLine = null;
+      currentLyricsFileName = title || '';
+
+      console.log(`Desktop client approved draft: "${title}" (${processedLines?.length || 0} lines)`);
+
+      // Broadcast to all clients (including outputs)
+      io.emit('lyricsLoad', currentLyrics);
+      io.emit('fileNameUpdate', currentLyricsFileName);
+      if (rawText) {
+        io.emit('setlistLoadSuccess', {
+          fileId: null,
+          fileName: title,
+          linesCount: currentLyrics.length,
+          rawContent: rawText,
+          loadedBy: 'desktop'
+        });
+      }
+
+      socket.emit('draftApproved', { success: true, title });
+    });
+
+    // Draft rejection from desktop
+    socket.on('lyricsDraftReject', ({ reason }) => {
+      if (!hasPermission(socket, 'lyrics:write')) {
+        socket.emit('permissionError', 'Insufficient permissions to reject drafts');
+        return;
+      }
+
+      console.log(`Desktop client rejected draft: ${reason || 'No reason provided'}`);
+      socket.emit('draftRejected', { success: true, reason });
+    });
+
     // Heartbeat for connection monitoring
     socket.on('heartbeat', () => {
       socket.emit('heartbeat_ack', { timestamp: Date.now() });
@@ -330,6 +407,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
 }
 
 function buildCurrentState(clientInfo) {
+  const timestamp = Date.now();
   return {
     lyrics: currentLyrics,
     selectedLine: currentSelectedLine,
@@ -340,7 +418,8 @@ function buildCurrentState(clientInfo) {
     lyricsFileName: currentLyricsFileName || '',
     isDesktopClient: clientInfo?.type === 'desktop',
     clientPermissions: clientInfo?.permissions || [],
-    timestamp: Date.now(),
+    timestamp,
+    syncTimestamp: timestamp,
   };
 }
 

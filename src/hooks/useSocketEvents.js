@@ -18,6 +18,9 @@ const useSocketEvents = (role) => {
   const setupApplicationEventHandlers = useCallback((socket, clientType, isDesktopApp) => {
     socket.on('currentState', (state) => {
       logDebug('Received enhanced current state:', state);
+      if (window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('sync-completed'));
+      }
 
       if (state.lyrics && state.lyrics.length > 0) {
         setLyrics(state.lyrics);
@@ -118,6 +121,41 @@ const useSocketEvents = (role) => {
       setLyricsFileName(fileName);
     });
 
+    socket.on('draftSubmitted', ({ success, title }) => {
+      logDebug(`Draft submitted successfully: ${title}`);
+      window.dispatchEvent(new CustomEvent('draft-submitted', {
+        detail: { success, title },
+      }));
+    });
+
+    socket.on('draftError', (error) => {
+      logError('Draft submission error:', error);
+      window.dispatchEvent(new CustomEvent('draft-error', {
+        detail: { message: error },
+      }));
+    });
+
+    socket.on('lyricsDraftReceived', (payload) => {
+      logDebug('Received lyrics draft for approval:', payload.title);
+      window.dispatchEvent(new CustomEvent('lyrics-draft-received', {
+        detail: payload,
+      }));
+    });
+
+    socket.on('draftApproved', ({ success, title }) => {
+      logDebug(`Draft approved: ${title}`);
+      window.dispatchEvent(new CustomEvent('draft-approved', {
+        detail: { success, title },
+      }));
+    });
+
+    socket.on('draftRejected', ({ success, reason }) => {
+      logDebug('Draft rejected:', reason);
+      window.dispatchEvent(new CustomEvent('draft-rejected', {
+        detail: { success, reason },
+      }));
+    });
+
     socket.on('clientDisconnected', ({ clientType: disconnectedType, deviceId, reason }) => {
       logDebug(`Client disconnected: ${disconnectedType} (${deviceId}) - ${reason}`);
     });
@@ -128,6 +166,9 @@ const useSocketEvents = (role) => {
 
     socket.on('periodicStateSync', (state) => {
       logDebug('Received periodic state sync');
+      if (window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('sync-completed'));
+      }
 
       if (state.lyrics && state.lyrics.length > 0) {
         const currentLyrics = useLyricsStore.getState().lyrics;
