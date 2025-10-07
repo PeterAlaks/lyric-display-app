@@ -247,6 +247,7 @@ lyric-display-app/
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
 |   |   ├── useSocket.js                    # Main React hook for Socket.IO client
 |   |   ├── useSocketEvents.js              # Socket events hook
+|   |   ├── useStoreSelectors.js            # Centralized collection of Zustand selectors
 |   |   ├── useSyncTimer.js                 # Last synced timer hook
 |   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
