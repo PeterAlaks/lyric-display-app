@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FolderOpen, FileText, Edit, List, Globe, Plus } from 'lucide-react';
-import useLyricsStore from '../context/LyricsStore';
+import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useDarkModeState, useSetlistState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import AuthStatusIndicator from './AuthStatusIndicator';
@@ -29,7 +29,14 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   // Global state management
-  const { isOutputOn, setIsOutputOn, lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, output1Settings, output2Settings, updateOutputSettings, darkMode, setDarkMode, isDesktopApp, setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull } = useLyricsStore();
+  // Targeted selectors for optimized re-renders
+  const { isOutputOn, setIsOutputOn } = useOutputState();
+  const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName } = useLyricsState();
+  const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
+  const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
+  const { darkMode, setDarkMode } = useDarkModeState();
+  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull } = useSetlistState();
+  const isDesktopApp = useIsDesktopApp();
 
   // Handle dark mode sync with Electron
   useDarkModeSync(darkMode, setDarkMode);
@@ -46,7 +53,19 @@ const LyricDisplayApp = () => {
   const handleFileUpload = useFileUpload();
 
   // Output tabs and settings helpers
-  const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({ output1Settings, output2Settings, updateOutputSettings, emitStyleUpdate, });
+  const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({
+    output1Settings,
+    output2Settings,
+    updateOutputSettings: (output, settings) => {
+      if (output === 'output1') {
+        updateOutput1Settings(settings);
+      } else if (output === 'output2') {
+        updateOutput2Settings(settings);
+      }
+      emitStyleUpdate(output, settings);
+    },
+    emitStyleUpdate,
+  });
 
   // Online lyrics search modal state
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);

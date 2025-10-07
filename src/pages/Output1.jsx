@@ -1,21 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import useLyricsStore from '../context/LyricsStore';
+import { useLyricsState, useOutputState, useOutput1Settings } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
 
 const Output1 = () => {
   const { socket, isConnected, connectionStatus, isAuthenticated } = useSocket('output1');
-  const {
-    lyrics,
-    selectedLine,
-    output1Settings,
-    isOutputOn,
-    setIsOutputOn,
-    setLyrics,
-    selectLine,
-    updateOutputSettings,
-  } = useLyricsStore();
+  const { lyrics, selectedLine, setLyrics, selectLine } = useLyricsState();
+  const { isOutputOn, setIsOutputOn } = useOutputState();
+  const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
 
   const stateRequestTimeoutRef = useRef(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -70,7 +63,7 @@ const Output1 = () => {
       // Apply received state
       if (state.lyrics) setLyrics(state.lyrics);
       if (state.selectedLine !== undefined) selectLine(state.selectedLine);
-      if (state.output1Settings) updateOutputSettings('output1', state.output1Settings);
+      if (state.output1Settings) updateOutput1Settings(state.output1Settings);
       if (typeof state.isOutputOn === 'boolean') setIsOutputOn(state.isOutputOn);
     };
 
@@ -88,7 +81,7 @@ const Output1 = () => {
     const handleStyleUpdate = ({ output, settings }) => {
       if (output === 'output1') {
         logDebug('Output1: Received style update');
-        updateOutputSettings('output1', settings);
+        updateOutput1Settings(settings);
       }
     };
 
@@ -119,7 +112,7 @@ const Output1 = () => {
       socket.off('styleUpdate', handleStyleUpdate);
       socket.off('outputToggle', handleOutputToggle);
     };
-  }, [socket, requestCurrentStateWithRetry, setLyrics, selectLine, updateOutputSettings, setIsOutputOn]);
+  }, [socket, requestCurrentStateWithRetry, setLyrics, selectLine, updateOutput1Settings, setIsOutputOn]);
 
   // Monitor connection status and re-request state on connection
   useEffect(() => {

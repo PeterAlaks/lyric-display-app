@@ -3,7 +3,7 @@ import { X, CheckCircle, XCircle, FileText, User, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useControlSocket } from '../context/ControlSocketProvider';
-import useLyricsStore from '../context/LyricsStore';
+import { useLyricsState } from '../hooks/useStoreSelectors';
 import useToast from '../hooks/useToast';
 import { processRawTextToLines } from '../utils/parseLyrics';
 
@@ -17,7 +17,7 @@ const DraftApprovalModal = ({ darkMode }) => {
     const processedDraftsRef = useRef(new Set());
 
     const { emitLyricsDraftApprove, emitLyricsDraftReject } = useControlSocket();
-    const { setLyrics, setRawLyricsContent, setLyricsFileName, selectLine } = useLyricsStore();
+    const { setLyrics, setRawLyricsContent, setLyricsFileName, selectLine } = useLyricsState();
     const { showToast } = useToast();
 
     // Listen for incoming drafts

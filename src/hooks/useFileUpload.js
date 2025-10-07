@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
 import { parseLyrics } from '../utils/parseLyrics';
 import { parseLrc } from '../utils/parseLrc';
-import useLyricsStore from '../context/LyricsStore';
+import { useLyricsState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 
 const useFileUpload = () => {
-  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName } = useLyricsStore();
+  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName } = useLyricsState();
   const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
 

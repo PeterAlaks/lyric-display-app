@@ -1,9 +1,7 @@
 import React from 'react';
-import useLyricsStore from '../context/LyricsStore';
+import { useDarkModeState, useOutput1Settings, useOutput2Settings } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
-import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem
-} from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Move, Italic, Underline, Bold, CaseUpper } from 'lucide-react';
@@ -14,20 +12,18 @@ const fontOptions = [
 ];
 
 const OutputSettingsPanel = ({ outputKey }) => {
-  const {
-    [outputKey + 'Settings']: settings,
-    updateOutputSettings,
-    darkMode
-  } = useLyricsStore();
+  const { darkMode } = useDarkModeState();
   const { emitStyleUpdate } = useControlSocket();
+
+  const { settings, updateSettings } =
+    outputKey === 'output1' ? useOutput1Settings() : useOutput2Settings();
 
   const update = (key, value) => {
     const newSettings = { ...settings, [key]: value };
-    updateOutputSettings(outputKey, { [key]: value });
+    updateSettings({ [key]: value });
     emitStyleUpdate(outputKey, newSettings);
   };
 
-  // Reusable label with icon
   const LabelWithIcon = ({ icon: Icon, text }) => (
     <div className="flex items-center gap-2 min-w-[140px]">
       <Icon className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />

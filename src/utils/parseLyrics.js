@@ -37,14 +37,14 @@ export const parseLyrics = (file) => {
 export function processRawTextToLines(rawText) {
   // Split by lines but preserve structure to identify clusters
   const allLines = rawText.split(/\r?\n/);
-  
+
   // Identify clusters: groups of consecutive non-empty lines separated by empty lines
   const clusters = [];
   let currentCluster = [];
-  
+
   for (let i = 0; i < allLines.length; i++) {
     const line = allLines[i].trim();
-    
+
     if (line.length > 0) {
       // Non-empty line - add to current cluster
       currentCluster.push({ line, originalIndex: i });
@@ -56,18 +56,17 @@ export function processRawTextToLines(rawText) {
       }
     }
   }
-  
+
   // Don't forget the last cluster if file doesn't end with empty line
   if (currentCluster.length > 0) {
     clusters.push(currentCluster);
   }
-  
+
   // Now process each cluster according to grouping rules
   const result = [];
-  
+
   clusters.forEach((cluster, clusterIndex) => {
     if (cluster.length === 2 && isTranslationLine(cluster[1].line)) {
-      // Only group if cluster has exactly 2 lines AND second is translation
       const groupedLine = {
         type: 'group',
         id: `group_${clusterIndex}_${cluster[0].originalIndex}`,
@@ -85,7 +84,7 @@ export function processRawTextToLines(rawText) {
       });
     }
   });
-  
+
   return result;
 }
 
@@ -97,10 +96,10 @@ export function processRawTextToLines(rawText) {
  */
 function isTranslationLine(line) {
   if (!line || typeof line !== 'string') return false;
-  
+
   const trimmed = line.trim();
   if (trimmed.length <= 2) return false; // Must have content inside brackets
-  
+
   const bracketPairs = [
     ['[', ']'],
     ['(', ')'],

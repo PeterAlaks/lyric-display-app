@@ -6,7 +6,7 @@ import Output2 from './pages/Output2';
 import NewSongCanvas from './components/NewSongCanvas';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import JoinCodePromptBridge from './components/JoinCodePromptBridge';
-import useLyricsStore from './context/LyricsStore';
+import { useDarkModeState } from './hooks/useStoreSelectors';
 import { ToastProvider } from '@/components/toast/ToastProvider';
 import { ModalProvider } from '@/components/modal/ModalProvider';
 import useToast from '@/hooks/useToast';
@@ -17,7 +17,7 @@ import { ControlSocketProvider } from './context/ControlSocketProvider';
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
 
 export default function App() {
-  const { darkMode } = useLyricsStore();
+  const { darkMode } = useDarkModeState();
   return (
     <ModalProvider isDark={!!darkMode}>
       <ToastProvider isDark={!!darkMode}>

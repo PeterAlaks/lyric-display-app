@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import QRCodeDialog from './QRCodeDialog';
-import useLyricsStore from '../context/LyricsStore';
+import { useDarkModeState } from '../hooks/useStoreSelectors';
 
 export default function QRCodeDialogBridge() {
-  const { darkMode } = useLyricsStore();
+  const { darkMode } = useDarkModeState();
   const [isOpen, setIsOpen] = useState(false);
 
   const openDialog = useCallback(() => {

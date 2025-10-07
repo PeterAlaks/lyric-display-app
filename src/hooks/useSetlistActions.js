@@ -1,18 +1,15 @@
 import { useMemo, useCallback } from 'react';
+import { useLyricsFileName, useSetlistState, useIsDesktopApp } from './useStoreSelectors';
 import useLyricsStore from '../context/LyricsStore';
 import useToast from './useToast';
 
 const useSetlistActions = (emitSetlistAdd) => {
-  const {
-    isDesktopApp,
-    lyrics,
-    rawLyricsContent,
-    lyricsFileName,
-    setlistFiles,
-    isSetlistFull,
-  } = useLyricsStore();
+  const isDesktopApp = useIsDesktopApp();
+  const lyricsFileName = useLyricsFileName();
+  const { setlistFiles, isSetlistFull } = useSetlistState();
 
-  const hasLyrics = lyrics && lyrics.length > 0;
+  const hasLyrics = useLyricsStore((state) => state.lyrics && state.lyrics.length > 0);
+  const rawLyricsContent = useLyricsStore((state) => state.rawLyricsContent);
   const { showToast } = useToast();
 
   const isFileAlreadyInSetlist = useCallback(() => {

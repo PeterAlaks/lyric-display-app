@@ -2,7 +2,7 @@
 // File: src/components/LyricsList.jsx
 
 import React from 'react';
-import useLyricsStore from '../context/LyricsStore';
+import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineDisplayText, getLineSearchText } from '../utils/parseLyrics';
 
@@ -13,12 +13,8 @@ const LyricsList = ({
   searchQuery = '',
   highlightedLineIndex = null
 }) => {
-  const {
-    lyrics: storeLyrics,
-    selectedLine: storeSelectedLine,
-    selectLine,
-    darkMode
-  } = useLyricsStore();
+  const { lyrics: storeLyrics, selectedLine: storeSelectedLine, selectLine } = useLyricsState();
+  const { darkMode } = useDarkModeState();
   const { emitLineUpdate } = useSocket();
 
   // Use props if provided, fallback to store (maintains backward compatibility)

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { List, RefreshCw, FileText } from 'lucide-react';
-import useLyricsStore from '../context/LyricsStore';
+import { useLyricsState, useOutputState, useDarkModeState, useSetlistState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
@@ -12,7 +12,10 @@ import SearchBar from './SearchBar';
 import { useSyncTimer } from '../hooks/useSyncTimer';
 
 const MobileLayout = () => {
-  const { isOutputOn, setIsOutputOn, lyrics, lyricsFileName, selectedLine, selectLine, darkMode, setlistModalOpen, setSetlistModalOpen, setlistFiles, } = useLyricsStore();
+  const { isOutputOn, setIsOutputOn } = useOutputState();
+  const { lyrics, lyricsFileName, selectedLine, selectLine } = useLyricsState();
+  const { darkMode } = useDarkModeState();
+  const { setlistModalOpen, setSetlistModalOpen, setlistFiles } = useSetlistState();
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus, ready, lastSyncTime } = useControlSocket();
 

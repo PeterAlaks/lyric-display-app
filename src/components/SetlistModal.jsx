@@ -1,14 +1,17 @@
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import useToast from '../hooks/useToast';
 import { X, Plus, Search, Trash2, Clock } from 'lucide-react';
-import useLyricsStore from '../context/LyricsStore';
+import { useSetlistState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const SetlistModal = () => {
-  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, darkMode, isDesktopApp, isSetlistFull, getAvailableSetlistSlots, } = useLyricsStore();
+  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull, getAvailableSetlistSlots } = useSetlistState();
+
+  const { darkMode } = useDarkModeState();
+  const isDesktopApp = useIsDesktopApp();
 
   const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad } = useControlSocket();
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen } from 'lucide-react';
-import useLyricsStore from '../context/LyricsStore';
+import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useDarkModeSync from '../hooks/useDarkModeSync';
@@ -21,7 +21,8 @@ const NewSongCanvas = () => {
   const composeMode = mode === "compose";
   const isController = composeMode;
 
-  const { darkMode, setDarkMode, lyrics, lyricsFileName, rawLyricsContent, setRawLyricsContent } = useLyricsStore();
+  const { darkMode, setDarkMode } = useDarkModeState();
+  const { lyrics, lyricsFileName, rawLyricsContent, setRawLyricsContent } = useLyricsState();
 
   const { emitLyricsDraftSubmit } = useControlSocket();
 
