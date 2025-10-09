@@ -186,14 +186,12 @@ const MobileLayout = () => {
                 {/* Scrollable Lyrics List */}
                 <div
                   ref={lyricsContainerRef}
-                  className="flex-1 overflow-y-auto p-4"
+                  className="flex-1 overflow-y-auto"
                 >
                   <LyricsList
-                    lyrics={lyrics}
-                    selectedLine={selectedLine}
-                    onSelectLine={handleLineSelect}
                     searchQuery={searchQuery}
                     highlightedLineIndex={highlightedLineIndex}
+                    onSelectLine={handleLineSelect}
                   />
                 </div>
               </>

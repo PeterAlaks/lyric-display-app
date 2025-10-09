@@ -21,13 +21,10 @@ const useSearch = (lyrics) => {
   }, [lyrics]);
 
   const scrollToLine = React.useCallback((lineIndex) => {
-    setTimeout(() => {
-      const container = containerRef.current;
-      if (!container) return;
-      const lineElements = container.querySelectorAll('[data-line-index]');
-      const target = lineElements[lineIndex];
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 50);
+    // Dispatch a custom event that LyricsList can listen to
+    window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', { 
+      detail: { lineIndex } 
+    }));
   }, []);
 
   const navigateToMatch = React.useCallback((matchIndex) => {
@@ -112,4 +109,3 @@ const useSearch = (lyrics) => {
 };
 
 export default useSearch;
-

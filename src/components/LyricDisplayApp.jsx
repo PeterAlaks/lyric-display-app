@@ -24,7 +24,6 @@ import { processRawTextToLines } from '../utils/parseLyrics';
 import { parseLrcText } from '../utils/parseLrc';
 import { useSyncTimer } from '../hooks/useSyncTimer';
 
-// Main App Component
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
@@ -491,7 +490,7 @@ const LyricDisplayApp = () => {
             {hasLyrics ? (
               <div
                 ref={lyricsContainerRef}
-                className="p-4 flex-1 overflow-y-auto"
+                className="flex-1 overflow-y-auto"
                 onDrop={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -512,17 +511,15 @@ const LyricDisplayApp = () => {
                 }}
               >
                 <LyricsList
-                  lyrics={lyrics}
-                  selectedLine={selectedLine}
-                  onSelectLine={handleLineSelect}
                   searchQuery={searchQuery}
                   highlightedLineIndex={highlightedLineIndex}
+                  onSelectLine={handleLineSelect}
                 />
               </div>
             ) : (
               /* Empty State - Drag and Drop */
               <div
-                className="flex-1 flex items-center justify-center"
+                className="flex-1 flex items-center justify-center p-4"
                 onDrop={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
