@@ -248,14 +248,14 @@ app.post('/api/auth/validate', (req, res) => {
 });
 
 // Admin endpoint for secret management
-app.get('/api/admin/secrets/status', localhostOnly, (req, res) => {
-  const status = secretManager.getSecretsStatus();
+app.get('/api/admin/secrets/status', localhostOnly, async (req, res) => {
+  const status = await secretManager.getSecretsStatus();
   res.json(status);
 });
 
-app.post('/api/admin/secrets/rotate', localhostOnly, (req, res) => {
+app.post('/api/admin/secrets/rotate', localhostOnly, async (req, res) => {
   try {
-    const newSecrets = secretManager.rotateJWTSecret();
+    const newSecrets = await secretManager.rotateJWTSecret();
     res.json({
       success: true,
       message: 'JWT secret rotated successfully. Server restart required.',
@@ -355,8 +355,8 @@ const PORT = process.env.PORT || 4000;
 const isDev = process.env.NODE_ENV === 'development';
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  const secretsStatus = secretManager.getSecretsStatus();
+app.get('/api/health', async (req, res) => {
+  const secretsStatus = await secretManager.getSecretsStatus();
   const joinCodeMetrics = getJoinCodeGuardSnapshot();
   res.json({
     status: 'healthy',
@@ -371,12 +371,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/health/ready', (req, res) => {
+app.get('/api/health/ready', async (req, res) => {
   try {
+    const secretsStatus = await secretManager.getSecretsStatus();
     // Verify all critical components are initialized
     const checks = {
       serverListening: true, // If we can respond, server is listening
-      secretsLoaded: !!secrets.JWT_SECRET,
+      secretsLoaded: !!secretsStatus?.exists,
       joinCodeGenerated: !!global.controllerJoinCode,
       socketIOReady: !!(io && io.engine),
       rateLimiterActive: !!tokenRateLimit,
@@ -391,7 +392,8 @@ app.get('/api/health/ready', (req, res) => {
         timestamp: new Date().toISOString(),
         checks,
         uptime: process.uptime(),
-        port: PORT
+        port: PORT,
+        secretsStatus,
       });
     } else {
       res.status(503).json({
@@ -401,7 +403,8 @@ app.get('/api/health/ready', (req, res) => {
         checks,
         failedChecks: Object.entries(checks)
           .filter(([_, passed]) => !passed)
-          .map(([check]) => check)
+          .map(([check]) => check),
+        secretsStatus,
       });
     }
   } catch (error) {
@@ -434,15 +437,17 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-server.listen(PORT, () => {
-  const secretsStatus = secretManager.getSecretsStatus();
+server.listen(PORT, async () => {
+  const secretsStatus = await secretManager.getSecretsStatus();
 
   console.log(`Server running at http://localhost:${PORT}`);
   console.log('Authentication enabled with JWT');
   console.log('Rate limiting active for auth endpoints');
-  console.log(`Secrets loaded from: ${secretsStatus.configPath}`);
+  if (secretsStatus?.configPath) {
+    console.log(`Secrets loaded from: ${secretsStatus.configPath}`);
+  }
 
-  if (secretsStatus.needsRotation) {
+  if (secretsStatus?.needsRotation) {
     console.log(`JWT secret is ${secretsStatus.daysSinceRotation} days old - consider rotation`);
   }
 

@@ -275,9 +275,9 @@ class SimpleSecretManager {
     }
   }
 
-  rotateJWTSecret() {
+  async rotateJWTSecret() {
     try {
-      const secrets = this.loadSecrets();
+      const secrets = await this.loadSecrets();
       const oldSecret = secrets.JWT_SECRET;
 
       secrets.JWT_SECRET = this.generateJWTSecret();
@@ -285,7 +285,7 @@ class SimpleSecretManager {
       secrets.previousSecret = oldSecret;
       secrets.previousSecretExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-      this.saveSecrets(secrets);
+      await this.saveSecrets(secrets);
       return secrets;
     } catch (error) {
       console.error('Error rotating JWT secret:', error);
@@ -293,11 +293,14 @@ class SimpleSecretManager {
     }
   }
 
-  getSecretsStatus() {
+  async getSecretsStatus() {
     try {
-      const secrets = this.loadSecrets();
-      const lastRotated = new Date(secrets.lastRotated);
-      const daysSinceRotation = Math.floor((Date.now() - lastRotated.getTime()) / (1000 * 60 * 60 * 24));
+      const secrets = await this.loadSecrets();
+      const lastRotated = secrets.lastRotated ? new Date(secrets.lastRotated) : null;
+      const lastRotatedTime = lastRotated && !Number.isNaN(lastRotated.getTime()) ? lastRotated.getTime() : null;
+      const daysSinceRotation = lastRotatedTime != null
+        ? Math.floor((Date.now() - lastRotatedTime) / (1000 * 60 * 60 * 24))
+        : null;
 
       const backend = keytar ? 'keytar+encrypted-file' : 'encrypted-file';
 
@@ -305,7 +308,7 @@ class SimpleSecretManager {
         exists: true,
         lastRotated: secrets.lastRotated,
         daysSinceRotation,
-        needsRotation: daysSinceRotation > 180,
+        needsRotation: typeof daysSinceRotation === 'number' ? daysSinceRotation > 180 : false,
         configPath: this.secretsPath,
         storageBackend: backend,
         hasGraceSecret: !!(secrets.previousSecret && secrets.previousSecretExpiry)
