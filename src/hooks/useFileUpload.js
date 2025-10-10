@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { parseLyrics } from '../utils/parseLyrics';
-import { parseLrc } from '../utils/parseLrc';
+import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useLyricsState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
@@ -31,7 +30,10 @@ const useFileUpload = () => {
       }
 
       // Parse the file to get both raw text and processed lines
-      const parsed = isLrc ? await parseLrc(file) : await parseLyrics(file);
+      const parsed = await parseLyricsFileAsync(file, { fileType: isLrc ? 'lrc' : 'txt' });
+      if (!parsed || !Array.isArray(parsed.processedLines)) {
+        throw new Error('Invalid lyrics parse response');
+      }
 
       // Store the processed lines for display in the control panel
       setLyrics(parsed.processedLines);

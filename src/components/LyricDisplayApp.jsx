@@ -20,8 +20,7 @@ import useOutputSettings from '../hooks/useOutputSettings';
 import useSetlistActions from '../hooks/useSetlistActions';
 import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
-import { processRawTextToLines } from '../utils/parseLyrics';
-import { parseLrcText } from '../utils/parseLrc';
+import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSyncTimer } from '../hooks/useSyncTimer';
 
 const LyricDisplayApp = () => {
@@ -79,15 +78,18 @@ const LyricDisplayApp = () => {
   const processLoadedLyrics = React.useCallback(async ({ content, fileName, filePath }) => {
     try {
       const lower = (fileName || '').toLowerCase();
-      let processedLines = [];
-      let rawText = content || '';
-      if (lower.endsWith('.lrc')) {
-        const parsed = parseLrcText(content || '');
-        processedLines = parsed.processedLines;
-        rawText = parsed.rawText;
-      } else {
-        processedLines = processRawTextToLines(content || '');
+      const parsed = await parseLyricsFileAsync(null, {
+        rawText: content || '',
+        fileType: lower.endsWith('.lrc') ? 'lrc' : 'txt',
+        name: fileName,
+        path: filePath,
+      });
+      if (!parsed || !Array.isArray(parsed.processedLines)) {
+        throw new Error('Invalid lyrics response');
       }
+
+      const processedLines = parsed.processedLines;
+      const rawText = parsed.rawText ?? (content || '');
 
       setLyrics(processedLines);
       setRawLyricsContent(rawText);

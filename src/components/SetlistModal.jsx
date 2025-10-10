@@ -1,6 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import useToast from '../hooks/useToast';
-import { X, Plus, Search, Trash2, Clock } from 'lucide-react';
+import { X, Plus, Search, Trash2, Clock, GripVertical } from 'lucide-react';
 import { useSetlistState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
@@ -8,24 +11,58 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const SetlistModal = () => {
-  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull, getAvailableSetlistSlots } = useSetlistState();
+  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull, getAvailableSetlistSlots, setSetlistFiles } = useSetlistState();
 
   const { darkMode } = useDarkModeState();
   const isDesktopApp = useIsDesktopApp();
 
-  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad } = useControlSocket();
+  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad, emitSetlistReorder } = useControlSocket();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
   const { showToast } = useToast();
   const { showModal } = useModal();
+  const [activeId, setActiveId] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   // Filter setlist files based on search query
   const list = Array.isArray(setlistFiles) ? setlistFiles : [];
   const filteredFiles = list.filter(file =>
     file.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const canReorder = isDesktopApp && filteredFiles.length > 1;
+
+  const handleDragStart = useCallback(({ active }) => {
+    if (!isDesktopApp) return;
+    setActiveId(active?.id ?? null);
+  }, [isDesktopApp]);
+
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+  }, []);
+
+  const handleDragEnd = useCallback(({ active, over }) => {
+    setActiveId(null);
+    if (!isDesktopApp || !over || !active || active.id === over.id) return;
+
+    const fromIndex = list.findIndex((file) => file.id === active.id);
+    const toIndex = list.findIndex((file) => file.id === over.id);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    const reordered = arrayMove(list, fromIndex, toIndex);
+    setSetlistFiles(reordered);
+
+    try {
+      emitSetlistReorder(reordered.map((file) => file.id));
+    } catch (error) {
+      console.error('Failed to emit setlist reorder:', error);
+    }
+  }, [emitSetlistReorder, isDesktopApp, list, setSetlistFiles]);
 
   // Format date for display
   const formatDate = (timestamp) => {
@@ -276,6 +313,12 @@ const SetlistModal = () => {
               }
             </p>
           )}
+
+          {isDesktopApp && filteredFiles.length > 1 && !searchQuery && (
+            <p className={`mt-2 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              Drag the grip handle to reorder songs. Changes sync to all clients.
+            </p>
+          )}
         </div>
 
         {/* Scrollable Content */}
@@ -323,52 +366,31 @@ const SetlistModal = () => {
           )}
 
           {!isLoading && filteredFiles.length > 0 && (
-            <div className="space-y-2">
-              {filteredFiles.map((file) => (
-                <div
-                  key={file.id}
-                  onClick={() => handleLoadFile(file.id)}
-                  className={`
-                    group relative p-4 rounded-lg border cursor-pointer transition-all duration-200
-                    ${darkMode
-                      ? 'bg-gray-700 border-gray-600 hover:bg-gray-600'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                    }
-                    hover:shadow-md
-                  `}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-base truncate mb-1">
-                        {file.displayName}
-                      </h3>
-                      <div className={`flex items-center gap-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                        <Clock className="w-3 h-3" />
-                        <span>{formatDate(file.lastModified)}</span>
-                      </div>
-                    </div>
-
-                    {/* Remove Button - Desktop Only */}
-                    {isDesktopApp && (
-                      <button
-                        onClick={(e) => handleRemoveFile(file.id, e)}
-                        className={`
-                          opacity-0 group-hover:opacity-100 p-2 rounded-md transition-opacity
-                          ${darkMode
-                            ? 'hover:bg-gray-800 text-gray-400 hover:text-red-400'
-                            : 'hover:bg-gray-200 text-gray-500 hover:text-red-500'
-                          }
-                        `}
-                        title="Remove from setlist"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
+              <SortableContext items={filteredFiles.map((file) => file.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {filteredFiles.map((file) => (
+                    <SortableSetlistItem
+                      key={file.id}
+                      file={file}
+                      darkMode={darkMode}
+                      isDesktopApp={isDesktopApp}
+                      canReorder={canReorder}
+                      isActive={activeId === file.id}
+                      onLoad={handleLoadFile}
+                      onRemove={handleRemoveFile}
+                      formatDate={formatDate}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       </div>
@@ -386,6 +408,116 @@ const SetlistModal = () => {
   );
 };
 
+const SortableSetlistItem = ({
+  file,
+  darkMode,
+  isDesktopApp,
+  canReorder,
+  isActive,
+  onLoad,
+  onRemove,
+  formatDate,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: file.id, disabled: !canReorder });
+
+  const style = {
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
+    transition: transition || undefined,
+    boxShadow: isDragging ? (darkMode ? '0 10px 30px rgba(0,0,0,0.45)' : '0 10px 25px rgba(0,0,0,0.15)') : undefined,
+  };
+
+  const handleLoad = useCallback(() => onLoad(file.id), [file.id, onLoad]);
+
+  const handleRemove = useCallback((event) => {
+    event.stopPropagation();
+    onRemove(file.id, event);
+  }, [file.id, onRemove]);
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleLoad();
+    }
+  };
+
+  const baseClasses = darkMode
+    ? 'bg-gray-700 border-gray-600 hover:bg-gray-600'
+    : 'bg-gray-50 border-gray-200 hover:bg-gray-100';
+
+  const activeClasses = isActive ? 'ring-2 ring-indigo-400 ring-offset-1' : '';
+
+  const removeButtonClasses = darkMode
+    ? 'hover:bg-gray-800 text-gray-400 hover:text-red-400'
+    : 'hover:bg-gray-200 text-gray-500 hover:text-red-500';
+
+  const handleClasses = darkMode
+    ? 'border-gray-600 text-gray-400 hover:bg-gray-600'
+    : 'border-gray-200 text-gray-500 hover:bg-gray-200';
+
+  const reorderTitle = canReorder
+    ? 'Drag to reorder'
+    : 'Reordering available on desktop when multiple items are visible';
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative p-4 rounded-lg border cursor-pointer transition-all duration-200 ${baseClasses} hover:shadow-md ${activeClasses}`}
+      onClick={handleLoad}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {isDesktopApp && (
+            <button
+              type="button"
+              ref={setActivatorNodeRef}
+              className={`mt-1 hidden sm:flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${handleClasses} ${canReorder ? 'cursor-grab active:cursor-grabbing opacity-100' : 'cursor-not-allowed opacity-40'}`}
+              onClick={(event) => event.stopPropagation()}
+              title={reorderTitle}
+              aria-label="Reorder setlist item"
+              {...(canReorder ? attributes : {})}
+              {...(canReorder ? listeners : {})}
+            >
+              <GripVertical className="w-4 h-4" />
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-base truncate mb-1">
+              {file.displayName}
+            </h3>
+            <div className={`flex items-center gap-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              <Clock className="w-3 h-3" />
+              <span>{formatDate(file.lastModified)}</span>
+            </div>
+          </div>
+        </div>
+
+        {isDesktopApp && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            className={`opacity-0 group-hover:opacity-100 p-2 rounded-md transition-opacity ${removeButtonClasses}`}
+            title="Remove from setlist"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Listen for setlist remove success to show toast
 export default function SetlistModalWithToasts(props) {
   const { showToast } = useToast();
@@ -397,7 +529,7 @@ export default function SetlistModalWithToasts(props) {
     window.addEventListener('setlist-remove-success', handler);
     return () => window.removeEventListener('setlist-remove-success', handler);
   }, [showToast]);
+
   return <SetlistModal {...props} />;
 }
 export { SetlistModal };
-

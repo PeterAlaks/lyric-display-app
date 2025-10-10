@@ -327,6 +327,7 @@ export const ControlSocketProvider = ({ children }) => {
     const emitSetlistLoad = useCallback(createEmitFunction('setlistLoad'), [createEmitFunction]);
     const emitRequestSetlist = useCallback(createEmitFunction('requestSetlist'), [createEmitFunction]);
     const emitSetlistClear = useCallback(createEmitFunction('setlistClear'), [createEmitFunction]);
+    const emitSetlistReorder = useCallback(createEmitFunction('setlistReorder'), [createEmitFunction]);
     const emitLyricsDraftSubmit = useCallback(createEmitFunction('lyricsDraftSubmit'), [createEmitFunction]);
     const emitLyricsDraftApprove = useCallback(createEmitFunction('lyricsDraftApprove'), [createEmitFunction]);
     const emitLyricsDraftReject = useCallback(createEmitFunction('lyricsDraftReject'), [createEmitFunction]);
@@ -411,6 +412,7 @@ export const ControlSocketProvider = ({ children }) => {
         emitSetlistLoad,
         emitRequestSetlist,
         emitSetlistClear,
+        emitSetlistReorder,
         emitLyricsDraftSubmit,
         emitLyricsDraftApprove,
         emitLyricsDraftReject,

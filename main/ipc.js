@@ -1,11 +1,12 @@
 import { ipcMain, dialog, nativeTheme, BrowserWindow } from 'electron';
 import { addRecent } from './recents.js';
-import { writeFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { getLocalIPAddress } from './utils.js';
 import * as secureTokenStore from './secureTokenStore.js';
 import updaterPkg from 'electron-updater';
 import { createProgressWindow } from './progressWindow.js';
 import { getAdminKey, onAdminKeyAvailable } from './adminKey.js';
+import { parseTxtContent, parseLrcContent } from '../shared/lyricsParsing.js';
 const { autoUpdater } = updaterPkg;
 
 let cachedJoinCode = null;
@@ -53,9 +54,8 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       const win = getMainWindow?.();
       const result = await dialog.showOpenDialog(win || undefined, { properties: ['openFile'], filters: [{ name: 'Text Files', extensions: ['txt', 'lrc'] }] });
       if (!result.canceled && result.filePaths.length > 0) {
-        const fs = await import('fs/promises');
         const filePath = result.filePaths[0];
-        const content = await fs.readFile(filePath, 'utf8');
+        const content = await readFile(filePath, 'utf8');
         const fileName = filePath.split(/[\\/]/).pop();
         try { await addRecent(filePath); } catch { }
         return { success: true, content, fileName, filePath };
@@ -64,6 +64,29 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
     } catch (error) {
       console.error('Error loading lyrics file:', error);
       return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('parse-lyrics-file', async (_event, payload = {}) => {
+    try {
+      const { fileType = 'txt', path: filePath, rawText } = payload || {};
+      let content = typeof rawText === 'string' ? rawText : null;
+
+      if (!content && filePath) {
+        content = await readFile(filePath, 'utf8');
+      }
+
+      if (typeof content !== 'string') {
+        return { success: false, error: 'No lyric content available for parsing' };
+      }
+
+      const parser = fileType === 'lrc' ? parseLrcContent : parseTxtContent;
+      const result = parser(content);
+
+      return { success: true, payload: result };
+    } catch (error) {
+      console.error('Error parsing lyrics file via IPC:', error);
+      return { success: false, error: error.message || 'Failed to parse lyrics' };
     }
   });
 

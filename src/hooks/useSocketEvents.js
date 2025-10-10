@@ -104,6 +104,13 @@ const useSocketEvents = (role) => {
       } catch { }
     });
 
+    socket.on('setlistReorderSuccess', ({ totalCount, orderedIds }) => {
+      logDebug(`Setlist reordered: ${orderedIds?.length || 0} items`);
+      window.dispatchEvent(new CustomEvent('setlist-reorder-success', {
+        detail: { totalCount, orderedIds },
+      }));
+    });
+
     socket.on('setlistError', (error) => {
       logError('Setlist error:', error);
       window.dispatchEvent(new CustomEvent('setlist-error', {

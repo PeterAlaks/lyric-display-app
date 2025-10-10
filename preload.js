@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
   syncNativeDarkMode: (isDark) => ipcRenderer.invoke('sync-native-dark-mode', isDark),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
+  parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
   getAdminKey: () => ipcRenderer.invoke('get-admin-key'),
   getDesktopJWT: (payload) => ipcRenderer.invoke('get-desktop-jwt', payload),
   newLyricsFile: () => ipcRenderer.invoke('new-lyrics-file'),
@@ -132,4 +133,3 @@ contextBridge.exposeInMainWorld('electronStore', {
     }
   }
 });
-

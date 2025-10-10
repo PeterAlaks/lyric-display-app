@@ -1,4 +1,5 @@
 // server/events.js (ES Module format with Authentication)
+import { processRawTextToLines } from '../shared/lyricsParsing.js';
 
 let currentLyrics = [];
 let currentLyricsFileName = '';
@@ -203,6 +204,56 @@ export default function registerSocketEvents(io, { hasPermission }) {
       console.log(`Setlist cleared by ${clientType} client`);
       io.emit('setlistUpdate', setlistFiles);
       socket.emit('setlistClearSuccess');
+    });
+
+    socket.on('setlistReorder', (payload) => {
+      if (!hasPermission(socket, 'setlist:write')) {
+        socket.emit('permissionError', 'Insufficient permissions to modify setlist ordering');
+        return;
+      }
+
+      const orderedIds = Array.isArray(payload) ? payload : payload?.orderedIds;
+      if (!Array.isArray(orderedIds)) {
+        socket.emit('setlistError', 'Invalid reorder payload');
+        return;
+      }
+
+      if (orderedIds.length !== setlistFiles.length) {
+        socket.emit('setlistError', 'Reorder payload does not match setlist size');
+        return;
+      }
+
+      const idToFile = new Map(setlistFiles.map((file) => [file.id, file]));
+      const seen = new Set();
+      const reordered = [];
+
+      for (const id of orderedIds) {
+        if (seen.has(id)) {
+          socket.emit('setlistError', 'Duplicate entries in reorder payload');
+          return;
+        }
+        seen.add(id);
+        const file = idToFile.get(id);
+        if (!file) {
+          socket.emit('setlistError', 'Unknown setlist entry in reorder payload');
+          return;
+        }
+        reordered.push(file);
+      }
+
+      if (reordered.length !== setlistFiles.length) {
+        socket.emit('setlistError', 'Reorder payload incomplete');
+        return;
+      }
+
+      setlistFiles = reordered;
+      console.log(`${clientType} client reordered setlist (${setlistFiles.length} items)`);
+
+      io.emit('setlistUpdate', setlistFiles);
+      socket.emit('setlistReorderSuccess', {
+        orderedIds,
+        totalCount: setlistFiles.length,
+      });
     });
 
     // Line update with permission check
@@ -421,57 +472,4 @@ function buildCurrentState(clientInfo) {
     timestamp,
     syncTimestamp: timestamp,
   };
-}
-
-// Helper function to process raw text (same rules as client)
-function processRawTextToLines(rawText) {
-  const allLines = rawText.split(/\r?\n/);
-
-  const clusters = [];
-  let currentCluster = [];
-
-  for (let i = 0; i < allLines.length; i++) {
-    const line = allLines[i].trim();
-    if (line.length > 0) {
-      currentCluster.push({ line, originalIndex: i });
-    } else {
-      if (currentCluster.length > 0) {
-        clusters.push([...currentCluster]);
-        currentCluster = [];
-      }
-    }
-  }
-  if (currentCluster.length > 0) {
-    clusters.push(currentCluster);
-  }
-
-  const result = [];
-  clusters.forEach((cluster, clusterIndex) => {
-    if (cluster.length === 2 && isTranslationLine(cluster[1].line)) {
-      const groupedLine = {
-        type: 'group',
-        id: `group_${clusterIndex}_${cluster[0].originalIndex}`,
-        mainLine: cluster[0].line,
-        translation: cluster[1].line,
-        displayText: `${cluster[0].line}\n${cluster[1].line}`,
-        searchText: `${cluster[0].line} ${cluster[1].line}`,
-        originalIndex: cluster[0].originalIndex
-      };
-      result.push(groupedLine);
-    } else {
-      cluster.forEach(item => {
-        result.push(item.line);
-      });
-    }
-  });
-
-  return result;
-}
-
-function isTranslationLine(line) {
-  if (!line || typeof line !== 'string') return false;
-  const trimmed = line.trim();
-  if (trimmed.length <= 2) return false;
-  const bracketPairs = [['[', ']'], ['(', ')'], ['{', '}'], ['<', '>']];
-  return bracketPairs.some(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
 }

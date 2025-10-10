@@ -208,6 +208,8 @@ lyric-display-app/
 |   ├── joinCodeGuard.js                    # Guard/limiter for join code attempts by secondary controllers
 |   └── package.json                        # Backend dependencies
 |   └── secretManager.js                    # Module handling the secure management of app secrets
+├── shared/
+|   └── lyricsParsing.js                    # Shared TXT/LRC parsing helpers.
 ├── src/                                    # React frontend source
 │   ├── assets/                             # Fonts, etc.
 │   ├── components/
@@ -257,6 +259,7 @@ lyric-display-app/
 |   |   ├── Output1.jsx                     # Output 1 display
 |   |   └── Output2.jsx                     # Output 2 display
 │   ├── utils/
+|   |   ├── asyncLyricsParser.js            # Picks worker/IPC/sync parsing strategy.
 |   |   ├── connectionManager.js            # Socket connection management hook
 |   |   ├── logger.js                       # Simple event and error logger utility
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
@@ -265,6 +268,8 @@ lyric-display-app/
 |   |   ├── parseLyrics.js                  # Text file parser
 |   |   ├── secureTokenStore.js             # Secure token storage utility
 |   |   └── toastSounds.js                  # Toast notifications tones utility
+│   ├── workers/
+|   |   └── lyricsParser.worker.js          # Web worker that parses lyrics off the UI thread.
 |   ├── App.jsx                             # React app main component
 |   ├── main.jsx                            # App entry point
 |   └── index.css                           # Global CSS
