@@ -42,41 +42,103 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
     return `${seconds}s`;
   };
 
+  const formatRelativeTime = (timestamp) => {
+    if (!Number.isFinite(timestamp) || timestamp <= 0) {
+      return null;
+    }
+    const delta = Date.now() - timestamp;
+    if (delta < 0) {
+      return "just now";
+    }
+    const seconds = Math.round(delta / 1000);
+    if (seconds < 45) {
+      return `${seconds}s ago`;
+    }
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) {
+      return `${minutes}m ago`;
+    }
+    const hours = Math.round(minutes / 60);
+    if (hours < 48) {
+      return `${hours}h ago`;
+    }
+    const days = Math.round(hours / 24);
+    if (days < 14) {
+      return `${days}d ago`;
+    }
+    const weeks = Math.round(days / 7);
+    if (weeks < 8) {
+      return `${weeks}w ago`;
+    }
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const formatAttemptSummary = (count) => {
+    if (!Number.isFinite(count) || count <= 0) {
+      return "no recent attempts";
+    }
+    return `${count} ${count === 1 ? "attempt" : "attempts"}`;
+  };
+
   const buildDiagnosticsDescription = (stats) => {
     if (!stats) {
       return "Connection diagnostics are not available yet.";
     }
 
-    const lines = [];
+    const lines = ["Overview:"];
 
     if (stats.globalBackoffActive) {
-      lines.push("LyricDisplay paused automatic reconnecting after several failed attempts.");
-      lines.push("Next automatic retry: about " + formatDuration(stats.globalBackoffRemainingMs) + ".");
+      lines.push(
+        `- Auto retry: waiting about ${formatDuration(stats.globalBackoffRemainingMs)} before trying again`
+      );
     } else {
-      lines.push("LyricDisplay is ready to reconnect immediately if needed.");
+      lines.push("- Auto retry: ready to reconnect immediately if needed");
     }
 
-    lines.push("Failed attempts this session: " + stats.globalFailures);
+    lines.push(`- Failed attempts this session: ${stats.globalFailures ?? 0}`);
 
     const clientEntries = Object.entries(stats.clients || {});
+    const totalClients = Number.isFinite(stats.totalClients)
+      ? stats.totalClients
+      : clientEntries.length;
+    lines.push(`- Active connection ${totalClients === 1 ? "client" : "clients"}: ${totalClients}`);
+
+    if (stats.lastFailureTime) {
+      const friendly = formatRelativeTime(stats.lastFailureTime);
+      if (friendly) {
+        lines.push(`- Most recent failure: ${friendly}`);
+      }
+    }
+
     if (clientEntries.length > 0) {
       lines.push("", "Client details:");
       clientEntries.forEach(([id, info]) => {
         const statusLabel = info.status === "connected"
-          ? "connected"
+          ? "Connected"
           : info.status === "disconnected"
-            ? "waiting to retry"
-            : info.status || "unknown";
-        const backoffLabel = info.backoffRemaining > 0
-          ? "next retry in " + formatDuration(info.backoffRemaining)
-          : "no waiting period";
-        const attemptLabel = info.attempts > 0
-          ? info.attempts + " recent " + (info.attempts === 1 ? "attempt" : "attempts")
-          : "no recent attempts";
-        lines.push(" - " + id + ": " + statusLabel + ", " + backoffLabel + ", " + attemptLabel);
+            ? "Waiting to retry"
+            : typeof info.status === "string"
+              ? info.status.charAt(0).toUpperCase() + info.status.slice(1)
+              : "Unknown";
+        const nextRetry = info.backoffRemaining > 0
+          ? `next retry in ${formatDuration(info.backoffRemaining)}`
+          : info.status === "connected"
+            ? "no retry scheduled"
+            : "ready to retry";
+        const lastAttempt = formatRelativeTime(info.lastAttemptTime);
+
+        lines.push(`- ${id}: ${statusLabel}`);
+        if (info.isConnecting) {
+          lines.push("    Currently reconnecting");
+        }
+        lines.push(`    Attempts this session: ${formatAttemptSummary(info.attempts)}`);
+        lines.push(`    Next retry: ${nextRetry}`);
+        if (lastAttempt) {
+          lines.push(`    Last attempt: ${lastAttempt}`);
+        }
       });
     } else {
-      lines.push("", "No clients are queued for retry right now.");
+      lines.push("", "No connection clients are queued for retry right now.");
     }
 
     return lines.join("\n");
@@ -357,6 +419,5 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
 
   return { createMenu, updateDarkModeMenu, toggleDarkMode };
 }
-
 
 
