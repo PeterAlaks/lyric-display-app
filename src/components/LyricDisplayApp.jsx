@@ -293,20 +293,52 @@ const LyricDisplayApp = () => {
                     return;
                   }
 
-                  if (lyrics && lyrics.length > 0) {
-                    emitLyricsLoad(lyrics);
-                    if (selectedLine !== null && selectedLine !== undefined) {
-                      emitLineUpdate(selectedLine);
+                  try {
+                    let syncSuccess = true;
+
+                    if (lyrics && lyrics.length > 0) {
+                      if (!emitLyricsLoad(lyrics)) {
+                        syncSuccess = false;
+                      }
+                      if (selectedLine !== null && selectedLine !== undefined) {
+                        if (!emitLineUpdate(selectedLine)) {
+                          syncSuccess = false;
+                        }
+                      }
+                      if (output1Settings && !emitStyleUpdate('output1', output1Settings)) {
+                        syncSuccess = false;
+                      }
+                      if (output2Settings && !emitStyleUpdate('output2', output2Settings)) {
+                        syncSuccess = false;
+                      }
                     }
-                    if (output1Settings) {
-                      emitStyleUpdate('output1', output1Settings);
+
+                    if (!emitOutputToggle(isOutputOn)) {
+                      syncSuccess = false;
                     }
-                    if (output2Settings) {
-                      emitStyleUpdate('output2', output2Settings);
+
+                    if (syncSuccess) {
+                      window.dispatchEvent(new CustomEvent('sync-completed', { detail: { source: 'manual' } }));
+                      showToast({
+                        title: 'Outputs Synced',
+                        message: 'Output displays updated successfully.',
+                        variant: 'success'
+                      });
+                    } else {
+                      showToast({
+                        title: 'Sync Failed',
+                        message: 'Outputs were not updated. Check the connection and try again.',
+                        variant: 'error'
+                      });
                     }
+                  } catch (error) {
+                    console.error('Manual sync failed:', error);
+                    showToast({
+                      title: 'Sync Failed',
+                      message: 'An unexpected error occurred while syncing outputs.',
+                      variant: 'error'
+                    });
                   }
-                  emitOutputToggle(isOutputOn);
-                  window.dispatchEvent(new CustomEvent('sync-completed'));
                 }}
               >
                 <RefreshCw className="w-5 h-5" />

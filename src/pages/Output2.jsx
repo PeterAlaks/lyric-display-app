@@ -154,6 +154,8 @@ const Output2 = () => {
     allCaps,
     fontSize,
     fontColor,
+    borderColor = '#000000',
+    borderSize = 0,
     dropShadowColor,
     dropShadowOpacity,
     backgroundColor,
@@ -176,6 +178,15 @@ const Output2 = () => {
     return `${backgroundColor}${opacity}`;
   };
 
+  const effectiveBorderSize = Math.min(10, Math.max(0, Number(borderSize) || 0));
+  const textStrokeValue = effectiveBorderSize > 0
+    ? `${effectiveBorderSize}px ${borderColor}`
+    : '0px transparent';
+  const textStrokeStyles = {
+    WebkitTextStroke: textStrokeValue,
+    textStroke: textStrokeValue,
+  };
+
   // Apply text transformations and handle multi-line content
   const processDisplayText = (text) => {
     return allCaps ? text.toUpperCase() : text;
@@ -195,6 +206,7 @@ const Output2 = () => {
               key={index}
               className={index > 0 ? 'font-medium' : 'font-medium'}
               style={{
+                ...textStrokeStyles,
                 color: index > 0 ? '#FBBF24' : 'inherit'
               }}
             >
@@ -226,6 +238,7 @@ const Output2 = () => {
           textShadow: getTextShadow(),
           backgroundColor: getBackground(),
           padding: `${yMargin}rem ${xMargin}rem`,
+          ...textStrokeStyles,
           opacity: isOutputOn && line ? 1 : 0, // Control opacity
           pointerEvents: isOutputOn && line ? 'auto' : 'none', // Make it non-interactive when hidden
         }}

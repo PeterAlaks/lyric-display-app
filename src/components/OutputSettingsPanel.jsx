@@ -4,7 +4,7 @@ import { useControlSocket } from '../context/ControlSocketProvider';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Move, Italic, Underline, Bold, CaseUpper } from 'lucide-react';
+import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper } from 'lucide-react';
 
 const fontOptions = [
   'Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat',
@@ -134,6 +134,33 @@ const OutputSettingsPanel = ({ outputKey }) => {
             : 'bg-white border-gray-300'
             }`}
         />
+      </div>
+
+      {/* Text Border */}
+      <div className="flex items-center justify-between gap-4">
+        <LabelWithIcon icon={Frame} text="Text Border" />
+        <div className="flex gap-2 items-center">
+          <Input
+            type="color"
+            value={settings.borderColor ?? '#000000'}
+            onChange={(e) => update('borderColor', e.target.value)}
+            className={`h-9 w-12 p-1 ${darkMode
+              ? 'bg-gray-700 border-gray-600'
+              : 'bg-white border-gray-300'
+              }`}
+          />
+          <Input
+            type="number"
+            value={settings.borderSize ?? 0}
+            onChange={(e) => update('borderSize', parseInt(e.target.value, 10))}
+            min="0"
+            max="10"
+            className={`w-20 ${darkMode
+              ? 'bg-gray-700 border-gray-600 text-gray-200'
+              : 'bg-white border-gray-300'
+              }`}
+          />
+        </div>
       </div>
 
       {/* Drop Shadow */}
