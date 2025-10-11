@@ -29,6 +29,7 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 - **Color Customization**: Independent font and drop shadow colors
 - **Background Controls**: Adjustable opacity and color settings
 - **Padding Adjustments**: X/Y margin controls for proper padding control
+- **Full Screen Mode**:    Fill colour/media background options for full screen lyrics display
 
 ### Professional Features
 - **Auto-Updates**: Seamless background updates via GitHub releases
@@ -80,7 +81,7 @@ npm run electron-pack
 
 ## File Format
 
-LyricDisplay accepts plain text (.txt) files with the following format:
+LyricDisplay accepts plain text (.txt) and lyrics (.lrc) files with the following format:
 
 ```
 First verse line
@@ -124,15 +125,18 @@ Chorus line one
 ### Output Settings
 Each output can be independently configured:
 
-| Setting | Description | Range |
-|---------|-------------|-------|
-| Font Style | Typography selection | 13 available fonts |
-| Font Size | Text size in pixels | 24-100px |
-| Font Color | Text color picker | Full spectrum |
-| Drop Shadow | Shadow color and intensity | 0-10 opacity |
-| Background | Background color and opacity | 0-10 opacity |
-| Margins | X/Y positioning offsets | Decimal values |
-| Emphasis | Bold, italic, underline, caps | Toggle options |
+| Setting | Description | Range / Options |
+|---------|-------------|-----------------|
+| Lyrics Position | Choose where lyrics sit vertically | Upper Third, Centre, Lower Third (centre enforced in full screen) |
+| Font Style | Typography selection with live preview | 13 curated fonts |
+| Emphasis | Toggle text emphasis states | Bold, Italic, Underline, All Caps |
+| Font Size | Adjust displayed text size | 24–100 px |
+| Font Colour | Apply precise text colour | Hex colour picker |
+| Text Border | Outline lyrics for legibility | Colour picker + 0–10 px thickness |
+| Drop Shadow | Add depth behind text | Colour picker + 0–10 opacity |
+| Background | Panel fill behind lyrics | Colour picker + 0–10 opacity (disabled in full screen) |
+| X & Y Margins | Fine-tune screen position | Decimal offsets |
+| Full Screen Mode | Expand lyrics and manage full-screen backgrounds | Toggle + solid colour or uploaded image/video (≤200 MB) |
 
 ### Storage & Persistence
 - Settings automatically saved using Zustand persistence
@@ -145,6 +149,9 @@ Each output can be independently configured:
 |----------|--------|
 | Ctrl/Cmd+O | Load lyrics file |
 | Ctrl/Cmd+N | New song canvas |
+| Ctrl/Cmd+T | In New song canvas - adds translation line |
+| Ctrl/Cmd+D | In New song canvas - duplicates current line |
+| Ctrl/Cmd+L | In New song canvas - selects current line |
 | Ctrl/Cmd+1 | Preview Output 1 |
 | Ctrl/Cmd+2 | Preview Output 2 |
 | Shift+↑/↓ | Navigate search results |
@@ -172,7 +179,7 @@ Each output can be independently configured:
 1. Add **Browser Source** to your scene
 2. Set URL to: `http://localhost:4000/#/output1` or `http://localhost:4000/#/output2`
 3. Replace `localhost` with the control panel PC's local IP if capturing display from another system across a network
-4. Set dimensions to match your canvas (1920 x <=300 pixels recommended)
+4. Set dimensions of browser source to match your canvas (for example, 1920 x 1080 pixels)
 5. Enable **Shutdown source when not visible** for performance
 6. **Refresh browser when scene becomes active** for reliability
 
@@ -206,7 +213,7 @@ lyric-display-app/
 |   ├── events.js                           # Backend communication events
 |   ├── index.js                            # Main backend server
 |   ├── joinCodeGuard.js                    # Guard/limiter for join code attempts by secondary controllers
-|   └── package.json                        # Backend dependencies
+|   ├── package.json                        # Backend dependencies
 |   └── secretManager.js                    # Module handling the secure management of app secrets
 ├── shared/
 |   └── lyricsParsing.js                    # Shared TXT/LRC parsing helpers.

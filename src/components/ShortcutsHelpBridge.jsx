@@ -7,6 +7,9 @@ const SHORTCUTS = [
   { label: 'New Lyrics', combo: 'Ctrl/Cmd + N' },
   { label: 'Preview Output 1', combo: 'Ctrl/Cmd + 1' },
   { label: 'Preview Output 2', combo: 'Ctrl/Cmd + 2' },
+  { label: 'Add Translation Line in Canvas', combo: 'Ctrl/Cmd + T' },
+  { label: 'Duplicate Line in Canvas', combo: 'Ctrl/Cmd + D' },
+  { label: 'Select Line in Canvas', combo: 'Ctrl/Cmd + L' },
   { label: 'Navigate Previous Search Results', combo: 'Shift + Up Arrow' },
   { label: 'Navigate Next Search Results', combo: 'Shift + Down Arrow' },
 ];
