@@ -235,7 +235,7 @@ const MobileLayout = () => {
             : 'text-gray-600 bg-gray-50 border-gray-200'
             }`}
         >
-          Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.
+          Designed and Developed by Peter Alakembi and David Okaliwe. ©2025 All Rights Reserved.
         </div>
 
         {/* Setlist Modal */}

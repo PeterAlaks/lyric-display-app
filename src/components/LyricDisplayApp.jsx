@@ -457,7 +457,7 @@ const LyricDisplayApp = () => {
           )}
 
           <div className={`mt-4 text-[12px] text-left space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Designed and Developed by Peter Alakembi and David Okaliwe for Victory City Media. ©2025 All Rights Reserved.
+            Designed and Developed by Peter Alakembi and David Okaliwe. ©2025 All Rights Reserved.
           </div>
         </div>
 

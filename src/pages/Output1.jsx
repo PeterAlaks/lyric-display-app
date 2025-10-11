@@ -3,6 +3,7 @@ import { useLyricsState, useOutputState, useOutput1Settings } from '../hooks/use
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
+import { resolveBackendUrl } from '../utils/network';
 
 const Output1 = () => {
   const { socket, isConnected, connectionStatus, isAuthenticated } = useSocket('output1');
@@ -11,6 +12,7 @@ const Output1 = () => {
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
 
   const stateRequestTimeoutRef = useRef(null);
+  const pendingStateRequestRef = useRef(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
   // Get the current line and process it for output
@@ -21,16 +23,26 @@ const Output1 = () => {
   const requestCurrentStateWithRetry = useCallback((retryCount = 0) => {
     const maxRetries = 3;
 
+    if (retryCount === 0 && pendingStateRequestRef.current) {
+      logDebug('Output1: Skipping state request - pending request in progress');
+      return;
+    }
+
     if (!socket || !socket.connected || !isAuthenticated) {
+      if (retryCount === 0) {
+        pendingStateRequestRef.current = false;
+      }
       logDebug('Output1: Cannot request state - socket not connected or authenticated');
       return;
     }
 
     if (retryCount >= maxRetries) {
+      pendingStateRequestRef.current = false;
       logError('Output1: Max retries reached for state request');
       return;
     }
 
+    pendingStateRequestRef.current = true;
     logDebug(`Output1: Requesting current state (attempt ${retryCount + 1})`);
     socket.emit('requestCurrentState');
 
@@ -40,10 +52,11 @@ const Output1 = () => {
     }
 
     stateRequestTimeoutRef.current = setTimeout(() => {
+      pendingStateRequestRef.current = false;
       logDebug(`Output1: State request timeout (attempt ${retryCount + 1}), retrying...`);
       requestCurrentStateWithRetry(retryCount + 1);
-    }, 3000); // 3 second timeout per attempt
-  }, [socket]);
+    }, 3000);
+  }, [socket, isAuthenticated]);
 
   // Enhanced socket setup with retry logic
   useEffect(() => {
@@ -59,8 +72,8 @@ const Output1 = () => {
         clearTimeout(stateRequestTimeoutRef.current);
         stateRequestTimeoutRef.current = null;
       }
+      pendingStateRequestRef.current = false;
 
-      // Apply received state
       if (state.lyrics) setLyrics(state.lyrics);
       if (state.selectedLine !== undefined) selectLine(state.selectedLine);
       if (state.output1Settings) updateOutput1Settings(state.output1Settings);
@@ -90,7 +103,6 @@ const Output1 = () => {
       setIsOutputOn(state);
     };
 
-    // Set up listeners
     socket.on('currentState', handleCurrentState);
     socket.on('lineUpdate', handleLineUpdate);
     socket.on('lyricsLoad', handleLyricsLoad);
@@ -106,13 +118,15 @@ const Output1 = () => {
       if (stateRequestTimeoutRef.current) {
         clearTimeout(stateRequestTimeoutRef.current);
       }
+      pendingStateRequestRef.current = false;
       socket.off('currentState', handleCurrentState);
       socket.off('lineUpdate', handleLineUpdate);
       socket.off('lyricsLoad', handleLyricsLoad);
       socket.off('styleUpdate', handleStyleUpdate);
       socket.off('outputToggle', handleOutputToggle);
     };
-  }, [socket, requestCurrentStateWithRetry, setLyrics, selectLine, updateOutput1Settings, setIsOutputOn]);
+
+  }, [socket, requestCurrentStateWithRetry]);
 
   // Monitor connection status and re-request state on connection
   useEffect(() => {
@@ -156,26 +170,101 @@ const Output1 = () => {
     fontColor,
     borderColor = '#000000',
     borderSize = 0,
-    dropShadowColor,
-    dropShadowOpacity,
-    backgroundColor,
-    backgroundOpacity,
-    xMargin,
-    yMargin,
+    dropShadowColor = '#000000',
+    dropShadowOpacity = 0,
+    backgroundColor = '#000000',
+    backgroundOpacity = 0,
+    lyricsPosition = 'lower',
+    fullScreenMode = false,
+    fullScreenBackgroundType = 'color',
+    fullScreenBackgroundColor = '#000000',
+    fullScreenBackgroundMedia,
+    xMargin = 0,
+    yMargin = 0,
   } = output1Settings;
 
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const toHexOpacity = (value) => clamp(Math.round((value / 10) * 255), 0, 255)
+    .toString(16)
+    .padStart(2, '0');
+
+  const dropShadowStrength = clamp(Number(dropShadowOpacity) || 0, 0, 10);
+  const backgroundStrength = clamp(Number(backgroundOpacity) || 0, 0, 10);
+  const verticalMarginRem = clamp(Number(yMargin) || 0, 0, 20);
+  const horizontalMarginRem = clamp(Number(xMargin) || 0, 0, 20);
+
   const getTextShadow = () => {
-    const opacity = Math.round((dropShadowOpacity / 10) * 255)
-      .toString(16)
-      .padStart(2, '0');
-    return `0px 8px 10px ${dropShadowColor}${opacity}`;
+    if (!dropShadowColor) return 'none';
+    const opacityHex = toHexOpacity(dropShadowStrength);
+    return `0px 8px 10px ${dropShadowColor}${opacityHex}`;
   };
 
-  const getBackground = () => {
-    const opacity = Math.round((backgroundOpacity / 10) * 255)
-      .toString(16)
-      .padStart(2, '0');
-    return `${backgroundColor}${opacity}`;
+  const getBandBackground = () => {
+    const opacityHex = toHexOpacity(backgroundStrength);
+    return `${backgroundColor}${opacityHex}`;
+  };
+
+  const BACKGROUND_VERTICAL_PADDING_REM = 1.5;
+  const positionJustifyMap = {
+    upper: 'flex-start',
+    center: 'center',
+    lower: 'flex-end',
+  };
+  const effectiveLyricsPosition = fullScreenMode ? 'center' : (positionJustifyMap[lyricsPosition] ? lyricsPosition : 'lower');
+  const justifyContent = positionJustifyMap[effectiveLyricsPosition] || 'flex-end';
+  const isVisible = Boolean(isOutputOn && line);
+
+  const fullScreenBackgroundColorValue =
+    fullScreenMode && fullScreenBackgroundType === 'color'
+      ? fullScreenBackgroundColor || '#000000'
+      : 'transparent';
+
+  const resolveBackgroundMediaSource = () => {
+    if (!fullScreenBackgroundMedia) return null;
+    if (fullScreenBackgroundMedia.dataUrl) return fullScreenBackgroundMedia.dataUrl;
+    if (fullScreenBackgroundMedia.url) return resolveBackendUrl(fullScreenBackgroundMedia.url);
+    return null;
+  };
+
+  const renderFullScreenMedia = () => {
+    if (!fullScreenMode || fullScreenBackgroundType !== 'media') {
+      return null;
+    }
+
+    const media = fullScreenBackgroundMedia;
+    const mediaSource = resolveBackgroundMediaSource();
+    if (!media || !mediaSource) {
+      return null;
+    }
+
+    const isVideo = media.mimeType?.startsWith('video/') ||
+      (!media.mimeType && typeof media.url === 'string' && /\.(mp4|webm|ogg|m4v|mov)$/i.test(media.url));
+
+    if (isVideo) {
+      return (
+        <video
+          key={`${mediaSource}-video`}
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          src={mediaSource}
+        />
+      );
+    }
+
+    return (
+      <img
+        key={`${mediaSource}-image`}
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        src={mediaSource}
+        alt="Full screen lyric background"
+      />
+    );
   };
 
   const effectiveBorderSize = Math.min(10, Math.max(0, Number(borderSize) || 0));
@@ -187,16 +276,13 @@ const Output1 = () => {
     textStroke: textStrokeValue,
   };
 
-  // Apply text transformations and handle multi-line content
   const processDisplayText = (text) => {
     return allCaps ? text.toUpperCase() : text;
   };
 
-  // Render multi-line content with proper styling for translations
   const renderContent = () => {
     const processedText = processDisplayText(line);
 
-    // Check if we have line breaks (from grouped content)
     if (processedText.includes('\n')) {
       const lines = processedText.split('\n');
       return (
@@ -222,29 +308,60 @@ const Output1 = () => {
 
   return (
     <div
-      className="w-screen h-screen flex items-center justify-center"
+      className="relative w-screen h-screen overflow-hidden"
       style={{
-        backgroundColor: 'transparent',
+        backgroundColor: fullScreenBackgroundColorValue,
       }}
     >
+      {renderFullScreenMedia()}
       <div
+        className="relative z-10 flex w-full h-full"
         style={{
-          fontFamily: fontStyle,
-          fontSize: `${fontSize}px`,
-          fontWeight: bold ? 'bold' : 'normal',
-          fontStyle: italic ? 'italic' : 'normal',
-          textDecoration: underline ? 'underline' : 'none',
-          color: fontColor,
-          textShadow: getTextShadow(),
-          backgroundColor: getBackground(),
-          padding: `${yMargin}rem ${xMargin}rem`,
-          ...textStrokeStyles,
-          opacity: isOutputOn && line ? 1 : 0,
-          pointerEvents: isOutputOn && line ? 'auto' : 'none',
+          justifyContent,
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          paddingTop: `${verticalMarginRem}rem`,
+          paddingBottom: `${verticalMarginRem}rem`,
         }}
-        className="w-full text-center leading-none transition-opacity duration-500 ease-in-out"
       >
-        {renderContent()}
+        <div className="flex w-full justify-center">
+          <div
+            style={{
+              backgroundColor: !fullScreenMode && backgroundStrength > 0 ? getBandBackground() : 'transparent',
+              paddingTop: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
+              paddingBottom: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
+              paddingLeft: `${horizontalMarginRem}rem`,
+              paddingRight: `${horizontalMarginRem}rem`,
+              display: 'flex',
+              justifyContent: 'center',
+              width: '100%',
+              transition: 'opacity 300ms ease-in-out, background-color 200ms ease-in-out',
+              opacity: isVisible ? 1 : 0,
+              pointerEvents: isVisible ? 'auto' : 'none',
+            }}
+            className="leading-none"
+          >
+            <div
+              style={{
+                fontFamily: fontStyle,
+                fontSize: `${fontSize}px`,
+                fontWeight: bold ? 'bold' : 'normal',
+                fontStyle: italic ? 'italic' : 'normal',
+                textDecoration: underline ? 'underline' : 'none',
+                color: fontColor,
+                textShadow: getTextShadow(),
+                ...textStrokeStyles,
+                textAlign: 'center',
+                width: '100%',
+                maxWidth: '100%',
+                lineHeight: 1.05,
+              }}
+              className="transition-opacity duration-500 ease-in-out"
+            >
+              {renderContent()}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

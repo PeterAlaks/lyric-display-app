@@ -1,12 +1,15 @@
 // server/index.js - Updated with Simple Secret Management
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import crypto from 'crypto';
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
 import registerSocketEvents from './events.js';
 import { assertJoinCodeAllowed, recordJoinCodeAttempt, getJoinCodeGuardSnapshot } from './joinCodeGuard.js';
 import SimpleSecretManager from './secretManager.js';
@@ -35,6 +38,37 @@ const isControllerClient = (clientType) => CONTROLLER_CLIENT_TYPES.includes(clie
 const app = express();
 const server = http.createServer(app);
 
+const uploadsRoot = path.join(__dirname, '..', 'uploads');
+const backgroundMediaDir = path.join(uploadsRoot, 'backgrounds');
+fs.mkdirSync(backgroundMediaDir, { recursive: true });
+
+const allowedMediaTypes = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif',
+  'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'
+]);
+
+const backgroundStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, backgroundMediaDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || '').slice(0, 16) || '.bin';
+    const uniqueName = `${Date.now()}-${crypto.randomUUID()}${ext}`;
+    cb(null, uniqueName);
+  }
+});
+
+const backgroundUpload = multer({
+  storage: backgroundStorage,
+  limits: {
+    fileSize: 200 * 1024 * 1024,
+  },
+  fileFilter: (req, file, cb) => {
+    if (!file?.mimetype || !allowedMediaTypes.has(file.mimetype)) {
+      return cb(new Error('Unsupported media type'));
+    }
+    cb(null, true);
+  },
+});
+
 // Rate limiting for token endpoints
 const tokenRateLimit = rateLimit({
   windowMs: secrets.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
@@ -52,6 +86,33 @@ const localhostOnly = (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;
   if (ip === '127.0.0.1' || ip === '::1' || req.hostname === 'localhost') return next();
   return res.status(403).json({ error: 'Local access only' });
+};
+
+const authenticateRequest = (requiredPermission) => (req, res, next) => {
+  try {
+    const authHeader = req.get('authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication token required' });
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const permissions = decoded.permissions || getClientPermissions(decoded.clientType);
+    if (requiredPermission && !permissions.includes(requiredPermission) && !permissions.includes('admin:full')) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    req.user = { ...decoded, permissions };
+    return next();
+  } catch (error) {
+    console.error('HTTP authentication error:', error);
+    return res.status(401).json({ error: 'Authentication failed' });
+  }
 };
 
 
@@ -247,6 +308,41 @@ app.post('/api/auth/validate', (req, res) => {
   });
 });
 
+app.post(
+  '/api/media/backgrounds',
+  authenticateRequest('settings:write'),
+  (req, res, next) => {
+    backgroundUpload.single('background')(req, res, (err) => {
+      if (err) {
+        console.error('Background upload error:', err);
+        if (err instanceof multer.MulterError) {
+          return res.status(400).json({ error: err.message });
+        }
+        return res.status(400).json({ error: err.message || 'Upload failed' });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const relativePath = `/media/backgrounds/${req.file.filename}`;
+      res.json({
+        url: relativePath,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        uploadedAt: Date.now(),
+      });
+    });
+  }
+);
+
+app.use('/media', express.static(uploadsRoot, {
+  maxAge: '1d',
+  setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  },
+}));
+
 // Admin endpoint for secret management
 app.get('/api/admin/secrets/status', localhostOnly, async (req, res) => {
   const status = await secretManager.getSecretsStatus();
@@ -280,14 +376,14 @@ function getClientPermissions(clientType) {
     web: [
       'lyrics:read', 'lyrics:draft',
       'setlist:read',
-      'output:control', 'settings:read'
+      'output:control', 'settings:read', 'settings:write'
     ],
     output1: ['lyrics:read', 'settings:read'],
     output2: ['lyrics:read', 'settings:read'],
     mobile: [
       'lyrics:read', 'lyrics:draft',
       'setlist:read',
-      'output:control', 'settings:read'
+      'output:control', 'settings:read', 'settings:write'
     ]
   };
 
@@ -464,3 +560,4 @@ server.listen(PORT, async () => {
     });
   }
 });
+
