@@ -25,35 +25,27 @@ const useLyricsStore = create(
       selectLine: (index) => set({ selectedLine: index }),
       setIsOutputOn: (state) => set({ isOutputOn: state }),
       setDarkMode: (mode) => set({ darkMode: mode }),
-
-      // New setlist actions
       setSetlistFiles: (files) => set({ setlistFiles: files }),
       setIsDesktopApp: (isDesktop) => set({ isDesktopApp: isDesktop }),
       setSetlistModalOpen: (open) => set({ setlistModalOpen: open }),
-
       addSetlistFiles: (newFiles) => set((state) => ({
         setlistFiles: [...state.setlistFiles, ...newFiles]
       })),
-
       removeSetlistFile: (fileId) => set((state) => ({
         setlistFiles: state.setlistFiles.filter(file => file.id !== fileId)
       })),
-
       clearSetlist: () => set({ setlistFiles: [] }),
 
-      // Get setlist file by ID
       getSetlistFile: (fileId) => {
         const state = get();
         return state.setlistFiles.find(file => file.id === fileId);
       },
 
-      // Check if setlist is full (25 files max)
       isSetlistFull: () => {
         const state = get();
         return state.setlistFiles.length >= 25;
       },
 
-      // Get available setlist slots
       getAvailableSetlistSlots: () => {
         const state = get();
         return Math.max(0, 25 - state.setlistFiles.length);

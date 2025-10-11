@@ -374,7 +374,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
               const { app, dialog } = await import('electron');
               const message = `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi`;
 
-                            const result = await (showInAppModal
+              const result = await (showInAppModal
                 ? showInAppModal(
                   {
                     title: 'About LyricDisplay',
@@ -393,8 +393,8 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                   }
                 )
                 : dialog
-                    .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
-                    .then((res) => ({ response: res.response }))
+                  .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                  .then((res) => ({ response: res.response }))
               );
 
               if ((result?.response ?? -1) === 1) {
@@ -412,12 +412,9 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
     updateDarkModeMenu();
   }
 
-  // Rebuild menu when recents change
   try {
     subscribe(() => { createMenu(); });
   } catch { }
 
   return { createMenu, updateDarkModeMenu, toggleDarkMode };
 }
-
-

@@ -13,7 +13,7 @@ export default function useModal() {
     };
     return {
       showModal: fallback,
-      closeModal: () => {},
+      closeModal: () => { },
     };
   }
   return ctx;

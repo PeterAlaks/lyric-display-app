@@ -41,7 +41,6 @@ export default function LyricsList({
       return height;
     }
 
-    // Default for single lines
     return DEFAULT_ROW_HEIGHT;
   }, [lyrics]);
 
@@ -137,7 +136,6 @@ export default function LyricsList({
     [darkMode, searchQuery]
   );
 
-  // Memoize row props to pass to react-window
   const rowPropsData = useMemo(
     () => ({
       lyrics,
@@ -183,7 +181,6 @@ export default function LyricsList({
     []
   );
 
-  // Listen for scroll-to-lyric-line events from useSearch
   useEffect(() => {
     const handleScrollToLine = (event) => {
       const { lineIndex } = event.detail;
@@ -233,7 +230,7 @@ export default function LyricsList({
     );
   }
 
-  // Virtualized render with dynamic row heights
+  // Virtualized render
   return (
     <div className="flex-1 min-h-0 w-full h-full">
       <List

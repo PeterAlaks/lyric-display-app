@@ -11,7 +11,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
   const exitTimer = useRef(new Map());
 
   const remove = useCallback((id) => {
-    // mark as exiting for slide-out, then actually remove after transition
+
     setToasts((prev) => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
     const t = removeTimer.current.get(id);
     if (t) { clearTimeout(t); removeTimer.current.delete(id); }
@@ -41,7 +41,6 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
       try { playTone(variant); } catch { }
     }
 
-    // Trigger enter transition before first paint, then settle
     requestAnimationFrame(() => {
       setToasts((prev) => prev.map(t => t.id === id ? { ...t, entering: false } : t));
     });
@@ -54,7 +53,6 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
   }, [remove]);
 
   useEffect(() => () => {
-    // cleanup timers on unmount
     removeTimer.current.forEach((t) => clearTimeout(t));
     removeTimer.current.clear();
     exitTimer.current.forEach((t) => clearTimeout(t));

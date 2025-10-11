@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { formatLyrics } from '../utils/lyricsFormat';
 
-// Provides cut/copy/paste/cleanup handlers for a textarea-based editor
 const useEditorClipboard = ({ content, setContent, textareaRef }) => {
   const handleCut = useCallback(async () => {
     if (!textareaRef.current) return;
@@ -75,4 +74,3 @@ const useEditorClipboard = ({ content, setContent, textareaRef }) => {
 };
 
 export default useEditorClipboard;
-

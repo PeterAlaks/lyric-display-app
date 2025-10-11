@@ -23,8 +23,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Optional: Add custom global styles below if needed */
-
 
 
 @layer base {
@@ -80,6 +78,7 @@
 
     --radius: 0.5rem
   }
+
   .dark {
 
     --background: 0 0% 3.9%;
@@ -138,6 +137,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -153,25 +153,23 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5); /* gray-400 with opacity */
+  background: rgba(156, 163, 175, 0.5);
   border-radius: 4px;
   transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.8); /* gray-400 with higher opacity */
+  background: rgba(156, 163, 175, 0.8);
 }
 
-/* Dark mode scrollbar */
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.6); /* gray-600 with opacity */
+  background: rgba(75, 85, 99, 0.6);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.9); /* gray-600 with higher opacity */
+  background: rgba(75, 85, 99, 0.9);
 }
 
-/* Firefox scrollbar styling */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.5) transparent;

@@ -31,7 +31,6 @@ async function handleMissingAdminKey() {
   app.quit();
 }
 
-// Optional compatibility flags in production only when requested
 if (!isDev && process.env.FORCE_COMPATIBILITY) {
   app.commandLine.appendSwitch('--disable-gpu-sandbox');
   app.commandLine.appendSwitch('--disable-software-rasterizer');
@@ -58,7 +57,6 @@ app.whenReady().then(async () => {
   try {
     await startBackend();
     console.log('Backend started successfully');
-    // Additional delay to ensure server is fully listening on port 4000
     await new Promise(resolve => setTimeout(resolve, 2000));
     const adminKey = await getAdminKeyWithRetry();
     if (!adminKey) {
@@ -71,15 +69,12 @@ app.whenReady().then(async () => {
     mainWindow = createWindow('/');
     menuAPI.createMenu();
 
-    // Initialize native theme based on system preference
     nativeTheme.themeSource = 'system';
     nativeTheme.on('updated', () => { if (mainWindow && !mainWindow.isDestroyed()) menuAPI.updateDarkModeMenu(); });
 
-    // Start update check after everything is ready
     setTimeout(() => { if (!isDev) checkForUpdates(false); }, 2000);
   } catch (error) {
     console.error('Failed to start backend:', error);
-    // Create window anyway but with error handling
     mainWindow = createWindow('/');
     menuAPI.createMenu();
     const { dialog } = await import('electron');

@@ -26,14 +26,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode }) => {
     const handleSearch = () => {
         if (!searchQuery.trim()) return;
 
-        // Check if query already contains "lyrics" (case insensitive)
         const queryLower = searchQuery.toLowerCase();
         const hasLyrics = queryLower.includes('lyrics');
 
-        // Construct search query - only append "lyrics" if not already present
         const finalQuery = hasLyrics ? searchQuery : `${searchQuery} lyrics`;
 
-        // Open Google search in in-app browser (Electron) or fallback to new tab
         const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(finalQuery)}`;
         if (window.electronAPI && window.electronAPI.openInAppBrowser) {
             window.electronAPI.openInAppBrowser(googleSearchUrl);
@@ -41,7 +38,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode }) => {
             window.open(googleSearchUrl, '_blank');
         }
 
-        // Close modal and clear input
         setSearchQuery('');
         onClose();
     };

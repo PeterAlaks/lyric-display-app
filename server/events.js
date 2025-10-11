@@ -1,4 +1,4 @@
-// server/events.js (ES Module format with Authentication)
+// server/events.js
 import { processRawTextToLines } from '../shared/lyricsParsing.js';
 
 let currentLyrics = [];
@@ -15,7 +15,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
     const { clientType, deviceId, sessionId } = socket.userData;
     console.log(`Authenticated user connected: ${clientType} (${deviceId}) - Socket: ${socket.id}`);
 
-    // Track authenticated client
     connectedClients.set(socket.id, {
       type: clientType,
       deviceId,
@@ -25,7 +24,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       connectedAt: socket.userData.connectedAt
     });
 
-    // Handle client type confirmation
     socket.on('clientConnect', ({ type }) => {
       if (type !== clientType) {
         console.warn(`Client ${socket.id} claimed type ${type} but authenticated as ${clientType}`);
@@ -37,7 +35,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket.emit('currentState', buildCurrentState(connectedClients.get(socket.id)));
     });
 
-    // Enhanced state request handler with authentication
     socket.on('requestCurrentState', () => {
       if (!hasPermission(socket, 'lyrics:read')) {
         socket.emit('permissionError', 'Insufficient permissions to read current state');
@@ -50,7 +47,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       console.log(`Current state sent to: ${socket.id} (${currentLyrics.length} lyrics, ${setlistFiles.length} setlist items)`);
     });
 
-    // Request setlist with permission check
     socket.on('requestSetlist', () => {
       if (!hasPermission(socket, 'setlist:read')) {
         socket.emit('permissionError', 'Insufficient permissions to access setlist');
@@ -61,7 +57,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       console.log('Setlist sent to authenticated client:', socket.id, `(${setlistFiles.length} items)`);
     });
 
-    // Add files to setlist with permission check
     socket.on('setlistAdd', (files) => {
       if (!hasPermission(socket, 'setlist:write')) {
         socket.emit('permissionError', 'Insufficient permissions to modify setlist');
@@ -123,7 +118,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
     });
 
-    // Remove file from setlist with permission check
     socket.on('setlistRemove', (fileId) => {
       if (!hasPermission(socket, 'setlist:write')) {
         socket.emit('permissionError', 'Insufficient permissions to modify setlist');
@@ -134,7 +128,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
         const initialCount = setlistFiles.length;
         const fileToRemove = setlistFiles.find(file => file.id === fileId);
 
-        // Desktop clients can remove any file, others can only remove their own
         if (!hasPermission(socket, 'admin:full') &&
           fileToRemove?.addedBy?.sessionId !== sessionId) {
           socket.emit('permissionError', 'You can only remove files you added');
@@ -156,7 +149,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
     });
 
-    // Load file from setlist with permission check
     socket.on('setlistLoad', (fileId) => {
       if (!hasPermission(socket, 'setlist:read')) {
         socket.emit('permissionError', 'Insufficient permissions to read setlist');
@@ -193,7 +185,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
     });
 
-    // Clear setlist (desktop/admin only)
     socket.on('setlistClear', () => {
       if (!hasPermission(socket, 'setlist:delete')) {
         socket.emit('permissionError', 'Insufficient permissions to clear setlist');
@@ -256,7 +247,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       });
     });
 
-    // Line update with permission check
     socket.on('lineUpdate', ({ index }) => {
       if (!hasPermission(socket, 'output:control')) {
         socket.emit('permissionError', 'Insufficient permissions to control output');
@@ -268,7 +258,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       io.emit('lineUpdate', { index });
     });
 
-    // Output toggle with permission check
     socket.on('outputToggle', (state) => {
       if (!hasPermission(socket, 'output:control')) {
         socket.emit('permissionError', 'Insufficient permissions to control output');
@@ -280,7 +269,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       io.emit('outputToggle', state);
     });
 
-    // Lyrics load with permission check
     socket.on('lyricsLoad', (lyrics) => {
       if (!hasPermission(socket, 'lyrics:write')) {
         socket.emit('permissionError', 'Insufficient permissions to load lyrics');
@@ -294,7 +282,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       io.emit('lyricsLoad', lyrics);
     });
 
-    // Style update with permission check
     socket.on('styleUpdate', ({ output, settings }) => {
       if (!hasPermission(socket, 'settings:write')) {
         socket.emit('permissionError', 'Insufficient permissions to modify settings');
@@ -311,7 +298,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       io.emit('styleUpdate', { output, settings });
     });
 
-    // File name update with permission check
     socket.on('fileNameUpdate', (fileName) => {
       if (!hasPermission(socket, 'lyrics:write')) {
         socket.emit('permissionError', 'Insufficient permissions to update filename');
@@ -331,7 +317,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
 
       console.log(`Lyrics draft submitted by ${clientType} client: "${title}" (${processedLines?.length || 0} lines)`);
 
-      // Broadcast draft to all desktop clients for approval
       const desktopClients = Array.from(connectedClients.values()).filter(c => c.type === 'desktop');
 
       if (desktopClients.length === 0) {
@@ -360,7 +345,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket.emit('draftSubmitted', { success: true, title });
     });
 
-    // Draft approval from desktop
     socket.on('lyricsDraftApprove', ({ title, rawText, processedLines }) => {
       if (!hasPermission(socket, 'lyrics:write')) {
         socket.emit('permissionError', 'Insufficient permissions to approve drafts');
@@ -373,7 +357,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
 
       console.log(`Desktop client approved draft: "${title}" (${processedLines?.length || 0} lines)`);
 
-      // Broadcast to all clients (including outputs)
       io.emit('lyricsLoad', currentLyrics);
       io.emit('fileNameUpdate', currentLyricsFileName);
       if (rawText) {
@@ -389,7 +372,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket.emit('draftApproved', { success: true, title });
     });
 
-    // Draft rejection from desktop
     socket.on('lyricsDraftReject', ({ reason }) => {
       if (!hasPermission(socket, 'lyrics:write')) {
         socket.emit('permissionError', 'Insufficient permissions to reject drafts');
@@ -405,12 +387,10 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket.emit('heartbeat_ack', { timestamp: Date.now() });
     });
 
-    // Enhanced disconnect handler
     socket.on('disconnect', (reason) => {
       console.log(`Authenticated user disconnected: ${clientType} (${deviceId}) - Reason: ${reason}`);
       connectedClients.delete(socket.id);
 
-      // Emit client disconnection to other clients for awareness
       socket.broadcast.emit('clientDisconnected', {
         clientType,
         deviceId,
@@ -419,7 +399,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       });
     });
 
-    // Send initial state after authentication
     setTimeout(() => {
       if (socket.connected) {
         const clientInfo = connectedClients.get(socket.id);
@@ -435,13 +414,11 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
     }, 30000);
 
-    // Clear interval on disconnect
     socket.on('disconnect', () => {
       clearInterval(stateBroadcastInterval);
     });
   });
 
-  // Broadcast connection statistics every 5 minutes
   setInterval(() => {
     const stats = {
       totalConnections: connectedClients.size,

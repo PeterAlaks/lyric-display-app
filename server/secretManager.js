@@ -124,7 +124,6 @@ export function decryptJson(wrapped, key) {
   return JSON.parse(dec.toString('utf8'));
 }
 
-// Export the config directory function
 export { getDefaultConfigDir };
 
 // ---------- Secret Manager ----------
@@ -184,7 +183,6 @@ class SimpleSecretManager {
     };
   }
 
-  // Synchronous keytar operations
   async _readFromKeytar() {
     if (!keytar) return null;
     try {
@@ -204,10 +202,8 @@ class SimpleSecretManager {
     }
   }
 
-  // Main synchronous loading method
   async loadSecrets() {
     try {
-      // Try keytar first
       const keytarData = await this._readFromKeytar();
       if (keytarData) {
         try {
@@ -257,10 +253,8 @@ class SimpleSecretManager {
       const normalized = this._normalizeSecrets(secrets);
       const dataStr = JSON.stringify(normalized);
 
-      // Try to save to keytar first
       const keytarSuccess = await this._writeToKeytar(dataStr);
 
-      // Always save to encrypted file as backup
       const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
       console.log(`Secrets saved - Keytar: ${keytarSuccess ? 'yes' : 'no'}, File: ${backupResult.success ? 'yes' : 'no'}`);
 

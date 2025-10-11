@@ -34,13 +34,11 @@ export function openInAppBrowser(initialUrl) {
     });
     inAppBrowserView.webContents.loadURL(initialUrl || 'https://www.google.com');
 
-    // Devtools support
     if (isDev) {
-      try { inAppBrowserWindow.webContents.openDevTools({ mode: 'detach' }); } catch {}
-      try { inAppBrowserView.webContents.openDevTools({ mode: 'detach' }); } catch {}
+      try { inAppBrowserWindow.webContents.openDevTools({ mode: 'detach' }); } catch { }
+      try { inAppBrowserView.webContents.openDevTools({ mode: 'detach' }); } catch { }
     }
 
-    // Allow Ctrl+Shift+I to open devtools for this window and its view
     inAppBrowserWindow.webContents.on('before-input-event', (event, input) => {
       try {
         if (input.control && input.shift && (input.key?.toLowerCase?.() === 'i')) {
@@ -50,10 +48,9 @@ export function openInAppBrowser(initialUrl) {
           }
           event.preventDefault();
         }
-      } catch {}
+      } catch { }
     });
 
-    // Keep toolbar address up to date
     const sendLocation = () => {
       if (!inAppBrowserWindow || inAppBrowserWindow.isDestroyed()) return;
       const current = inAppBrowserView?.webContents?.getURL() || '';

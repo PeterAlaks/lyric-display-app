@@ -5,7 +5,6 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import useLyricsStore from '../context/LyricsStore';
 
-// Lyrics state selector
 export const useLyricsState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -22,7 +21,6 @@ export const useLyricsState = () =>
         shallow
     );
 
-// Output control selector
 export const useOutputState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -33,7 +31,6 @@ export const useOutputState = () =>
         shallow
     );
 
-// Output 1 settings selector
 export const useOutput1Settings = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -45,7 +42,6 @@ export const useOutput1Settings = () =>
         shallow
     );
 
-// Output 2 settings selector
 export const useOutput2Settings = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -57,7 +53,6 @@ export const useOutput2Settings = () =>
         shallow
     );
 
-// Dark mode selector
 export const useDarkModeState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -68,7 +63,6 @@ export const useDarkModeState = () =>
         shallow
     );
 
-// Setlist state selector
 export const useSetlistState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -88,7 +82,6 @@ export const useSetlistState = () =>
         shallow
     );
 
-// Atomic selectors (for single-value reads, no equality fn needed)
 export const useLyricsFileName = () =>
     useLyricsStore((state) => state.lyricsFileName);
 export const useIsDesktopApp = () =>
@@ -100,7 +93,6 @@ export const useIsOutputOn = () =>
 export const useDarkMode = () =>
     useLyricsStore((state) => state.darkMode);
 
-// Derived selectors
 export const useHasLyrics = () =>
     useLyricsStore((state) => Boolean(state.lyrics && state.lyrics.length > 0));
 

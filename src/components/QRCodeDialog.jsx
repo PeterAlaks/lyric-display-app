@@ -68,7 +68,6 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
           const ip = await window.electronAPI.getLocalIP();
           setLocalIP(ip);
         } else {
-          // Fallback for non-Electron environments (web browsers)
           setLocalIP('localhost');
         }
       } catch (error) {
@@ -80,7 +79,6 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     getLocalIP();
   }, [isOpen]);
 
-  // Generate QR code when we have the IP
   useEffect(() => {
     if (!localIP || !isOpen) return;
 
@@ -264,4 +262,3 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 };
 
 export default QRCodeDialog;
-

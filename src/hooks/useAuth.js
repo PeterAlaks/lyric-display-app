@@ -288,7 +288,6 @@ class AuthService {
   }
 
   async getAdminKey() {
-    // Try to get admin key from Electron API first
     if (window.electronAPI?.getAdminKey) {
       try {
         return await window.electronAPI.getAdminKey();
@@ -297,7 +296,6 @@ class AuthService {
       }
     }
 
-    // Fallback to environment variable for development
     if (import.meta.env.DEV && import.meta.env.VITE_ADMIN_KEY) {
       logWarn('Using admin key from environment variable (development only)');
       return import.meta.env.VITE_ADMIN_KEY;

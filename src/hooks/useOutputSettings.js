@@ -22,4 +22,3 @@ const useOutputSettings = ({
 };
 
 export default useOutputSettings;
-

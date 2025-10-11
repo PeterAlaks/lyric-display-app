@@ -15,7 +15,7 @@ const fontOptions = [
   'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'
 ];
 
-const MAX_MEDIA_SIZE_BYTES = 200 * 1024 * 1024; // 200MB upload limit for streamed media.
+const MAX_MEDIA_SIZE_BYTES = 200 * 1024 * 1024;
 
 const detectClientType = () => {
   if (typeof window === 'undefined') return 'web';
@@ -140,7 +140,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
         try {
           const errorBody = await response.json();
           if (errorBody?.error) errorMessage = errorBody.error;
-        } catch {}
+        } catch { }
         throw new Error(errorMessage);
       }
 
@@ -448,7 +448,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
               }`}
           />
         </div>
-    </div>
+      </div>
 
       {/* Full Screen Mode */}
       <div className="flex items-center justify-between gap-4">
@@ -536,6 +536,3 @@ const OutputSettingsPanel = ({ outputKey }) => {
 };
 
 export default OutputSettingsPanel;
-
-
-

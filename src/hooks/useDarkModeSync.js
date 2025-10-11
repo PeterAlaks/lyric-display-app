@@ -22,4 +22,3 @@ const useDarkModeSync = (darkMode, setDarkMode) => {
 };
 
 export default useDarkModeSync;
-

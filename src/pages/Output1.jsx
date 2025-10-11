@@ -15,11 +15,9 @@ const Output1 = () => {
   const pendingStateRequestRef = useRef(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
-  // Get the current line and process it for output
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
 
-  // Robust state request function with retry logic
   const requestCurrentStateWithRetry = useCallback((retryCount = 0) => {
     const maxRetries = 3;
 
@@ -46,7 +44,6 @@ const Output1 = () => {
     logDebug(`Output1: Requesting current state (attempt ${retryCount + 1})`);
     socket.emit('requestCurrentState');
 
-    // Set timeout for response
     if (stateRequestTimeoutRef.current) {
       clearTimeout(stateRequestTimeoutRef.current);
     }
@@ -58,16 +55,13 @@ const Output1 = () => {
     }, 3000);
   }, [socket, isAuthenticated]);
 
-  // Enhanced socket setup with retry logic
   useEffect(() => {
     if (!socket) return;
 
-    // Set up event listeners
     const handleCurrentState = (state) => {
       logDebug('Output1: Received current state:', state);
       setLastSyncTime(Date.now());
 
-      // Clear any pending timeout
       if (stateRequestTimeoutRef.current) {
         clearTimeout(stateRequestTimeoutRef.current);
         stateRequestTimeoutRef.current = null;
@@ -109,7 +103,6 @@ const Output1 = () => {
     socket.on('styleUpdate', handleStyleUpdate);
     socket.on('outputToggle', handleOutputToggle);
 
-    // Request current state when socket is ready
     if (socket.connected) {
       setTimeout(() => requestCurrentStateWithRetry(0), 100);
     }
@@ -128,7 +121,6 @@ const Output1 = () => {
 
   }, [socket, requestCurrentStateWithRetry]);
 
-  // Monitor connection status and re-request state on connection
   useEffect(() => {
     logDebug(`Output1 connection status: ${connectionStatus}`);
 
@@ -137,7 +129,6 @@ const Output1 = () => {
     }
   }, [connectionStatus, socket, requestCurrentStateWithRetry]);
 
-  // Periodic sync check (every 60 seconds)
   useEffect(() => {
     if (!isConnected) return;
 
@@ -151,7 +142,6 @@ const Output1 = () => {
     return () => clearInterval(syncCheckInterval);
   }, [isConnected, socket, requestCurrentStateWithRetry]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (stateRequestTimeoutRef.current) {

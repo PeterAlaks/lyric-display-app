@@ -23,7 +23,6 @@ export default function QRCodeDialogBridge() {
         unsubscribe = window.electronAPI.onOpenQRCodeDialog(handler);
       }
     } catch (_) {
-      // no-op: continue with DOM listener fallback
     }
 
     window.addEventListener('open-qr-dialog', handler);

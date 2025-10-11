@@ -19,7 +19,6 @@ export const parseLrc = (file) => new Promise((resolve, reject) => {
   reader.readAsText(file);
 });
 
-// Parse LRC content from a raw string (no FileReader)
 export function parseLrcText(raw) {
   return parseLrcContent(raw || '');
 }

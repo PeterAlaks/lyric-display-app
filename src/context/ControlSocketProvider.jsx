@@ -189,7 +189,6 @@ export const ControlSocketProvider = ({ children }) => {
                 const socket = socketRef.current;
                 const isDesktopApp = clientType === 'desktop';
 
-                // Enhanced connect handler - sets ready flag after currentState
                 const handleConnect = () => {
                     logDebug(`Control socket connected: ${clientId.current}`);
                     connectionManager.recordConnectionSuccess(clientId.current);
@@ -198,7 +197,6 @@ export const ControlSocketProvider = ({ children }) => {
                     setLastSyncTime(Date.now());
                     startHeartbeat();
 
-                    // Mark as ready only after currentState arrives
                     socket.once('currentState', () => {
                         readyRef.current = true;
                         setReady(true);
@@ -232,7 +230,6 @@ export const ControlSocketProvider = ({ children }) => {
                 socket.on('connect_error', handleConnectError);
                 socket.on('disconnect', handleDisconnect);
 
-                // Track sync times
                 socket.on('currentState', () => {
                     setLastSyncTime(Date.now());
                 });
@@ -304,7 +301,6 @@ export const ControlSocketProvider = ({ children }) => {
         };
     }, [authStatus]);
 
-    // Emit functions
     const emitLineUpdate = useCallback((value) => {
         const payload = (value && typeof value === 'object' && !Array.isArray(value))
             ? ('index' in value ? value : { index: value })
@@ -365,7 +361,6 @@ export const ControlSocketProvider = ({ children }) => {
         };
     }, [connectionStatus, authStatus, lastSyncTime]);
 
-    // Listen for sync completion events
     useEffect(() => {
         const handleSyncCompleted = () => {
             setLastSyncTime(Date.now());
@@ -375,7 +370,6 @@ export const ControlSocketProvider = ({ children }) => {
         return () => window.removeEventListener('sync-completed', handleSyncCompleted);
     }, []);
 
-    // Initial connection
     useEffect(() => {
         connectSocketInternal();
 
@@ -390,7 +384,6 @@ export const ControlSocketProvider = ({ children }) => {
         };
     }, [connectSocketInternal, stopHeartbeat, cleanupSocket, clearBackoffWarning]);
 
-    // Emit connection diagnostics event for modal
     useEffect(() => {
         const handleDiagnosticsRequest = () => {
             const diagnostics = getConnectionDiagnostics();

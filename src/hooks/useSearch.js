@@ -21,9 +21,8 @@ const useSearch = (lyrics) => {
   }, [lyrics]);
 
   const scrollToLine = React.useCallback((lineIndex) => {
-    // Dispatch a custom event that LyricsList can listen to
-    window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', { 
-      detail: { lineIndex } 
+    window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+      detail: { lineIndex }
     }));
   }, []);
 

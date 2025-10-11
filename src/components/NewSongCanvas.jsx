@@ -110,14 +110,12 @@ const NewSongCanvas = () => {
     }
   }, [editMode, navigate, setRawLyricsContent]);
 
-  // Focus textarea on mount
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
   }, []);
 
-  // Populate editor when in edit mode and relevant data changes
   useEffect(() => {
     if (!editMode) return;
     if (rawLyricsContent) {
@@ -130,7 +128,7 @@ const NewSongCanvas = () => {
     }
     setFileName(lyricsFileName || '');
     setTitle(lyricsFileName || '');
-    // Set baselines for unsaved changes guard
+
     const nextContent = rawLyricsContent
       ? rawLyricsContent
       : (lyrics && lyrics.length > 0)
@@ -149,7 +147,6 @@ const NewSongCanvas = () => {
     baseTitleRef.current = '';
   }, [editMode]);
 
-  // Listen for draft submission results
   React.useEffect(() => {
     const handleDraftSubmitted = (event) => {
       showToast({
@@ -176,7 +173,6 @@ const NewSongCanvas = () => {
     };
   }, [showToast]);
 
-  // Clipboard + formatting handlers
   const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef });
 
   const lines = useMemo(() => content.split('\n'), [content]);
@@ -382,7 +378,6 @@ const NewSongCanvas = () => {
     };
   }, [pendingFocus, lineOffsets, lines]);
 
-  // Back navigation
   const handleBack = () => {
     const hasChanges = (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
     if (hasChanges) {
@@ -401,7 +396,6 @@ const NewSongCanvas = () => {
     navigate('/');
   };
 
-  // Save file
   const handleSave = async () => {
     if (!content.trim() || !title.trim()) {
       showModal({
@@ -438,7 +432,6 @@ const NewSongCanvas = () => {
         });
       }
     } else {
-      // Fallback: download file
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -452,7 +445,7 @@ const NewSongCanvas = () => {
       baseTitleRef.current = title || fileName || 'lyrics';
     }
   };
-  // Save and load into app
+
   const handleSaveAndLoad = async () => {
     if (!content.trim() || !title.trim()) {
       showModal({
@@ -529,7 +522,6 @@ const NewSongCanvas = () => {
     }
   };
 
-  // Handle load draft (for controllers)
   const handleLoadDraft = useCallback(async () => {
     if (!content.trim() || !title.trim()) {
       showModal({

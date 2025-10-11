@@ -1,4 +1,4 @@
-// server/index.js - Updated with Simple Secret Management
+// server/index.js
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -14,17 +14,14 @@ import registerSocketEvents from './events.js';
 import { assertJoinCodeAllowed, recordJoinCodeAttempt, getJoinCodeGuardSnapshot } from './joinCodeGuard.js';
 import SimpleSecretManager from './secretManager.js';
 
-// Load environment variables first
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize secret manager
 const secretManager = new SimpleSecretManager();
 const secrets = await secretManager.loadSecrets();
 
-// Use secrets from secure storage, with .env fallbacks for development
 const JWT_SECRET = secrets.JWT_SECRET;
 const TOKEN_EXPIRY = secrets.TOKEN_EXPIRY || process.env.TOKEN_EXPIRY || '24h';
 const ADMIN_TOKEN_EXPIRY = secrets.ADMIN_TOKEN_EXPIRY || process.env.ADMIN_TOKEN_EXPIRY || '7d';
@@ -473,9 +470,8 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/health/ready', async (req, res) => {
   try {
     const secretsStatus = await secretManager.getSecretsStatus();
-    // Verify all critical components are initialized
     const checks = {
-      serverListening: true, // If we can respond, server is listening
+      serverListening: true,
       secretsLoaded: !!secretsStatus?.exists,
       joinCodeGenerated: !!global.controllerJoinCode,
       socketIOReady: !!(io && io.engine),
@@ -517,7 +513,6 @@ app.get('/api/health/ready', async (req, res) => {
   }
 });
 
-// In production, serve the React frontend
 if (!isDev) {
   const frontendPath = path.join(__dirname, '..', 'dist');
   app.use(express.static(frontendPath));
@@ -550,11 +545,9 @@ server.listen(PORT, async () => {
     console.log(`JWT secret is ${secretsStatus.daysSinceRotation} days old - consider rotation`);
   }
 
-  // Enhanced ready signal with verification
   console.log('Server fully initialized and listening on port', PORT);
 
   if (process.send) {
-    // Send ready signal to parent process (Electron main)
     process.send({
       status: 'ready',
       port: PORT,
@@ -563,4 +556,3 @@ server.listen(PORT, async () => {
     });
   }
 });
-

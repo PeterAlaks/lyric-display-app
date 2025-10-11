@@ -14,9 +14,9 @@ export function checkForUpdates(showNoUpdateDialog = false) {
   });
 
   autoUpdater.on('update-available', (info) => {
-    // Notify renderer to show toast with actions
+
     BrowserWindow.getAllWindows().forEach(win => {
-      try { win.webContents.send('updater:update-available', { version: info?.version }); } catch {}
+      try { win.webContents.send('updater:update-available', { version: info?.version }); } catch { }
     });
   });
 
@@ -43,7 +43,7 @@ export function checkForUpdates(showNoUpdateDialog = false) {
   autoUpdater.on('error', (err) => {
     closeProgressWindow();
     const msg = err == null ? 'Unknown error' : (err.stack || err).toString();
-    BrowserWindow.getAllWindows().forEach(win => { try { win.webContents.send('updater:update-error', msg); } catch {} });
+    BrowserWindow.getAllWindows().forEach(win => { try { win.webContents.send('updater:update-error', msg); } catch { } });
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -51,13 +51,13 @@ export function checkForUpdates(showNoUpdateDialog = false) {
     console.log(msg);
     const win = getProgressWindow();
     if (win && !win.isDestroyed()) {
-      try { win.webContents.send('progress-update', progress); } catch {}
+      try { win.webContents.send('progress-update', progress); } catch { }
     }
   });
 
   autoUpdater.on('update-downloaded', () => {
     closeProgressWindow();
-    BrowserWindow.getAllWindows().forEach(win => { try { win.webContents.send('updater:update-downloaded'); } catch {} });
+    BrowserWindow.getAllWindows().forEach(win => { try { win.webContents.send('updater:update-downloaded'); } catch { } });
   });
 
   autoUpdater.checkForUpdates();

@@ -1,4 +1,4 @@
-// src/hooks/useSocket.js - Enhanced with connection management
+// src/hooks/useSocket.js
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import useAuth from './useAuth';
@@ -90,7 +90,6 @@ const useSocket = (role = 'output') => {
     }
   }, [clearAuthToken, setAuthStatus]);
 
-  // Enhanced cleanup with promise-based socket disconnection
   const cleanupSocket = useCallback(() => {
     return new Promise((resolve) => {
       if (!socketRef.current) {
@@ -101,7 +100,6 @@ const useSocket = (role = 'output') => {
       const socket = socketRef.current;
       socketRef.current = null;
 
-      // Set timeout for cleanup
       const cleanupTimeout = setTimeout(() => {
         logWarn(`Socket cleanup timeout for ${clientId}`);
         resolve();
@@ -129,7 +127,6 @@ const useSocket = (role = 'output') => {
   }, [clientId]);
 
   const connectSocketInternal = useCallback(async () => {
-    // Check with connection manager before attempting
     const canConnect = connectionManager.canAttemptConnection(clientId);
 
     if (!canConnect.allowed) {
@@ -182,7 +179,6 @@ const useSocket = (role = 'output') => {
     clearBackoffWarning();
 
     try {
-      // Record attempt start with connection manager
       connectionManager.startConnectionAttempt(clientId);
 
       setAuthStatus('authenticating');
@@ -205,12 +201,11 @@ const useSocket = (role = 'output') => {
       const socketUrl = getSocketUrl();
       logDebug(`Connecting socket to: ${socketUrl} (${clientId})`);
 
-      // Clean up existing socket with proper async handling
       await cleanupSocket();
 
       const socketOptions = {
         transports: ['websocket', 'polling'],
-        timeout: 10000, // Reduced from 30s
+        timeout: 10000,
         reconnection: false,
         forceNew: true,
         auth: { token },
@@ -223,7 +218,6 @@ const useSocket = (role = 'output') => {
         const resolvedClientType = getClientType();
         const isDesktopApp = resolvedClientType === 'desktop';
 
-        // Enhanced connection success handling
         const handleConnect = () => {
           logDebug(`Socket connected successfully: ${clientId}`);
           connectionManager.recordConnectionSuccess(clientId);
@@ -232,7 +226,6 @@ const useSocket = (role = 'output') => {
           startHeartbeat();
         };
 
-        // Enhanced error handling
         const handleConnectError = (error) => {
           logError(`Socket connection error (${clientId}):`, error);
           connectionManager.recordConnectionFailure(clientId, error);
@@ -245,18 +238,15 @@ const useSocket = (role = 'output') => {
           setConnectionStatus('disconnected');
           stopHeartbeat();
 
-          // Only attempt reconnection for unexpected disconnects
           if (reason !== 'io client disconnect' && reason !== 'transport close') {
             scheduleRetry();
           }
         };
 
-        // Set up event handlers
         socket.on('connect', handleConnect);
         socket.on('connect_error', handleConnectError);
         socket.on('disconnect', handleDisconnect);
 
-        // Register application-specific handlers
         registerAuthenticatedHandlers({
           socket,
           clientType: resolvedClientType,
@@ -293,7 +283,6 @@ const useSocket = (role = 'output') => {
     clearBackoffWarning
   ]);
 
-  // Centralized retry scheduling
   const scheduleRetry = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
@@ -368,7 +357,6 @@ const useSocket = (role = 'output') => {
   }, [clearBackoffWarning]);
 
   useEffect(() => {
-    // Add staggered delay for different client types to prevent connection storms
     const staggerDelay = role === 'control' ? 0 : role === 'output1' ? 500 : 1000;
 
     const startConnection = setTimeout(() => {
@@ -388,7 +376,6 @@ const useSocket = (role = 'output') => {
       stopHeartbeat();
       connectionManager.cleanup(clientId);
 
-      // Async cleanup with timeout
       cleanupSocket().then(() => {
         logDebug(`Socket cleanup completed for ${clientId}`);
       });
@@ -457,8 +444,6 @@ const useSocket = (role = 'output') => {
       setConnectionStatus('disconnected');
       setAuthStatus('pending');
       clearBackoffWarning();
-
-      // Small delay to ensure cleanup is complete
       setTimeout(() => {
         connectSocket();
       }, 100);
@@ -482,7 +467,7 @@ const useSocket = (role = 'output') => {
     refreshAuthToken,
     isConnected: connectionStatus === 'connected',
     isAuthenticated: authStatus === 'authenticated',
-    connectionStats: connectionManager.getStats(), // For debugging
+    connectionStats: connectionManager.getStats(),
   };
 };
 

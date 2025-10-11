@@ -11,11 +11,10 @@ class ConnectionManager {
     };
   }
 
-  // Calculate exponential backoff with jitter
   calculateBackoff(attemptCount, baseDelay = 100) {
-    const maxDelay = 30000; // 30 seconds max
+    const maxDelay = 30000;
     const exponential = Math.min(baseDelay * Math.pow(2, attemptCount), maxDelay);
-    const jitter = Math.random() * 0.3 * exponential; // 30% jitter
+    const jitter = Math.random() * 0.3 * exponential;
     return Math.floor(exponential + jitter);
   }
 
@@ -31,7 +30,6 @@ class ConnectionManager {
     return remaining;
   }
 
-  // Check if we should delay connection attempts globally
   shouldGloballyDelay() {
     const remaining = this.getGlobalBackoffRemaining();
     if (remaining > 0) {
@@ -41,12 +39,10 @@ class ConnectionManager {
     return false;
   }
 
-  // Record a global connection failure
   recordGlobalFailure() {
     this.globalBackoffState.failureCount += 1;
     this.globalBackoffState.lastFailureTime = Date.now();
 
-    // Apply global backoff after multiple rapid failures
     if (this.globalBackoffState.failureCount >= 3) {
       const delay = this.calculateBackoff(this.globalBackoffState.failureCount - 3, 2000);
       this.globalBackoffState.backoffUntil = Date.now() + delay;
@@ -54,7 +50,6 @@ class ConnectionManager {
     }
   }
 
-  // Record a successful connection (resets global failure count)
   recordGlobalSuccess() {
     if (this.globalBackoffState.failureCount > 0) {
       logDebug(`Global connection success, resetting failure count from ${this.globalBackoffState.failureCount}`);
@@ -64,7 +59,6 @@ class ConnectionManager {
     this.globalBackoffState.lastFailureTime = null;
   }
 
-  // Get connection state for a specific client
   getConnectionState(clientId) {
     if (!this.connections.has(clientId)) {
       this.connections.set(clientId, {
@@ -80,7 +74,6 @@ class ConnectionManager {
     return this.connections.get(clientId);
   }
 
-  // Check if connection should be attempted for specific client
   canAttemptConnection(clientId) {
     const globalRemaining = this.getGlobalBackoffRemaining();
     if (globalRemaining > 0) {
@@ -105,7 +98,6 @@ class ConnectionManager {
     return { allowed: true, reason: null, remainingMs: 0 };
   }
 
-  // Start connection attempt for client
   startConnectionAttempt(clientId) {
     const state = this.getConnectionState(clientId);
 
@@ -113,14 +105,12 @@ class ConnectionManager {
     state.attemptCount += 1;
     state.lastAttemptTime = Date.now();
 
-    // Set client-specific backoff for next attempt
     const backoffDelay = this.calculateBackoff(state.attemptCount - 1);
     state.backoffUntil = Date.now() + backoffDelay;
 
     logDebug(`Starting connection attempt ${state.attemptCount} for ${clientId}, next attempt in ${backoffDelay}ms`);
   }
 
-  // Record connection success for client
   recordConnectionSuccess(clientId) {
     const state = this.getConnectionState(clientId);
 
@@ -134,7 +124,6 @@ class ConnectionManager {
     logDebug(`Connection successful for ${clientId}`);
   }
 
-  // Record connection failure for client
   recordConnectionFailure(clientId, error) {
     const state = this.getConnectionState(clientId);
 
@@ -146,7 +135,6 @@ class ConnectionManager {
     logWarn(`Connection failed for ${clientId}: ${error?.message || error}`);
   }
 
-  // Clean up connection tracking for client
   cleanup(clientId) {
     if (!this.connections.has(clientId)) {
       return;
@@ -168,7 +156,6 @@ class ConnectionManager {
     }
   }
 
-  // Get connection statistics
   getStats() {
     const globalRemaining = this.getGlobalBackoffRemaining();
     const globalBackoffActive = globalRemaining > 0;
@@ -198,7 +185,6 @@ class ConnectionManager {
     return stats;
   }
 
-  // Reset all connection states (for debugging)
   reset() {
     this.connections.clear();
     this.globalBackoffState = {
@@ -210,10 +196,8 @@ class ConnectionManager {
   }
 }
 
-// Create singleton instance
 export const connectionManager = new ConnectionManager();
 
-// Export for debugging
 if (typeof window !== 'undefined') {
   window.connectionManager = connectionManager;
   if (!window.__connectionManagerUnloadAttached) {

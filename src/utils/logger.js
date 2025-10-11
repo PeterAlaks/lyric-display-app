@@ -19,4 +19,3 @@ export const logWarn = (...args) => {
 export const logError = (...args) => {
   console.error(...args);
 };
-

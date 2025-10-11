@@ -71,7 +71,6 @@ const LyricDisplayApp = () => {
   // Search state and helpers
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
 
-  // Check if lyrics are loaded
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast } = useToast();
 
@@ -97,13 +96,11 @@ const LyricDisplayApp = () => {
       const baseName = (fileName || '').replace(/\.(txt|lrc)$/i, '');
       setLyricsFileName(baseName);
 
-      // Emit to connected outputs and broadcast filename
       emitLyricsLoad(processedLines);
       if (socket && socket.connected && baseName) {
         socket.emit('fileNameUpdate', baseName);
       }
 
-      // Ensure file is in recent list
       try {
         if (filePath && window?.electronAPI?.addRecentFile) {
           await window.electronAPI.addRecentFile(filePath);
@@ -117,7 +114,6 @@ const LyricDisplayApp = () => {
     }
   }, [emitLyricsLoad, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, showToast, socket]);
 
-  // Handle opening lyrics directly from a file path via menu (recent files)
   React.useEffect(() => {
     if (!window?.electronAPI?.onOpenLyricsFromPath) return;
     const off = window.electronAPI.onOpenLyricsFromPath(async (payload) => {
@@ -126,7 +122,6 @@ const LyricDisplayApp = () => {
     return () => { try { off?.(); } catch { } };
   }, [processLoadedLyrics]);
 
-  // Show toast if a recent file no longer exists
   React.useEffect(() => {
     if (!window?.electronAPI?.onOpenLyricsFromPathError) return;
     const off = window.electronAPI.onOpenLyricsFromPathError(({ filePath }) => {
@@ -139,7 +134,6 @@ const LyricDisplayApp = () => {
     return () => { try { off?.(); } catch { } };
   }, [showToast]);
 
-  // Handle load triggered from File menu using native dialog (renderer dispatches DOM event)
   React.useEffect(() => {
     const listener = (e) => {
       const payload = e?.detail || {};
@@ -149,10 +143,8 @@ const LyricDisplayApp = () => {
     return () => window.removeEventListener('lyrics-opened', listener);
   }, [processLoadedLyrics]);
 
-  // Font options for dropdown
   const fontOptions = ['Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat', 'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'];
 
-  // Handle file upload button click
   const openFileDialog = async () => {
     if (!isAuthenticated) {
       showToast({
@@ -177,22 +169,18 @@ const LyricDisplayApp = () => {
     fileInputRef.current?.click();
   };
 
-  // Handle create new song
   const handleCreateNewSong = () => {
     navigate('/new-song?mode=new');
   };
 
-  // Handle edit current lyrics
   const handleEditLyrics = () => {
     navigate('/new-song?mode=edit');
   };
 
-  // Handle setlist modal
   const handleOpenSetlist = () => {
     setSetlistModalOpen(true);
   };
 
-  // Handle online lyrics search modal
   const handleOpenOnlineLyricsSearch = () => {
     setOnlineLyricsModalOpen(true);
   };
@@ -201,7 +189,6 @@ const LyricDisplayApp = () => {
     setOnlineLyricsModalOpen(false);
   };
 
-  // Handle file input change
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     const name = file?.name?.toLowerCase?.() || '';
@@ -211,13 +198,11 @@ const LyricDisplayApp = () => {
     }
   };
 
-  // Handle line selection
   const handleLineSelect = (index) => {
     selectLine(index);
     emitLineUpdate(index);
   };
 
-  // Handle output toggle
   const handleToggle = () => {
     if (!isConnected || !isAuthenticated || !ready) {
       showToast({
@@ -232,10 +217,8 @@ const LyricDisplayApp = () => {
     emitOutputToggle(!isOutputOn);
   };
 
-  // Setlist actions
   const { isFileAlreadyInSetlist, handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
-  // If not desktop app, show mobile layout
   if (!isDesktopApp) {
     return <MobileLayout />;
   }

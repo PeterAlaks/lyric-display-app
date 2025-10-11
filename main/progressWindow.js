@@ -6,7 +6,7 @@ let progressWindow = null;
 export function createProgressWindow({ parent } = {}) {
   if (progressWindow) {
     if (parent && !progressWindow.isDestroyed()) {
-      try { progressWindow.setParentWindow(parent); } catch {}
+      try { progressWindow.setParentWindow(parent); } catch { }
     }
     return progressWindow;
   }

@@ -15,7 +15,6 @@ const useFileUpload = () => {
   const handleFileUpload = useCallback(async (file) => {
     try {
       if (!file) return;
-      // Validate size
       if (file.size > MAX_FILE_SIZE_BYTES) {
         showToast({ title: 'File too large', message: `Max ${MAX_FILE_SIZE_MB} MB allowed.`, variant: 'error' });
         return;
@@ -29,34 +28,26 @@ const useFileUpload = () => {
         return;
       }
 
-      // Parse the file to get both raw text and processed lines
       const parsed = await parseLyricsFileAsync(file, { fileType: isLrc ? 'lrc' : 'txt' });
       if (!parsed || !Array.isArray(parsed.processedLines)) {
         throw new Error('Invalid lyrics parse response');
       }
 
-      // Store the processed lines for display in the control panel
       setLyrics(parsed.processedLines);
 
-      // Store the original raw text for editing purposes
       setRawLyricsContent(parsed.rawText);
 
-      // Clear any selected line
       selectLine(null);
 
-      // Set the filename
       const baseName = file.name.replace(/\.(txt|lrc)$/i, '');
       setLyricsFileName(baseName);
 
-      // Emit to connected outputs
       emitLyricsLoad(parsed.processedLines);
 
-      // Broadcast filename to all clients
       if (socket && socket.connected) {
         socket.emit('fileNameUpdate', baseName);
       }
 
-      // Add to recent files (Electron only)
       try {
         const filePath = file?.path;
         if (filePath && window?.electronAPI?.addRecentFile) {

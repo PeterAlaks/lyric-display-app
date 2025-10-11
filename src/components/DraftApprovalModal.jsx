@@ -20,7 +20,6 @@ const DraftApprovalModal = ({ darkMode }) => {
     const { setLyrics, setRawLyricsContent, setLyricsFileName, selectLine } = useLyricsState();
     const { showToast } = useToast();
 
-    // Listen for incoming drafts
     useEffect(() => {
         const handleDraftReceived = (event) => {
             const draft = event.detail;
@@ -51,7 +50,6 @@ const DraftApprovalModal = ({ darkMode }) => {
         return () => window.removeEventListener('lyrics-draft-received', handleDraftReceived);
     }, [showToast]);
 
-    // Show first draft in queue
     useEffect(() => {
         if (!currentDraft && draftQueue.length > 0) {
             setCurrentDraft(draftQueue[0]);
@@ -64,16 +62,13 @@ const DraftApprovalModal = ({ darkMode }) => {
         setIsProcessing(true);
 
         try {
-            // Process the lyrics locally first
             const processedLines = currentDraft.processedLines || processRawTextToLines(currentDraft.rawText);
 
-            // Update local state
             setLyrics(processedLines);
             setRawLyricsContent(currentDraft.rawText);
             setLyricsFileName(currentDraft.title);
             selectLine(null);
 
-            // Emit approval to server (broadcasts to all clients including outputs)
             const success = emitLyricsDraftApprove({
                 title: currentDraft.title,
                 rawText: currentDraft.rawText,
@@ -87,7 +82,6 @@ const DraftApprovalModal = ({ darkMode }) => {
                     variant: 'success'
                 });
 
-                // Remove from queue and show next
                 setDraftQueue(prev => prev.slice(1));
                 setCurrentDraft(null);
                 setShowRejectInput(false);
@@ -124,7 +118,6 @@ const DraftApprovalModal = ({ darkMode }) => {
                     variant: 'info'
                 });
 
-                // Remove from queue
                 setDraftQueue(prev => prev.slice(1));
                 setCurrentDraft(null);
                 setShowRejectInput(false);
@@ -145,7 +138,6 @@ const DraftApprovalModal = ({ darkMode }) => {
     }, [currentDraft, isProcessing, rejectReason, emitLyricsDraftReject, showToast]);
 
     const handleDismiss = useCallback(() => {
-        // Remove current draft without approving or rejecting
         setDraftQueue(prev => prev.slice(1));
         setCurrentDraft(null);
         setShowRejectInput(false);

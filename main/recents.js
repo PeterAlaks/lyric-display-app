@@ -11,7 +11,7 @@ function getStorePath() {
   try {
     return path.join(app.getPath('userData'), 'recent-files.json');
   } catch {
-    // Fallback to current working dir if userData is unavailable
+
     return path.join(process.cwd(), 'recent-files.json');
   }
 }
@@ -26,7 +26,7 @@ async function loadRecents() {
       recents = parsed.filter(Boolean);
     }
   } catch {
-    // ignore
+
   } finally {
     loaded = true;
   }
@@ -38,7 +38,7 @@ async function persist() {
     const p = getStorePath();
     await fs.writeFile(p, JSON.stringify(recents, null, 2), 'utf8');
   } catch (e) {
-    // Best effort — do not crash app on failure
+
     try {
       await requestRendererModal({
         title: 'Recent files error',
@@ -54,14 +54,14 @@ async function persist() {
         },
       });
     } catch {
-      try { dialog.showErrorBox('Recent Files Error', 'Could not persist recent files list.'); } catch {}
+      try { dialog.showErrorBox('Recent Files Error', 'Could not persist recent files list.'); } catch { }
     }
   }
 }
 
 function notify() {
   for (const fn of subscribers) {
-    try { fn([...recents]); } catch {}
+    try { fn([...recents]); } catch { }
   }
 }
 
@@ -74,7 +74,7 @@ export async function addRecent(filePath) {
   if (!filePath || typeof filePath !== 'string') return getRecents();
   await loadRecents();
   const normalized = filePath.trim();
-  // De-duplicate and move to front
+
   recents = [normalized, ...recents.filter(p => p !== normalized)].slice(0, 10);
   await persist();
   notify();
@@ -94,7 +94,5 @@ export function subscribe(callback) {
     subscribers.add(callback);
     return () => subscribers.delete(callback);
   }
-  return () => {};
+  return () => { };
 }
-
-

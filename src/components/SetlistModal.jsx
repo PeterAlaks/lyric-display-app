@@ -64,7 +64,6 @@ const SetlistModal = () => {
     }
   }, [emitSetlistReorder, isDesktopApp, list, setSetlistFiles]);
 
-  // Format date for display
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', {
@@ -77,7 +76,6 @@ const SetlistModal = () => {
     });
   };
 
-  // Handle file selection
   const handleFileSelect = useCallback(async () => {
     if (!isDesktopApp) {
       console.warn('File add only available on desktop app');
@@ -97,12 +95,10 @@ const SetlistModal = () => {
     fileInputRef.current?.click();
   }, [isDesktopApp, isSetlistFull]);
 
-  // Process selected files
   const handleFileChange = useCallback(async (event) => {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
-    // Check if adding these files would exceed limit
     const availableSlots = getAvailableSetlistSlots();
     if (files.length > availableSlots) {
       showModal({
@@ -116,7 +112,6 @@ const SetlistModal = () => {
       return;
     }
 
-    // Validate all files are .txt
     const invalidFiles = files.filter(file => !file.name.toLowerCase().endsWith('.txt'));
     if (invalidFiles.length > 0) {
       showModal({
@@ -148,10 +143,8 @@ const SetlistModal = () => {
         })
       );
 
-      // Send files to server
       emitSetlistAdd(processedFiles);
 
-      // Clear file input
       event.target.value = '';
 
     } catch (error) {
@@ -167,33 +160,27 @@ const SetlistModal = () => {
     }
   }, [emitSetlistAdd, getAvailableSetlistSlots]);
 
-  // Handle file removal
   const handleRemoveFile = useCallback((fileId, event) => {
-    event.stopPropagation(); // Prevent loading the file when clicking remove
+    event.stopPropagation();
     if (!isDesktopApp) return;
 
     emitSetlistRemove(fileId);
   }, [emitSetlistRemove, isDesktopApp]);
 
-  // Handle file loading
   const handleLoadFile = useCallback((fileId) => {
     emitSetlistLoad(fileId);
-    // Close modal after loading (optional - you can remove this if you want modal to stay open)
     setSetlistModalOpen(false);
   }, [emitSetlistLoad, setSetlistModalOpen]);
 
-  // Clear search
   const clearSearch = () => {
     setSearchQuery('');
   };
 
-  // Close modal
   const closeModal = () => {
     setSetlistModalOpen(false);
-    setSearchQuery(''); // Clear search when closing
+    setSearchQuery('');
   };
 
-  // Animate mount/unmount (internal visibility decoupled from store)
   const [visible, setVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [entering, setEntering] = useState(false);
@@ -205,7 +192,6 @@ const SetlistModal = () => {
       const raf = requestAnimationFrame(() => setEntering(false));
       return () => cancelAnimationFrame(raf);
     } else {
-      // trigger exit animation then hide after duration
       setEntering(false);
       setExiting(true);
       const t = setTimeout(() => { setExiting(false); setVisible(false); }, 300);
@@ -518,7 +504,6 @@ const SortableSetlistItem = ({
   );
 };
 
-// Listen for setlist remove success to show toast
 export default function SetlistModalWithToasts(props) {
   const { showToast } = useToast();
   useEffect(() => {

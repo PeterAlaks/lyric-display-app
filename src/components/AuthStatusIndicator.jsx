@@ -49,7 +49,6 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     return () => window.removeEventListener('join-code-updated', handleJoinCodeUpdated);
   }, [refreshJoinCode]);
 
-  // Listen for auth and permission errors
   useEffect(() => {
     const handleAuthError = (event) => {
       showToast({
@@ -178,7 +177,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
         variant: 'primary',
         onClick: () => {
           onRetry();
-          return true; // Close modal
+          return true;
         }
       });
     }
@@ -189,7 +188,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
         variant: 'secondary',
         onClick: () => {
           onRefreshToken();
-          return true; // Close modal
+          return true;
         }
       });
     }
@@ -272,4 +271,3 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
 };
 
 export default AuthStatusIndicator;
-

@@ -2,7 +2,6 @@ import { app } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Determine app root relative to this module (main/ -> project root)
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 export const appRoot = path.resolve(moduleDir, '..');
 
