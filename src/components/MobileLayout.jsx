@@ -116,7 +116,7 @@ const MobileLayout = () => {
           {/* Compose New Lyrics Button - Full Width */}
           <button
             onClick={() => navigate('/new-song?mode=compose')}
-            className={`w-full py-3 px-4 mb-6 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${darkMode
+            className={`w-full py-3 px-4 mb-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${darkMode
               ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
               : 'bg-gradient-to-r from-blue-400 to-purple-600 hover:from-blue-500 hover:to-purple-700 text-white'
               }`}
