@@ -253,7 +253,7 @@ const LyricDisplayApp = () => {
             <div className="flex items-center gap-2">
               {/* Online Lyrics Search Button */}
               <button
-                className={`p-2 rounded font-medium transition-colors ${darkMode
+                className={`p-2 rounded-lg font-medium transition-colors ${darkMode
                   ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
@@ -265,7 +265,7 @@ const LyricDisplayApp = () => {
 
               {/* Setlist Button */}
               <button
-                className={`p-2 rounded font-medium transition-colors ${darkMode
+                className={`p-2 rounded-lg font-medium transition-colors ${darkMode
                   ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
@@ -278,7 +278,7 @@ const LyricDisplayApp = () => {
               {/* Sync Outputs Button - Icon Only */}
               <button
                 disabled={!isConnected || !isAuthenticated || !ready}
-                className={`p-2 rounded font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
+                className={`p-2 rounded-lg font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
                   ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
                   : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
                   }`}

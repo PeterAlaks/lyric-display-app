@@ -9,6 +9,7 @@ import useEditorClipboard from '../hooks/useEditorClipboard';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
+import { processRawTextToLines } from '../utils/parseLyrics';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 
@@ -46,6 +47,9 @@ const NewSongCanvas = () => {
   const measurementRefs = useRef([]);
   const toolbarRef = useRef(null);
   const contextMenuRef = useRef(null);
+  const touchLongPressTimeoutRef = useRef(null);
+  const touchStartPositionRef = useRef(null);
+  const touchMovedRef = useRef(false);
   const pendingScrollRestoreRef = useRef(null);
   const lastKnownScrollRef = useRef(0);
 
@@ -61,6 +65,14 @@ const NewSongCanvas = () => {
 
   const closeContextMenu = useCallback(() => {
     setContextMenuState({ visible: false, x: 0, y: 0, lineIndex: null, mode: 'line' });
+  }, []);
+
+  const clearTouchLongPress = useCallback(() => {
+    if (touchLongPressTimeoutRef.current !== null) {
+      window.clearTimeout(touchLongPressTimeoutRef.current);
+      touchLongPressTimeoutRef.current = null;
+    }
+    touchMovedRef.current = false;
   }, []);
 
   const preserveTextareaScroll = useCallback((updater) => {
@@ -282,6 +294,12 @@ const NewSongCanvas = () => {
   }, [contextMenuState.visible]);
 
   useEffect(() => {
+    return () => {
+      clearTouchLongPress();
+    };
+  }, [clearTouchLongPress]);
+
+  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setSelectedLineIndex(null);
@@ -313,56 +331,55 @@ const NewSongCanvas = () => {
   useEffect(() => {
     if (!pendingFocus || !textareaRef.current) return;
 
-    const applyFocus = () => {
-      if (!textareaRef.current) return;
+    const attemptFocus = () => {
+      if (!textareaRef.current) return false;
+      const offsets = lineOffsets[pendingFocus.lineIndex];
+      const lineText = lines[pendingFocus.lineIndex] ?? '';
+      if (!offsets) {
+        return false;
+      }
+
+      const previousScroll = typeof lastKnownScrollRef.current === 'number'
+        ? lastKnownScrollRef.current
+        : textareaRef.current.scrollTop;
+
+      try {
+        textareaRef.current.focus({ preventScroll: true });
+      } catch (err) {
+        textareaRef.current.focus();
+      }
+
       if (pendingFocus.type === 'line') {
-        const offsets = lineOffsets[pendingFocus.lineIndex];
-        if (!offsets) {
-          setPendingFocus(null);
-          return;
-        }
-        const previousScroll = typeof lastKnownScrollRef.current === 'number'
-          ? lastKnownScrollRef.current
-          : textareaRef.current.scrollTop;
-        try {
-          textareaRef.current.focus({ preventScroll: true });
-        } catch (err) {
-          textareaRef.current.focus();
-        }
         textareaRef.current.setSelectionRange(offsets.start, offsets.end);
-        if (typeof previousScroll === 'number') {
-          textareaRef.current.scrollTop = previousScroll;
-          lastKnownScrollRef.current = previousScroll;
-        }
       } else if (pendingFocus.type === 'translation') {
-        const offsets = lineOffsets[pendingFocus.lineIndex];
-        const lineText = lines[pendingFocus.lineIndex] ?? '';
-        if (!offsets) {
-          setPendingFocus(null);
-          return;
-        }
         const openIndex = lineText.indexOf('(');
         const cursorPosition = openIndex >= 0 ? offsets.start + openIndex + 1 : offsets.end;
-        const previousScroll = typeof lastKnownScrollRef.current === 'number'
-          ? lastKnownScrollRef.current
-          : textareaRef.current.scrollTop;
-        try {
-          textareaRef.current.focus({ preventScroll: true });
-        } catch (err) {
-          textareaRef.current.focus();
-        }
         textareaRef.current.setSelectionRange(cursorPosition, cursorPosition);
-        if (typeof previousScroll === 'number') {
-          textareaRef.current.scrollTop = previousScroll;
-          lastKnownScrollRef.current = previousScroll;
-        }
       }
+
+      if (typeof previousScroll === 'number') {
+        textareaRef.current.scrollTop = previousScroll;
+        lastKnownScrollRef.current = previousScroll;
+      }
+
       setSelectedLineIndex(pendingFocus.lineIndex ?? null);
       setPendingFocus(null);
+      return true;
     };
 
-    const animationFrame = requestAnimationFrame(applyFocus);
-    return () => cancelAnimationFrame(animationFrame);
+    let completed = false;
+    const run = () => {
+      if (completed) return;
+      completed = attemptFocus();
+    };
+
+    const animationFrame = requestAnimationFrame(run);
+    const timeout = window.setTimeout(run, 75);
+    return () => {
+      completed = true;
+      cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeout);
+    };
   }, [pendingFocus, lineOffsets, lines]);
 
   // Back navigation
@@ -525,7 +542,8 @@ const NewSongCanvas = () => {
     }
 
     try {
-      const processedLines = formatLyrics(content).split('\n').filter(l => l.trim());
+      const cleanedText = formatLyrics(content);
+      const processedLines = processRawTextToLines(cleanedText);
 
       const success = emitLyricsDraftSubmit({
         title: title.trim(),
@@ -592,17 +610,34 @@ const NewSongCanvas = () => {
       closeContextMenu();
       return;
     }
-    preserveTextareaScroll(() => {
-      setContent((prev) => {
-        const segments = prev.split('\n');
-        const safeIndex = Math.max(0, Math.min(lineIndex, segments.length - 1));
-        segments.splice(safeIndex + 1, 0, '()');
-        return segments.join('\n');
-      });
-    });
-    focusInsideBrackets(lineIndex + 1);
+
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const currentContent = textarea.value;
+    const currentScroll = textarea.scrollTop;
+    const segments = currentContent.split('\n');
+    const safeIndex = Math.max(0, Math.min(lineIndex, segments.length - 1));
+
+    let newCursorPos = 0;
+    for (let i = 0; i <= safeIndex; i++) {
+      newCursorPos += segments[i].length + 1;
+    }
+    newCursorPos += 1;
+
+    segments.splice(safeIndex + 1, 0, '()');
+    const newContent = segments.join('\n');
+
+    textarea.value = newContent;
+    textarea.focus();
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.scrollTop = currentScroll;
+
+    setContent(newContent);
+    lastKnownScrollRef.current = currentScroll;
+    setSelectedLineIndex(lineIndex + 1);
     closeContextMenu();
-  }, [closeContextMenu, focusInsideBrackets, focusLine, isLineWrappedWithTranslation, lines, preserveTextareaScroll, setContent]);
+  }, [closeContextMenu, isLineWrappedWithTranslation, lines, focusLine]);
 
   const handleCopyLine = useCallback(async (lineIndex) => {
     const lineText = lines[lineIndex] ?? '';
@@ -661,6 +696,28 @@ const NewSongCanvas = () => {
     setSelectedLineIndex(lineIndex);
   }, [getLineIndexFromOffset]);
 
+  const handleTextareaKeyDown = useCallback((event) => {
+    if (!textareaRef.current) return;
+    const usesModifier = event.ctrlKey || event.metaKey;
+    if (!usesModifier || event.altKey) return;
+
+    const key = (event.key || '').toLowerCase();
+    const start = textareaRef.current.selectionStart ?? 0;
+    const lineIndex = getLineIndexFromOffset(start);
+
+    if (key === 'd') {
+      event.preventDefault();
+      handleDuplicateLine(lineIndex);
+    } else if (key === 't') {
+      event.preventDefault();
+      handleAddTranslation(lineIndex);
+    } else if (key === 'l') {
+      event.preventDefault();
+      closeContextMenu();
+      focusLine(lineIndex);
+    }
+  }, [closeContextMenu, focusLine, getLineIndexFromOffset, handleAddTranslation, handleDuplicateLine]);
+
   const handleCanvasContextMenu = useCallback((event) => {
     event.preventDefault();
     if (!editorContainerRef.current) return;
@@ -710,6 +767,60 @@ const NewSongCanvas = () => {
       mode: 'line'
     });
   }, [contextMenuDimensions.height, contextMenuDimensions.width, findLineIndexByPosition, getLineIndexFromOffset, lineOffsets, scrollTop, selectedLineIndex]);
+
+  const handleTouchStart = useCallback((event) => {
+    if (!event.touches || event.touches.length !== 1) {
+      clearTouchLongPress();
+      return;
+    }
+    const touch = event.touches[0];
+    clearTouchLongPress();
+    touchMovedRef.current = false;
+    touchStartPositionRef.current = {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    };
+    touchLongPressTimeoutRef.current = window.setTimeout(() => {
+      if (touchMovedRef.current) return;
+      const coords = touchStartPositionRef.current;
+      if (!coords) return;
+      clearTouchLongPress();
+      const syntheticEvent = {
+        preventDefault: () => { },
+        stopPropagation: () => { },
+        clientX: coords.clientX,
+        clientY: coords.clientY
+      };
+      handleCanvasContextMenu(syntheticEvent);
+      touchStartPositionRef.current = null;
+    }, 550);
+  }, [clearTouchLongPress, handleCanvasContextMenu]);
+
+  const handleTouchMove = useCallback((event) => {
+    if (!touchStartPositionRef.current || !event.touches || event.touches.length !== 1) {
+      clearTouchLongPress();
+      touchStartPositionRef.current = null;
+      return;
+    }
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartPositionRef.current.clientX);
+    const deltaY = Math.abs(touch.clientY - touchStartPositionRef.current.clientY);
+    if (deltaX > 10 || deltaY > 10) {
+      touchMovedRef.current = true;
+      clearTouchLongPress();
+      touchStartPositionRef.current = null;
+    }
+  }, [clearTouchLongPress]);
+
+  const handleTouchEnd = useCallback(() => {
+    clearTouchLongPress();
+    touchStartPositionRef.current = null;
+  }, [clearTouchLongPress]);
+
+  const handleTouchCancel = useCallback(() => {
+    clearTouchLongPress();
+    touchStartPositionRef.current = null;
+  }, [clearTouchLongPress]);
 
   const handleCleanupFromContext = useCallback(() => {
     handleCleanup();
@@ -960,6 +1071,10 @@ const NewSongCanvas = () => {
           ref={editorContainerRef}
           className={`relative h-full rounded-lg border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
           onContextMenu={handleCanvasContextMenu}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
         >
           <textarea
             ref={textareaRef}
@@ -968,6 +1083,7 @@ const NewSongCanvas = () => {
             onPaste={handleTextareaPaste}
             onScroll={handleTextareaScroll}
             onClick={handleTextareaSelect}
+            onKeyDown={handleTextareaKeyDown}
             onKeyUp={handleTextareaSelect}
             onSelect={handleTextareaSelect}
             placeholder="Start typing your lyrics here, or paste existing content..."

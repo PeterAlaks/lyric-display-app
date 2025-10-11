@@ -260,7 +260,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
   return (
     <button
       onClick={showAuthModal}
-      className={`p-2 rounded font-medium transition-colors ${darkMode
+      className={`p-2 rounded-lg font-medium transition-colors ${darkMode
         ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
         : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
         }`}

@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import useSearch from '../hooks/useSearch';
 import SearchBar from './SearchBar';
 import { useSyncTimer } from '../hooks/useSyncTimer';
+import useToast from '../hooks/useToast';
 
 const MobileLayout = () => {
   const { isOutputOn, setIsOutputOn } = useOutputState();
@@ -17,7 +18,7 @@ const MobileLayout = () => {
   const { darkMode } = useDarkModeState();
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles } = useSetlistState();
 
-  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus, ready, lastSyncTime } = useControlSocket();
+  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus, ready, lastSyncTime, isConnected } = useControlSocket();
 
   const secondsAgo = useSyncTimer(lastSyncTime);
 
@@ -25,6 +26,7 @@ const MobileLayout = () => {
     containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch, } = useSearch(lyrics);
 
   const hasLyrics = lyrics && lyrics.length > 0;
+  const { showToast } = useToast();
 
   const navigate = useNavigate();
 
@@ -46,16 +48,55 @@ const MobileLayout = () => {
   };
 
   const handleSyncOutputs = () => {
-    if (!isAuthenticated || !ready) {
+    if (!isConnected || !isAuthenticated || !ready) {
+      showToast({
+        title: 'Cannot Sync',
+        message: 'Not connected or authenticated.',
+        variant: 'warning',
+      });
       return;
     }
-    if (lyrics && lyrics.length > 0) {
-      emitLyricsLoad(lyrics);
-      if (selectedLine !== null && selectedLine !== undefined) {
-        emitLineUpdate(selectedLine);
+
+    try {
+      let syncSuccess = true;
+
+      if (lyrics && lyrics.length > 0) {
+        if (!emitLyricsLoad(lyrics)) {
+          syncSuccess = false;
+        }
+        if (selectedLine !== null && selectedLine !== undefined) {
+          if (!emitLineUpdate(selectedLine)) {
+            syncSuccess = false;
+          }
+        }
       }
+
+      if (!emitOutputToggle(isOutputOn)) {
+        syncSuccess = false;
+      }
+
+      if (syncSuccess) {
+        window.dispatchEvent(new CustomEvent('sync-completed', { detail: { source: 'manual' } }));
+        showToast({
+          title: 'Outputs Synced',
+          message: 'Output displays updated successfully.',
+          variant: 'success',
+        });
+      } else {
+        showToast({
+          title: 'Sync Failed',
+          message: 'Outputs were not updated. Check the connection and try again.',
+          variant: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('Manual sync failed:', error);
+      showToast({
+        title: 'Sync Failed',
+        message: 'An unexpected error occurred while syncing outputs.',
+        variant: 'error',
+      });
     }
-    emitOutputToggle(isOutputOn);
   };
 
   return (
@@ -101,12 +142,12 @@ const MobileLayout = () => {
               {/* Sync Outputs Button */}
               <button
                 onClick={handleSyncOutputs}
-                disabled={!isAuthenticated || !ready}
-                className={`p-2.5 rounded-lg transition-colors ${(!isAuthenticated || !ready)
+                disabled={!isConnected || !isAuthenticated || !ready}
+                className={`p-2.5 rounded-lg transition-colors ${(!isConnected || !isAuthenticated || !ready)
                   ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
                   : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
                   }`}
-                title={(!isAuthenticated || !ready) ? "Cannot sync - not ready" : "Sync outputs"}
+                title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync outputs"}
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
