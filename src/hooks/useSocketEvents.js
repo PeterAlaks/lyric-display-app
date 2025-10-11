@@ -85,6 +85,11 @@ const useSocketEvents = (role) => {
       if (rawContent) {
         setRawLyricsContent(rawContent);
       }
+      try {
+        window.dispatchEvent(new CustomEvent('setlist-load-success', {
+          detail: { fileId, fileName, linesCount, loadedBy },
+        }));
+      } catch { }
     });
 
     socket.on('setlistAddSuccess', ({ addedCount, totalCount }) => {

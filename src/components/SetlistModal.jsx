@@ -21,6 +21,7 @@ const SetlistModal = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const pendingLoadRef = useRef({ id: null, name: '' });
   const { showToast } = useToast();
   const { showModal } = useModal();
   const [activeId, setActiveId] = useState(null);
@@ -30,7 +31,6 @@ const SetlistModal = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Filter setlist files based on search query
   const list = Array.isArray(setlistFiles) ? setlistFiles : [];
   const filteredFiles = list.filter(file =>
     file.displayName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -112,11 +112,14 @@ const SetlistModal = () => {
       return;
     }
 
-    const invalidFiles = files.filter(file => !file.name.toLowerCase().endsWith('.txt'));
+    const invalidFiles = files.filter(file => {
+      const lower = file.name.toLowerCase();
+      return !lower.endsWith('.txt') && !lower.endsWith('.lrc');
+    });
     if (invalidFiles.length > 0) {
       showModal({
         title: 'Unsupported files',
-        description: 'Only .txt lyric files can be added to the setlist.',
+        description: 'Only .txt or .lrc lyric files can be added to the setlist.',
         variant: 'error',
         dismissLabel: 'Understood',
       });
@@ -168,9 +171,16 @@ const SetlistModal = () => {
   }, [emitSetlistRemove, isDesktopApp]);
 
   const handleLoadFile = useCallback((fileId) => {
-    emitSetlistLoad(fileId);
+    const target = list.find((file) => file.id === fileId);
+    const displayName = target?.displayName || target?.name || '';
+    pendingLoadRef.current = { id: fileId, name: displayName };
+    const emitted = emitSetlistLoad(fileId);
+    if (!emitted) {
+      pendingLoadRef.current = { id: null, name: '' };
+      return;
+    }
     setSetlistModalOpen(false);
-  }, [emitSetlistLoad, setSetlistModalOpen]);
+  }, [emitSetlistLoad, list, setSetlistModalOpen]);
 
   const clearSearch = () => {
     setSearchQuery('');
@@ -198,6 +208,37 @@ const SetlistModal = () => {
       return () => clearTimeout(t);
     }
   }, [setlistModalOpen]);
+
+  useEffect(() => {
+    const handleLoadSuccess = (event) => {
+      const detail = event?.detail || {};
+      const pending = pendingLoadRef.current;
+      if (!pending || !pending.id || pending.id !== detail.fileId) {
+        return;
+      }
+      const rawName = pending.name || detail.fileName || '';
+      const lower = rawName.toLowerCase();
+      const isLrc = lower.endsWith('.lrc');
+      const baseName = rawName.replace(/\.(txt|lrc)$/i, '') || rawName;
+      showToast({
+        title: 'File loaded',
+        message: `${isLrc ? 'LRC' : 'Text'}: ${baseName}`,
+        variant: 'success',
+      });
+      pendingLoadRef.current = { id: null, name: '' };
+    };
+
+    const handleLoadError = () => {
+      pendingLoadRef.current = { id: null, name: '' };
+    };
+
+    window.addEventListener('setlist-load-success', handleLoadSuccess);
+    window.addEventListener('setlist-error', handleLoadError);
+    return () => {
+      window.removeEventListener('setlist-load-success', handleLoadSuccess);
+      window.removeEventListener('setlist-error', handleLoadError);
+    };
+  }, [showToast]);
 
   if (!visible) return null;
 
@@ -385,7 +426,7 @@ const SetlistModal = () => {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".txt"
+        accept=".txt,.lrc"
         multiple
         style={{ display: 'none' }}
         onChange={handleFileChange}
