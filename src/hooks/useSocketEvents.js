@@ -227,33 +227,37 @@ const useSocketEvents = (role) => {
         socket.emit('requestCurrentState');
       }, 500);
 
-      const syncOutputSettingsFromStore = () => {
-        try {
-          const { output1Settings, output2Settings } = useLyricsStore.getState();
+      const shouldSyncOutputSettings = role !== 'output' && role !== 'output1' && role !== 'output2';
 
-          if (output1Settings) {
-            socket.emit('styleUpdate', { output: 'output1', settings: output1Settings });
+      if (shouldSyncOutputSettings) {
+        const syncOutputSettingsFromStore = () => {
+          try {
+            const { output1Settings, output2Settings } = useLyricsStore.getState();
+
+            if (output1Settings) {
+              socket.emit('styleUpdate', { output: 'output1', settings: output1Settings });
+            }
+
+            if (output2Settings) {
+              socket.emit('styleUpdate', { output: 'output2', settings: output2Settings });
+            }
+
+            logDebug('Synced output settings to server after reconnect');
+          } catch (error) {
+            logError('Failed to sync output settings after reconnect:', error);
           }
+        };
 
-          if (output2Settings) {
-            socket.emit('styleUpdate', { output: 'output2', settings: output2Settings });
-          }
-
-          logDebug('Synced output settings to server after reconnect');
-        } catch (error) {
-          logError('Failed to sync output settings after reconnect:', error);
-        }
-      };
-
-      const persistApi = useLyricsStore.persist;
-      if (persistApi?.hasHydrated?.()) {
-        syncOutputSettingsFromStore();
-      } else if (persistApi?.onFinishHydration) {
-        persistApi.onFinishHydration(() => {
+        const persistApi = useLyricsStore.persist;
+        if (persistApi?.hasHydrated?.()) {
           syncOutputSettingsFromStore();
-        });
-      } else {
-        syncOutputSettingsFromStore();
+        } else if (persistApi?.onFinishHydration) {
+          persistApi.onFinishHydration(() => {
+            syncOutputSettingsFromStore();
+          });
+        } else {
+          syncOutputSettingsFromStore();
+        }
       }
 
       if (isDesktopApp) {
