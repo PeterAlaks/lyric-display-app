@@ -14,8 +14,6 @@ const useLyricsStore = create(
       lyricsFileName: '',
       isOutputOn: true,
       darkMode: false,
-
-      // New setlist state
       setlistFiles: [],
       isDesktopApp: false,
       setlistModalOpen: false,
