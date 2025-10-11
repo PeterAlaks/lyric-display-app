@@ -2,7 +2,7 @@
 
 > Complete setup instructions for Windows, OBS Studio, and VMix integration
 
-**Version:** 2.1.1  
+**Version:** 4.0.1  
 **Last Updated:** October 2025
 
 ---
@@ -15,8 +15,9 @@
 4. [OBS Studio Integration](#obs-studio-integration)
 5. [VMix Integration](#vmix-integration)
 6. [Network Setup (Multi-PC)](#network-setup-multi-pc)
-7. [Loading and Managing Lyrics](#loading-and-managing-lyrics)
-8. [Troubleshooting](#troubleshooting)
+7. [Secondary Controllers](#secondary-controllers)
+8. [Loading and Managing Lyrics](#loading-and-managing-lyrics)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -267,6 +268,16 @@ If the connection fails, allow LyricDisplay through Windows Firewall:
 5. Browse to `C:\Program Files\LyricDisplay\LyricDisplay.exe`
 6. Ensure both **Private** and **Public** are checked
 7. Click **OK**
+
+---
+
+## Secondary Controllers
+
+Secondary controllers allow mobile or web devices to follow along without granting full desktop access.
+
+1. In LyricDisplay choose **File > Connect Mobile Controller** (or click the shield icon) to display the QR code and current 6-digit join code. The code refreshes whenever the desktop app restarts.
+2. On the secondary device, make sure it is on the same network, then scan the QR code or visit `http://<control-pc-ip>:4000/?client=mobile` and enter the join code.
+3. After pairing, the mobile layout can trigger lyric lines, toggle the display, run manual sync, and submit lyric drafts that the desktop operator approves before they go live.
 
 ---
 

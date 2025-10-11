@@ -35,6 +35,7 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 - **Auto-Updates**: Seamless background updates via GitHub releases
 - **Dark Mode**: System-integrated dark/light theme switching
 - **Keyboard Shortcuts**: Full menu-driven workflow
+- **Secondary Controllers**: Authorize mobile/web devices with a 6-digit join code so remote operators can trigger lines and submit lyric drafts (desktop approval required)
 - **Cross-Platform**: Windows, macOS, and Linux support
 - **Socket.io Backend**: Secure and reliable real-time communication
 
@@ -78,6 +79,11 @@ npm run electron-pack
 - Use search bar to quickly find specific lyrics
 - Navigate matches with Shift+Up/Down arrows
 - Toggle output on/off with the main switch
+
+### 4. Secondary Controllers (Optional)
+- In the desktop app, open `File > Connect Mobile Controller` or tap the shield icon to view the QR code and current 6-digit join code (the code refreshes when the app restarts)
+- On a phone or tablet on the same network, scan the QR code or visit `http://<control-pc-ip>:4000/?client=mobile`, then enter the join code to pair
+- Paired controllers load the mobile layout where they can trigger lyric lines, toggle outputs, run manual sync, and submit lyric drafts for approval
 
 ## File Format
 

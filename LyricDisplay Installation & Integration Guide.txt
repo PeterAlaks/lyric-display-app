@@ -3,7 +3,7 @@ LYRICDISPLAY - INSTALLATION & OBS INTEGRATION GUIDE
 =================================================================
 
 Professional real-time lyric display for live streaming & church services
-Version: 2.1.1 | Windows 10/11 (64-bit)
+Version: 4.0.1 | Windows 10/11 (64-bit)
 
 -----------------------------------------------------------------
 WHAT IS LYRICDISPLAY?
@@ -21,6 +21,7 @@ Key Features:
 - Translation support (bracketed lines)
 - 13 professional fonts with full styling controls
 - Keyboard-driven workflow
+- Secondary mobile/web controllers with join-code security
 - Auto-updates via GitHub releases
 
 -----------------------------------------------------------------
@@ -162,6 +163,14 @@ On LyricDisplay computer:
 4. Browse to: C:\Program Files\LyricDisplay\LyricDisplay.exe
 5. Check both "Private" and "Public"
 6. Click OK
+
+-----------------------------------------------------------------
+SECONDARY CONTROLLERS (MOBILE / WEB)
+-----------------------------------------------------------------
+
+1. In LyricDisplay go to File > Connect Mobile Controller (or click the shield icon) to show the QR code and current 6-digit join code. The code resets when the app restarts.
+2. On the secondary device (same network) scan the QR code or visit: http://<control-pc-ip>:4000/?client=mobile and enter the join code.
+3. After pairing, the mobile layout can trigger lyric lines, toggle the display, run manual sync, and send lyric drafts for approval on the desktop.
 
 -----------------------------------------------------------------
 LOADING LYRICS
