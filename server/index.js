@@ -38,7 +38,10 @@ const isControllerClient = (clientType) => CONTROLLER_CLIENT_TYPES.includes(clie
 const app = express();
 const server = http.createServer(app);
 
-const uploadsRoot = path.join(__dirname, '..', 'uploads');
+const dataRoot = process.env.LYRICDISPLAY_DATA_DIR
+  ? path.resolve(process.env.LYRICDISPLAY_DATA_DIR)
+  : path.join(__dirname, '..');
+const uploadsRoot = path.join(dataRoot, 'uploads');
 const backgroundMediaDir = path.join(uploadsRoot, 'backgrounds');
 fs.mkdirSync(backgroundMediaDir, { recursive: true });
 

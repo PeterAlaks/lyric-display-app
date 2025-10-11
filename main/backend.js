@@ -42,12 +42,14 @@ async function waitForBackendHealth(maxAttempts = 20, intervalMs = 500) {
 export function startBackend() {
   return new Promise((resolve, reject) => {
     const serverPath = resolveProductionPath('server', 'index.js');
+    const backendDataDir = path.join(app.getPath('userData'), 'backend');
 
     backendProcess = fork(serverPath, [], {
       cwd: path.dirname(serverPath),
       env: {
         ...process.env,
-        NODE_ENV: app.isPackaged ? 'production' : 'development'
+        NODE_ENV: app.isPackaged ? 'production' : 'development',
+        LYRICDISPLAY_DATA_DIR: backendDataDir
       },
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     });
