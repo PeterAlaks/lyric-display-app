@@ -81,6 +81,16 @@
         "to": "app.asar.unpacked/server/node_modules"
       }
     ],
+    "extraFiles": [
+      {
+        "from": "LyricDisplay Installation & Integration Guide.txt",
+        "to": "LyricDisplay Installation & Integration Guide.txt"
+      },
+      {
+        "from": "LyricDisplay Installation & Integration Guide.md",
+        "to": "LyricDisplay Installation & Integration Guide.md"
+      }
+    ],
     "nsis": {
       "oneClick": false,
       "allowElevation": true,
