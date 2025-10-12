@@ -15,7 +15,8 @@
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run update-version && npm run build && electron-builder",
     "electron-publish": "npm run update-version && npm run build && electron-builder --publish=always",
-    "version": "npm run update-version && git add README.md 'LyricDisplay Installation & Integration Guide.md'"
+    "version": "npm run update-version && git add README.md 'LyricDisplay Installation & Integration Guide.md'",
+    "release": "node scripts/release.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -52,6 +53,7 @@
     "electron-builder": "^24.13.3",
     "husky": "^9.1.7",
     "postcss": "^8.5.6",
+    "prompts": "^2.4.2",
     "tailwindcss": "^3.4.17",
     "vite": "^4.5.14",
     "wait-on": "^7.2.0"
