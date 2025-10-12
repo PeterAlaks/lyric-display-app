@@ -15,7 +15,6 @@
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run update-version && npm run build && electron-builder",
     "electron-publish": "npm run update-version && npm run build && electron-builder --publish=always",
-    "prepare": "husky install",
     "version": "npm run update-version && git add README.md 'LyricDisplay Installation & Integration Guide.md'"
   },
   "dependencies": {
