@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": "Peter Alakembi",
   "main": "main.js",
@@ -12,8 +12,11 @@
     "server": "node server/index.js",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron": "electron .",
-    "electron-pack": "npm run build && electron-builder",
-    "electron-publish": "npm run build && electron-builder --publish=always"
+    "update-version": "node scripts/update-version.js",
+    "electron-pack": "npm run update-version && npm run build && electron-builder",
+    "electron-publish": "npm run update-version && npm run build && electron-builder --publish=always",
+    "prepare": "husky install",
+    "version": "npm run update-version && git add README.md 'LyricDisplay Installation & Integration Guide.md'"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -48,6 +51,7 @@
     "concurrently": "^8.2.2",
     "electron": "^37.2.5",
     "electron-builder": "^24.13.3",
+    "husky": "^9.1.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "vite": "^4.5.14",
@@ -82,10 +86,6 @@
       }
     ],
     "extraFiles": [
-      {
-        "from": "LyricDisplay Installation & Integration Guide.txt",
-        "to": "LyricDisplay Installation & Integration Guide.txt"
-      },
       {
         "from": "LyricDisplay Installation & Integration Guide.md",
         "to": "LyricDisplay Installation & Integration Guide.md"

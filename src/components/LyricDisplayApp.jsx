@@ -191,10 +191,10 @@ const LyricDisplayApp = () => {
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
-    const name = file?.name?.toLowerCase?.() || '';
-    if (file && (file.type === 'text/plain' || name.endsWith('.txt') || name.endsWith('.lrc'))) {
+    if (!file) return;
+    const success = await handleFileUpload(file);
+    if (success) {
       clearSearch();
-      await handleFileUpload(file);
     }
   };
 
@@ -512,10 +512,10 @@ const LyricDisplayApp = () => {
                   e.preventDefault();
                   e.stopPropagation();
                   const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                  const name = file?.name?.toLowerCase?.() || '';
-                  if (file && (file.type === 'text/plain' || name.endsWith('.txt') || name.endsWith('.lrc'))) {
+                  if (!file) return;
+                  const success = await handleFileUpload(file);
+                  if (success) {
                     clearSearch();
-                    await handleFileUpload(file);
                   }
                 }}
                 onDragOver={e => {
@@ -541,10 +541,8 @@ const LyricDisplayApp = () => {
                   e.preventDefault();
                   e.stopPropagation();
                   const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                  const name = file?.name?.toLowerCase?.() || '';
-                  if (file && (file.type === 'text/plain' || name.endsWith('.txt') || name.endsWith('.lrc'))) {
-                    await handleFileUpload(file);
-                  }
+                  if (!file) return;
+                  await handleFileUpload(file);
                 }}
                 onDragOver={e => {
                   e.preventDefault();

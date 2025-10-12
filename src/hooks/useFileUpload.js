@@ -14,10 +14,10 @@ const useFileUpload = () => {
 
   const handleFileUpload = useCallback(async (file) => {
     try {
-      if (!file) return;
+      if (!file) return false;
       if (file.size > MAX_FILE_SIZE_BYTES) {
         showToast({ title: 'File too large', message: `Max ${MAX_FILE_SIZE_MB} MB allowed.`, variant: 'error' });
-        return;
+        return false;
       }
 
       const nameLower = (file.name || '').toLowerCase();
@@ -25,7 +25,7 @@ const useFileUpload = () => {
       const isLrc = nameLower.endsWith('.lrc');
       if (!isTxt && !isLrc) {
         showToast({ title: 'Unsupported file', message: 'Only .txt or .lrc files are supported.', variant: 'warn' });
-        return;
+        return false;
       }
 
       const parsed = await parseLyricsFileAsync(file, { fileType: isLrc ? 'lrc' : 'txt' });
@@ -57,9 +57,11 @@ const useFileUpload = () => {
 
       showToast({ title: 'File loaded', message: `${isLrc ? 'LRC' : 'Text'}: ${baseName}`, variant: 'success' });
 
+      return true;
     } catch (err) {
       console.error('Failed to read lyrics file:', err);
       showToast({ title: 'Failed to load file', message: 'Please check the file and try again.', variant: 'error' });
+      return false;
     }
   }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, emitLyricsLoad, socket, showToast]);
 
