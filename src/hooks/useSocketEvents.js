@@ -78,7 +78,7 @@ const useSocketEvents = (role) => {
       setSetlistFiles(files);
     });
 
-    socket.on('setlistLoadSuccess', ({ fileId, fileName, linesCount, rawContent, loadedBy }) => {
+    socket.on('setlistLoadSuccess', ({ fileId, fileName, originalName, fileType, linesCount, rawContent, loadedBy }) => {
       logDebug(`Setlist file loaded: ${fileName} (${linesCount} lines) by ${loadedBy}`);
       setLyricsFileName(fileName);
       selectLine(null);
@@ -87,7 +87,7 @@ const useSocketEvents = (role) => {
       }
       try {
         window.dispatchEvent(new CustomEvent('setlist-load-success', {
-          detail: { fileId, fileName, linesCount, loadedBy },
+          detail: { fileId, fileName, originalName, fileType, linesCount, loadedBy },
         }));
       } catch { }
     });

@@ -21,7 +21,8 @@ const SetlistModal = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
-  const pendingLoadRef = useRef({ id: null, name: '' });
+  const pendingLoadRef = useRef({ id: null, displayName: '', originalName: '', fileType: null });
+  const pendingAddRef = useRef([]);
   const { showToast } = useToast();
   const { showModal } = useModal();
   const [activeId, setActiveId] = useState(null);
@@ -146,9 +147,30 @@ const SetlistModal = () => {
         })
       );
 
-      emitSetlistAdd(processedFiles);
+      pendingAddRef.current = processedFiles.map((file) => {
+        const lower = file.name.toLowerCase();
+        const fileType = lower.endsWith('.lrc') ? 'lrc' : 'txt';
+        const displayName = file.name.replace(/\.(txt|lrc)$/i, '') || file.name;
+        return {
+          displayName,
+          originalName: file.name,
+          fileType,
+        };
+      });
 
       event.target.value = '';
+
+      const emitted = emitSetlistAdd(processedFiles);
+      if (!emitted) {
+        pendingAddRef.current = [];
+        setIsLoading(false);
+        showToast({
+          title: 'Setlist unavailable',
+          message: 'Unable to add files right now. Check your connection and try again.',
+          variant: 'warn',
+        });
+        return;
+      }
 
     } catch (error) {
       console.error('Error processing files:', error);
@@ -173,10 +195,13 @@ const SetlistModal = () => {
   const handleLoadFile = useCallback((fileId) => {
     const target = list.find((file) => file.id === fileId);
     const displayName = target?.displayName || target?.name || '';
-    pendingLoadRef.current = { id: fileId, name: displayName };
+    const originalName = target?.originalName || '';
+    const normalizedOriginal = originalName.toLowerCase();
+    const fileType = target?.fileType || (normalizedOriginal.endsWith('.lrc') ? 'lrc' : 'txt');
+    pendingLoadRef.current = { id: fileId, displayName, originalName, fileType };
     const emitted = emitSetlistLoad(fileId);
     if (!emitted) {
-      pendingLoadRef.current = { id: null, name: '' };
+      pendingLoadRef.current = { id: null, displayName: '', originalName: '', fileType: null };
       return;
     }
     setSetlistModalOpen(false);
@@ -194,6 +219,45 @@ const SetlistModal = () => {
   const [visible, setVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [entering, setEntering] = useState(false);
+  useEffect(() => {
+    const handleAddSuccess = (event) => {
+      const detail = event?.detail || {};
+      const addedCount = Number(detail.addedCount) || 0;
+      const totalCount = Number(detail.totalCount) || 0;
+      if (addedCount <= 0) return;
+
+      const pending = pendingAddRef.current;
+      if (!pending || pending.length === 0) {
+        return;
+      }
+
+      if (addedCount === 1 && pending.length === 1) {
+        const addedFile = pending[0];
+        const rawName = addedFile?.displayName || addedFile?.originalName || '';
+        const baseName = rawName.replace(/\.(txt|lrc)$/i, '') || rawName;
+        const type = addedFile?.fileType || (addedFile?.originalName?.toLowerCase?.().endsWith('.lrc') ? 'lrc' : 'txt');
+        showToast({
+          title: 'Added to setlist',
+          message: `${type === 'lrc' ? 'LRC' : 'Text'}: ${baseName}`,
+          variant: 'success',
+        });
+      }
+
+      pendingAddRef.current = [];
+    };
+
+    const handleAddError = () => {
+      setIsLoading(false);
+      pendingAddRef.current = [];
+    };
+
+    window.addEventListener('setlist-add-success', handleAddSuccess);
+    window.addEventListener('setlist-error', handleAddError);
+    return () => {
+      window.removeEventListener('setlist-add-success', handleAddSuccess);
+      window.removeEventListener('setlist-error', handleAddError);
+    };
+  }, [showToast]);
   useLayoutEffect(() => {
     if (setlistModalOpen) {
       setVisible(true);
@@ -216,20 +280,21 @@ const SetlistModal = () => {
       if (!pending || !pending.id || pending.id !== detail.fileId) {
         return;
       }
-      const rawName = pending.name || detail.fileName || '';
-      const lower = rawName.toLowerCase();
-      const isLrc = lower.endsWith('.lrc');
+      const rawName = pending.displayName || detail.fileName || detail.originalName || '';
+      const pendingOriginal = pending.originalName || detail.originalName || '';
+      const normalizedOriginal = String(pendingOriginal).toLowerCase();
+      const inferredType = pending.fileType || detail.fileType || (normalizedOriginal.endsWith('.lrc') ? 'lrc' : 'txt');
       const baseName = rawName.replace(/\.(txt|lrc)$/i, '') || rawName;
       showToast({
         title: 'File loaded',
-        message: `${isLrc ? 'LRC' : 'Text'}: ${baseName}`,
+        message: `${inferredType === 'lrc' ? 'LRC' : 'Text'}: ${baseName}`,
         variant: 'success',
       });
-      pendingLoadRef.current = { id: null, name: '' };
+      pendingLoadRef.current = { id: null, displayName: '', originalName: '', fileType: null };
     };
 
     const handleLoadError = () => {
-      pendingLoadRef.current = { id: null, name: '' };
+      pendingLoadRef.current = { id: null, displayName: '', originalName: '', fileType: null };
     };
 
     window.addEventListener('setlist-load-success', handleLoadSuccess);

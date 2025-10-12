@@ -1,5 +1,5 @@
 // server/events.js
-import { processRawTextToLines } from '../shared/lyricsParsing.js';
+import { processRawTextToLines, parseLrcContent } from '../shared/lyricsParsing.js';
 
 let currentLyrics = [];
 let currentLyricsFileName = '';
@@ -77,14 +77,22 @@ export default function registerSocketEvents(io, { hasPermission }) {
           return;
         }
 
+        const normalizeName = (value = '') => String(value).trim().replace(/\.(txt|lrc)$/i, '').toLowerCase();
+
         const newFiles = files.map((file, index) => {
           if (!file.name || !file.content) {
             throw new Error(`File ${index + 1} is missing name or content`);
           }
 
-          const displayName = file.name.replace(/\.txt$/i, '');
-          const existingFile = setlistFiles.find(f => f.displayName === displayName);
-          if (existingFile) {
+          const lowerName = file.name.toLowerCase();
+          const isLrc = lowerName.endsWith('.lrc');
+          const displayName = file.name.replace(/\.(txt|lrc)$/i, '');
+          const normalizedIncoming = normalizeName(file.name);
+          const alreadyExists = setlistFiles.some((existing) => {
+            const candidate = existing?.displayName ?? existing?.originalName ?? '';
+            return normalizeName(candidate) === normalizedIncoming;
+          });
+          if (alreadyExists) {
             throw new Error(`File "${displayName}" already exists in setlist`);
           }
 
@@ -95,6 +103,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
             content: file.content,
             lastModified: file.lastModified || Date.now(),
             addedAt: Date.now(),
+            fileType: isLrc ? 'lrc' : 'txt',
             addedBy: {
               clientType,
               deviceId,
@@ -162,20 +171,35 @@ export default function registerSocketEvents(io, { hasPermission }) {
           return;
         }
 
-        const processedLines = processRawTextToLines(file.content);
+        let processedLines;
+        let sanitizedRawContent = file.content;
+        const isLrc = (file.fileType === 'lrc') ||
+          (typeof file.originalName === 'string' && file.originalName.toLowerCase().endsWith('.lrc'));
+
+        if (isLrc) {
+          const parsed = parseLrcContent(file.content);
+          processedLines = parsed.processedLines;
+          sanitizedRawContent = parsed.rawText;
+        } else {
+          processedLines = processRawTextToLines(file.content);
+        }
+
+        const cleanDisplayName = (file.displayName || file.originalName || '').replace(/\.(txt|lrc)$/i, '') || file.displayName;
 
         currentLyrics = processedLines;
         currentSelectedLine = null;
-        currentLyricsFileName = file.displayName;
+        currentLyricsFileName = cleanDisplayName;
 
-        console.log(`${clientType} client loaded "${file.displayName}" from setlist (${processedLines.length} lines)`);
+        console.log(`${clientType} client loaded "${cleanDisplayName}" from setlist (${processedLines.length} lines)`);
 
         io.emit('lyricsLoad', processedLines);
         io.emit('setlistLoadSuccess', {
           fileId,
-          fileName: file.displayName,
+          fileName: cleanDisplayName,
+          originalName: file.originalName,
+          fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
           linesCount: processedLines.length,
-          rawContent: file.content,
+          rawContent: sanitizedRawContent,
           loadedBy: clientType
         });
 
