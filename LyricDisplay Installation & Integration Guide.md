@@ -1,444 +1,377 @@
-# LyricDisplay Installation & Integration Guide
+##### **LyricDisplay - Installation and Integration Guide**
 
-> Complete setup instructions for Windows, OBS Studio, and VMix integration
+Professional real-time lyric display for streaming, church services and other live events
 
-**Version:** 4.0.1  
-**Last Updated:** October 2025
+Version: 4.0.1 | Windows 10/11 (64-bit)
 
----
 
-## Table of Contents
+###### **What is LyricDisplay?**
 
-1. [System Requirements](#system-requirements)
-2. [Installing LyricDisplay](#installing-lyricdisplay)
-3. [First Launch Setup](#first-launch-setup)
-4. [OBS Studio Integration](#obs-studio-integration)
-5. [VMix Integration](#vmix-integration)
-6. [Network Setup (Multi-PC)](#network-setup-multi-pc)
-7. [Secondary Controllers](#secondary-controllers)
-8. [Loading and Managing Lyrics](#loading-and-managing-lyrics)
-9. [Troubleshooting](#troubleshooting)
+LyricDisplay is a free desktop app that provides perfectly clear, sharp and transparent lyric overlays for OBS Studio, VMix or any broadcast/production software that accepts browser input sources.
 
----
+**Ideal for:**
 
-## System Requirements
+\- Church worship services
+\- Live concerts \& events
+\- Karaoke streaming
+\- Multi-language presentations
 
-### Minimum Requirements
-- **Operating System:** Windows 10/11 (64-bit)
-- **RAM:** 8 GB
-- **Processor:** Intel Core i5 or equivalent
-- **Graphics:** Dual-display capable GPU
-- **Network:** Ethernet/Wi-Fi for multi-PC setups
-- **Disk Space:** 500 MB free space
+**Key Features:**
 
-### Recommended Setup
-- **RAM:** 16 GB or higher
-- **Processor:** Intel Core i7 or AMD Ryzen 7
-- **Network:** Gigabit Ethernet for network streaming
-- **Display:** Dual monitor setup for control panel + preview
+\- TXT and LRC file lyric display system
+\- Dual independent outputs with transparent backgrounds
+\- Real-time sync across displays
+\- Translation support (bracketed lines)
+\- 13 professional fonts with full styling controls
+\- Keyboard-supported workflow
+\- Secondary mobile/web controllers with join-code security
+\- Auto-updates via GitHub releases
 
----
 
-## Installing LyricDisplay
+###### **System Requirements**
 
-### Step 1: Download the Installer
+**Minimum:**
 
-1. Visit the official releases page:  
-   **[https://github.com/PeterAlaks/lyric-display-updates/releases/latest](https://github.com/PeterAlaks/lyric-display-updates/releases/latest)**
+\- Windows 10/11 (64-bit)
+\- 8 GB RAM
+\- Dual-display capable GPU
+\- 500 MB disk space
 
-2. Under **Assets**, download the Windows installer:
-   - File name: `LyricDisplay-Setup-2.1.1.exe` (or latest version)
-   - File size: ~150-200 MB
+**Recommended:**
 
-### Step 2: Run the Installer
+\- 16 GB RAM
+\- Dedicated GPU
+\- Dual monitors for control + preview
 
-1. **Locate the downloaded file** in your Downloads folder
-2. **Right-click** the installer → **Run as Administrator**
-3. If Windows SmartScreen appears, click **More info** → **Run anyway**
-4. Follow the installation wizard:
-   - Accept the license agreement
-   - Choose installation location (default: `C:\Program Files\LyricDisplay`)
-   - Select **Create desktop shortcut** (recommended)
-   - Click **Install**
 
-### Step 3: Complete Installation
+###### **Installation**
 
-1. Wait for the installation to complete (30-60 seconds)
-2. Click **Finish** to exit the installer
-3. **Launch LyricDisplay** from the desktop shortcut or Start menu
+**1. Download Latest Release**
 
-> **Note:** Your existing settings are preserved when updating to a newer version.
+&nbsp;  [​Click here to download latest version of the app​​​](https://github.com/PeterAlaks/lyric-display-updates/releases/latest)
+&nbsp;  Download: LyricDisplay-Setup.exe or full release assets (recommended)
 
----
+**2. Run Installer**
 
-## First Launch Setup
+&nbsp;  - Right-click installer → Run as Administrator
+&nbsp;  - If SmartScreen appears: More info → Run anyway
+&nbsp;  - Follow wizard, accept defaults
 
-### Initial Configuration
+&nbsp;  - Create desktop shortcut (recommended)
 
-When you first launch LyricDisplay, you'll see the **Control Panel** interface:
+**3. Launch Application**
 
-1. **Main Lyric Panel** (right) - Your lyrics will appear here
-2. **Settings Panel** (left) - Configure Output 1 and Output 2
-3. **Menu Bar** (top) - File operations and shortcuts
+&nbsp;  - Open from desktop shortcut or Start menu
 
-### Configure Your First Output
+&nbsp;  - Control panel interface will appear
 
-1. In the **Settings Panel**, click **Output 1**
-2. Adjust these basic settings:
-   - **Font Style:** Choose a readable font (e.g., "Montserrat" or "Open Sans")
-   - **Font Size:** Start with 48-60 px
-   - **Font Color:** White (#FFFFFF) for dark backgrounds
-   - **Drop Shadow:** Enable with 5-7 opacity for better readability
-   - **Lyrics Position:** Lower Third (most common for live streams)
 
-3. Click **Preview Output 1** to see your settings in a window
+###### **OBS Studio Integration (For running LyricDisplay on same computer as OBS)**
 
-> **Pro Tip:** Keep Output 1 for your main broadcast and Output 2 for in-house displays or alternate languages.
+**STEP 1: Add Browser Source**
 
----
+1\. In your OBS scene, click \[+] in Sources panel
+2\. Select "Browser Source"
+3\. Name it "Lyrics - Output 1 or whichever you like"
+4\. Click OK
 
-## OBS Studio Integration
+**STEP 2: Configure Browser Source**
 
-### Single Computer Setup (Recommended for Beginners)
+Enter these exact settings:
 
-This setup runs LyricDisplay and OBS on the same computer.
+URL: http://localhost:4000/#/output1
+Width: 1920
+Height: 1080
+FPS: 30
+☑ Shutdown source when not visible
+☑ Refresh browser when scene becomes active
 
-#### Step 1: Add Browser Source
+Click OK to save.
+*Note: Adjust width and height to directly match your broadcast resolution/canvas.*
 
-1. In OBS, go to your scene
-2. Click the **+** button in Sources panel
-3. Select **Browser**
-4. Name it "Lyrics - Output 1"
-5. Click **OK**
+**STEP 3: Configure LyricDisplay settings (there are default values anyway)**
 
-#### Step 2: Configure Browser Source
+1\. In LyricDisplay Settings Panel on the right side of the control panel, select "Output 1 from the tab switcher"
+2\. Basic settings to start:
+&nbsp;  - Position: Lower Third
+&nbsp;  - Font: Montserrat or Open Sans
+&nbsp;  - Font Size: 48-60 px
+&nbsp;  - Font Color: #FFFFFF (white)
+&nbsp;  - Drop Shadow: Opacity 5-7
 
-Enter these settings in the Browser Source properties:
+**STEP 3: Test Connection**
 
-| Setting | Value |
-|---------|-------|
-| **URL** | `http://localhost:4000/#/output1` |
-| **Width** | `1920` (match your canvas width) |
-| **Height** | `1080` (match your canvas height) |
-| **FPS** | `30` |
-| **Shutdown source when not visible** | ✅ Checked (improves performance) |
-| **Refresh browser when scene becomes active** | ✅ Checked (ensures reliability) |
+1\. Load a test lyric file (.txt or .lrc) in LyricDisplay through the Load Lyrics button or by pressing Ctrl/Cmd + O on your keyboard.
+2\. The app will display the lyric lines from the file on the control panel showing individual lines.
+3\. Click on any lyric line to select
+4\. Check OBS - lyrics should appear instantly for any line clicked.
+5\. Toggle "Display Output" switch to hide/show lyrics.
 
-Click **OK** to save.
+**FOR A SECOND OUTPUT (OPTIONAL):**
 
-#### Step 3: Test the Connection
+Repeat steps above but use:
 
-1. In LyricDisplay, load a test lyric file
-2. Click any lyric line
-3. Switch to OBS - you should see the lyrics appear
-4. Toggle the **Display Output** switch in LyricDisplay to hide/show lyrics
+\- Source name: "Lyrics - Output 2"
+\- URL: http://localhost:4000/#/output2
 
-#### Adding Output 2 (Optional)
 
-Repeat Steps 1-3, but use:
-- Source name: "Lyrics - Output 2"
-- URL: `http://localhost:4000/#/output2`
+###### **Network Setup (For running LyricDisplay on a separate computer)**
 
-### Advanced: Positioning and Styling in OBS
+Use this when running LyricDisplay on one computer and OBS on another.
 
-1. **Right-click** the browser source in your scene
-2. Select **Transform** → **Edit Transform**
-3. Adjust position if needed (though LyricDisplay handles positioning internally)
-4. Use **Filters** to add:
-   - **Color Correction** for fine-tuning
-   - **Sharpen** for crisp text on scaled outputs
+**REQUIREMENTS:**
 
----
+Both PCs must be on the same local network (LAN/Wi-Fi)
+Ethernet connection is strongly recommended for better stability
 
-## VMix Integration
+**STEP 1: Identify Your Router’s Gateway (Important)**
 
-### Adding LyricDisplay as Web Browser Input
+Routers don’t always use the same address — some use 192.168.0.1, others 192.168.1.1, 192.168.8.1, etc. You need to confirm yours before setting a static IP.
 
-#### Step 1: Add Input
+To find it:
+Press Win + R then type: cmd, and press Enter
+Type: ipconfig
+Look for the line labelled “Default Gateway” — this is your router’s IP (for example 192.168.0.1 or 192.168.1.1).
+Use that exact address in the next step as your Default Gateway.
 
-1. Click **Add Input** in VMix
-2. Select **Web Browser**
-3. Enter these settings:
+**STEP 2: Set a Static IP on the LyricDisplay Computer (Recommended)**
 
-| Setting | Value |
-|---------|-------|
-| **URL** | `http://localhost:4000/#/output1` |
-| **Width** | `1920` |
-| **Height** | `1080` |
-| **Frame Rate** | `30` |
+Press Win + R then type: ncpa.cpl, and press Enter
+Right-click your active network adapter → Properties
+Double-click “Internet Protocol Version 4 (TCP/IPv4)”
+Select “Use the following IP address”
+Enter the details (adjust to match your network):
 
-4. Click **OK**
+*If your gateway is 192.168.1.1:*
+**IP address: 192.168.1.100**
+**Subnet mask: 255.255.255.0**
+**Default gateway: 192.168.1.1**
+**Preferred DNS: 8.8.8.8**
 
-#### Step 2: Position as Overlay
+*If your gateway is 192.168.0.1:*
+**IP address: 192.168.0.100**
+**Subnet mask: 255.255.255.0**
+**Default gateway: 192.168.0.1**
+**Preferred DNS: 8.8.8.8**
 
-1. Drag the Web Browser input to an **Overlay** channel (1-4)
-2. This makes the transparent background work correctly
-3. Lyrics will appear over your main video
+The first three numbers of the IP address must always match your router’s gateway (e.g. 192.168.0 or 192.168.1). You can decide to change the number after those first three numbers to whichever you want from 100 - 199.
 
-#### Step 3: Test and Adjust
+Click OK → OK → Close
 
-1. Load lyrics in LyricDisplay
-2. Select a line to display
-3. Check VMix preview - lyrics should overlay cleanly
-4. Adjust opacity in LyricDisplay settings if needed
+**STEP 3: Verify the Static IP**
 
-> **VMix Pro Tip:** Use different overlay channels for Output 1 and Output 2 to quickly switch between language displays.
+Press Win + R then type: cmd, and press Enter
+Type: ipconfig
+Confirm your static IP shows correctly under your active network adapter.
 
----
+**STEP 4: Configure OBS Browser Source**
 
-## Network Setup (Multi-PC)
-
-Use this setup when running LyricDisplay on one computer and OBS/VMix on another.
-
-### Prerequisites
-
-- Both computers on the **same network** (LAN or Wi-Fi)
-- Ethernet cable connection recommended for stability
-- Administrator access to configure IP settings
-
-### Step 1: Assign Static IP to LyricDisplay Computer
-
-#### On Windows:
-
-1. Press **Win + R**, type `ncpa.cpl`, press **Enter**
-2. **Right-click** your active network adapter → **Properties**
-3. Double-click **Internet Protocol Version 4 (TCP/IPv4)**
-4. Select **Use the following IP address**
-5. Enter these values (adjust to your network):
-
-   ```
-   IP address: 192.168.1.100
-   Subnet mask: 255.255.255.0
-   Default gateway: 192.168.1.1
-   Preferred DNS: 8.8.8.8
-   ```
-
-6. Click **OK** → **OK** → **Close**
-
-> **Important:** Choose an IP address that's not used by other devices. Check your router's DHCP range to avoid conflicts (typically 192.168.1.100-200 is safe).
-
-### Step 2: Verify Connection
-
-On the **LyricDisplay computer**, press **Win + R**, type `cmd`, press **Enter**, then run:
-
-```cmd
-ipconfig
-```
-
-Confirm your static IP appears under your network adapter.
-
-### Step 3: Configure OBS/VMix on Second Computer
-
-#### For OBS:
-
-In Browser Source properties, change the URL:
-
-```
+On the computer running OBS, use this URL in Browser Source:
 http://192.168.1.100:4000/#/output1
-```
+*Replace 192.168.1.100 with the static IP you set in the previous step for the computer running LyricDisplay.*
 
-Replace `192.168.1.100` with your LyricDisplay computer's static IP.
+**STEP 5: Test Connection**
 
-#### For VMix:
+On OBS computer:
 
-In Web Browser input, use the same URL format:
+1\. Open web browser
+2\. Navigate to: http://192.168.1.100:4000
+3\. It should load up a secondary version of the control panel asking you for a join code. That's how you know it has worked. You can close that tab because the main control is done from the desktop app.
+4\. If error, check firewall settings below
 
-```
+*Replace 192.168.1.100 with the static IP you set.*
+To connect a second output display (output2), simply change the URL to:
+
 http://192.168.1.100:4000/#/output2
-```
 
-### Step 4: Test Network Connection
+On the computer you're running your second instance of OBS or on the second browser source.
+*Again, don't forget to replace 192.168.1.100 with the static IP you set for the computer running LyricDisplay.*
 
-1. On the OBS/VMix computer, open a web browser
-2. Navigate to `http://192.168.1.100:4000`
-3. You should see a connection or the LyricDisplay interface
-4. If you get an error, check:
-   - Both computers are on the same network
-   - Windows Firewall isn't blocking port 4000
-   - LyricDisplay is running on the first computer
+**FIREWALL FIX (If connection fails):**
 
-### Firewall Configuration (If Needed)
+On LyricDisplay computer:
 
-If the connection fails, allow LyricDisplay through Windows Firewall:
+1\. Search for "Windows Defender Firewall"
+2\. Click "Allow an app through firewall"
+3\. Click "Change settings" → "Allow another app"
+4\. Browse to: C:\\Program Files\\LyricDisplay\\LyricDisplay.exe
+5\. Check both "Private" and "Public"
+6\. Click OK
 
-1. On the **LyricDisplay computer**:
-2. Search for **Windows Defender Firewall**
-3. Click **Allow an app through firewall**
-4. Click **Change settings** → **Allow another app**
-5. Browse to `C:\Program Files\LyricDisplay\LyricDisplay.exe`
-6. Ensure both **Private** and **Public** are checked
-7. Click **OK**
 
----
+###### **Secondary Controllers (Optional Mobile/Web Controllers)**
 
-## Secondary Controllers
+1\. In LyricDisplay go to File > Connect Mobile Controller to show the QR code and current 6-digit join code. The code resets when the app restarts.
+2\. On the secondary device (connected on the same network), scan the QR code or visit: 
+http://192.168.0.100:4000/
+*Replace 192.168.0.100 with the static IP you set for the computer running LyricDisplay*
+3\. The control panel should load up with a prompt to enter the join code. You can also find the join code from the desktop app by clicking on the shield icon on the left top bar.
+4\. After pairing, you can now access the control panel and trigger lyric lines, load files added to setlist, toggle the display, run manual sync, and send lyric drafts for approval on the desktop.
 
-Secondary controllers allow mobile or web devices to follow along without granting full desktop access.
 
-1. In LyricDisplay choose **File > Connect Mobile Controller** (or click the shield icon) to display the QR code and current 6-digit join code. The code refreshes whenever the desktop app restarts.
-2. On the secondary device, make sure it is on the same network, then scan the QR code or visit `http://<control-pc-ip>:4000/?client=mobile` and enter the join code.
-3. After pairing, the mobile layout can trigger lyric lines, toggle the display, run manual sync, and submit lyric drafts that the desktop operator approves before they go live.
+###### **Loading Lyrics**
 
----
+**METHOD 1: Load File**
 
-## Loading and Managing Lyrics
+\- Click on Load Lyrics File Button
+\- Alternatively, go to File in top menu → Load Lyrics File (Ctrl/Cmd + O)
+\- Browse and select a .txt or .lrc file
+\- Click Open
 
-### Method 1: Load Existing File
+**METHOD 2: Drag \& Drop**
 
-1. Click **File** → **Load Lyrics File** (or press `Ctrl+O`)
-2. Browse to your `.txt` or `.lrc` file
-3. Select the file and click **Open**
-4. Lyrics appear in the control panel
+\- Drag .txt or .lrc file from the File Explorer
+\- Drop into LyricDisplay app
 
-### Method 2: Drag and Drop
+**METHOD 3: Create New Lyrics File**
 
-1. Open File Explorer with your lyrics folder
-2. Drag a `.txt` file into the LyricDisplay main panel
-3. Release to load instantly
+\- Click on the button beside Load Lyrics File button
+\- Alternatively, go to File in top menu → New Lyrics File (Ctrl/Cmd + N)
+\- Type or paste in your lyrics
+\- Ctrl/Cmd + T to add a translation line underneath a line
+\- Enter a title for your lyrics
+\- Click 'Save" to save your lyrics file as .txt document or click "Save and Load" to save the file and automatically load into the app.
 
-### Method 3: Create New Song
+**LYRIC FILE FORMAT:**
 
-1. Click **File** → **New Song** (or press `Ctrl+N`)
-2. The **New Song Canvas** opens
-3. Type or paste your lyrics
-4. Use formatting tools:
-   - `Ctrl+T` - Add translation line
-   - `Ctrl+D` - Duplicate current line
-   - `Ctrl+L` - Select current line
-5. Click **Save and Load** when finished
-
-### Lyric File Format
-
-LyricDisplay accepts plain text with optional translations:
-
-```
 First verse line
-[Translation or alternative text]
+(Translation in brackets)
 
-Second verse line
-Another line without translation
+Second line
 
-Chorus line one
-[Chorus translation]
-```
+Another line
 
-**Formatting Tips:**
-- Lines in brackets `[like this]`, `(this)`, or `{this}` are translations
-- Blank lines separate sections
-- Auto-cleanup removes periods and capitalizes key words
+*Lines in brackets \[], (), <> or {} are treated as translations.*
 
-### Operating Live
 
-1. **Click any line** to display it instantly on active outputs
-2. **Use the search bar** to find specific lyrics quickly
-3. **Navigate** search results with `Shift+Up` and `Shift+Down`
-4. **Toggle Display Output** switch to show/hide all lyrics
+###### **Live Operation**
 
----
+\- Click any line to display on both outputs instantly
+\- Use search bar to search through loaded lyrics quickly
+\- Navigate search with Shift + Up/Down arrows
+\- Toggle "Display Output" switch to show/hide lyrics displayed on outputs
+\- Click "Sync Outputs" to manually force refresh if changes don't appear immediately
 
-## Troubleshooting
 
-### LyricDisplay Won't Launch
+###### **Troubleshooting**
 
-**Issue:** Application doesn't open after installation
+**PROBLEM: Browser Source is Black/Empty**
 
-**Solutions:**
-- Right-click → Run as Administrator
-- Check Windows Event Viewer for error details
-- Reinstall the application
-- Ensure .NET Framework 4.8+ is installed
+Solutions:
+→ Confirm LyricDisplay is running
+→ Verify URL of browser source is set to exactly: http://localhost:4000/#/output1 or /output2
+→ Click on the browser source from your sources tab on OBS then click on Refresh on the properties pane
+→ Restart both LyricDisplay and OBS
+→ Check Windows Firewall isn't blocking port 4000
 
-### OBS/VMix Browser Source Shows Nothing
+**PROBLEM: Network Connection Not Working**
 
-**Issue:** Browser source is black or shows "Unable to connect"
+Solutions:
+→ Verify both PCs on same network
+→ Confirm that URL of browser source is http://static-ip-configured:4000/#/output1 or /output2
+→ Temporarily disable firewall to test
+→ Confirm that you used http:// not https:// in URL
+→ Check router isn't blocking local traffic
 
-**Solutions:**
-- Confirm LyricDisplay is running
-- Check the URL is exactly `http://localhost:4000/#/output1`
-- Refresh the browser source (right-click → Refresh)
-- Restart both LyricDisplay and OBS/VMix
-- Check Windows Firewall settings
+**PROBLEM: Lyrics Not Updating in Real-Time**
 
-### Network Setup Not Working
+Solutions:
+→ Click "Sync Outputs" in LyricDisplay settings
+→ Refresh browser source in OBS
+→ Check socket connection (Shield icon in desktop control panel must be green)
+→ Restart LyricDisplay
 
-**Issue:** Can't connect from second computer
+**PROBLEM: OBS Performance Issues**
 
-**Solutions:**
-- Verify both computers are on same network
-- Ping the LyricDisplay computer: `ping 192.168.1.100`
-- Disable Windows Firewall temporarily to test
-- Check router settings aren't blocking local traffic
-- Use `http://` not `https://` in the URL
+Solutions:
+→ Enable "Shutdown source when not visible"
+→ Close unused preview windows in LyricDisplay
+→ Check CPU usage
+→ Move LyricDisplay to dedicated PC
 
-### Lyrics Not Updating in Real-Time
+**PROBLEM: Styling Changes Not Applying**
 
-**Issue:** Changes in LyricDisplay don't appear in OBS/VMix
+Solutions:
+→ Use "Sync Outputs" button in settings
+→ Refresh browser source in OBS
+→ Check browser console (F12) for errors
 
-**Solutions:**
-- Click **Sync Outputs** button in LyricDisplay settings
-- Refresh the browser source in OBS/VMix
-- Check Socket.io connection status (green indicator)
-- Restart the backend server via LyricDisplay menu
 
-### Styling Changes Not Applying
+###### **Keyboard Shortcuts**
 
-**Issue:** Font color or size changes don't show
+Ctrl/Cmd + O - Load lyrics file
+Ctrl/Cmd + N - New song canvas
+Ctrl/Cmd + 1 - Preview Output 1
+Ctrl/Cmd + 2 - Preview Output 2
+Ctrl/Cmd + T - Add translation line (in editor)
+Ctrl/Cmd + D - Duplicate line (in editor)
+Ctrl/Cmd + L - Select line (in editor)
+Shift + ↑/↓ - Navigate through search results
 
-**Solutions:**
-- Use the **Sync Outputs** control in settings panel
-- Refresh browser source in your streaming software
-- Check browser console (F12) for JavaScript errors
-- Clear browser cache in OBS/VMix settings
 
-### Performance Issues
+###### **OBS Tips and Tricks**
 
-**Issue:** Lag or stuttering in lyrics display
+**1. POSITIONING**
 
-**Solutions:**
-- Enable "Shutdown source when not visible" in OBS
-- Lower browser source FPS to 30
-- Close unused output preview windows
-- Check CPU usage - move to dedicated PC if needed
-- Use hardware acceleration in streaming software
+&nbsp;  LyricDisplay handles positioning internally via settings panel.
+&nbsp;  No need to transform in OBS unless you have specific needs.
 
-### Auto-Updates Not Working
+**2. LAYERING**
 
-**Issue:** "No updates available" when newer version exists
+&nbsp;  Place browser source above your main video/camera layers.
+&nbsp;  Transparency automatically works.
 
-**Solutions:**
-- Check internet connection
-- Verify GitHub releases page is accessible
-- Run as Administrator to allow update download
-- Check Windows Defender isn't blocking downloads
-- Manually download and install latest version
+**3. SCENE TRANSITIONS**
 
----
+&nbsp;  Use OBS scene transitions normally.
+&nbsp;  Enable "Shutdown source when not visible" for better performance.
 
-## Quick Reference: Keyboard Shortcuts
+**4. MULTIPLE OUTPUTS**
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+O` | Load lyrics file |
-| `Ctrl+N` | New song canvas |
-| `Ctrl+T` | Add translation line (in editor) |
-| `Ctrl+D` | Duplicate line (in editor) |
-| `Ctrl+L` | Select line (in editor) |
-| `Ctrl+1` | Preview Output 1 |
-| `Ctrl+2` | Preview Output 2 |
-| `Shift+↑/↓` | Navigate search results |
+&nbsp;  Use Output 1 for main broadcast/stream
+&nbsp;  Use Output 2 for alternate or in-house display
+&nbsp;  Both can run simultaneously with different stylings
 
----
+**5. BACKUP/RECOMMENDED STRATEGY**
 
-## Support & Resources
+&nbsp;  Keep a dedicated lyrics folder on your LyricDisplay system for easy access to .txt and .lrc lyric files
+&nbsp;  Test connection before going live
 
-- **Latest Release:** [GitHub Releases](https://github.com/PeterAlaks/lyric-display-updates/releases/latest)
-- **Video Tutorial:** [Watch on Google Drive](https://drive.google.com/file/d/1fP4fSSWSNvSocI8fK7hktdJ7dY6xnCM-/view?usp=sharing)
-- **Developer Contact:** [linktr.ee/peteralaks](https://linktr.ee/peteralaks)
-- **Issue Tracker:** [GitHub Issues](https://github.com/PeterAlaks/lyric-display-updates/issues)
+**6. PERFORMANCE**
 
----
+&nbsp;  Browser sources use CPU - monitor usage
+&nbsp;  Consider dedicated GPU for encoding
+&nbsp;  Close preview windows when not needed
 
-**Developed by Peter Alakembi & David Okaliwe**  
-*LyricDisplay - Powering worship experiences worldwide*
 
+###### **Vmix Integration**
+
+Generally, follow same steps from OBS Integration but tailor the app setup to Vmix
+
+1\. Add Input → Web Browser
+2\. URL: http://localhost:4000/#/output1 or /output2
+3\. URL for network setup: http://192.168.0.100:4000/#/output1 or /output2
+*Make sure the IP address matches the configured static IP address of the system*
+4\. Width: 1920, Height: 1080 (or your exact broadcast resolution)
+5\. Drag to Overlay channel (1-4)
+6\. Transparent background works automatically
+
+
+###### **Video Tutorial**
+
+[Click here to watch quick setup and usage guide](https://drive.google.com/file/d/1fP4fSSWSNvSocI8fK7hktdJ7dY6xnCM-/view?usp=sharing)
+
+
+###### **Support and Resources**
+
+[​Click here to download the latest version of the app​​​](https://github.com/PeterAlaks/lyric-display-updates/releases/latest)
+[​Click here to log issues or complaints​​​](https://github.com/PeterAlaks/lyric-display-updates/issues)
+​[Click here to contact the developer for technical support or lodge further complaints/improvement suggestions](https://linktr.ee/peteralaks)
+[​Click here to see app source code​​​](https://github.com/PeterAlaks/lyric-display-app)
+
+
+Developed by Peter Alakembi \& David Okaliwe
 © 2025 All Rights Reserved
+
+
+LyricDisplay - Powering worship experiences worldwide
