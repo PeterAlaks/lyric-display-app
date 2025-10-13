@@ -120,7 +120,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener(channel, handler);
   },
   resolveModalRequest: (id, result) => ipcRenderer.invoke('modal-bridge:resolve', { id, result }),
-  rejectModalRequest: (id, error) => ipcRenderer.invoke('modal-bridge:reject', { id, error: error?.message || error || 'cancelled' })
+  rejectModalRequest: (id, error) => ipcRenderer.invoke('modal-bridge:reject', { id, error: error?.message || error || 'cancelled' }),
+  lyrics: {
+    listProviders: () => ipcRenderer.invoke('lyrics:providers:list'),
+    getProviderKey: (providerId) => ipcRenderer.invoke('lyrics:providers:key:get', { providerId }),
+    saveProviderKey: (providerId, key) => ipcRenderer.invoke('lyrics:providers:key:set', { providerId, key }),
+    deleteProviderKey: (providerId) => ipcRenderer.invoke('lyrics:providers:key:delete', { providerId }),
+    search: (payload) => ipcRenderer.invoke('lyrics:search', payload),
+    fetch: (payload) => ipcRenderer.invoke('lyrics:fetch', payload),
+  }
 });
 
 contextBridge.exposeInMainWorld('electronStore', {

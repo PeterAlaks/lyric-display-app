@@ -13,7 +13,7 @@
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron": "electron .",
     "update-version": "node scripts/update-version.js",
-    "electron-pack": "npm run update-version && npm run build && electron-builder",
+    "electron-pack": "npm run build && electron-builder",
     "electron-publish": "npm run update-version && npm run build && electron-builder --publish=always",
     "version": "npm run update-version && git add README.md 'LyricDisplay Installation & Integration Guide.md'",
     "release": "node scripts/release.js"
@@ -24,6 +24,7 @@
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
+    "@radix-ui/react-tabs": "^1.0.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",

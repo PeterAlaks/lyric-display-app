@@ -1,0 +1,74 @@
+[
+  {
+    "id": "openhymnal:amazing-grace",
+    "title": "Amazing Grace",
+    "author": "John Newton",
+    "year": 1779,
+    "meter": "8.6.8.6",
+    "topics": ["Grace", "Salvation"],
+    "lyrics": [
+      "Amazing grace! how sweet the sound that saved a wretch like me! I once was lost, but now am found; was blind, but now I see.",
+      "'Twas grace that taught my heart to fear, and grace my fears relieved; how precious did that grace appear the hour I first believed!",
+      "Through many dangers, toils, and snares, I have already come; 'tis grace has brought me safe thus far, and grace will lead me home.",
+      "The Lord has promised good to me, his word my hope secures; he will my shield and portion be as long as life endures."
+    ]
+  },
+  {
+    "id": "openhymnal:great-is-thy-faithfulness",
+    "title": "Great Is Thy Faithfulness",
+    "author": "Thomas O. Chisholm",
+    "year": 1923,
+    "meter": "11.10.11.10 with Refrain",
+    "topics": ["Faithfulness", "Providence"],
+    "lyrics": [
+      "Great is thy faithfulness, O God my Father; there is no shadow of turning with thee; thou changest not, thy compassions, they fail not; as thou hast been, thou forever wilt be.",
+      "Summer and winter and springtime and harvest, sun, moon, and stars in their courses above join with all nature in manifold witness to thy great faithfulness, mercy, and love.",
+      "Pardon for sin and a peace that endureth, thine own dear presence to cheer and to guide; strength for today and bright hope for tomorrow, blessings all mine, with ten thousand beside!"
+    ],
+    "refrain": "Great is thy faithfulness! Great is thy faithfulness! Morning by morning new mercies I see; all I have needed thy hand hath provided; great is thy faithfulness, Lord, unto me!"
+  },
+  {
+    "id": "openhymnal:be-thou-my-vision",
+    "title": "Be Thou My Vision",
+    "author": "Traditional Irish, trans. Mary E. Byrne",
+    "year": 1912,
+    "meter": "10.10.10.10",
+    "topics": ["Guidance", "Trust"],
+    "lyrics": [
+      "Be thou my vision, O Lord of my heart; naught be all else to me, save that thou art. Thou my best thought, by day or by night, waking or sleeping, thy presence my light.",
+      "Be thou my wisdom, and thou my true word; I ever with thee and thou with me, Lord; thou my great Father, I thy true son; thou in me dwelling and I with thee one.",
+      "Riches I heed not, nor man's empty praise; thou mine inheritance, now and always; thou and thou only, first in my heart; High King of heaven, my treasure thou art.",
+      "High King of heaven, my victory won, may I reach heaven's joys, O bright heav'n's Sun! Heart of my own heart, whatever befall, still be my vision, O Ruler of all."
+    ]
+  },
+  {
+    "id": "openhymnal:holy-holy-holy",
+    "title": "Holy, Holy, Holy",
+    "author": "Reginald Heber",
+    "year": 1826,
+    "meter": "11.12.12.10",
+    "topics": ["Trinity", "Adoration"],
+    "lyrics": [
+      "Holy, holy, holy! Lord God Almighty! Early in the morning our song shall rise to thee; holy, holy, holy, merciful and mighty, God in three Persons, blessed Trinity!",
+      "Holy, holy, holy! All the saints adore thee, casting down their golden crowns around the glassy sea; cherubim and seraphim falling down before thee, which wert and art and evermore shalt be.",
+      "Holy, holy, holy! Though the darkness hide thee, though the eye of sinful man thy glory may not see; only thou art holy; there is none beside thee, perfect in power, in love, and purity.",
+      "Holy, holy, holy! Lord God Almighty! All thy works shall praise thy name in earth and sky and sea; holy, holy, holy, merciful and mighty, God in three Persons, blessed Trinity!"
+    ]
+  },
+  {
+    "id": "openhymnal:how-great-thou-art",
+    "title": "How Great Thou Art",
+    "author": "Stuart K. Hine",
+    "year": 1949,
+    "meter": "11.10.11.10 with Refrain",
+    "topics": ["Creation", "Praise"],
+    "lyrics": [
+      "O Lord my God! when I in awesome wonder consider all the worlds thy hands have made, I see the stars, I hear the rolling thunder, thy pow'r throughout the universe displayed;",
+      "When through the woods and forest glades I wander and hear the birds sing sweetly in the trees; when I look down from lofty mountain grandeur and hear the brook and feel the gentle breeze;",
+      "And when I think that God, his Son not sparing, sent him to die, I scarce can take it in; that on the cross, my burden gladly bearing, he bled and died to take away my sin;",
+      "When Christ shall come with shout of acclamation and take me home, what joy shall fill my heart! Then I shall bow in humble adoration, and there proclaim, my God, how great thou art!"
+    ],
+    "refrain": "Then sings my soul, my Savior God, to thee; how great thou art, how great thou art! Then sings my soul, my Savior God, to thee; how great thou art, how great thou art!"
+  }
+]
+

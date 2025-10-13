@@ -74,31 +74,46 @@ const LyricDisplayApp = () => {
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast } = useToast();
 
-  const processLoadedLyrics = React.useCallback(async ({ content, fileName, filePath }) => {
+  const processLoadedLyrics = React.useCallback(async ({ content, fileName, filePath, fileType }, context = {}) => {
+    const sanitize = (value) => (value || '')
+      .replace(/[<>:"/\\|?*]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     try {
-      const lower = (fileName || '').toLowerCase();
+      const requestedType = (fileType || '').toLowerCase() === 'lrc' ? 'lrc' : ((fileType || '').toLowerCase() === 'txt' ? 'txt' : null);
+      const providedName = sanitize(fileName);
+      const fallbackName = sanitize(context.fallbackFileName);
+      const baseName = providedName || fallbackName || 'Imported Lyrics';
+      const hasExtension = /\.[a-z0-9]{2,5}$/i.test(providedName);
+      const inferredType = (!requestedType && providedName && providedName.toLowerCase().endsWith('.lrc')) ? 'lrc' : 'txt';
+      const finalType = requestedType || inferredType;
+      const extension = finalType === 'lrc' ? '.lrc' : '.txt';
+      const finalFileName = hasExtension ? providedName : `${baseName}${extension}`;
+
       const parsed = await parseLyricsFileAsync(null, {
         rawText: content || '',
-        fileType: lower.endsWith('.lrc') ? 'lrc' : 'txt',
-        name: fileName,
+        fileType: finalType,
+        name: finalFileName,
         path: filePath,
       });
+
       if (!parsed || !Array.isArray(parsed.processedLines)) {
         throw new Error('Invalid lyrics response');
       }
 
       const processedLines = parsed.processedLines;
       const rawText = parsed.rawText ?? (content || '');
+      const finalBaseName = (finalFileName || '').replace(/\.(txt|lrc)$/i, '');
 
       setLyrics(processedLines);
       setRawLyricsContent(rawText);
       selectLine(null);
-      const baseName = (fileName || '').replace(/\.(txt|lrc)$/i, '');
-      setLyricsFileName(baseName);
+      setLyricsFileName(finalBaseName);
 
       emitLyricsLoad(processedLines);
-      if (socket && socket.connected && baseName) {
-        socket.emit('fileNameUpdate', baseName);
+      if (socket && socket.connected && finalBaseName) {
+        socket.emit('fileNameUpdate', finalBaseName);
       }
 
       try {
@@ -107,12 +122,50 @@ const LyricDisplayApp = () => {
         }
       } catch { }
 
-      showToast({ title: 'File loaded', message: `${lower.endsWith('.lrc') ? 'LRC' : 'Text'}: ${baseName}`, variant: 'success' });
+      showToast({
+        title: context.toastTitle || 'Lyrics loaded',
+        message: context.toastMessage || `${finalType === 'lrc' ? 'LRC' : 'Text'}: ${finalBaseName}`,
+        variant: context.toastVariant || 'success',
+      });
+
+      return true;
     } catch (err) {
-      console.error('Failed to open file:', err);
-      showToast({ title: 'Failed to open file', message: 'The file could not be processed.', variant: 'error' });
+      console.error('Failed to load lyrics content:', err);
+      showToast({
+        title: context.errorTitle || 'Failed to load lyrics',
+        message: context.errorMessage || 'The lyrics could not be processed.',
+        variant: 'error',
+      });
+      return false;
     }
   }, [emitLyricsLoad, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, showToast, socket]);
+
+  const handleImportFromLibrary = React.useCallback(async ({ providerId, providerName, lyric }) => {
+    if (!lyric || typeof lyric.content !== 'string' || !lyric.content.trim()) {
+      showToast({
+        title: 'Import failed',
+        message: 'The selected provider did not return lyric content.',
+        variant: 'error',
+      });
+      return false;
+    }
+
+    const baseNamePieces = [lyric.title || 'Untitled Song', lyric.artist || providerName || providerId];
+    const fallbackFileName = baseNamePieces.filter(Boolean).join(' - ');
+
+    return processLoadedLyrics(
+      {
+        content: lyric.content,
+        fileName: lyric.title || fallbackFileName,
+        fileType: 'txt',
+      },
+      {
+        fallbackFileName,
+        toastTitle: 'Lyrics imported',
+        toastMessage: `Loaded from ${providerName || providerId}.`,
+      }
+    );
+  }, [processLoadedLyrics, showToast]);
 
   React.useEffect(() => {
     if (!window?.electronAPI?.onOpenLyricsFromPath) return;
@@ -575,6 +628,7 @@ const LyricDisplayApp = () => {
           isOpen={onlineLyricsModalOpen}
           onClose={handleCloseOnlineLyricsSearch}
           darkMode={darkMode}
+          onImportLyrics={handleImportFromLibrary}
         />
       </div>
     </>
