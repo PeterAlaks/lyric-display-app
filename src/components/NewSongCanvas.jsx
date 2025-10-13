@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen, Undo, Redo } from 'lucide-react';
 import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useDarkModeSync from '../hooks/useDarkModeSync';
 import useEditorClipboard from '../hooks/useEditorClipboard';
+import useEditorHistory from '../hooks/useEditorHistory';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
@@ -39,7 +40,7 @@ const NewSongCanvas = () => {
   const baseContentRef = useRef('');
   const baseTitleRef = useRef('');
 
-  const [content, setContent] = useState('');
+  const { content, setContent, undo, redo, canUndo, canRedo } = useEditorHistory('');
   const [fileName, setFileName] = useState('');
   const [title, setTitle] = useState('');
   const editorContainerRef = useRef(null);
@@ -472,7 +473,7 @@ const NewSongCanvas = () => {
           const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
 
           setRawLyricsContent(content);
-          await handleFileUpload(file);
+          await handleFileUpload(file, { rawText: content });
           try {
             if (window.electronAPI?.addRecentFile) {
               await window.electronAPI.addRecentFile(result.filePath);
@@ -497,7 +498,7 @@ const NewSongCanvas = () => {
         const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
 
         setRawLyricsContent(content);
-        await handleFileUpload(file);
+        await handleFileUpload(file, { rawText: content });
 
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -569,6 +570,52 @@ const NewSongCanvas = () => {
       });
     }
   }, [content, title, emitLyricsDraftSubmit, showToast, showModal, navigate]);
+
+  const handleUndo = useCallback(() => {
+    const previousContent = undo();
+    if (previousContent !== null && textareaRef.current) {
+      const currentScroll = lastKnownScrollRef.current;
+      requestAnimationFrame(() => {
+        if (textareaRef.current && typeof currentScroll === 'number') {
+          textareaRef.current.scrollTop = currentScroll;
+        }
+      });
+    }
+  }, [undo]);
+
+  const handleRedo = useCallback(() => {
+    const nextContent = redo();
+    if (nextContent !== null && textareaRef.current) {
+      const currentScroll = lastKnownScrollRef.current;
+      requestAnimationFrame(() => {
+        if (textareaRef.current && typeof currentScroll === 'number') {
+          textareaRef.current.scrollTop = currentScroll;
+        }
+      });
+    }
+  }, [redo]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const usesModifier = event.ctrlKey || event.metaKey;
+      if (!usesModifier) return;
+
+      if (event.key === 'z' || event.key === 'Z') {
+        if (event.shiftKey) {
+          event.preventDefault();
+          handleRedo();
+        } else {
+          event.preventDefault();
+          handleUndo();
+        }
+      } else if (event.key === 'y' || event.key === 'Y') {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   const findLineIndexByPosition = useCallback((yPosition) => {
     if (!lineMetrics.length) return null;
@@ -934,19 +981,25 @@ const NewSongCanvas = () => {
             <div className="w-[72px]"></div>
           </div>
 
-          {/* Row 1: Cut, Copy, Paste, Cleanup */}
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <Scissors className="w-4 h-4 mr-1" /> Cut
+          {/* Row 1: Undo, Redo, Cut, Copy, Paste, Cleanup */}
+          <div className="flex items-center justify-center gap-1 mb-3">
+            <Button onClick={handleUndo} disabled={!canUndo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
+              <Undo className="w-4 h-4" />
             </Button>
-            <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <Copy className="w-4 h-4 mr-1" /> Copy
+            <Button onClick={handleRedo} disabled={!canRedo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
+              <Redo className="w-4 h-4" />
             </Button>
-            <Button onClick={handlePaste} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <ClipboardPaste className="w-4 h-4 mr-1" /> Paste
+            <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cut">
+              <Scissors className="w-4 h-4" />
             </Button>
-            <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <Wand2 className="w-4 h-4 mr-1" /> Cleanup
+            <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Copy">
+              <Copy className="w-4 h-4" />
+            </Button>
+            <Button onClick={handlePaste} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Paste">
+              <ClipboardPaste className="w-4 h-4" />
+            </Button>
+            <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cleanup">
+              <Wand2 className="w-4 h-4" />
             </Button>
           </div>
 
@@ -968,8 +1021,9 @@ const NewSongCanvas = () => {
                 onClick={handleLoadDraft}
                 disabled={isContentEmpty || isTitleEmpty}
                 className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700"
+                size="sm"
               >
-                <FolderOpen className="w-4 h-4 mr-1" /> Load Draft
+                <FolderOpen className="w-4 h-4 mr-1" /> Load
               </Button>
             ) : (
               <>
@@ -978,8 +1032,9 @@ const NewSongCanvas = () => {
                   disabled={isContentEmpty || isTitleEmpty}
                   variant="ghost"
                   size="sm"
+                  title="Save"
                 >
-                  <Save className="w-4 h-4 mr-1" /> Save
+                  <Save className="w-4 h-4" />
                 </Button>
                 <Button
                   onClick={handleSaveAndLoad}
@@ -1012,36 +1067,75 @@ const NewSongCanvas = () => {
             </h1>
             <div className="w-[72px]"></div>
           </div>
-          <div className="flex items-center justify-center gap-4">
-            <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <Scissors className="w-4 h-4" /> Cut
+          {/* Desktop Toolbar */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button onClick={handleUndo} disabled={!canUndo} variant="ghost"
+              className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
+              <Undo className="w-4 h-4" />
             </Button>
-            <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <Copy className="w-4 h-4" /> Copy
-            </Button>
-            <Button onClick={handlePaste} variant="ghost" className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <ClipboardPaste className="w-4 h-4" /> Paste
-            </Button>
-            <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
-              <Wand2 className="w-4 h-4" /> Cleanup
+            <Button onClick={handleRedo} disabled={!canRedo} variant="ghost"
+              className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
+              <Redo className="w-4 h-4" />
             </Button>
             <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+
+            {/* Responsive Cut/Copy/Paste/Cleanup*/}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost"
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                <Scissors className="w-4 h-4" /> Cut
+              </Button>
+              <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost"
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                <Copy className="w-4 h-4" /> Copy
+              </Button>
+              <Button onClick={handlePaste} variant="ghost"
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                <ClipboardPaste className="w-4 h-4" /> Paste
+              </Button>
+              <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost"
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                <Wand2 className="w-4 h-4" /> Cleanup
+              </Button>
+
+              {/* Icon-only versions appear below lg */}
+              <div className="flex lg:hidden gap-1">
+                <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" title="Cut">
+                  <Scissors className="w-4 h-4" />
+                </Button>
+                <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" title="Copy">
+                  <Copy className="w-4 h-4" />
+                </Button>
+                <Button onClick={handlePaste} variant="ghost" size="sm" title="Paste">
+                  <ClipboardPaste className="w-4 h-4" />
+                </Button>
+                <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" title="Cleanup">
+                  <Wand2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+
+            {/* Title Input */}
             <Input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={65}
               placeholder="Enter song title..."
-              className={`px-3 py-1.5 rounded-md max-w-sm ${darkMode
+              className={`px-3 py-1.5 rounded-md flex-shrink min-w-[100px] max-w-sm ${darkMode
                 ? "bg-gray-700 text-gray-200 placeholder-gray-400 border-gray-600"
                 : "bg-white text-gray-900 placeholder-gray-400 border-gray-300"
                 }`}
             />
+
             {!composeMode && (
               <Button
                 onClick={handleSave}
                 disabled={isContentEmpty || isTitleEmpty}
-                variant="ghost" className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+                variant="ghost"
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
               >
                 <Save className="w-4 h-4" /> Save
               </Button>

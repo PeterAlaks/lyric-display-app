@@ -247,7 +247,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     );
 
     showModal({
-      title: 'Connection Status',
+      title: 'Socket Connection Status',
       description,
       variant: getStatusVariant(),
       actions,

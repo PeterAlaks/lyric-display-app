@@ -458,11 +458,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
             checked={fullScreenModeChecked}
             onCheckedChange={handleFullScreenToggle}
             aria-label="Toggle full screen mode"
-            className={`!h-9 !w-16 !border-0 shadow-sm transition-colors ${darkMode
+            className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
               ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
               : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
               }`}
-            thumbClassName="!h-7 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
+            thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
           />
           <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {fullScreenModeChecked ? 'Enabled' : 'Disabled'}

@@ -12,7 +12,7 @@ const useFileUpload = () => {
   const MAX_FILE_SIZE_MB = 2;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-  const handleFileUpload = useCallback(async (file) => {
+  const handleFileUpload = useCallback(async (file, additionalOptions = {}) => {
     try {
       if (!file) return false;
       if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -28,7 +28,10 @@ const useFileUpload = () => {
         return false;
       }
 
-      const parsed = await parseLyricsFileAsync(file, { fileType: isLrc ? 'lrc' : 'txt' });
+      const parsed = await parseLyricsFileAsync(file, {
+        fileType: isLrc ? 'lrc' : 'txt',
+        ...additionalOptions
+      });
       if (!parsed || !Array.isArray(parsed.processedLines)) {
         throw new Error('Invalid lyrics parse response');
       }

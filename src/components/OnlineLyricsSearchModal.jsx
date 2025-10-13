@@ -1,10 +1,12 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Search, X, ExternalLink, Loader2, Key, Trash2, Globe2, BookOpen } from 'lucide-react';
+import { Search, X, ExternalLink, Loader2, Key, Trash2, Globe2, BookOpen, AlertTriangle } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import useToast from '../hooks/useToast';
 import OnlineLyricsWelcomeSplash from './OnlineLyricsWelcomeSplash';
+import useNetworkStatus from '../hooks/useNetworkStatus';
+import { classifyError } from '../utils/errorClassification';
 
 const DEFAULT_TAB = 'libraries';
 const INITIAL_STATE = {
@@ -34,6 +36,9 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const [keyInputValue, setKeyInputValue] = useState('');
   const [savingKey, setSavingKey] = useState(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
+  const [lastError, setLastError] = useState(null);
+  const [retrying, setRetrying] = useState(false);
+  const isOnline = useNetworkStatus();
 
   const { showToast } = useToast();
   const suggestionsRequestRef = useRef(0);
@@ -66,6 +71,17 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     }
   }, [isOpen, visible]);
 
+  useEffect(() => {
+    if (isOnline && lastError && (lastError.type === 'offline' || lastError.type === 'network' || lastError.type === 'timeout')) {
+      setLastError(null);
+      showToast({
+        title: 'Connection restored',
+        message: 'You can now search for lyrics.',
+        variant: 'success',
+      });
+    }
+  }, [isOnline, lastError]);
+
   useLayoutEffect(() => {
     if (isOpen) {
       setVisible(true);
@@ -96,6 +112,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       setKeyInputValue('');
       setLoadingSuggestions(false);
       setLoadingFullResults(false);
+      setLastError(null);
+      setRetrying(false);
     }
   }, [isOpen, visible]);
 
@@ -109,6 +127,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     setActiveTab(DEFAULT_TAB);
     setKeyEditor(null);
     setKeyInputValue('');
+    setLastError(null);
+    setRetrying(false);
   };
 
   useEffect(() => {
@@ -155,10 +175,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         if (requestId !== suggestionsRequestRef.current) return;
         setLoadingSuggestions(false);
         setSuggestionResults([]);
+        const classified = classifyError(error);
+        setLastError({ ...classified, context: 'suggestions' });
         showToast({
-          title: 'Search failed',
-          message: error?.message || 'Could not fetch suggestions.',
-          variant: 'error',
+          title: classified.title,
+          message: classified.message,
+          variant: classified.type === 'not_found' ? 'warning' : 'error',
         });
       }
     }, 320);
@@ -187,6 +209,14 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
   const performFullSearch = async () => {
     if (!query.trim() || !hasElectronBridge) return;
+    if (!isOnline) {
+      showToast({
+        title: 'No internet connection',
+        message: 'Please check your network connection and try again.',
+        variant: 'error',
+      });
+      return;
+    }
     const trimmed = query.trim();
     const requestId = ++fullSearchRequestRef.current;
     setLoadingFullResults(true);
@@ -206,10 +236,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       if (requestId !== fullSearchRequestRef.current) return;
       setLoadingFullResults(false);
       setFullResults([]);
+      const classified = classifyError(error);
+      setLastError({ ...classified, context: 'fullSearch' });
       showToast({
-        title: 'Search failed',
-        message: error?.message || 'Unable to complete search.',
-        variant: 'error',
+        title: classified.title,
+        message: classified.message,
+        variant: classified.type === 'not_found' ? 'warning' : 'error',
       });
     }
   };
@@ -239,13 +271,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       onClose?.();
     } catch (error) {
       console.error('Failed to load lyrics selection:', error);
-      const is404 = error?.message?.includes('404') || error?.message?.toLowerCase().includes('not found');
+      const classified = classifyError(error);
       showToast({
-        title: is404 ? 'Lyrics not found' : 'Unable to load lyrics',
-        message: is404
-          ? 'This song may not be available from this provider. Try another result.'
-          : error?.message || 'Provider returned an error.',
-        variant: is404 ? 'warning' : 'error',
+        title: classified.title,
+        message: classified.message,
+        variant: classified.type === 'not_found' ? 'warning' : 'error',
       });
     } finally {
       setSelectionLoadingId(null);
@@ -290,9 +320,10 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       const list = await window.electronAPI.lyrics.listProviders();
       if (list?.success) setProviderDefinitions(list.providers || []);
     } catch (error) {
+      const classified = classifyError(error);
       showToast({
-        title: 'Save failed',
-        message: error?.message || 'Could not store provider key.',
+        title: classified.title,
+        message: classified.message,
         variant: 'error',
       });
     } finally {
@@ -315,9 +346,10 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       const list = await window.electronAPI.lyrics.listProviders();
       if (list?.success) setProviderDefinitions(list.providers || []);
     } catch (error) {
+      const classified = classifyError(error);
       showToast({
-        title: 'Removal failed',
-        message: error?.message || 'Could not remove provider key.',
+        title: classified.title,
+        message: classified.message,
         variant: 'error',
       });
     } finally {
@@ -386,9 +418,22 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     if (!items?.length) {
       return (
         <div className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-white'}`}>
-          <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
             <BookOpen className={`w-6 h-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-            <p className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>No matches found. Try a different title or artist.</p>
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>No matches found. Try a different title or artist.</p>
+              {lastError && lastError.context === 'fullSearch' && lastError.retryable && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={performFullSearch}
+                  disabled={loadingFullResults}
+                  className="mt-3"
+                >
+                  Retry Search
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       );
@@ -438,7 +483,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
   const modalClasses = [
     'rounded-lg shadow-xl w-[90vw] max-w-2xl mx-4',
-    'flex flex-col max-h-[92vh]',
+    'flex flex-col h-[700px]',
     darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200',
     'transition-all duration-300 ease-out',
     (exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100',
@@ -459,6 +504,19 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Network Status Indicator */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-colors ${isOnline
+                ? (darkMode ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700')
+                : (darkMode ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse' : 'bg-red-50 border-red-200 text-red-700 animate-pulse')
+                }`}
+              title={isOnline ? 'Connected to internet' : 'No internet connection'}
+            >
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-[10px] font-semibold uppercase tracking-wide">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
+            </div>
             {/* Help Button */}
             <button
               onClick={() => setShowWelcomeSplash(true)}
@@ -483,14 +541,14 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 h-[500px]">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className={darkMode ? 'bg-gray-800 text-gray-300' : undefined}>
               <TabsTrigger value="google">Google Search</TabsTrigger>
               <TabsTrigger value="libraries">Online Song Libraries</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="google">
+            <TabsContent value="google" className="animate-in slide-in-from-left-8 duration-300">
               <div className="mt-4 space-y-4">
                 <div className="relative">
                   <Input
@@ -568,7 +626,23 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
               </div>
             </TabsContent>
 
-            <TabsContent value="libraries">
+            <TabsContent value="libraries" className="animate-in slide-in-from-right-8 duration-300">
+              {/* Offline Banner */}
+              {!isOnline && (
+                <div className={`mt-4 rounded-lg border-2 px-4 py-3 ${darkMode ? 'border-red-500/50 bg-red-500/10' : 'border-red-200 bg-red-50'}`}>
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
+                    <div>
+                      <p className={`text-sm font-semibold ${darkMode ? 'text-red-300' : 'text-red-900'}`}>
+                        No internet connection
+                      </p>
+                      <p className={`text-xs mt-1 ${darkMode ? 'text-red-400' : 'text-red-700'}`}>
+                        Online library search requires an active internet connection. Please check your network and try again.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {!hasElectronBridge ? (
                 <div className={`mt-6 rounded-md border px-4 py-6 text-center ${darkMode ? 'border-gray-700 bg-gray-800 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600'}`}>
                   <p className="text-sm">
@@ -624,6 +698,41 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                       </Button>
                     </div>
                   </div>
+
+                  {/* Error State with Retry */}
+                  {lastError && lastError.context === 'suggestions' && !loadingSuggestions && (
+                    <div className={`mt-3 rounded-md border px-4 py-3 ${darkMode ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-yellow-200 bg-yellow-50'}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2 flex-1">
+                          <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                          <div className="min-w-0">
+                            <p className={`text-sm font-medium ${darkMode ? 'text-yellow-300' : 'text-yellow-900'}`}>
+                              {lastError.title}
+                            </p>
+                            <p className={`text-xs mt-1 ${darkMode ? 'text-yellow-400/80' : 'text-yellow-700'}`}>
+                              {lastError.message}
+                            </p>
+                          </div>
+                        </div>
+                        {lastError.retryable && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setLastError(null);
+                              if (query.trim()) {
+                                setQuery(query + ' ');
+                                setTimeout(() => setQuery(query.trim()), 0);
+                              }
+                            }}
+                            className={darkMode ? 'border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/20' : 'border-yellow-400 text-yellow-700 hover:bg-yellow-100'}
+                          >
+                            Retry
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {loadingSuggestions && !showFullResults && (
                     <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">

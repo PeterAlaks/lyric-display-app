@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FolderOpen, FileText, Edit, List, Globe, Plus } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useDarkModeState, useSetlistState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
@@ -64,6 +65,8 @@ const LyricDisplayApp = () => {
     },
     emitStyleUpdate,
   });
+
+  const [hasInteractedWithTabs, setHasInteractedWithTabs] = React.useState(false);
 
   // Online lyrics search modal state
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
@@ -445,45 +448,43 @@ const LyricDisplayApp = () => {
             </div>
           </div>
 
-          <div className={`border-t my-10 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
-
-          {/* Output Settings */}
-          <div className="mb-6">
-            <OutputSettingsPanel
-              outputKey={activeTab}
-              settings={getCurrentSettings()}
-              updateSettings={updateSettings}
-              fontOptions={fontOptions}
-            />
-          </div>
+          <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
           {/* Output Tabs */}
-          <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-            <button
-              className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${activeTab === 'output1'
-                ? 'bg-black text-white'
-                : darkMode
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              onClick={() => setActiveTab('output1')}
+          <Tabs value={activeTab} onValueChange={(val) => { setHasInteractedWithTabs(true); setActiveTab(val); }}>
+            <TabsList className={`w-full h-11 mb-8 ${darkMode ? 'bg-gray-800 text-gray-300' : ''}`}>
+              <TabsTrigger value="output1" className="flex-1 h-9 data-[state=active]:bg-black data-[state=active]:text-white">
+                Output 1
+              </TabsTrigger>
+              <TabsTrigger value="output2" className="flex-1 h-9 data-[state=active]:bg-black data-[state=active]:text-white">
+                Output 2
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent
+              value="output1"
+              className={`mt-0 ${hasInteractedWithTabs && activeTab === 'output1' ? 'animate-in slide-in-from-left-8 duration-300' : ''}`}
             >
-              Output 1
-            </button>
-            <button
-              className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${activeTab === 'output2'
-                ? 'bg-black text-white'
-                : darkMode
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              onClick={() => setActiveTab('output2')}
+              <OutputSettingsPanel
+                outputKey="output1"
+                settings={getCurrentSettings()}
+                updateSettings={updateSettings}
+                fontOptions={fontOptions}
+              />
+            </TabsContent>
+            <TabsContent
+              value="output2"
+              className={`mt-0 ${hasInteractedWithTabs && activeTab === 'output2' ? 'animate-in slide-in-from-right-8 duration-300' : ''}`}
             >
-              Output 2
-            </button>
-          </div>
+              <OutputSettingsPanel
+                outputKey="output2"
+                settings={getCurrentSettings()}
+                updateSettings={updateSettings}
+                fontOptions={fontOptions}
+              />
+            </TabsContent>
+          </Tabs>
 
-          <div className={`border-t my-10 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+          <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
           {/* Last Synced Indicator */}
           {lastSyncTime && (

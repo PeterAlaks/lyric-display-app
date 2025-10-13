@@ -6,6 +6,8 @@ export function createWindow(route = '/') {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    minWidth: 1000,
+    minHeight: 650,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
