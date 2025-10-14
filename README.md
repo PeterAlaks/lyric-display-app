@@ -257,6 +257,7 @@ lyric-display-app/
 |   |   ├── useEditorClipboard.js           # Hook for cut, copy and paste handlers
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
 |   |   ├── useMenuShortcuts.js             # Hook for handling menu navigation/shortcuts
+|   |   ├── useNetworkStatus.js             # Internet connection status hook
 |   |   ├── useModal.js                     # Global modal hook
 |   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
 |   |   ├── useSearch.js                    # Hook for search bar functionality
@@ -274,7 +275,8 @@ lyric-display-app/
 |   |   └── Output2.jsx                     # Output 2 display
 │   ├── utils/
 |   |   ├── asyncLyricsParser.js            # Picks worker/IPC/sync parsing strategy.
-|   |   ├── connectionManager.js            # Socket connection management hook
+|   |   ├── connectionManager.js            # Socket connection management utility
+|   |   ├── errorClassification.js          # Network error detection and description utility
 |   |   ├── logger.js                       # Simple event and error logger utility
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
 |   |   ├── network.js                      # Network utility for backend URL resolution

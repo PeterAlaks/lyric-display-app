@@ -595,7 +595,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     Search the Web for Lyrics
                   </h3>
                   <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Opens an in-app browser with Google search results. Perfect for finding lyrics from any website, copying them with Ctrl/Cmd + C key action, and pasting into LyricDisplay.
+                    Opens an in-app browser with Google search results. Perfect for finding lyrics from any website, copying them and pasting into LyricDisplay.
                   </p>
                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${darkMode ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
                     <Globe2 className="w-3.5 h-3.5" />
@@ -615,7 +615,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     </li>
                     <li className={`text-xs flex items-start gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <span className={`mt-0.5 w-1 h-1 rounded-full flex-shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'}`}></span>
-                      <span>The browser stays open while you copy lyrics</span>
+                      <span>The browser stays open while you copy lyrics. You can only copy with Ctrl/Cmd + C key action.</span>
                     </li>
                     <li className={`text-xs flex items-start gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <span className={`mt-0.5 w-1 h-1 rounded-full flex-shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'}`}></span>
