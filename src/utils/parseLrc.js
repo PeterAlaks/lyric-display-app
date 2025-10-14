@@ -4,13 +4,15 @@ import { parseLrcContent } from '../../shared/lyricsParsing.js';
  * Parse .lrc file into { rawText, processedLines }
  * - processedLines: array of lyric strings ordered by time
  * - rawText: strictly the displayed text, no timestamps (for editing)
+ * @param {File} file
+ * @param {object} options - Parsing options including enableSplitting
  */
-export const parseLrc = (file) => new Promise((resolve, reject) => {
+export const parseLrc = (file, options = {}) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = (event) => {
     try {
       const raw = event.target.result || '';
-      resolve(parseLrcContent(raw));
+      resolve(parseLrcContent(raw, options));
     } catch (error) {
       reject(error);
     }
@@ -19,6 +21,6 @@ export const parseLrc = (file) => new Promise((resolve, reject) => {
   reader.readAsText(file);
 });
 
-export function parseLrcText(raw) {
-  return parseLrcContent(raw || '');
+export function parseLrcText(raw, options = {}) {
+  return parseLrcContent(raw || '', options);
 }

@@ -6,16 +6,17 @@ import { parseTxtContent, processRawTextToLines } from '../../shared/lyricsParsi
 /**
  * Parses a .txt file and extracts the raw text and processed lyric lines.
  * @param {File} file - A plain text file
+ * @param {object} options - Parsing options including enableSplitting
  * @returns {Promise<{rawText: string, processedLines: Array}>} - Resolves to an object
  */
-export const parseLyrics = (file) => {
+export const parseLyrics = (file, options = {}) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
     reader.onload = (event) => {
       try {
         const rawText = event.target.result;
-        const parsed = parseTxtContent(rawText);
+        const parsed = parseTxtContent(rawText, options);
         resolve(parsed);
       } catch (error) {
         reject(error);

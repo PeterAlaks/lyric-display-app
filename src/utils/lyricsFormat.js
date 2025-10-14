@@ -1,4 +1,7 @@
-// Utilities for formatting and reconstructing lyrics text
+// utils/lyricsFormat.js
+// Enhanced utilities for formatting and reconstructing lyrics text
+
+import { preprocessText, splitLongLine } from '../../shared/intelligentLineSplitting.js';
 
 const RELIGIOUS_WORDS = ['jesus', 'jehovah', 'god', 'yahweh', 'lord', 'christ', 'holy ghost',
   'holy spirit', 'bible', 'amen', 'hallelujah', 'hosanna', 'savior', 'saviour', 'redeemer', 'messiah'];
@@ -11,59 +14,8 @@ const BRACKET_PAIRS = [
 ];
 
 const LATIN_LETTER_REGEX = /[A-Za-z]/;
-const ENGLISH_HINT_WORDS = [
-  ...RELIGIOUS_WORDS,
-  'the',
-  'and',
-  'for',
-  'with',
-  'praise',
-  'glory',
-  'grace',
-  'mercy',
-  'love',
-  'king',
-  'queen',
-  'strength',
-  'light',
-  'power',
-  'redeemer',
-  'savior',
-  'saviour',
-  'spirit',
-  'amen',
-  'hallelujah',
-  'we',
-  'you',
-  'your',
-  'our',
-  'their',
-  'his',
-  'her',
-  'who',
-  'what',
-  'where',
-  'when',
-  'why',
-  'how',
-  'this',
-  'that',
-  'these',
-  'those',
-  'shall',
-  'will',
-  'hope',
-  'faith',
-  'joy',
-  'peace',
-  'deliver',
-  'deliverer',
-  'rescue',
-  'comfort',
-  'comforter',
-  'guide',
-  'helper'
-];
+const ENGLISH_HINT_WORDS = [...RELIGIOUS_WORDS, 'the', 'and', 'for', 'with', 'praise', 'glory', 'grace', 'mercy', 'love', 'king', 'queen', 'strength', 'light', 'power', 'redeemer', 'savior', 'saviour', 'spirit', 'amen', 'hallelujah', 'we', 'you', 'your', 'our', 'their', 'his', 'her', 'who', 'what', 'where', 'when', 'why', 'how', 'this', 'that', 'these', 'those', 'shall', 'will', 'hope', 'faith', 'joy', 'peace', 'deliver', 'deliverer', 'rescue', 'comfort', 'comforter', 'guide', 'helper'];
+
 const ENGLISH_HINT_REGEXES = ENGLISH_HINT_WORDS.map((word) => new RegExp(`\\b${word}\\b`, 'i'));
 
 const normalizePunctuation = (line) => {
@@ -161,10 +113,28 @@ export const splitInlineTranslation = (line) => {
   return [mainLine, translationLine];
 };
 
-export const formatLyrics = (text) => {
+/**
+ * Enhanced formatLyrics with optional intelligent line splitting
+ * @param {string} text - Raw lyrics text
+ * @param {object} options - { enableSplitting: boolean, splitConfig: object }
+ * @returns {string} - Formatted lyrics text
+ */
+export const formatLyrics = (text, options = {}) => {
   if (!text) return '';
 
-  const lines = String(text).split(/\r?\n/);
+  const {
+    enableSplitting = false,
+    splitConfig = {
+      TARGET_LENGTH: 55,
+      MIN_LENGTH: 35,
+      MAX_LENGTH: 70,
+      OVERFLOW_TOLERANCE: 12,
+    }
+  } = options;
+
+  const workingText = enableSplitting ? preprocessText(text) : text;
+
+  const lines = String(workingText).split(/\r?\n/);
   const formattedLines = [];
 
   for (let i = 0; i < lines.length; i += 1) {
@@ -176,20 +146,29 @@ export const formatLyrics = (text) => {
 
     const punctuationNormalized = normalizePunctuation(trimmedInput);
 
-    const segments = splitInlineTranslation(punctuationNormalized)
-      .map((segment) => segment.trim())
-      .filter(Boolean)
-      .map((segment) => capitalizeReligiousTerms(capitalizeFirstCharacter(segment)));
+    const nextLine = lines[i + 1];
+    const nextIsBracketed = nextLine && isBracketedTranslationLine(nextLine.trim());
 
-    if (segments.length === 0) continue;
+    let linesToProcess = [punctuationNormalized];
+    if (enableSplitting && !nextIsBracketed && !isBracketedTranslationLine(punctuationNormalized)) {
+      linesToProcess = splitLongLine(punctuationNormalized, splitConfig);
+    }
 
-    segments.forEach((segment) => {
-      formattedLines.push(segment);
-    });
+    for (const processLine of linesToProcess) {
+      const segments = splitInlineTranslation(processLine)
+        .map((segment) => segment.trim())
+        .filter(Boolean)
+        .map((segment) => capitalizeReligiousTerms(capitalizeFirstCharacter(segment)));
 
-    const nextLine = lines[i + 1] || '';
-    if (!isBracketedTranslationLine(nextLine)) {
-      formattedLines.push('');
+      if (segments.length === 0) continue;
+
+      segments.forEach((segment) => {
+        formattedLines.push(segment);
+      });
+
+      if (!nextIsBracketed && !isBracketedTranslationLine(nextLine || '')) {
+        formattedLines.push('');
+      }
     }
   }
 

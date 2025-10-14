@@ -8,6 +8,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  worker: {
+    format: 'es'
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')

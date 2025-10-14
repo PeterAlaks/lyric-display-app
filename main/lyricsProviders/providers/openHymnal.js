@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Fuse from 'fuse.js';
 
 export const definition = {
   id: 'openHymnal',
@@ -18,9 +19,12 @@ export const definition = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEFAULT_DATA_PATH = path.resolve(__dirname, '../../../shared/data/openhymnal-sample.json');
+const DEFAULT_DATA_PATH = path.resolve(__dirname, '../../../shared/data/openhymnal-bundle.json');
 let cachedDataset = null;
 let lastLoadedPath = null;
+let fuse = null;
+
+const normalizeText = (text) => (text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 
 const loadDataset = async () => {
   const overridePath = process.env.OPEN_HYMNAL_DATA_PATH || process.env.LYRICDISPLAY_OPEN_HYMNAL_PATH || null;
@@ -35,20 +39,36 @@ const loadDataset = async () => {
   }
 
   try {
+    console.time('openHymnal-loadDataset');
     const raw = await fs.readFile(targetPath, 'utf8');
     const data = JSON.parse(raw);
     cachedDataset = Array.isArray(data) ? data : [];
     lastLoadedPath = targetPath;
+
+    fuse = new Fuse(cachedDataset, {
+      keys: [
+        { name: 'title', weight: 0.4 },
+        { name: 'author', weight: 0.3 },
+        { name: 'topics', weight: 0.2 },
+        { name: 'lyrics', weight: 0.1 },
+      ],
+      includeScore: true,
+      threshold: 0.4,
+      minMatchCharLength: 2,
+      ignoreLocation: true,
+      useExtendedSearch: true,
+    });
+    console.timeEnd('openHymnal-loadDataset');
+    console.log(`[openHymnal] Loaded ${cachedDataset.length} hymns`);
   } catch (error) {
     console.warn('[openHymnal] Failed to load dataset:', error.message);
     cachedDataset = [];
+    fuse = null;
     lastLoadedPath = targetPath;
   }
 
   return cachedDataset;
 };
-
-const normalizeText = (text) => (text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 
 const normalizeEntry = (entry) => {
   const firstStanza = Array.isArray(entry?.lyrics) ? entry.lyrics[0] : '';
@@ -92,30 +112,23 @@ const collectText = (entry) => {
 };
 
 export async function search(query, { limit = 10 } = {}) {
+  console.time('openHymnal-search');
   if (!query || !query.trim()) {
     const dataset = await loadDataset();
-    return { results: dataset.slice(0, limit).map(normalizeEntry), errors: [] };
+    const results = dataset.slice(0, limit).map(normalizeEntry);
+    console.timeEnd('openHymnal-search');
+    return { results, errors: [] };
   }
 
   const dataset = await loadDataset();
-  if (!dataset.length) {
+  if (!dataset.length || !fuse) {
+    console.timeEnd('openHymnal-search');
     return { results: [], errors: ['Open Hymnal dataset is unavailable.'] };
   }
 
-  const normQuery = normalizeText(query);
-  const matches = dataset.filter((entry) => {
-    const haystack = [
-      entry?.title,
-      entry?.author,
-      ...(Array.isArray(entry?.topics) ? entry.topics : []),
-      ...(Array.isArray(entry?.lyrics) ? entry.lyrics.join(' ') : []),
-    ]
-      .map(normalizeText)
-      .join(' ');
-    return haystack.includes(normQuery) || normQuery.split(/\s+/).every((part) => haystack.includes(part));
-  });
-
-  const limited = matches.slice(0, limit).map(normalizeEntry);
+  const results = fuse.search(query, { limit }).map((result) => result.item);
+  const limited = results.map(normalizeEntry);
+  console.timeEnd('openHymnal-search');
   return { results: limited, errors: [] };
 }
 

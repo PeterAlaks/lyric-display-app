@@ -30,12 +30,35 @@ self.addEventListener('message', async (event) => {
   }
 
   try {
-    const { fileType = 'txt' } = payload || {};
-    const rawText = await getRawTextFromPayload(payload);
-    const parser = fileType === 'lrc' ? parseLrcContent : parseTxtContent;
-    const result = parser(rawText);
+    const { fileType = 'txt', content, enableSplitting, splitConfig } = payload || {};
+    let result;
+
+    if (content) {
+
+      if (fileType === 'lrc') {
+        const mod = await import('../../shared/lyricsParsing.js');
+        result = mod.parseLrcContent(content, { enableSplitting, splitConfig });
+      } else {
+        const mod = await import('../../shared/lyricsParsing.js');
+        result = mod.parseTxtContent(content, { enableSplitting, splitConfig });
+      }
+    } else {
+
+      const rawText = await getRawTextFromPayload(payload);
+      const mod = await import('../../shared/lyricsParsing.js');
+      if (fileType === 'lrc') {
+        result = mod.parseLrcContent(rawText, { enableSplitting, splitConfig });
+      } else {
+        result = mod.parseTxtContent(rawText, { enableSplitting, splitConfig });
+      }
+    }
+
     self.postMessage({ id, status: RESULT_OK, result });
   } catch (error) {
-    self.postMessage({ id, status: RESULT_ERROR, error: error?.message || String(error) });
+    self.postMessage({
+      id,
+      status: RESULT_ERROR,
+      error: error?.message || String(error),
+    });
   }
 });

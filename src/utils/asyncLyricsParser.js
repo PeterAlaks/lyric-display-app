@@ -144,7 +144,7 @@ const detectFileType = (file, explicitType) => {
 /**
  * Parse a lyrics file asynchronously using the best available strategy.
  * @param {File|undefined|null} file
- * @param {{ fileType?: 'txt' | 'lrc', rawText?: string, path?: string, name?: string }} options
+ * @param {{ fileType?: 'txt' | 'lrc', rawText?: string, path?: string, name?: string, enableSplitting?: boolean, splitConfig?: object }} options
  */
 export async function parseLyricsFileAsync(file, options = {}) {
   const fileType = detectFileType(file, options.fileType);
@@ -152,6 +152,8 @@ export async function parseLyricsFileAsync(file, options = {}) {
     ...options,
     fileType,
     name: options.name || file?.name || '',
+    enableSplitting: options.enableSplitting ?? false,
+    splitConfig: options.splitConfig || {},
   };
 
   const ipcResult = await parseViaElectronIPC(file, parseOptions);
