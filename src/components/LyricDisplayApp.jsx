@@ -293,7 +293,11 @@ const LyricDisplayApp = () => {
         <div className={`w-[420px] shadow-lg p-6 overflow-y-auto ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>LyricDisplay</h1>
+            <img
+              src="/LyricDisplay-icon.png"
+              alt="LyricDisplay"
+              className="h-8 w-8"
+            />
             <div className="flex items-center gap-2">
               {/* Online Lyrics Search Button */}
               <button
@@ -457,11 +461,11 @@ const LyricDisplayApp = () => {
 
           {/* Output Tabs */}
           <Tabs value={activeTab} onValueChange={(val) => { setHasInteractedWithTabs(true); setActiveTab(val); }}>
-            <TabsList className={`w-full h-11 mb-8 ${darkMode ? 'bg-gray-800 text-gray-300' : ''}`}>
-              <TabsTrigger value="output1" className="flex-1 h-9 data-[state=active]:bg-black data-[state=active]:text-white">
+            <TabsList className={`w-full h-11 mb-8 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
+              <TabsTrigger value="output1" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                 Output 1
               </TabsTrigger>
-              <TabsTrigger value="output2" className="flex-1 h-9 data-[state=active]:bg-black data-[state=active]:text-white">
+              <TabsTrigger value="output2" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                 Output 2
               </TabsTrigger>
             </TabsList>

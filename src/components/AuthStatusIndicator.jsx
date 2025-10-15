@@ -256,16 +256,42 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     });
   };
 
+  const getStatusLabel = () => {
+    if (authStatus === 'authenticated' && connectionStatus === 'connected') {
+      return 'Connected';
+    }
+    if (authStatus === 'authenticating') {
+      return 'Authenticating...';
+    }
+    if (connectionStatus === 'reconnecting') {
+      return 'Reconnecting...';
+    }
+    if (authStatus === 'failed') {
+      return 'Auth Failed';
+    }
+    if (authStatus === 'admin-key-required') {
+      return 'Key Required';
+    }
+    if (connectionStatus === 'error') {
+      return 'Error';
+    }
+    if (connectionStatus === 'disconnected') {
+      return 'Disconnected';
+    }
+    return 'Connecting...';
+  };
+
   return (
     <button
       onClick={showAuthModal}
-      className={`p-2 rounded-lg font-medium transition-colors ${darkMode
+      className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${darkMode
         ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
         : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
         }`}
       title={`Authentication Status: ${getStatusText()}`}
     >
       {getStatusIcon()}
+      <span className="text-xs">{getStatusLabel()}</span>
     </button>
   );
 };

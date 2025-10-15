@@ -42,7 +42,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
             name: 'Lyrics.ovh',
             description: 'General pop/rock catalog powered by Deezer',
             requiresKey: false,
-            icon: <Music className="w-5 h-5" />,
+            icon: '/logos/lyricsovh-icon.png',
             color: 'emerald',
             link: 'https://lyricsovh.docs.apiary.io/',
         },
@@ -50,7 +50,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
             name: 'Vagalume',
             description: 'International catalog with strong Brazilian coverage',
             requiresKey: true,
-            icon: <Globe className="w-5 h-5" />,
+            icon: '/logos/vagalume-icon.png',
             color: 'blue',
             link: 'https://auth.vagalume.com.br/applications',
             keySteps: [
@@ -65,7 +65,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
             name: 'Hymnary.org',
             description: 'Historic hymn database with 20,000+ public domain texts',
             requiresKey: true,
-            icon: <Music className="w-5 h-5" />,
+            icon: '/logos/hymnaryorg-icon.png',
             color: 'purple',
             link: 'https://hymnary.org/help/api',
             keySteps: [
@@ -80,7 +80,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
             name: 'Open Hymnal',
             description: 'Bundled collection of beloved traditional hymns (offline)',
             requiresKey: false,
-            icon: <Zap className="w-5 h-5" />,
+            icon: '/logos/openhymnal-icon.png',
             color: 'amber',
             link: 'https://openhymnal.org/',
         },
@@ -175,7 +175,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-2">
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${colorClasses[provider.color]}`}>{provider.icon}</div>
+                                                <img src={provider.icon} alt={provider.name} className="w-6 h-6 object-contain" />
                                                 <div>
                                                     <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                                         {provider.name}

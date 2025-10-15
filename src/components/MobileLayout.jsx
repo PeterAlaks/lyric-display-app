@@ -115,17 +115,24 @@ const MobileLayout = () => {
         >
           {/* Top Row - Title and Controls */}
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1
-                className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
-              >
-                LyricDisplay
-              </h1>
-              {lastSyncTime && (
-                <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Last synced {secondsAgo}s ago
-                </p>
-              )}
+            <div className="flex items-center gap-3">
+              <img
+                src="/LyricDisplay-icon.png"
+                alt="LyricDisplay"
+                className="h-9 w-9"
+              />
+              <div>
+                <h1
+                  className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                >
+                  LyricDisplay
+                </h1>
+                {lastSyncTime && (
+                  <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Last synced {secondsAgo}s ago
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               {/* Setlist Button */}
