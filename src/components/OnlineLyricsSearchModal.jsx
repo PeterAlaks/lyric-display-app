@@ -773,7 +773,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                       <p className={`mb-3 text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         Featured libraries
                       </p>
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex gap-3">
                         {providerDefinitions.map((provider) => {
                           const logoMap = {
                             lyricsOvh: '/logos/lyricsovh-logo.png',
@@ -788,12 +788,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                               href={provider.homepage}
                               target="_blank"
                               rel="noreferrer"
-                              className="group relative w-auto block transition-all hover:opacity-75"
+                              className="group relative flex-1 transition-all hover:opacity-75"
                             >
                               <img
                                 src={logoMap[provider.id]}
                                 alt={provider.displayName}
-                                className="h-8 w-auto object-contain"
+                                className="w-full h-auto object-contain"
                               />
                             </a>
                           );
@@ -839,8 +839,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                                 </div>
                                 {!isEditing && (
                                   <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="secondary" onClick={() => openKeyEditor(provider.id)}>
-                                      {configured ? 'Update key' : 'Add key'}
+                                    <Button size="sm" variant="secondary" onClick={() => openKeyEditor(provider.id)} className={
+                                      darkMode
+                                        ? 'bg-gray-700 text-white hover:bg-gray-600'
+                                        : ''
+                                    }
+                                    >{configured ? 'Update key' : 'Add key'}
                                     </Button>
                                     {configured && (
                                       <Button size="icon" variant="ghost" onClick={() => handleDeleteKey(provider.id)} disabled={savingKey}>
@@ -860,8 +864,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                                     className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500' : ''}
                                   />
                                   <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="sm" onClick={() => { setKeyEditor(null); setKeyInputValue(''); }} disabled={savingKey}>
-                                      Cancel
+                                    <Button variant="ghost" size="sm" onClick={() => { setKeyEditor(null); setKeyInputValue(''); }} disabled={savingKey} className={
+                                      darkMode
+                                        ? 'text-gray-400 hover:bg-gray-700/60 hover:text-white'
+                                        : ''
+                                    }
+                                    >Cancel
                                     </Button>
                                     <Button size="sm" onClick={() => handleSaveKey(provider.id)} disabled={savingKey || !keyInputValue.trim()}>
                                       {savingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save key'}
