@@ -1,5 +1,5 @@
 export class TTLCache {
-  constructor({ max = 50, ttlMs = 60_000 } = {}) {
+  constructor({ max = 50, ttlMs = 300_000 } = {}) {
     this.max = max;
     this.ttlMs = ttlMs;
     this.store = new Map();
@@ -43,4 +43,3 @@ export class TTLCache {
     this.store.clear();
   }
 }
-

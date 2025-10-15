@@ -245,9 +245,19 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
     }
   });
 
-  ipcMain.handle('lyrics:search', async (_event, { query, limit, skipCache } = {}) => {
+  ipcMain.handle('lyrics:search', async (event, { query, limit, skipCache } = {}) => {
     try {
-      const result = await searchAllProviders(query, { limit, skipCache });
+      const result = await searchAllProviders(query, {
+        limit,
+        skipCache,
+        onPartialResults: (partialPayload) => {
+          try {
+            event.sender.send('lyrics:search:partial', partialPayload);
+          } catch (error) {
+            console.warn('Failed to send partial lyrics results:', error);
+          }
+        }
+      });
       return { success: true, ...result };
     } catch (error) {
       console.error('Lyrics search failed:', error);

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import path from 'path';
+import { prewarmCredentials } from './main/providerCredentials.js';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { startBackend, stopBackend } from './main/backend.js';
@@ -26,7 +27,7 @@ async function handleMissingAdminKey() {
     if (typeof app.hide === 'function') {
       app.hide();
     }
-  } catch {}
+  } catch { }
   app.exitCode = 1;
   app.quit();
 }
@@ -65,6 +66,15 @@ app.whenReady().then(async () => {
     }
 
     console.log('Admin key loaded and cached');
+
+    Promise.all([
+      import('./main/lyricsProviders/providers/openHymnal.js').then(mod => mod.loadDataset()),
+      prewarmCredentials()
+    ]).then(() => {
+      console.log('[Startup] Lyrics provider resources pre-warmed');
+    }).catch(error => {
+      console.warn('[Startup] Failed to pre-warm lyrics resources:', error);
+    });
 
     mainWindow = createWindow('/');
     menuAPI.createMenu();

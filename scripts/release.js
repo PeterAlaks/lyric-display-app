@@ -42,9 +42,194 @@ function getNextVersions(version) {
     };
 }
 
+function safeExec(cmd, opts = {}) {
+    return execSync(cmd, { encoding: 'utf8', ...opts }).toString().trim();
+}
+
+async function promptForCustomVersion(currentVersion) {
+    while (true) {
+        const response = await prompts({
+            type: 'text',
+            name: 'version',
+            message: 'Enter your desired version (e.g. 4.2.5 or 5.0.0-beta.1):',
+            validate: value =>
+                /^\d+\.\d+\.\d+(-[a-zA-Z0-9-.]+)?$/.test(value)
+                    ? true
+                    : 'Please enter a valid semver version (e.g. 4.2.5 or 5.0.0-beta.1)'
+        });
+
+        if (!response.version) {
+            return null;
+        }
+
+        const entered = response.version.trim();
+
+        if (entered === currentVersion) {
+            const { action } = await prompts({
+                type: 'select',
+                name: 'action',
+                message: `The entered version (v${entered}) is the same as the current package.json version (v${currentVersion}). What would you like to do?`,
+                choices: [
+                    { title: 'Re-enter version', value: 'retry' },
+                    { title: 'Cancel release', value: 'cancel' }
+                ]
+            });
+
+            if (action === 'cancel' || !action) return null;
+            continue;
+        }
+
+        const cmp = compareVersions(entered, currentVersion);
+        if (cmp < 0) {
+            const { confirmLower } = await prompts({
+                type: 'confirm',
+                name: 'confirmLower',
+                message: chalk.redBright(
+                    `⚠️  The version you entered (v${entered}) is LOWER than the current version (v${currentVersion}). Continue anyway?`
+                ),
+                initial: false
+            });
+            if (!confirmLower) {
+                continue;
+            }
+        }
+
+        return entered;
+    }
+}
+
+async function checkGitStateInteractive() {
+    if (fs.existsSync('.git/MERGE_HEAD') || fs.existsSync('.git/rebase-apply') || fs.existsSync('.git/rebase-merge')) {
+        console.log(chalk.redBright('\n🚫 A Git merge or rebase is currently in progress.'));
+        console.log(chalk.yellow('Please resolve all conflicts and complete the merge/rebase before releasing.\n'));
+        return { ok: false };
+    }
+
+    let branch = '';
+    try {
+        branch = safeExec('git symbolic-ref --short -q HEAD');
+    } catch (e) {
+        branch = '';
+    }
+    if (!branch) {
+        console.log(chalk.redBright('\n🚫 You are in a detached HEAD state (not on a branch).'));
+        console.log(chalk.yellow('Please checkout a branch before running a release (e.g. git checkout main).\n'));
+        return { ok: false };
+    }
+
+    try {
+        const count = safeExec('git rev-list --count HEAD');
+        if (parseInt(count, 10) === 0) {
+            console.log(chalk.redBright('\n🚫 This repository has no commits yet.'));
+            console.log(chalk.yellow('Please make an initial commit before running the release script.\n'));
+            return { ok: false };
+        }
+    } catch (e) {
+        console.log(chalk.redBright('\n🚫 Unable to determine commit history.'));
+        console.log(chalk.yellow('Ensure this is a valid Git repository and try again.\n'));
+        return { ok: false };
+    }
+
+    let status = '';
+    try {
+        status = safeExec('git status --porcelain');
+    } catch (e) {
+        status = '';
+    }
+
+    const lines = status ? status.split('\n').filter(Boolean) : [];
+
+    const hasStaged = lines.some(line => {
+        return line[0] !== ' ' && line[0] !== '?';
+    });
+
+    const hasUnstaged = lines.some(line => {
+        return line.startsWith('??') || line[1] !== ' ';
+    });
+
+    if (hasUnstaged && !hasStaged) {
+        console.log(chalk.yellow('\n⚠️  You have unstaged changes (no staged files).'));
+        console.log(chalk.gray('Please review and stage files (git add <files> or git add .) before continuing.\n'));
+        const { autoStage } = await prompts({
+            type: 'confirm',
+            name: 'autoStage',
+            message: 'Would you like the script to automatically stage all changes now (git add .)?',
+            initial: false
+        });
+
+        if (!autoStage) {
+            console.log(chalk.red('Aborting release. Please stage your changes and re-run the script.'));
+            return { ok: false };
+        }
+
+        try {
+            execSync('git add .', { stdio: 'inherit' });
+            console.log(chalk.green('✅ All changes staged.'));
+            status = safeExec('git status --porcelain');
+        } catch (e) {
+            console.error(chalk.red('❌ Failed to stage changes:'), e.message);
+            return { ok: false };
+        }
+    }
+
+    const refreshedLines = status ? status.split('\n').filter(Boolean) : [];
+    const nowHasStaged = refreshedLines.some(line => line[0] !== ' ' && line[0] !== '?');
+    const nowHasUnstaged = refreshedLines.some(line => line.startsWith('??') || line[1] !== ' ');
+
+    if (nowHasStaged) {
+        console.log(chalk.yellow('\n📝 You have staged but uncommitted changes that will be included in this release.'));
+        const { commitMessage } = await prompts({
+            type: 'text',
+            name: 'commitMessage',
+            message: 'Enter a commit message for the staged changes (this will be committed automatically):',
+            validate: val => val && val.trim().length > 0 ? true : 'Commit message cannot be empty.'
+        });
+
+        if (!commitMessage) {
+            console.log(chalk.red('Aborting release. No commit message provided.'));
+            return { ok: false };
+        }
+
+        try {
+            execSync(`git commit -m "${commitMessage.trim().replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
+            console.log(chalk.green('✅ Changes committed.'));
+        } catch (e) {
+            console.error(chalk.red('❌ Failed to commit changes:'), e.message);
+            return { ok: false };
+        }
+    } else if (nowHasUnstaged) {
+        console.log(chalk.yellow('\n⚠️ There are unstaged changes that will NOT be included in this release.'));
+        const { continueAnyway } = await prompts({
+            type: 'confirm',
+            name: 'continueAnyway',
+            message: 'Do you want to continue without including these unstaged changes?',
+            initial: false
+        });
+        if (!continueAnyway) {
+            console.log(chalk.red('Aborting release. Please stage/commit your changes and re-run.'));
+            return { ok: false };
+        }
+    }
+
+    if (branch && !['main', 'master'].includes(branch)) {
+        const { confirmBranch } = await prompts({
+            type: 'confirm',
+            name: 'confirmBranch',
+            message: `You are on branch '${branch}', not on 'main' or 'master'. Are you sure you want to create a release from this branch?`,
+            initial: false
+        });
+        if (!confirmBranch) {
+            console.log(chalk.red('Aborting release. Checkout the desired branch and re-run.'));
+            return { ok: false };
+        }
+    }
+
+    return { ok: true, branch };
+}
+
 async function main() {
     const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-    const currentVersion = pkg.version;
+    let currentVersion = pkg.version;
     const next = getNextVersions(currentVersion);
 
     console.log(chalk.cyan.bold('\n🚀 LyricDisplay Release Assistant\n'));
@@ -69,40 +254,13 @@ async function main() {
     }
 
     let customVersion = null;
-
     if (bumpType === 'custom') {
-        const response = await prompts({
-            type: 'text',
-            name: 'version',
-            message: 'Enter your desired version (e.g. 4.2.5 or 5.0.0-beta.1):',
-            validate: value =>
-                /^\d+\.\d+\.\d+(-[a-zA-Z0-9-.]+)?$/.test(value)
-                    ? true
-                    : 'Please enter a valid semver version (e.g. 4.2.5 or 5.0.0-beta.1)'
-        });
-
-        if (!response.version) {
+        const chosen = await promptForCustomVersion(currentVersion);
+        if (!chosen) {
             console.log(chalk.yellow('No version entered. Release cancelled.'));
             process.exit(0);
         }
-
-        const cmp = compareVersions(response.version, currentVersion);
-        if (cmp < 0) {
-            const { confirm } = await prompts({
-                type: 'confirm',
-                name: 'confirm',
-                message: chalk.redBright(
-                    `⚠️  The version you entered (v${response.version}) is LOWER than the current version (v${currentVersion}). Continue anyway?`
-                ),
-                initial: false
-            });
-            if (!confirm) {
-                console.log(chalk.yellow('Release cancelled.'));
-                process.exit(0);
-            }
-        }
-
-        customVersion = response.version;
+        customVersion = chosen;
     }
 
     const { notes } = await prompts({
@@ -111,61 +269,15 @@ async function main() {
         message: 'Add a short changelog or release note (optional):'
     });
 
-    try {
-        if (
-            fs.existsSync('.git/MERGE_HEAD') ||
-            fs.existsSync('.git/rebase-apply') ||
-            fs.existsSync('.git/rebase-merge')
-        ) {
-            console.log(chalk.redBright('\n🚫 A Git merge or rebase is currently in progress.'));
-            console.log(chalk.yellow('Please resolve all conflicts and complete the merge/rebase before releasing.\n'));
-            process.exit(1);
-        }
+    const gitCheck = await checkGitStateInteractive();
+    if (!gitCheck.ok) process.exit(1);
 
-        const status = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
+    let pkgAfterPrep = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+    currentVersion = pkgAfterPrep.version;
 
-        if (status) {
-            const lines = status.split('\n');
-            const hasUnstaged = lines.some(line => line.startsWith('??') || line.startsWith(' M'));
-            const hasStaged = lines.some(line => line.startsWith('M ') || line.startsWith('A ') || line.startsWith('D '));
-
-            if (hasUnstaged && !hasStaged) {
-                console.log(chalk.yellow('\n⚠️  You have unstaged changes.'));
-                console.log(chalk.gray('Please review and stage files (git add .) before continuing.\n'));
-                const { proceed } = await prompts({
-                    type: 'confirm',
-                    name: 'proceed',
-                    message: 'Do you want to automatically stage all changes now?',
-                    initial: false
-                });
-
-                if (!proceed) {
-                    console.log(chalk.red('Aborting release.'));
-                    process.exit(0);
-                }
-
-                execSync('git add .', { stdio: 'inherit' });
-                console.log(chalk.green('✅ All changes staged.'));
-            }
-
-            const hasPendingCommit = hasStaged || (!hasUnstaged && status);
-            if (hasPendingCommit) {
-                console.log(chalk.yellow('\n📝 You have staged but uncommitted changes.'));
-                const { message } = await prompts({
-                    type: 'text',
-                    name: 'message',
-                    message: 'Enter a commit message before release:',
-                    validate: val => val.trim().length > 0 ? true : 'Commit message cannot be empty.'
-                });
-
-                execSync(`git commit -m "${message.trim()}"`, { stdio: 'inherit' });
-                console.log(chalk.green('✅ Changes committed.'));
-            }
-        } else {
-            console.log(chalk.gray('✔️  Working directory clean.'));
-        }
-    } catch (err) {
-        console.error(chalk.red('❌ Failed to check Git status:'), err.message);
+    if (bumpType === 'custom' && customVersion === currentVersion) {
+        console.log(chalk.redBright(`\n🚫 The requested version (v${customVersion}) matches package.json (v${currentVersion}).`));
+        console.log(chalk.yellow('Please choose a different version and re-run the release script.\n'));
         process.exit(1);
     }
 
@@ -178,14 +290,25 @@ async function main() {
             execSync(`npm version ${bumpType}`, { stdio: 'inherit' });
         }
 
+        const updatedPkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+        const appliedVersion = updatedPkg.version;
+        console.log(chalk.green(`\n✅ package.json updated to v${appliedVersion}`));
+
         console.log(chalk.blue('\n🛠️  Building and publishing release...'));
         execSync(`npm run electron-publish`, { stdio: 'inherit' });
 
         console.log(chalk.blue('\n☁️  Pushing commit and tags to GitHub...'));
-        execSync('git push && git push --tags', { stdio: 'inherit' });
+        try {
+            execSync('git push', { stdio: 'inherit' });
+            execSync('git push --tags', { stdio: 'inherit' });
+        } catch (pushErr) {
+            console.error(chalk.red('\n⚠️ Push failed:'), pushErr.message);
+            console.log(chalk.yellow('\nTip: Ensure you have a remote set (git remote -v) and correct permissions.'));
+            console.log(chalk.gray('You can manually run: git push && git push --tags\n'));
+            process.exit(1);
+        }
 
-        const updatedPkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-        const version = updatedPkg.version;
+        const version = appliedVersion;
         const releaseUrl = `https://github.com/PeterAlaks/lyric-display-updates/releases/tag/v${version}`;
 
         console.log(chalk.green.bold('\n✅ Release complete!'));

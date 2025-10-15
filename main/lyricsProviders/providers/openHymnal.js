@@ -26,7 +26,7 @@ let fuse = null;
 
 const normalizeText = (text) => (text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 
-const loadDataset = async () => {
+export const loadDataset = async () => {
   const overridePath = process.env.OPEN_HYMNAL_DATA_PATH || process.env.LYRICDISPLAY_OPEN_HYMNAL_PATH || null;
   let targetPath = overridePath ? path.resolve(overridePath) : DEFAULT_DATA_PATH;
 

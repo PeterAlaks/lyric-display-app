@@ -1,4 +1,5 @@
 import { TTLCache } from './cache.js';
+import { EventEmitter } from 'events';
 import * as lyricsOvh from './providers/lyricsOvh.js';
 import * as vagalume from './providers/vagalume.js';
 import * as hymnary from './providers/hymnary.js';
@@ -91,7 +92,7 @@ const mergeResults = (chunks, { limit }) => {
   return merged.slice(0, limit);
 };
 
-export const searchAllProviders = async (query, { limit = 10, skipCache = false, signal } = {}) => {
+export const searchAllProviders = async (query, { limit = 10, skipCache = false, signal, onPartialResults } = {}) => {
   const trimmed = (query || '').trim();
   if (!trimmed) {
     return {
@@ -116,21 +117,48 @@ export const searchAllProviders = async (query, { limit = 10, skipCache = false,
   }
 
   const perProviderLimit = Math.min(Math.max(limit, 5), 15);
+  const completedChunks = [];
+  let partialMerged = [];
 
-  const executions = providers.map(async (mod) => {
+  const executions = providers.map(async (mod, index) => {
     try {
       const result = await mod.search(trimmed, { limit: perProviderLimit, signal });
-      return {
+      const chunk = {
         provider: mod.definition,
         results: Array.isArray(result?.results) ? result.results : [],
         errors: Array.isArray(result?.errors) ? result.errors : [],
       };
+
+      if (onPartialResults) {
+        completedChunks.push(chunk);
+        partialMerged = mergeResults(completedChunks, { limit });
+        onPartialResults({
+          results: partialMerged,
+          meta: {
+            providers: completedChunks.map((c) => ({
+              id: c.provider.id,
+              displayName: c.provider.displayName,
+              count: c.results.length,
+              errors: c.errors,
+            })),
+          },
+          isComplete: false,
+        });
+      }
+
+      return chunk;
     } catch (error) {
-      return {
+      const chunk = {
         provider: mod.definition,
         results: [],
         errors: [error?.message || 'Unknown provider error'],
       };
+
+      if (onPartialResults) {
+        completedChunks.push(chunk);
+      }
+
+      return chunk;
     }
   });
 
@@ -146,7 +174,7 @@ export const searchAllProviders = async (query, { limit = 10, skipCache = false,
     })),
   };
 
-  const payload = { results: merged, meta };
+  const payload = { results: merged, meta, isComplete: true };
   searchCache.set(cacheKey, payload);
   return payload;
 };

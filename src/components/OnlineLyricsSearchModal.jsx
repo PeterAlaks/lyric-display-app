@@ -44,6 +44,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const suggestionsRequestRef = useRef(0);
   const fullSearchRequestRef = useRef(0);
   const hasElectronBridge = useMemo(() => isElectronBridgeAvailable(), []);
+  const abortControllerRef = useRef(null);
+  const partialResultsCleanupRef = useRef(null);
   const hasCheckedWelcome = useRef(false);
 
   useEffect(() => {
@@ -157,13 +159,34 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       return;
     }
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    if (partialResultsCleanupRef.current) {
+      partialResultsCleanupRef.current();
+      partialResultsCleanupRef.current = null;
+    }
+
+    abortControllerRef.current = new AbortController();
     const requestId = ++suggestionsRequestRef.current;
     setLoadingSuggestions(true);
+
     const timer = setTimeout(async () => {
       try {
+        const cleanup = window.electronAPI.lyrics.onPartialResults((partialPayload) => {
+          if (requestId !== suggestionsRequestRef.current) return;
+          if (partialPayload?.results) {
+            setSuggestionResults(partialPayload.results);
+            setProviderStatuses(partialPayload.meta?.providers || []);
+          }
+        });
+        partialResultsCleanupRef.current = cleanup;
+
         const response = await window.electronAPI.lyrics.search({ query: trimmed, limit: 10 });
+
         if (requestId !== suggestionsRequestRef.current) return;
         setLoadingSuggestions(false);
+
         if (response?.success) {
           setSuggestionResults(response.results || []);
           setProviderStatuses(response.meta?.providers || []);
@@ -171,7 +194,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           setSuggestionResults([]);
           setProviderStatuses([]);
         }
+
+        if (cleanup) cleanup();
+        partialResultsCleanupRef.current = null;
       } catch (error) {
+        if (error.name === 'AbortError') return;
         if (requestId !== suggestionsRequestRef.current) return;
         setLoadingSuggestions(false);
         setSuggestionResults([]);
@@ -182,10 +209,24 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           message: classified.message,
           variant: classified.type === 'not_found' ? 'warning' : 'error',
         });
-      }
-    }, 320);
 
-    return () => clearTimeout(timer);
+        if (partialResultsCleanupRef.current) {
+          partialResultsCleanupRef.current();
+          partialResultsCleanupRef.current = null;
+        }
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (partialResultsCleanupRef.current) {
+        partialResultsCleanupRef.current();
+        partialResultsCleanupRef.current = null;
+      }
+    };
   }, [query, activeTab, isOpen, hasElectronBridge]);
 
   const providerMap = useMemo(() => {
@@ -221,10 +262,25 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     const requestId = ++fullSearchRequestRef.current;
     setLoadingFullResults(true);
     setShowFullResults(true);
+
     try {
-      const response = await window.electronAPI.lyrics.search({ query: trimmed, limit: 25, skipCache: true });
+      const cleanup = window.electronAPI.lyrics.onPartialResults((partialPayload) => {
+        if (requestId !== fullSearchRequestRef.current) return;
+        if (partialPayload?.results) {
+          setFullResults(partialPayload.results);
+          setProviderStatuses(partialPayload.meta?.providers || []);
+        }
+      });
+
+      const response = await window.electronAPI.lyrics.search({
+        query: trimmed,
+        limit: 25,
+        skipCache: true
+      });
+
       if (requestId !== fullSearchRequestRef.current) return;
       setLoadingFullResults(false);
+
       if (response?.success) {
         setFullResults(response.results || []);
         setProviderStatuses(response.meta?.providers || []);
@@ -232,6 +288,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         setFullResults([]);
         throw new Error(response?.error || 'No results found.');
       }
+
+      cleanup();
     } catch (error) {
       if (requestId !== fullSearchRequestRef.current) return;
       setLoadingFullResults(false);

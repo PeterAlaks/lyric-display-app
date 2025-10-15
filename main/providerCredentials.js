@@ -250,3 +250,11 @@ export const listProviderKeys = async () => {
   return result;
 };
 
+export const prewarmCredentials = async () => {
+  try {
+    await listProviderKeys();
+    console.log('[ProviderCredentials] Keys pre-warmed in cache');
+  } catch (error) {
+    console.warn('[ProviderCredentials] Pre-warm failed, will load on demand:', error.message);
+  }
+};

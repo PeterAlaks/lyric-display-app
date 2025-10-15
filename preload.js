@@ -128,6 +128,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteProviderKey: (providerId) => ipcRenderer.invoke('lyrics:providers:key:delete', { providerId }),
     search: (payload) => ipcRenderer.invoke('lyrics:search', payload),
     fetch: (payload) => ipcRenderer.invoke('lyrics:fetch', payload),
+    onPartialResults: (callback) => {
+      ipcRenderer.removeAllListeners('lyrics:search:partial');
+      ipcRenderer.on('lyrics:search:partial', (_event, payload) => callback(payload));
+      return () => ipcRenderer.removeAllListeners('lyrics:search:partial');
+    }
   }
 });
 
