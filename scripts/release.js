@@ -112,6 +112,64 @@ async function main() {
     });
 
     try {
+        if (
+            fs.existsSync('.git/MERGE_HEAD') ||
+            fs.existsSync('.git/rebase-apply') ||
+            fs.existsSync('.git/rebase-merge')
+        ) {
+            console.log(chalk.redBright('\n🚫 A Git merge or rebase is currently in progress.'));
+            console.log(chalk.yellow('Please resolve all conflicts and complete the merge/rebase before releasing.\n'));
+            process.exit(1);
+        }
+
+        const status = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
+
+        if (status) {
+            const lines = status.split('\n');
+            const hasUnstaged = lines.some(line => line.startsWith('??') || line.startsWith(' M'));
+            const hasStaged = lines.some(line => line.startsWith('M ') || line.startsWith('A ') || line.startsWith('D '));
+
+            if (hasUnstaged && !hasStaged) {
+                console.log(chalk.yellow('\n⚠️  You have unstaged changes.'));
+                console.log(chalk.gray('Please review and stage files (git add .) before continuing.\n'));
+                const { proceed } = await prompts({
+                    type: 'confirm',
+                    name: 'proceed',
+                    message: 'Do you want to automatically stage all changes now?',
+                    initial: false
+                });
+
+                if (!proceed) {
+                    console.log(chalk.red('Aborting release.'));
+                    process.exit(0);
+                }
+
+                execSync('git add .', { stdio: 'inherit' });
+                console.log(chalk.green('✅ All changes staged.'));
+            }
+
+            const hasPendingCommit = hasStaged || (!hasUnstaged && status);
+            if (hasPendingCommit) {
+                console.log(chalk.yellow('\n📝 You have staged but uncommitted changes.'));
+                const { message } = await prompts({
+                    type: 'text',
+                    name: 'message',
+                    message: 'Enter a commit message before release:',
+                    validate: val => val.trim().length > 0 ? true : 'Commit message cannot be empty.'
+                });
+
+                execSync(`git commit -m "${message.trim()}"`, { stdio: 'inherit' });
+                console.log(chalk.green('✅ Changes committed.'));
+            }
+        } else {
+            console.log(chalk.gray('✔️  Working directory clean.'));
+        }
+    } catch (err) {
+        console.error(chalk.red('❌ Failed to check Git status:'), err.message);
+        process.exit(1);
+    }
+
+    try {
         if (bumpType === 'custom') {
             console.log(chalk.blue(`\n📦 Setting custom version (v${customVersion})...`));
             execSync(`npm version ${customVersion}`, { stdio: 'inherit' });

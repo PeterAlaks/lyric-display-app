@@ -543,10 +543,30 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={darkMode ? 'bg-gray-800 text-gray-300' : undefined}>
-              <TabsTrigger value="google">Google Search</TabsTrigger>
-              <TabsTrigger value="libraries">Online Song Libraries</TabsTrigger>
-            </TabsList>
+            <div className="flex items-center gap-2">
+              <TabsList className={darkMode ? 'bg-gray-800 text-gray-300' : undefined}>
+                <TabsTrigger value="google" className={darkMode
+                  ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900'
+                  : 'data-[state=active]:bg-white data-[state=active]:text-gray-900'}
+                >Google Search</TabsTrigger>
+                <TabsTrigger value="libraries" className={darkMode
+                  ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900'
+                  : 'data-[state=active]:bg-white data-[state=active]:text-gray-900'}
+                >Online Song Libraries</TabsTrigger>
+              </TabsList>
+
+              {activeTab === 'libraries' && (
+                <span
+                  className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-sm border
+      ${darkMode
+                      ? 'border-gray-600 bg-gray-700 text-gray-300'
+                      : 'border-gray-300 bg-gray-100 text-gray-700'
+                    }`}
+                >
+                  Beta
+                </span>
+              )}
+            </div>
 
             <TabsContent value="google" className="animate-in slide-in-from-left-8 duration-300">
               <div className="mt-4 space-y-4">

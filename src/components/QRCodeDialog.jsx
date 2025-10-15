@@ -80,13 +80,13 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   }, [isOpen]);
 
   useEffect(() => {
-    if (!localIP || !isOpen) return;
+    if (!localIP || !isOpen || !joinCode) return;
 
     const generateQRCode = async () => {
       setIsGenerating(true);
 
       try {
-        const url = `http://${localIP}:4000/?client=mobile`;
+        const url = `http://${localIP}:4000/?client=mobile&joinCode=${joinCode}`;
 
         const dataURL = await QRCode.toDataURL(url, {
           width: 200,
@@ -107,7 +107,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     };
 
     generateQRCode();
-  }, [localIP, isOpen, darkMode]);
+  }, [localIP, isOpen, darkMode, joinCode]);
 
 
   useLayoutEffect(() => {

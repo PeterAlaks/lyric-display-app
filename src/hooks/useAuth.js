@@ -37,6 +37,23 @@ class AuthService {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  getJoinCodeFromURL() {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const joinCode = params.get('joinCode');
+
+      if (joinCode && /^\d{6}$/.test(joinCode.trim())) {
+        return joinCode.trim();
+      }
+    } catch (error) {
+      logWarn('Failed to parse join code from URL:', error);
+    }
+
+    return null;
+  }
+
   requiresJoinCode(clientType) {
     return ['web', 'mobile'].includes(clientType);
   }
@@ -342,7 +359,18 @@ class AuthService {
         }
 
         const requiresJoinCode = this.requiresJoinCode(clientType);
-        let joinCode = requiresJoinCode ? this.getStoredJoinCode() : null;
+        let joinCode = null;
+
+        if (requiresJoinCode) {
+          const urlJoinCode = this.getJoinCodeFromURL();
+          if (urlJoinCode) {
+            joinCode = urlJoinCode;
+            this.storeJoinCode(joinCode);
+            logDebug('Join code obtained from URL parameter');
+          } else {
+            joinCode = this.getStoredJoinCode();
+          }
+        }
 
         while (true) {
           const requestBody = { ...baseBody };
