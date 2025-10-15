@@ -201,6 +201,14 @@ Each output can be independently configured:
 ```
 lyric-display-app/
 ├── main/                                   # Electron main script modules
+│   ├── lyricProviders/
+|   |   ├── providers/
+|   |   |   ├── hymnary.js                  # Hymnary.org lyrics provider definitions
+|   |   |   ├── lyricsOvh.js                # Lyrics.ovh lyrics provider definitions
+|   |   |   ├── openHymnal.js               # Open Hymnal lyrics provider definitions
+|   |   |   └── vagalume                    # Vagalume lyrics provider definitions
+|   |   ├── cache.js                        # Online lyrics search data cache
+|   |   └── index.js                        # Main online lyrics search initializer and aggregator
 |   ├── adminKey.js                         # Admin access key module
 |   ├── backend.js                          # Backend server starter
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
@@ -209,6 +217,7 @@ lyric-display-app/
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
+|   ├── providerCredentials.js              # secure storage utility for online lyrics provider credentials
 |   ├── recents.js                          # Module for token storage
 |   ├── secureTokenStore.js                 # Main token storage for desktop app
 |   ├── updater.js                          # Module to manage app updates
@@ -216,6 +225,9 @@ lyric-display-app/
 |   └── windows.js                          # Main window builder
 ├── public/                                 # Static assets
 |   └── index.html                          # Browser web app entry point
+├── scripts/                                # Custom npm scripts
+|   ├── release.js                          # Release publish assistant script
+|   └── update-version.js                   # Helper script for updating current version in readme and install guide
 ├── server/                                 # Express.js backend
 |   ├── events.js                           # Backend communication events
 |   ├── index.js                            # Main backend server
@@ -223,6 +235,10 @@ lyric-display-app/
 |   ├── package.json                        # Backend dependencies
 |   └── secretManager.js                    # Module handling the secure management of app secrets
 ├── shared/
+│   ├── data/
+|   |   ├── openhymnal-bundle.json          # Open Hymnal hymn lyrics bundle from public website
+|   |   └── openhymnal-sample.json          # Open Hymnal hymn lyrics sample format for search discoverability
+|   ├── intelligentLineSplitting.js         # Line splitting utility for robust lyrics parsing 
 |   └── lyricsParsing.js                    # Shared TXT/LRC parsing helpers.
 ├── src/                                    # React frontend source
 │   ├── assets/                             # Fonts, etc.
@@ -339,6 +355,30 @@ npm run electron-pack    # Package Electron app
 - Monitor CPU usage during extended sessions
 
 ## License & Credits
+
+## Lyrics Provider Credits & Copyright Disclaimer
+
+LyricDisplay integrates optional online lyrics search features powered by free and publicly available lyrics providers.  
+All lyrics, metadata, and related content displayed through these services remain the property of their respective copyright holders.
+
+### Integrated Providers
+- **Lyrics.ovh** — Free lyrics API (public domain and licensed material) provided for educational and non-commercial use.  
+- **Vagalume** — © Vagalume Media Group. Lyrics and artist data are provided through the official Vagalume API.  
+- **Hymnary.org** — © Hymnary.org / Christian Classics Ethereal Library (CCEL). Content is provided for educational and liturgical purposes.  
+- **Open Hymnal Project** — Public domain hymn texts and music as compiled by the Open Hymnal Project.
+
+### Logos & Trademarks
+Logos and brand marks of the above providers are displayed in LyricDisplay **for identification and attribution purposes only**.  
+All trademarks, service marks, and logos are the property of their respective owners.  
+Their inclusion does **not imply endorsement, partnership, or affiliation** with LyricDisplay or its developers.
+
+### Usage Notice
+- LyricDisplay does **not store**, redistribute, or claim ownership of any lyrics obtained through these sources.  
+- Lyrics are fetched on demand from publicly accessible APIs and displayed **solely for personal, church, and non-commercial use**.  
+- If you are a copyright holder and wish to request content removal or modification, please contact the original provider directly.
+
+> **Disclaimer:** LyricDisplay and its developers are not affiliated with or endorsed by any of the above content providers.  
+> This feature is offered “as is” for convenience and educational purposes only.
 
 **Copyright © 2025. All Rights Reserved.**
 
