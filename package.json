@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "4.1.0",
+  "version": "4.4.0",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": "Peter Alakembi",
   "main": "main.js",
@@ -15,7 +15,7 @@
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run build && electron-builder",
     "electron-publish": "npm run update-version && npm run build && electron-builder --publish=always",
-    "version": "npm run update-version && git add README.md 'LyricDisplay Installation & Integration Guide.md'",
+    "version": "npm run update-version && git add README.md \"LyricDisplay Installation & Integration Guide.md\"",
     "release": "node scripts/release.js"
   },
   "dependencies": {
