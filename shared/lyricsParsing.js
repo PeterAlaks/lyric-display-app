@@ -301,10 +301,10 @@ export function parseOnlineLyricsContent(rawText = '', options = {}) {
   const enhancedOptions = {
     enableSplitting: true,
     splitConfig: {
-      TARGET_LENGTH: 55,
-      MIN_LENGTH: 35,
-      MAX_LENGTH: 70,
-      OVERFLOW_TOLERANCE: 12,
+      TARGET_LENGTH: 60,
+      MIN_LENGTH: 40,
+      MAX_LENGTH: 80,
+      OVERFLOW_TOLERANCE: 15,
     },
     ...options,
   };

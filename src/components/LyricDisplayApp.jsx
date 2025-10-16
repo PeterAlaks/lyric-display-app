@@ -94,7 +94,6 @@ const LyricDisplayApp = () => {
       const extension = finalType === 'lrc' ? '.lrc' : '.txt';
       const finalFileName = hasExtension ? providedName : `${baseName}${extension}`;
 
-      // NEW: Determine if we should enable intelligent splitting
       const enableSplitting = Boolean(context.enableOnlineLyricsSplitting || context.enableIntelligentSplitting);
 
       const parsed = await parseLyricsFileAsync(null, {

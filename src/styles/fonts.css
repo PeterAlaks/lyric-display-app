@@ -1,0 +1,61 @@
+/* src/styles/fonts.css */
+
+/* ===== Output Lyric Fonts ===== */
+
+/* Bebas Neue */
+@font-face { font-family: 'Bebas Neue'; src: url('../assets/fonts/Bebas_Neue/BebasNeue-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Fira Sans */
+@font-face { font-family: 'Fira Sans'; src: url('../assets/fonts/Fira_Sans/FiraSans-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Fira Sans'; src: url('../assets/fonts/Fira_Sans/FiraSans-Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Fira Sans'; src: url('../assets/fonts/Fira_Sans/FiraSans-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Fira Sans'; src: url('../assets/fonts/Fira_Sans/FiraSans-BoldItalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+
+/* Inter (variable font) */
+@font-face { font-family: 'Inter'; src: url('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf') format('truetype'); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype'); font-weight: 100 900; font-style: italic; font-display: swap; }
+
+/* Lato */
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato/Lato-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato/Lato-Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato/Lato-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato/Lato-BoldItalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+
+/* Montserrat (variable font) */
+@font-face { font-family: 'Montserrat'; src: url('../assets/fonts/Montserrat/Montserrat-VariableFont_wght.ttf') format('truetype'); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Montserrat'; src: url('../assets/fonts/Montserrat/Montserrat-Italic-VariableFont_wght.ttf') format('truetype'); font-weight: 100 900; font-style: italic; font-display: swap; }
+
+/* Noto Sans (variable font) */
+@font-face { font-family: 'Noto Sans'; src: url('../assets/fonts/Noto_Sans/NotoSans-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 100 900; font-stretch: 75% 125%; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Noto Sans'; src: url('../assets/fonts/Noto_Sans/NotoSans-Italic-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 100 900; font-stretch: 75% 125%; font-style: italic; font-display: swap; }
+
+/* Open Sans (variable font) */
+@font-face { font-family: 'Open Sans'; src: url('../assets/fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 100 900; font-stretch: 75% 125%; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Open Sans'; src: url('../assets/fonts/Open_Sans/OpenSans-Italic-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 100 900; font-stretch: 75% 125%; font-style: italic; font-display: swap; }
+
+/* Poppins */
+@font-face { font-family: 'Poppins'; src: url('../assets/fonts/Poppins/Poppins-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Poppins'; src: url('../assets/fonts/Poppins/Poppins-Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Poppins'; src: url('../assets/fonts/Poppins/Poppins-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Poppins'; src: url('../assets/fonts/Poppins/Poppins-BoldItalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+
+/* Roboto (variable font) */
+@font-face { font-family: 'Roboto'; src: url('../assets/fonts/Roboto/Roboto-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 100 900; font-stretch: 75% 125%; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Roboto'; src: url('../assets/fonts/Roboto/Roboto-Italic-VariableFont_wdth,wght.ttf') format('truetype'); font-weight: 100 900; font-stretch: 75% 125%; font-style: italic; font-display: swap; }
+
+/* Work Sans (variable font) */
+@font-face { font-family: 'Work Sans'; src: url('../assets/fonts/Work_Sans/WorkSans-VariableFont_wght.ttf') format('truetype');
+font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Work Sans'; src: url('../assets/fonts/Work_Sans/WorkSans-Italic-VariableFont_wght.ttf') format('truetype'); font-weight: 100 900; font-style: italic; font-display: swap; }
+
+
+/* ===== App Interface Font ===== */
+
+/* Space Grotesk (variable font) */
+@font-face { font-family: 'Space Grotesk'; src: url('../assets/fonts/Space_Grotesk/SpaceGrotesk-VariableFont_wght.ttf') format('truetype'); font-weight: 100 700; font-style: normal; font-display: swap; }
+
+
+/* ===== Local Custom Font ===== */
+
+/* GarnetCapitals */
+@font-face { font-family: 'GarnetCapitals'; src: url('../assets/fonts/GarnetCapitals/garnet-capitals-bold.ttf') format('truetype'); font-weight: bold; font-style: normal; font-display: swap; }

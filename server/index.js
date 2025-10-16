@@ -14,6 +14,23 @@ import registerSocketEvents from './events.js';
 import { assertJoinCodeAllowed, recordJoinCodeAttempt, getJoinCodeGuardSnapshot } from './joinCodeGuard.js';
 import SimpleSecretManager from './secretManager.js';
 
+const cleanupOldMediaFiles = async (outputKey) => {
+  try {
+    const files = await fs.promises.readdir(backgroundMediaDir);
+    const pattern = new RegExp(`^${outputKey}-(output[12])-\\d+-[a-f0-9-]+\\.(jpg|jpeg|png|gif|webp|avif|mp4|webm|ogg|mov)$`, 'i');
+
+    for (const file of files) {
+      if (pattern.test(file)) {
+        const filePath = path.join(backgroundMediaDir, file);
+        await fs.promises.unlink(filePath);
+        console.log(`Cleaned up old media file: ${file}`);
+      }
+    }
+  } catch (error) {
+    console.warn('Media cleanup warning (non-critical):', error.message);
+  }
+};
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,8 +67,9 @@ const allowedMediaTypes = new Set([
 const backgroundStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, backgroundMediaDir),
   filename: (req, file, cb) => {
+    const outputKey = req.body.outputKey || 'output1';
     const ext = path.extname(file.originalname || '').slice(0, 16) || '.bin';
-    const uniqueName = `${Date.now()}-${crypto.randomUUID()}${ext}`;
+    const uniqueName = `bg-${outputKey}-${Date.now()}-${crypto.randomUUID()}${ext}`;
     cb(null, uniqueName);
   }
 });
@@ -311,8 +329,8 @@ app.post('/api/auth/validate', (req, res) => {
 app.post(
   '/api/media/backgrounds',
   authenticateRequest('settings:write'),
-  (req, res, next) => {
-    backgroundUpload.single('background')(req, res, (err) => {
+  async (req, res, next) => {
+    backgroundUpload.single('background')(req, res, async (err) => {
       if (err) {
         console.error('Background upload error:', err);
         if (err instanceof multer.MulterError) {
@@ -325,6 +343,14 @@ app.post(
       }
 
       const relativePath = `/media/backgrounds/${req.file.filename}`;
+
+      const outputKey = req.body.outputKey;
+      if (outputKey && /^output[12]$/.test(outputKey)) {
+        cleanupOldMediaFiles(outputKey).catch(err =>
+          console.warn('Background cleanup failed (non-blocking):', err.message)
+        );
+      }
+
       res.json({
         url: relativePath,
         originalName: req.file.originalname,

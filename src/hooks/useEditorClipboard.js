@@ -68,11 +68,6 @@ const useEditorClipboard = ({ content, setContent, textareaRef }) => {
   const handleCleanup = useCallback(() => {
     const formattedContent = formatLyrics(content, {
       enableSplitting: true,
-      splitConfig: {
-        TARGET_LENGTH: 50,
-        MIN_LENGTH: 30,
-        MAX_LENGTH: 65,
-      }
     });
     setContent(formattedContent);
   }, [content, setContent]);

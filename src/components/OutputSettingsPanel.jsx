@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import useToast from '../hooks/useToast';
 import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
+import { logWarn } from '../utils/logger';
 import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, Maximize2 } from 'lucide-react';
 
 const fontOptions = [
@@ -36,6 +37,30 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
   const { settings, updateSettings } =
     outputKey === 'output1' ? useOutput1Settings() : useOutput2Settings();
+
+  React.useEffect(() => {
+    const validateMedia = async () => {
+      if (!settings.fullScreenMode || !settings.fullScreenBackgroundMedia?.url) return;
+
+      const mediaUrl = resolveBackendUrl(settings.fullScreenBackgroundMedia.url);
+      try {
+        const response = await fetch(mediaUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          logWarn(`${outputKey}: Background media not found, clearing reference`);
+          applySettings({
+            fullScreenBackgroundMedia: null,
+            fullScreenBackgroundMediaName: '',
+          });
+        }
+      } catch (error) {
+        logWarn(`${outputKey}: Could not validate background media:`, error.message);
+      }
+    };
+
+    if (settings.fullScreenMode) {
+      validateMedia();
+    }
+  }, [settings.fullScreenMode, settings.fullScreenBackgroundMedia?.url]);
 
   const applySettings = React.useCallback((partial) => {
     const newSettings = { ...settings, ...partial };
@@ -126,6 +151,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
       const uploadUrl = resolveBackendUrl('/api/media/backgrounds');
       const formData = new FormData();
       formData.append('background', file);
+      formData.append('outputKey', outputKey);
 
       const response = await fetch(uploadUrl, {
         method: 'POST',

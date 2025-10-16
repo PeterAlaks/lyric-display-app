@@ -230,10 +230,12 @@ const Output1 = () => {
     const isVideo = media.mimeType?.startsWith('video/') ||
       (!media.mimeType && typeof media.url === 'string' && /\.(mp4|webm|ogg|m4v|mov)$/i.test(media.url));
 
+    const cacheKey = media.uploadedAt || Date.now();
+
     if (isVideo) {
       return (
         <video
-          key={`${mediaSource}-video`}
+          key={`video-${cacheKey}`}
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
@@ -242,17 +244,23 @@ const Output1 = () => {
           playsInline
           preload="auto"
           src={mediaSource}
+          onError={(e) => {
+            logError('Output1: Failed to load background video:', mediaSource);
+          }}
         />
       );
     }
 
     return (
       <img
-        key={`${mediaSource}-image`}
+        key={`image-${cacheKey}`}
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
         src={mediaSource}
         alt="Full screen lyric background"
+        onError={(e) => {
+          logError('Output1: Failed to load background image:', mediaSource);
+        }}
       />
     );
   };
@@ -277,18 +285,24 @@ const Output1 = () => {
       const lines = processedText.split('\n');
       return (
         <div className="space-y-1">
-          {lines.map((lineText, index) => (
-            <div
-              key={index}
-              className={index > 0 ? 'font-medium' : 'font-medium'}
-              style={{
-                ...textStrokeStyles,
-                color: index > 0 ? '#FBBF24' : 'inherit'
-              }}
-            >
-              {lineText}
-            </div>
-          ))}
+          {lines.map((lineText, index) => {
+            const displayText = index > 0
+              ? lineText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim()
+              : lineText;
+
+            return (
+              <div
+                key={index}
+                className="font-medium"
+                style={{
+                  ...textStrokeStyles,
+                  color: index > 0 ? '#FBBF24' : 'inherit'
+                }}
+              >
+                {displayText}
+              </div>
+            );
+          })}
         </div>
       );
     }

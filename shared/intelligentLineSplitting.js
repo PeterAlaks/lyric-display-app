@@ -5,10 +5,10 @@
  * Configuration for line splitting behavior
  */
 const SPLIT_CONFIG = {
-    TARGET_LENGTH: 55,
-    MIN_LENGTH: 35,
-    MAX_LENGTH: 70,
-    OVERFLOW_TOLERANCE: 12,
+    TARGET_LENGTH: 60,
+    MIN_LENGTH: 40,
+    MAX_LENGTH: 80,
+    OVERFLOW_TOLERANCE: 15,
 };
 
 /**
@@ -24,8 +24,6 @@ const EXCESSIVE_NEWLINES_REGEX = /\n{3,}/g;
 const BREAK_MARKERS = [
     { pattern: /[.!?]+\s+/g, priority: 10, preserve: true },
     { pattern: /[,;:]+\s+/g, priority: 8, preserve: true },
-    { pattern: /\s+(?:and|or|but|yet|so|for|nor)\s+/gi, priority: 6, preserve: true },
-    { pattern: /\s+(?:in|on|at|to|from|with|by|of|for)\s+/gi, priority: 4, preserve: true },
     { pattern: /\s+/g, priority: 2, preserve: false },
 ];
 
