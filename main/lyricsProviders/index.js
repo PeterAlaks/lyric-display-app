@@ -32,35 +32,46 @@ function analyzeQuery(query) {
     };
   }
 
+  let inferredArtist = null;
+  let inferredTitle = null;
+  if (normalized.includes(' by ')) {
+    const parts = normalized.split(' by ');
+    inferredTitle = parts[0].trim();
+    inferredArtist = parts.slice(1).join(' by ').trim();
+  } else if (normalized.includes(' - ')) {
+    const parts = normalized.split(' - ');
+    inferredTitle = parts[0].trim();
+    inferredArtist = parts.slice(1).join(' - ').trim();
+  }
+
   const words = normalized.split(/\s+/);
 
   const knownArtists = knownArtistsList.map(a => a.toLowerCase());
 
-  let artist = null;
-  let title = null;
-
-  if (words.length >= 2) {
-    for (const knownArtist of knownArtists) {
-      if (normalized.includes(knownArtist)) {
-        artist = knownArtist;
-        const artistWords = knownArtist.split(/\s+/);
-        const remainingWords = words.filter(w => !artistWords.includes(w));
-        title = remainingWords.join(' ');
-        break;
+  if (!inferredTitle || !inferredArtist) {
+    if (words.length >= 2) {
+      for (const knownArtist of knownArtists) {
+        if (normalized.includes(knownArtist)) {
+          inferredArtist = knownArtist;
+          const artistWords = knownArtist.split(/\s+/);
+          const remainingWords = words.filter(w => !artistWords.includes(w));
+          inferredTitle = remainingWords.join(' ');
+          break;
+        }
       }
     }
   }
 
-  if (!title) {
-    title = normalized;
+  if (!inferredTitle) {
+    inferredTitle = normalized;
   }
 
   return {
     rawQuery: query,
     normalizedQuery: normalized,
     words,
-    inferredArtist: artist,
-    inferredTitle: title,
+    inferredArtist,
+    inferredTitle,
     stopWords: new Set(['the', 'a', 'an', 'of', 'to', 'in', 'by', 'with', 'for']),
   };
 }
@@ -148,11 +159,15 @@ function calculateRelevanceScore(item, queryAnalysis) {
   let score = 0;
   const signals = {};
 
+  let isExact = false;
+
   if (titleLower === normalizedQuery) {
-    return { score: 1000000, signals: { exactTitleMatch: true } };
+    isExact = true;
+    return { score: 1000000, signals: { exactTitleMatch: true }, isExact };
   }
   if (artistLower === normalizedQuery) {
-    return { score: 900000, signals: { exactArtistMatch: true } };
+    isExact = true;
+    return { score: 900000, signals: { exactArtistMatch: true }, isExact };
   }
 
   const titleContains = titleLower.includes(normalizedQuery);
@@ -168,7 +183,6 @@ function calculateRelevanceScore(item, queryAnalysis) {
   }
 
   if (inferredTitle && inferredArtist) {
-
     if (Math.abs(titleLower.length - inferredTitle.length) < 5) {
       const titleMatch = fuzzyMatch(titleLower, inferredTitle, 0.75);
       if (titleMatch > 0) {
@@ -184,6 +198,13 @@ function calculateRelevanceScore(item, queryAnalysis) {
         signals.artistInferredMatch = artistMatch;
       }
     }
+
+    if (signals.titleInferredMatch >= 0.9 && signals.artistInferredMatch >= 0.9) {
+      isExact = true;
+    }
+  } else if (inferredTitle && !inferredArtist && signals.titleInferredMatch >= 0.95) {
+
+    isExact = true;
   }
 
   const meaningfulWords = words.filter(w => !stopWords.has(w) && w.length >= 3);
@@ -234,7 +255,7 @@ function calculateRelevanceScore(item, queryAnalysis) {
   const positionPenalty = (item._resultIndex || 0) * -100;
   score += positionPenalty;
 
-  return { score, signals };
+  return { score, signals, isExact };
 }
 
 const providers = [
@@ -273,7 +294,7 @@ const mergeResults = (chunks, { limit, query }) => {
 
   chunks.forEach((chunk, providerIndex) => {
     chunk.results.forEach((item, resultIndex) => {
-      const { score, signals } = calculateRelevanceScore(
+      const { score, signals, isExact } = calculateRelevanceScore(
         { ...item, _resultIndex: resultIndex },
         queryAnalysis
       );
@@ -282,6 +303,7 @@ const mergeResults = (chunks, { limit, query }) => {
         item,
         score,
         signals,
+        isExact,
         providerIndex,
       });
     });
@@ -296,16 +318,20 @@ const mergeResults = (chunks, { limit, query }) => {
     scoredResults.slice(0, 5).forEach((r, i) => {
       console.log(`  ${i + 1}. [${r.score.toFixed(0)}] ${r.item.title} - ${r.item.artist} (${r.item.provider})`);
       console.log(`     Signals:`, r.signals);
+      console.log(`     isExact:`, r.isExact);
     });
   }
 
-  const dedupeKey = (item) =>
-    `${(item.title || '').toLowerCase().trim()}|${(item.artist || '').toLowerCase().trim()}`;
+  const dedupeKey = (scored) => {
+    const item = scored.item;
+    const baseKey = `${(item.title || '').toLowerCase().trim()}|${(item.artist || '').toLowerCase().trim()}`;
+    return scored.isExact ? `${baseKey}|${item.provider}` : baseKey;
+  };
 
   for (const scored of scoredResults) {
     if (merged.length >= limit) break;
 
-    const key = dedupeKey(scored.item);
+    const key = dedupeKey(scored);
     if (!seen.has(key)) {
       seen.add(key);
       merged.push(scored.item);

@@ -459,7 +459,7 @@ const LyricDisplayApp = () => {
             </div>
           )}
 
-          {/* Output Toggle - UPDATE this section */}
+          {/* Output Toggle */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 mx-2">
               <Switch
@@ -477,7 +477,7 @@ const LyricDisplayApp = () => {
               </span>
             </div>
 
-            {/* ADD THIS - Help trigger button */}
+            {/* Help trigger button */}
             <button
               onClick={() => {
                 showModal({
@@ -495,7 +495,7 @@ const LyricDisplayApp = () => {
                 }`}
               title="Control Panel Help"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
@@ -565,9 +565,9 @@ const LyricDisplayApp = () => {
                   <button
                     onClick={handleAddToSetlist}
                     aria-disabled={addDisabled}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${addDisabled
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${addDisabled
                       ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
-                      : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
+                      : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')
                       }`}
                     title={addTitle}
                     style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
@@ -579,13 +579,13 @@ const LyricDisplayApp = () => {
                   {/* Edit Button */}
                   <button
                     onClick={handleEditLyrics}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                       }`}
                   >
                     <Edit className="w-4 h-4" />
-                    Edit
+                    Edit Lyrics
                   </button>
                 </div>
               )}

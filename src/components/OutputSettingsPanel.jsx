@@ -10,7 +10,7 @@ import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
 import { logWarn } from '../utils/logger';
-import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, Maximize2 } from 'lucide-react';
+import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, Maximize2, ScreenShare } from 'lucide-react';
 
 const fontOptions = [
   'Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat',
@@ -238,13 +238,13 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
   return (
     <div className="space-y-4">
-      {/* UPDATE the header section */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           {outputKey.toUpperCase()} SETTINGS
         </h3>
 
-        {/* ADD THIS - Help trigger button */}
+        {/* Help trigger button */}
         <button
           onClick={() => {
             showModal({
@@ -505,7 +505,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Full Screen Mode */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={Maximize2} text="Full Screen Mode" />
+        <LabelWithIcon icon={ScreenShare} text="Full Screen Mode" />
         <div className="flex items-center gap-3 justify-end w-full">
           <Switch
             checked={fullScreenModeChecked}

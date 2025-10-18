@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Search, X, ExternalLink, Loader2, Key, Trash2, Globe2, BookOpen, AlertTriangle } from 'lucide-react';
+import { Search, X, ExternalLink, Loader2, Key, Trash2, Globe2, BookOpen, AlertTriangle, ChevronRight } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -38,6 +38,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
   const [lastError, setLastError] = useState(null);
   const [retrying, setRetrying] = useState(false);
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
   const isOnline = useNetworkStatus();
 
   const { showToast } = useToast();
@@ -83,6 +84,18 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       });
     }
   }, [isOnline, lastError]);
+
+  useEffect(() => {
+    if (!isOpen || !visible) return;
+    try {
+      const saved = localStorage.getItem('lyricdisplay_advancedExpanded');
+      if (saved !== null) {
+        setAdvancedExpanded(saved === 'true');
+      }
+    } catch (err) {
+      console.warn('Failed to load advanced section state:', err);
+    }
+  }, [isOpen, visible]);
 
   useLayoutEffect(() => {
     if (isOpen) {
@@ -541,7 +554,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
   const modalClasses = [
     'rounded-lg shadow-xl w-[90vw] max-w-2xl mx-4',
-    'flex flex-col h-[700px]',
+    'flex flex-col h-[650px]',
     darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200',
     'transition-all duration-300 ease-out',
     (exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100',
@@ -635,8 +648,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     onChange={(event) => setQuery(event.target.value)}
                     onKeyDown={handleKeyDown}
                     autoFocus={activeTab === 'google'}
-                    placeholder="Song title and artist"
-                    className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10' : 'pr-10'}
+                    placeholder="Enter song title and artist"
+                    className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10 h-10' : 'pr-10 h-10'}
                   />
                   {query && (
                     <button
@@ -654,7 +667,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                 <Button
                   onClick={handleGoogleSearch}
                   disabled={!query.trim()}
-                  className="w-full"
+                  className="w-full h-10"
                 >
                   <Search className="w-4 h-4" />
                   Open Google Search
@@ -737,8 +750,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                         onChange={(event) => { setQuery(event.target.value); setShowFullResults(false); }}
                         onKeyDown={handleKeyDown}
                         autoFocus={activeTab === 'libraries'}
-                        placeholder="Search title, artist, or hymn"
-                        className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10' : 'pr-10'}
+                        placeholder="Search for song titles, artists or hymns"
+                        className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10 h-10' : 'pr-10 h-10'}
                       />
                       {query && (
                         <button
@@ -763,13 +776,14 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                         variant="secondary"
                         disabled={loadingSuggestions || loadingFullResults}
                         onClick={() => setShowFullResults(false)}
+                        className="h-10"
                       >
                         Live Suggestions
                       </Button>
                       <Button
                         onClick={performFullSearch}
                         disabled={!query.trim() || loadingFullResults}
-                        className="flex-1"
+                        className="flex-1 h-10"
                       >
                         <Search className="w-4 h-4" />
                         Search Libraries
@@ -822,41 +836,13 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                   {!showFullResults && renderSuggestionList(suggestionResults)}
                   {showFullResults && renderFullResults(fullResults)}
 
-                  {providerStatuses?.length > 0 && (
-                    <div className={`mt-6 rounded-md border px-4 py-3 text-xs ${darkMode ? 'border-gray-700 bg-gray-800 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600'}`}>
-                      <p className="font-medium mb-2 flex items-center gap-2">
-                        <Globe2 className="w-4 h-4" />
-                        Provider status
-                      </p>
-                      <ul className="space-y-1">
-                        {providerStatuses.map((provider) => (
-                          <li key={provider.id} className="flex items-center justify-between gap-3">
-                            <span className="font-medium">{provider.displayName}</span>
-                            <div className="flex items-center gap-2">
-                              <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200/40 text-gray-600'}`}>
-                                {provider.count} hit{provider.count === 1 ? '' : 's'}
-                              </span>
-                              {provider.duration && (
-                                <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1000 ? 'text-yellow-500' : 'text-gray-500'}`}>
-                                  {provider.duration}ms
-                                </span>
-                              )}
-                              {provider.errors?.[0] && (
-                                <span className="text-[10px] text-red-500">{provider.errors[0]}</span>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
+                  {/* Featured Libraries */}
                   {providerDefinitions?.length > 0 && (
                     <div className="mt-6">
                       <p className={`mb-3 text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         Featured libraries
                       </p>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-4 gap-3">
                         {providerDefinitions.map((provider) => {
                           const logoMap = {
                             lyricsOvh: '/logos/lyricsovh-logo.png',
@@ -873,12 +859,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                               href={provider.homepage}
                               target="_blank"
                               rel="noreferrer"
-                              className="group relative transition-all hover:opacity-75 hover:scale-105"
+                              className="group relative transition-all hover:opacity-85 hover:scale-105"
                             >
                               <img
                                 src={logoMap[provider.id]}
                                 alt={provider.displayName}
-                                className="h-10 w-auto object-contain"
+                                className="h-9 w-auto object-contain"
                               />
                             </a>
                           );
@@ -887,87 +873,149 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     </div>
                   )}
 
-                  {providerDefinitions.some((provider) => provider.requiresKey) && (
-                    <div className={`mt-6 rounded-md border px-4 py-4 ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
-                      <p className={`mb-3 flex items-center gap-2 text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                        <Key className="w-4 h-4" />
-                        Provider access keys
-                      </p>
-                      <div className="space-y-4">
-                        {providerDefinitions.filter((provider) => provider.requiresKey).map((provider) => {
-                          const configured = provider.configured;
-                          const isEditing = keyEditor === provider.id;
-                          const iconMap = {
-                            'vagalume': '/logos/vagalume-icon.png',
-                            'hymnary': '/logos/hymnaryorg-icon.png',
-                            'openHymnal': '/logos/openhymnal-icon.png',
-                            'lyricsOvh': '/logos/lyricsovh-icon.png',
-                            'lrclib': '/logos/lrclib-icon.png',
-                            'chartlyrics': '/logos/chartlyrics-icon.png',
-                          };
+                  {/* Collapsible Advanced Section */}
+                  {(providerStatuses?.length > 0 || providerDefinitions.some((provider) => provider.requiresKey)) && (
+                    <div className={`mt-6 rounded-md border ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+                      <button
+                        onClick={() => {
+                          const newState = !advancedExpanded;
+                          setAdvancedExpanded(newState);
+                          try {
+                            localStorage.setItem('lyricdisplay_advancedExpanded', String(newState));
+                          } catch (err) {
+                            console.warn('Failed to save advanced section state:', err);
+                          }
+                        }}
+                        className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors ${darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100/50'
+                          }`}
+                      >
+                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                          Advanced Options (API Key Management and more)
+                        </span>
+                        <ChevronRight
+                          className={`w-4 h-4 transition-transform ${advancedExpanded ? 'rotate-90' : ''} ${darkMode ? 'text-gray-400' : 'text-gray-500'
+                            }`}
+                        />
+                      </button>
 
-                          return (
-                            <div key={provider.id} className={`rounded-md border px-3 py-3 ${darkMode ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white'}`}>
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                  {iconMap[provider.id] && (
-                                    <img
-                                      src={iconMap[provider.id]}
-                                      alt={provider.displayName}
-                                      className="h-8 w-8 object-contain"
-                                    />
-                                  )}
-                                  <div>
-                                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>{provider.displayName}</p>
-                                    <p className={`text-xs ${configured ? 'text-green-500' : 'text-red-500'}`}>
-                                      {configured ? 'Configured' : 'Key required'}
-                                    </p>
-                                  </div>
-                                </div>
-                                {!isEditing && (
-                                  <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="secondary" onClick={() => openKeyEditor(provider.id)} className={
-                                      darkMode
-                                        ? 'bg-gray-700 text-white hover:bg-gray-600'
-                                        : ''
-                                    }
-                                    >{configured ? 'Update key' : 'Add key'}
-                                    </Button>
-                                    {configured && (
-                                      <Button size="icon" variant="ghost" onClick={() => handleDeleteKey(provider.id)} disabled={savingKey}>
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              {isEditing && (
-                                <div className="mt-3 space-y-3">
-                                  <Input
-                                    type="text"
-                                    value={keyInputValue}
-                                    onChange={(event) => setKeyInputValue(event.target.value)}
-                                    placeholder="Paste provider API key"
-                                    className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500' : ''}
-                                  />
-                                  <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="sm" onClick={() => { setKeyEditor(null); setKeyInputValue(''); }} disabled={savingKey} className={
-                                      darkMode
-                                        ? 'text-gray-400 hover:bg-gray-700/60 hover:text-white'
-                                        : ''
-                                    }
-                                    >Cancel
-                                    </Button>
-                                    <Button size="sm" onClick={() => handleSaveKey(provider.id)} disabled={savingKey || !keyInputValue.trim()}>
-                                      {savingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save key'}
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
+                      {advancedExpanded && (
+                        <div className={`px-4 pb-4 space-y-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                          {/* Provider Status */}
+                          {providerStatuses?.length > 0 && (
+                            <div className="pt-4">
+                              <p className={`font-medium mb-3 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <Globe2 className="w-4 h-4" />
+                                Provider status
+                              </p>
+                              <ul className="space-y-1 text-xs">
+                                {providerStatuses.map((provider) => (
+                                  <li key={provider.id} className="flex items-center justify-between gap-3">
+                                    <span className="font-medium">{provider.displayName}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200/40 text-gray-600'}`}>
+                                        {provider.count} hit{provider.count === 1 ? '' : 's'}
+                                      </span>
+                                      {provider.duration && (
+                                        <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1000 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                                          {provider.duration}ms
+                                        </span>
+                                      )}
+                                      {provider.errors?.[0] && (
+                                        <span className="text-[10px] text-red-500">{provider.errors[0]}</span>
+                                      )}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
-                          );
-                        })}
-                      </div>
+                          )}
+
+                          {/* Provider Access Keys */}
+                          {providerDefinitions.some((provider) => provider.requiresKey) && (
+                            <div className={providerStatuses?.length > 0 ? 'pt-0' : 'pt-4'}>
+                              <p className={`mb-3 flex items-center gap-2 text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+                                <Key className="w-4 h-4" />
+                                Provider access keys
+                              </p>
+                              <div className="space-y-4">
+                                {providerDefinitions.filter((provider) => provider.requiresKey).map((provider) => {
+                                  const configured = provider.configured;
+                                  const isEditing = keyEditor === provider.id;
+                                  const iconMap = {
+                                    'vagalume': '/logos/vagalume-icon.png',
+                                    'hymnary': '/logos/hymnaryorg-icon.png',
+                                    'openHymnal': '/logos/openhymnal-icon.png',
+                                    'lyricsOvh': '/logos/lyricsovh-icon.png',
+                                    'lrclib': '/logos/lrclib-icon.png',
+                                    'chartlyrics': '/logos/chartlyrics-icon.png',
+                                  };
+
+                                  return (
+                                    <div key={provider.id} className={`rounded-md border px-3 py-3 ${darkMode ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white'}`}>
+                                      <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                          {iconMap[provider.id] && (
+                                            <img
+                                              src={iconMap[provider.id]}
+                                              alt={provider.displayName}
+                                              className="h-8 w-8 object-contain"
+                                            />
+                                          )}
+                                          <div>
+                                            <p className={`text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>{provider.displayName}</p>
+                                            <p className={`text-xs ${configured ? 'text-green-500' : 'text-red-500'}`}>
+                                              {configured ? 'Configured' : 'Key required'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        {!isEditing && (
+                                          <div className="flex items-center gap-2">
+                                            <Button size="sm" variant="secondary" onClick={() => openKeyEditor(provider.id)} className={
+                                              darkMode
+                                                ? 'bg-gray-700 text-white hover:bg-gray-600'
+                                                : ''
+                                            }
+                                            >{configured ? 'Update key' : 'Add key'}
+                                            </Button>
+                                            {configured && (
+                                              <Button size="icon" variant="ghost" onClick={() => handleDeleteKey(provider.id)} disabled={savingKey}>
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {isEditing && (
+                                        <div className="mt-3 space-y-3">
+                                          <Input
+                                            type="text"
+                                            value={keyInputValue}
+                                            onChange={(event) => setKeyInputValue(event.target.value)}
+                                            placeholder="Paste provider API key"
+                                            className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500' : ''}
+                                          />
+                                          <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => { setKeyEditor(null); setKeyInputValue(''); }} disabled={savingKey} className={
+                                              darkMode
+                                                ? 'text-gray-400 hover:bg-gray-700/60 hover:text-white'
+                                                : ''
+                                            }
+                                            >Cancel
+                                            </Button>
+                                            <Button size="sm" onClick={() => handleSaveKey(provider.id)} disabled={savingKey || !keyInputValue.trim()}>
+                                              {savingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save key'}
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </>

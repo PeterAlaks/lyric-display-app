@@ -303,7 +303,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
             <div
                 className={cn(
                     'relative w-full max-w-3xl rounded-2xl border shadow-2xl flex flex-col',
-                    'max-h-[90vh]',
+                    'h-[650px]',
                     'transform transition-all duration-200',
                     isMounted ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-95',
                     darkMode ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200'
@@ -322,7 +322,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                             <Database className="h-6 w-6" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-semibold">Import from EasyWorship</h2>
+                            <h2 className="text-xl font-semibold">Import Songs from EasyWorship</h2>
                             <p className={cn('text-sm', darkMode ? 'text-gray-400' : 'text-gray-600')}>
                                 Step {currentStep + 1} of 5
                             </p>
@@ -351,9 +351,9 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                     {currentStep === STEPS.INTRO && (
                         <div className="space-y-6">
                             <div>
-                                <h3 className="text-lg font-semibold mb-2">Welcome to EasyWorship Import</h3>
+                                <h3 className="text-lg font-semibold mb-2">Welcome to EasyWorship Song Import</h3>
                                 <p className={cn('text-sm', darkMode ? 'text-gray-400' : 'text-gray-600')}>
-                                    This wizard will help you import your song library from EasyWorship. We'll convert your songs to plain text files that work perfectly with LyricDisplay.
+                                    This wizard will help you import songs from your EasyWorship library. We'll convert them to plain text files that work perfectly with LyricDisplay.
                                 </p>
                             </div>
 

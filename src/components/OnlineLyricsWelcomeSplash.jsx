@@ -117,8 +117,8 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                 <button
                     onClick={handleClose}
                     className={`absolute top-4 right-4 p-2 rounded-full transition-colors z-10 ${darkMode
-                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        ? 'bg-black bg-opacity-30 text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                        : 'bg-black bg-opacity-30 text-gray-100 hover:text-gray-100 hover:bg-black hover:bg-opacity-50'
                         }`}
                     aria-label="Close welcome screen"
                 >

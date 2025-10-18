@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, Paintbrush, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, Italic, Underline, CaseUpper } from 'lucide-react';
+import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, Paintbrush, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, Italic, Underline, CaseUpper, ScreenShare } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -75,7 +75,7 @@ export const OutputSettingsHelp = ({ darkMode }) => (
         <HelpSection
             icon={AlignVerticalSpaceAround}
             title="Lyrics Position"
-            description="Choose where lyrics appear on screen: Upper Third (top), Centre (middle), or Lower Third (bottom). Automatically set to Centre when Full Screen Mode is enabled. Perfect for different camera angles and presentation styles."
+            description="Choose where lyrics appear on screen: Upper Third (top), Centre (middle), or Lower Third (bottom). Automatically set to Centre when Full Screen Mode is enabled. Perfect for different presentation styles."
             darkMode={darkMode}
         />
 
@@ -122,7 +122,7 @@ export const OutputSettingsHelp = ({ darkMode }) => (
         />
 
         <HelpSection
-            icon={FileText}
+            icon={ScreenShare}
             title="Full Screen Mode"
             description="Expand lyrics to fill the entire display with automatic Centre positioning. Choose between a solid color background or upload custom images/videos (up to 200MB). Ideal for immersive worship experiences and special presentations."
             darkMode={darkMode}
@@ -148,14 +148,14 @@ export const SongCanvasHelp = ({ darkMode }) => (
         <HelpSection
             icon={Wand2}
             title="Auto Cleanup"
-            description="Intelligently formats lyrics by removing extra spaces, normalizing line breaks, capitalizing religious terms (Jesus, God, Lord, etc.), and splitting overly long lines. Click the magic wand icon or press Ctrl/Cmd+Shift+C."
+            description="Intelligently formats lyrics by removing extra spaces, normalizing line breaks, capitalizing religious terms (Jesus, God, Lord, etc.), and splitting overly long lines. Click the magic wand icon or paste content into the canvas"
             darkMode={darkMode}
         />
 
         <HelpSection
             icon={Type}
             title="Line Selection & Editing"
-            description="Click any line to select it (highlights in blue). Right-click for context menu with options to Copy Line, Add Translation, or Duplicate Line. Selected lines show an inline toolbar for quick actions."
+            description="Click any line to select it (highlights in blue). Right-click for context menu with options to Copy Line, Add Translation, or Duplicate Line. Selected lines show an inline toolbar for quick actions. You can also use Ctrl/Cmd+L to select the current line."
             darkMode={darkMode}
         />
 
