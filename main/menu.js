@@ -156,97 +156,38 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
       return;
     }
 
-    let statsResult;
-    try {
-      statsResult = await win.webContents.executeJavaScript(`
-        (function () {
-          try {
-            const data = window.connectionManager?.getStats?.();
-            return data ? JSON.parse(JSON.stringify(data)) : null;
-          } catch (error) {
-            return { __error: error?.message || String(error) };
-          }
-        })();
-      `, true);
-    } catch (error) {
-      console.error("Failed to query connection diagnostics:", error);
-      await dialog.showMessageBox({
-        type: "error",
-        buttons: ["Close"],
-        defaultId: 0,
-        title: "Connection Diagnostics",
-        message: "Failed to retrieve diagnostics from the renderer process.",
-        detail: error?.message || String(error),
-      });
-      return;
-    }
-
-    if (!statsResult) {
-      await dialog.showMessageBox({
-        type: "info",
-        buttons: ["Close"],
-        defaultId: 0,
-        title: "Connection Diagnostics",
-        message: "Diagnostics are not available yet.",
-      });
-      return;
-    }
-
-    if (statsResult.__error) {
-      await dialog.showMessageBox({
-        type: "error",
-        buttons: ["Close"],
-        defaultId: 0,
-        title: "Connection Diagnostics",
-        message: "Failed to read diagnostics.",
-        detail: statsResult.__error,
-      });
-      return;
-    }
-
-    const stats = statsResult;
-    const description = buildDiagnosticsDescription(stats);
-    const hasClientBackoff = Object.values(stats.clients || {}).some(
-      (info) => (info?.backoffRemaining ?? 0) >= BACKOFF_WARNING_THRESHOLD_MS
-    );
-    const variant = stats.globalBackoffActive || hasClientBackoff ? "warning" : "info";
-
-    const fallbackDialog = () =>
-      dialog.showMessageBox({
-        type: variant === "warning" ? "warning" : "info",
-        buttons: ["Close"],
-        defaultId: 0,
-        title: "Connection Diagnostics",
-        message:
-          variant === "warning" ? "LyricDisplay is waiting briefly before trying again." : "LyricDisplay is ready to reconnect immediately if needed.",
-        detail: description,
-      });
-
     if (typeof showInAppModal === "function") {
       try {
         await showInAppModal(
           {
             title: "Connection Diagnostics",
-            description,
-            variant,
-            size: "auto",
+            component: "ConnectionDiagnostics",
+            variant: "info",
+            size: "large",
             actions: [
               {
                 label: "Close",
                 value: 0,
-                variant: variant === "warning" ? "secondary" : "primary",
+                variant: "secondary",
                 autoFocus: true,
               },
             ],
           },
-          { fallback: fallbackDialog, timeout: 600000 }
+          {
+            fallback: () => {
+              dialog.showMessageBox({
+                type: "info",
+                buttons: ["Close"],
+                defaultId: 0,
+                title: "Connection Diagnostics",
+                message: "Please view diagnostics from the main application window.",
+              });
+            }, timeout: 600000
+          }
         );
       } catch (error) {
-        console.warn("Renderer modal unavailable, falling back to native dialog:", error);
-        await fallbackDialog();
+        console.warn("Could not open diagnostics modal:", error);
       }
-    } else {
-      await fallbackDialog();
     }
   }
 
@@ -321,6 +262,20 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
             }
           },
           { type: 'separator' },
+          {
+            label: 'Import Songs from EasyWorship',
+            click: () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                try {
+                  win.webContents.send('open-easyworship-import');
+                } catch (err) {
+                  console.error('Failed to send easyworship import event:', err);
+                }
+              }
+            }
+          },
+          { type: 'separator' },
           { label: 'Preview Output 1', accelerator: 'CmdOrCtrl+1', click: () => createWindow?.('/output1') },
           { label: 'Preview Output 2', accelerator: 'CmdOrCtrl+2', click: () => createWindow?.('/output2') },
           { type: 'separator' },
@@ -349,7 +304,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
         submenu: [
           { role: 'minimize' },
           {
-            label: 'Keyboard Shortcuts...',
+            label: 'Keyboard Shortcuts',
             click: () => {
               try {
                 const win = getMainWindow?.();
@@ -363,9 +318,9 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
       {
         label: 'Help',
         submenu: [
-          { label: 'Documentation', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-updates#readme'); } },
-          { label: 'GitHub Repository', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-updates'); } },
-          { label: 'Connection Diagnostics...', click: openConnectionDiagnostics },
+          { label: 'Documentation', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-app#readme'); } },
+          { label: 'GitHub Repository', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-app'); } },
+          { label: 'Connection Diagnostics', click: openConnectionDiagnostics },
           { type: 'separator' },
           { label: 'More About Author', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://linktr.ee/peteralaks'); } },
           {
@@ -401,6 +356,13 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                 checkForUpdates?.(true);
               }
             },
+          },
+          {
+            label: 'Support Development',
+            click: async () => {
+              const { shell } = await import('electron');
+              await shell.openExternal('https://paystack.shop/pay/lyricdisplay-support');
+            }
           },
           { label: 'Check for Updates', click: () => checkForUpdates?.(true) },
         ],

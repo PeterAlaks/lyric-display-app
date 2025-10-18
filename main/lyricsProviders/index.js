@@ -11,18 +11,16 @@ import { deleteProviderKey, getProviderKey, listProviderKeys, setProviderKey } f
 let knownArtistsList = [];
 try {
   const module = await import('../../shared/data/knownArtists.json', {
-    assert: { type: 'json' },
+    with: { type: 'json' },
   });
   knownArtistsList = module.default;
 } catch (err) {
   console.error('Failed to load knownArtists.json:', err);
 }
 
-// Stage 1: Query Analysis (Optimized - no unnecessary allocations)
 function analyzeQuery(query) {
   const normalized = query.toLowerCase().trim();
 
-  // Quick bailout for empty queries
   if (!normalized) {
     return {
       rawQuery: query,
@@ -36,18 +34,15 @@ function analyzeQuery(query) {
 
   const words = normalized.split(/\s+/);
 
-  // Common artist name patterns (minimal list - only most common)
   const knownArtists = knownArtistsList.map(a => a.toLowerCase());
 
   let artist = null;
   let title = null;
 
-  // Quick check - only iterate if query is long enough
   if (words.length >= 2) {
     for (const knownArtist of knownArtists) {
       if (normalized.includes(knownArtist)) {
         artist = knownArtist;
-        // Remove artist words from title
         const artistWords = knownArtist.split(/\s+/);
         const remainingWords = words.filter(w => !artistWords.includes(w));
         title = remainingWords.join(' ');
@@ -56,7 +51,6 @@ function analyzeQuery(query) {
     }
   }
 
-  // If no artist found, assume entire query is title
   if (!title) {
     title = normalized;
   }
@@ -71,19 +65,14 @@ function analyzeQuery(query) {
   };
 }
 
-// Stage 2: Lightweight Text Matching (Optimized)
-
-// Simple Levenshtein with early termination
 function levenshteinDistance(str1, str2, maxDistance = 10) {
   const len1 = str1.length;
   const len2 = str2.length;
 
-  // Early bailout - strings too different in length
   if (Math.abs(len1 - len2) > maxDistance) {
     return maxDistance + 1;
   }
 
-  // Optimization: use single array instead of matrix
   let prev = Array(len2 + 1).fill(0).map((_, i) => i);
 
   for (let i = 1; i <= len1; i++) {
@@ -92,13 +81,12 @@ function levenshteinDistance(str1, str2, maxDistance = 10) {
     for (let j = 1; j <= len2; j++) {
       const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
       curr[j] = Math.min(
-        prev[j] + 1,      // deletion
-        curr[j - 1] + 1,  // insertion
-        prev[j - 1] + cost // substitution
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + cost
       );
     }
 
-    // Early termination - if minimum value exceeds threshold
     if (Math.min(...curr) > maxDistance) {
       return maxDistance + 1;
     }
@@ -109,14 +97,11 @@ function levenshteinDistance(str1, str2, maxDistance = 10) {
   return prev[len2];
 }
 
-// Fuzzy match with max distance threshold
 function fuzzyMatch(str1, str2, similarityThreshold = 0.8) {
   const maxLen = Math.max(str1.length, str2.length);
 
-  // Quick exact match check
   if (str1 === str2) return 1.0;
 
-  // Skip if strings are too short or too different in length
   if (maxLen < 3 || Math.abs(str1.length - str2.length) > maxLen * 0.5) {
     return 0;
   }
@@ -130,16 +115,13 @@ function fuzzyMatch(str1, str2, similarityThreshold = 0.8) {
   return similarity >= similarityThreshold ? similarity : 0;
 }
 
-// Lightweight n-gram (only bigrams for speed)
 function bigramSimilarity(str1, str2) {
   const s1 = str1.toLowerCase();
   const s2 = str2.toLowerCase();
 
-  // Quick checks
   if (s1 === s2) return 1.0;
   if (s1.length < 2 || s2.length < 2) return 0;
 
-  // Use Set for O(1) lookups
   const bigrams1 = new Set();
   for (let i = 0; i < s1.length - 1; i++) {
     bigrams1.add(s1[i] + s1[i + 1]);
@@ -157,7 +139,6 @@ function bigramSimilarity(str1, str2) {
   return total > 0 ? matches / total : 0;
 }
 
-// Stage 3: Intelligent Scoring (Optimized with early exits)
 function calculateRelevanceScore(item, queryAnalysis) {
   const { normalizedQuery, words, inferredArtist, inferredTitle, stopWords } = queryAnalysis;
 
@@ -167,7 +148,6 @@ function calculateRelevanceScore(item, queryAnalysis) {
   let score = 0;
   const signals = {};
 
-  // === FAST PATH: Exact Matches (Skip expensive calculations) ===
   if (titleLower === normalizedQuery) {
     return { score: 1000000, signals: { exactTitleMatch: true } };
   }
@@ -175,7 +155,6 @@ function calculateRelevanceScore(item, queryAnalysis) {
     return { score: 900000, signals: { exactArtistMatch: true } };
   }
 
-  // === FAST PATH: Substring containment (cheap check) ===
   const titleContains = titleLower.includes(normalizedQuery);
   const artistContains = artistLower.includes(normalizedQuery);
 
@@ -188,9 +167,8 @@ function calculateRelevanceScore(item, queryAnalysis) {
     signals.artistContainsQuery = true;
   }
 
-  // === SIGNAL: Inferred Structure Match (if available) ===
   if (inferredTitle && inferredArtist) {
-    // Only do fuzzy match if lengths are similar (avoid wasted computation)
+
     if (Math.abs(titleLower.length - inferredTitle.length) < 5) {
       const titleMatch = fuzzyMatch(titleLower, inferredTitle, 0.75);
       if (titleMatch > 0) {
@@ -208,15 +186,12 @@ function calculateRelevanceScore(item, queryAnalysis) {
     }
   }
 
-  // === SIGNAL: Word-Level Matching (lightweight) ===
-  // Filter stopwords and short words
   const meaningfulWords = words.filter(w => !stopWords.has(w) && w.length >= 3);
 
   if (meaningfulWords.length > 0) {
     let titleWordMatches = 0;
     let artistWordMatches = 0;
 
-    // Simple includes check (O(n*m) but strings are short)
     for (const word of meaningfulWords) {
       if (titleLower.includes(word)) titleWordMatches++;
       if (artistLower.includes(word)) artistWordMatches++;
@@ -230,7 +205,6 @@ function calculateRelevanceScore(item, queryAnalysis) {
     }
   }
 
-  // === SIGNAL: Bigram similarity (only if no strong signal yet) ===
   if (score < 50000) {
     const titleBigram = bigramSimilarity(titleLower, normalizedQuery);
     const artistBigram = bigramSimilarity(artistLower, normalizedQuery);
@@ -245,7 +219,6 @@ function calculateRelevanceScore(item, queryAnalysis) {
     }
   }
 
-  // === SIGNAL: Provider context (lightweight heuristic) ===
   const queryHasYear = /202[0-5]|201[0-9]/.test(normalizedQuery);
   if (queryHasYear && item.provider === 'lrclib') {
     score += 5000;
@@ -258,7 +231,6 @@ function calculateRelevanceScore(item, queryAnalysis) {
     signals.traditionalContentBoost = true;
   }
 
-  // === SIGNAL: Position penalty (first results usually better) ===
   const positionPenalty = (item._resultIndex || 0) * -100;
   score += positionPenalty;
 
@@ -278,8 +250,6 @@ const providerById = new Map(providers.map((mod) => [mod.definition.id, mod]));
 
 const searchCache = new TTLCache({ max: 100, ttlMs: 45_000 });
 
-const dedupeKey = (item) => `${item.provider}|${(item.title || '').toLowerCase()}|${(item.artist || '').toLowerCase()}`;
-
 export const getProviderDefinitions = async () => {
   const keys = await listProviderKeys();
   return providers.map((mod) => {
@@ -298,10 +268,7 @@ const mergeResults = (chunks, { limit, query }) => {
   const merged = [];
   const seen = new Set();
 
-  // Analyze query first
   const queryAnalysis = analyzeQuery(query);
-
-  // Calculate relevance scores for all results
   const scoredResults = [];
 
   chunks.forEach((chunk, providerIndex) => {
@@ -320,10 +287,8 @@ const mergeResults = (chunks, { limit, query }) => {
     });
   });
 
-  // Sort by score descending
   scoredResults.sort((a, b) => b.score - a.score);
 
-  // Debug logging
   if (process.env.NODE_ENV === 'development' && scoredResults.length > 0) {
     console.log(`\n[LyricsSearch] Query: "${query}"`);
     console.log('[LyricsSearch] Inferred:', queryAnalysis.inferredTitle, 'by', queryAnalysis.inferredArtist);
@@ -334,7 +299,6 @@ const mergeResults = (chunks, { limit, query }) => {
     });
   }
 
-  // Deduplicate and collect
   const dedupeKey = (item) =>
     `${(item.title || '').toLowerCase().trim()}|${(item.artist || '').toLowerCase().trim()}`;
 

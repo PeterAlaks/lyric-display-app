@@ -14,9 +14,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
   parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
   getAdminKey: () => ipcRenderer.invoke('get-admin-key'),
+  getJoinCode: () => ipcRenderer.invoke('get-join-code'),
   getDesktopJWT: (payload) => ipcRenderer.invoke('get-desktop-jwt', payload),
+  getConnectionDiagnostics: () => ipcRenderer.invoke('get-connection-diagnostics'),
   newLyricsFile: () => ipcRenderer.invoke('new-lyrics-file'),
   getLocalIP: () => ipcRenderer.invoke('get-local-ip'),
+  getPlatform: () => process.platform,
   onTriggerFileLoad: (callback) => {
     ipcRenderer.removeAllListeners('trigger-file-load');
     ipcRenderer.on('trigger-file-load', callback);
@@ -90,6 +93,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, callback);
     return () => ipcRenderer.removeAllListeners(channel);
   },
+  onOpenEasyWorshipImport: (callback) => {
+    const channel = 'open-easyworship-import';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
   onOpenLyricsFromPathError: (callback) => {
     const channel = 'open-lyrics-from-path-error';
     ipcRenderer.removeAllListeners(channel);
@@ -133,6 +142,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('lyrics:search:partial', (_event, payload) => callback(payload));
       return () => ipcRenderer.removeAllListeners('lyrics:search:partial');
     }
+  },
+  easyWorship: {
+    validatePath: (path) => ipcRenderer.invoke('easyworship:validate-path', { path }),
+    browseForPath: () => ipcRenderer.invoke('easyworship:browse-path'),
+    browseForDestination: () => ipcRenderer.invoke('easyworship:browse-destination'),
+    importSong: (params) => ipcRenderer.invoke('easyworship:import-song', params),
+    openFolder: (path) => ipcRenderer.invoke('easyworship:open-folder', { path }),
+    getUserHome: () => ipcRenderer.invoke('easyworship:get-user-home')
   }
 });
 

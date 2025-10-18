@@ -1,7 +1,7 @@
 // shared/lyricsParsing.js
 // Enhanced utilities for parsing TXT and LRC lyric content with intelligent line splitting
 
-import { preprocessText, enhancedTextProcessing, splitLongLine, validateProcessing } from './intelligentLineSplitting.js';
+import { preprocessText, enhancedTextProcessing, splitLongLine, validateProcessing } from './lineSplitting.js';
 
 const BRACKET_PAIRS = [
   ['[', ']'],

@@ -7,14 +7,9 @@ import updaterPkg from 'electron-updater';
 import { createProgressWindow } from './progressWindow.js';
 import { getAdminKey, onAdminKeyAvailable } from './adminKey.js';
 import { parseTxtContent, parseLrcContent } from '../shared/lyricsParsing.js';
-import {
-  fetchLyricsByProvider,
-  getProviderDefinitions,
-  getProviderKeyState,
-  removeProviderKey,
-  saveProviderKey,
-  searchAllProviders,
-} from './lyricsProviders/index.js';
+import { fetchLyricsByProvider, getProviderDefinitions, getProviderKeyState, removeProviderKey, saveProviderKey, searchAllProviders } from './lyricsProviders/index.js';
+import * as easyWorship from './easyWorship.js';
+
 const { autoUpdater } = updaterPkg;
 
 let cachedJoinCode = null;
@@ -135,6 +130,35 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
     }
   });
 
+  ipcMain.handle('get-connection-diagnostics', async () => {
+    try {
+      const win = getMainWindow?.();
+      if (!win || win.isDestroyed()) {
+        return null;
+      }
+
+      const statsResult = await win.webContents.executeJavaScript(`
+      (function () {
+        try {
+          const data = window.connectionManager?.getStats?.();
+          return data ? JSON.parse(JSON.stringify(data)) : null;
+        } catch (error) {
+          return { __error: error?.message || String(error) };
+        }
+      })();
+    `, true);
+
+      if (statsResult?.__error) {
+        console.error('Connection diagnostics error:', statsResult.__error);
+        return null;
+      }
+
+      return statsResult;
+    } catch (error) {
+      console.error('Failed to get connection diagnostics:', error);
+      return null;
+    }
+  });
 
   ipcMain.handle('get-desktop-jwt', async (_event, { deviceId, sessionId }) => {
     try {
@@ -276,6 +300,63 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
     }
   });
 
+  // EasyWorship Import handlers
+  ipcMain.handle('easyworship:validate-path', async (_event, { path: dbPath }) => {
+    try {
+      return await easyWorship.validateDatabasePath(dbPath);
+    } catch (error) {
+      console.error('Error validating EasyWorship path:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('easyworship:browse-path', async () => {
+    try {
+      const win = getMainWindow?.();
+      return await easyWorship.browseForDatabasePath(win);
+    } catch (error) {
+      console.error('Error browsing for database path:', error);
+      return { canceled: true, error: error.message };
+    }
+  });
+
+  ipcMain.handle('easyworship:browse-destination', async () => {
+    try {
+      const win = getMainWindow?.();
+      return await easyWorship.browseForDestinationPath(win);
+    } catch (error) {
+      console.error('Error browsing for destination:', error);
+      return { canceled: true, error: error.message };
+    }
+  });
+
+  ipcMain.handle('easyworship:import-song', async (_event, params) => {
+    try {
+      return await easyWorship.importSong(params);
+    } catch (error) {
+      console.error('Error importing song:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('easyworship:open-folder', async (_event, { path: folderPath }) => {
+    try {
+      await easyWorship.openFolder(folderPath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error opening folder:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('easyworship:get-user-home', async () => {
+    try {
+      const os = await import('os');
+      return { success: true, homedir: os.homedir() };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
 
   // Updater controls
   ipcMain.handle('updater:download', async () => {

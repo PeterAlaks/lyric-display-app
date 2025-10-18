@@ -1,4 +1,4 @@
-// shared/intelligentLineSplitting.js
+// shared/lineSplitting.js
 // Enhanced utilities for intelligently breaking long lyric lines into displayable segments
 
 /**

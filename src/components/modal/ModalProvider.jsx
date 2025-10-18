@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
+import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
+import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp } from '../HelpContent';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -72,7 +74,9 @@ export function ModalProvider({ children, isDark = false }) {
       variant: normalizedVariant,
       title: config.title || '',
       description: config.description ?? config.message ?? '',
+      headerDescription: config.headerDescription ?? '',
       body: config.body,
+      component: config.component,
       dismissible: config.dismissible !== false,
       actions: hasExplicitActions
         ? config.actions.map((action) => ({ ...action }))
@@ -188,7 +192,7 @@ export function ModalProvider({ children, isDark = false }) {
         const zIndex = 1300 + index;
         const isTopModal = index === modals.length - 1;
         const sizeClass =
-          modal.size === 'lg'
+          modal.size === 'lg' || modal.size === 'large'
             ? 'max-w-3xl'
             : modal.size === 'sm'
               ? 'max-w-md'
@@ -229,7 +233,7 @@ export function ModalProvider({ children, isDark = false }) {
             <div className="pointer-events-none relative flex min-h-full items-center justify-center px-4 py-10">
               <div
                 className={cn(
-                  'pointer-events-auto transform rounded-2xl border shadow-2xl ring-1 transition-all duration-200',
+                  'pointer-events-auto transform rounded-2xl border shadow-2xl ring-1 transition-all duration-200 flex flex-col',
                   isDark ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200',
                   palette.ring,
                   widthClass,
@@ -237,9 +241,18 @@ export function ModalProvider({ children, isDark = false }) {
                   sizeClass,
                   modal.className
                 )}
+                style={{ maxHeight: 'calc(100vh - 80px)' }}
               >
-                <div className="flex items-start gap-4 px-6 py-6">
-                  <div className={cn('flex h-11 w-11 items-center justify-center rounded-xl', palette.badge)}>
+                {/* Fixed Header */}
+                <div className={cn(
+                  'flex gap-4 px-6 py-5 border-b flex-shrink-0',
+                  modal.headerDescription ? 'items-start' : 'items-center',
+                  isDark ? 'border-gray-800' : 'border-gray-200'
+                )}>
+                  <div className={cn(
+                    'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl',
+                    palette.badge
+                  )}>
                     {modal.icon ? modal.icon : <IconComponent className={cn('h-6 w-6', palette.accent)} aria-hidden />}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -248,71 +261,21 @@ export function ModalProvider({ children, isDark = false }) {
                         {modal.title}
                       </h2>
                     )}
-                    {(modal.description || modal.body) && (
-                      <div
-                        id={`modal-${modal.id}-description`}
-                        className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-300"
-                      >
-                        {modal.description && <p className="whitespace-pre-wrap">{modal.description}</p>}
-                        {modal.body && (
-                          <div className="mt-3 text-sm text-gray-500 dark:text-gray-300">
-                            {typeof modal.body === 'function'
-                              ? modal.body({ close: (value) => closeModal(modal.id, value) })
-                              : modal.body}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {modal.actions.length > 0 && (
-                      <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-                        {modal.actions.map((action, idx) => {
-                          const buttonVariant = isDark
-                            ? (action.variant || (action.destructive ? 'destructive' : 'outline'))
-                            : (action.variant || (action.destructive ? 'destructive' : idx === 0 ? 'default' : 'outline'));
-                          const darkTextClass = isDark
-                            ? buttonVariant === 'destructive'
-                              ? 'dark:text-red-200 dark:hover:text-red-100'
-                              : 'bg-transparent border border-gray-500 text-white hover:text-white hover:border-gray-400 hover:bg-gray-800/40'
-                            : '';
-                          return (
-                            <Button
-                              key={`${modal.id}-action-${idx}`}
-                              type="button"
-                              variant={buttonVariant}
-                              onClick={async () => {
-                                if (!isTopModal || action.disabled) return;
-                                let shouldClose = action.closeOnClick !== false;
-                                let actionResult = action.value ?? action.label ?? true;
-                                if (typeof action.onSelect === 'function') {
-                                  try {
-                                    const maybe = await action.onSelect();
-                                    if (typeof maybe !== 'undefined') {
-                                      actionResult = maybe;
-                                    }
-                                  } catch (error) {
-                                    console.error('Modal action handler failed', error);
-                                  }
-                                }
-                                if (shouldClose) {
-                                  closeModal(modal.id, actionResult, { actionIndex: idx });
-                                }
-                              }}
-                              className={cn('min-w-[96px] justify-center', darkTextClass, action.className)}
-                              autoFocus={action.autoFocus ?? (!anyAutoFocus && idx === 0)}
-                              disabled={action.disabled}
-                            >
-                              {action.label}
-                            </Button>
-                          );
-                        })}
-                      </div>
+                    {modal.headerDescription && (
+                      <p className={cn(
+                        'mt-1 text-xs',
+                        isDark ? 'text-gray-400' : 'text-gray-600'
+                      )}>
+                        {modal.headerDescription}
+                      </p>
                     )}
                   </div>
                   {modal.dismissible && (
                     <button
                       type="button"
                       className={cn(
-                        'relative -mr-2 -mt-2 rounded-full p-2 transition-colors',
+                        'relative flex-shrink-0 rounded-full p-2 transition-colors',
+                        modal.headerDescription ? '-mr-2 -mt-1' : '-mr-2',
                         isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-black/5'
                       )}
                       onClick={() => {
@@ -326,12 +289,97 @@ export function ModalProvider({ children, isDark = false }) {
                     </button>
                   )}
                 </div>
+
+                {/* Scrollable Content */}
+                <div className="overflow-y-auto flex-1 px-6 py-5">
+                  {(modal.description || modal.body || modal.component) && (
+                    <div
+                      id={`modal-${modal.id}-description`}
+                      className="text-sm leading-relaxed text-gray-500 dark:text-gray-300"
+                    >
+                      {/* Render component-based modals */}
+                      {modal.component === 'ConnectionDiagnostics' && (
+                        <ConnectionDiagnosticsModal darkMode={isDark} />
+                      )}
+                      {modal.component === 'ControlPanelHelp' && (
+                        <ControlPanelHelp darkMode={isDark} />
+                      )}
+                      {modal.component === 'OutputSettingsHelp' && (
+                        <OutputSettingsHelp darkMode={isDark} />
+                      )}
+                      {modal.component === 'SongCanvasHelp' && (
+                        <SongCanvasHelp darkMode={isDark} />
+                      )}
+
+                      {/* Render standard description/body modals */}
+                      {!modal.component && modal.description && (
+                        <p className="whitespace-pre-wrap">{modal.description}</p>
+                      )}
+                      {!modal.component && modal.body && (
+                        <div className="mt-3 text-sm text-gray-500 dark:text-gray-300">
+                          {typeof modal.body === 'function'
+                            ? modal.body({ close: (value) => closeModal(modal.id, value) })
+                            : modal.body}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Fixed Footer with Actions */}
+                {modal.actions.length > 0 && (
+                  <div className={cn(
+                    'flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0',
+                    isDark ? 'border-gray-800' : 'border-gray-200'
+                  )}>
+                    {modal.actions.map((action, idx) => {
+                      const buttonVariant = isDark
+                        ? (action.variant || (action.destructive ? 'destructive' : 'outline'))
+                        : (action.variant || (action.destructive ? 'destructive' : idx === 0 ? 'default' : 'outline'));
+                      const darkTextClass = isDark
+                        ? buttonVariant === 'destructive'
+                          ? 'dark:text-red-200 dark:hover:text-red-100'
+                          : 'bg-transparent border border-gray-500 text-white hover:text-white hover:border-gray-400 hover:bg-gray-800/40'
+                        : '';
+                      return (
+                        <Button
+                          key={`${modal.id}-action-${idx}`}
+                          type="button"
+                          variant={buttonVariant}
+                          onClick={async () => {
+                            if (!isTopModal || action.disabled) return;
+                            let shouldClose = action.closeOnClick !== false;
+                            let actionResult = action.value ?? action.label ?? true;
+                            if (typeof action.onSelect === 'function') {
+                              try {
+                                const maybe = await action.onSelect();
+                                if (typeof maybe !== 'undefined') {
+                                  actionResult = maybe;
+                                }
+                              } catch (error) {
+                                console.error('Modal action handler failed', error);
+                              }
+                            }
+                            if (shouldClose) {
+                              closeModal(modal.id, actionResult, { actionIndex: idx });
+                            }
+                          }}
+                          className={cn('min-w-[96px] justify-center', darkTextClass, action.className)}
+                          autoFocus={action.autoFocus ?? (!anyAutoFocus && idx === 0)}
+                          disabled={action.disabled}
+                        >
+                          {action.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         );
       })}
-    </div>
+    </div >
   ) : null;
 
   return (

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import useToast from '../hooks/useToast';
+import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
 import { logWarn } from '../utils/logger';
@@ -31,6 +32,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
   const { darkMode } = useDarkModeState();
   const { emitStyleUpdate } = useControlSocket();
   const { showToast } = useToast();
+  const { showModal } = useModal();
   const { ensureValidToken } = useAuth();
   const fileInputRef = React.useRef(null);
   const clientTypeRef = React.useRef(detectClientType());
@@ -236,10 +238,35 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'
-        }`}>
-        {outputKey.toUpperCase()} SETTINGS
-      </h3>
+      {/* UPDATE the header section */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          {outputKey.toUpperCase()} SETTINGS
+        </h3>
+
+        {/* ADD THIS - Help trigger button */}
+        <button
+          onClick={() => {
+            showModal({
+              title: 'Output Settings Help',
+              headerDescription: 'Customize every aspect of your lyric display appearance',
+              component: 'OutputSettingsHelp',
+              variant: 'info',
+              size: 'large',
+              dismissLabel: 'Got it'
+            });
+          }}
+          className={`p-1.5 rounded-lg transition-colors ${darkMode
+              ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+              : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+            }`}
+          title="Output Settings Help"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+      </div>
 
       {/* Lyrics Position */}
       <div className="flex items-center justify-between gap-4">

@@ -1,7 +1,7 @@
 // utils/lyricsFormat.js
 // Enhanced utilities for formatting and reconstructing lyrics text
 
-import { preprocessText, splitLongLine } from '../../shared/intelligentLineSplitting.js';
+import { preprocessText, splitLongLine } from '../../shared/lineSplitting.js';
 
 const RELIGIOUS_WORDS = ['jesus', 'jehovah', 'god', 'yahweh', 'lord', 'christ', 'holy ghost',
   'holy spirit', 'bible', 'amen', 'hallelujah', 'hosanna', 'savior', 'saviour', 'redeemer', 'messiah'];
@@ -30,7 +30,8 @@ const normalizePunctuation = (line) => {
 
 const capitalizeFirstCharacter = (line) => {
   if (!line) return line;
-  return line.charAt(0).toUpperCase() + line.slice(1);
+  const corrected = line.replace(/\bi\b/g, 'I');
+  return corrected.charAt(0).toUpperCase() + corrected.slice(1);
 };
 
 const toTitleCase = (phrase) => {

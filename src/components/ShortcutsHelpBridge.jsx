@@ -20,6 +20,7 @@ export default function ShortcutsHelpBridge() {
   const openShortcutsModal = useCallback(() => {
     showModal({
       title: 'Keyboard Shortcuts',
+      headerDescription: 'Helpful keyboard shortcuts for faster navigation and actions',
       variant: 'info',
       size: 'auto',
       icon: <Keyboard className="h-6 w-6" aria-hidden />,

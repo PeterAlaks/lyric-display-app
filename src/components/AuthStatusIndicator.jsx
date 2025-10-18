@@ -231,10 +231,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
           </p>
           <button
             onClick={handleCopyJoinCode}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${darkMode
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`}
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700 transition-all duration-200"
           >
             Copy
           </button>
@@ -248,6 +245,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
 
     showModal({
       title: 'Socket Connection Status',
+      headerDescription: 'View authentication details and manage your secure connection',
       description,
       variant: getStatusVariant(),
       actions,

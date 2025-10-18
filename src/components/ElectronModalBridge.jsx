@@ -11,20 +11,28 @@ export default function ElectronModalBridge() {
     }
 
     const unsubscribe = api.onModalRequest(async (payload) => {
-      const { id, ...config } = payload || {};
+      const { id, component, ...config } = payload || {};
       if (!id) {
         return;
       }
       try {
-        const result = await showModal(config);
-        await api.resolveModalRequest(id, result ?? {});
+        if (component) {
+          const result = await showModal({
+            ...config,
+            component,
+          });
+          await api.resolveModalRequest(id, result ?? {});
+        } else {
+          const result = await showModal(config);
+          await api.resolveModalRequest(id, result ?? {});
+        }
       } catch (error) {
         await api.rejectModalRequest(id, { message: error?.message || String(error) });
       }
     });
 
     return () => {
-      try { unsubscribe?.(); } catch {}
+      try { unsubscribe?.(); } catch { }
     };
   }, [showModal]);
 

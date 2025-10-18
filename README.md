@@ -238,7 +238,7 @@ lyric-display-app/
 │   ├── data/
 |   |   ├── openhymnal-bundle.json          # Open Hymnal hymn lyrics bundle from public website
 |   |   └── openhymnal-sample.json          # Open Hymnal hymn lyrics sample format for search discoverability
-|   ├── intelligentLineSplitting.js         # Line splitting utility for robust lyrics parsing 
+|   ├── lineSplitting.js                    # Intelligent line splitting utility for smarter lyrics parsing 
 |   └── lyricsParsing.js                    # Shared TXT/LRC parsing helpers.
 ├── src/                                    # React frontend source
 │   ├── assets/                             # Fonts, etc.

@@ -11,6 +11,7 @@ import LyricsList from './LyricsList';
 import MobileLayout from './MobileLayout';
 import SetlistModal from './SetlistModal';
 import OnlineLyricsSearchModal from './OnlineLyricsSearchModal';
+import EasyWorshipImportModal from './EasyWorshipImportModal';
 import DraftApprovalModal from './DraftApprovalModal';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +22,8 @@ import useOutputSettings from '../hooks/useOutputSettings';
 import useSetlistActions from '../hooks/useSetlistActions';
 import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
+import useModal from '../hooks/useModal';
+
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSyncTimer } from '../hooks/useSyncTimer';
 
@@ -71,11 +74,15 @@ const LyricDisplayApp = () => {
   // Online lyrics search modal state
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
 
+  // EasyWorship import modal state
+  const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
+
   // Search state and helpers
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
 
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast } = useToast();
+  const { showModal } = useModal();
 
   const processLoadedLyrics = React.useCallback(async ({ content, fileName, filePath, fileType }, context = {}) => {
     const sanitize = (value) => (value || '')
@@ -202,6 +209,21 @@ const LyricDisplayApp = () => {
     window.addEventListener('lyrics-opened', listener);
     return () => window.removeEventListener('lyrics-opened', listener);
   }, [processLoadedLyrics]);
+
+  // Listen for EasyWorship import dialog from menu
+  React.useEffect(() => {
+    if (!window?.electronAPI?.onOpenEasyWorshipImport) return;
+
+    const off = window.electronAPI.onOpenEasyWorshipImport(() => {
+      setEasyWorshipModalOpen(true);
+    });
+
+    return () => {
+      try {
+        if (typeof off === 'function') off();
+      } catch { }
+    };
+  }, []);
 
   const fontOptions = ['Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat', 'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'];
 
@@ -437,23 +459,46 @@ const LyricDisplayApp = () => {
             </div>
           )}
 
-          {/* Output Toggle */}
+          {/* Output Toggle - UPDATE this section */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 mx-2">
               <Switch
                 checked={isOutputOn}
                 onCheckedChange={handleToggle}
                 className={`
-                scale-[1.8]
-                ${darkMode
+        scale-[1.8]
+        ${darkMode
                     ? "data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600"
                     : "data-[state=checked]:bg-black"}
-              `}
+      `}
               />
               <span className={`text-sm ml-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
               </span>
             </div>
+
+            {/* ADD THIS - Help trigger button */}
+            <button
+              onClick={() => {
+                showModal({
+                  title: 'Control Panel Help',
+                  headerDescription: 'Master your LyricDisplay workflow with these essential tools',
+                  component: 'ControlPanelHelp',
+                  variant: 'info',
+                  size: 'large',
+                  dismissLabel: 'Got it'
+                });
+              }}
+              className={`p-2 rounded-lg transition-colors ${darkMode
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                }`}
+              title="Control Panel Help"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
           </div>
 
           <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
@@ -638,6 +683,13 @@ const LyricDisplayApp = () => {
           onClose={handleCloseOnlineLyricsSearch}
           darkMode={darkMode}
           onImportLyrics={handleImportFromLibrary}
+        />
+
+        {/* EasyWorship Import Modal */}
+        <EasyWorshipImportModal
+          isOpen={easyWorshipModalOpen}
+          onClose={() => setEasyWorshipModalOpen(false)}
+          darkMode={darkMode}
         />
       </div>
     </>
