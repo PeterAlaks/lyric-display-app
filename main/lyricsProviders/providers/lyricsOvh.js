@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '../fetchWithTimeout.js';
+
 const BASE_URL = 'https://api.lyrics.ovh';
 
 export const definition = {
@@ -45,7 +47,8 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
   const url = `${BASE_URL}/suggest/${encodeURIComponent(query.trim())}`;
 
   try {
-    const resp = await fetchImpl(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+    const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
+    const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
     if (!resp.ok) {
       const message = `lyrics.ovh suggest failed with status ${resp.status}`;
       return { results: [], errors: [message] };
@@ -70,7 +73,8 @@ export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {})
 
   const url = `${BASE_URL}/v1/${encodeURIComponent(payload.artist)}/${encodeURIComponent(payload.title)}`;
 
-  const resp = await fetchImpl(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+  const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
+  const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
   if (!resp.ok) {
     const body = await resp.text();
     throw new Error(`lyrics.ovh lyrics request failed: ${resp.status} ${body}`);

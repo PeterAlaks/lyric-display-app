@@ -1,4 +1,5 @@
 import { getProviderKey } from '../../providerCredentials.js';
+import { fetchWithTimeout } from '../fetchWithTimeout.js';
 
 const BASE_URL = 'https://hymnary.org';
 
@@ -79,7 +80,8 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
   });
 
   try {
-    const resp = await fetchImpl(url, {
+    const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
+    const resp = await fetchFn(url, {
       signal,
       headers: {
         Accept: 'application/json',
@@ -130,7 +132,8 @@ export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {})
     format: 'json',
   });
 
-  const resp = await fetchImpl(url, {
+  const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
+  const resp = await fetchFn(url, {
     signal,
     headers: {
       Accept: 'application/json',

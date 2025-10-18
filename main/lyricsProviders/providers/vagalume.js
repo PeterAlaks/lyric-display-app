@@ -1,4 +1,5 @@
 import { getProviderKey } from '../../providerCredentials.js';
+import { fetchWithTimeout } from '../fetchWithTimeout.js';
 
 const BASE_URL = 'https://api.vagalume.com.br';
 
@@ -60,7 +61,8 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
   });
 
   try {
-    const resp = await fetchImpl(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+    const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
+    const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
     if (!resp.ok) {
       const message = `Vagalume search failed (${resp.status})`;
       return { results: [], errors: [message] };
@@ -105,7 +107,8 @@ export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {})
     : { art: payload.artist, mus: payload.title, apikey: key };
 
   const url = makeUrl('/search.php', params);
-  const resp = await fetchImpl(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+  const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
+  const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
   if (!resp.ok) {
     const body = await resp.text();
     throw new Error(`Vagalume lyrics request failed: ${resp.status} ${body}`);

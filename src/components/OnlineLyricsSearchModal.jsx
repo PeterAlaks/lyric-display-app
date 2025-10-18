@@ -836,6 +836,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                               <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200/40 text-gray-600'}`}>
                                 {provider.count} hit{provider.count === 1 ? '' : 's'}
                               </span>
+                              {provider.duration && (
+                                <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1000 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                                  {provider.duration}ms
+                                </span>
+                              )}
                               {provider.errors?.[0] && (
                                 <span className="text-[10px] text-red-500">{provider.errors[0]}</span>
                               )}
@@ -851,13 +856,15 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                       <p className={`mb-3 text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         Featured libraries
                       </p>
-                      <div className="flex gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         {providerDefinitions.map((provider) => {
                           const logoMap = {
                             lyricsOvh: '/logos/lyricsovh-logo.png',
                             vagalume: '/logos/vagalume-logo.png',
                             hymnary: '/logos/hymnaryorg-logo.png',
                             openHymnal: '/logos/openhymnal-logo.png',
+                            lrclib: '/logos/lrclib-logo.png',
+                            chartlyrics: '/logos/chartlyrics-logo.png',
                           };
 
                           return (
@@ -866,12 +873,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                               href={provider.homepage}
                               target="_blank"
                               rel="noreferrer"
-                              className="group relative flex-1 transition-all hover:opacity-75"
+                              className="group relative transition-all hover:opacity-75 hover:scale-105"
                             >
                               <img
                                 src={logoMap[provider.id]}
                                 alt={provider.displayName}
-                                className="w-full h-auto object-contain"
+                                className="h-10 w-auto object-contain"
                               />
                             </a>
                           );
@@ -895,6 +902,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                             'hymnary': '/logos/hymnaryorg-icon.png',
                             'openHymnal': '/logos/openhymnal-icon.png',
                             'lyricsOvh': '/logos/lyricsovh-icon.png',
+                            'lrclib': '/logos/lrclib-icon.png',
+                            'chartlyrics': '/logos/chartlyrics-icon.png',
                           };
 
                           return (

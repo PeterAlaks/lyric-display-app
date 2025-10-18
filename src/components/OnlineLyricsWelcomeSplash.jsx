@@ -39,12 +39,28 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
 
     const providers = [
         {
+            name: 'LRCLIB',
+            description: 'Free synced lyrics database with nearly 3 million lyrics',
+            requiresKey: false,
+            icon: '/logos/lrclib-icon.png',
+            color: 'blue',
+            link: 'https://lrclib.net/',
+        },
+        {
             name: 'Lyrics.ovh',
             description: 'General pop/rock catalog powered by Deezer',
             requiresKey: false,
             icon: '/logos/lyricsovh-icon.png',
             color: 'emerald',
             link: 'https://lyricsovh.docs.apiary.io/',
+        },
+        {
+            name: 'ChartLyrics',
+            description: 'Free lyrics API with good coverage of popular songs',
+            requiresKey: false,
+            icon: '/logos/chartlyrics-icon.png',
+            color: 'blue',
+            link: 'http://api.chartlyrics.com/apiv1.asmx',
         },
         {
             name: 'Vagalume',
@@ -135,7 +151,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                         </h2>
                         <div className="space-y-3">
                             {[
-                                'Search across 4 different lyrics providers simultaneously',
+                                'Search across different lyrics providers simultaneously',
                                 'Get live suggestions as you type or run a full catalog search',
                                 'Click any result to import lyrics directly into your control panel',
                                 'Providers without API keys still work with limited features',

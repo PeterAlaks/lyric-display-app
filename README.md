@@ -362,6 +362,8 @@ LyricDisplay integrates optional online lyrics search features powered by free a
 All lyrics, metadata, and related content displayed through these services remain the property of their respective copyright holders.
 
 ### Integrated Providers
+- **LRCLIB** — Free synced lyrics database with nearly 3 million lyrics. No API key required. Provides both plain and timestamped (LRC format) lyrics.
+- **ChartLyrics** — Free public lyrics API with good coverage of popular songs. No API key required.
 - **Lyrics.ovh** — Free lyrics API (public domain and licensed material) provided for educational and non-commercial use.  
 - **Vagalume** — © Vagalume Media Group. Lyrics and artist data are provided through the official Vagalume API.  
 - **Hymnary.org** — © Hymnary.org / Christian Classics Ethereal Library (CCEL). Content is provided for educational and liturgical purposes.  
