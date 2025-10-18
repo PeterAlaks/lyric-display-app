@@ -201,16 +201,20 @@ Each output can be independently configured:
 ```
 lyric-display-app/
 ├── main/                                   # Electron main script modules
-│   ├── lyricProviders/
+│   ├── lyricsProviders/
 |   |   ├── providers/
+|   |   |   ├── chartlyrics.js              # ChartLyrics lyrics provider definitions
 |   |   |   ├── hymnary.js                  # Hymnary.org lyrics provider definitions
+|   |   |   ├── lrclib.js                   # LRCLIB lyrics provider definitions
 |   |   |   ├── lyricsOvh.js                # Lyrics.ovh lyrics provider definitions
 |   |   |   ├── openHymnal.js               # Open Hymnal lyrics provider definitions
 |   |   |   └── vagalume                    # Vagalume lyrics provider definitions
 |   |   ├── cache.js                        # Online lyrics search data cache
+|   |   ├── fetchWithTimeout.js             # Fetch lyric data timeout moderator for providers
 |   |   └── index.js                        # Main online lyrics search initializer and aggregator
 |   ├── adminKey.js                         # Admin access key module
 |   ├── backend.js                          # Backend server starter
+|   ├── easyWorship.js                      # EasyWorship song data import and conversion engine
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
 |   ├── ipc.js                              # IPC handlers
 |   ├── menu.js                             # Window menu builder
@@ -236,6 +240,7 @@ lyric-display-app/
 |   └── secretManager.js                    # Module handling the secure management of app secrets
 ├── shared/
 │   ├── data/
+|   |   ├── knownArtists.json               # Popular artists name database for enhanced lyric search logic
 |   |   ├── openhymnal-bundle.json          # Open Hymnal hymn lyrics bundle from public website
 |   |   └── openhymnal-sample.json          # Open Hymnal hymn lyrics sample format for search discoverability
 |   ├── lineSplitting.js                    # Intelligent line splitting utility for smarter lyrics parsing 
@@ -250,14 +255,18 @@ lyric-display-app/
 |   |   ├── ui/                             # Shadcn UI components
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
 |   |   ├── ConnectionBackoffBanner.jsx     # Global connection backoff modal component
+|   |   ├── ConnectionDiagnosticsModal.jsx  # Connection diagnostics modal component
 |   |   ├── DraftApprovalModal.jsx          # Approval modal component for lyric drafts submitted from secondary controllers
+|   |   ├── EasyWorshipImportModal.jsx      # Song import from local EasyWorship store wizard
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
+|   |   ├── HelpContent.jsx                 # Help and operation tips modal 
 |   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
 |   |   ├── NewSongCanvas.jsx               # New/edit song text editor
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
+|   |   ├── OnlineLyricsWelcomeSplash.jsx   # Online Lyrics Search welcome and help modal component
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
 |   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
@@ -271,10 +280,11 @@ lyric-display-app/
 |   |   ├── useAuth.js                      # Authenticator hook for socket connections
 |   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
 |   |   ├── useEditorClipboard.js           # Hook for cut, copy and paste handlers
+|   |   ├── useEditorHistory.js             # Hook for history state management of lyrics editor canvas
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
 |   |   ├── useMenuShortcuts.js             # Hook for handling menu navigation/shortcuts
-|   |   ├── useNetworkStatus.js             # Internet connection status hook
 |   |   ├── useModal.js                     # Global modal hook
+|   |   ├── useNetworkStatus.js             # Internet connection status hook
 |   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
 |   |   ├── useSearch.js                    # Hook for search bar functionality
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
@@ -289,6 +299,8 @@ lyric-display-app/
 |   |   ├── ControlPanel.jsx                # Control panel page wrapper
 |   |   ├── Output1.jsx                     # Output 1 display
 |   |   └── Output2.jsx                     # Output 2 display
+│   ├── styles/
+|   |   └── fonts.css                       # Display font styles import and definitions
 │   ├── utils/
 |   |   ├── asyncLyricsParser.js            # Picks worker/IPC/sync parsing strategy.
 |   |   ├── connectionManager.js            # Socket connection management utility
@@ -303,14 +315,17 @@ lyric-display-app/
 │   ├── workers/
 |   |   └── lyricsParser.worker.js          # Web worker that parses lyrics off the UI thread.
 |   ├── App.jsx                             # React app main component
-|   ├── main.jsx                            # App entry point
-|   └── index.css                           # Global CSS
+|   ├── index.css                           # Global CSS and custom style definitions
+|   └── main.jsx                            # App entry point
 ├── .env                                    # Environment variables file
+├── components.json                         # Shadcn UI config
 ├── index.html                              # Alternative browser web app entry point
+├── jsconfig.json                           # Path and settings configurations for JS
 ├── main.js                                 # Electron main process
 ├── package.json                            # Dependencies and scripts
 ├── postcss.config.js                       # PostCSS configurations
 ├── preload.js                              # Electron preload script
+├── README.md                               # App documentation
 ├── tailwind.config.js                      # Tailwind configurations
 └── vite.config.js                          # Vite configurations
 ```
@@ -392,6 +407,7 @@ Their inclusion does **not imply endorsement, partnership, or affiliation** with
 - [GitHub Repository](https://github.com/PeterAlaks/lyric-display-updates)
 - [Developer Portfolio](https://linktr.ee/peteralaks)
 - [Documentation](https://github.com/PeterAlaks/lyric-display-app#readme)
+- [Support Development](https://paystack.shop/pay/lyricdisplay-support)
 
 ## Support
 
