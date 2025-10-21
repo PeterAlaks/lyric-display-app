@@ -125,6 +125,27 @@ function rtfToPlainText(rtfContent) {
         return '';
     }
 
+    const BRACKET_PAIRS = [
+        ['[', ']'],
+        ['(', ')'],
+        ['{', '}'],
+        ['<', '>'],
+    ];
+
+    /**
+     * Check if a line is a translation line based on bracket delimiters
+     * @param {string} line
+     * @returns {boolean}
+     */
+    function isTranslationLine(line) {
+        if (!line || typeof line !== 'string') return false;
+        const trimmed = line.trim();
+        if (trimmed.length <= 2) return false;
+        return BRACKET_PAIRS.some(([open, close]) =>
+            trimmed.startsWith(open) && trimmed.endsWith(close)
+        );
+    }
+
     let text = rtfContent;
 
     text = text.replace(/\{\\rtf1[^}]*\}/g, '');
@@ -132,13 +153,11 @@ function rtfToPlainText(rtfContent) {
     text = text.replace(/\{\\colortbl[^}]*\}/g, '');
     text = text.replace(/\{\\stylesheet[^}]*\}/g, '');
     text = text.replace(/\{\\info[^}]*\}/g, '');
-
     text = text.replace(/\{\\[^}]*\}/g, '');
 
     text = text.replace(/\\par\s*/g, '\n');
     text = text.replace(/\\line\s*/g, '\n');
-
-    text = text.replace(/\\sdslidemarker/g, '\n\n');
+    text = text.replace(/\\sdslidemarker/g, '\n');
 
     text = text.replace(/\\'92/g, "'");
     text = text.replace(/\\'91/g, "'");
@@ -175,10 +194,22 @@ function rtfToPlainText(rtfContent) {
     text = text.replace(/ +/g, ' ');
     text = text.replace(/\n /g, '\n');
     text = text.replace(/ \n/g, '\n');
-    text = text.replace(/\n{3,}/g, '\n\n');
 
-    text = text.split('\n').map(line => line.trim()).join('\n');
-    text = text.trim();
+    let lines = text.split('\n').map(line => line.trim()).filter(line => line);
+
+    const processedLines = [];
+    for (let i = 0; i < lines.length; i++) {
+        const currentLine = lines[i];
+        const nextLine = lines[i + 1];
+
+        processedLines.push(currentLine);
+
+        if (i < lines.length - 1 && !isTranslationLine(nextLine)) {
+            processedLines.push('');
+        }
+    }
+
+    text = processedLines.join('\n').trimEnd();
 
     return text;
 }

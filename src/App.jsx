@@ -7,9 +7,11 @@ import NewSongCanvas from './components/NewSongCanvas';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import JoinCodePromptBridge from './components/JoinCodePromptBridge';
 import { useDarkModeState } from './hooks/useStoreSelectors';
+import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
 import { ModalProvider } from '@/components/modal/ModalProvider';
 import useToast from '@/hooks/useToast';
+import useModal from '@/hooks/useModal';
 import ElectronModalBridge from './components/ElectronModalBridge';
 import QRCodeDialogBridge from './components/QRCodeDialogBridge';
 import { ControlSocketProvider } from './context/ControlSocketProvider';
@@ -24,6 +26,7 @@ export default function App() {
         <AppErrorBoundary>
           <ElectronModalBridge />
           <JoinCodePromptBridge />
+          <WelcomeSplashBridge />
           <UpdaterToastBridge />
           <QRCodeDialogBridge />
           <ShortcutsHelpBridge />
@@ -47,6 +50,53 @@ export default function App() {
       </ToastProvider>
     </ModalProvider>
   );
+}
+
+function WelcomeSplashBridge() {
+  const hasSeenWelcome = useLyricsStore((state) => state.hasSeenWelcome);
+  const setHasSeenWelcome = useLyricsStore((state) => state.setHasSeenWelcome);
+  const { showModal } = useModal();
+  const { darkMode } = useDarkModeState();
+
+  useEffect(() => {
+    if (hasSeenWelcome || !window.electronAPI) return;
+
+    const timer = setTimeout(() => {
+      showModal({
+        title: 'Welcome to LyricDisplay',
+        component: 'WelcomeSplash',
+        variant: 'info',
+        size: 'lg',
+        dismissible: true,
+        actions: [
+          {
+            label: 'View Integration Guide',
+            variant: 'default',
+            onSelect: () => {
+              showModal({
+                title: 'Streaming Software Integration',
+                headerDescription: 'Connect LyricDisplay to OBS, vMix, Wirecast and more',
+                component: 'IntegrationInstructions',
+                variant: 'info',
+                size: 'lg',
+                dismissLabel: 'Close'
+              });
+            }
+          },
+          {
+            label: 'Get Started',
+            variant: 'outline',
+            onSelect: () => { }
+          }
+        ]
+      });
+      setHasSeenWelcome(true);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [hasSeenWelcome, setHasSeenWelcome, showModal, darkMode]);
+
+  return null;
 }
 
 // Bridge updater events from main to toasts
@@ -94,7 +144,6 @@ function UpdaterToastBridge() {
   return null;
 }
 
-// Hard guard: prevents a render crash from blanking the UI in production
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);

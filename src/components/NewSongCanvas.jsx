@@ -9,6 +9,7 @@ import useEditorClipboard from '../hooks/useEditorClipboard';
 import useEditorHistory from '../hooks/useEditorHistory';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip } from '@/components/ui/tooltip';
 import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
 import { processRawTextToLines } from '../utils/parseLyrics';
 import useToast from '../hooks/useToast';
@@ -174,7 +175,7 @@ const NewSongCanvas = () => {
     };
   }, [showToast]);
 
-  const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef });
+  const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef, showToast });
 
   const lines = useMemo(() => content.split('\n'), [content]);
 
@@ -965,16 +966,18 @@ const NewSongCanvas = () => {
         {/* Mobile Layout - Two Rows */}
         <div className="md:hidden">
           <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={handleBack}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </button>
+            <Tooltip content="Return to control panel" side="right">
+              <button
+                onClick={handleBack}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+            </Tooltip>
 
             {/* Title and Help Button */}
             <div className="flex items-center gap-2">
@@ -993,8 +996,8 @@ const NewSongCanvas = () => {
                   });
                 }}
                 className={`p-1.5 rounded-lg transition-colors ${darkMode
-                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                   }`}
                 title="Song Canvas Help"
               >
@@ -1009,24 +1012,36 @@ const NewSongCanvas = () => {
 
           {/* Row 1: Undo, Redo, Cut, Copy, Paste, Cleanup */}
           <div className="flex items-center justify-center gap-1 mb-3">
-            <Button onClick={handleUndo} disabled={!canUndo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
-              <Undo className="w-4 h-4" />
-            </Button>
-            <Button onClick={handleRedo} disabled={!canRedo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
-              <Redo className="w-4 h-4" />
-            </Button>
-            <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cut">
-              <Scissors className="w-4 h-4" />
-            </Button>
-            <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Copy">
-              <Copy className="w-4 h-4" />
-            </Button>
-            <Button onClick={handlePaste} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Paste">
-              <ClipboardPaste className="w-4 h-4" />
-            </Button>
-            <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cleanup">
-              <Wand2 className="w-4 h-4" />
-            </Button>
+            <Tooltip content="Undo last change" side="top">
+              <Button onClick={handleUndo} disabled={!canUndo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
+                <Undo className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Redo last undone change" side="top">
+              <Button onClick={handleRedo} disabled={!canRedo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
+                <Redo className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Cut selected text" side="top">
+              <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cut">
+                <Scissors className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Copy selected text" side="top">
+              <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Copy">
+                <Copy className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Paste from clipboard" side="top">
+              <Button onClick={handlePaste} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Paste">
+                <ClipboardPaste className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Auto-format and clean up lyrics" side="top">
+              <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cleanup">
+                <Wand2 className="w-4 h-4" />
+              </Button>
+            </Tooltip>
           </div>
 
           {/* Row 2: Title and Action Button */}
@@ -1053,23 +1068,27 @@ const NewSongCanvas = () => {
               </Button>
             ) : (
               <>
-                <Button
-                  onClick={handleSave}
-                  disabled={isContentEmpty || isTitleEmpty}
-                  variant="ghost"
-                  size="sm"
-                  title="Save"
-                >
-                  <Save className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={handleSaveAndLoad}
-                  disabled={isContentEmpty || isTitleEmpty}
-                  className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white"
-                  size="sm"
-                >
-                  <FolderOpen className="w-4 h-4 mr-1" /> Save & Load
-                </Button>
+                <Tooltip content="Save lyrics file" side="left">
+                  <Button
+                    onClick={handleSave}
+                    disabled={isContentEmpty || isTitleEmpty}
+                    variant="ghost"
+                    size="sm"
+                    title="Save"
+                  >
+                    <Save className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Save file and load into control panel" side="left">
+                  <Button
+                    onClick={handleSaveAndLoad}
+                    disabled={isContentEmpty || isTitleEmpty}
+                    className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white"
+                    size="sm"
+                  >
+                    <FolderOpen className="w-4 h-4 mr-1" /> Save & Load
+                  </Button>
+                </Tooltip>
               </>
             )}
           </div>
@@ -1078,16 +1097,18 @@ const NewSongCanvas = () => {
         {/* Desktop Layout - Original Single Row */}
         <div className="hidden md:block">
           <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={handleBack}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </button>
+            <Tooltip content="Return to control panel" side="right">
+              <button
+                onClick={handleBack}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+            </Tooltip>
 
             {/* Title and Help Button */}
             <div className="flex items-center gap-2">
@@ -1120,49 +1141,69 @@ const NewSongCanvas = () => {
           </div>
           {/* Desktop Toolbar */}
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button onClick={handleUndo} disabled={!canUndo} variant="ghost"
-              className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
-              <Undo className="w-4 h-4" />
-            </Button>
-            <Button onClick={handleRedo} disabled={!canRedo} variant="ghost"
-              className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
-              <Redo className="w-4 h-4" />
-            </Button>
+            <Tooltip content="Undo last change (Ctrl+Z)" side="bottom">
+              <Button onClick={handleUndo} disabled={!canUndo} variant="ghost"
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
+                <Undo className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Redo last undone change (Ctrl+Shift+Z)" side="bottom">
+              <Button onClick={handleRedo} disabled={!canRedo} variant="ghost"
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
+                <Redo className="w-4 h-4" />
+              </Button>
+            </Tooltip>
             <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
 
             {/* Responsive Cut/Copy/Paste/Cleanup*/}
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
-                <Scissors className="w-4 h-4" /> Cut
-              </Button>
-              <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
-                <Copy className="w-4 h-4" /> Copy
-              </Button>
-              <Button onClick={handlePaste} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
-                <ClipboardPaste className="w-4 h-4" /> Paste
-              </Button>
-              <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
-                <Wand2 className="w-4 h-4" /> Cleanup
-              </Button>
+              <Tooltip content="Cut selected text" side="bottom">
+                <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost"
+                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  <Scissors className="w-4 h-4" /> Cut
+                </Button>
+              </Tooltip>
+              <Tooltip content="Copy selected text" side="bottom">
+                <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost"
+                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  <Copy className="w-4 h-4" /> Copy
+                </Button>
+              </Tooltip>
+              <Tooltip content="Paste from clipboard" side="bottom">
+                <Button onClick={handlePaste} variant="ghost"
+                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  <ClipboardPaste className="w-4 h-4" /> Paste
+                </Button>
+              </Tooltip>
+              <Tooltip content="Auto-format and clean up lyrics" side="bottom">
+                <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost"
+                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  <Wand2 className="w-4 h-4" /> Cleanup
+                </Button>
+              </Tooltip>
 
               {/* Icon-only versions appear below lg */}
               <div className="flex lg:hidden gap-1">
-                <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" title="Cut">
-                  <Scissors className="w-4 h-4" />
-                </Button>
-                <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" title="Copy">
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button onClick={handlePaste} variant="ghost" size="sm" title="Paste">
-                  <ClipboardPaste className="w-4 h-4" />
-                </Button>
-                <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" title="Cleanup">
-                  <Wand2 className="w-4 h-4" />
-                </Button>
+                <Tooltip content="Cut" side="bottom">
+                  <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" title="Cut">
+                    <Scissors className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Copy" side="bottom">
+                  <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" title="Copy">
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Paste" side="bottom">
+                  <Button onClick={handlePaste} variant="ghost" size="sm" title="Paste">
+                    <ClipboardPaste className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Cleanup" side="bottom">
+                  <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" title="Cleanup">
+                    <Wand2 className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
               </div>
             </div>
 
@@ -1182,22 +1223,26 @@ const NewSongCanvas = () => {
             />
 
             {!composeMode && (
-              <Button
-                onClick={handleSave}
-                disabled={isContentEmpty || isTitleEmpty}
-                variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
-              >
-                <Save className="w-4 h-4" /> Save
-              </Button>
+              <Tooltip content="Save lyrics file to disk" side="bottom">
+                <Button
+                  onClick={handleSave}
+                  disabled={isContentEmpty || isTitleEmpty}
+                  variant="ghost"
+                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+                >
+                  <Save className="w-4 h-4" /> Save
+                </Button>
+              </Tooltip>
             )}
-            <Button
-              onClick={composeMode ? handleLoadDraft : handleSaveAndLoad}
-              disabled={isContentEmpty || isTitleEmpty}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700"
-            >
-              <FolderOpen className="w-4 h-4" /> {composeMode ? 'Load Draft' : 'Save and Load'}
-            </Button>
+            <Tooltip content={composeMode ? "Submit draft for approval" : "Save file and load into control panel"} side="bottom">
+              <Button
+                onClick={composeMode ? handleLoadDraft : handleSaveAndLoad}
+                disabled={isContentEmpty || isTitleEmpty}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700"
+              >
+                <FolderOpen className="w-4 h-4" /> {composeMode ? 'Load Draft' : 'Save and Load'}
+              </Button>
+            </Tooltip>
           </div>
         </div>
       </div>

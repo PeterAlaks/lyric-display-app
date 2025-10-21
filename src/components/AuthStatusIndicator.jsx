@@ -3,6 +3,7 @@ import React, { useCallback, useEffect } from 'react';
 import { Shield, ShieldAlert, ShieldCheck, RefreshCw } from 'lucide-react';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
+import { Tooltip } from '@/components/ui/tooltip';
 import { resolveBackendUrl } from '../utils/network';
 
 const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshToken, darkMode = false }) => {
@@ -280,17 +281,19 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
   };
 
   return (
-    <button
-      onClick={showAuthModal}
-      className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${darkMode
-        ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-        }`}
-      title={`Authentication Status: ${getStatusText()}`}
-    >
-      {getStatusIcon()}
-      <span className="text-xs">{getStatusLabel()}</span>
-    </button>
+    <Tooltip content="See current socket connection status and mobile controller join code" side="bottom">
+      <button
+        onClick={showAuthModal}
+        className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${darkMode
+          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          }`}
+        title={`Authentication Status: ${getStatusText()}`}
+      >
+        {getStatusIcon()}
+        <span className="text-xs">{getStatusLabel()}</span>
+      </button>
+    </Tooltip>
   );
 };
 

@@ -321,6 +321,29 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
           { label: 'Documentation', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-app#readme'); } },
           { label: 'GitHub Repository', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://github.com/PeterAlaks/lyric-display-app'); } },
           { label: 'Connection Diagnostics', click: openConnectionDiagnostics },
+          {
+            label: 'Integration Guide',
+            click: async () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                try {
+                  await (showInAppModal
+                    ? showInAppModal({
+                      title: 'Streaming Software Integration',
+                      headerDescription: 'Connect LyricDisplay to OBS, vMix, or Wirecast',
+                      component: 'IntegrationInstructions',
+                      variant: 'info',
+                      size: 'lg',
+                      dismissLabel: 'Close'
+                    }, { timeout: 600000 })
+                    : Promise.resolve()
+                  );
+                } catch (err) {
+                  console.warn('Could not open integration guide:', err);
+                }
+              }
+            }
+          },
           { type: 'separator' },
           { label: 'More About Author', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://linktr.ee/peteralaks'); } },
           {

@@ -311,7 +311,7 @@ const SetlistModal = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black backdrop-blur-sm transition-opacity duration-300 ${exiting || entering ? 'opacity-0' : 'opacity-50'}`}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${exiting || entering ? 'opacity-0' : 'opacity-100'}`}
         onClick={closeModal}
       />
 

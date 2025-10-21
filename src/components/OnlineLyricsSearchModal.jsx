@@ -39,6 +39,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const [lastError, setLastError] = useState(null);
   const [retrying, setRetrying] = useState(false);
   const [advancedExpanded, setAdvancedExpanded] = useState(false);
+  const advancedContentRef = useRef(null);
+  const [advancedMaxHeight, setAdvancedMaxHeight] = useState('0px');
   const isOnline = useNetworkStatus();
 
   const { showToast } = useToast();
@@ -241,6 +243,27 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       }
     };
   }, [query, activeTab, isOpen, hasElectronBridge]);
+
+  useEffect(() => {
+    const content = advancedContentRef.current;
+    if (!content) return;
+
+    if (advancedExpanded) {
+      setAdvancedMaxHeight('0px');
+
+      const timer = setTimeout(() => {
+        setAdvancedMaxHeight(`${content.scrollHeight}px`);
+      }, 0);
+      return () => clearTimeout(timer);
+    } else {
+
+      setAdvancedMaxHeight(`${content.scrollHeight}px`);
+      const timer = setTimeout(() => {
+        setAdvancedMaxHeight('0px');
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [advancedExpanded]);
 
   const providerMap = useMemo(() => {
     const map = new Map();
@@ -563,7 +586,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className={`absolute inset-0 bg-black transition-opacity duration-300 ${(exiting || entering) ? 'opacity-0' : 'opacity-60'}`}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${(exiting || entering) ? 'opacity-0' : 'opacity-100'}`}
         onClick={() => onClose?.()}
       />
       <div className={modalClasses}>
@@ -612,7 +635,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-scroll px-6 py-5">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex items-center gap-2">
               <TabsList className={darkMode ? 'bg-gray-800 text-gray-300' : undefined}>
@@ -878,28 +901,32 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     <div className={`mt-6 rounded-md border ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
                       <button
                         onClick={() => {
-                          const newState = !advancedExpanded;
-                          setAdvancedExpanded(newState);
+                          const newExpanded = !advancedExpanded;
+                          setAdvancedExpanded(newExpanded);
                           try {
-                            localStorage.setItem('lyricdisplay_advancedExpanded', String(newState));
+                            localStorage.setItem('lyricdisplay_advancedExpanded', newExpanded.toString());
                           } catch (err) {
                             console.warn('Failed to save advanced section state:', err);
                           }
                         }}
-                        className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors ${darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100/50'
-                          }`}
+                        className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors ${darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100/50'}`}
                       >
                         <span className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
                           Advanced Options (API Key Management and more)
                         </span>
                         <ChevronRight
-                          className={`w-4 h-4 transition-transform ${advancedExpanded ? 'rotate-90' : ''} ${darkMode ? 'text-gray-400' : 'text-gray-500'
-                            }`}
+                          className={`w-4 h-4 transition-transform ${advancedExpanded ? 'rotate-90' : ''} ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
                         />
                       </button>
 
-                      {advancedExpanded && (
-                        <div className={`px-4 pb-4 space-y-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <div
+                        className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                        style={{ maxHeight: advancedMaxHeight }}
+                      >
+                        <div
+                          ref={advancedContentRef}
+                          className={`px-4 pb-4 space-y-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                        >
                           {/* Provider Status */}
                           {providerStatuses?.length > 0 && (
                             <div className="pt-4">
@@ -1015,7 +1042,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                             </div>
                           )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </>

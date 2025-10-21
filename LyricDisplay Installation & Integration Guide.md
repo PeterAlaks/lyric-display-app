@@ -48,8 +48,8 @@ LyricDisplay is a free desktop app that provides perfectly clear, sharp and tran
 
 **1. Download Latest Release**
 
-&nbsp;  [​Click here to download latest version of the app​​​](https://github.com/PeterAlaks/lyric-display-updates/releases/latest)
-&nbsp;  Download: LyricDisplay-Setup.exe or full release assets (recommended)
+&nbsp;  [​Click here to download latest version of the app​​​](https://mega.nz/file/guRHGaoB#BD5ZRfGWcwro8fXqgGh7-OgSW15J45JQ0OQ4U5Kn1nI)
+&nbsp;  Download: LyricDisplay-Setup.exe
 
 **2. Run Installer**
 
@@ -364,8 +364,8 @@ Generally, follow same steps from OBS Integration but tailor the app setup to Vm
 
 ###### **Support and Resources**
 
-[​Click here to download the latest version of the app​​​](https://github.com/PeterAlaks/lyric-display-updates/releases/latest)
-[​Click here to log issues or complaints​​​](https://github.com/PeterAlaks/lyric-display-updates/issues)
+[​Click here to download the latest version of the app​​​](https://mega.nz/file/guRHGaoB#BD5ZRfGWcwro8fXqgGh7-OgSW15J45JQ0OQ4U5Kn1nI)
+[​Click here to log issues or complaints​​​](https://github.com/PeterAlaks/lyric-display-app/issues)
 ​[Click here to contact the developer for technical support or lodge further complaints/improvement suggestions](https://linktr.ee/peteralaks)
 [​Click here to see app source code​​​](https://github.com/PeterAlaks/lyric-display-app)
 

@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
 import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp } from '../HelpContent';
+import { WelcomeSplash } from '../WelcomeSplash';
+import { IntegrationInstructions } from '../IntegrationInstructions';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -309,6 +311,12 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'SongCanvasHelp' && (
                         <SongCanvasHelp darkMode={isDark} />
+                      )}
+                      {modal.component === 'WelcomeSplash' && (
+                        <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />
+                      )}
+                      {modal.component === 'IntegrationInstructions' && (
+                        <IntegrationInstructions darkMode={isDark} />
                       )}
 
                       {/* Render standard description/body modals */}

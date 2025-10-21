@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { formatLyrics } from '../utils/lyricsFormat';
 
-const useEditorClipboard = ({ content, setContent, textareaRef }) => {
+const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => {
   const handleCut = useCallback(async () => {
     if (!textareaRef.current) return;
     const start = textareaRef.current.selectionStart;
@@ -70,7 +70,13 @@ const useEditorClipboard = ({ content, setContent, textareaRef }) => {
       enableSplitting: true,
     });
     setContent(formattedContent);
+    showToast({
+      title: 'Lyrics cleaned',
+      message: 'Formatting applied successfully.',
+      variant: 'success'
+    });
   }, [content, setContent]);
+
 
   return { handleCut, handleCopy, handlePaste, handleTextareaPaste, handleCleanup };
 };

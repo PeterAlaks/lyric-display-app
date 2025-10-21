@@ -23,6 +23,7 @@ import useSetlistActions from '../hooks/useSetlistActions';
 import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
+import { Tooltip } from '@/components/ui/tooltip';
 
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSyncTimer } from '../hooks/useSyncTimer';
@@ -321,97 +322,103 @@ const LyricDisplayApp = () => {
             />
             <div className="flex items-center gap-2">
               {/* Online Lyrics Search Button */}
-              <button
-                className={`p-2 rounded-lg font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                title="Search online for lyrics"
-                onClick={handleOpenOnlineLyricsSearch}
-              >
-                <Globe className="w-5 h-5" />
-              </button>
+              <Tooltip content="Search and import lyrics from online providers" side="bottom">
+                <button
+                  className={`p-2 rounded-lg font-medium transition-colors ${darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  title="Search online for lyrics"
+                  onClick={handleOpenOnlineLyricsSearch}
+                >
+                  <Globe className="w-5 h-5" />
+                </button>
+              </Tooltip>
 
               {/* Setlist Button */}
-              <button
-                className={`p-2 rounded-lg font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                title="Open setlist"
-                onClick={handleOpenSetlist}
-              >
-                <List className="w-5 h-5" />
-              </button>
+              <Tooltip content="View and manage your song setlist (up to 25 songs)" side="bottom">
+                <button
+                  className={`p-2 rounded-lg font-medium transition-colors ${darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  title="Open setlist"
+                  onClick={handleOpenSetlist}
+                >
+                  <List className="w-5 h-5" />
+                </button>
+              </Tooltip>
 
               {/* Sync Outputs Button - Icon Only */}
-              <button
-                disabled={!isConnected || !isAuthenticated || !ready}
-                className={`p-2 rounded-lg font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
-                  ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
-                  : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
-                  }`}
-                title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync current state to outputs"}
-                onClick={() => {
-                  if (!isConnected || !isAuthenticated) {
-                    showToast({
-                      title: 'Cannot Sync',
-                      message: 'Not connected or authenticated.',
-                      variant: 'warning'
-                    });
-                    return;
-                  }
+              <Tooltip content="Force refresh all output displays with current state" side="bottom">
+                <button
+                  disabled={!isConnected || !isAuthenticated || !ready}
+                  className={`p-2 rounded-lg font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
+                    ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
+                    : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
+                    }`}
+                  title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync current state to outputs"}
+                  onClick={() => {
+                    if (!isConnected || !isAuthenticated) {
+                      showToast({
+                        title: 'Cannot Sync',
+                        message: 'Not connected or authenticated.',
+                        variant: 'warning'
+                      });
+                      return;
+                    }
 
-                  try {
-                    let syncSuccess = true;
+                    try {
+                      let syncSuccess = true;
 
-                    if (lyrics && lyrics.length > 0) {
-                      if (!emitLyricsLoad(lyrics)) {
-                        syncSuccess = false;
-                      }
-                      if (selectedLine !== null && selectedLine !== undefined) {
-                        if (!emitLineUpdate(selectedLine)) {
+                      if (lyrics && lyrics.length > 0) {
+                        if (!emitLyricsLoad(lyrics)) {
+                          syncSuccess = false;
+                        }
+                        if (selectedLine !== null && selectedLine !== undefined) {
+                          if (!emitLineUpdate(selectedLine)) {
+                            syncSuccess = false;
+                          }
+                        }
+                        if (output1Settings && !emitStyleUpdate('output1', output1Settings)) {
+                          syncSuccess = false;
+                        }
+                        if (output2Settings && !emitStyleUpdate('output2', output2Settings)) {
                           syncSuccess = false;
                         }
                       }
-                      if (output1Settings && !emitStyleUpdate('output1', output1Settings)) {
+
+                      if (!emitOutputToggle(isOutputOn)) {
                         syncSuccess = false;
                       }
-                      if (output2Settings && !emitStyleUpdate('output2', output2Settings)) {
-                        syncSuccess = false;
+
+                      if (syncSuccess) {
+                        window.dispatchEvent(new CustomEvent('sync-completed', { detail: { source: 'manual' } }));
+                        showToast({
+                          title: 'Outputs Synced',
+                          message: 'Output displays updated successfully.',
+                          variant: 'success'
+                        });
+                      } else {
+                        showToast({
+                          title: 'Sync Failed',
+                          message: 'Outputs were not updated. Check the connection and try again.',
+                          variant: 'error'
+                        });
                       }
-                    }
-
-                    if (!emitOutputToggle(isOutputOn)) {
-                      syncSuccess = false;
-                    }
-
-                    if (syncSuccess) {
-                      window.dispatchEvent(new CustomEvent('sync-completed', { detail: { source: 'manual' } }));
-                      showToast({
-                        title: 'Outputs Synced',
-                        message: 'Output displays updated successfully.',
-                        variant: 'success'
-                      });
-                    } else {
+                    } catch (error) {
+                      console.error('Manual sync failed:', error);
                       showToast({
                         title: 'Sync Failed',
-                        message: 'Outputs were not updated. Check the connection and try again.',
+                        message: 'An unexpected error occurred while syncing outputs.',
                         variant: 'error'
                       });
                     }
-                  } catch (error) {
-                    console.error('Manual sync failed:', error);
-                    showToast({
-                      title: 'Sync Failed',
-                      message: 'An unexpected error occurred while syncing outputs.',
-                      variant: 'error'
-                    });
-                  }
-                }}
-              >
-                <RefreshCw className="w-5 h-5" />
-              </button>
+                  }}
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </button>
+              </Tooltip>
 
               {/* Authentication Status Indicator */}
               <AuthStatusIndicator
@@ -426,23 +433,27 @@ const LyricDisplayApp = () => {
 
           {/* Load and Create Buttons */}
           <div className="flex gap-3 mb-3">
-            <button
-              className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
-              onClick={openFileDialog}
-            >
-              <FolderOpen className="w-5 h-5" />
-              Load lyrics file (.txt, .lrc)
-            </button>
-            <button
-              className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              onClick={handleCreateNewSong}
-              title="Create new lyrics"
-            >
-              <FileText className="w-5 h-5" />
-            </button>
+            <Tooltip content="Load a .txt or .lrc lyrics file from your computer" side="right">
+              <button
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
+                onClick={openFileDialog}
+              >
+                <FolderOpen className="w-5 h-5" />
+                Load lyrics file (.txt, .lrc)
+              </button>
+            </Tooltip>
+            <Tooltip content="Open the song canvas to create new lyrics from scratch" side="left">
+              <button
+                className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                onClick={handleCreateNewSong}
+                title="Create new lyrics"
+              >
+                <FileText className="w-5 h-5" />
+              </button>
+            </Tooltip>
           </div>
           <input
             type="file"
@@ -562,31 +573,35 @@ const LyricDisplayApp = () => {
               {hasLyrics && (
                 <div className="flex items-center gap-2">
                   {/* Add to Setlist Button */}
-                  <button
-                    onClick={handleAddToSetlist}
-                    aria-disabled={addDisabled}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${addDisabled
-                      ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
-                      : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')
-                      }`}
-                    title={addTitle}
-                    style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add to Setlist
-                  </button>
+                  <Tooltip content="Add current lyrics to your setlist for quick access during service" side="bottom">
+                    <button
+                      onClick={handleAddToSetlist}
+                      aria-disabled={addDisabled}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${addDisabled
+                        ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
+                        : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')
+                        }`}
+                      title={addTitle}
+                      style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add to Setlist
+                    </button>
+                  </Tooltip>
 
                   {/* Edit Button */}
-                  <button
-                    onClick={handleEditLyrics}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                      }`}
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit Lyrics
-                  </button>
+                  <Tooltip content="Edit current lyrics in the song canvas editor" side="bottom">
+                    <button
+                      onClick={handleEditLyrics}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode
+                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                        }`}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit Lyrics
+                    </button>
+                  </Tooltip>
                 </div>
               )}
             </div>

@@ -5,6 +5,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip } from '@/components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
@@ -257,8 +258,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
             });
           }}
           className={`p-1.5 rounded-lg transition-colors ${darkMode
-              ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-              : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+            ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+            : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
             }`}
           title="Output Settings Help"
         >
@@ -270,7 +271,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Lyrics Position */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={AlignVerticalSpaceAround} text="Lyrics Position" />
+        <Tooltip content="Choose where lyrics appear vertically on screen (centre is enforced in full screen mode)" side="right">
+          <LabelWithIcon icon={AlignVerticalSpaceAround} text="Lyrics Position" />
+        </Tooltip>
         <div className="w-full">
           <Select
             value={lyricsPositionValue}
@@ -297,7 +300,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Font Picker */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={Type} text="Font Style" />
+        <Tooltip content="Select font family for lyric display" side="right">
+          <LabelWithIcon icon={Type} text="Font Style" />
+        </Tooltip>
         <Select value={settings.fontStyle} onValueChange={(val) => update('fontStyle', val)}>
           <SelectTrigger className={`w-full ${darkMode
             ? 'bg-gray-700 border-gray-600 text-gray-200'
@@ -322,50 +327,62 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Bold / Italic / Underline / All Caps */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={TextQuote} text="Emphasis" />
+        <Tooltip content="Apply text styling: bold, italic, underline, or all caps" side="right">
+          <LabelWithIcon icon={TextQuote} text="Emphasis" />
+        </Tooltip>
         <div className="flex gap-2 flex-wrap">
-          <Button
-            size="icon"
-            variant={settings.bold ? 'default' : 'outline'}
-            onClick={() => update('bold', !settings.bold)}
-            title="Bold"
-            className={!settings.bold && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-          >
-            <Bold className="w-4 h-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant={settings.italic ? 'default' : 'outline'}
-            onClick={() => update('italic', !settings.italic)}
-            title="Italic"
-            className={!settings.italic && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-          >
-            <Italic className="w-4 h-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant={settings.underline ? 'default' : 'outline'}
-            onClick={() => update('underline', !settings.underline)}
-            title="Underline"
-            className={!settings.underline && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-          >
-            <Underline className="w-4 h-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant={settings.allCaps ? 'default' : 'outline'}
-            onClick={() => update('allCaps', !settings.allCaps)}
-            title="All Caps"
-            className={!settings.allCaps && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-          >
-            <CaseUpper className="w-4 h-4" />
-          </Button>
+          <Tooltip content="Make text bold" side="top">
+            <Button
+              size="icon"
+              variant={settings.bold ? 'default' : 'outline'}
+              onClick={() => update('bold', !settings.bold)}
+              title="Bold"
+              className={!settings.bold && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+            >
+              <Bold className="w-4 h-4" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Make text italic" side="top">
+            <Button
+              size="icon"
+              variant={settings.italic ? 'default' : 'outline'}
+              onClick={() => update('italic', !settings.italic)}
+              title="Italic"
+              className={!settings.italic && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+            >
+              <Italic className="w-4 h-4" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Underline text" side="top">
+            <Button
+              size="icon"
+              variant={settings.underline ? 'default' : 'outline'}
+              onClick={() => update('underline', !settings.underline)}
+              title="Underline"
+              className={!settings.underline && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+            >
+              <Underline className="w-4 h-4" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Convert text to uppercase" side="top">
+            <Button
+              size="icon"
+              variant={settings.allCaps ? 'default' : 'outline'}
+              onClick={() => update('allCaps', !settings.allCaps)}
+              title="All Caps"
+              className={!settings.allCaps && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+            >
+              <CaseUpper className="w-4 h-4" />
+            </Button>
+          </Tooltip>
         </div>
       </div>
 
       {/* Font Size */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={TextCursorInput} text="Font Size" />
+        <Tooltip content="Adjust text size in pixels (24-100)" side="right">
+          <LabelWithIcon icon={TextCursorInput} text="Font Size" />
+        </Tooltip>
         <Input
           type="number"
           value={settings.fontSize}
@@ -381,7 +398,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Font Color */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={Paintbrush} text="Font Colour" />
+        <Tooltip content="Choose the color of your lyrics text" side="right">
+          <LabelWithIcon icon={Paintbrush} text="Font Colour" />
+        </Tooltip>
         <Input
           type="color"
           value={settings.fontColor}
@@ -395,7 +414,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Text Border */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={Frame} text="Text Border" />
+        <Tooltip content="Add an outline around text for better visibility (0-10px)" side="right">
+          <LabelWithIcon icon={Frame} text="Text Border" />
+        </Tooltip>
         <div className="flex gap-2 items-center">
           <Input
             type="color"
@@ -422,7 +443,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Drop Shadow */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={Contrast} text="Drop Shadow" />
+        <Tooltip content="Add shadow behind text for depth (0-10 opacity)" side="right">
+          <LabelWithIcon icon={Contrast} text="Drop Shadow" />
+        </Tooltip>
         <div className="flex gap-2 items-center">
           <Input
             type="color"
@@ -449,7 +472,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Background */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={Square} text="Background" />
+        <Tooltip content="Set background band with custom color and opacity behind lyrics" side="right">
+          <LabelWithIcon icon={Square} text="Background" />
+        </Tooltip>
         <div className="flex items-center gap-2 justify-end w-full">
           <Input
             type="color"
@@ -480,7 +505,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* X and Y Margins */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={Move} text="X & Y Margins" />
+        <Tooltip content="Adjust horizontal and vertical positioning offset" side="right">
+          <LabelWithIcon icon={Move} text="X & Y Margins" />
+        </Tooltip>
         <div className="flex gap-2 items-center">
           <Input
             type="number"
@@ -505,7 +532,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Full Screen Mode */}
       <div className="flex items-center justify-between gap-4">
-        <LabelWithIcon icon={ScreenShare} text="Full Screen Mode" />
+        <Tooltip content="Enable full screen display with custom background settings" side="right">
+          <LabelWithIcon icon={ScreenShare} text="Full Screen Mode" />
+        </Tooltip>
         <div className="flex items-center gap-3 justify-end w-full">
           <Switch
             checked={fullScreenModeChecked}

