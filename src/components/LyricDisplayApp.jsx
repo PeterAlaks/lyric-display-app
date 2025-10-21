@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, Edit, List, Globe, Plus } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useDarkModeState, useSetlistState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -345,7 +345,7 @@ const LyricDisplayApp = () => {
                   title="Open setlist"
                   onClick={handleOpenSetlist}
                 >
-                  <List className="w-5 h-5" />
+                  <ListMusic className="w-5 h-5" />
                 </button>
               </Tooltip>
 

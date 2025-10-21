@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { List, RefreshCw, FileText } from 'lucide-react';
+import { ListMusic, RefreshCw, FileText } from 'lucide-react';
 import { useLyricsState, useOutputState, useDarkModeState, useSetlistState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
@@ -146,7 +146,7 @@ const MobileLayout = () => {
                   }`}
                 title="Open setlist"
               >
-                <List className="w-5 h-5" />
+                <ListMusic className="w-5 h-5" />
               </button>
               {/* Sync Outputs Button */}
               <button
