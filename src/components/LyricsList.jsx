@@ -8,7 +8,7 @@ import useSocket from '../hooks/useSocket';
 
 const DEFAULT_ROW_HEIGHT = 48;
 const ROW_GAP = 8;
-const VIRTUALIZATION_THRESHOLD = 40;
+const VIRTUALIZATION_THRESHOLD = 200;
 const HORIZONTAL_PADDING_PX = 16;
 
 export default function LyricsList({
