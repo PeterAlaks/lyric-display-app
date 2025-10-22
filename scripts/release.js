@@ -548,6 +548,7 @@ async function main() {
 
                     if (shouldCommit) {
                         try {
+                            execSync('npm run update-version', { stdio: 'inherit' });
                             execSync('git add README.md "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
                             execSync(`git commit -m "chore: update MEGA download links for v${version}"`, { stdio: 'inherit' });
                             execSync('git push', { stdio: 'inherit' });
