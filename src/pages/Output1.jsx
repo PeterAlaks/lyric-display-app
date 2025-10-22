@@ -56,6 +56,23 @@ const Output1 = () => {
   }, [socket, isAuthenticated]);
 
   useEffect(() => {
+    const transparentStyle = 'background: transparent !important';
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+
+    if (html) html.setAttribute('style', transparentStyle);
+    if (body) body.setAttribute('style', transparentStyle);
+    if (root) root.setAttribute('style', transparentStyle);
+
+    return () => {
+      if (html) html.removeAttribute('style');
+      if (body) body.removeAttribute('style');
+      if (root) root.removeAttribute('style');
+    };
+  }, []);
+
+  useEffect(() => {
     if (!socket) return;
 
     const handleCurrentState = (state) => {
