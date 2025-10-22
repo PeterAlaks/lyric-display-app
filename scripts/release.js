@@ -349,7 +349,8 @@ async function main() {
         console.log(chalk.blue('\n☁️  Pushing commit and tags to GitHub...'));
         try {
             execSync('git push', { stdio: 'inherit' });
-            execSync('git push --tags', { stdio: 'inherit' });
+            execSync(`git push origin v${appliedVersion}`, { stdio: 'inherit' });
+
         } catch (pushErr) {
             console.error(chalk.red('\n⚠️ Push failed:'), pushErr.message);
             console.log(chalk.yellow('\nTip: Ensure you have a remote set (git remote -v) and correct permissions.'));
