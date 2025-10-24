@@ -4,9 +4,10 @@ import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
 import { resolveBackendUrl } from '../utils/network';
+import { calculateOptimalFontSize, applyTruncation } from '../utils/maxLinesCalculator';
 
 const Output2 = () => {
-  const { socket, isConnected, connectionStatus, isAuthenticated } = useSocket('output2');
+  const { socket, isConnected, connectionStatus, isAuthenticated, emitStyleUpdate, emitOutputMetrics } = useSocket('output2');
   const { lyrics, selectedLine, setLyrics, selectLine } = useLyricsState();
   const { isOutputOn, setIsOutputOn } = useOutputState();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
@@ -14,6 +15,11 @@ const Output2 = () => {
   const stateRequestTimeoutRef = useRef(null);
   const pendingStateRequestRef = useRef(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
+
+  const [adjustedFontSize, setAdjustedFontSize] = useState(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+  const measureRef = useRef(null);
+  const textContainerRef = useRef(null);
 
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
@@ -188,6 +194,9 @@ const Output2 = () => {
     fullScreenBackgroundMedia,
     xMargin = 0,
     yMargin = 0,
+    maxLinesEnabled = false,
+    maxLines = 3,
+    minFontSize = 24,
   } = output2Settings;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -262,7 +271,7 @@ const Output2 = () => {
           preload="auto"
           src={mediaSource}
           onError={(e) => {
-            logError('Output1: Failed to load background video:', mediaSource);
+            logError('Output2: Failed to load background video:', mediaSource);
           }}
         />
       );
@@ -276,7 +285,7 @@ const Output2 = () => {
         src={mediaSource}
         alt="Full screen lyric background"
         onError={(e) => {
-          logError('Output1: Failed to load background image:', mediaSource);
+          logError('Output2: Failed to load background image:', mediaSource);
         }}
       />
     );
@@ -295,15 +304,102 @@ const Output2 = () => {
     return allCaps ? text.toUpperCase() : text;
   };
 
+  useEffect(() => {
+    if (!maxLinesEnabled) {
+      if (adjustedFontSize !== null) {
+        setAdjustedFontSize(null);
+        setIsTruncated(false);
+      }
+      const updates = { adjustedFontSize: null, autosizerActive: false };
+      updateOutput2Settings(updates);
+      if (emitOutputMetrics && isConnected && isAuthenticated) {
+        try {
+          emitOutputMetrics('output2', { adjustedFontSize: null, autosizerActive: false });
+        } catch { }
+      }
+      return;
+    }
+
+    if (!line || !isVisible) {
+      return;
+    }
+
+    const rafId = requestAnimationFrame(() => {
+      const containerWidth = textContainerRef.current ? textContainerRef.current.clientWidth : null;
+      const result = calculateOptimalFontSize({
+        text: line,
+        fontSize,
+        maxLines,
+        minFontSize,
+        fontStyle,
+        bold,
+        italic,
+        horizontalMarginRem,
+        processDisplayText,
+        currentAdjustedSize: adjustedFontSize,
+        maxLinesEnabled,
+        containerWidth,
+      });
+
+      const safeAdjusted = (result.adjustedSize === null)
+        ? null
+        : (Number.isFinite(result.adjustedSize) && result.adjustedSize > 0 ? result.adjustedSize : null);
+
+      setAdjustedFontSize(safeAdjusted);
+      setIsTruncated(Boolean(result.isTruncated));
+
+      const autosizerActive = Boolean(maxLinesEnabled && safeAdjusted !== null && safeAdjusted !== fontSize);
+
+      const updates = { adjustedFontSize: safeAdjusted, autosizerActive };
+      updateOutput2Settings(updates);
+      if (emitOutputMetrics && isConnected && isAuthenticated) {
+        try {
+          emitOutputMetrics('output2', {
+            adjustedFontSize: safeAdjusted,
+            autosizerActive,
+          });
+        } catch { }
+      }
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [
+    maxLinesEnabled,
+    line,
+    fontSize,
+    maxLines,
+    minFontSize,
+    fontStyle,
+    bold,
+    italic,
+    horizontalMarginRem,
+    allCaps,
+    isVisible,
+    adjustedFontSize
+  ]);
+
+  useEffect(() => {
+    if (emitOutputMetrics && isConnected && isAuthenticated) {
+      try {
+        emitOutputMetrics('output2', {
+          adjustedFontSize,
+          autosizerActive: Boolean(maxLinesEnabled && adjustedFontSize !== null && adjustedFontSize !== fontSize),
+        });
+      } catch { }
+    }
+  }, [adjustedFontSize, maxLinesEnabled, fontSize, isConnected, isAuthenticated, emitOutputMetrics]);
+
   const renderContent = () => {
     const processedText = processDisplayText(line);
 
-    if (processedText.includes('\n')) {
-      const lines = processedText.split('\n');
+    const displayText = applyTruncation(processedText, isTruncated && maxLinesEnabled);
+
+    if (displayText.includes('\n')) {
+      const lines = displayText.split('\n');
       return (
         <div className="space-y-1">
           {lines.map((lineText, index) => {
-            const displayText = index > 0
+            const lineDisplayText = index > 0
               ? lineText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim()
               : lineText;
 
@@ -316,7 +412,7 @@ const Output2 = () => {
                   color: index > 0 ? '#FBBF24' : 'inherit'
                 }}
               >
-                {displayText}
+                {lineDisplayText}
               </div>
             );
           })}
@@ -324,7 +420,7 @@ const Output2 = () => {
       );
     }
 
-    return processedText;
+    return displayText;
   };
 
   return (
@@ -335,6 +431,7 @@ const Output2 = () => {
       }}
     >
       {renderFullScreenMedia()}
+      <div ref={measureRef} style={{ position: 'absolute', visibility: 'hidden' }} />
       <div
         className="relative z-10 flex w-full h-full"
         style={{
@@ -363,9 +460,10 @@ const Output2 = () => {
             className="leading-none"
           >
             <div
+              ref={textContainerRef}
               style={{
                 fontFamily: fontStyle,
-                fontSize: `${fontSize}px`,
+                fontSize: `${(adjustedFontSize ?? fontSize)}px`,
                 fontWeight: bold ? 'bold' : 'normal',
                 fontStyle: italic ? 'italic' : 'normal',
                 textDecoration: underline ? 'underline' : 'none',
@@ -376,8 +474,17 @@ const Output2 = () => {
                 width: '100%',
                 maxWidth: '100%',
                 lineHeight: 1.05,
+                transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
+                display: maxLinesEnabled ? '-webkit-box' : 'block',
+                WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
+                WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
+                overflow: maxLinesEnabled ? 'hidden' : 'visible',
+                textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word',
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
               }}
-              className="transition-opacity duration-500 ease-in-out"
             >
               {renderContent()}
             </div>

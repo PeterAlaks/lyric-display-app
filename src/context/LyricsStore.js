@@ -1,6 +1,4 @@
-// Project: LyricDisplay App
 // File: src/context/LyricsStore.js
-// This file defines the Zustand store for managing lyrics, output settings, and setlist.
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -74,7 +72,12 @@ const useLyricsStore = create(
         fullScreenBackgroundMediaName: '',
         fullScreenRestorePosition: null,
         xMargin: 3.5,
-        yMargin: 0
+        yMargin: 0,
+        maxLinesEnabled: false,
+        maxLines: 3,
+        minFontSize: 24,
+        adjustedFontSize: null,
+        autosizerActive: false
       },
       output2Settings: {
         fontStyle: 'Bebas Neue',
@@ -98,7 +101,12 @@ const useLyricsStore = create(
         fullScreenBackgroundMediaName: '',
         fullScreenRestorePosition: null,
         xMargin: 3.5,
-        yMargin: 0
+        yMargin: 0,
+        maxLinesEnabled: false,
+        maxLines: 3,
+        minFontSize: 24,
+        adjustedFontSize: null,
+        autosizerActive: false
       },
       updateOutputSettings: (output, newSettings) =>
         set((state) => ({

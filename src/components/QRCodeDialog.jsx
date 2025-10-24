@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { X, Smartphone, Wifi } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { resolveBackendUrl } from "../utils/network";
+import useToast from '../hooks/useToast';
 
 const ANIMATION_DURATION = 300;
 
@@ -15,6 +16,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   const [entering, setEntering] = useState(false);
 
   const [joinCode, setJoinCode] = useState(null);
+  const { showToast } = useToast();
 
   const refreshJoinCode = useCallback(async () => {
     try {
@@ -226,7 +228,18 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(joinCode).then(() => {
-                        console.log("Join code copied to clipboard");
+                        showToast({
+                          title: 'Copied',
+                          message: 'Join code copied to clipboard',
+                          variant: 'success',
+                          duration: 2000,
+                        });
+                      }).catch(() => {
+                        showToast({
+                          title: 'Copy failed',
+                          message: 'Could not copy join code',
+                          variant: 'error',
+                        });
                       });
                     }}
                     className={`ml-2 px-2 py-1 rounded text-xs font-medium transition-colors ${darkMode
@@ -246,7 +259,18 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
           <Button
             onClick={() => {
               navigator.clipboard.writeText(connectionURL).then(() => {
-                console.log("URL copied to clipboard");
+                showToast({
+                  title: 'Copied',
+                  message: 'URL copied to clipboard',
+                  variant: 'success',
+                  duration: 2000,
+                });
+              }).catch(() => {
+                showToast({
+                  title: 'Copy failed',
+                  message: 'Could not copy URL',
+                  variant: 'error',
+                });
               });
             }}
             variant="outline"

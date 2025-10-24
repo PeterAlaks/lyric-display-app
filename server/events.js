@@ -322,6 +322,22 @@ export default function registerSocketEvents(io, { hasPermission }) {
       io.emit('styleUpdate', { output, settings });
     });
 
+    socket.on('outputMetrics', ({ output, metrics }) => {
+      if (!(clientType === 'output1' || clientType === 'output2')) {
+        socket.emit('permissionError', 'Insufficient permissions to publish metrics');
+        return;
+      }
+      if (!output || !metrics || (output !== 'output1' && output !== 'output2')) {
+        return;
+      }
+
+      const safe = {};
+      if (Number.isFinite(metrics.adjustedFontSize) || metrics.adjustedFontSize === null) safe.adjustedFontSize = metrics.adjustedFontSize;
+      if (typeof metrics.autosizerActive === 'boolean') safe.autosizerActive = metrics.autosizerActive;
+
+      io.emit('outputMetrics', { output, metrics: safe });
+    });
+
     socket.on('fileNameUpdate', (fileName) => {
       if (!hasPermission(socket, 'lyrics:write')) {
         socket.emit('permissionError', 'Insufficient permissions to update filename');

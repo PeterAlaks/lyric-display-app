@@ -127,7 +127,6 @@ class AuthService {
           try {
             unsubscribe();
           } catch {
-            // noop
           }
         }
         if (timerId) {
@@ -522,7 +521,7 @@ class AuthService {
         }
 
         const data = await response.json();
-        const resolvedClientType = data.clientType || this.lastClientType || 'web';
+        const resolvedClientType = data.clientType || this.lastClientType;
         this.token = data.token;
         this.tokenExpiry = Date.now() + (this.parseExpiryTime(data.expiresIn) * 1000);
         this.lastClientType = resolvedClientType;

@@ -96,7 +96,22 @@ const tokenRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+// CORS middleware for development
+const corsMiddleware = (req, res, next) => {
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+  if (isDev) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+};
+
 // Middleware
+app.use(corsMiddleware);
 app.use(express.json());
 app.use('/api/auth', tokenRateLimit);
 

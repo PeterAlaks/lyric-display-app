@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Monitor, Video, Cast, Check, Network } from 'lucide-react';
+import { Monitor, Video, Cast, Check, Network, Copy } from 'lucide-react';
 
 export function IntegrationInstructions({ darkMode }) {
     const [localIP, setLocalIP] = useState('localhost');
@@ -565,9 +565,32 @@ function SubStep({ children, darkMode }) {
 }
 
 function URLBox({ children, darkMode }) {
+    const textRef = React.useRef(null);
+    const [copied, setCopied] = React.useState(false);
+
+    const handleCopy = () => {
+        const textContent = textRef.current?.textContent || '';
+        navigator.clipboard.writeText(textContent).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }).catch((err) => {
+            console.error('Failed to copy:', err);
+        });
+    };
+
     return (
-        <div className={`mt-2 p-2.5 rounded-lg font-mono text-xs break-all ${darkMode ? 'bg-gray-800 text-blue-300 border border-gray-700' : 'bg-gray-100 text-blue-700 border border-gray-200'}`}>
-            {children}
+        <div className={`mt-2 p-2.5 rounded-lg font-mono text-xs flex items-center justify-between gap-2 ${darkMode ? 'bg-gray-800 text-blue-300 border border-gray-700' : 'bg-gray-100 text-blue-700 border border-gray-200'}`}>
+            <span ref={textRef} className="break-all flex-1">{children}</span>
+            <button
+                onClick={handleCopy}
+                className={`flex-shrink-0 p-1.5 rounded transition-all ${copied
+                    ? darkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'
+                    : darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                    }`}
+                title={copied ? 'Copied!' : 'Copy to clipboard'}
+            >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
         </div>
     );
 }

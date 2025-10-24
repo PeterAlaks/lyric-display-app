@@ -11,7 +11,7 @@ import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
 import { logWarn } from '../utils/logger';
-import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, Maximize2, ScreenShare } from 'lucide-react';
+import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart } from 'lucide-react';
 
 const fontOptions = [
   'Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat',
@@ -221,7 +221,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
   const uploadedMediaName = settings.fullScreenBackgroundMediaName || backgroundMedia?.name || '';
   const fullScreenOptionsWrapperClass = fullScreenModeChecked
     ? 'max-h-40 opacity-100 translate-y-0 pointer-events-auto mt-2'
-    : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none';
+    : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0';
 
   const previousFullScreenModeRef = React.useRef(fullScreenModeChecked);
   const previousLyricsPositionRef = React.useRef(lyricsPositionValue);
@@ -383,17 +383,111 @@ const OutputSettingsPanel = ({ outputKey }) => {
         <Tooltip content="Adjust text size in pixels (24-100)" side="right">
           <LabelWithIcon icon={TextCursorInput} text="Font Size" />
         </Tooltip>
-        <Input
-          type="number"
-          value={settings.fontSize}
-          onChange={(e) => update('fontSize', parseInt(e.target.value))}
-          min="24"
-          max="100"
-          className={`w-24 ${darkMode
-            ? 'bg-gray-700 border-gray-600 text-gray-200'
-            : 'bg-white border-gray-300'
-            }`}
-        />
+        <div className="flex items-center gap-2">
+          {(() => {
+            const baseFont = Number.isFinite(settings.fontSize) ? settings.fontSize : 24;
+            const adjusted = Number.isFinite(settings.adjustedFontSize) ? settings.adjustedFontSize : null;
+            // Trust autosizerActive flag from outputs/state syncs instead of inferring from numbers
+            const autosizerActive = Boolean(settings.maxLinesEnabled && settings.autosizerActive);
+            const displayFontSize = autosizerActive
+              ? (Number.isFinite(adjusted) ? adjusted : baseFont)
+              : baseFont;
+
+            const innerClassBase = `${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`;
+
+            return (
+              <div className={`flex items-center ${autosizerActive ? 'gap-2' : ''}`} aria-live={autosizerActive ? 'polite' : undefined}>
+                {autosizerActive && (
+                  <span
+                    className="inline-flex items-center justify-center"
+                    title={`Auto-resizing active: ${Number.isFinite(displayFontSize) ? displayFontSize : ''}px`}
+                    aria-hidden="true"
+                  >
+                    {/* Sparkles icon with gradient fill */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                      <defs>
+                        <linearGradient id="spark-grad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#60A5FA" />
+                          <stop offset="100%" stopColor="#8B5CF6" />
+                        </linearGradient>
+                      </defs>
+                      <path d="M12 2l2.2 4.8L19 9l-4.8 2.2L12 16l-2.2-4.8L5 9l4.8-2.2L12 2zm7 11l1.1 2.4L23 16l-2.4 1.1L19 19l-1.1-2.4L15 16l2.4-1.1L19 13zM3 13l1.1 2.4L6 16l-2.4 1.1L3 19l-1.1-2.4L0 16l2.4-1.1L3 13z" fill="url(#spark-grad)" />
+                    </svg>
+                  </span>
+                )}
+                <Input
+                  type="number"
+                  value={Number.isFinite(displayFontSize) ? displayFontSize : 24}
+                  onChange={(e) => {
+                    const next = parseInt(e.target.value, 10);
+                    if (!Number.isNaN(next)) update('fontSize', next);
+                  }}
+                  min="24"
+                  max="100"
+                  disabled={autosizerActive}
+                  className={`w-24 ${innerClassBase} ${autosizerActive ? 'opacity-80 cursor-not-allowed' : ''}`}
+                  title={autosizerActive ? `Auto-resizing active: ${Number.isFinite(displayFontSize) ? displayFontSize : ''}px (preferred: ${settings.fontSize ?? ''}px)` : 'Set the preferred font size in pixels'}
+                />
+              </div>
+            );
+          })()}
+          <Tooltip content="Enable adaptive text fitting with max lines limit" side="top">
+            <Button
+              size="icon"
+              variant={settings.maxLinesEnabled ? 'default' : 'outline'}
+              onClick={() => update('maxLinesEnabled', !settings.maxLinesEnabled)}
+              title="Max Lines"
+              className={!settings.maxLinesEnabled && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+            >
+              <ListStart className="w-4 h-4" />
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Max Lines Settings Row */}
+      <div
+        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${settings.maxLinesEnabled
+          ? 'max-h-20 opacity-100 translate-y-0 pointer-events-auto mt-1'
+          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
+          }`}
+        aria-hidden={!settings.maxLinesEnabled}
+        style={{ marginTop: settings.maxLinesEnabled ? undefined : 0 }}
+      >
+        <div className="flex items-center justify-between gap-4 pt-2">
+          <div className="flex items-center gap-2">
+            <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+              Max Lines
+            </label>
+            <Input
+              type="number"
+              value={settings.maxLines ?? 3}
+              onChange={(e) => update('maxLines', parseInt(e.target.value))}
+              min="1"
+              max="10"
+              className={`w-16 ${darkMode
+                ? 'bg-gray-700 border-gray-600 text-gray-200'
+                : 'bg-white border-gray-300'
+                }`}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+              Minimum Size
+            </label>
+            <Input
+              type="number"
+              value={settings.minFontSize ?? 24}
+              onChange={(e) => update('minFontSize', parseInt(e.target.value))}
+              min="12"
+              max="100"
+              className={`w-16 ${darkMode
+                ? 'bg-gray-700 border-gray-600 text-gray-200'
+                : 'bg-white border-gray-300'
+                }`}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Font Color */}
@@ -552,9 +646,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
         </div>
       </div>
 
+      {/* Fullscreen Mode Settings Row */}
       <div
         className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${fullScreenOptionsWrapperClass}`}
         aria-hidden={!fullScreenModeChecked}
+        style={{ marginTop: fullScreenModeChecked ? undefined : 0 }}
       >
         <div className="flex items-center gap-3 justify-between w-full pt-2">
           <Select

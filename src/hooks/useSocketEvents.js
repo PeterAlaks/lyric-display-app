@@ -32,8 +32,14 @@ const useSocketEvents = (role) => {
         }
       }
 
-      if (state.output1Settings) updateOutputSettings('output1', state.output1Settings);
-      if (state.output2Settings) updateOutputSettings('output2', state.output2Settings);
+      const stripDerived = (s) => {
+        if (!s || typeof s !== 'object') return s;
+        const { adjustedFontSize, autosizerActive, ...rest } = s;
+        return rest;
+      };
+
+      if (state.output1Settings) updateOutputSettings('output1', stripDerived(state.output1Settings));
+      if (state.output2Settings) updateOutputSettings('output2', stripDerived(state.output2Settings));
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
       if (typeof state.isOutputOn === 'boolean' && !isDesktopApp) {
@@ -54,7 +60,42 @@ const useSocketEvents = (role) => {
 
       socket.on('styleUpdate', ({ output, settings }) => {
         logDebug('Received style update for', output, ':', settings);
-        updateOutputSettings(output, settings);
+        try {
+          const allowed = {};
+          if (settings && typeof settings === 'object') {
+            if (Number.isFinite(settings.adjustedFontSize) || settings.adjustedFontSize === null) {
+              allowed.adjustedFontSize = settings.adjustedFontSize;
+            }
+            if (typeof settings.autosizerActive === 'boolean') {
+              allowed.autosizerActive = settings.autosizerActive;
+            }
+          }
+
+          const toApply = Object.keys(allowed).length > 0 ? allowed : settings;
+          updateOutputSettings(output, toApply);
+        } catch (e) {
+          updateOutputSettings(output, settings);
+        }
+      });
+
+      socket.on('outputMetrics', ({ output, metrics }) => {
+        try {
+          const allowed = {};
+          if (metrics && typeof metrics === 'object') {
+
+            if (Number.isFinite(metrics.adjustedFontSize) || metrics.adjustedFontSize === null) {
+              allowed.adjustedFontSize = metrics.adjustedFontSize;
+            }
+            if (typeof metrics.autosizerActive === 'boolean') {
+              allowed.autosizerActive = metrics.autosizerActive;
+            }
+          }
+          if (Object.keys(allowed).length > 0 && (output === 'output1' || output === 'output2')) {
+            updateOutputSettings(output, allowed);
+          }
+        } catch (e) {
+          logWarn('Failed to apply output metrics:', e?.message || e);
+        }
       });
 
       socket.on('outputToggle', (state) => {
@@ -196,8 +237,14 @@ const useSocketEvents = (role) => {
         }
       }
 
-      if (state.output1Settings) updateOutputSettings('output1', state.output1Settings);
-      if (state.output2Settings) updateOutputSettings('output2', state.output2Settings);
+      const stripDerived = (s) => {
+        if (!s || typeof s !== 'object') return s;
+        const { adjustedFontSize, autosizerActive, ...rest } = s;
+        return rest;
+      };
+
+      if (state.output1Settings) updateOutputSettings('output1', stripDerived(state.output1Settings));
+      if (state.output2Settings) updateOutputSettings('output2', stripDerived(state.output2Settings));
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
     });

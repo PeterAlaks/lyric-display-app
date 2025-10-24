@@ -411,6 +411,7 @@ const useSocket = (role = 'output') => {
 
   const emitLyricsLoad = useCallback(createEmitFunction('lyricsLoad'), [createEmitFunction]);
   const rawEmitStyleUpdate = useMemo(() => createEmitFunction('styleUpdate'), [createEmitFunction]);
+  const rawEmitOutputMetrics = useMemo(() => createEmitFunction('outputMetrics'), [createEmitFunction]);
 
   const emitStyleUpdate = useCallback((outputOrPayload, maybeSettings) => {
     if (outputOrPayload && typeof outputOrPayload === 'object' && !Array.isArray(outputOrPayload)) {
@@ -424,6 +425,10 @@ const useSocket = (role = 'output') => {
       settings: maybeSettings,
     });
   }, [rawEmitStyleUpdate]);
+
+  const emitOutputMetrics = useCallback((output, metrics) => {
+    return rawEmitOutputMetrics({ output, metrics });
+  }, [rawEmitOutputMetrics]);
 
   const emitOutputToggle = useCallback(createEmitFunction('outputToggle'), [createEmitFunction]);
   const emitSetlistAdd = useCallback(createEmitFunction('setlistAdd'), [createEmitFunction]);
@@ -461,6 +466,7 @@ const useSocket = (role = 'output') => {
     emitSetlistLoad,
     emitRequestSetlist,
     emitSetlistClear,
+    emitOutputMetrics,
     connectionStatus,
     authStatus,
     forceReconnect,

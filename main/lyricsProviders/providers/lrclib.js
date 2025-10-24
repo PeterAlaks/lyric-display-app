@@ -49,18 +49,8 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
     }
 
     const trimmed = query.trim();
-    const parts = trimmed.split(/\s+/);
 
-    let trackName = trimmed;
-    let artistName = '';
-
-    if (parts.length >= 2) {
-        const midpoint = Math.floor(parts.length / 2);
-        trackName = parts.slice(0, midpoint).join(' ');
-        artistName = parts.slice(midpoint).join(' ');
-    }
-
-    const url = `${BASE_URL}/search?track_name=${encodeURIComponent(trackName)}${artistName ? `&artist_name=${encodeURIComponent(artistName)}` : ''}`;
+    const url = `${BASE_URL}/search?q=${encodeURIComponent(trimmed)}`;
 
     try {
         const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
