@@ -29,8 +29,9 @@ function replaceVersion(filePath, regex, label) {
 /**
  * Update MEGA download links in documentation files
  * @param {string} newMegaLink - The new MEGA public link
+ * @param {boolean} alsoUpdateVersion - Whether to also update version numbers in the same operation
  */
-export function updateMegaLinks(newMegaLink) {
+export function updateMegaLinks(newMegaLink, alsoUpdateVersion = false) {
   if (!newMegaLink || !newMegaLink.startsWith('https://mega.nz/')) {
     console.warn('⚠️  Invalid MEGA link provided, skipping link update');
     return false;
@@ -45,9 +46,18 @@ export function updateMegaLinks(newMegaLink) {
     const guideMatches = guideContent.match(megaLinkPattern);
 
     if (guideMatches && guideMatches.length > 0) {
+
       guideContent = guideContent.replace(megaLinkPattern, newMegaLink);
+
+      if (alsoUpdateVersion) {
+        guideContent = guideContent.replace(/(Version:\s*)(\d+\.\d+\.\d+)/i, `$1${version}`);
+      }
+
       fs.writeFileSync(guidePath, guideContent);
       console.log(`✅ Updated ${guideMatches.length} MEGA link(s) in Installation Guide`);
+      if (alsoUpdateVersion) {
+        console.log(`✅ Updated Installation Guide to version ${version}`);
+      }
       filesUpdated++;
     }
   }
@@ -57,9 +67,18 @@ export function updateMegaLinks(newMegaLink) {
     const readmeMatches = readmeContent.match(megaLinkPattern);
 
     if (readmeMatches && readmeMatches.length > 0) {
+
       readmeContent = readmeContent.replace(megaLinkPattern, newMegaLink);
+
+      if (alsoUpdateVersion) {
+        readmeContent = readmeContent.replace(/(\*\*Version:\*\*\s*)(\d+\.\d+\.\d+)/i, `$1${version}`);
+      }
+
       fs.writeFileSync(readmePath, readmeContent);
       console.log(`✅ Updated ${readmeMatches.length} MEGA link(s) in README.md`);
+      if (alsoUpdateVersion) {
+        console.log(`✅ Updated README.md to version ${version}`);
+      }
       filesUpdated++;
     }
   }
@@ -67,7 +86,14 @@ export function updateMegaLinks(newMegaLink) {
   return filesUpdated > 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+/**
+ * Update only version numbers (no MEGA links)
+ */
+export function updateVersionOnly() {
   replaceVersion(readmePath, /(\*\*Version:\*\*\s*)(\d+\.\d+\.\d+)/i, 'README.md');
   replaceVersion(guidePath, /(Version:\s*)(\d+\.\d+\.\d+)/i, 'Installation Guide');
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  updateVersionOnly();
 }

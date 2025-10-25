@@ -46,7 +46,7 @@ function getNextVersions(version) {
 }
 
 function safeExec(cmd, opts = {}) {
-    const defaultTimeout = 30000; // 30 seconds default
+    const defaultTimeout = 30000;
     return execSync(cmd, {
         encoding: 'utf8',
         stdio: 'pipe',
@@ -334,7 +334,6 @@ async function handleMegaUpload(version, zipFilePath, zipFilename) {
         }
     }
 
-    // Check if file already exists on MEGA
     try {
         const remoteFilePath = `${remoteFolder}/${zipFilename}`;
         const lsOutput = safeExec(`mega-ls ${escapeMegaPath(remoteFilePath)} 2>&1 || echo "NOT_FOUND"`, { timeout: 10000 });
@@ -351,7 +350,6 @@ async function handleMegaUpload(version, zipFilePath, zipFilename) {
             if (!overwrite) {
                 console.log(chalk.gray('Skipping upload, using existing file.'));
 
-                // Try to get existing link
                 try {
                     const exportOutput = safeExec(`mega-export -a -f ${escapeMegaPath(remoteFilePath)}`, { timeout: 15000 });
                     const linkMatch = exportOutput.match(/(https:\/\/mega\.nz\/[^\s]+)/);
@@ -364,7 +362,6 @@ async function handleMegaUpload(version, zipFilePath, zipFilename) {
                 return null;
             }
 
-            // Delete existing file before uploading
             try {
                 execSync(`mega-rm -f ${escapeMegaPath(remoteFilePath)}`, {
                     stdio: 'inherit',
@@ -385,7 +382,7 @@ async function handleMegaUpload(version, zipFilePath, zipFilename) {
     try {
         execSync(`mega-put "${zipFilePath}" ${escapeMegaPath(remoteFolder + '/')}`, {
             stdio: 'inherit',
-            timeout: 300000 // 5 minutes timeout for upload
+            timeout: 300000
         });
         console.log(chalk.green('✅ Upload completed.'));
     } catch (e) {
@@ -397,7 +394,6 @@ async function handleMegaUpload(version, zipFilePath, zipFilename) {
         throw e;
     }
 
-    // Generate public link
     try {
         const remoteFilePath = `${remoteFolder}/${zipFilename}`;
         console.log(chalk.blue('Generating public link...'));
@@ -479,7 +475,6 @@ async function main() {
     console.log(chalk.cyan.bold('\n🚀 LyricDisplay Release Assistant\n'));
     console.log(chalk.gray(`Current version: v${currentVersion}\n`));
 
-    // Check if current version tag already exists
     const currentTagExists = checkRemoteTagExists(`v${currentVersion}`);
 
     if (currentTagExists) {
@@ -505,7 +500,6 @@ async function main() {
         if (resumeAction === 'mega-only') {
             console.log(chalk.blue('\n📦 MEGA-only mode: Skipping version bump and GitHub push.\n'));
 
-            // Go directly to MEGA upload
             try {
                 const DIST_DIR = path.resolve('./dist');
                 const README_NAME = 'LyricDisplay Installation & Integration Guide.md';
@@ -513,7 +507,6 @@ async function main() {
                 const zipFilename = `LyricDisplay v${currentVersion}.zip`;
                 const zipFilePath = path.join(DIST_DIR, zipFilename);
 
-                // Check if ZIP exists
                 if (!fs.existsSync(zipFilePath)) {
                     console.log(chalk.yellow(`⚠️ ZIP file not found: ${zipFilePath}`));
                     console.log(chalk.blue('Creating ZIP file...'));
@@ -567,29 +560,27 @@ async function main() {
                         }
                     }
 
-                    // Update documentation
-                    console.log(chalk.blue('\n📝 Updating documentation with new MEGA link...'));
-                    const updated = updateMegaLinks(megaLink);
+                    console.log(chalk.blue('\n📝 Updating documentation with new MEGA link and version...'));
+                    const updated = updateMegaLinks(megaLink, true);
 
                     if (updated) {
-                        console.log(chalk.green('✅ Documentation files updated with new MEGA link'));
+                        console.log(chalk.green('✅ Documentation files updated with new MEGA link and version'));
 
                         const { shouldCommit } = await prompts({
                             type: 'confirm',
                             name: 'shouldCommit',
-                            message: 'Commit and push the updated MEGA links to repository?',
+                            message: 'Commit and push the updated documentation to repository?',
                             initial: true
                         });
 
                         if (shouldCommit) {
                             try {
-                                execSync('npm run update-version', { stdio: 'inherit' });
                                 execSync('git add README.md "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
-                                execSync(`git commit -m "chore: update MEGA download links for v${currentVersion}"`, { stdio: 'inherit' });
+                                execSync(`git commit -m "chore: update MEGA download links and version for v${currentVersion}"`, { stdio: 'inherit' });
                                 execSync('git push', { stdio: 'inherit' });
-                                console.log(chalk.green('✅ MEGA link updates committed and pushed to GitHub'));
+                                console.log(chalk.green('✅ Documentation updates committed and pushed to GitHub'));
                             } catch (e) {
-                                console.error(chalk.yellow('⚠️ Failed to commit/push link updates:'), e.message);
+                                console.error(chalk.yellow('⚠️ Failed to commit/push updates:'), e.message);
                                 console.log(chalk.gray('You can manually commit these changes later'));
                             }
                         }
@@ -784,7 +775,7 @@ async function main() {
         if (megaLinkGenerated) {
             console.log(chalk.blue('\n📝 Updating documentation with new MEGA link...'));
 
-            const updated = updateMegaLinks(megaLinkGenerated);
+            const updated = updateMegaLinks(megaLinkGenerated, false);
 
             if (updated) {
                 console.log(chalk.green('✅ Documentation files updated with new MEGA link'));
@@ -807,7 +798,6 @@ async function main() {
 
                     if (shouldCommit) {
                         try {
-                            execSync('npm run update-version', { stdio: 'inherit' });
                             execSync('git add README.md "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
                             execSync(`git commit -m "chore: update MEGA download links for v${version}"`, { stdio: 'inherit' });
                             execSync('git push', { stdio: 'inherit' });
@@ -833,7 +823,7 @@ async function main() {
 
         console.log(chalk.green('\n✨ All done! You can close this window or verify the release on GitHub.\n'));
     } catch (err) {
-        console.error(chalk.red.bold('\nâŒ Release failed:'), err.message);
+        console.error(chalk.red.bold('\n❌ Release failed:'), err.message);
         console.log(chalk.yellow('\nTroubleshooting tips:'));
         console.log(chalk.gray('- Check if a version tag already exists: git tag -l'));
         console.log(chalk.gray('- Delete remote tag if needed: git push --delete origin v{version}'));
