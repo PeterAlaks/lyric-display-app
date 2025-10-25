@@ -1,4 +1,3 @@
-// Project: LyricDisplay App
 // File: src/hooks/useStoreSelectors.js
 
 import { useStoreWithEqualityFn } from 'zustand/traditional';
@@ -13,9 +12,11 @@ export const useLyricsState = () =>
             rawLyricsContent: state.rawLyricsContent,
             selectedLine: state.selectedLine,
             lyricsFileName: state.lyricsFileName,
+            songMetadata: state.songMetadata,
             setLyrics: state.setLyrics,
             setRawLyricsContent: state.setRawLyricsContent,
             setLyricsFileName: state.setLyricsFileName,
+            setSongMetadata: state.setSongMetadata,
             selectLine: state.selectLine,
         }),
         shallow

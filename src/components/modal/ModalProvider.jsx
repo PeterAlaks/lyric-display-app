@@ -6,6 +6,7 @@ import PreviewOutputsModal from '../PreviewOutputsModal';
 import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp } from '../HelpContent';
 import { WelcomeSplash } from '../WelcomeSplash';
 import { IntegrationInstructions } from '../IntegrationInstructions';
+import SongInfoModal from '../SongInfoModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -321,6 +322,9 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'IntegrationInstructions' && (
                         <IntegrationInstructions darkMode={isDark} />
+                      )}
+                      {modal.component === 'SongInfoModal' && (
+                        <SongInfoModal darkMode={isDark} />
                       )}
 
                       {/* Render standard description/body modals */}

@@ -16,6 +16,14 @@ const useLyricsStore = create(
       setlistFiles: [],
       isDesktopApp: false,
       setlistModalOpen: false,
+      songMetadata: {
+        title: '',
+        artists: [],
+        album: '',
+        year: null,
+        origin: '',
+        filePath: '',
+      },
 
       setLyrics: (lines) => set({ lyrics: lines }),
       setRawLyricsContent: (content) => set({ rawLyricsContent: content }),
@@ -27,6 +35,7 @@ const useLyricsStore = create(
       setSetlistFiles: (files) => set({ setlistFiles: files }),
       setIsDesktopApp: (isDesktop) => set({ isDesktopApp: isDesktop }),
       setSetlistModalOpen: (open) => set({ setlistModalOpen: open }),
+      setSongMetadata: (metadata) => set({ songMetadata: metadata }),
       addSetlistFiles: (newFiles) => set((state) => ({
         setlistFiles: [...state.setlistFiles, ...newFiles]
       })),

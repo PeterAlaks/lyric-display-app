@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useDarkModeState, useSetlistState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -24,17 +24,16 @@ import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
-
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSyncTimer } from '../hooks/useSyncTimer';
+import { detectArtistFromFilename } from '../utils/artistDetection';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   // Global state management
-
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName } = useLyricsState();
+  const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setSongMetadata } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { darkMode, setDarkMode } = useDarkModeState();
@@ -118,6 +117,20 @@ const LyricDisplayApp = () => {
       selectLine(null);
       setLyricsFileName(finalBaseName);
 
+      if (!context.providerId) {
+        const detected = detectArtistFromFilename(finalBaseName);
+        const metadata = {
+          title: detected.title || finalBaseName,
+          artists: detected.artist ? [detected.artist] : [],
+          album: null,
+          year: null,
+          lyricLines: processedLines.length,
+          origin: finalType === 'lrc' ? 'Local (.lrc)' : 'Local (.txt)',
+          filePath: filePath || null
+        };
+        setSongMetadata(metadata);
+      }
+
       emitLyricsLoad(processedLines);
       if (socket && socket.connected && finalBaseName) {
         socket.emit('fileNameUpdate', finalBaseName);
@@ -160,7 +173,7 @@ const LyricDisplayApp = () => {
     const baseNamePieces = [lyric.title || 'Untitled Song', lyric.artist || providerName || providerId];
     const fallbackFileName = baseNamePieces.filter(Boolean).join(' - ');
 
-    return processLoadedLyrics(
+    const success = await processLoadedLyrics(
       {
         content: lyric.content,
         fileName: lyric.title || fallbackFileName,
@@ -171,9 +184,27 @@ const LyricDisplayApp = () => {
         fallbackFileName,
         toastTitle: 'Lyrics imported',
         toastMessage: `Loaded from ${providerName || providerId}.`,
+        providerId,
       }
     );
-  }, [processLoadedLyrics, showToast]);
+
+    if (success) {
+      const album = lyric.album || lyric.albumName || null;
+
+      const metadata = {
+        title: lyric.title || 'Untitled Song',
+        artists: lyric.artist ? [lyric.artist] : [],
+        album: album,
+        year: lyric.year || null,
+        lyricLines: lyrics.length,
+        origin: providerName || providerId,
+        filePath: null
+      };
+      setSongMetadata(metadata);
+    }
+
+    return success;
+  }, [processLoadedLyrics, showToast, lyrics, setSongMetadata]);
 
   React.useEffect(() => {
     if (!window?.electronAPI?.onOpenLyricsFromPath) return;
@@ -204,7 +235,6 @@ const LyricDisplayApp = () => {
     return () => window.removeEventListener('lyrics-opened', listener);
   }, [processLoadedLyrics]);
 
-  // Listen for EasyWorship import dialog from menu
   React.useEffect(() => {
     if (!window?.electronAPI?.onOpenEasyWorshipImport) return;
 
@@ -391,7 +421,7 @@ const LyricDisplayApp = () => {
       {isDesktopApp && <DraftApprovalModal darkMode={darkMode} />}
       <div className={`flex h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Control Panel */}
-        <div className={`w-[420px] shadow-lg p-6 overflow-y-auto ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`w-[420px] flex-shrink-0 shadow-lg p-6 overflow-y-auto ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <img
@@ -635,16 +665,16 @@ const LyricDisplayApp = () => {
         </div>
 
         {/* Right Main Area */}
-        <div className="flex-1 p-6 flex flex-col h-screen">
+        <div className="flex-1 min-w-0 p-6 flex flex-col h-screen">
           {/* Fixed Header */}
-          <div className="mb-6 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <div className="mb-6 flex-shrink-0 min-w-0">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h2 className={`text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {hasLyrics ? lyricsFileName : ''}
                 </h2>
                 {hasLyrics && (
-                  <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <p className={`text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     {selectedLine !== null && selectedLine !== undefined
                       ? `Line ${selectedLine + 1} of ${lyrics.length} loaded lyric lines`
                       : `${lyrics.length} loaded lyric ${lyrics.length === 1 ? 'line' : 'lines'}`
@@ -666,8 +696,8 @@ const LyricDisplayApp = () => {
                       title={addTitle}
                       style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
                     >
-                      <Plus className="w-4 h-4" />
-                      Add to Setlist
+                      <Plus className="w-4 h-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">Add to Setlist</span>
                     </button>
                   </Tooltip>
 
@@ -680,8 +710,30 @@ const LyricDisplayApp = () => {
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                         }`}
                     >
-                      <Edit className="w-4 h-4" />
-                      Edit Lyrics
+                      <Edit className="w-4 h-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">Edit Lyrics</span>
+                    </button>
+                  </Tooltip>
+
+                  {/* Song Info Button */}
+                  <Tooltip content="View song information" side="bottom">
+                    <button
+                      onClick={() => {
+                        showModal({
+                          title: 'Song Information',
+                          component: 'SongInfoModal',
+                          variant: 'info',
+                          size: 'sm',
+                          dismissLabel: 'Close'
+                        });
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${darkMode
+                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      title="Song Information"
+                    >
+                      <Info className="w-4 h-4" />
                     </button>
                   </Tooltip>
                 </div>
