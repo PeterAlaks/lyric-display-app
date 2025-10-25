@@ -386,28 +386,35 @@ const OutputSettingsPanel = ({ outputKey }) => {
         <div className="flex items-center gap-2">
           {(() => {
             const baseFont = Number.isFinite(settings.fontSize) ? settings.fontSize : 24;
-            const adjusted = Number.isFinite(settings.adjustedFontSize) ? settings.adjustedFontSize : null;
-
-            const instanceCount = settings.instanceCount || 1;
+            const instanceCount = settings.instanceCount || 0;
             const hasMultipleInstances = instanceCount > 1;
             const allInstances = settings.allInstances || [];
 
             let anyInstanceResizing = false;
-            let primaryInstanceResizing = false;
+            let primaryAdjustedSize = null;
 
-            if (settings.maxLinesEnabled) {
+            if (settings.maxLinesEnabled && instanceCount > 0) {
               if (hasMultipleInstances && allInstances.length > 0) {
                 anyInstanceResizing = allInstances.some(inst => inst.autosizerActive === true);
-                primaryInstanceResizing = (adjusted !== null && adjusted !== baseFont);
-              } else {
-                anyInstanceResizing = Boolean(settings.autosizerActive);
-                primaryInstanceResizing = Boolean(settings.autosizerActive);
+                const primaryInstance = allInstances.reduce((largest, current) => {
+                  if (!largest) return current;
+                  const largestArea = (largest.viewportWidth || 0) * (largest.viewportHeight || 0);
+                  const currentArea = (current.viewportWidth || 0) * (current.viewportHeight || 0);
+                  return currentArea > largestArea ? current : largest;
+                }, null);
+                primaryAdjustedSize = primaryInstance?.adjustedFontSize ?? null;
+              } else if (allInstances.length > 0) {
+                const singleInstance = allInstances[0];
+                anyInstanceResizing = Boolean(singleInstance?.autosizerActive);
+                primaryAdjustedSize = singleInstance?.adjustedFontSize ?? null;
+              } else if (settings.autosizerActive) {
+                anyInstanceResizing = true;
+                primaryAdjustedSize = null;
               }
             }
 
-            const displayFontSize = primaryInstanceResizing
-              ? (Number.isFinite(adjusted) ? adjusted : baseFont)
-              : baseFont;
+            const primaryInstanceResizing = anyInstanceResizing && primaryAdjustedSize !== null && primaryAdjustedSize !== baseFont;
+            const displayFontSize = primaryInstanceResizing ? primaryAdjustedSize : baseFont;
 
             const primaryViewport = settings.primaryViewportWidth && settings.primaryViewportHeight
               ? `${settings.primaryViewportWidth}×${settings.primaryViewportHeight}`
@@ -416,7 +423,6 @@ const OutputSettingsPanel = ({ outputKey }) => {
             let inputDisplayValue = displayFontSize;
             if (hasMultipleInstances && anyInstanceResizing && allInstances.length > 0) {
               const primaryValue = displayFontSize;
-
               const otherResizingInstance = allInstances.find(inst =>
                 inst.autosizerActive === true &&
                 inst.adjustedFontSize !== primaryValue
@@ -476,7 +482,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
                 <div className="relative flex-1">
                   {hasMultipleInstances && anyInstanceResizing && primaryInstanceResizing ? (
                     <div
-                      className={`w-24 h-9 px-3 flex items-center justify-start text-sm font-medium rounded-md border ${innerClassBase} opacity-80 cursor-not-allowed`}
+                      className={`w-24 h-9 px-3 flex items-center justify-start text-sm rounded-md border cursor-not-allowed ${darkMode
+                        ? 'bg-gray-700 border-gray-600 text-gray-500'
+                        : 'bg-gray-50 border-gray-300 text-gray-500'
+                        }`}
+                      style={{ fontWeight: 400 }}
                       title={tooltipText}
                     >
                       {inputDisplayValue}

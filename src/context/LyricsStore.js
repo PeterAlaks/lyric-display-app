@@ -76,12 +76,11 @@ const useLyricsStore = create(
         maxLinesEnabled: false,
         maxLines: 3,
         minFontSize: 24,
-        adjustedFontSize: null,
         autosizerActive: false,
         primaryViewportWidth: null,
         primaryViewportHeight: null,
         allInstances: null,
-        instanceCount: 1
+        instanceCount: 0
       },
       output2Settings: {
         fontStyle: 'Bebas Neue',
@@ -109,12 +108,11 @@ const useLyricsStore = create(
         maxLinesEnabled: false,
         maxLines: 3,
         minFontSize: 24,
-        adjustedFontSize: null,
         autosizerActive: false,
         primaryViewportWidth: null,
         primaryViewportHeight: null,
         allInstances: null,
-        instanceCount: 1
+        instanceCount: 0
       },
       updateOutputSettings: (output, newSettings) =>
         set((state) => ({
@@ -137,6 +135,26 @@ const useLyricsStore = create(
         output1Settings: state.output1Settings,
         output2Settings: state.output2Settings,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.output1Settings = {
+            ...state.output1Settings,
+            autosizerActive: false,
+            primaryViewportWidth: null,
+            primaryViewportHeight: null,
+            allInstances: null,
+            instanceCount: 0,
+          };
+          state.output2Settings = {
+            ...state.output2Settings,
+            autosizerActive: false,
+            primaryViewportWidth: null,
+            primaryViewportHeight: null,
+            allInstances: null,
+            instanceCount: 0,
+          };
+        }
+      },
     }
   )
 );

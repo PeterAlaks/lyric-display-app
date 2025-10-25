@@ -32,14 +32,15 @@ const useSocketEvents = (role) => {
         }
       }
 
-      const stripDerived = (s) => {
-        if (!s || typeof s !== 'object') return s;
-        const { adjustedFontSize, autosizerActive, ...rest } = s;
-        return rest;
-      };
-
-      if (state.output1Settings) updateOutputSettings('output1', stripDerived(state.output1Settings));
-      if (state.output2Settings) updateOutputSettings('output2', stripDerived(state.output2Settings));
+      // Preserve metrics fields when applying settings from server state
+      if (state.output1Settings) {
+        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output1Settings;
+        updateOutputSettings('output1', styleSettings);
+      }
+      if (state.output2Settings) {
+        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output2Settings;
+        updateOutputSettings('output2', styleSettings);
+      }
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
       if (typeof state.isOutputOn === 'boolean' && !isDesktopApp) {
@@ -60,48 +61,23 @@ const useSocketEvents = (role) => {
 
       socket.on('styleUpdate', ({ output, settings }) => {
         logDebug('Received style update for', output, ':', settings);
-        try {
-          const allowed = {};
-          if (settings && typeof settings === 'object') {
-            if (Number.isFinite(settings.adjustedFontSize) || settings.adjustedFontSize === null) {
-              allowed.adjustedFontSize = settings.adjustedFontSize;
-            }
-            if (typeof settings.autosizerActive === 'boolean') {
-              allowed.autosizerActive = settings.autosizerActive;
-            }
-          }
-
-          const toApply = Object.keys(allowed).length > 0 ? allowed : settings;
-          updateOutputSettings(output, toApply);
-        } catch (e) {
-          updateOutputSettings(output, settings);
-        }
+        // Preserve metrics fields when applying style updates from control panel
+        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = settings;
+        updateOutputSettings(output, styleSettings);
       });
 
       socket.on('outputMetrics', ({ output, metrics, allInstances, instanceCount }) => {
         try {
-          const allowed = {};
-          if (metrics && typeof metrics === 'object') {
+          const updates = {
+            autosizerActive: metrics?.autosizerActive ?? false,
+            primaryViewportWidth: metrics?.viewportWidth ?? null,
+            primaryViewportHeight: metrics?.viewportHeight ?? null,
+            allInstances: allInstances || null,
+            instanceCount: instanceCount || 1,
+          };
 
-            if (Number.isFinite(metrics.adjustedFontSize) || metrics.adjustedFontSize === null) {
-              allowed.adjustedFontSize = metrics.adjustedFontSize;
-            }
-            if (typeof metrics.autosizerActive === 'boolean') {
-              allowed.autosizerActive = metrics.autosizerActive;
-            }
-            if (Number.isFinite(metrics.viewportWidth)) {
-              allowed.primaryViewportWidth = metrics.viewportWidth;
-            }
-            if (Number.isFinite(metrics.viewportHeight)) {
-              allowed.primaryViewportHeight = metrics.viewportHeight;
-            }
-          }
-
-          allowed.allInstances = allInstances || null;
-          allowed.instanceCount = instanceCount || 1;
-
-          if (Object.keys(allowed).length > 0 && (output === 'output1' || output === 'output2')) {
-            updateOutputSettings(output, allowed);
+          if (output === 'output1' || output === 'output2') {
+            updateOutputSettings(output, updates);
 
             if (instanceCount > 1) {
               logDebug(`${output}: ${instanceCount} instances detected, using primary (${metrics.viewportWidth}x${metrics.viewportHeight})`);
@@ -251,14 +227,15 @@ const useSocketEvents = (role) => {
         }
       }
 
-      const stripDerived = (s) => {
-        if (!s || typeof s !== 'object') return s;
-        const { adjustedFontSize, autosizerActive, ...rest } = s;
-        return rest;
-      };
-
-      if (state.output1Settings) updateOutputSettings('output1', stripDerived(state.output1Settings));
-      if (state.output2Settings) updateOutputSettings('output2', stripDerived(state.output2Settings));
+      // Preserve metrics fields when applying settings from periodic sync
+      if (state.output1Settings) {
+        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output1Settings;
+        updateOutputSettings('output1', styleSettings);
+      }
+      if (state.output2Settings) {
+        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output2Settings;
+        updateOutputSettings('output2', styleSettings);
+      }
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
     });

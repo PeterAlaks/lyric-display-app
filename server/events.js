@@ -360,7 +360,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
       io.emit('outputMetrics', {
         output,
         metrics: primaryInstance || safe,
-        allInstances: allInstances.length > 1 ? allInstances : undefined,
+        allInstances: allInstances,
         instanceCount: allInstances.length
       });
     });
@@ -472,7 +472,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
           io.emit('outputMetrics', {
             output: clientType,
             metrics: primaryInstance,
-            allInstances: remainingInstances.length > 1 ? remainingInstances : undefined,
+            allInstances: remainingInstances,
             instanceCount: remainingInstances.length
           });
         }

@@ -17,7 +17,7 @@ const SearchBar = ({
       <div className="relative">
         <Input
           type="text"
-          placeholder="Search through loaded lyrics..."
+          placeholder="Search loaded lyrics..."
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           data-search-input
