@@ -78,7 +78,7 @@ const useSocketEvents = (role) => {
         }
       });
 
-      socket.on('outputMetrics', ({ output, metrics }) => {
+      socket.on('outputMetrics', ({ output, metrics, allInstances, instanceCount }) => {
         try {
           const allowed = {};
           if (metrics && typeof metrics === 'object') {
@@ -89,9 +89,23 @@ const useSocketEvents = (role) => {
             if (typeof metrics.autosizerActive === 'boolean') {
               allowed.autosizerActive = metrics.autosizerActive;
             }
+            if (Number.isFinite(metrics.viewportWidth)) {
+              allowed.primaryViewportWidth = metrics.viewportWidth;
+            }
+            if (Number.isFinite(metrics.viewportHeight)) {
+              allowed.primaryViewportHeight = metrics.viewportHeight;
+            }
           }
+
+          allowed.allInstances = allInstances || null;
+          allowed.instanceCount = instanceCount || 1;
+
           if (Object.keys(allowed).length > 0 && (output === 'output1' || output === 'output2')) {
             updateOutputSettings(output, allowed);
+
+            if (instanceCount > 1) {
+              logDebug(`${output}: ${instanceCount} instances detected, using primary (${metrics.viewportWidth}x${metrics.viewportHeight})`);
+            }
           }
         } catch (e) {
           logWarn('Failed to apply output metrics:', e?.message || e);

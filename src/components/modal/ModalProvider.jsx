@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
+import PreviewOutputsModal from '../PreviewOutputsModal';
 import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp } from '../HelpContent';
 import { WelcomeSplash } from '../WelcomeSplash';
 import { IntegrationInstructions } from '../IntegrationInstructions';
@@ -302,6 +303,9 @@ export function ModalProvider({ children, isDark = false }) {
                       {/* Render component-based modals */}
                       {modal.component === 'ConnectionDiagnostics' && (
                         <ConnectionDiagnosticsModal darkMode={isDark} />
+                      )}
+                      {modal.component === 'PreviewOutputs' && (
+                        <PreviewOutputsModal darkMode={isDark} />
                       )}
                       {modal.component === 'ControlPanelHelp' && (
                         <ControlPanelHelp darkMode={isDark} />

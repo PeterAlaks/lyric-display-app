@@ -1,20 +1,32 @@
 let knownArtistsList = [];
+let knownArtistsLoaded = false;
+
 try {
     const module = await import('../../shared/data/knownArtists.json', {
         with: { type: 'json' },
     });
-    knownArtistsList = module.default;
+    knownArtistsList = module.default || [];
+    knownArtistsLoaded = true;
+    console.log(`[SearchAlgorithm] Loaded ${knownArtistsList.length} known artists`);
 } catch (err) {
-    console.error('Failed to load knownArtists.json:', err);
+    console.warn('[SearchAlgorithm] Failed to load knownArtists.json, artist inference will be limited:', err.message);
 }
 
+const normalizationCache = new Map();
+const MAX_CACHE_SIZE = 1000;
 
 /**
  * Normalize text for comparison: remove accents, punctuation, extra spaces
+ * Results are cached for performance
  */
 function normalizeText(text) {
     if (!text) return '';
-    return text
+
+    if (normalizationCache.has(text)) {
+        return normalizationCache.get(text);
+    }
+
+    const normalized = text
         .toLowerCase()
         .trim()
         .normalize('NFD')
@@ -22,6 +34,14 @@ function normalizeText(text) {
         .replace(/[^\w\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+
+    if (normalizationCache.size >= MAX_CACHE_SIZE) {
+        const firstKey = normalizationCache.keys().next().value;
+        normalizationCache.delete(firstKey);
+    }
+    normalizationCache.set(text, normalized);
+
+    return normalized;
 }
 
 /**
@@ -32,7 +52,15 @@ function getWords(text) {
 }
 
 /**
- * Comprehensive stop words list - includes common words but NOT music-specific terms
+ * Check if a word exists as a complete word (not substring) in text
+ */
+function containsWholeWord(text, word) {
+    const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    return regex.test(text);
+}
+
+/**
+ * Comprehensive stop words list
  * Music terms like "remix", "live", "acoustic" are meaningful for distinguishing versions
  */
 const STOP_WORDS = new Set([
@@ -44,11 +72,10 @@ const STOP_WORDS = new Set([
     'are', 'was', 'were', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can',
     // Pronouns & common words
     'it', 'that', 'this', 'i', 'you', 'he', 'she', 'we', 'they', 'all', 'some', 'any', 'no', 'not', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
-    // NOTE: NOT including music-specific terms - they're meaningful for version distinction
 ]);
 
 /**
- * Extract meaningful words (non-stop words, length >= 2)
+ * Extract meaningful words
  */
 function getMeaningfulWords(text) {
     const words = getWords(text);
@@ -57,7 +84,7 @@ function getMeaningfulWords(text) {
 
 
 /**
- * Levenshtein distance with early termination
+ * Levenshtein distance
  */
 export function levenshteinDistance(str1, str2, maxDistance = 10) {
     const len1 = str1.length;
@@ -156,11 +183,22 @@ export function bigramSimilarity(str1, str2) {
 /**
  * Analyze query to infer artist and title
  * Strategy:
- * 1. Check for explicit delimiters (" by ", " - ")
+ * 1. Check for explicit delimiters (" by ", " - ") - prefer rightmost occurrence
  * 2. Try to match against known artists (exact substring, then fuzzy)
  * 3. If no artist found, treat entire query as title
+ * 
+ * @param {string} query - The search query
+ * @param {Object} options - Configuration options
+ * @param {number} options.artistMatchThreshold - Minimum similarity for artist matching (default: 0.65)
+ * @param {number} options.wordMatchThreshold - Minimum similarity for word-to-artist matching (default: 0.75)
+ * @returns {Object} Query analysis with inferred artist and title
  */
-export function analyzeQuery(query) {
+export function analyzeQuery(query, options = {}) {
+    const {
+        artistMatchThreshold = 0.65,
+        wordMatchThreshold = 0.75,
+    } = options;
+
     const normalized = normalizeText(query);
     const words = getWords(normalized);
     const meaningfulWords = getMeaningfulWords(normalized);
@@ -173,25 +211,36 @@ export function analyzeQuery(query) {
             meaningfulWords: [],
             inferredArtist: null,
             inferredTitle: null,
+            confidence: 0,
         };
     }
 
     let inferredArtist = null;
     let inferredTitle = null;
+    let confidence = 0;
 
     if (normalized.includes(' by ')) {
-        const [title, artist] = normalized.split(' by ', 2);
-        inferredTitle = title.trim();
-        inferredArtist = artist.trim();
+        const lastByIndex = normalized.lastIndexOf(' by ');
+        inferredTitle = normalized.substring(0, lastByIndex).trim();
+        inferredArtist = normalized.substring(lastByIndex + 4).trim();
+        confidence = 0.95;
     } else if (normalized.includes(' - ')) {
-        const [title, artist] = normalized.split(' - ', 2);
-        inferredTitle = title.trim();
-        inferredArtist = artist.trim();
+        const parts = normalized.split(' - ');
+        if (parts.length === 2) {
+            inferredTitle = parts[0].trim();
+            inferredArtist = parts[1].trim();
+            confidence = 0.9;
+        } else if (parts.length > 2) {
+            inferredTitle = parts[0].trim();
+            inferredArtist = parts.slice(1).join(' - ').trim();
+            confidence = 0.85;
+        }
     }
 
-    if (!inferredArtist && meaningfulWords.length >= 1) {
+    if (!inferredArtist && knownArtistsLoaded && meaningfulWords.length >= 1) {
         const normalizedArtists = knownArtistsList.map(a => normalizeText(a));
 
+        // Phase 1: Exact substring match (prefer longest match)
         let bestMatch = null;
         let bestLength = 0;
         for (const artist of normalizedArtists) {
@@ -206,20 +255,25 @@ export function analyzeQuery(query) {
             const artistWords = getWords(bestMatch);
             const remainingWords = words.filter(w => !artistWords.includes(w));
             inferredTitle = remainingWords.join(' ').trim() || normalized;
+            confidence = 0.75;
         } else {
+            // Phase 2: Fuzzy matching (more expensive, only if exact match failed)
             let bestFuzzyMatch = null;
             let bestFuzzyScore = 0;
 
-            for (const artist of normalizedArtists) {
+            const searchLimit = Math.min(normalizedArtists.length, 500);
 
-                const score = fuzzyMatch(artist, normalized, 0.65);
+            for (let i = 0; i < searchLimit; i++) {
+                const artist = normalizedArtists[i];
+
+                const score = fuzzyMatch(artist, normalized, artistMatchThreshold);
                 if (score > bestFuzzyScore) {
                     bestFuzzyMatch = artist;
                     bestFuzzyScore = score;
                 }
 
                 for (const word of meaningfulWords) {
-                    const wordScore = fuzzyMatch(word, artist, 0.75);
+                    const wordScore = fuzzyMatch(word, artist, wordMatchThreshold);
                     if (wordScore > bestFuzzyScore) {
                         bestFuzzyMatch = artist;
                         bestFuzzyScore = wordScore;
@@ -227,17 +281,19 @@ export function analyzeQuery(query) {
                 }
             }
 
-            if (bestFuzzyMatch && bestFuzzyScore > 0.65) {
+            if (bestFuzzyMatch && bestFuzzyScore >= artistMatchThreshold) {
                 inferredArtist = bestFuzzyMatch;
                 const artistWords = getWords(bestFuzzyMatch);
                 const remainingWords = words.filter(w => !artistWords.includes(w));
                 inferredTitle = remainingWords.join(' ').trim() || normalized;
+                confidence = bestFuzzyScore * 0.7;
             }
         }
     }
 
     if (!inferredTitle) {
         inferredTitle = normalized;
+        confidence = inferredArtist ? confidence : 0.5;
     }
 
     return {
@@ -247,15 +303,30 @@ export function analyzeQuery(query) {
         meaningfulWords,
         inferredArtist,
         inferredTitle,
+        confidence,
+        hasKnownArtists: knownArtistsLoaded,
     };
 }
 
 /**
  * Calculate relevance score for a database item against query
  * Uses multi-tier scoring system with clear priorities
+ * 
+ * @param {Object} item - The database item to score
+ * @param {Object} queryAnalysis - Analyzed query from analyzeQuery()
+ * @param {Object} options - Scoring configuration
+ * @returns {Object} Score, signals, and exactness indicator
  */
-export function calculateRelevanceScore(item, queryAnalysis) {
-    const { normalizedQuery, meaningfulWords, inferredArtist, inferredTitle } = queryAnalysis;
+export function calculateRelevanceScore(item, queryAnalysis, options = {}) {
+    const {
+        artistMismatchPenalty = 50000,
+        minWordMatchRatio = 0.25,
+        bigramThreshold = 0.3,
+        fuzzyMatchThreshold = 0.65,
+        positionPenaltyWeight = 100,
+    } = options;
+
+    const { normalizedQuery, meaningfulWords, inferredArtist, inferredTitle, confidence } = queryAnalysis;
 
     const titleNorm = normalizeText(item.title || '');
     const artistNorm = normalizeText(item.artist || '');
@@ -272,6 +343,10 @@ export function calculateRelevanceScore(item, queryAnalysis) {
         return { score: 900000, signals: { exactArtistMatch: true }, isExact: true };
     }
 
+    if (inferredArtist && inferredTitle && titleNorm === inferredTitle && artistNorm === inferredArtist) {
+        return { score: 1100000, signals: { exactCombinedMatch: true }, isExact: true };
+    }
+
     // ===== TIER 2: Substring Matches =====
     if (titleNorm.includes(normalizedQuery)) {
         score += 150000;
@@ -282,31 +357,32 @@ export function calculateRelevanceScore(item, queryAnalysis) {
         signals.artistContainsQuery = true;
     }
 
-    // ===== TIER 3: Inferred Artist/Title Matching =====
-
+    // ===== TIER 3: Inferred Artist/Title Matching =====    
     if (inferredArtist && inferredTitle) {
-
-        const artistMatch = fuzzyMatch(artistNorm, inferredArtist, 0.65);
-        if (artistMatch > 0.65) {
-            score += 250000 * artistMatch;
+        const artistMatch = fuzzyMatch(artistNorm, inferredArtist, fuzzyMatchThreshold);
+        if (artistMatch >= fuzzyMatchThreshold) {
+            score += 250000 * artistMatch * (confidence || 0.7);
             signals.artistInferredMatch = artistMatch;
-        } else {
-            score -= 200000;
-            signals.artistMismatchPenalty = true;
+        } else if (confidence > 0.8) {
+            const penalty = Math.min(artistMismatchPenalty, artistMismatchPenalty * confidence);
+            score -= penalty;
+            signals.artistMismatchPenalty = penalty;
         }
 
-        const titleMatch = fuzzyMatch(titleNorm, inferredTitle, 0.65);
-        if (titleMatch > 0.65) {
+        const titleMatch = fuzzyMatch(titleNorm, inferredTitle, fuzzyMatchThreshold);
+        if (titleMatch >= fuzzyMatchThreshold) {
             score += 250000 * titleMatch;
             signals.titleInferredMatch = titleMatch;
         }
 
         if ((signals.artistInferredMatch || 0) >= 0.8 && (signals.titleInferredMatch || 0) >= 0.8) {
             isExact = true;
+            score += 50000;
+            signals.strongCombinedMatch = true;
         }
     } else if (inferredTitle && !inferredArtist) {
-        const titleMatch = fuzzyMatch(titleNorm, inferredTitle, 0.65);
-        if (titleMatch > 0.65) {
+        const titleMatch = fuzzyMatch(titleNorm, inferredTitle, fuzzyMatchThreshold);
+        if (titleMatch >= fuzzyMatchThreshold) {
             score += 250000 * titleMatch;
             signals.titleInferredMatch = titleMatch;
             if (titleMatch >= 0.85) {
@@ -315,52 +391,71 @@ export function calculateRelevanceScore(item, queryAnalysis) {
         }
     }
 
-    // ===== TIER 4: Meaningful Word Matching =====
-
+    // ===== TIER 4: Meaningful Word Matching =====    
     if (meaningfulWords.length > 0) {
         let matchedWords = 0;
+        let wholeWordMatches = 0;
         const titleWords = getWords(titleNorm);
         const artistWords = getWords(artistNorm);
         const allDbWords = [...titleWords, ...artistWords];
 
         for (const queryWord of meaningfulWords) {
+            let wordMatched = false;
 
-            if (titleNorm.includes(queryWord) || artistNorm.includes(queryWord)) {
+            if (containsWholeWord(titleNorm, queryWord) || containsWholeWord(artistNorm, queryWord)) {
                 matchedWords++;
+                wholeWordMatches++;
+                wordMatched = true;
                 continue;
             }
 
-            for (const dbWord of allDbWords) {
-                if (fuzzyMatch(queryWord, dbWord, 0.7) > 0.7) {
-                    matchedWords++;
-                    break;
+            if (titleNorm.includes(queryWord) || artistNorm.includes(queryWord)) {
+                matchedWords++;
+                wordMatched = true;
+                continue;
+            }
+
+            if (!wordMatched) {
+                for (const dbWord of allDbWords) {
+                    if (fuzzyMatch(queryWord, dbWord, 0.7) > 0.7) {
+                        matchedWords++;
+                        break;
+                    }
                 }
             }
         }
 
         const matchRatio = matchedWords / meaningfulWords.length;
+        const wholeWordRatio = wholeWordMatches / meaningfulWords.length;
 
-        if (matchRatio >= 0.25) {
-            score += 100000 * matchRatio;
-            signals.wordMatches = { matched: matchedWords, total: meaningfulWords.length, ratio: matchRatio };
+        if (matchRatio >= minWordMatchRatio) {
+            const baseScore = 100000 * matchRatio;
+            const wholeWordBonus = 20000 * wholeWordRatio;
+            score += baseScore + wholeWordBonus;
+            signals.wordMatches = {
+                matched: matchedWords,
+                wholeWord: wholeWordMatches,
+                total: meaningfulWords.length,
+                ratio: matchRatio,
+                wholeWordRatio: wholeWordRatio
+            };
         }
     }
 
-    // ===== TIER 5: Bigram Similarity (Fallback) =====
-
+    // ===== TIER 5: Bigram Similarity (Fallback) =====    
     const titleBigram = bigramSimilarity(titleNorm, normalizedQuery);
     const artistBigram = bigramSimilarity(artistNorm, normalizedQuery);
 
-    if (titleBigram > 0.3) {
+    if (titleBigram > bigramThreshold) {
         score += 40000 * titleBigram;
         signals.titleBigramMatch = titleBigram;
     }
-    if (artistBigram > 0.3) {
+    if (artistBigram > bigramThreshold) {
         score += 30000 * artistBigram;
         signals.artistBigramMatch = artistBigram;
     }
 
-    // ===== TIER 6: Context-Based Boosts =====
+    // ===== TIER 6: Context-Based Boosts =====    
     const queryHasYear = /202[0-5]|201[0-9]/.test(normalizedQuery);
     if (queryHasYear && item.provider === 'lrclib') {
         score += 10000;
@@ -373,10 +468,12 @@ export function calculateRelevanceScore(item, queryAnalysis) {
         signals.traditionalContentBoost = true;
     }
 
-    // ===== Position Penalty =====
-
-    const positionPenalty = (item._resultIndex || 0) * -100;
+    // ===== TIER 7: Position Penalty =====
+    const positionPenalty = (item._resultIndex || 0) * -positionPenaltyWeight;
     score += positionPenalty;
+    if (positionPenalty < 0) {
+        signals.positionPenalty = Math.abs(positionPenalty);
+    }
 
     return { score, signals, isExact };
 }
@@ -388,8 +485,23 @@ export function calculateRelevanceScore(item, queryAnalysis) {
  * - Sort by relevance
  * - Deduplicate (same song from different providers)
  * - Return top N results
+ * 
+ * @param {Array} chunks - Array of provider result chunks
+ * @param {Object} options - Merge configuration
+ * @param {number} options.limit - Maximum number of results to return
+ * @param {string} options.query - The search query
+ * @param {number} options.minScoreThreshold - Minimum score to include (default: adaptive)
+ * @param {Object} options.scoringOptions - Options to pass to calculateRelevanceScore
+ * @returns {Array} Merged and ranked results
  */
-export function mergeResults(chunks, { limit, query }) {
+export function mergeResults(chunks, options = {}) {
+    const {
+        limit = 10,
+        query = '',
+        minScoreThreshold = null,
+        scoringOptions = {},
+    } = options;
+
     const queryAnalysis = analyzeQuery(query);
     const scoredResults = [];
 
@@ -397,7 +509,8 @@ export function mergeResults(chunks, { limit, query }) {
         chunk.results.forEach((item, resultIndex) => {
             const { score, signals, isExact } = calculateRelevanceScore(
                 { ...item, _resultIndex: resultIndex },
-                queryAnalysis
+                queryAnalysis,
+                scoringOptions
             );
 
             scoredResults.push({
@@ -413,7 +526,8 @@ export function mergeResults(chunks, { limit, query }) {
 
     if (process.env.NODE_ENV === 'development' && scoredResults.length > 0) {
         console.log(`\n[LyricsSearch] Query: "${query}"`);
-        console.log(`[LyricsSearch] Inferred: "${queryAnalysis.inferredTitle}" by "${queryAnalysis.inferredArtist}"`);
+        console.log(`[LyricsSearch] Inferred: "${queryAnalysis.inferredTitle}" by "${queryAnalysis.inferredArtist}" (confidence: ${(queryAnalysis.confidence * 100).toFixed(0)}%)`);
+        console.log(`[LyricsSearch] Known artists loaded: ${queryAnalysis.hasKnownArtists}`);
         console.log('[LyricsSearch] Top 5 results:');
         scoredResults.slice(0, 5).forEach((r, i) => {
             console.log(`  ${i + 1}. [${r.score.toFixed(0)}] ${r.item.title} - ${r.item.artist} (${r.item.provider})`);
@@ -421,11 +535,24 @@ export function mergeResults(chunks, { limit, query }) {
         });
     }
 
-    const MIN_SCORE_THRESHOLD = 50000;
-    const filtered = scoredResults.filter(r => r.score >= MIN_SCORE_THRESHOLD);
+    let threshold = minScoreThreshold;
+    if (threshold === null) {
+        const topScore = scoredResults[0]?.score || 0;
+        if (topScore > 500000) {
+            threshold = 100000;
+        } else if (topScore > 200000) {
+            threshold = 50000;
+        } else if (topScore > 50000) {
+            threshold = 20000;
+        } else {
+            threshold = 5000;
+        }
+    }
+
+    const filtered = scoredResults.filter(r => r.score >= threshold);
 
     const merged = [];
-    const seen = new Set();
+    const seen = new Map();
 
     for (const scored of filtered) {
         if (merged.length >= limit) break;
@@ -433,11 +560,38 @@ export function mergeResults(chunks, { limit, query }) {
         const item = scored.item;
         const dedupKey = `${normalizeText(item.title)}|${normalizeText(item.artist)}`;
 
-        if (!seen.has(dedupKey)) {
-            seen.add(dedupKey);
+        const existing = seen.get(dedupKey);
+        if (!existing) {
+            seen.set(dedupKey, scored.score);
             merged.push(item);
+        } else if (scored.score > existing) {
+            const existingIndex = merged.findIndex(m =>
+                `${normalizeText(m.title)}|${normalizeText(m.artist)}` === dedupKey
+            );
+            if (existingIndex !== -1) {
+                merged[existingIndex] = item;
+                seen.set(dedupKey, scored.score);
+            }
         }
     }
 
     return merged;
+}
+
+/**
+ * Clear the normalization cache
+ */
+export function clearCache() {
+    normalizationCache.clear();
+}
+
+/**
+ * Get cache statistics
+ */
+export function getCacheStats() {
+    return {
+        normalizationCacheSize: normalizationCache.size,
+        knownArtistsLoaded,
+        knownArtistsCount: knownArtistsList.length,
+    };
 }

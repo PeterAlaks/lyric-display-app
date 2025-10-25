@@ -32,7 +32,7 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   // Global state management
-  // Targeted selectors for optimized re-renders
+
   const { isOutputOn, setIsOutputOn } = useOutputState();
   const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
@@ -41,10 +41,8 @@ const LyricDisplayApp = () => {
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
 
-  // Handle dark mode sync with Electron
   useDarkModeSync(darkMode, setDarkMode);
 
-  // Menu shortcuts from Electron
   const fileInputRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
@@ -52,10 +50,8 @@ const LyricDisplayApp = () => {
 
   const secondsAgo = useSyncTimer(lastSyncTime);
 
-  // File upload functionality
   const handleFileUpload = useFileUpload();
 
-  // Output tabs and settings helpers
   const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({
     output1Settings,
     output2Settings,
@@ -72,13 +68,10 @@ const LyricDisplayApp = () => {
 
   const [hasInteractedWithTabs, setHasInteractedWithTabs] = React.useState(false);
 
-  // Online lyrics search modal state
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
 
-  // EasyWorship import modal state
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
 
-  // Search state and helpers
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
 
   const hasLyrics = lyrics && lyrics.length > 0;
@@ -299,6 +292,92 @@ const LyricDisplayApp = () => {
     setIsOutputOn(!isOutputOn);
     emitOutputToggle(!isOutputOn);
   };
+
+  React.useEffect(() => {
+    if (!hasLyrics) return;
+
+    const handleKeyDown = (event) => {
+      const activeElement = document.activeElement;
+      const isTyping = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.isContentEditable
+      );
+
+      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+        event.preventDefault();
+        const searchInput = document.querySelector('[data-search-input]');
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (searchQuery) {
+          event.preventDefault();
+          clearSearch();
+          if (activeElement && activeElement.hasAttribute('data-search-input')) {
+            activeElement.blur();
+          }
+        }
+        return;
+      }
+
+      if (event.key === 'Enter' && activeElement && activeElement.hasAttribute('data-search-input')) {
+        event.preventDefault();
+        if (totalMatches > 0 && highlightedLineIndex !== null) {
+          handleLineSelect(highlightedLineIndex);
+          window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+            detail: { lineIndex: highlightedLineIndex }
+          }));
+        }
+        return;
+      }
+
+      if (isTyping) return;
+
+      if (event.key === ' ' || event.code === 'Space') {
+        event.preventDefault();
+        handleToggle();
+        return;
+      }
+
+      const isUpArrow = event.key === 'ArrowUp' || event.keyCode === 38;
+      const isDownArrow = event.key === 'ArrowDown' || event.keyCode === 40;
+      const isHome = event.key === 'Home';
+      const isEnd = event.key === 'End';
+
+      if (isUpArrow || isDownArrow || isHome || isEnd) {
+        event.preventDefault();
+
+        const currentIndex = selectedLine ?? -1;
+        let newIndex;
+
+        if (isHome) {
+          newIndex = 0;
+        } else if (isEnd) {
+          newIndex = lyrics.length - 1;
+        } else if (isUpArrow) {
+          newIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+        } else {
+          newIndex = currentIndex < lyrics.length - 1 ? currentIndex + 1 : lyrics.length - 1;
+        }
+
+        if (newIndex !== currentIndex) {
+          handleLineSelect(newIndex);
+
+          window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+            detail: { lineIndex: newIndex }
+          }));
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasLyrics, lyrics, selectedLine, handleLineSelect, handleToggle, searchQuery, clearSearch, totalMatches, highlightedLineIndex, isConnected, isAuthenticated, ready, showToast, setIsOutputOn, emitOutputToggle]);
 
   const { isFileAlreadyInSetlist, handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
@@ -550,13 +629,6 @@ const LyricDisplayApp = () => {
 
           <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
-          {/* Last Synced Indicator */}
-          {lastSyncTime && (
-            <div className={`mt-3 text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              Last synced {secondsAgo}s ago
-            </div>
-          )}
-
           <div className={`mt-4 text-[12px] text-left space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             © 2025 LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
           </div>
@@ -567,9 +639,19 @@ const LyricDisplayApp = () => {
           {/* Fixed Header */}
           <div className="mb-6 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                {hasLyrics ? lyricsFileName : ''}
-              </h2>
+              <div>
+                <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {hasLyrics ? lyricsFileName : ''}
+                </h2>
+                {hasLyrics && (
+                  <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {selectedLine !== null && selectedLine !== undefined
+                      ? `Line ${selectedLine + 1} of ${lyrics.length} loaded lyric lines`
+                      : `${lyrics.length} loaded lyric ${lyrics.length === 1 ? 'line' : 'lines'}`
+                    }
+                  </p>
+                )}
+              </div>
               {hasLyrics && (
                 <div className="flex items-center gap-2">
                   {/* Add to Setlist Button */}

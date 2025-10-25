@@ -55,12 +55,18 @@ const toLoopbackOrigin = (origin, port, forceIPv4Loopback = false) => {
       return normalizeOrigin(origin);
     }
 
-    const shouldForce = forceIPv4Loopback || url.hostname === '0.0.0.0' || url.hostname === '::1' || url.hostname === '[::1]';
-    if (!shouldForce && url.hostname.startsWith('127.')) {
+    if (forceIPv4Loopback) {
+      const protocol = url.protocol || 'http:';
+      const portValue = url.port || `${port}`;
+      const portSuffix = isDefaultPortForProtocol(protocol, portValue) ? '' : `:${portValue}`;
+      return normalizeOrigin(`${protocol}//127.0.0.1${portSuffix}`);
+    }
+
+    if (url.hostname.startsWith('127.')) {
       return normalizeOrigin(origin);
     }
 
-    if (!shouldForce && url.hostname === 'localhost') {
+    if (url.hostname === 'localhost') {
       return normalizeOrigin(origin);
     }
 
@@ -82,55 +88,53 @@ export const resolveBackendOrigin = (port = defaultPort) => {
   const inBrowser = typeof window !== 'undefined';
   const hasElectronBridge = inBrowser && !!window.electronAPI;
 
-  const normalizedEnvOrigin = envOrigin
-    ? toLoopbackOrigin(envOrigin, port, hasElectronBridge)
-    : '';
-
   if (envOrigin && !envIsLocal) {
-    return normalizedEnvOrigin;
+    return envOrigin;
   }
 
   const browserOrigin = getBrowserOrigin();
   const browserHost = parseHostname(browserOrigin);
   const browserIsLocal = isLocalHostname(browserHost);
-  const normalizedBrowserOrigin = browserOrigin
-    ? toLoopbackOrigin(browserOrigin, port, hasElectronBridge)
-    : '';
 
   if (hasElectronBridge) {
-    if (normalizedEnvOrigin) return normalizedEnvOrigin;
-    if (normalizedBrowserOrigin) return normalizedBrowserOrigin;
+    if (browserOrigin) {
+      const browserUrl = new URL(browserOrigin);
+      const browserPort = browserUrl.port;
+
+      if (browserPort === '5173') {
+        return `http://localhost:${port}`;
+      }
+
+      if (browserHost.startsWith('127.')) {
+        return browserOrigin;
+      }
+
+      if (browserHost === 'localhost') {
+        return browserOrigin;
+      }
+
+      if (browserIsLocal) {
+        return browserOrigin;
+      }
+    }
+
     return `http://127.0.0.1:${port}`;
   }
 
-  if (browserOrigin && !browserIsLocal) {
-    if (envOrigin && envIsLocal) {
-      try {
-        const browserUrl = new URL(browserOrigin);
-        const envUrlObj = new URL(envOrigin || `http://localhost:${port}`);
-        const targetProtocol = envUrlObj.protocol || browserUrl.protocol || 'http:';
-        const targetPort = envUrlObj.port || `${port}`;
-        const currentPort = browserUrl.port;
 
-        if (!currentPort || currentPort !== targetPort) {
-          const portSuffix = isDefaultPortForProtocol(targetProtocol, targetPort) ? '' : `:${targetPort}`;
-          return normalizeOrigin(`${targetProtocol}//${browserUrl.hostname}${portSuffix}`);
-        }
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.warn('[network] Failed to derive backend origin from browser host:', error);
-        }
-      }
+  if (browserOrigin) {
+    const browserUrl = new URL(browserOrigin);
+    const browserPort = browserUrl.port;
+
+    if (browserPort === '5173') {
+      return `http://localhost:${port}`;
     }
-    return normalizeOrigin(browserOrigin);
-  }
 
-  if (normalizedEnvOrigin) {
-    return normalizedEnvOrigin;
-  }
+    if (!browserIsLocal) {
+      return browserOrigin;
+    }
 
-  if (normalizedBrowserOrigin) {
-    return normalizedBrowserOrigin;
+    return browserOrigin;
   }
 
   if (import.meta.env.DEV || import.meta.env.MODE === 'development') {

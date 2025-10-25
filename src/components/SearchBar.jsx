@@ -17,9 +17,10 @@ const SearchBar = ({
       <div className="relative">
         <Input
           type="text"
-          placeholder="Search lyrics..."
+          placeholder="Search through loaded lyrics..."
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
+          data-search-input
           className={`border rounded-md w-full pr-24 ${darkMode
             ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
             : 'border-gray-300 bg-white'

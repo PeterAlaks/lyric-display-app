@@ -194,7 +194,13 @@ export const ControlSocketProvider = ({ children }) => {
                     connectionManager.recordConnectionSuccess(clientId.current);
                     setConnectionStatus('connected');
                     setAuthStatus('authenticated');
-                    setLastSyncTime(Date.now());
+                    const syncTime = Date.now();
+                    setLastSyncTime(syncTime);
+                    try {
+                        localStorage.setItem('lastSyncTime', syncTime.toString());
+                    } catch (err) {
+                        console.warn('Failed to store lastSyncTime:', err);
+                    }
                     startHeartbeat();
 
                     socket.once('currentState', () => {
@@ -231,7 +237,13 @@ export const ControlSocketProvider = ({ children }) => {
                 socket.on('disconnect', handleDisconnect);
 
                 socket.on('currentState', () => {
-                    setLastSyncTime(Date.now());
+                    const syncTime = Date.now();
+                    setLastSyncTime(syncTime);
+                    try {
+                        localStorage.setItem('lastSyncTime', syncTime.toString());
+                    } catch (err) {
+                        console.warn('Failed to store lastSyncTime:', err);
+                    }
                 });
 
                 registerAuthenticatedHandlers({
@@ -363,7 +375,13 @@ export const ControlSocketProvider = ({ children }) => {
 
     useEffect(() => {
         const handleSyncCompleted = () => {
-            setLastSyncTime(Date.now());
+            const syncTime = Date.now();
+            setLastSyncTime(syncTime);
+            try {
+                localStorage.setItem('lastSyncTime', syncTime.toString());
+            } catch (err) {
+                console.warn('Failed to store lastSyncTime:', err);
+            }
         };
 
         window.addEventListener('sync-completed', handleSyncCompleted);

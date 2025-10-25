@@ -77,7 +77,11 @@ const useLyricsStore = create(
         maxLines: 3,
         minFontSize: 24,
         adjustedFontSize: null,
-        autosizerActive: false
+        autosizerActive: false,
+        primaryViewportWidth: null,
+        primaryViewportHeight: null,
+        allInstances: null,
+        instanceCount: 1
       },
       output2Settings: {
         fontStyle: 'Bebas Neue',
@@ -106,7 +110,11 @@ const useLyricsStore = create(
         maxLines: 3,
         minFontSize: 24,
         adjustedFontSize: null,
-        autosizerActive: false
+        autosizerActive: false,
+        primaryViewportWidth: null,
+        primaryViewportHeight: null,
+        allInstances: null,
+        instanceCount: 1
       },
       updateOutputSettings: (output, newSettings) =>
         set((state) => ({

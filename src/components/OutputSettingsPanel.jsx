@@ -387,23 +387,81 @@ const OutputSettingsPanel = ({ outputKey }) => {
           {(() => {
             const baseFont = Number.isFinite(settings.fontSize) ? settings.fontSize : 24;
             const adjusted = Number.isFinite(settings.adjustedFontSize) ? settings.adjustedFontSize : null;
-            // Trust autosizerActive flag from outputs/state syncs instead of inferring from numbers
-            const autosizerActive = Boolean(settings.maxLinesEnabled && settings.autosizerActive);
-            const displayFontSize = autosizerActive
+
+            const instanceCount = settings.instanceCount || 1;
+            const hasMultipleInstances = instanceCount > 1;
+            const allInstances = settings.allInstances || [];
+
+            let anyInstanceResizing = false;
+            let primaryInstanceResizing = false;
+
+            if (settings.maxLinesEnabled) {
+              if (hasMultipleInstances && allInstances.length > 0) {
+                anyInstanceResizing = allInstances.some(inst => inst.autosizerActive === true);
+                primaryInstanceResizing = (adjusted !== null && adjusted !== baseFont);
+              } else {
+                anyInstanceResizing = Boolean(settings.autosizerActive);
+                primaryInstanceResizing = Boolean(settings.autosizerActive);
+              }
+            }
+
+            const displayFontSize = primaryInstanceResizing
               ? (Number.isFinite(adjusted) ? adjusted : baseFont)
               : baseFont;
+
+            const primaryViewport = settings.primaryViewportWidth && settings.primaryViewportHeight
+              ? `${settings.primaryViewportWidth}×${settings.primaryViewportHeight}`
+              : null;
+
+            let inputDisplayValue = displayFontSize;
+            if (hasMultipleInstances && anyInstanceResizing && allInstances.length > 0) {
+              const primaryValue = displayFontSize;
+
+              const otherResizingInstance = allInstances.find(inst =>
+                inst.autosizerActive === true &&
+                inst.adjustedFontSize !== primaryValue
+              );
+
+              if (otherResizingInstance) {
+                const otherValue = otherResizingInstance.adjustedFontSize ?? baseFont;
+                inputDisplayValue = allInstances.length > 2
+                  ? `${primaryValue}, ${otherValue}…`
+                  : `${primaryValue}, ${otherValue}`;
+              } else if (allInstances.length > 1) {
+                inputDisplayValue = `${primaryValue}…`;
+              }
+            }
+
+            let tooltipText = '';
+            if (anyInstanceResizing) {
+              if (hasMultipleInstances) {
+                tooltipText = `Auto-resizing active on ${instanceCount} displays\n\nPrimary (${primaryViewport}): ${displayFontSize}px`;
+                if (allInstances.length > 0) {
+                  allInstances.forEach((inst, idx) => {
+                    const viewport = `${inst.viewportWidth}×${inst.viewportHeight}`;
+                    const size = inst.adjustedFontSize ?? baseFont;
+                    tooltipText += `\nDisplay ${idx + 1} (${viewport}): ${size}px`;
+                  });
+                }
+                tooltipText += `\n\nPreferred size: ${settings.fontSize}px`;
+              } else {
+                tooltipText = `Auto-resizing active: ${displayFontSize}px (preferred: ${settings.fontSize}px)`;
+              }
+            } else {
+              tooltipText = 'Set the preferred font size in pixels';
+            }
 
             const innerClassBase = `${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`;
 
             return (
-              <div className={`flex items-center ${autosizerActive ? 'gap-2' : ''}`} aria-live={autosizerActive ? 'polite' : undefined}>
-                {autosizerActive && (
+              <div className={`flex items-center ${anyInstanceResizing ? 'gap-2' : ''}`} aria-live={anyInstanceResizing ? 'polite' : undefined}>
+                {anyInstanceResizing && (
                   <span
                     className="inline-flex items-center justify-center"
-                    title={`Auto-resizing active: ${Number.isFinite(displayFontSize) ? displayFontSize : ''}px`}
+                    title={tooltipText}
                     aria-hidden="true"
                   >
-                    {/* Sparkles icon with gradient fill */}
+                    {/* Sparkles icon */}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
                       <defs>
                         <linearGradient id="spark-grad" x1="0" y1="0" x2="1" y2="1">
@@ -415,19 +473,30 @@ const OutputSettingsPanel = ({ outputKey }) => {
                     </svg>
                   </span>
                 )}
-                <Input
-                  type="number"
-                  value={Number.isFinite(displayFontSize) ? displayFontSize : 24}
-                  onChange={(e) => {
-                    const next = parseInt(e.target.value, 10);
-                    if (!Number.isNaN(next)) update('fontSize', next);
-                  }}
-                  min="24"
-                  max="100"
-                  disabled={autosizerActive}
-                  className={`w-24 ${innerClassBase} ${autosizerActive ? 'opacity-80 cursor-not-allowed' : ''}`}
-                  title={autosizerActive ? `Auto-resizing active: ${Number.isFinite(displayFontSize) ? displayFontSize : ''}px (preferred: ${settings.fontSize ?? ''}px)` : 'Set the preferred font size in pixels'}
-                />
+                <div className="relative flex-1">
+                  {hasMultipleInstances && anyInstanceResizing && primaryInstanceResizing ? (
+                    <div
+                      className={`w-24 h-9 px-3 flex items-center justify-start text-sm font-medium rounded-md border ${innerClassBase} opacity-80 cursor-not-allowed`}
+                      title={tooltipText}
+                    >
+                      {inputDisplayValue}
+                    </div>
+                  ) : (
+                    <Input
+                      type="number"
+                      value={Number.isFinite(displayFontSize) ? displayFontSize : 24}
+                      onChange={(e) => {
+                        const next = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(next)) update('fontSize', next);
+                      }}
+                      min="24"
+                      max="100"
+                      disabled={primaryInstanceResizing}
+                      className={`w-24 ${innerClassBase} ${primaryInstanceResizing ? 'opacity-80 cursor-not-allowed' : ''}`}
+                      title={tooltipText}
+                    />
+                  )}
+                </div>
               </div>
             );
           })()}

@@ -9,6 +9,10 @@ let currentOutput2Settings = {};
 let currentIsOutputOn = false;
 let setlistFiles = [];
 let connectedClients = new Map();
+let outputInstances = {
+  output1: new Map(),
+  output2: new Map()
+};
 
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
@@ -334,8 +338,31 @@ export default function registerSocketEvents(io, { hasPermission }) {
       const safe = {};
       if (Number.isFinite(metrics.adjustedFontSize) || metrics.adjustedFontSize === null) safe.adjustedFontSize = metrics.adjustedFontSize;
       if (typeof metrics.autosizerActive === 'boolean') safe.autosizerActive = metrics.autosizerActive;
+      if (Number.isFinite(metrics.viewportWidth)) safe.viewportWidth = metrics.viewportWidth;
+      if (Number.isFinite(metrics.viewportHeight)) safe.viewportHeight = metrics.viewportHeight;
+      if (Number.isFinite(metrics.timestamp)) safe.timestamp = metrics.timestamp;
 
-      io.emit('outputMetrics', { output, metrics: safe });
+      outputInstances[output].set(socket.id, {
+        ...safe,
+        socketId: socket.id,
+        lastUpdate: Date.now()
+      });
+
+      const allInstances = Array.from(outputInstances[output].values());
+
+      const primaryInstance = allInstances.reduce((largest, current) => {
+        if (!largest) return current;
+        const largestArea = (largest.viewportWidth || 0) * (largest.viewportHeight || 0);
+        const currentArea = (current.viewportWidth || 0) * (current.viewportHeight || 0);
+        return currentArea > largestArea ? current : largest;
+      }, null);
+
+      io.emit('outputMetrics', {
+        output,
+        metrics: primaryInstance || safe,
+        allInstances: allInstances.length > 1 ? allInstances : undefined,
+        instanceCount: allInstances.length
+      });
     });
 
     socket.on('fileNameUpdate', (fileName) => {
@@ -422,7 +449,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket.emit('draftRejected', { success: true, reason });
     });
 
-    // Heartbeat for connection monitoring
     socket.on('heartbeat', () => {
       socket.emit('heartbeat_ack', { timestamp: Date.now() });
     });
@@ -430,6 +456,27 @@ export default function registerSocketEvents(io, { hasPermission }) {
     socket.on('disconnect', (reason) => {
       console.log(`Authenticated user disconnected: ${clientType} (${deviceId}) - Reason: ${reason}`);
       connectedClients.delete(socket.id);
+
+      if (clientType === 'output1' || clientType === 'output2') {
+        outputInstances[clientType]?.delete(socket.id);
+
+        const remainingInstances = Array.from(outputInstances[clientType]?.values() || []);
+        if (remainingInstances.length > 0) {
+          const primaryInstance = remainingInstances.reduce((largest, current) => {
+            if (!largest) return current;
+            const largestArea = (largest.viewportWidth || 0) * (largest.viewportHeight || 0);
+            const currentArea = (current.viewportWidth || 0) * (current.viewportHeight || 0);
+            return currentArea > largestArea ? current : largest;
+          }, null);
+
+          io.emit('outputMetrics', {
+            output: clientType,
+            metrics: primaryInstance,
+            allInstances: remainingInstances.length > 1 ? remainingInstances : undefined,
+            instanceCount: remainingInstances.length
+          });
+        }
+      }
 
       socket.broadcast.emit('clientDisconnected', {
         clientType,
@@ -446,7 +493,6 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
     }, 100);
 
-    // Periodic authenticated state broadcast (every 30 seconds)
     const stateBroadcastInterval = setInterval(() => {
       if (socket.connected) {
         const clientInfo = connectedClients.get(socket.id);

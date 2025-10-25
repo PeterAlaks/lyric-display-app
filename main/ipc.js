@@ -358,6 +358,18 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
     }
   });
 
+  // Output preview window opener
+  ipcMain.handle('open-output-window', async (_event, outputNumber) => {
+    try {
+      const route = outputNumber === 1 ? '/output1' : '/output2';
+      const { createWindow } = await import('./windows.js');
+      createWindow(route);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // Updater controls
   ipcMain.handle('updater:download', async () => {
     try {

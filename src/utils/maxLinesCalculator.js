@@ -203,13 +203,3 @@ export const calculateOptimalFontSize = ({
     return { adjustedSize: targetMinSize, isTruncated: true };
   }
 };
-
-/**
- * Applies truncation to text if needed
- * @param {string} text - The text to potentially truncate
- * @param {boolean} shouldTruncate - Whether truncation is needed
- * @returns {string} Original or truncated text
- */
-export const applyTruncation = (text, shouldTruncate) => {
-  return text;
-};

@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   openInAppBrowser: (url) => ipcRenderer.invoke('open-in-app-browser', url),
   addRecentFile: (filePath) => ipcRenderer.invoke('add-recent-file', filePath),
+  openOutputWindow: (outputNumber) => ipcRenderer.invoke('open-output-window', outputNumber),
   onOpenLyricsFromPath: (callback) => {
     const channel = 'open-lyrics-from-path';
     ipcRenderer.removeAllListeners(channel);

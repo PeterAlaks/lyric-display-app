@@ -67,10 +67,23 @@
 @layer base {
   * {
     @apply border-border;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
   }
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  input,
+  textarea,
+  [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
   }
 }
 

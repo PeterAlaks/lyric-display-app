@@ -1,9 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Clock, Users, AlertCircle, CheckCircle, Timer, RefreshCw } from 'lucide-react';
+import { Activity, Clock, Users, AlertCircle, CheckCircle, Timer, RefreshCw, Zap } from 'lucide-react';
 
 const ConnectionDiagnosticsModal = ({ darkMode }) => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [lastSyncTime, setLastSyncTime] = useState(null);
+    const [secondsAgo, setSecondsAgo] = useState(0);
+
+    useEffect(() => {
+        const updateSyncTime = () => {
+            try {
+                const stored = localStorage.getItem('lastSyncTime');
+                if (stored) {
+                    setLastSyncTime(parseInt(stored, 10));
+                }
+            } catch (err) {
+                console.warn('Failed to read lastSyncTime:', err);
+            }
+        };
+
+        updateSyncTime();
+
+        const handleSyncCompleted = () => {
+            updateSyncTime();
+        };
+
+        window.addEventListener('sync-completed', handleSyncCompleted);
+        return () => window.removeEventListener('sync-completed', handleSyncCompleted);
+    }, []);
+
+    useEffect(() => {
+        if (!lastSyncTime) {
+            setSecondsAgo(0);
+            return;
+        }
+
+        const updateTimer = () => {
+            const now = Date.now();
+            const diff = now - lastSyncTime;
+            setSecondsAgo(Math.floor(diff / 1000));
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [lastSyncTime]);
 
     useEffect(() => {
         fetchDiagnostics();
@@ -91,7 +132,7 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
                 <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
                     <div className="flex items-center gap-2 mb-2">
                         <Activity className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -114,6 +155,23 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
                     <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {stats.globalFailures || 0}
                     </p>
+                </div>
+
+                <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Zap className={`w-5 h-5 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
+                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Last Synced
+                        </span>
+                    </div>
+                    <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {lastSyncTime ? `${secondsAgo}s` : 'Never'}
+                    </p>
+                    {lastSyncTime && (
+                        <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                            ago
+                        </p>
+                    )}
                 </div>
             </div>
 

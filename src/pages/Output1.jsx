@@ -4,7 +4,7 @@ import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
 import { resolveBackendUrl } from '../utils/network';
-import { calculateOptimalFontSize, applyTruncation } from '../utils/maxLinesCalculator';
+import { calculateOptimalFontSize } from '../utils/maxLinesCalculator';
 
 const Output1 = () => {
   const { socket, isConnected, connectionStatus, isAuthenticated, emitStyleUpdate, emitOutputMetrics } = useSocket('output1');
@@ -14,11 +14,9 @@ const Output1 = () => {
 
   const stateRequestTimeoutRef = useRef(null);
   const pendingStateRequestRef = useRef(false);
-  const [lastSyncTime, setLastSyncTime] = useState(null);
 
   const [adjustedFontSize, setAdjustedFontSize] = useState(null);
   const [isTruncated, setIsTruncated] = useState(false);
-  const measureRef = useRef(null);
   const textContainerRef = useRef(null);
 
   const currentLine = lyrics[selectedLine];
@@ -83,7 +81,6 @@ const Output1 = () => {
 
     const handleCurrentState = (state) => {
       logDebug('Output1: Received current state:', state);
-      setLastSyncTime(Date.now());
 
       if (stateRequestTimeoutRef.current) {
         clearTimeout(stateRequestTimeoutRef.current);
@@ -310,11 +307,17 @@ const Output1 = () => {
         setAdjustedFontSize(null);
         setIsTruncated(false);
       }
-      const updates = { adjustedFontSize: null, autosizerActive: false };
-      updateOutput1Settings(updates);
+      updateOutput1Settings({ autosizerActive: false });
+
       if (emitOutputMetrics && isConnected && isAuthenticated) {
         try {
-          emitOutputMetrics('output1', { adjustedFontSize: null, autosizerActive: false });
+          emitOutputMetrics('output1', {
+            adjustedFontSize: null,
+            autosizerActive: false,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            timestamp: Date.now(),
+          });
         } catch { }
       }
       return;
@@ -350,13 +353,16 @@ const Output1 = () => {
 
       const autosizerActive = Boolean(maxLinesEnabled && safeAdjusted !== null && safeAdjusted !== fontSize);
 
-      const updates = { adjustedFontSize: safeAdjusted, autosizerActive };
-      updateOutput1Settings(updates);
+      updateOutput1Settings({ autosizerActive });
+
       if (emitOutputMetrics && isConnected && isAuthenticated) {
         try {
           emitOutputMetrics('output1', {
             adjustedFontSize: safeAdjusted,
             autosizerActive,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            timestamp: Date.now(),
           });
         } catch { }
       }
@@ -378,23 +384,11 @@ const Output1 = () => {
     adjustedFontSize
   ]);
 
-  useEffect(() => {
-    if (emitOutputMetrics && isConnected && isAuthenticated) {
-      try {
-        emitOutputMetrics('output1', {
-          adjustedFontSize,
-          autosizerActive: Boolean(maxLinesEnabled && adjustedFontSize !== null && adjustedFontSize !== fontSize),
-        });
-      } catch { }
-    }
-  }, [adjustedFontSize, maxLinesEnabled, fontSize, isConnected, isAuthenticated, emitOutputMetrics]);
-
   const renderContent = () => {
     const processedText = processDisplayText(line);
-    const displayText = applyTruncation(processedText, isTruncated && maxLinesEnabled);
 
-    if (displayText.includes('\n')) {
-      const lines = displayText.split('\n');
+    if (processedText.includes('\n')) {
+      const lines = processedText.split('\n');
       return (
         <div className="space-y-1">
           {lines.map((lineText, index) => {
@@ -419,7 +413,7 @@ const Output1 = () => {
       );
     }
 
-    return displayText;
+    return processedText;
   };
 
   return (
@@ -430,7 +424,6 @@ const Output1 = () => {
       }}
     >
       {renderFullScreenMedia()}
-      <div ref={measureRef} style={{ position: 'absolute', visibility: 'hidden' }} />
       <div
         className="relative z-10 flex w-full h-full"
         style={{

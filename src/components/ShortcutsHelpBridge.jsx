@@ -5,8 +5,14 @@ import { useModalContext } from './modal/ModalProvider';
 const SHORTCUTS = [
   { label: 'Open Lyrics File', combo: 'Ctrl/Cmd + O' },
   { label: 'New Lyrics', combo: 'Ctrl/Cmd + N' },
-  { label: 'Preview Output 1', combo: 'Ctrl/Cmd + 1' },
-  { label: 'Preview Output 2', combo: 'Ctrl/Cmd + 2' },
+  { label: 'Focus Search Bar', combo: 'Ctrl/Cmd + F' },
+  { label: 'Clear Search', combo: 'Escape' },
+  { label: 'Jump to First Match (in search)', combo: 'Enter' },
+  { label: 'Navigate to Previous Lyric Line', combo: 'Up Arrow / Numpad ↑' },
+  { label: 'Navigate to Next Lyric Line', combo: 'Down Arrow / Numpad ↓' },
+  { label: 'Jump to First Lyric Line', combo: 'Home' },
+  { label: 'Jump to Last Lyric Line', combo: 'End' },
+  { label: 'Toggle Display Output', combo: 'Spacebar' },
   { label: 'Add Translation Line in Canvas', combo: 'Ctrl/Cmd + T' },
   { label: 'Duplicate Line in Canvas', combo: 'Ctrl/Cmd + D' },
   { label: 'Select Line in Canvas', combo: 'Ctrl/Cmd + L' },
@@ -26,7 +32,7 @@ export default function ShortcutsHelpBridge() {
       icon: <Keyboard className="h-6 w-6" aria-hidden />,
       dismissLabel: 'Close',
       allowBackdropClose: true,
-      className: 'sm:min-w-[360px] max-w-lg',
+      className: 'sm:min-w-[500px] max-w-2xl',
       body: <ShortcutsList />,
     });
   }, [showModal]);

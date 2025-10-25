@@ -276,8 +276,30 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
             }
           },
           { type: 'separator' },
-          { label: 'Preview Output 1', accelerator: 'CmdOrCtrl+1', click: () => createWindow?.('/output1') },
-          { label: 'Preview Output 2', accelerator: 'CmdOrCtrl+2', click: () => createWindow?.('/output2') },
+          {
+            label: 'Preview Outputs',
+            click: async () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                try {
+                  await (showInAppModal
+                    ? showInAppModal({
+                      title: 'Preview Outputs',
+                      headerDescription: 'Live preview of both output displays side-by-side',
+                      component: 'PreviewOutputs',
+                      variant: 'info',
+                      size: 'large',
+                      dismissLabel: 'Close',
+                      className: 'max-w-4xl'
+                    }, { timeout: 600000 })
+                    : Promise.resolve()
+                  );
+                } catch (err) {
+                  console.warn('Could not open preview outputs modal:', err);
+                }
+              }
+            }
+          },
           { type: 'separator' },
           { role: 'quit' },
         ],
