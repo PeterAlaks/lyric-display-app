@@ -280,6 +280,7 @@ lyric-display-app/
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
 |   |   ├── SetlistModal.jsx                # Setlist Modal
 |   |   ├── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
+|   |   ├── SongInfoModal.jsx               # Info modal for loaded lyrics
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
 │   ├── context/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
@@ -310,7 +311,8 @@ lyric-display-app/
 │   ├── styles/
 |   |   └── fonts.css                       # Display font styles import and definitions
 │   ├── utils/
-|   |   ├── asyncLyricsParser.js            # Picks worker/IPC/sync parsing strategy.
+|   |   ├── artistDetection.js              # Scans Known Artists database for various uses around the app
+|   |   ├── asyncLyricsParser.js            # Picks worker/IPC/sync parsing strategy
 |   |   ├── connectionManager.js            # Socket connection management utility
 |   |   ├── errorClassification.js          # Network error detection and description utility
 |   |   ├── logger.js                       # Simple event and error logger utility
