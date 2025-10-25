@@ -154,14 +154,18 @@ Each output can be independently configured:
 
 | Shortcut | Action |
 |----------|--------|
-| Ctrl/Cmd+O | Load lyrics file |
-| Ctrl/Cmd+N | New song canvas |
-| Ctrl/Cmd+T | In New song canvas - adds translation line |
-| Ctrl/Cmd+D | In New song canvas - duplicates current line |
-| Ctrl/Cmd+L | In New song canvas - selects current line |
-| Ctrl/Cmd+1 | Preview Output 1 |
-| Ctrl/Cmd+2 | Preview Output 2 |
-| Shift+↑/↓ | Navigate search results |
+| Ctrl/Cmd + O | Load lyrics file |
+| Ctrl/Cmd + N | New song canvas |
+| Ctrl/Cmd + F | Jump to search |
+| Esc | Clear search query |
+| Ctrl/Cmd + T | In New song canvas - adds translation line |
+| Ctrl/Cmd + D | In New song canvas - duplicates current line |
+| Ctrl/Cmd + L | In New song canvas - selects current line |
+| Shift + ↑/↓ | Navigate search results |
+| Spacebar | Toggle display output |
+| ↑/↓ or Numpad ↑/↓ | Jump to next/previous selected lyric line |
+| Home | Jump to select first lyric line |
+| End | Jump to select last lyric line |
 
 ## Use Cases
 
@@ -270,6 +274,7 @@ lyric-display-app/
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
 |   |   ├── OnlineLyricsWelcomeSplash.jsx   # Online Lyrics Search welcome and help modal component
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
+|   |   ├── PreviewOutputsModal.jsx         # Display outputs preview modal
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
 |   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
@@ -310,6 +315,7 @@ lyric-display-app/
 |   |   ├── errorClassification.js          # Network error detection and description utility
 |   |   ├── logger.js                       # Simple event and error logger utility
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
+|   |   ├── maxLinesCalculator.js           # Calculator for maximum lines feature in outputs display
 |   |   ├── network.js                      # Network utility for backend URL resolution
 |   |   ├── parseLrc.js                     # LRC file parser
 |   |   ├── parseLyrics.js                  # Text file parser
