@@ -581,7 +581,7 @@ const LyricDisplayApp = () => {
 
           {/* Output Toggle */}
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4 mx-2">
+            <div className="flex items-center gap-4 pl-4">
               <Switch
                 checked={isOutputOn}
                 onCheckedChange={handleToggle}
