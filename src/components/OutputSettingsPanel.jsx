@@ -226,30 +226,28 @@ const OutputSettingsPanel = ({ outputKey }) => {
   const previousFullScreenModeRef = React.useRef(fullScreenModeChecked);
   const previousLyricsPositionRef = React.useRef(lyricsPositionValue);
 
-  // Advanced settings expanded states (session storage)
   const getSessionStorageKey = (key) => `${outputKey}_${key}`;
-  
+
   const [fontSizeAdvancedExpanded, setFontSizeAdvancedExpanded] = React.useState(() => {
     const stored = sessionStorage.getItem(getSessionStorageKey('fontSizeAdvancedExpanded'));
     return stored === 'true';
   });
-  
+
   const [fontColorAdvancedExpanded, setFontColorAdvancedExpanded] = React.useState(() => {
     const stored = sessionStorage.getItem(getSessionStorageKey('fontColorAdvancedExpanded'));
     return stored === 'true';
   });
-  
+
   const [dropShadowAdvancedExpanded, setDropShadowAdvancedExpanded] = React.useState(() => {
     const stored = sessionStorage.getItem(getSessionStorageKey('dropShadowAdvancedExpanded'));
     return stored === 'true';
   });
-  
+
   const [backgroundAdvancedExpanded, setBackgroundAdvancedExpanded] = React.useState(() => {
     const stored = sessionStorage.getItem(getSessionStorageKey('backgroundAdvancedExpanded'));
     return stored === 'true';
   });
 
-  // Save to session storage when states change
   React.useEffect(() => {
     sessionStorage.setItem(getSessionStorageKey('fontSizeAdvancedExpanded'), fontSizeAdvancedExpanded);
   }, [fontSizeAdvancedExpanded, outputKey]);
@@ -266,84 +264,72 @@ const OutputSettingsPanel = ({ outputKey }) => {
     sessionStorage.setItem(getSessionStorageKey('backgroundAdvancedExpanded'), backgroundAdvancedExpanded);
   }, [backgroundAdvancedExpanded, outputKey]);
 
-  // Font size settings with defaults
   const translationFontSizeMode = settings.translationFontSizeMode ?? 'bound';
   const translationFontSize = settings.translationFontSize ?? settings.fontSize ?? 48;
   const currentFontSize = settings.fontSize ?? 48;
 
-  // Font color settings with defaults
   const translationLineColor = settings.translationLineColor ?? '#FBBF24';
 
-  // Drop shadow settings with defaults
   const dropShadowOffsetX = settings.dropShadowOffsetX ?? 0;
   const dropShadowOffsetY = settings.dropShadowOffsetY ?? 8;
   const dropShadowBlur = settings.dropShadowBlur ?? 10;
 
-  // Background band settings with defaults
   const backgroundBandVerticalPadding = settings.backgroundBandVerticalPadding ?? 20;
   const backgroundBandHeightMode = settings.backgroundBandHeightMode ?? 'adaptive';
   const backgroundBandLockedToMaxLines = settings.backgroundBandLockedToMaxLines ?? false;
   const maxLinesValue = settings.maxLines ?? 3;
   const maxLinesEnabled = settings.maxLinesEnabled ?? false;
-  
-  // Calculate default for custom height
+
   const getDefaultCustomHeight = () => {
     if (maxLinesEnabled) {
       return maxLinesValue;
     }
     return 3;
   };
-  
-  const backgroundBandCustomLines = backgroundBandLockedToMaxLines && maxLinesEnabled 
-    ? maxLinesValue 
+
+  const backgroundBandCustomLines = backgroundBandLockedToMaxLines && maxLinesEnabled
+    ? maxLinesValue
     : (settings.backgroundBandCustomLines ?? getDefaultCustomHeight());
 
-  // Handler for background band height mode change
   const handleBackgroundHeightModeChange = (mode) => {
     const updates = { backgroundBandHeightMode: mode };
-    
+
     if (mode === 'custom' && !settings.backgroundBandCustomLines) {
       updates.backgroundBandCustomLines = getDefaultCustomHeight();
     }
-    
+
     applySettings(updates);
   };
 
-  // Handler for custom lines change with validation
   const handleCustomLinesChange = (value) => {
     const numValue = parseInt(value, 10);
-    
-    // If max lines is enabled, constrain to max lines value
+
     if (maxLinesEnabled && numValue > maxLinesValue) {
       applySettings({ backgroundBandCustomLines: maxLinesValue });
       return;
     }
-    
+
     applySettings({ backgroundBandCustomLines: numValue });
   };
 
-  // Handler for translation font size mode change
   const handleTranslationFontSizeModeChange = (mode) => {
     const updates = { translationFontSizeMode: mode };
-    
-    // When switching to custom, set translation size to current font size
+
     if (mode === 'custom') {
       updates.translationFontSize = currentFontSize;
     }
-    
+
     applySettings(updates);
   };
 
-  // Handler for translation font size change with validation
   const handleTranslationFontSizeChange = (value) => {
     const numValue = parseInt(value, 10);
-    
-    // Constrain to not exceed main font size
+
     if (numValue > currentFontSize) {
       applySettings({ translationFontSize: currentFontSize });
       return;
     }
-    
+
     applySettings({ translationFontSize: numValue });
   };
 
@@ -358,24 +344,21 @@ const OutputSettingsPanel = ({ outputKey }) => {
     previousLyricsPositionRef.current = lyricsPositionValue;
   }, [fullScreenModeChecked, lyricsPositionValue, settings.fullScreenRestorePosition, applySettings]);
 
-  // Sync background band custom lines with max lines constraint
   React.useEffect(() => {
     if (maxLinesEnabled && backgroundBandHeightMode === 'custom' && backgroundBandCustomLines > maxLinesValue) {
       applySettings({ backgroundBandCustomLines: maxLinesValue });
     }
   }, [maxLinesValue, maxLinesEnabled, backgroundBandHeightMode, backgroundBandCustomLines, applySettings]);
 
-  // Sync translation font size with main font size constraint
   React.useEffect(() => {
     if (translationFontSizeMode === 'custom' && translationFontSize > currentFontSize) {
       applySettings({ translationFontSize: currentFontSize });
     }
   }, [currentFontSize, translationFontSizeMode, translationFontSize, applySettings]);
 
-  // Sync background band custom lines with max lines when locked
   React.useEffect(() => {
     if (backgroundBandLockedToMaxLines && maxLinesEnabled && backgroundBandHeightMode === 'custom') {
-      // Only update if the value is actually different
+
       if (settings.backgroundBandCustomLines !== maxLinesValue) {
         applySettings({ backgroundBandCustomLines: maxLinesValue });
       }
@@ -720,7 +703,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             </Select>
           </div>
 
-          {/* Translation Custom Size (only shown when custom mode is selected) */}
+          {/* Translation Custom Size */}
           {translationFontSizeMode === 'custom' && (
             <Tooltip content={`Translation font size (max: ${currentFontSize}px)`} side="top">
               <div className="flex items-center gap-2">
@@ -825,7 +808,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
       >
         <div className="flex items-center justify-between w-full">
           <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-            Translation Line Colour
+            Translation Colour
           </label>
           <Input
             type="color"
@@ -1063,46 +1046,43 @@ const OutputSettingsPanel = ({ outputKey }) => {
             </Select>
           </div>
 
-          {/* Custom Lines (only shown when custom mode is selected) */}
+          {/* Custom Lines */}
           {backgroundBandHeightMode === 'custom' && (
             <Tooltip content={
-              !maxLinesEnabled 
-                ? "Number of lines for band height" 
-                : backgroundBandLockedToMaxLines 
-                  ? `Locked to Max Lines (${maxLinesValue}). Click to unlock` 
+              !maxLinesEnabled
+                ? "Number of lines for band height"
+                : backgroundBandLockedToMaxLines
+                  ? `Locked to Max Lines (${maxLinesValue}). Click to unlock`
                   : `Click to lock to Max Lines (${maxLinesValue})`
             } side="top">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     if (maxLinesEnabled) {
-                      applySettings({ 
+                      applySettings({
                         backgroundBandLockedToMaxLines: !backgroundBandLockedToMaxLines,
                         backgroundBandCustomLines: !backgroundBandLockedToMaxLines ? maxLinesValue : backgroundBandCustomLines
                       });
                     }
                   }}
                   disabled={!maxLinesEnabled}
-                  className={`p-1 rounded transition-all ${
-                    maxLinesEnabled 
-                      ? `cursor-pointer ${
-                          backgroundBandLockedToMaxLines 
-                            ? darkMode 
-                              ? 'bg-blue-600 hover:bg-blue-700' 
-                              : 'bg-blue-500 hover:bg-blue-600'
-                            : darkMode
-                              ? 'hover:bg-gray-700'
-                              : 'hover:bg-gray-200'
-                        }` 
-                      : 'cursor-default opacity-50'
-                  }`}
+                  className={`p-1 rounded transition-all ${maxLinesEnabled
+                    ? `cursor-pointer ${backgroundBandLockedToMaxLines
+                      ? darkMode
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                      : darkMode
+                        ? 'hover:bg-gray-700'
+                        : 'hover:bg-gray-200'
+                    }`
+                    : 'cursor-default opacity-50'
+                    }`}
                   aria-label={maxLinesEnabled ? (backgroundBandLockedToMaxLines ? "Unlock from max lines" : "Lock to max lines") : undefined}
                 >
-                  <Rows3 className={`w-4 h-4 ${
-                    backgroundBandLockedToMaxLines && maxLinesEnabled
-                      ? 'text-white' 
-                      : darkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`} />
+                  <Rows3 className={`w-4 h-4 ${backgroundBandLockedToMaxLines && maxLinesEnabled
+                    ? 'text-white'
+                    : darkMode ? 'text-gray-400' : 'text-gray-500'
+                    }`} />
                 </button>
                 <Input
                   type="number"
