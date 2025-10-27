@@ -596,4 +596,27 @@ server.listen(PORT, async () => {
       pid: process.pid
     });
   }
+}).on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Another instance may be running.`);
+    if (process.send) {
+      process.send({
+        status: 'error',
+        error: 'EADDRINUSE',
+        port: PORT,
+        message: `Port ${PORT} is already in use`
+      });
+    }
+    process.exit(1);
+  } else {
+    console.error('Server error:', error);
+    if (process.send) {
+      process.send({
+        status: 'error',
+        error: error.code || 'UNKNOWN',
+        message: error.message
+      });
+    }
+    process.exit(1);
+  }
 });

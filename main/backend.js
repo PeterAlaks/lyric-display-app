@@ -91,8 +91,15 @@ export function startBackend() {
       }
     });
 
-    // Enhanced ready message handling
     backendProcess.on('message', async (msg) => {
+      if (msg?.status === 'error' && msg?.error === 'EADDRINUSE' && !isResolved) {
+        console.error(`Backend failed: Port ${msg.port} is already in use`);
+        isResolved = true;
+        clearTimeout(timeout);
+        reject(new Error('PORT_IN_USE'));
+        return;
+      }
+
       if (msg?.status === 'ready' && !isResolved) {
         console.log('Backend reported ready, verifying health...');
 

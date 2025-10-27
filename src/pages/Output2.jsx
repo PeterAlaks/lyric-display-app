@@ -177,13 +177,22 @@ const Output2 = () => {
     underline,
     allCaps,
     fontSize,
+    translationFontSizeMode = 'bound',
+    translationFontSize = 48,
     fontColor,
+    translationLineColor = '#FBBF24',
     borderColor = '#000000',
     borderSize = 0,
     dropShadowColor = '#000000',
     dropShadowOpacity = 0,
+    dropShadowOffsetX = 0,
+    dropShadowOffsetY = 8,
+    dropShadowBlur = 10,
     backgroundColor = '#000000',
     backgroundOpacity = 0,
+    backgroundBandVerticalPadding = 20,
+    backgroundBandHeightMode = 'adaptive',
+    backgroundBandCustomLines = 3,
     lyricsPosition = 'lower',
     fullScreenMode = false,
     fullScreenBackgroundType = 'color',
@@ -207,9 +216,9 @@ const Output2 = () => {
   const horizontalMarginRem = clamp(Number(xMargin) || 0, 0, 20);
 
   const getTextShadow = () => {
-    if (!dropShadowColor) return 'none';
+    if (!dropShadowColor || dropShadowStrength === 0) return 'none';
     const opacityHex = toHexOpacity(dropShadowStrength);
-    return `0px 8px 10px ${dropShadowColor}${opacityHex}`;
+    return `${dropShadowOffsetX}px ${dropShadowOffsetY}px ${dropShadowBlur}px ${dropShadowColor}${opacityHex}`;
   };
 
   const getBandBackground = () => {
@@ -217,7 +226,22 @@ const Output2 = () => {
     return `${backgroundColor}${opacityHex}`;
   };
 
-  const BACKGROUND_VERTICAL_PADDING_REM = 1.5;
+  // Calculate background band vertical padding in rem (convert px to rem, assuming 16px = 1rem)
+  const BACKGROUND_VERTICAL_PADDING_REM = backgroundBandVerticalPadding / 16;
+  
+  // Calculate custom height for background band if in custom mode
+  const getBackgroundBandHeight = () => {
+    if (backgroundBandHeightMode !== 'custom' || fullScreenMode) {
+      return undefined;
+    }
+    // Calculate height based on: (lines * fontSize * lineHeight) + (2 * vertical padding)
+    const lineHeight = 1.05;
+    const effectiveFontSize = adjustedFontSize ?? fontSize;
+    const textHeight = backgroundBandCustomLines * effectiveFontSize * lineHeight;
+    const totalPadding = 2 * backgroundBandVerticalPadding;
+    return `${textHeight + totalPadding}px`;
+  };
+
   const positionJustifyMap = {
     upper: 'flex-start',
     center: 'center',
@@ -389,6 +413,11 @@ const Output2 = () => {
 
     if (processedText.includes('\n')) {
       const lines = processedText.split('\n');
+      // Calculate effective translation font size
+      const effectiveTranslationSize = translationFontSizeMode === 'custom' 
+        ? translationFontSize 
+        : (adjustedFontSize ?? fontSize);
+      
       return (
         <div className="space-y-1">
           {lines.map((lineText, index) => {
@@ -402,7 +431,8 @@ const Output2 = () => {
                 className="font-medium"
                 style={{
                   ...textStrokeStyles,
-                  color: index > 0 ? '#FBBF24' : 'inherit'
+                  color: index > 0 ? translationLineColor : 'inherit',
+                  fontSize: index > 0 ? `${effectiveTranslationSize}px` : 'inherit'
                 }}
               >
                 {lineDisplayText}
@@ -442,8 +472,10 @@ const Output2 = () => {
               paddingBottom: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
               paddingLeft: `${horizontalMarginRem}rem`,
               paddingRight: `${horizontalMarginRem}rem`,
+              height: getBackgroundBandHeight(),
               display: 'flex',
               justifyContent: 'center',
+              alignItems: 'center',
               width: '100%',
               transition: 'opacity 300ms ease-in-out, background-color 200ms ease-in-out',
               opacity: isVisible ? 1 : 0,

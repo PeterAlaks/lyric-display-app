@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 let globalActiveTooltip = null;
 
-export function Tooltip({ children, content, delay = 500, side = 'top', className }) {
+export function Tooltip({ children, content, delay = 1000, side = 'top', className }) {
     const [visible, setVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const timeoutRef = useRef(null);

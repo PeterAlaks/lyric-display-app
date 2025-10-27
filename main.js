@@ -11,6 +11,20 @@ import { openInAppBrowser, registerInAppBrowserIpc } from './main/inAppBrowser.j
 import { makeMenuAPI } from './main/menu.js';
 import { getAdminKeyWithRetry } from './main/adminKey.js';
 
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  console.log('[Main] Another instance is already running. Exiting...');
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 let mainWindow = null;
 
 
@@ -85,6 +99,17 @@ app.whenReady().then(async () => {
     setTimeout(() => { if (!isDev) checkForUpdates(false); }, 2000);
   } catch (error) {
     console.error('Failed to start backend:', error);
+    
+    if (error.message === 'PORT_IN_USE') {
+      const { dialog } = await import('electron');
+      dialog.showErrorBox(
+        'Application Already Running',
+        'LyricDisplay is already running. Only one instance can run at a time.\n\nPlease close the other instance or check your system tray.'
+      );
+      app.quit();
+      return;
+    }
+
     mainWindow = createWindow('/');
     menuAPI.createMenu();
     const { dialog } = await import('electron');
