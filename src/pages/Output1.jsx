@@ -226,15 +226,13 @@ const Output1 = () => {
     return `${backgroundColor}${opacityHex}`;
   };
 
-  // Calculate background band vertical padding in rem (convert px to rem, assuming 16px = 1rem)
   const BACKGROUND_VERTICAL_PADDING_REM = backgroundBandVerticalPadding / 16;
-  
-  // Calculate custom height for background band if in custom mode
+
   const getBackgroundBandHeight = () => {
     if (backgroundBandHeightMode !== 'custom' || fullScreenMode) {
       return undefined;
     }
-    // Calculate height based on: (lines * fontSize * lineHeight) + (2 * vertical padding)
+
     const lineHeight = 1.05;
     const effectiveFontSize = adjustedFontSize ?? fontSize;
     const textHeight = backgroundBandCustomLines * effectiveFontSize * lineHeight;
@@ -413,11 +411,10 @@ const Output1 = () => {
 
     if (processedText.includes('\n')) {
       const lines = processedText.split('\n');
-      // Calculate effective translation font size
-      const effectiveTranslationSize = translationFontSizeMode === 'custom' 
-        ? translationFontSize 
+      const effectiveTranslationSize = translationFontSizeMode === 'custom'
+        ? translationFontSize
         : (adjustedFontSize ?? fontSize);
-      
+
       return (
         <div className="space-y-1">
           {lines.map((lineText, index) => {
@@ -465,54 +462,99 @@ const Output1 = () => {
         }}
       >
         <div className="flex w-full justify-center">
-          <div
-            style={{
-              backgroundColor: !fullScreenMode && backgroundStrength > 0 ? getBandBackground() : 'transparent',
-              paddingTop: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
-              paddingBottom: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
-              paddingLeft: `${horizontalMarginRem}rem`,
-              paddingRight: `${horizontalMarginRem}rem`,
-              height: getBackgroundBandHeight(),
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '100%',
-              transition: 'opacity 300ms ease-in-out, background-color 200ms ease-in-out',
-              opacity: isVisible ? 1 : 0,
-              pointerEvents: isVisible ? 'auto' : 'none',
-            }}
-            className="leading-none"
-          >
+          {(!fullScreenMode && backgroundStrength > 0) ? (
             <div
-              ref={textContainerRef}
               style={{
-                fontFamily: fontStyle,
-                fontSize: `${(adjustedFontSize ?? fontSize)}px`,
-                fontWeight: bold ? 'bold' : 'normal',
-                fontStyle: italic ? 'italic' : 'normal',
-                textDecoration: underline ? 'underline' : 'none',
-                color: fontColor,
-                textShadow: getTextShadow(),
-                ...textStrokeStyles,
-                textAlign: 'center',
+                backgroundColor: getBandBackground(),
+                paddingTop: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
+                paddingBottom: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
+                paddingLeft: `${horizontalMarginRem}rem`,
+                paddingRight: `${horizontalMarginRem}rem`,
+                height: getBackgroundBandHeight(),
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
                 width: '100%',
-                maxWidth: '100%',
-                lineHeight: 1.05,
-                transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
-                display: maxLinesEnabled ? '-webkit-box' : 'block',
-                WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
-                WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
-                overflow: maxLinesEnabled ? 'hidden' : 'visible',
-                textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                wordBreak: 'break-word',
-                overflowWrap: 'break-word',
+                transition: 'opacity 300ms ease-in-out, background-color 200ms ease-in-out',
+                opacity: isVisible ? 1 : 0,
+                pointerEvents: isVisible ? 'auto' : 'none',
+              }}
+              className="leading-none"
+            >
+              <div
+                ref={textContainerRef}
+                style={{
+                  fontFamily: fontStyle,
+                  fontSize: `${(adjustedFontSize ?? fontSize)}px`,
+                  fontWeight: bold ? 'bold' : 'normal',
+                  fontStyle: italic ? 'italic' : 'normal',
+                  textDecoration: underline ? 'underline' : 'none',
+                  color: fontColor,
+                  textShadow: getTextShadow(),
+                  ...textStrokeStyles,
+                  textAlign: 'center',
+                  width: '100%',
+                  maxWidth: '100%',
+                  lineHeight: 1.05,
+                  transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
+                  display: maxLinesEnabled ? '-webkit-box' : 'block',
+                  WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
+                  WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
+                  overflow: maxLinesEnabled ? 'hidden' : 'visible',
+                  textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                }}
+              >
+                {renderContent()}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="leading-none"
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                opacity: isVisible ? 1 : 0,
+                transition: 'opacity 300ms ease-in-out',
+                pointerEvents: isVisible ? 'auto' : 'none',
               }}
             >
-              {renderContent()}
+              <div
+                ref={textContainerRef}
+                style={{
+                  fontFamily: fontStyle,
+                  fontSize: `${(adjustedFontSize ?? fontSize)}px`,
+                  fontWeight: bold ? 'bold' : 'normal',
+                  fontStyle: italic ? 'italic' : 'normal',
+                  textDecoration: underline ? 'underline' : 'none',
+                  color: fontColor,
+                  textShadow: getTextShadow(),
+                  ...textStrokeStyles,
+                  textAlign: 'center',
+                  width: '100%',
+                  maxWidth: '100%',
+                  lineHeight: 1.05,
+                  transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
+                  display: maxLinesEnabled ? '-webkit-box' : 'block',
+                  WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
+                  WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
+                  overflow: maxLinesEnabled ? 'hidden' : 'visible',
+                  textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                }}
+              >
+                {renderContent()}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
