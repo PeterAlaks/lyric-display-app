@@ -3,9 +3,10 @@ import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useLyricsState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
+import { detectArtistFromFilename } from '../utils/artistDetection';
 
 const useFileUpload = () => {
-  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName } = useLyricsState();
+  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setSongMetadata } = useLyricsState();
   const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
 
@@ -45,6 +46,18 @@ const useFileUpload = () => {
       const baseName = file.name.replace(/\.(txt|lrc)$/i, '');
       setLyricsFileName(baseName);
 
+      const detected = detectArtistFromFilename(baseName);
+      const metadata = {
+        title: detected.title || baseName,
+        artists: detected.artist ? [detected.artist] : [],
+        album: null,
+        year: null,
+        lyricLines: parsed.processedLines.length,
+        origin: isLrc ? 'Local (.lrc)' : 'Local (.txt)',
+        filePath: file?.path || null
+      };
+      setSongMetadata(metadata);
+
       emitLyricsLoad(parsed.processedLines);
 
       if (socket && socket.connected) {
@@ -66,7 +79,7 @@ const useFileUpload = () => {
       showToast({ title: 'Failed to load file', message: 'Please check the file and try again.', variant: 'error' });
       return false;
     }
-  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, emitLyricsLoad, socket, showToast]);
+  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setSongMetadata, emitLyricsLoad, socket, showToast]);
 
   return handleFileUpload;
 };

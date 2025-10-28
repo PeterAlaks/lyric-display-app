@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info, FileMusic } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useDarkModeState, useSetlistState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -574,8 +574,9 @@ const LyricDisplayApp = () => {
 
           {/* Current File Indicator */}
           {hasLyrics && (
-            <div className={`mb-6 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              {lyricsFileName}
+            <div className={`mb-6 text-sm font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <FileMusic className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{lyricsFileName}</span>
             </div>
           )}
 

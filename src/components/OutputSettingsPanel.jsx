@@ -233,6 +233,12 @@ const OutputSettingsPanel = ({ outputKey }) => {
     return stored === 'true';
   });
 
+  React.useEffect(() => {
+    if (settings.maxLinesEnabled && !fontSizeAdvancedExpanded) {
+      setFontSizeAdvancedExpanded(true);
+    }
+  }, [settings.maxLinesEnabled]);
+
   const [fontColorAdvancedExpanded, setFontColorAdvancedExpanded] = React.useState(() => {
     const stored = sessionStorage.getItem(getSessionStorageKey('fontColorAdvancedExpanded'));
     return stored === 'true';
@@ -677,55 +683,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
         aria-hidden={!fontSizeAdvancedExpanded}
         style={{ marginTop: fontSizeAdvancedExpanded ? undefined : 0 }}
       >
-        {/* Translation Font Size Row */}
-        <div className="flex items-center justify-between w-full mb-4">
-          {/* Translation Mode */}
-          <div className="flex items-center gap-2">
-            <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-              Translation Size
-            </label>
-            <Select
-              value={translationFontSizeMode}
-              onValueChange={handleTranslationFontSizeModeChange}
-            >
-              <SelectTrigger
-                className={`w-[120px] ${darkMode
-                  ? 'bg-gray-700 border-gray-600 text-gray-200'
-                  : 'bg-white border-gray-300'
-                  }`}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
-                <SelectItem value="bound">Bound</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Translation Custom Size */}
-          {translationFontSizeMode === 'custom' && (
-            <Tooltip content={`Translation font size (max: ${currentFontSize}px)`} side="top">
-              <div className="flex items-center gap-2">
-                <Languages className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                <Input
-                  type="number"
-                  value={translationFontSize}
-                  onChange={(e) => handleTranslationFontSizeChange(e.target.value)}
-                  min="12"
-                  max={currentFontSize}
-                  className={`w-16 ${darkMode
-                    ? 'bg-gray-700 border-gray-600 text-gray-200'
-                    : 'bg-white border-gray-300'
-                    }`}
-                />
-              </div>
-            </Tooltip>
-          )}
-        </div>
-
         {/* Max Lines Settings Row */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
               Max Lines
@@ -759,6 +718,55 @@ const OutputSettingsPanel = ({ outputKey }) => {
                 : 'bg-white border-gray-300'
                 } ${!maxLinesEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
+          </div>
+        </div>
+
+        {/* Translation Font Size Row */}
+        <div className="flex items-center justify-between w-full">
+          {/* Translation Label */}
+          <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+            Translation Size
+          </label>
+
+          {/* Translation Mode and Custom Size */}
+          <div className="flex items-center gap-2">
+            <Select
+              value={translationFontSizeMode}
+              onValueChange={handleTranslationFontSizeModeChange}
+            >
+              <SelectTrigger
+                className={`w-[120px] ${darkMode
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300'
+                  }`}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+                <SelectItem value="bound">Bound</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Translation Custom Size */}
+            {translationFontSizeMode === 'custom' && (
+              <Tooltip content={`Translation font size (max: ${currentFontSize}px)`} side="top">
+                <div className="flex items-center gap-2">
+                  <Languages className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <Input
+                    type="number"
+                    value={translationFontSize}
+                    onChange={(e) => handleTranslationFontSizeChange(e.target.value)}
+                    min="12"
+                    max={currentFontSize}
+                    className={`w-16 ${darkMode
+                      ? 'bg-gray-700 border-gray-600 text-gray-200'
+                      : 'bg-white border-gray-300'
+                      }`}
+                  />
+                </div>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
@@ -1205,7 +1213,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
                 }`}
             />
           ) : (
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-2 ml-auto min-w-0 max-w-full">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1216,13 +1224,13 @@ const OutputSettingsPanel = ({ outputKey }) => {
               <Button
                 variant="outline"
                 onClick={triggerFileDialog}
-                className={`h-9 px-4 ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}`}
+                className={`h-9 px-4 flex-shrink-0 ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}`}
               >
                 {hasBackgroundMedia ? 'File Added' : 'Add File'}
               </Button>
               {hasBackgroundMedia && (
                 <span
-                  className={`text-sm max-w-[220px] truncate inline-block ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                  className={`text-sm max-w-[220px] min-w-0 truncate ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
                   title={uploadedMediaName}
                 >
                   {uploadedMediaName}
