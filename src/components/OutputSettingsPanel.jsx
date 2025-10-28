@@ -1161,6 +1161,9 @@ const OutputSettingsPanel = ({ outputKey }) => {
           <LabelWithIcon icon={ScreenShare} text="Full Screen Mode" />
         </Tooltip>
         <div className="flex items-center gap-3 justify-end w-full">
+          <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            {fullScreenModeChecked ? 'Enabled' : 'Disabled'}
+          </span>
           <Switch
             checked={fullScreenModeChecked}
             onCheckedChange={handleFullScreenToggle}
@@ -1171,9 +1174,6 @@ const OutputSettingsPanel = ({ outputKey }) => {
               }`}
             thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
           />
-          <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            {fullScreenModeChecked ? 'Enabled' : 'Disabled'}
-          </span>
         </div>
       </div>
 
