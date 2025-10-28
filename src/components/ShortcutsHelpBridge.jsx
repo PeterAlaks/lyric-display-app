@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect } from 'react';
 import { Keyboard } from 'lucide-react';
 import { useModalContext } from './modal/ModalProvider';
+import { useDarkModeState } from '../hooks/useStoreSelectors';
 
 const SHORTCUTS = [
   { label: 'Open Lyrics File', combo: 'Ctrl/Cmd + O' },
@@ -22,6 +23,7 @@ const SHORTCUTS = [
 
 export default function ShortcutsHelpBridge() {
   const { showModal } = useModalContext();
+  const { darkMode } = useDarkModeState();
 
   const openShortcutsModal = useCallback(() => {
     showModal({
@@ -33,9 +35,9 @@ export default function ShortcutsHelpBridge() {
       dismissLabel: 'Close',
       allowBackdropClose: true,
       className: 'sm:min-w-[500px] max-w-2xl',
-      body: <ShortcutsList />,
+      body: <ShortcutsList darkMode={darkMode} />,
     });
-  }, [showModal]);
+  }, [showModal, darkMode]);
 
   useEffect(() => {
     const handler = () => openShortcutsModal();
@@ -55,13 +57,13 @@ export default function ShortcutsHelpBridge() {
   return null;
 }
 
-function ShortcutsList() {
+function ShortcutsList({ darkMode }) {
   return (
     <div className="space-y-3">
       {SHORTCUTS.map(({ label, combo }) => (
         <div key={combo} className="flex items-center justify-between gap-4">
-          <span className="truncate text-gray-600 dark:text-gray-200">{label}</span>
-          <span className="whitespace-nowrap font-semibold text-gray-900 dark:text-gray-100">{combo}</span>
+          <span className={`truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{label}</span>
+          <span className={`whitespace-nowrap font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{combo}</span>
         </div>
       ))}
     </div>
