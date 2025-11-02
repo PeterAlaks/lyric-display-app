@@ -1,10 +1,12 @@
 // Project: LyricDisplay App
 // File: src/components/LyricsList.jsx
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { List, useDynamicRowHeight, useListRef } from 'react-window';
 import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
+import useToast from '../hooks/useToast';
+import { Ungroup } from 'lucide-react';
 
 const DEFAULT_ROW_HEIGHT = 48;
 const ROW_GAP = 8;
@@ -17,9 +19,12 @@ export default function LyricsList({
   onSelectLine,
 }) {
   const listRef = useListRef();
-  const { lyrics = [], selectedLine, selectLine } = useLyricsState();
+  const { lyrics = [], selectedLine, selectLine, setLyrics } = useLyricsState();
   const { darkMode } = useDarkModeState();
-  const { emitLineUpdate } = useSocket();
+  const { emitLineUpdate, emitLyricsLoad } = useSocket();
+  const { showToast } = useToast();
+  const [hoveredLineIndex, setHoveredLineIndex] = useState(null);
+  const [hoveredButtonIndex, setHoveredButtonIndex] = useState(null);
 
 
   const dynamicRowHeight = useDynamicRowHeight({
@@ -75,6 +80,40 @@ export default function LyricsList({
       }
     },
     [onSelectLine, selectLine, emitLineUpdate]
+  );
+
+  const handleSplitGroup = useCallback(
+    (event, index) => {
+      event.stopPropagation();
+
+      const line = lyrics[index];
+      if (line?.type !== 'normal-group') return;
+
+      const newLyrics = [...lyrics];
+      newLyrics.splice(index, 1, line.line1, line.line2);
+
+      setLyrics(newLyrics);
+
+      if (emitLyricsLoad) {
+        emitLyricsLoad(newLyrics);
+      }
+
+      if (selectedLine === index) {
+        setTimeout(() => {
+          selectLine(index);
+          emitLineUpdate(index);
+        }, 0);
+      }
+
+      showToast({
+        title: 'Group split',
+        message: 'The grouped lines have been separated',
+        variant: 'success',
+      });
+
+      setHoveredLineIndex(null);
+    },
+    [lyrics, setLyrics, emitLyricsLoad, showToast, selectedLine, selectLine, emitLineUpdate]
   );
 
   const highlightSearchTerm = (text, searchTerm) => {
@@ -243,10 +282,37 @@ export default function LyricsList({
           <div key={line?.id || `line_${i}`} className="px-4">
             <div
               data-line-index={i}
-              className={getLineClassName(i)}
+              className={`${getLineClassName(i)} relative`}
               onClick={() => handleLineClick(i)}
+              onMouseEnter={() => setHoveredLineIndex(i)}
+              onMouseLeave={() => setHoveredLineIndex(null)}
             >
               {renderLine(line, i)}
+
+              {/* Split button for normal groups */}
+              {line?.type === 'normal-group' && hoveredLineIndex === i && (
+                <button
+                  onClick={(e) => handleSplitGroup(e, i)}
+                  onMouseEnter={() => setHoveredButtonIndex(i)}
+                  onMouseLeave={() => setHoveredButtonIndex(null)}
+                  className={`absolute top-1.5 right-1.5 rounded shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === i ? 'pl-2 pr-2 py-1.5 gap-1.5' : 'p-1.5'
+                    } ${darkMode
+                      ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border border-gray-600'
+                      : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
+                    }`}
+                  title="Split group into separate lines"
+                >
+                  <Ungroup className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span
+                    className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === i
+                      ? 'max-w-[60px] opacity-100 ml-0'
+                      : 'max-w-0 opacity-0'
+                      }`}
+                  >
+                    Ungroup
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         ))}
