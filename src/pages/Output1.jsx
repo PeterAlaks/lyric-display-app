@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLyricsState, useOutputState, useOutput1Settings } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
@@ -203,7 +204,43 @@ const Output1 = () => {
     maxLinesEnabled = false,
     maxLines = 3,
     minFontSize = 24,
+    transitionAnimation = 'none',
+    transitionSpeed = 150,
   } = output1Settings;
+
+  const getAnimationVariants = () => {
+    switch (transitionAnimation) {
+      case 'fade':
+        return {
+          hidden: { opacity: 0 },
+          visible: { opacity: 1 },
+          exit: { opacity: 0 }
+        };
+      case 'scale':
+        return {
+          hidden: { opacity: 0, scale: 0.9 },
+          visible: { opacity: 1, scale: 1 },
+          exit: { opacity: 0, scale: 0.9 }
+        };
+      case 'slide':
+        return {
+          hidden: { opacity: 0, y: 30 },
+          visible: { opacity: 1, y: 0 },
+          exit: { opacity: 0, y: -30 }
+        };
+      case 'blur':
+        return {
+          hidden: { opacity: 0, filter: 'blur(8px)' },
+          visible: { opacity: 1, filter: 'blur(0px)' },
+          exit: { opacity: 0, filter: 'blur(8px)' }
+        };
+      default:
+        return null;
+    }
+  };
+
+  const animationVariants = getAnimationVariants();
+  const shouldAnimate = transitionAnimation !== 'none' && animationVariants !== null;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const toHexOpacity = (value) => clamp(Math.round((value / 10) * 255), 0, 255)
@@ -485,35 +522,79 @@ const Output1 = () => {
               }}
               className="leading-none"
             >
-              <div
-                ref={textContainerRef}
-                style={{
-                  fontFamily: fontStyle,
-                  fontSize: `${(adjustedFontSize ?? fontSize)}px`,
-                  fontWeight: bold ? 'bold' : 'normal',
-                  fontStyle: italic ? 'italic' : 'normal',
-                  textDecoration: underline ? 'underline' : 'none',
-                  color: fontColor,
-                  textShadow: getTextShadow(),
-                  ...textStrokeStyles,
-                  textAlign: 'center',
-                  width: '100%',
-                  maxWidth: '100%',
-                  lineHeight: 1.05,
-                  transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
-                  display: maxLinesEnabled ? '-webkit-box' : 'block',
-                  WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
-                  WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
-                  overflow: maxLinesEnabled ? 'hidden' : 'visible',
-                  textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
-                  whiteSpace: 'pre-wrap',
-                  wordWrap: 'break-word',
-                  wordBreak: 'break-word',
-                  overflowWrap: 'break-word',
-                }}
-              >
-                {renderContent()}
-              </div>
+              {shouldAnimate ? (
+                <AnimatePresence mode="wait">
+                  {isVisible && (
+                    <motion.div
+                      key={`text-band-${selectedLine}-${line}`}
+                      ref={textContainerRef}
+                      variants={animationVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      transition={{
+                        duration: transitionSpeed / 1000,
+                        ease: [0.25, 0.46, 0.45, 0.94]
+                      }}
+                      style={{
+                        fontFamily: fontStyle,
+                        fontSize: `${(adjustedFontSize ?? fontSize)}px`,
+                        fontWeight: bold ? 'bold' : 'normal',
+                        fontStyle: italic ? 'italic' : 'normal',
+                        textDecoration: underline ? 'underline' : 'none',
+                        color: fontColor,
+                        textShadow: getTextShadow(),
+                        ...textStrokeStyles,
+                        textAlign: 'center',
+                        width: '100%',
+                        maxWidth: '100%',
+                        lineHeight: 1.05,
+                        display: maxLinesEnabled ? '-webkit-box' : 'block',
+                        WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
+                        WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
+                        overflow: maxLinesEnabled ? 'hidden' : 'visible',
+                        textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                      }}
+                    >
+                      {renderContent()}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              ) : (
+                <div
+                  ref={textContainerRef}
+                  style={{
+                    fontFamily: fontStyle,
+                    fontSize: `${(adjustedFontSize ?? fontSize)}px`,
+                    fontWeight: bold ? 'bold' : 'normal',
+                    fontStyle: italic ? 'italic' : 'normal',
+                    textDecoration: underline ? 'underline' : 'none',
+                    color: fontColor,
+                    textShadow: getTextShadow(),
+                    ...textStrokeStyles,
+                    textAlign: 'center',
+                    width: '100%',
+                    maxWidth: '100%',
+                    lineHeight: 1.05,
+                    transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
+                    display: maxLinesEnabled ? '-webkit-box' : 'block',
+                    WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
+                    WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
+                    overflow: maxLinesEnabled ? 'hidden' : 'visible',
+                    textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                  }}
+                >
+                  {renderContent()}
+                </div>
+              )}
             </div>
           ) : (
             <div
@@ -528,35 +609,79 @@ const Output1 = () => {
                 pointerEvents: isVisible ? 'auto' : 'none',
               }}
             >
-              <div
-                ref={textContainerRef}
-                style={{
-                  fontFamily: fontStyle,
-                  fontSize: `${(adjustedFontSize ?? fontSize)}px`,
-                  fontWeight: bold ? 'bold' : 'normal',
-                  fontStyle: italic ? 'italic' : 'normal',
-                  textDecoration: underline ? 'underline' : 'none',
-                  color: fontColor,
-                  textShadow: getTextShadow(),
-                  ...textStrokeStyles,
-                  textAlign: 'center',
-                  width: '100%',
-                  maxWidth: '100%',
-                  lineHeight: 1.05,
-                  transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
-                  display: maxLinesEnabled ? '-webkit-box' : 'block',
-                  WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
-                  WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
-                  overflow: maxLinesEnabled ? 'hidden' : 'visible',
-                  textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
-                  whiteSpace: 'pre-wrap',
-                  wordWrap: 'break-word',
-                  wordBreak: 'break-word',
-                  overflowWrap: 'break-word',
-                }}
-              >
-                {renderContent()}
-              </div>
+              {shouldAnimate ? (
+                <AnimatePresence mode="wait">
+                  {isVisible && (
+                    <motion.div
+                      key={`text-full-${selectedLine}-${line}`}
+                      ref={textContainerRef}
+                      variants={animationVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      transition={{
+                        duration: transitionSpeed / 1000,
+                        ease: [0.25, 0.46, 0.45, 0.94]
+                      }}
+                      style={{
+                        fontFamily: fontStyle,
+                        fontSize: `${(adjustedFontSize ?? fontSize)}px`,
+                        fontWeight: bold ? 'bold' : 'normal',
+                        fontStyle: italic ? 'italic' : 'normal',
+                        textDecoration: underline ? 'underline' : 'none',
+                        color: fontColor,
+                        textShadow: getTextShadow(),
+                        ...textStrokeStyles,
+                        textAlign: 'center',
+                        width: '100%',
+                        maxWidth: '100%',
+                        lineHeight: 1.05,
+                        display: maxLinesEnabled ? '-webkit-box' : 'block',
+                        WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
+                        WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
+                        overflow: maxLinesEnabled ? 'hidden' : 'visible',
+                        textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                      }}
+                    >
+                      {renderContent()}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              ) : (
+                <div
+                  ref={textContainerRef}
+                  style={{
+                    fontFamily: fontStyle,
+                    fontSize: `${(adjustedFontSize ?? fontSize)}px`,
+                    fontWeight: bold ? 'bold' : 'normal',
+                    fontStyle: italic ? 'italic' : 'normal',
+                    textDecoration: underline ? 'underline' : 'none',
+                    color: fontColor,
+                    textShadow: getTextShadow(),
+                    ...textStrokeStyles,
+                    textAlign: 'center',
+                    width: '100%',
+                    maxWidth: '100%',
+                    lineHeight: 1.05,
+                    transition: 'font-size 200ms ease-out, opacity 500ms ease-in-out',
+                    display: maxLinesEnabled ? '-webkit-box' : 'block',
+                    WebkitBoxOrient: maxLinesEnabled ? 'vertical' : undefined,
+                    WebkitLineClamp: maxLinesEnabled ? String(maxLines) : undefined,
+                    overflow: maxLinesEnabled ? 'hidden' : 'visible',
+                    textOverflow: maxLinesEnabled ? 'ellipsis' : 'clip',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                  }}
+                >
+                  {renderContent()}
+                </div>
+              )}
             </div>
           )}
         </div>

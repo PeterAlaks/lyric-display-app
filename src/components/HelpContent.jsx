@@ -122,6 +122,13 @@ export const OutputSettingsHelp = ({ darkMode }) => (
         />
 
         <HelpSection
+            icon={Wand2}
+            title="Transition Style"
+            description="Add smooth animations when lyrics change on display. Choose from None (instant), Fade (opacity), Scale (zoom), Slide (vertical motion), or Blur effects. Adjust transition speed from 100-2000ms for the perfect timing."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
             icon={ScreenShare}
             title="Full Screen Mode"
             description="Expand lyrics to fill the entire display with automatic Centre positioning. Choose between a solid color background or upload custom images/videos (up to 200MB). Ideal for immersive worship experiences and special presentations."

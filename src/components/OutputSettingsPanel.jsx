@@ -11,7 +11,7 @@ import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
 import { logWarn } from '../utils/logger';
-import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ChevronDown, ChevronUp, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages } from 'lucide-react';
+import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ChevronDown, ChevronUp, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2 } from 'lucide-react';
 
 const fontOptions = [
   'Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat',
@@ -254,6 +254,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
     return stored === 'true';
   });
 
+  const [transitionAdvancedExpanded, setTransitionAdvancedExpanded] = React.useState(() => {
+    const stored = sessionStorage.getItem(getSessionStorageKey('transitionAdvancedExpanded'));
+    return stored === 'true';
+  });
+
   React.useEffect(() => {
     sessionStorage.setItem(getSessionStorageKey('fontSizeAdvancedExpanded'), fontSizeAdvancedExpanded);
   }, [fontSizeAdvancedExpanded, outputKey]);
@@ -269,6 +274,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
   React.useEffect(() => {
     sessionStorage.setItem(getSessionStorageKey('backgroundAdvancedExpanded'), backgroundAdvancedExpanded);
   }, [backgroundAdvancedExpanded, outputKey]);
+
+  React.useEffect(() => {
+    sessionStorage.setItem(getSessionStorageKey('transitionAdvancedExpanded'), transitionAdvancedExpanded);
+  }, [transitionAdvancedExpanded, outputKey]);
 
   const translationFontSizeMode = settings.translationFontSizeMode ?? 'bound';
   const translationFontSize = settings.translationFontSize ?? settings.fontSize ?? 48;
@@ -1155,6 +1164,80 @@ const OutputSettingsPanel = ({ outputKey }) => {
         </div>
       </div>
 
+      {/* Transition Style */}
+      <div className="flex items-center justify-between gap-4">
+        <Tooltip content="Choose animation style when lyrics change on display" side="right">
+          <LabelWithIcon icon={Wand2} text="Transition Style" />
+        </Tooltip>
+        <div className="flex items-center gap-2 justify-end w-full">
+          <Tooltip content={transitionAdvancedExpanded ? "Hide advanced settings" : "Show advanced settings"} side="top">
+            <button
+              onClick={() => setTransitionAdvancedExpanded(!transitionAdvancedExpanded)}
+              className={`p-1 rounded transition-colors ${darkMode
+                ? 'hover:bg-gray-700 text-gray-400'
+                : 'hover:bg-gray-100 text-gray-500'
+                }`}
+              aria-label="Toggle transition advanced settings"
+            >
+              {transitionAdvancedExpanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
+          </Tooltip>
+          <Select
+            value={settings.transitionAnimation ?? 'none'}
+            onValueChange={(val) => update('transitionAnimation', val)}
+          >
+            <SelectTrigger
+              className={`w-[140px] ${darkMode
+                ? 'bg-gray-700 border-gray-600 text-gray-200'
+                : 'bg-white border-gray-300'
+                }`}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="fade">Fade</SelectItem>
+              <SelectItem value="scale">Scale</SelectItem>
+              <SelectItem value="slide">Slide</SelectItem>
+              <SelectItem value="blur">Blur</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Transition Style Advanced Settings Row */}
+      <div
+        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${transitionAdvancedExpanded
+          ? 'max-h-20 opacity-100 translate-y-0 pointer-events-auto mt-1'
+          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
+          }`}
+        aria-hidden={!transitionAdvancedExpanded}
+        style={{ marginTop: transitionAdvancedExpanded ? undefined : 0 }}
+      >
+        <div className="flex items-center justify-between w-full">
+          <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50' : ''}`}>
+            Transition Speed (ms)
+          </label>
+          <Input
+            type="number"
+            value={settings.transitionSpeed ?? 150}
+            onChange={(e) => update('transitionSpeed', parseInt(e.target.value, 10))}
+            min="100"
+            max="2000"
+            step="50"
+            disabled={(settings.transitionAnimation ?? 'none') === 'none'}
+            className={`w-24 ${darkMode
+              ? 'bg-gray-700 border-gray-600 text-gray-200'
+              : 'bg-white border-gray-300'
+              } ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
+        </div>
+      </div>
+
       {/* Full Screen Mode */}
       <div className="flex items-center justify-between gap-4">
         <Tooltip content="Enable full screen display with custom background settings" side="right">
@@ -1240,7 +1323,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
           )}
         </div>
       </div>
-    </div>
+
+      </div>
   );
 };
 

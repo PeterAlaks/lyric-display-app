@@ -99,7 +99,9 @@ const useLyricsStore = create(
         primaryViewportWidth: null,
         primaryViewportHeight: null,
         allInstances: null,
-        instanceCount: 0
+        instanceCount: 0,
+        transitionAnimation: 'none',
+        transitionSpeed: 150
       },
       output2Settings: {
         fontStyle: 'Bebas Neue',
@@ -141,7 +143,9 @@ const useLyricsStore = create(
         primaryViewportWidth: null,
         primaryViewportHeight: null,
         allInstances: null,
-        instanceCount: 0
+        instanceCount: 0,
+        transitionAnimation: 'none',
+        transitionSpeed: 150
       },
       updateOutputSettings: (output, newSettings) =>
         set((state) => ({
