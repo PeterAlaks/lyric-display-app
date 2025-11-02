@@ -2,7 +2,7 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 5.0.0
+**Version:** 5.2.0
 **Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
@@ -43,7 +43,7 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 ## Installation
 
 ### Pre-built Releases (Recommended)
-1. Download the latest release by [clicking Here](https://mega.nz/file/5vwglSTI#FhKGmQm6Q-sBonSuYRTk_cp1_C9AVLxp6UZVqm5---Q)
+1. Download the latest release by [clicking Here](https://mega.nz/file/lmZx1LbK#rWYpXP0WllmdUS8_2f1-nEWMwt7h4WH3s0OLBSgb0FI)
 2. Run the installer for your platform
 3. Launch LyricDisplay
 

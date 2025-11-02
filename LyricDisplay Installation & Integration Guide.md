@@ -2,7 +2,7 @@
 
 Professional real-time lyric display for streaming, church services and other live events
 
-Version: 5.0.0 | Windows 10/11 (64-bit)
+Version: 5.2.0 | Windows 10/11 (64-bit)
 
 
 ###### **What is LyricDisplay?**
@@ -48,7 +48,7 @@ LyricDisplay is a free desktop app that provides perfectly clear, sharp and tran
 
 **1. Download Latest Release**
 
-&nbsp;  [​Click here to download latest version of the app​​​](https://mega.nz/file/5vwglSTI#FhKGmQm6Q-sBonSuYRTk_cp1_C9AVLxp6UZVqm5---Q)
+&nbsp;  [​Click here to download latest version of the app​​​](https://mega.nz/file/lmZx1LbK#rWYpXP0WllmdUS8_2f1-nEWMwt7h4WH3s0OLBSgb0FI)
 &nbsp;  Download: LyricDisplay-Setup.exe
 
 **2. Run Installer**
@@ -368,7 +368,7 @@ Generally, follow same steps from OBS Integration but tailor the app setup to Vm
 
 ###### **Support and Resources**
 
-[​Click here to download the latest version of the app​​​](https://mega.nz/file/5vwglSTI#FhKGmQm6Q-sBonSuYRTk_cp1_C9AVLxp6UZVqm5---Q)
+[​Click here to download the latest version of the app​​​](https://mega.nz/file/lmZx1LbK#rWYpXP0WllmdUS8_2f1-nEWMwt7h4WH3s0OLBSgb0FI)
 [​Click here to log issues or complaints​​​](https://github.com/PeterAlaks/lyric-display-app/issues)
 ​[Click here to contact the developer for technical support or lodge further complaints/improvement suggestions](https://linktr.ee/peteralaks)
 [​Click here to see app source code​​​](https://github.com/PeterAlaks/lyric-display-app)
