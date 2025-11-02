@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import useLyricsStore from '../context/LyricsStore';
 import { logDebug, logError, logWarn } from '../utils/logger';
+import { detectArtistFromFilename } from '../utils/artistDetection';
 
 const useSocketEvents = (role) => {
   const {
@@ -32,7 +33,6 @@ const useSocketEvents = (role) => {
         }
       }
 
-      // Preserve metrics fields when applying settings from server state
       if (state.output1Settings) {
         const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output1Settings;
         updateOutputSettings('output1', styleSettings);
@@ -61,7 +61,7 @@ const useSocketEvents = (role) => {
 
       socket.on('styleUpdate', ({ output, settings }) => {
         logDebug('Received style update for', output, ':', settings);
-        // Preserve metrics fields when applying style updates from control panel
+
         const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = settings;
         updateOutputSettings(output, styleSettings);
       });
@@ -116,6 +116,19 @@ const useSocketEvents = (role) => {
       if (rawContent) {
         setRawLyricsContent(rawContent);
       }
+
+      const detected = detectArtistFromFilename(fileName);
+      const metadata = {
+        title: detected.title || fileName,
+        artists: detected.artist ? [detected.artist] : [],
+        album: null,
+        year: null,
+        lyricLines: linesCount,
+        origin: fileType === 'lrc' ? 'Setlist (.lrc)' : 'Setlist (.txt)',
+        filePath: null
+      };
+      useLyricsStore.getState().setSongMetadata(metadata);
+
       try {
         window.dispatchEvent(new CustomEvent('setlist-load-success', {
           detail: { fileId, fileName, originalName, fileType, linesCount, loadedBy },
@@ -227,7 +240,6 @@ const useSocketEvents = (role) => {
         }
       }
 
-      // Preserve metrics fields when applying settings from periodic sync
       if (state.output1Settings) {
         const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output1Settings;
         updateOutputSettings('output1', styleSettings);

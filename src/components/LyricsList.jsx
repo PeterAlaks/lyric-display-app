@@ -7,6 +7,7 @@ import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import useToast from '../hooks/useToast';
 import { Ungroup } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const DEFAULT_ROW_HEIGHT = 48;
 const ROW_GAP = 8;
@@ -199,19 +200,40 @@ export default function LyricsList({
     [darkMode, searchQuery]
   );
 
+  const getTooltipContent = useCallback((index, line) => {
+    if (index === selectedLine) {
+      return 'Currently displayed on output screens';
+    }
+    if (line?.type === 'group') {
+      return 'Click to display this lyric with translation';
+    }
+    if (line?.type === 'normal-group') {
+      return 'Grouped lines - click to display or use ungroup button to split';
+    }
+    return 'Click to display this lyric line on output screens';
+  }, [selectedLine]);
+
   const rowPropsData = useMemo(
     () => ({
       lyrics,
       getLineClassName,
       renderLine,
       handleLineClick,
+      handleSplitGroup,
+      getTooltipContent,
+      selectedLine,
+      darkMode,
+      hoveredLineIndex,
+      setHoveredLineIndex,
+      hoveredButtonIndex,
+      setHoveredButtonIndex,
     }),
-    [lyrics, getLineClassName, renderLine, handleLineClick]
+    [lyrics, getLineClassName, renderLine, handleLineClick, handleSplitGroup, getTooltipContent, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex]
   );
 
   // Virtualized row renderer
   const Row = useCallback(
-    ({ index, style, lyrics, getLineClassName, renderLine, handleLineClick }) => {
+    ({ index, style, lyrics, getLineClassName, renderLine, handleLineClick, handleSplitGroup, getTooltipContent, selectedLine, darkMode, hoveredLineIndex, setHoveredLineIndex, hoveredButtonIndex, setHoveredButtonIndex }) => {
       const line = lyrics[index];
       if (!line) return null;
 
@@ -232,12 +254,44 @@ export default function LyricsList({
 
       return (
         <div data-line-index={index} style={adjustedStyle}>
-          <div
-            className={getLineClassName(index, true)}
-            onClick={() => handleLineClick(index)}
-          >
-            {renderLine(line, index)}
-          </div>
+          <Tooltip content={getTooltipContent(index, line)} side="top" sideOffset={8} align="start">
+            <div
+              className={`${getLineClassName(index, true)} relative`}
+              onClick={() => handleLineClick(index)}
+              onMouseEnter={() => setHoveredLineIndex(index)}
+              onMouseLeave={() => setHoveredLineIndex(null)}
+            >
+              {renderLine(line, index)}
+
+              {/* Split button for normal groups */}
+              {line?.type === 'normal-group' && hoveredLineIndex === index && (
+                <Tooltip content="Split this group into two separate lines" side="top" sideOffset={5}>
+                  <button
+                    onClick={(e) => handleSplitGroup(e, index)}
+                    onMouseEnter={() => setHoveredButtonIndex(index)}
+                    onMouseLeave={() => setHoveredButtonIndex(null)}
+                    className={`absolute top-1.5 right-1.5 rounded-md shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'p-1.5 gap-1.5' : 'p-1.5'
+                      } ${index === selectedLine
+                        ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400'
+                        : darkMode
+                          ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border border-gray-600'
+                          : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
+                      }`}
+                  >
+                    <Ungroup className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span
+                      className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === index
+                        ? 'max-w-[60px] opacity-100 ml-0'
+                        : 'max-w-0 opacity-0'
+                        }`}
+                    >
+                      Ungroup
+                    </span>
+                  </button>
+                </Tooltip>
+              )}
+            </div>
+          </Tooltip>
         </div>
       );
     },
@@ -278,44 +332,64 @@ export default function LyricsList({
   if (!useVirtualized) {
     return (
       <div className="space-y-2 py-4">
-        {lyrics.map((line, i) => (
-          <div key={line?.id || `line_${i}`} className="px-4">
-            <div
-              data-line-index={i}
-              className={`${getLineClassName(i)} relative`}
-              onClick={() => handleLineClick(i)}
-              onMouseEnter={() => setHoveredLineIndex(i)}
-              onMouseLeave={() => setHoveredLineIndex(null)}
-            >
-              {renderLine(line, i)}
+        {lyrics.map((line, i) => {
+          const getTooltipContent = () => {
+            if (i === selectedLine) {
+              return 'Currently displayed on output screens';
+            }
+            if (line?.type === 'group') {
+              return 'Click to display this lyric with translation';
+            }
+            if (line?.type === 'normal-group') {
+              return 'Grouped lines - click to display or use ungroup button to split';
+            }
+            return 'Click to display this lyric line on output screens';
+          };
 
-              {/* Split button for normal groups */}
-              {line?.type === 'normal-group' && hoveredLineIndex === i && (
-                <button
-                  onClick={(e) => handleSplitGroup(e, i)}
-                  onMouseEnter={() => setHoveredButtonIndex(i)}
-                  onMouseLeave={() => setHoveredButtonIndex(null)}
-                  className={`absolute top-1.5 right-1.5 rounded shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === i ? 'pl-2 pr-2 py-1.5 gap-1.5' : 'p-1.5'
-                    } ${darkMode
-                      ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border border-gray-600'
-                      : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
-                    }`}
-                  title="Split group into separate lines"
+          return (
+            <div key={line?.id || `line_${i}`} className="px-4">
+              <Tooltip content={getTooltipContent()} side="top" sideOffset={8} align="start">
+                <div
+                  data-line-index={i}
+                  className={`${getLineClassName(i)} relative`}
+                  onClick={() => handleLineClick(i)}
+                  onMouseEnter={() => setHoveredLineIndex(i)}
+                  onMouseLeave={() => setHoveredLineIndex(null)}
                 >
-                  <Ungroup className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span
-                    className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === i
-                      ? 'max-w-[60px] opacity-100 ml-0'
-                      : 'max-w-0 opacity-0'
-                      }`}
-                  >
-                    Ungroup
-                  </span>
-                </button>
-              )}
+                  {renderLine(line, i)}
+
+                  {/* Split button for normal groups */}
+                  {line?.type === 'normal-group' && hoveredLineIndex === i && (
+                    <Tooltip content="Split this group into two separate lines" side="top" sideOffset={5}>
+                      <button
+                        onClick={(e) => handleSplitGroup(e, i)}
+                        onMouseEnter={() => setHoveredButtonIndex(i)}
+                        onMouseLeave={() => setHoveredButtonIndex(null)}
+                        className={`absolute top-1.5 right-1.5 rounded-md shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === i ? 'p-1.5 gap-1.5' : 'p-1.5'
+                          } ${i === selectedLine
+                            ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400'
+                            : darkMode
+                              ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border border-gray-600'
+                              : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
+                          }`}
+                      >
+                        <Ungroup className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span
+                          className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === i
+                            ? 'max-w-[60px] opacity-100 ml-0'
+                            : 'max-w-0 opacity-0'
+                            }`}
+                        >
+                          Ungroup
+                        </span>
+                      </button>
+                    </Tooltip>
+                  )}
+                </div>
+              </Tooltip>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
