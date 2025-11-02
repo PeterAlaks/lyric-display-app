@@ -411,6 +411,10 @@ const Output2 = () => {
 
     if (processedText.includes('\n')) {
       const lines = processedText.split('\n');
+
+      const isTranslationGroup = lines.length === 2 &&
+        /^[\[({<].*[\])}>\s]*$/.test(lines[1].trim());
+
       const effectiveTranslationSize = translationFontSizeMode === 'custom'
         ? translationFontSize
         : (adjustedFontSize ?? fontSize);
@@ -418,7 +422,7 @@ const Output2 = () => {
       return (
         <div className="space-y-1">
           {lines.map((lineText, index) => {
-            const lineDisplayText = index > 0
+            const lineDisplayText = (isTranslationGroup && index > 0)
               ? lineText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim()
               : lineText;
 
@@ -428,8 +432,8 @@ const Output2 = () => {
                 className="font-medium"
                 style={{
                   ...textStrokeStyles,
-                  color: index > 0 ? translationLineColor : 'inherit',
-                  fontSize: index > 0 ? `${effectiveTranslationSize}px` : 'inherit'
+                  color: (isTranslationGroup && index > 0) ? translationLineColor : 'inherit',
+                  fontSize: (isTranslationGroup && index > 0) ? `${effectiveTranslationSize}px` : 'inherit'
                 }}
               >
                 {lineDisplayText}

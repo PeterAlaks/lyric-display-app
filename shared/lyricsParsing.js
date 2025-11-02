@@ -3,11 +3,37 @@
 
 import { preprocessText, enhancedTextProcessing, splitLongLine, validateProcessing } from './lineSplitting.js';
 
-const BRACKET_PAIRS = [
+export const BRACKET_PAIRS = [
   ['[', ']'],
   ['(', ')'],
   ['{', '}'],
   ['<', '>'],
+];
+
+export const NORMAL_GROUP_CONFIG = {
+  ENABLED: true,
+  MAX_LINE_LENGTH: 45,
+  CROSS_BLANK_LINE_GROUPING: true,
+};
+
+export const STRUCTURE_TAGS_CONFIG = {
+  ENABLED: true,
+  MODE: 'isolate',
+};
+
+// Common structure tag patterns
+export const STRUCTURE_TAG_PATTERNS = [
+// [Verse], [Verse 1], [Verse 1:], [Chorus], etc.
+/^\s*\[(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:?\]\s*/i,
+
+// Verse 1:, Chorus:, etc. (WITH colon at start of line)
+/^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:\s*/i,
+
+// (Verse 1), (Chorus), etc.
+/^\s*\((Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:?\)\s*/i,
+
+// Verse 1, Chorus, Bridge, etc. (WITHOUT colon, standalone on line)
+/^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*$/i,
 ];
 
 const TIME_TAG_REGEX = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
@@ -29,6 +55,97 @@ export function isTranslationLine(line) {
   const trimmed = line.trim();
   if (trimmed.length <= 2) return false;
   return BRACKET_PAIRS.some(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
+}
+
+/**
+ * Check if a line is eligible for normal grouping (not bracketed, within character limit)
+ * @param {string} line
+ * @returns {boolean}
+ */
+function isNormalGroupCandidate(line) {
+  if (!line || typeof line !== 'string') return false;
+  if (!NORMAL_GROUP_CONFIG.ENABLED) return false;
+  const trimmed = line.trim();
+  if (trimmed.length === 0) return false;
+  if (isTranslationLine(trimmed)) return false;
+  return trimmed.length <= NORMAL_GROUP_CONFIG.MAX_LINE_LENGTH;
+}
+
+/**
+ * Check if a line is a song separator (multiple asterisks, dashes, or underscores used to mark song boundaries)
+ * @param {string} line
+ * @returns {boolean}
+ */
+function isSongSeparator(line) {
+  if (!line || typeof line !== 'string') return false;
+  const trimmed = line.trim();
+  return /^[\*\-_]{2,}/.test(trimmed);
+}
+
+/**
+ * Check if a line is a structure tag (Verse, Chorus, etc.)
+ * @param {string} line
+ * @returns {boolean}
+ */
+function isStructureTag(line) {
+  if (!line || typeof line !== 'string') return false;
+  const trimmed = line.trim();
+  return STRUCTURE_TAG_PATTERNS.some(pattern => pattern.test(trimmed));
+}
+
+/**
+ * Extract and isolate structure tags from text.
+ * Handles cases where tags are on their own line or combined with lyrics.
+ * @param {string} text
+ * @returns {string}
+ */
+function extractStructureTags(text) {
+  if (!text || typeof text !== 'string') return text;
+  if (!STRUCTURE_TAGS_CONFIG.ENABLED) return text;
+
+  const lines = text.split(/\r?\n/);
+  const processedLines = [];
+
+  for (const line of lines) {
+    if (!line || line.trim().length === 0) {
+      processedLines.push(line);
+      continue;
+    }
+
+    let processed = false;
+
+    for (const pattern of STRUCTURE_TAG_PATTERNS) {
+      const match = line.match(pattern);
+      if (match) {
+        const tag = match[0].trim();
+        const remainder = line.substring(match[0].length).trim();
+
+        if (STRUCTURE_TAGS_CONFIG.MODE === 'strip') {
+
+          if (remainder) {
+            processedLines.push(remainder);
+          }
+        } else if (STRUCTURE_TAGS_CONFIG.MODE === 'isolate') {
+
+          processedLines.push(tag);
+          if (remainder) {
+            processedLines.push(remainder);
+          }
+        } else {
+          processedLines.push(line);
+        }
+
+        processed = true;
+        break;
+      }
+    }
+
+    if (!processed) {
+      processedLines.push(line);
+    }
+  }
+
+  return processedLines.join('\n');
 }
 
 /**
@@ -89,7 +206,8 @@ function applyIntelligentSplitting(rawLines, options = {}) {
 }
 
 /**
- * Groups clusters of raw lines into either individual strings or grouped translation objects.
+ * Groups clusters of raw lines into either individual strings, translation groups, or normal groups.
+ * Handles both translation grouping (bracketed) and normal grouping (two-line pairs).
  * @param {Array<{ line: string, originalIndex: number }[]>} clusters
  * @returns {Array<string | object>}
  */
@@ -108,12 +226,135 @@ function flattenClusters(clusters) {
         originalIndex: cluster[0].originalIndex,
       };
       result.push(groupedLine);
+      return;
+    }
+
+    if (cluster.length >= 2 && NORMAL_GROUP_CONFIG.ENABLED) {
+      let i = 0;
+      while (i < cluster.length) {
+        const currentItem = cluster[i];
+        const nextItem = cluster[i + 1];
+        const nextNextItem = cluster[i + 2];
+
+        if (nextItem && isTranslationLine(nextItem.line)) {
+          const translationGroup = {
+            type: 'group',
+            id: `group_${clusterIndex}_${currentItem.originalIndex}`,
+            mainLine: currentItem.line,
+            translation: nextItem.line,
+            displayText: `${currentItem.line}\n${nextItem.line}`,
+            searchText: `${currentItem.line} ${nextItem.line}`,
+            originalIndex: currentItem.originalIndex,
+          };
+          result.push(translationGroup);
+          i += 2;
+          continue;
+        }
+
+        if (nextItem && nextNextItem && isTranslationLine(nextNextItem.line)) {
+          result.push(currentItem.line);
+          const translationGroup = {
+            type: 'group',
+            id: `group_${clusterIndex}_${nextItem.originalIndex}`,
+            mainLine: nextItem.line,
+            translation: nextNextItem.line,
+            displayText: `${nextItem.line}\n${nextNextItem.line}`,
+            searchText: `${nextItem.line} ${nextNextItem.line}`,
+            originalIndex: nextItem.originalIndex,
+          };
+          result.push(translationGroup);
+          i += 3;
+          continue;
+        }
+
+        if (
+          nextItem &&
+          isNormalGroupCandidate(currentItem.line) &&
+          isNormalGroupCandidate(nextItem.line) &&
+          !isTranslationLine(nextItem.line)
+        ) {
+
+          const normalGroup = {
+            type: 'normal-group',
+            id: `normal_group_${clusterIndex}_${currentItem.originalIndex}`,
+            line1: currentItem.line,
+            line2: nextItem.line,
+            displayText: `${currentItem.line}\n${nextItem.line}`,
+            searchText: `${currentItem.line} ${nextItem.line}`,
+            originalIndex: currentItem.originalIndex,
+          };
+          result.push(normalGroup);
+          i += 2;
+        } else {
+          result.push(currentItem.line);
+          i += 1;
+        }
+      }
     } else {
       cluster.forEach((item) => {
         result.push(item.line);
       });
     }
   });
+
+  return result;
+}
+
+/**
+ * Merge eligible single-line items across blank line boundaries.
+ * Only merges consecutive standalone strings that are both normal group candidates.
+ * Preserves all existing groups and multi-line structures.
+ * Excludes structure tags from grouping.
+ * @param {Array<string | object>} processedLines
+ * @returns {Array<string | object>}
+ */
+function mergeAcrossBlankLines(processedLines) {
+  if (!NORMAL_GROUP_CONFIG.ENABLED || !NORMAL_GROUP_CONFIG.CROSS_BLANK_LINE_GROUPING) {
+    return processedLines;
+  }
+
+  const result = [];
+  let i = 0;
+
+  while (i < processedLines.length) {
+    const current = processedLines[i];
+    const next = processedLines[i + 1];
+
+    const currentIsString = typeof current === 'string';
+    const nextIsString = typeof next === 'string';
+
+    const currentIsStructureTag = currentIsString && isStructureTag(current);
+    const nextIsStructureTag = nextIsString && isStructureTag(next);
+    const currentIsSongSeparator = currentIsString && isSongSeparator(current);
+    const nextIsSongSeparator = nextIsString && isSongSeparator(next);
+
+    if (
+      currentIsString &&
+      nextIsString &&
+      !currentIsStructureTag &&
+      !nextIsStructureTag &&
+      !currentIsSongSeparator &&
+      !nextIsSongSeparator &&
+      isNormalGroupCandidate(current) &&
+      isNormalGroupCandidate(next)
+    ) {
+
+      const crossBlankGroup = {
+        type: 'normal-group',
+        id: `cross_blank_group_${i}`,
+        line1: current,
+        line2: next,
+        displayText: `${current}\n${next}`,
+        searchText: `${current} ${next}`,
+        originalIndex: i,
+      };
+      result.push(crossBlankGroup);
+      i += 2;
+    } else {
+      result.push(current);
+      i += 1;
+    }
+  }
 
   return result;
 }
@@ -130,6 +371,7 @@ export function processRawTextToLines(rawText = '', options = {}) {
 
   let cleaned = preprocessText(rawText);
   cleaned = stripTimestampPatterns(cleaned);
+  cleaned = extractStructureTags(cleaned);
   const allLines = cleaned.split(/\r?\n/);
   const preClusters = [];
   let currentCluster = [];
@@ -185,11 +427,13 @@ export function processRawTextToLines(rawText = '', options = {}) {
     finalClusters.push(indexedCluster);
   }
 
-  return flattenClusters(finalClusters);
+  const clusteredResult = flattenClusters(finalClusters);
+
+  return mergeAcrossBlankLines(clusteredResult);
 }
 
 /**
- * Parse plain text lyric content into processed lines with translation groupings.
+ * Parse plain text lyric content into processed lines with translation and normal groupings.
  * Enhanced with intelligent line splitting.
  * @param {string} rawText
  * @param {object} options - { enableSplitting: boolean, splitConfig: object }
@@ -202,6 +446,9 @@ export function parseTxtContent(rawText = '', options = {}) {
     if (typeof line === 'string') return line;
     if (line && line.type === 'group') {
       return `${line.mainLine}\n${line.translation}`;
+    }
+    if (line && line.type === 'normal-group') {
+      return `${line.line1}\n${line.line2}`;
     }
     return '';
   }).join('\n\n');

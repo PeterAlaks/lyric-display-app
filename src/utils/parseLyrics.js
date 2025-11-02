@@ -41,33 +41,36 @@ export { processRawTextToLines, parseTxtContent };
  */
 /**
  * Helper function to get display text from any line type
- * @param {string|object} line - Line item (string or group object)
+ * @param {string|object} line - Line item (string, group, or normal-group object)
  * @returns {string} - Text to display
  */
 export const getLineDisplayText = (line) => {
   if (typeof line === 'string') return line;
   if (line && line.type === 'group') return line.displayText;
+  if (line && line.type === 'normal-group') return line.displayText;
   return '';
 };
 
 /**
  * Helper function to get searchable text from any line type
- * @param {string|object} line - Line item (string or group object)
+ * @param {string|object} line - Line item (string, group, or normal-group object)
  * @returns {string} - Text to search within
  */
 export const getLineSearchText = (line) => {
   if (typeof line === 'string') return line;
   if (line && line.type === 'group') return line.searchText;
+  if (line && line.type === 'normal-group') return line.searchText;
   return '';
 };
 
 /**
  * Helper function to get output text for display
- * @param {string|object} line - Line item (string or group object)
+ * @param {string|object} line - Line item (string, group, or normal-group object)
  * @returns {string} - Text to send to output displays
  */
 export const getLineOutputText = (line) => {
   if (typeof line === 'string') return line;
   if (line && line.type === 'group') return line.displayText;
+  if (line && line.type === 'normal-group') return line.displayText;
   return '';
 };

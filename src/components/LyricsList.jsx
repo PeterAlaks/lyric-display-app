@@ -41,6 +41,10 @@ export default function LyricsList({
       return height;
     }
 
+    if (line.type === 'normal-group') {
+      return 72;
+    }
+
     return DEFAULT_ROW_HEIGHT;
   }, [lyrics]);
 
@@ -114,6 +118,7 @@ export default function LyricsList({
   const renderLine = useCallback(
     (line, index) => {
       if (!line) return null;
+
       if (line.type === 'group') {
         return (
           <div className="space-y-1">
@@ -131,6 +136,25 @@ export default function LyricsList({
           </div>
         );
       }
+
+      if (line.type === 'normal-group') {
+        return (
+          <div className="space-y-1">
+            <div className="font-medium">
+              {highlightSearchTerm(line.line1, searchQuery)}
+            </div>
+            {line.line2 && (
+              <div
+                className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+              >
+                {highlightSearchTerm(line.line2, searchQuery)}
+              </div>
+            )}
+          </div>
+        );
+      }
+
       return highlightSearchTerm(line, searchQuery);
     },
     [darkMode, searchQuery]
