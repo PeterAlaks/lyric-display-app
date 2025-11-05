@@ -334,6 +334,79 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
               } catch { }
             }
           },
+          { type: 'separator' },
+          {
+            label: 'Display Settings',
+            click: async () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                try {
+                  const { getAllDisplays, getDisplayAssignment } = await import('./displayManager.js');
+                  const displays = getAllDisplays();
+                  const externalDisplays = displays.filter(d => !d.primary);
+
+                  if (externalDisplays.length === 0) {
+                    await (showInAppModal
+                      ? showInAppModal({
+                        title: 'No External Displays',
+                        description: 'No external displays are currently connected. Connect an external display via HDMI or other connection to configure display settings.',
+                        variant: 'info',
+                        dismissLabel: 'OK'
+                      }, { timeout: 30000 })
+                      : Promise.resolve()
+                    );
+                    return;
+                  }
+
+                  const display = externalDisplays[0];
+                  const assignment = getDisplayAssignment(display.id);
+
+                  const { BrowserWindow } = await import('electron');
+                  const windows = BrowserWindow.getAllWindows();
+                  let isCurrentlyProjecting = false;
+
+                  if (assignment) {
+                    const outputRoute = assignment.outputKey === 'stage' ? '/stage' :
+                      assignment.outputKey === 'output1' ? '/output1' : '/output2';
+
+                    for (const w of windows) {
+                      if (!w || w.isDestroyed()) continue;
+                      try {
+                        const url = w.webContents.getURL();
+                        if (url.includes(outputRoute)) {
+                          isCurrentlyProjecting = true;
+                          break;
+                        }
+                      } catch (err) {
+
+                      }
+                    }
+                  }
+
+                  await (showInAppModal
+                    ? showInAppModal({
+                      title: 'Display Settings',
+                      headerDescription: 'Configure how to use connected displays',
+                      component: 'DisplayDetection',
+                      variant: 'info',
+                      size: 'lg',
+                      dismissible: true,
+                      isManualOpen: true,
+                      isCurrentlyProjecting,
+                      displayInfo: {
+                        id: display.id,
+                        name: display.name,
+                        bounds: display.bounds
+                      }
+                    }, { timeout: 600000 })
+                    : Promise.resolve()
+                  );
+                } catch (err) {
+                  console.warn('Could not open display settings:', err);
+                }
+              }
+            }
+          },
           { role: 'close' }
         ],
       },

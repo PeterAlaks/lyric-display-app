@@ -7,6 +7,7 @@ const SHORTCUTS = [
   { label: 'Open Lyrics File', combo: 'Ctrl/Cmd + O' },
   { label: 'New Lyrics', combo: 'Ctrl/Cmd + N' },
   { label: 'Focus Search Bar', combo: 'Ctrl/Cmd + F' },
+  { label: 'Toggle Autoplay', combo: 'Ctrl/Cmd + P' },
   { label: 'Clear Search', combo: 'Escape' },
   { label: 'Jump to First Match (in search)', combo: 'Enter' },
   { label: 'Navigate to Previous Lyric Line', combo: 'Up Arrow / Numpad ↑' },

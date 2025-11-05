@@ -301,6 +301,7 @@ Solutions:
 
 Ctrl/Cmd + O - Load lyrics file
 Ctrl/Cmd + N - New song canvas
+Ctrl/Cmd + P - Toggle autoplay
 Ctrl/Cmd + 1 - Preview Output 1
 Ctrl/Cmd + 2 - Preview Output 2
 ↑ Arrow / Numpad ↑ - Navigate to previous lyric line

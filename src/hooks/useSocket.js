@@ -34,6 +34,8 @@ const useSocket = (role = 'output') => {
     if (window.electronAPI) return 'desktop';
     if (role === 'output1') return 'output1';
     if (role === 'output2') return 'output2';
+    if (role === 'stage') return 'stage';
+    if (role === 'output') return 'output1';
     if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
       return 'mobile';
     }

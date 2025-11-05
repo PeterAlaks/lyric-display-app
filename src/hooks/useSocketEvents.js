@@ -41,14 +41,30 @@ const useSocketEvents = (role) => {
         const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output2Settings;
         updateOutputSettings('output2', styleSettings);
       }
+      if (state.stageSettings && role === 'stage') {
+        updateOutputSettings('stage', state.stageSettings);
+      }
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
       if (typeof state.isOutputOn === 'boolean' && !isDesktopApp) {
         useLyricsStore.getState().setIsOutputOn(state.isOutputOn);
       }
+
+      if (role === 'stage') {
+        if (state.stageTimerState) {
+          window.dispatchEvent(new CustomEvent('stage-timer-update', {
+            detail: state.stageTimerState,
+          }));
+        }
+        if (state.stageMessages) {
+          window.dispatchEvent(new CustomEvent('stage-messages-update', {
+            detail: state.stageMessages,
+          }));
+        }
+      }
     });
 
-    if (role === 'output' || role === 'output1' || role === 'output2') {
+    if (role === 'output' || role === 'output1' || role === 'output2' || role === 'stage') {
       socket.on('lineUpdate', ({ index }) => {
         logDebug('Received line update:', index);
         selectLine(index);
@@ -62,8 +78,14 @@ const useSocketEvents = (role) => {
       socket.on('styleUpdate', ({ output, settings }) => {
         logDebug('Received style update for', output, ':', settings);
 
-        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = settings;
-        updateOutputSettings(output, styleSettings);
+        if (output === 'stage' && role === 'stage') {
+
+          updateOutputSettings(output, settings);
+        } else if (output !== 'stage') {
+
+          const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = settings;
+          updateOutputSettings(output, styleSettings);
+        }
       });
 
       socket.on('outputMetrics', ({ output, metrics, allInstances, instanceCount }) => {
@@ -91,6 +113,29 @@ const useSocketEvents = (role) => {
       socket.on('outputToggle', (state) => {
         logDebug('Received output toggle:', state);
         useLyricsStore.getState().setIsOutputOn(state);
+      });
+    }
+
+    if (role === 'stage') {
+      socket.on('stageTimerUpdate', (timerData) => {
+        logDebug('Received stage timer update:', timerData);
+        window.dispatchEvent(new CustomEvent('stage-timer-update', {
+          detail: timerData,
+        }));
+      });
+
+      socket.on('stageMessagesUpdate', (messages) => {
+        logDebug('Received stage messages update:', messages);
+        window.dispatchEvent(new CustomEvent('stage-messages-update', {
+          detail: messages,
+        }));
+      });
+
+      socket.on('stageUpcomingSongUpdate', (data) => {
+        logDebug('Received stage upcoming song update:', data);
+        window.dispatchEvent(new CustomEvent('stage-upcoming-song-update', {
+          detail: data,
+        }));
       });
     }
 
@@ -248,6 +293,9 @@ const useSocketEvents = (role) => {
         const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output2Settings;
         updateOutputSettings('output2', styleSettings);
       }
+      if (state.stageSettings && role === 'stage') {
+        updateOutputSettings('stage', state.stageSettings);
+      }
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
     });
@@ -282,12 +330,12 @@ const useSocketEvents = (role) => {
         socket.emit('requestCurrentState');
       }, 500);
 
-      const shouldSyncOutputSettings = role !== 'output' && role !== 'output1' && role !== 'output2';
+      const shouldSyncOutputSettings = role !== 'output' && role !== 'output1' && role !== 'output2' && role !== 'stage';
 
       if (shouldSyncOutputSettings) {
         const syncOutputSettingsFromStore = () => {
           try {
-            const { output1Settings, output2Settings } = useLyricsStore.getState();
+            const { output1Settings, output2Settings, stageSettings } = useLyricsStore.getState();
 
             if (output1Settings) {
               socket.emit('styleUpdate', { output: 'output1', settings: output1Settings });
@@ -295,6 +343,10 @@ const useSocketEvents = (role) => {
 
             if (output2Settings) {
               socket.emit('styleUpdate', { output: 'output2', settings: output2Settings });
+            }
+
+            if (stageSettings) {
+              socket.emit('styleUpdate', { output: 'stage', settings: stageSettings });
             }
 
             logDebug('Synced output settings to server after reconnect');

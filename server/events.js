@@ -6,13 +6,17 @@ let currentLyricsFileName = '';
 let currentSelectedLine = null;
 let currentOutput1Settings = {};
 let currentOutput2Settings = {};
+let currentStageSettings = {};
 let currentIsOutputOn = false;
 let setlistFiles = [];
 let connectedClients = new Map();
 let outputInstances = {
   output1: new Map(),
-  output2: new Map()
+  output2: new Map(),
+  stage: new Map()
 };
+let currentStageTimerState = { running: false, paused: false, endTime: null, remaining: null };
+let currentStageMessages = [];
 
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
@@ -322,8 +326,33 @@ export default function registerSocketEvents(io, { hasPermission }) {
       if (output === 'output2') {
         currentOutput2Settings = { ...currentOutput2Settings, ...settings };
       }
+      if (output === 'stage') {
+        currentStageSettings = { ...currentStageSettings, ...settings };
+      }
       console.log(`Style updated for ${output} by ${clientType} client`);
       io.emit('styleUpdate', { output, settings });
+    });
+
+    socket.on('stageTimerUpdate', (timerData) => {
+      if (!hasPermission(socket, 'output:control')) {
+        socket.emit('permissionError', 'Insufficient permissions to control stage timer');
+        return;
+      }
+
+      currentStageTimerState = { ...timerData };
+      console.log(`Stage timer updated by ${clientType} client:`, timerData);
+      io.emit('stageTimerUpdate', timerData);
+    });
+
+    socket.on('stageMessagesUpdate', (messages) => {
+      if (!hasPermission(socket, 'output:control')) {
+        socket.emit('permissionError', 'Insufficient permissions to update stage messages');
+        return;
+      }
+
+      currentStageMessages = Array.isArray(messages) ? [...messages] : [];
+      console.log(`Stage messages updated by ${clientType} client: ${messages?.length || 0} messages`);
+      io.emit('stageMessagesUpdate', messages);
     });
 
     socket.on('outputMetrics', ({ output, metrics }) => {
@@ -522,11 +551,12 @@ export default function registerSocketEvents(io, { hasPermission }) {
 
 function buildCurrentState(clientInfo) {
   const timestamp = Date.now();
-  return {
+  const state = {
     lyrics: currentLyrics,
     selectedLine: currentSelectedLine,
     output1Settings: currentOutput1Settings,
     output2Settings: currentOutput2Settings,
+    stageSettings: currentStageSettings,
     isOutputOn: currentIsOutputOn,
     setlistFiles,
     lyricsFileName: currentLyricsFileName || '',
@@ -535,4 +565,11 @@ function buildCurrentState(clientInfo) {
     timestamp,
     syncTimestamp: timestamp,
   };
+
+  if (clientInfo?.type === 'stage') {
+    state.stageTimerState = currentStageTimerState;
+    state.stageMessages = currentStageMessages;
+  }
+
+  return state;
 }

@@ -10,6 +10,7 @@ import { registerIpcHandlers } from './main/ipc.js';
 import { openInAppBrowser, registerInAppBrowserIpc } from './main/inAppBrowser.js';
 import { makeMenuAPI } from './main/menu.js';
 import { getAdminKeyWithRetry } from './main/adminKey.js';
+import { initDisplayManager, cleanupDisplayManager } from './main/displayManager.js';
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -17,7 +18,7 @@ if (!gotTheLock) {
   console.log('[Main] Another instance is already running. Exiting...');
   app.quit();
 } else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -54,6 +55,44 @@ if (!isDev && process.env.FORCE_COMPATIBILITY) {
 
 const getMainWindow = () => mainWindow;
 initModalBridge(getMainWindow);
+
+const handleDisplayChange = async (changeType, display) => {
+  if (changeType === 'added') {
+    console.log('[Main] New display detected:', display.id);
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    try {
+      const result = await requestRendererModal(
+        {
+          title: 'New Display Detected',
+          headerDescription: 'Configure how to use the newly connected display',
+          component: 'DisplayDetection',
+          variant: 'info',
+          size: 'lg',
+          dismissible: true,
+          displayInfo: {
+            id: display.id,
+            name: display.label || `Display ${display.id}`,
+            bounds: display.bounds
+          }
+        },
+        {
+          timeout: 60000,
+          fallback: () => {
+            console.log('[Main] Display detection modal fallback - user may have dismissed');
+            return { dismissed: true };
+          }
+        }
+      );
+
+      console.log('[Main] Display detection modal result:', result);
+    } catch (error) {
+      console.error('[Main] Error showing display detection modal:', error);
+    }
+  }
+};
+
 const menuAPI = makeMenuAPI({
   getMainWindow,
   createWindow: (route) => {
@@ -93,13 +132,15 @@ app.whenReady().then(async () => {
     mainWindow = createWindow('/');
     menuAPI.createMenu();
 
+    initDisplayManager(handleDisplayChange);
+
     nativeTheme.themeSource = 'system';
     nativeTheme.on('updated', () => { if (mainWindow && !mainWindow.isDestroyed()) menuAPI.updateDarkModeMenu(); });
 
     setTimeout(() => { if (!isDev) checkForUpdates(false); }, 2000);
   } catch (error) {
     console.error('Failed to start backend:', error);
-    
+
     if (error.message === 'PORT_IN_USE') {
       const { dialog } = await import('electron');
       dialog.showErrorBox(
@@ -143,4 +184,5 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 
 app.on('before-quit', () => {
   try { stopBackend(); } catch { }
+  try { cleanupDisplayManager(); } catch { }
 });

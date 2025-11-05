@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
 import PreviewOutputsModal from '../PreviewOutputsModal';
-import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp } from '../HelpContent';
+import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp } from '../HelpContent';
 import { WelcomeSplash } from '../WelcomeSplash';
 import { IntegrationInstructions } from '../IntegrationInstructions';
 import SongInfoModal from '../SongInfoModal';
+import DisplayDetectionModal from '../DisplayDetectionModal';
+import AutoplaySettings from '../AutoplaySettings';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -92,6 +94,12 @@ export function ModalProvider({ children, isDark = false }) {
       className: config.className,
       size: config.size || 'md',
       icon: config.icon || null,
+      ...Object.keys(config).reduce((acc, key) => {
+        if (!['variant', 'title', 'description', 'message', 'headerDescription', 'body', 'component', 'dismissible', 'actions', 'allowBackdropClose', 'onClose', 'className', 'size', 'icon', 'dismissLabel'].includes(key)) {
+          acc[key] = config[key];
+        }
+        return acc;
+      }, {})
     };
 
     if (!hasExplicitActions && modal.actions.length === 0) {
@@ -317,6 +325,9 @@ export function ModalProvider({ children, isDark = false }) {
                       {modal.component === 'SongCanvasHelp' && (
                         <SongCanvasHelp darkMode={isDark} />
                       )}
+                      {modal.component === 'StageDisplayHelp' && (
+                        <StageDisplayHelp darkMode={isDark} />
+                      )}
                       {modal.component === 'WelcomeSplash' && (
                         <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />
                       )}
@@ -325,6 +336,52 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'SongInfoModal' && (
                         <SongInfoModal darkMode={isDark} />
+                      )}
+                      {modal.component === 'DisplayDetection' && (
+                        <DisplayDetectionModal
+                          darkMode={isDark}
+                          displayInfo={modal.displayInfo}
+                          isManualOpen={modal.isManualOpen || false}
+                          isCurrentlyProjecting={modal.isCurrentlyProjecting || false}
+                          onSave={async (config) => {
+                            if (!window.electronAPI?.display) {
+                              closeModal(modal.id, { error: 'Display API not available' });
+                              return;
+                            }
+
+                            try {
+                              if (config.action === 'project') {
+                                await window.electronAPI.display.saveAssignment(
+                                  config.displayId,
+                                  config.selectedOutput
+                                );
+
+                                await window.electronAPI.display.openOutputOnDisplay(
+                                  config.selectedOutput,
+                                  config.displayId
+                                );
+                              } else if (config.action === 'turnOff') {
+                                await window.electronAPI.display.removeAssignment(config.displayId);
+                              }
+
+                              closeModal(modal.id, { action: config.action });
+                            } catch (error) {
+                              console.error('Error handling display action:', error);
+                              closeModal(modal.id, { error: error.message });
+                            }
+                          }}
+                          onCancel={() => {
+                            closeModal(modal.id, { dismissed: true });
+                          }}
+                        />
+                      )}
+                      {modal.component === 'AutoplaySettings' && (
+                        <AutoplaySettings
+                          darkMode={isDark}
+                          settings={modal.settings}
+                          onSave={modal.onSave}
+                          close={(value) => closeModal(modal.id, value)}
+                        />
                       )}
 
                       {/* Render standard description/body modals */}

@@ -24,6 +24,12 @@ const useLyricsStore = create(
         origin: '',
         filePath: '',
       },
+      autoplaySettings: {
+        interval: 5,
+        loop: true,
+        startFromFirst: true,
+        skipBlankLines: true,
+      },
 
       setLyrics: (lines) => set({ lyrics: lines }),
       setRawLyricsContent: (content) => set({ rawLyricsContent: content }),
@@ -36,6 +42,7 @@ const useLyricsStore = create(
       setIsDesktopApp: (isDesktop) => set({ isDesktopApp: isDesktop }),
       setSetlistModalOpen: (open) => set({ setlistModalOpen: open }),
       setSongMetadata: (metadata) => set({ songMetadata: metadata }),
+      setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
       addSetlistFiles: (newFiles) => set((state) => ({
         setlistFiles: [...state.setlistFiles, ...newFiles]
       })),
@@ -147,6 +154,48 @@ const useLyricsStore = create(
         transitionAnimation: 'none',
         transitionSpeed: 150
       },
+      stageSettings: {
+        fontStyle: 'Bebas Neue',
+        backgroundColor: '#000000',
+        liveFontSize: 120,
+        liveColor: '#FFFFFF',
+        liveBold: true,
+        liveItalic: false,
+        liveUnderline: false,
+        liveAllCaps: false,
+        liveAlign: 'left',
+        nextFontSize: 72,
+        nextColor: '#808080',
+        nextBold: false,
+        nextItalic: false,
+        nextUnderline: false,
+        nextAllCaps: false,
+        nextAlign: 'left',
+        showNextArrow: true,
+        nextArrowColor: '#FFA500',
+        prevFontSize: 28,
+        prevColor: '#404040',
+        prevBold: false,
+        prevItalic: false,
+        prevUnderline: false,
+        prevAllCaps: false,
+        prevAlign: 'left',
+        currentSongColor: '#FFFFFF',
+        currentSongSize: 24,
+        upcomingSongColor: '#808080',
+        upcomingSongSize: 18,
+        upcomingSongMode: 'automatic',
+        upcomingSongFullScreen: false,
+        showTime: true,
+        messageScrollSpeed: 3000,
+        bottomBarColor: '#FFFFFF',
+        bottomBarSize: 20,
+        maxLinesEnabled: false,
+        maxLines: 3,
+        minFontSize: 24,
+        transitionAnimation: 'slide',
+        transitionSpeed: 300
+      },
       updateOutputSettings: (output, newSettings) =>
         set((state) => ({
           [`${output}Settings`]: {
@@ -168,6 +217,8 @@ const useLyricsStore = create(
         hasSeenWelcome: state.hasSeenWelcome,
         output1Settings: state.output1Settings,
         output2Settings: state.output2Settings,
+        stageSettings: state.stageSettings,
+        autoplaySettings: state.autoplaySettings,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

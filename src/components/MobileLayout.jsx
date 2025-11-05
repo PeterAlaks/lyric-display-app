@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListMusic, RefreshCw, FileText } from 'lucide-react';
-import { useLyricsState, useOutputState, useDarkModeState, useSetlistState } from '../hooks/useStoreSelectors';
+import { ListMusic, RefreshCw, FileText, Play, Square, ChevronDown } from 'lucide-react';
+import { useLyricsState, useOutputState, useDarkModeState, useSetlistState, useAutoplaySettings } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
@@ -12,12 +12,14 @@ import SearchBar from './SearchBar';
 import { useSyncTimer } from '../hooks/useSyncTimer';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
+import { getLineDisplayText } from '../utils/parseLyrics';
 
 const MobileLayout = () => {
   const { isOutputOn, setIsOutputOn } = useOutputState();
   const { lyrics, lyricsFileName, selectedLine, selectLine } = useLyricsState();
   const { darkMode } = useDarkModeState();
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles } = useSetlistState();
+  const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus, ready, lastSyncTime, isConnected } = useControlSocket();
 
@@ -31,6 +33,45 @@ const MobileLayout = () => {
   const { showModal } = useModal();
 
   const navigate = useNavigate();
+
+  const [autoplayActive, setAutoplayActive] = React.useState(false);
+  const autoplayIntervalRef = useRef(null);
+  const lyricsRef = useRef(lyrics);
+  const selectedLineRef = useRef(selectedLine);
+  const autoplaySettingsRef = useRef(autoplaySettings);
+  const selectLineRef = useRef(selectLine);
+  const emitLineUpdateRef = useRef(emitLineUpdate);
+  const showToastRef = useRef(showToast);
+
+  React.useEffect(() => {
+    lyricsRef.current = lyrics;
+  }, [lyrics]);
+
+  React.useEffect(() => {
+    selectedLineRef.current = selectedLine;
+  }, [selectedLine]);
+
+  React.useEffect(() => {
+    autoplaySettingsRef.current = autoplaySettings;
+  }, [autoplaySettings]);
+
+  React.useEffect(() => {
+    selectLineRef.current = selectLine;
+  }, [selectLine]);
+
+  React.useEffect(() => {
+    emitLineUpdateRef.current = emitLineUpdate;
+  }, [emitLineUpdate]);
+
+  React.useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
+  const isLineBlank = React.useCallback((line) => {
+    if (!line) return true;
+    const displayText = getLineDisplayText(line);
+    return !displayText || displayText.trim() === '';
+  }, []);
 
   const handleLineSelect = (index) => {
     if (!isAuthenticated || !ready) {
@@ -100,6 +141,145 @@ const MobileLayout = () => {
       });
     }
   };
+
+  React.useEffect(() => {
+    if (autoplayIntervalRef.current) {
+      clearInterval(autoplayIntervalRef.current);
+      autoplayIntervalRef.current = null;
+    }
+
+    if (!autoplayActive || !hasLyrics) {
+      return;
+    }
+
+    autoplayIntervalRef.current = setInterval(() => {
+      const currentLyrics = lyricsRef.current;
+      const currentSelectedLine = selectedLineRef.current;
+      const currentSettings = autoplaySettingsRef.current;
+      const currentSelectLine = selectLineRef.current;
+      const currentEmitLineUpdate = emitLineUpdateRef.current;
+      const currentShowToast = showToastRef.current;
+
+      if (!currentLyrics || currentLyrics.length === 0) {
+        setAutoplayActive(false);
+        return;
+      }
+
+      const currentIndex = currentSelectedLine ?? -1;
+      let nextIndex = currentIndex + 1;
+
+      if (currentSettings.skipBlankLines) {
+        while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
+          nextIndex++;
+        }
+      }
+
+      if (nextIndex >= currentLyrics.length) {
+        if (currentSettings.loop) {
+          nextIndex = 0;
+          if (currentSettings.skipBlankLines) {
+            while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
+              nextIndex++;
+            }
+          }
+          if (nextIndex >= currentLyrics.length) {
+            setAutoplayActive(false);
+            currentShowToast({
+              title: 'Autoplay Stopped',
+              message: 'No non-blank lines found.',
+              variant: 'info'
+            });
+            return;
+          }
+        } else {
+          setAutoplayActive(false);
+          currentShowToast({
+            title: 'Autoplay Complete',
+            message: 'Reached the end of lyrics.',
+            variant: 'success'
+          });
+          return;
+        }
+      }
+
+      currentSelectLine(nextIndex);
+      currentEmitLineUpdate(nextIndex);
+      window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+        detail: { lineIndex: nextIndex }
+      }));
+    }, autoplaySettings.interval * 1000);
+
+    return () => {
+      if (autoplayIntervalRef.current) {
+        clearInterval(autoplayIntervalRef.current);
+        autoplayIntervalRef.current = null;
+      }
+    };
+  }, [autoplayActive, hasLyrics, autoplaySettings.interval, isLineBlank]);
+
+  const handleAutoplayToggle = () => {
+    if (autoplayActive) {
+      setAutoplayActive(false);
+      showToast({
+        title: 'Autoplay Stopped',
+        message: 'Automatic lyric progression paused.',
+        variant: 'info'
+      });
+    } else {
+      if (autoplaySettings.startFromFirst) {
+        let startIndex = 0;
+        if (autoplaySettings.skipBlankLines) {
+          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+            startIndex++;
+          }
+        }
+        if (startIndex >= lyrics.length) {
+          showToast({
+            title: 'Cannot Start Autoplay',
+            message: 'No non-blank lines found.',
+            variant: 'warning'
+          });
+          return;
+        }
+        selectLine(startIndex);
+        emitLineUpdate(startIndex);
+        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+          detail: { lineIndex: startIndex }
+        }));
+      }
+
+      setAutoplayActive(true);
+      showToast({
+        title: 'Autoplay Started',
+        message: `Advancing every ${autoplaySettings.interval} second${autoplaySettings.interval !== 1 ? 's' : ''}.`,
+        variant: 'success'
+      });
+    }
+  };
+
+  const handleOpenAutoplaySettings = () => {
+    showModal({
+      title: 'Autoplay Settings',
+      headerDescription: 'Configure automatic lyric progression',
+      component: 'AutoplaySettings',
+      variant: 'info',
+      size: 'sm',
+      settings: autoplaySettings,
+      onSave: (newSettings) => {
+        setAutoplaySettings(newSettings);
+        showToast({
+          title: 'Settings Saved',
+          message: 'Autoplay settings updated successfully.',
+          variant: 'success'
+        });
+      },
+      actions: []
+    });
+  };
+
+  React.useEffect(() => {
+    setAutoplayActive(false);
+  }, [lyricsFileName]);
 
   return (
     <>
@@ -236,7 +416,7 @@ const MobileLayout = () => {
           >
             {hasLyrics ? (
               <>
-                {/* Fixed Search Bar */}
+                {/* Fixed Search Bar and Autoplay */}
                 <div className={`border-b px-4 py-4 flex-shrink-0 ${darkMode
                   ? 'border-gray-600 bg-gray-800'
                   : 'border-gray-200 bg-white'
@@ -251,6 +431,45 @@ const MobileLayout = () => {
                     onNext={navigateToNextMatch}
                     onClear={clearSearch}
                   />
+
+                  {/* Autoplay Button */}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={handleAutoplayToggle}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${autoplayActive
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : darkMode
+                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                        }`}
+                    >
+                      {autoplayActive ? (
+                        <>
+                          <Square className="w-4 h-4 fill-current" />
+                          <span>Stop Autoplay</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4" />
+                          <span>Start Autoplay</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Settings Button */}
+                    {!autoplayActive && (
+                      <button
+                        onClick={handleOpenAutoplaySettings}
+                        className={`p-2.5 rounded-lg transition-colors ${darkMode
+                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                          }`}
+                        title="Autoplay settings"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Scrollable Lyrics List */}

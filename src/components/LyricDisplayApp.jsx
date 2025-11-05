@@ -1,8 +1,8 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info, FileMusic } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useDarkModeState, useSetlistState, useIsDesktopApp } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import AuthStatusIndicator from './AuthStatusIndicator';
@@ -27,6 +27,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSyncTimer } from '../hooks/useSyncTimer';
 import { detectArtistFromFilename } from '../utils/artistDetection';
+import { getLineDisplayText } from '../utils/parseLyrics';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -36,9 +37,11 @@ const LyricDisplayApp = () => {
   const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setSongMetadata } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
+  const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
   const { darkMode, setDarkMode } = useDarkModeState();
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
+  const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
 
   useDarkModeSync(darkMode, setDarkMode);
 
@@ -54,11 +57,14 @@ const LyricDisplayApp = () => {
   const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({
     output1Settings,
     output2Settings,
+    stageSettings,
     updateOutputSettings: (output, settings) => {
       if (output === 'output1') {
         updateOutput1Settings(settings);
       } else if (output === 'output2') {
         updateOutput2Settings(settings);
+      } else if (output === 'stage') {
+        updateStageSettings(settings);
       }
       emitStyleUpdate(output, settings);
     },
@@ -70,12 +76,48 @@ const LyricDisplayApp = () => {
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
 
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
+  const [autoplayActive, setAutoplayActive] = React.useState(false);
+  const [availableWidth, setAvailableWidth] = React.useState(1000);
+  const headerContainerRef = useRef(null);
 
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
 
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast } = useToast();
   const { showModal } = useModal();
+
+  const autoplayIntervalRef = useRef(null);
+  const lyricsRef = useRef(lyrics);
+  const selectedLineRef = useRef(selectedLine);
+  const autoplaySettingsRef = useRef(autoplaySettings);
+  const selectLineRef = useRef(selectLine);
+  const emitLineUpdateRef = useRef(emitLineUpdate);
+  const showToastRef = useRef(showToast);
+  const isAutoplaySelectionRef = useRef(false);
+
+  React.useEffect(() => {
+    lyricsRef.current = lyrics;
+  }, [lyrics]);
+
+  React.useEffect(() => {
+    selectedLineRef.current = selectedLine;
+  }, [selectedLine]);
+
+  React.useEffect(() => {
+    autoplaySettingsRef.current = autoplaySettings;
+  }, [autoplaySettings]);
+
+  React.useEffect(() => {
+    selectLineRef.current = selectLine;
+  }, [selectLine]);
+
+  React.useEffect(() => {
+    emitLineUpdateRef.current = emitLineUpdate;
+  }, [emitLineUpdate]);
+
+  React.useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   const processLoadedLyrics = React.useCallback(async ({ content, fileName, filePath, fileType }, context = {}) => {
     const sanitize = (value) => (value || '')
@@ -323,6 +365,52 @@ const LyricDisplayApp = () => {
     emitOutputToggle(!isOutputOn);
   };
 
+  const isLineBlank = React.useCallback((line) => {
+    if (!line) return true;
+    const displayText = getLineDisplayText(line);
+    return !displayText || displayText.trim() === '';
+  }, []);
+
+  const handleAutoplayToggle = React.useCallback(() => {
+    if (autoplayActive) {
+      setAutoplayActive(false);
+      showToast({
+        title: 'Autoplay Stopped',
+        message: 'Automatic lyric progression paused.',
+        variant: 'info'
+      });
+    } else {
+      if (autoplaySettings.startFromFirst) {
+        let startIndex = 0;
+        if (autoplaySettings.skipBlankLines) {
+          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+            startIndex++;
+          }
+        }
+        if (startIndex >= lyrics.length) {
+          showToast({
+            title: 'Cannot Start Autoplay',
+            message: 'No non-blank lines found.',
+            variant: 'warning'
+          });
+          return;
+        }
+        selectLine(startIndex);
+        emitLineUpdate(startIndex);
+        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+          detail: { lineIndex: startIndex }
+        }));
+      }
+
+      setAutoplayActive(true);
+      showToast({
+        title: 'Autoplay Started',
+        message: `Advancing every ${autoplaySettings.interval} second${autoplaySettings.interval !== 1 ? 's' : ''}.`,
+        variant: 'success'
+      });
+    }
+  }, [autoplayActive, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast]);
+
   React.useEffect(() => {
     if (!hasLyrics) return;
 
@@ -341,6 +429,12 @@ const LyricDisplayApp = () => {
           searchInput.focus();
           searchInput.select();
         }
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+        event.preventDefault();
+        handleAutoplayToggle();
         return;
       }
 
@@ -407,9 +501,132 @@ const LyricDisplayApp = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasLyrics, lyrics, selectedLine, handleLineSelect, handleToggle, searchQuery, clearSearch, totalMatches, highlightedLineIndex, isConnected, isAuthenticated, ready, showToast, setIsOutputOn, emitOutputToggle]);
+  }, [hasLyrics, lyrics, selectedLine, handleLineSelect, handleToggle, handleAutoplayToggle, searchQuery, clearSearch, totalMatches, highlightedLineIndex, isConnected, isAuthenticated, ready, showToast, setIsOutputOn, emitOutputToggle]);
 
   const { isFileAlreadyInSetlist, handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
+
+  React.useEffect(() => {
+    if (autoplayIntervalRef.current) {
+      clearInterval(autoplayIntervalRef.current);
+      autoplayIntervalRef.current = null;
+    }
+
+    if (!autoplayActive || !hasLyrics) {
+      return;
+    }
+
+    autoplayIntervalRef.current = setInterval(() => {
+      const currentLyrics = lyricsRef.current;
+      const currentSelectedLine = selectedLineRef.current;
+      const currentSettings = autoplaySettingsRef.current;
+      const currentSelectLine = selectLineRef.current;
+      const currentEmitLineUpdate = emitLineUpdateRef.current;
+      const currentShowToast = showToastRef.current;
+
+      if (!currentLyrics || currentLyrics.length === 0) {
+        setAutoplayActive(false);
+        return;
+      }
+
+      const currentIndex = currentSelectedLine ?? -1;
+      let nextIndex = currentIndex + 1;
+
+      if (currentSettings.skipBlankLines) {
+        while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
+          nextIndex++;
+        }
+      }
+
+      if (nextIndex >= currentLyrics.length) {
+        if (currentSettings.loop) {
+          nextIndex = 0;
+          if (currentSettings.skipBlankLines) {
+            while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
+              nextIndex++;
+            }
+          }
+          if (nextIndex >= currentLyrics.length) {
+            setAutoplayActive(false);
+            currentShowToast({
+              title: 'Autoplay Stopped',
+              message: 'No non-blank lines found.',
+              variant: 'info'
+            });
+            return;
+          }
+        } else {
+          setAutoplayActive(false);
+          currentShowToast({
+            title: 'Autoplay Complete',
+            message: 'Reached the end of lyrics.',
+            variant: 'success'
+          });
+          return;
+        }
+      }
+
+      isAutoplaySelectionRef.current = true;
+      currentSelectLine(nextIndex);
+      currentEmitLineUpdate(nextIndex);
+      window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+        detail: { lineIndex: nextIndex }
+      }));
+
+      setTimeout(() => {
+        isAutoplaySelectionRef.current = false;
+      }, 50);
+    }, autoplaySettings.interval * 1000);
+
+    return () => {
+      if (autoplayIntervalRef.current) {
+        clearInterval(autoplayIntervalRef.current);
+        autoplayIntervalRef.current = null;
+      }
+    };
+  }, [autoplayActive, hasLyrics, autoplaySettings.interval, isLineBlank]);
+
+  const handleOpenAutoplaySettings = () => {
+    showModal({
+      title: 'Autoplay Settings',
+      headerDescription: 'Configure automatic lyric progression',
+      component: 'AutoplaySettings',
+      variant: 'info',
+      size: 'sm',
+      settings: autoplaySettings,
+      onSave: (newSettings) => {
+        setAutoplaySettings(newSettings);
+        showToast({
+          title: 'Settings Saved',
+          message: 'Autoplay settings updated successfully.',
+          variant: 'success'
+        });
+      },
+      actions: []
+    });
+  };
+
+  React.useEffect(() => {
+    setAutoplayActive(false);
+  }, [lyricsFileName]);
+
+  React.useEffect(() => {
+    if (!headerContainerRef.current || !hasLyrics) return;
+
+    const updateWidth = () => {
+      if (headerContainerRef.current) {
+        setAvailableWidth(headerContainerRef.current.offsetWidth);
+      }
+    };
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(headerContainerRef.current);
+
+    updateWidth();
+
+    return () => observer.disconnect();
+  }, [hasLyrics]);
+
+  const useIconOnlyButtons = availableWidth < 700;
 
   if (!isDesktopApp) {
     return <MobileLayout />;
@@ -625,7 +842,10 @@ const LyricDisplayApp = () => {
           <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
           {/* Output Tabs */}
-          <Tabs value={activeTab} onValueChange={(val) => { setHasInteractedWithTabs(true); setActiveTab(val); }}>
+          <Tabs value={activeTab} onValueChange={(val) => {
+            setHasInteractedWithTabs(true);
+            setActiveTab(val);
+          }}>
             <TabsList className={`w-full h-11 mb-8 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
               <TabsTrigger value="output1" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                 Output 1
@@ -633,29 +853,48 @@ const LyricDisplayApp = () => {
               <TabsTrigger value="output2" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                 Output 2
               </TabsTrigger>
+              <TabsTrigger value="stage" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+                Stage
+              </TabsTrigger>
             </TabsList>
-            <TabsContent
-              value="output1"
-              className={`mt-0 ${hasInteractedWithTabs && activeTab === 'output1' ? 'animate-in slide-in-from-left-8 duration-300' : ''}`}
-            >
-              <OutputSettingsPanel
-                outputKey="output1"
-                settings={getCurrentSettings()}
-                updateSettings={updateSettings}
-                fontOptions={fontOptions}
-              />
-            </TabsContent>
-            <TabsContent
-              value="output2"
-              className={`mt-0 ${hasInteractedWithTabs && activeTab === 'output2' ? 'animate-in slide-in-from-right-8 duration-300' : ''}`}
-            >
-              <OutputSettingsPanel
-                outputKey="output2"
-                settings={getCurrentSettings()}
-                updateSettings={updateSettings}
-                fontOptions={fontOptions}
-              />
-            </TabsContent>
+
+            {/* Tab Content */}
+            <div>
+              {activeTab === 'output1' && (
+                <OutputSettingsPanel
+                  outputKey="output1"
+                  settings={output1Settings}
+                  updateSettings={(settings) => {
+                    updateOutput1Settings(settings);
+                    emitStyleUpdate('output1', settings);
+                  }}
+                  fontOptions={fontOptions}
+                />
+              )}
+
+              {activeTab === 'output2' && (
+                <OutputSettingsPanel
+                  outputKey="output2"
+                  settings={output2Settings}
+                  updateSettings={(settings) => {
+                    updateOutput2Settings(settings);
+                    emitStyleUpdate('output2', settings);
+                  }}
+                  fontOptions={fontOptions}
+                />
+              )}
+
+              {activeTab === 'stage' && (
+                <OutputSettingsPanel
+                  outputKey="stage"
+                  settings={stageSettings}
+                  updateSettings={(settings) => {
+                    updateStageSettings(settings);
+                    emitStyleUpdate('stage', settings);
+                  }}
+                />
+              )}
+            </div>
           </Tabs>
 
           <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
@@ -668,7 +907,7 @@ const LyricDisplayApp = () => {
         {/* Right Main Area */}
         <div className="flex-1 min-w-0 p-6 flex flex-col h-screen">
           {/* Fixed Header */}
-          <div className="mb-6 flex-shrink-0 min-w-0">
+          <div className="mb-6 flex-shrink-0 min-w-0" ref={headerContainerRef}>
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <h2 className={`text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -684,21 +923,73 @@ const LyricDisplayApp = () => {
                 )}
               </div>
               {hasLyrics && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Autoplay Button */}
+                  <Tooltip content={autoplayActive ? "Stop autoplay" : "Start automatic lyric progression"} side="bottom">
+                    <div className="relative flex">
+                      <button
+                        onClick={handleAutoplayToggle}
+                        className={`flex items-center gap-2 text-sm font-medium transition-all ${autoplayActive
+                          ? useIconOnlyButtons
+                            ? 'bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-l-lg'
+                            : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-l-lg'
+                          : useIconOnlyButtons
+                            ? darkMode
+                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-2 py-2 rounded-l-lg'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-2 rounded-l-lg'
+                            : darkMode
+                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-l-lg'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-l-lg'
+                          }`}
+                      >
+                        {autoplayActive ? (
+                          <>
+                            <Square className="w-4 h-4 flex-shrink-0 fill-current" />
+                            {!useIconOnlyButtons && <span className="whitespace-nowrap">Autoplay</span>}
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 flex-shrink-0" />
+                            {!useIconOnlyButtons && <span className="whitespace-nowrap">Autoplay</span>}
+                          </>
+                        )}
+                      </button>
+
+                      {/* Settings dropdown trigger - Always show when not active */}
+                      {!autoplayActive && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAutoplaySettings();
+                          }}
+                          className={`flex items-center justify-center ${useIconOnlyButtons ? 'px-1.5' : 'px-2'} py-2 rounded-r-lg transition-colors border-l ${autoplayActive
+                            ? 'bg-green-600 hover:bg-green-700 text-white border-green-500'
+                            : darkMode
+                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
+                            }`}
+                          title="Autoplay settings"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </Tooltip>
+
                   {/* Add to Setlist Button */}
                   <Tooltip content="Add current lyrics to your setlist for quick access during service" side="bottom">
                     <button
                       onClick={handleAddToSetlist}
                       aria-disabled={addDisabled}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${addDisabled
+                      className={`flex items-center gap-2 rounded-lg text-sm font-medium transition-colors ${addDisabled
                         ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
                         : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')
-                        }`}
+                        } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}
                       title={addTitle}
                       style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
                     >
                       <Plus className="w-4 h-4 flex-shrink-0" />
-                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">Add to Setlist</span>
+                      {!useIconOnlyButtons && <span className="whitespace-nowrap overflow-hidden text-ellipsis">Add to Setlist</span>}
                     </button>
                   </Tooltip>
 
@@ -706,13 +997,13 @@ const LyricDisplayApp = () => {
                   <Tooltip content="Edit current lyrics in the song canvas editor" side="bottom">
                     <button
                       onClick={handleEditLyrics}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode
+                      className={`flex items-center gap-2 rounded-lg text-sm font-medium transition-colors ${darkMode
                         ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                        }`}
+                        } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}
                     >
                       <Edit className="w-4 h-4 flex-shrink-0" />
-                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">Edit Lyrics</span>
+                      {!useIconOnlyButtons && <span className="whitespace-nowrap overflow-hidden text-ellipsis">Edit Lyrics</span>}
                     </button>
                   </Tooltip>
 

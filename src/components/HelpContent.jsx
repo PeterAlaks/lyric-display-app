@@ -64,7 +64,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
 
         <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
             <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
-                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to quickly load files and Ctrl/Cmd+N for new songs. The Display Output toggle controls visibility on all connected displays simultaneously.
+                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to quickly load files, Ctrl/Cmd+N for new songs, and Ctrl/Cmd+P to toggle autoplay. The Display Output toggle controls visibility on all connected displays simultaneously.
             </p>
         </div>
     </div>
@@ -202,4 +202,70 @@ export const SongCanvasHelp = ({ darkMode }) => (
     </div>
 );
 
-export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp };
+export const StageDisplayHelp = ({ darkMode }) => (
+    <div className="space-y-3">
+        <HelpSection
+            icon={ScreenShare}
+            title="Stage Display Overview"
+            description="The Stage Display is designed for performers, worship leaders, and musicians on stage. It shows the current lyric line, upcoming line, and previous line simultaneously, helping performers stay ahead and never miss a cue."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Type}
+            title="Live, Next & Previous Lines"
+            description="Customize font size, color, alignment, and emphasis (bold, italic, underline, ALL CAPS) independently for each line type. The current line is typically largest and brightest, with upcoming and previous lines styled for quick reference."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Paintbrush}
+            title="Arrow Indicator"
+            description="Enable an optional arrow before the upcoming line to draw attention. Customize the arrow color to match your stage lighting or branding. Perfect for helping performers quickly identify what's coming next."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={List}
+            title="Song Information Bar"
+            description="The top bar displays the current song name and upcoming song from your setlist. Adjust font sizes and colors independently for each. Helps performers prepare for transitions between songs during live services."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={ScreenShare}
+            title="Bottom Bar & Time Display"
+            description="Show the current real-world time in the bottom bar. Adjust text size and color to match your stage aesthetic. Essential for keeping track of service timing and ensuring you stay on schedule."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={RefreshCw}
+            title="Countdown Timer"
+            description="Set a countdown timer (in minutes) that displays in the bottom bar. Start, pause, resume, or stop the timer as needed. Perfect for timed segments, prayer moments, or managing service flow. Timer syncs across all stage displays."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Globe}
+            title="Custom Messages"
+            description="Add custom messages that scroll in the bottom bar (e.g., 'Welcome to Service', 'Offering Time', 'Altar Call'). Set scroll speed (1000-10000ms) and add/remove messages as needed. Great for communicating with the worship team during service."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Wand2}
+            title="Transition Animations"
+            description="Choose how lyrics change on stage displays: None (instant), Fade (smooth opacity), or Slide/Wheel (vertical motion). Adjust animation speed (100-1000ms) to match your worship style. Smooth transitions help performers track lyric changes."
+            darkMode={darkMode}
+        />
+
+        <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-indigo-900/20 border border-indigo-700/30' : 'bg-indigo-50 border border-indigo-200'}`}>
+            <p className={`text-sm font-medium ${darkMode ? 'text-indigo-300' : 'text-indigo-800'}`}>
+                🎤 <strong>Pro Tip:</strong> Use high contrast colors (bright text on dark background) for stage displays to ensure visibility under stage lighting. The Stage Display automatically shows the next song from your setlist, helping your team prepare for smooth transitions.
+            </p>
+        </div>
+    </div>
+);
+
+export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp };

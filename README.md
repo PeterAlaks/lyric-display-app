@@ -156,6 +156,7 @@ Each output can be independently configured:
 |----------|--------|
 | Ctrl/Cmd + O | Load lyrics file |
 | Ctrl/Cmd + N | New song canvas |
+| Ctrl/Cmd + P | Toggle autoplay |
 | Ctrl/Cmd + F | Jump to search |
 | Esc | Clear search query |
 | Ctrl/Cmd + T | In New song canvas - adds translation line |

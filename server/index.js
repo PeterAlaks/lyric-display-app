@@ -44,7 +44,7 @@ const TOKEN_EXPIRY = secrets.TOKEN_EXPIRY || process.env.TOKEN_EXPIRY || '24h';
 const ADMIN_TOKEN_EXPIRY = secrets.ADMIN_TOKEN_EXPIRY || process.env.ADMIN_TOKEN_EXPIRY || '7d';
 
 global.controllerJoinCode = String(Math.floor(100000 + Math.random() * 900000));
-const VALID_CLIENT_TYPES = ['desktop', 'web', 'output1', 'output2', 'mobile'];
+const VALID_CLIENT_TYPES = ['desktop', 'web', 'output1', 'output2', 'stage', 'mobile'];
 const CONTROLLER_CLIENT_TYPES = ['web', 'mobile'];
 const isControllerClient = (clientType) => CONTROLLER_CLIENT_TYPES.includes(clientType);
 
@@ -421,6 +421,7 @@ function getClientPermissions(clientType) {
     ],
     output1: ['lyrics:read', 'settings:read'],
     output2: ['lyrics:read', 'settings:read'],
+    stage: ['lyrics:read', 'settings:read'],
     mobile: [
       'lyrics:read', 'lyrics:draft',
       'setlist:read',

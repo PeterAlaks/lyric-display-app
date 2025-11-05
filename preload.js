@@ -151,6 +151,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     importSong: (params) => ipcRenderer.invoke('easyworship:import-song', params),
     openFolder: (path) => ipcRenderer.invoke('easyworship:open-folder', { path }),
     getUserHome: () => ipcRenderer.invoke('easyworship:get-user-home')
+  },
+  display: {
+    getAll: () => ipcRenderer.invoke('display:get-all'),
+    getPrimary: () => ipcRenderer.invoke('display:get-primary'),
+    getById: (displayId) => ipcRenderer.invoke('display:get-by-id', { displayId }),
+    saveAssignment: (displayId, outputKey) => ipcRenderer.invoke('display:save-assignment', { displayId, outputKey }),
+    getAssignment: (displayId) => ipcRenderer.invoke('display:get-assignment', { displayId }),
+    getAllAssignments: () => ipcRenderer.invoke('display:get-all-assignments'),
+    removeAssignment: (displayId) => ipcRenderer.invoke('display:remove-assignment', { displayId }),
+    openOutputOnDisplay: (outputKey, displayId) => ipcRenderer.invoke('display:open-output-on-display', { outputKey, displayId })
   }
 });
 

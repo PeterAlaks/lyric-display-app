@@ -54,6 +54,17 @@ export const useOutput2Settings = () =>
         shallow
     );
 
+export const useStageSettings = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            settings: state.stageSettings,
+            updateSettings: (newSettings) =>
+                state.updateOutputSettings('stage', newSettings),
+        }),
+        shallow
+    );
+
 export const useDarkModeState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -105,4 +116,14 @@ export const useCanAddToSetlist = () =>
             state.lyricsFileName != null &&
             state.lyrics != null &&
             state.lyrics.length > 0
+    );
+
+export const useAutoplaySettings = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            settings: state.autoplaySettings,
+            setSettings: state.setAutoplaySettings,
+        }),
+        shallow
     );
