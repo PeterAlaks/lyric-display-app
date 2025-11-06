@@ -15,73 +15,72 @@ export const detectArtistFromFilename = (fileName) => {
 
   for (const artist of knownArtistsData) {
     const artistLower = artist.toLowerCase();
-    if (normalized.includes(artistLower)) {
 
-      const byPattern = new RegExp(`(.+?)\\s+by\\s+${artistLower}`, 'i');
-      const byMatch = nameWithoutExt.match(byPattern);
-      if (byMatch) {
-        return {
-          artist,
-          title: byMatch[1].trim()
-        };
-      }
+    const escapedArtist = artistLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      const dashPattern = new RegExp(`(.+?)\\s*-\\s*${artistLower}`, 'i');
-      const dashMatch = nameWithoutExt.match(dashPattern);
-      if (dashMatch) {
-        return {
-          artist,
-          title: dashMatch[1].trim()
-        };
-      }
+    const wordBoundaryPattern = new RegExp(`(^|[\\s\\-_])${escapedArtist}([\\s\\-_]|$)`, 'i');
 
-      const reverseDashPattern = new RegExp(`${artistLower}\\s*-\\s*(.+)`, 'i');
-      const reverseDashMatch = nameWithoutExt.match(reverseDashPattern);
-      if (reverseDashMatch) {
-        return {
-          artist,
-          title: reverseDashMatch[1].trim()
-        };
-      }
+    if (!wordBoundaryPattern.test(normalized)) {
+      continue;
+    }
 
-      if (normalized.startsWith(artistLower)) {
-        const titlePart = nameWithoutExt
-          .substring(artist.length)
-          .replace(/^[-_\s]+/, '')
-          .trim();
-
-        if (titlePart) {
-          return {
-            artist,
-            title: titlePart
-          };
-        }
-      }
-
-      if (normalized.endsWith(artistLower)) {
-        const titlePart = nameWithoutExt
-          .substring(0, nameWithoutExt.length - artist.length)
-          .replace(/[-_\s]+$/, '')
-          .trim();
-
-        if (titlePart) {
-          return {
-            artist,
-            title: titlePart
-          };
-        }
-      }
-
-      const titlePart = nameWithoutExt
-        .replace(new RegExp(artist, 'gi'), '')
-        .replace(/^[-_\s]+|[-_\s]+$/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
+    const byPattern = new RegExp(`(.+?)\\s+by\\s+${escapedArtist}\\s*$`, 'i');
+    const byMatch = nameWithoutExt.match(byPattern);
+    if (byMatch) {
       return {
         artist,
-        title: titlePart || nameWithoutExt
+        title: byMatch[1].trim()
       };
+    }
+
+    const dashPattern = new RegExp(`(.+?)\\s*-\\s*${escapedArtist}\\s*$`, 'i');
+    const dashMatch = nameWithoutExt.match(dashPattern);
+    if (dashMatch) {
+      return {
+        artist,
+        title: dashMatch[1].trim()
+      };
+    }
+
+    const reverseDashPattern = new RegExp(`^\\s*${escapedArtist}\\s*-\\s*(.+)`, 'i');
+    const reverseDashMatch = nameWithoutExt.match(reverseDashPattern);
+    if (reverseDashMatch) {
+      return {
+        artist,
+        title: reverseDashMatch[1].trim()
+      };
+    }
+
+    if (normalized.startsWith(artistLower + ' ') ||
+      normalized.startsWith(artistLower + '-') ||
+      normalized.startsWith(artistLower + '_')) {
+      const titlePart = nameWithoutExt
+        .substring(artist.length)
+        .replace(/^[-_\s]+/, '')
+        .trim();
+
+      if (titlePart) {
+        return {
+          artist,
+          title: titlePart
+        };
+      }
+    }
+
+    if (normalized.endsWith(' ' + artistLower) ||
+      normalized.endsWith('-' + artistLower) ||
+      normalized.endsWith('_' + artistLower)) {
+      const titlePart = nameWithoutExt
+        .substring(0, nameWithoutExt.length - artist.length)
+        .replace(/[-_\s]+$/, '')
+        .trim();
+
+      if (titlePart) {
+        return {
+          artist,
+          title: titlePart
+        };
+      }
     }
   }
 

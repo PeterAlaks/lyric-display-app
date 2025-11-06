@@ -931,8 +931,8 @@ const LyricDisplayApp = () => {
                         onClick={handleAutoplayToggle}
                         className={`flex items-center gap-2 text-sm font-medium transition-all ${autoplayActive
                           ? useIconOnlyButtons
-                            ? 'bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-l-lg'
-                            : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-l-lg'
+                            ? 'bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-lg'
+                            : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg'
                           : useIconOnlyButtons
                             ? darkMode
                               ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-2 py-2 rounded-l-lg'
