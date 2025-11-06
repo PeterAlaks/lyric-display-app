@@ -1,11 +1,14 @@
 import { fetchWithTimeout } from '../fetchWithTimeout.js';
+import { app } from 'electron';
 
+const APP_VERSION = app.getVersion();
+const USER_AGENT = `LyricDisplay/${APP_VERSION} (+https://github.com/PeterAlaks/lyric-display-app)`;
 const BASE_URL = 'https://api.lyrics.ovh';
 
 export const definition = {
   id: 'lyricsOvh',
   displayName: 'Lyrics.ovh',
-  description: 'Free public lyrics API powered by Deezer catalog.',
+  description: 'Free public lyrics API providing song lyrics by artist and title.',
   requiresKey: false,
   homepage: 'https://lyricsovh.docs.apiary.io/',
   supportedFeatures: {
@@ -48,7 +51,7 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
 
   try {
     const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
-    const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+    const resp = await fetchFn(url, { signal, headers: { 'User-Agent': USER_AGENT } });
     if (!resp.ok) {
       const message = `lyrics.ovh suggest failed with status ${resp.status}`;
       return { results: [], errors: [message] };
@@ -74,7 +77,7 @@ export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {})
   const url = `${BASE_URL}/v1/${encodeURIComponent(payload.artist)}/${encodeURIComponent(payload.title)}`;
 
   const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
-  const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+  const resp = await fetchFn(url, { signal, headers: { 'User-Agent': USER_AGENT } });
   if (!resp.ok) {
     const body = await resp.text();
     throw new Error(`lyrics.ovh lyrics request failed: ${resp.status} ${body}`);

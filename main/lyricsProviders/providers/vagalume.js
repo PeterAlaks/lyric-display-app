@@ -1,6 +1,9 @@
 import { getProviderKey } from '../../providerCredentials.js';
 import { fetchWithTimeout } from '../fetchWithTimeout.js';
+import { app } from 'electron';
 
+const APP_VERSION = app.getVersion();
+const USER_AGENT = `LyricDisplay/${APP_VERSION} (+https://github.com/PeterAlaks/lyric-display-app)`;
 const BASE_URL = 'https://api.vagalume.com.br';
 
 export const definition = {
@@ -62,7 +65,7 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
 
   try {
     const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
-    const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+    const resp = await fetchFn(url, { signal, headers: { 'User-Agent': USER_AGENT } });
     if (!resp.ok) {
       const message = `Vagalume search failed (${resp.status})`;
       return { results: [], errors: [message] };
@@ -108,7 +111,7 @@ export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {})
 
   const url = makeUrl('/search.php', params);
   const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
-  const resp = await fetchFn(url, { signal, headers: { 'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)' } });
+  const resp = await fetchFn(url, { signal, headers: { 'User-Agent': USER_AGENT } });
   if (!resp.ok) {
     const body = await resp.text();
     throw new Error(`Vagalume lyrics request failed: ${resp.status} ${body}`);

@@ -1,6 +1,9 @@
 import { getProviderKey } from '../../providerCredentials.js';
 import { fetchWithTimeout } from '../fetchWithTimeout.js';
+import { app } from 'electron';
 
+const APP_VERSION = app.getVersion();
+const USER_AGENT = `LyricDisplay/${APP_VERSION} (+https://github.com/PeterAlaks/lyric-display-app)`;
 const BASE_URL = 'https://hymnary.org';
 
 export const definition = {
@@ -85,7 +88,7 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
       signal,
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)',
+        'User-Agent': USER_AGENT,
       },
     });
     if (!resp.ok) {
@@ -137,7 +140,7 @@ export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {})
     signal,
     headers: {
       Accept: 'application/json',
-      'User-Agent': 'LyricDisplay/1.0 (+https://lyricdisplay.app)',
+      'User-Agent': USER_AGENT,
     },
   });
 

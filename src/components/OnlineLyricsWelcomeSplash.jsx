@@ -48,7 +48,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
         },
         {
             name: 'Lyrics.ovh',
-            description: 'General pop/rock catalog powered by Deezer',
+            description: 'General pop/rock catalog with simple API access',
             requiresKey: false,
             icon: '/logos/lyricsovh-icon.png',
             color: 'emerald',
