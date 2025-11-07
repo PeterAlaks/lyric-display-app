@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { resolveBackendUrl } from "../utils/network";
 import useToast from '../hooks/useToast';
 
-const ANIMATION_DURATION = 300;
+const animationDuration = 220;
 
 const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   const [localIP, setLocalIP] = useState('');
@@ -130,7 +130,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     const timeout = setTimeout(() => {
       setExiting(false);
       setVisible(false);
-    }, ANIMATION_DURATION);
+    }, animationDuration);
 
     return () => clearTimeout(timeout);
   }, [isOpen, visible]);
@@ -149,10 +149,10 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 
       {/* Dialog */}
       <div className={`
-        relative w-full max-w-md mx-4 rounded-xl shadow-2xl p-6
-        ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
-        transition-all duration-300 ease-out
-        ${(exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100'}
+        relative w-full max-w-md mx-4 rounded-2xl border shadow-2xl ring-1 p-6
+        ${darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20'}
+        transition-all duration-200 ease-out
+        ${(exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100'}
       `}>
 
         {/* Header */}

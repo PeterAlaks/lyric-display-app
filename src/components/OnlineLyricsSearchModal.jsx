@@ -15,6 +15,7 @@ const INITIAL_STATE = {
   providerStatuses: [],
   fullResults: [],
 };
+const animationDuration = 220;
 
 const isElectronBridgeAvailable = () => typeof window !== 'undefined' && !!window?.electronAPI?.lyrics;
 
@@ -110,7 +111,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     const timeout = setTimeout(() => {
       setExiting(false);
       setVisible(false);
-    }, 280);
+    }, animationDuration);
     return () => clearTimeout(timeout);
   }, [isOpen]);
 
@@ -554,11 +555,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   if (!visible) return null;
 
   const modalClasses = [
-    'rounded-lg shadow-xl w-[90vw] max-w-2xl mx-4',
+    'rounded-2xl border shadow-2xl ring-1 w-[90vw] max-w-2xl mx-4',
     'flex flex-col h-[650px]',
-    darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200',
-    'transition-all duration-300 ease-out',
-    (exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100',
+    darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20',
+    'transition-all duration-200 ease-out',
+    (exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100',
   ].join(' ');
 
   return (
@@ -568,7 +569,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         onClick={() => onClose?.()}
       />
       <div className={modalClasses}>
-        <div className={`flex items-center justify-between border-b px-6 py-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`flex items-center justify-between border-b px-6 py-4 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           <div>
             <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Online Lyrics Search</h2>
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>

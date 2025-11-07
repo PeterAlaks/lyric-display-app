@@ -23,17 +23,17 @@ export const STRUCTURE_TAGS_CONFIG = {
 
 // Common structure tag patterns
 export const STRUCTURE_TAG_PATTERNS = [
-// [Verse], [Verse 1], [Verse 1:], [Chorus], etc.
-/^\s*\[(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:?\]\s*/i,
+  // [Verse], [Verse 1], [Verse 1:], [Chorus], etc.
+  /^\s*\[(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:?\]\s*/i,
 
-// Verse 1:, Chorus:, etc. (WITH colon at start of line)
-/^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:\s*/i,
+  // Verse 1:, Chorus:, etc. (WITH colon at start of line)
+  /^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:\s*/i,
 
-// (Verse 1), (Chorus), etc.
-/^\s*\((Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:?\)\s*/i,
+  // (Verse 1), (Chorus), etc.
+  /^\s*\((Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:?\)\s*/i,
 
-// Verse 1, Chorus, Bridge, etc. (WITHOUT colon, standalone on line)
-/^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*$/i,
+  // Verse 1, Chorus, Bridge, etc. (WITHOUT colon, standalone on line)
+  /^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*$/i,
 ];
 
 const TIME_TAG_REGEX = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
@@ -54,6 +54,9 @@ export function isTranslationLine(line) {
   if (!line || typeof line !== 'string') return false;
   const trimmed = line.trim();
   if (trimmed.length <= 2) return false;
+
+  if (isStructureTag(trimmed)) return false;
+
   return BRACKET_PAIRS.some(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
 }
 
@@ -215,7 +218,7 @@ function flattenClusters(clusters) {
   const result = [];
 
   clusters.forEach((cluster, clusterIndex) => {
-    if (cluster.length === 2 && isTranslationLine(cluster[1].line)) {
+    if (cluster.length === 2 && isTranslationLine(cluster[1].line) && !isTranslationLine(cluster[0].line)) {
       const groupedLine = {
         type: 'group',
         id: `group_${clusterIndex}_${cluster[0].originalIndex}`,
@@ -236,7 +239,7 @@ function flattenClusters(clusters) {
         const nextItem = cluster[i + 1];
         const nextNextItem = cluster[i + 2];
 
-        if (nextItem && isTranslationLine(nextItem.line)) {
+        if (nextItem && isTranslationLine(nextItem.line) && !isTranslationLine(currentItem.line)) {
           const translationGroup = {
             type: 'group',
             id: `group_${clusterIndex}_${currentItem.originalIndex}`,
@@ -251,7 +254,7 @@ function flattenClusters(clusters) {
           continue;
         }
 
-        if (nextItem && nextNextItem && isTranslationLine(nextNextItem.line)) {
+        if (nextItem && nextNextItem && isTranslationLine(nextNextItem.line) && !isTranslationLine(nextItem.line)) {
           result.push(currentItem.line);
           const translationGroup = {
             type: 'group',
@@ -271,7 +274,9 @@ function flattenClusters(clusters) {
           nextItem &&
           isNormalGroupCandidate(currentItem.line) &&
           isNormalGroupCandidate(nextItem.line) &&
-          !isTranslationLine(nextItem.line)
+          !isTranslationLine(nextItem.line) &&
+          !isStructureTag(currentItem.line) &&
+          !isStructureTag(nextItem.line)
         ) {
 
           const normalGroup = {
@@ -517,7 +522,7 @@ export function parseLrcContent(rawText = '', options = {}) {
     const main = splitLines[i];
     const next = splitLines[i + 1];
 
-    if (next && isTranslationLine(next)) {
+    if (next && isTranslationLine(next) && !isTranslationLine(main)) {
       grouped.push({
         type: 'group',
         id: `lrc_group_${i}`,

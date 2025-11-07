@@ -478,6 +478,17 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket.emit('draftRejected', { success: true, reason });
     });
 
+    socket.on('autoplayStateUpdate', ({ isActive, clientType: autoplayClientType }) => {
+      if (!hasPermission(socket, 'output:control')) {
+        socket.emit('permissionError', 'Insufficient permissions to update autoplay state');
+        return;
+      }
+
+      console.log(`Autoplay state updated by ${clientType} client: ${isActive ? 'active' : 'inactive'}`);
+
+      socket.broadcast.emit('autoplayStateUpdate', { isActive, clientType: autoplayClientType });
+    });
+
     socket.on('heartbeat', () => {
       socket.emit('heartbeat_ack', { timestamp: Date.now() });
     });

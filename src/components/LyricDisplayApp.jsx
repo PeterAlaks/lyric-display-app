@@ -48,7 +48,7 @@ const LyricDisplayApp = () => {
   const fileInputRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready, lastSyncTime } = useControlSocket();
+  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready, lastSyncTime } = useControlSocket();
 
   const secondsAgo = useSyncTimer(lastSyncTime);
 
@@ -77,6 +77,7 @@ const LyricDisplayApp = () => {
 
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
   const [autoplayActive, setAutoplayActive] = React.useState(false);
+  const [remoteAutoplayActive, setRemoteAutoplayActive] = React.useState(false);
   const [availableWidth, setAvailableWidth] = React.useState(1000);
   const headerContainerRef = useRef(null);
 
@@ -610,6 +611,27 @@ const LyricDisplayApp = () => {
   }, [lyricsFileName]);
 
   React.useEffect(() => {
+    if (isConnected && isAuthenticated && ready) {
+      const clientType = isDesktopApp ? 'desktop' : 'mobile';
+      emitAutoplayStateUpdate({ isActive: autoplayActive, clientType });
+    }
+  }, [autoplayActive, isConnected, isAuthenticated, ready, isDesktopApp, emitAutoplayStateUpdate]);
+
+  React.useEffect(() => {
+    const handleAutoplayStateUpdate = (event) => {
+      const { isActive, clientType } = event.detail;
+      const currentClientType = isDesktopApp ? 'desktop' : 'mobile';
+
+      if (clientType !== currentClientType) {
+        setRemoteAutoplayActive(isActive);
+      }
+    };
+
+    window.addEventListener('autoplay-state-update', handleAutoplayStateUpdate);
+    return () => window.removeEventListener('autoplay-state-update', handleAutoplayStateUpdate);
+  }, [isDesktopApp]);
+
+  React.useEffect(() => {
     if (!headerContainerRef.current || !hasLyrics) return;
 
     const updateWidth = () => {
@@ -846,14 +868,14 @@ const LyricDisplayApp = () => {
             setHasInteractedWithTabs(true);
             setActiveTab(val);
           }}>
-            <TabsList className={`w-full h-11 mb-8 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
-              <TabsTrigger value="output1" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+            <TabsList className={`w-full h-11 mb-8 gap-2 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
+              <TabsTrigger value="output1" className={`flex-1 h-7 text-xs min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                 Output 1
               </TabsTrigger>
-              <TabsTrigger value="output2" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+              <TabsTrigger value="output2" className={`flex-1 h-7 text-xs min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                 Output 2
               </TabsTrigger>
-              <TabsTrigger value="stage" className={`flex-1 h-8 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+              <TabsTrigger value="stage" className={`flex-1 h-7 text-xs min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                 Stage
               </TabsTrigger>
             </TabsList>
@@ -925,21 +947,26 @@ const LyricDisplayApp = () => {
               {hasLyrics && (
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {/* Autoplay Button */}
-                  <Tooltip content={autoplayActive ? "Stop autoplay" : "Start automatic lyric progression"} side="bottom">
+                  <Tooltip content={remoteAutoplayActive ? "Autoplay is active on mobile controller" : autoplayActive ? "Stop autoplay" : "Start automatic lyric progression"} side="bottom">
                     <div className="relative flex">
                       <button
                         onClick={handleAutoplayToggle}
-                        className={`flex items-center gap-2 text-sm font-medium transition-all ${autoplayActive
+                        disabled={remoteAutoplayActive}
+                        className={`flex items-center gap-2 text-xs font-medium transition-all ${remoteAutoplayActive
                           ? useIconOnlyButtons
-                            ? 'bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-lg'
-                            : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg'
-                          : useIconOnlyButtons
-                            ? darkMode
-                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-2 py-2 rounded-l-lg'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-2 rounded-l-lg'
-                            : darkMode
-                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-l-lg'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-l-lg'
+                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed px-2 py-2 rounded-lg opacity-60'
+                            : 'bg-gray-400 text-gray-600 cursor-not-allowed px-4 py-2 rounded-lg opacity-60'
+                          : autoplayActive
+                            ? useIconOnlyButtons
+                              ? 'bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-lg'
+                              : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg'
+                            : useIconOnlyButtons
+                              ? darkMode
+                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-2 py-2 rounded-l-lg'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-2 rounded-l-lg'
+                              : darkMode
+                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-l-lg'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-l-lg'
                           }`}
                       >
                         {autoplayActive ? (
@@ -956,7 +983,7 @@ const LyricDisplayApp = () => {
                       </button>
 
                       {/* Settings dropdown trigger - Always show when not active */}
-                      {!autoplayActive && (
+                      {!autoplayActive && !remoteAutoplayActive && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -970,7 +997,7 @@ const LyricDisplayApp = () => {
                             }`}
                           title="Autoplay settings"
                         >
-                          <ChevronDown className="w-3.5 h-3.5" />
+                          <ChevronDown className="w-4 h-4" />
                         </button>
                       )}
                     </div>
@@ -981,7 +1008,7 @@ const LyricDisplayApp = () => {
                     <button
                       onClick={handleAddToSetlist}
                       aria-disabled={addDisabled}
-                      className={`flex items-center gap-2 rounded-lg text-sm font-medium transition-colors ${addDisabled
+                      className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-colors ${addDisabled
                         ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
                         : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')
                         } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}
@@ -997,7 +1024,7 @@ const LyricDisplayApp = () => {
                   <Tooltip content="Edit current lyrics in the song canvas editor" side="bottom">
                     <button
                       onClick={handleEditLyrics}
-                      className={`flex items-center gap-2 rounded-lg text-sm font-medium transition-colors ${darkMode
+                      className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-colors ${darkMode
                         ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                         } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}

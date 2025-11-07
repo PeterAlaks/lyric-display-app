@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { X, CheckCircle, XCircle, FileText, User, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,14 +7,20 @@ import { useLyricsState } from '../hooks/useStoreSelectors';
 import useToast from '../hooks/useToast';
 import { processRawTextToLines } from '../utils/parseLyrics';
 
+const animationDuration = 220;
+
 const DraftApprovalModal = ({ darkMode }) => {
     const [draftQueue, setDraftQueue] = useState([]);
     const [currentDraft, setCurrentDraft] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectInput, setShowRejectInput] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [visible, setVisible] = useState(false);
+    const [exiting, setExiting] = useState(false);
+    const [entering, setEntering] = useState(false);
 
     const processedDraftsRef = useRef(new Set());
+    const displayDraftRef = useRef(null);
 
     const { emitLyricsDraftApprove, emitLyricsDraftReject } = useControlSocket();
     const { setLyrics, setRawLyricsContent, setLyricsFileName, selectLine } = useLyricsState();
@@ -55,6 +61,26 @@ const DraftApprovalModal = ({ darkMode }) => {
             setCurrentDraft(draftQueue[0]);
         }
     }, [draftQueue, currentDraft]);
+
+    useLayoutEffect(() => {
+        if (currentDraft) {
+            displayDraftRef.current = currentDraft;
+            setVisible(true);
+            setExiting(false);
+            setEntering(true);
+            const raf = requestAnimationFrame(() => setEntering(false));
+            return () => cancelAnimationFrame(raf);
+        } else if (visible) {
+            setEntering(false);
+            setExiting(true);
+            const t = setTimeout(() => {
+                setExiting(false);
+                setVisible(false);
+                displayDraftRef.current = null;
+            }, animationDuration);
+            return () => clearTimeout(t);
+        }
+    }, [currentDraft, visible]);
 
     const handleApprove = useCallback(async () => {
         if (!currentDraft || isProcessing) return;
@@ -154,28 +180,33 @@ const DraftApprovalModal = ({ darkMode }) => {
         });
     };
 
-    if (!currentDraft) return null;
+    if (!visible) return null;
 
-    const previewLines = currentDraft.processedLines || processRawTextToLines(currentDraft.rawText);
+    const draft = displayDraftRef.current;
+    if (!draft) return null;
+
+    const previewLines = draft.processedLines || processRawTextToLines(draft.rawText);
     const lineCount = previewLines.length;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+                className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${exiting || entering ? 'opacity-0' : 'opacity-100'}`}
                 onClick={handleDismiss}
             />
 
             {/* Modal */}
             <div className={`
-        relative w-full max-w-2xl mx-4 max-h-[90vh] rounded-xl shadow-2xl overflow-hidden
-        ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
+        relative w-full max-w-2xl mx-4 max-h-[90vh] rounded-2xl border shadow-2xl ring-1 overflow-hidden
+        ${darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20'}
+        transition-all duration-200 ease-out
+        ${(exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100'}
       `}>
                 {/* Header */}
                 <div className={`
           px-6 py-4 border-b flex items-center justify-between
-          ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}
+          ${darkMode ? 'border-gray-800' : 'border-gray-200'}
         `}>
                     <div className="flex items-center gap-3">
                         <FileText className="w-6 h-6 text-blue-500" />
@@ -200,20 +231,20 @@ const DraftApprovalModal = ({ darkMode }) => {
                 {/* Draft Info */}
                 <div className={`
           px-6 py-4 border-b
-          ${darkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}
+          ${darkMode ? 'border-gray-800 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}
         `}>
-                    <h3 className="text-lg font-semibold mb-2">{currentDraft.title}</h3>
+                    <h3 className="text-lg font-semibold mb-2">{draft.title}</h3>
                     <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-1">
                             <User className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                             <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                                {currentDraft.submittedBy?.clientType || 'Unknown'} controller
+                                {draft.submittedBy?.clientType || 'Unknown'} controller
                             </span>
                         </div>
                         <div className="flex items-center gap-1">
                             <Clock className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                             <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                                {formatTimestamp(currentDraft.submittedBy?.timestamp)}
+                                {formatTimestamp(draft.submittedBy?.timestamp)}
                             </span>
                         </div>
                         <div className={`px-2 py-0.5 rounded text-xs font-medium ${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'
@@ -244,14 +275,15 @@ const DraftApprovalModal = ({ darkMode }) => {
                                     </div>
                                 );
                             }
-                            return <div key={index} className="mb-1">{line}</div>;
+                            const displayText = typeof line === 'string' ? line : (line?.displayText || line?.line1 || '');
+                            return <div key={index} className="mb-1">{displayText}</div>;
                         })}
                     </div>
                 </div>
 
                 {/* Reject Reason Input */}
                 {showRejectInput && (
-                    <div className="px-6 py-4 border-t">
+                    <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                         <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'
                             }`}>
                             Reason for rejection (optional)
@@ -272,13 +304,13 @@ const DraftApprovalModal = ({ darkMode }) => {
                 {/* Actions */}
                 <div className={`
           px-6 py-4 border-t flex items-center justify-between gap-3
-          ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}
+          ${darkMode ? 'border-gray-800' : 'border-gray-200'}
         `}>
                     <Button
                         onClick={handleDismiss}
-                        variant="outline"
+                        variant="ghost"
                         disabled={isProcessing}
-                        className={darkMode ? 'border-gray-600 hover:bg-gray-700' : ''}
+                        className={darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800' : ''}
                     >
                         Dismiss
                     </Button>
@@ -291,7 +323,7 @@ const DraftApprovalModal = ({ darkMode }) => {
                                     variant="outline"
                                     disabled={isProcessing}
                                     className={`flex items-center gap-2 ${darkMode
-                                        ? 'border-red-600 text-red-400 hover:bg-red-900/20'
+                                        ? 'border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500 hover:text-white'
                                         : 'border-red-300 text-red-600 hover:bg-red-50'
                                         }`}
                                 >
@@ -314,9 +346,9 @@ const DraftApprovalModal = ({ darkMode }) => {
                                         setShowRejectInput(false);
                                         setRejectReason('');
                                     }}
-                                    variant="outline"
+                                    variant="ghost"
                                     disabled={isProcessing}
-                                    className={darkMode ? 'border-gray-600' : ''}
+                                    className={darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800' : ''}
                                 >
                                     Cancel
                                 </Button>

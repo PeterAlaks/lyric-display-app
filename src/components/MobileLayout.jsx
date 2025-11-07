@@ -21,7 +21,7 @@ const MobileLayout = () => {
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles } = useSetlistState();
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
 
-  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, isAuthenticated, connectionStatus, ready, lastSyncTime, isConnected } = useControlSocket();
+  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitAutoplayStateUpdate, isAuthenticated, connectionStatus, ready, lastSyncTime, isConnected } = useControlSocket();
 
   const secondsAgo = useSyncTimer(lastSyncTime);
 
@@ -35,6 +35,7 @@ const MobileLayout = () => {
   const navigate = useNavigate();
 
   const [autoplayActive, setAutoplayActive] = React.useState(false);
+  const [remoteAutoplayActive, setRemoteAutoplayActive] = React.useState(false);
   const autoplayIntervalRef = useRef(null);
   const lyricsRef = useRef(lyrics);
   const selectedLineRef = useRef(selectedLine);
@@ -281,6 +282,25 @@ const MobileLayout = () => {
     setAutoplayActive(false);
   }, [lyricsFileName]);
 
+  React.useEffect(() => {
+    if (isConnected && isAuthenticated && ready) {
+      emitAutoplayStateUpdate({ isActive: autoplayActive, clientType: 'mobile' });
+    }
+  }, [autoplayActive, isConnected, isAuthenticated, ready, emitAutoplayStateUpdate]);
+
+  React.useEffect(() => {
+    const handleAutoplayStateUpdate = (event) => {
+      const { isActive, clientType } = event.detail;
+
+      if (clientType === 'desktop') {
+        setRemoteAutoplayActive(isActive);
+      }
+    };
+
+    window.addEventListener('autoplay-state-update', handleAutoplayStateUpdate);
+    return () => window.removeEventListener('autoplay-state-update', handleAutoplayStateUpdate);
+  }, []);
+
   return (
     <>
       <ConnectionBackoffBanner darkMode={darkMode} />
@@ -436,11 +456,14 @@ const MobileLayout = () => {
                   <div className="mt-3 flex gap-2">
                     <button
                       onClick={handleAutoplayToggle}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${autoplayActive
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : darkMode
-                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                      disabled={remoteAutoplayActive}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${remoteAutoplayActive
+                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
+                        : autoplayActive
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : darkMode
+                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                         }`}
                     >
                       {autoplayActive ? (
@@ -457,7 +480,7 @@ const MobileLayout = () => {
                     </button>
 
                     {/* Settings Button */}
-                    {!autoplayActive && (
+                    {!autoplayActive && !remoteAutoplayActive && (
                       <button
                         onClick={handleOpenAutoplaySettings}
                         className={`p-2.5 rounded-lg transition-colors ${darkMode

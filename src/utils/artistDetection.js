@@ -24,12 +24,21 @@ export const detectArtistFromFilename = (fileName) => {
       continue;
     }
 
-    const byPattern = new RegExp(`(.+?)\\s+by\\s+${escapedArtist}\\s*$`, 'i');
+    const byPattern = new RegExp(`^(.+?)\\s+by\\s+${escapedArtist}\\s*$`, 'i');
     const byMatch = nameWithoutExt.match(byPattern);
     if (byMatch) {
       return {
         artist,
         title: byMatch[1].trim()
+      };
+    }
+
+    const byMiddlePattern = new RegExp(`^(.+?)\\s+by\\s+${escapedArtist}\\s+(.+)$`, 'i');
+    const byMiddleMatch = nameWithoutExt.match(byMiddlePattern);
+    if (byMiddleMatch) {
+      return {
+        artist,
+        title: byMiddleMatch[1].trim()
       };
     }
 
@@ -81,6 +90,18 @@ export const detectArtistFromFilename = (fileName) => {
           title: titlePart
         };
       }
+    }
+
+    const middlePattern = new RegExp(`^(.+?)\\s+${escapedArtist}\\s+(.+)$`, 'i');
+    const middleMatch = nameWithoutExt.match(middlePattern);
+    if (middleMatch) {
+      const beforeArtist = middleMatch[1].trim();
+      const afterArtist = middleMatch[2].trim();
+
+      return {
+        artist,
+        title: beforeArtist
+      };
     }
   }
 

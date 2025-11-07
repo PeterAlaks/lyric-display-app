@@ -265,6 +265,13 @@ const useSocketEvents = (role) => {
       logDebug('Heartbeat acknowledged, server time:', new Date(timestamp));
     });
 
+    socket.on('autoplayStateUpdate', ({ isActive, clientType }) => {
+      logDebug('Received autoplay state update:', { isActive, clientType });
+      window.dispatchEvent(new CustomEvent('autoplay-state-update', {
+        detail: { isActive, clientType },
+      }));
+    });
+
     socket.on('periodicStateSync', (state) => {
       logDebug('Received periodic state sync');
       if (window.dispatchEvent) {

@@ -219,6 +219,7 @@ const SetlistModal = () => {
   const [visible, setVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [entering, setEntering] = useState(false);
+  const animationDuration = 220;
   useEffect(() => {
     const handleAddSuccess = (event) => {
       const detail = event?.detail || {};
@@ -268,10 +269,10 @@ const SetlistModal = () => {
     } else {
       setEntering(false);
       setExiting(true);
-      const t = setTimeout(() => { setExiting(false); setVisible(false); }, 300);
+      const t = setTimeout(() => { setExiting(false); setVisible(false); }, animationDuration);
       return () => clearTimeout(t);
     }
-  }, [setlistModalOpen]);
+  }, [setlistModalOpen, animationDuration]);
 
   useEffect(() => {
     const handleLoadSuccess = (event) => {
@@ -317,18 +318,18 @@ const SetlistModal = () => {
 
       {/* Modal */}
       <div className={`
-        relative w-full max-w-4xl mx-4 max-h-[90vh] rounded-xl shadow-2xl overflow-hidden
-        ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
-        md:mx-auto md:w-full md:max-w-2xl md:max-h-[80vh] md:rounded-xl
+        relative w-full max-w-4xl mx-4 max-h-[90vh] rounded-2xl border shadow-2xl ring-1 overflow-hidden
+        ${darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20'}
+        md:mx-auto md:w-full md:max-w-2xl md:max-h-[80vh] md:rounded-2xl
         sm:mx-2 sm:max-w-full sm:h-full sm:max-h-full sm:rounded-none
-        transition-all duration-300 ease-out
-        ${(exiting || entering) ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100'}
+        transition-all duration-200 ease-out
+        ${(exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100'}
         `}>
 
         {/* Fixed Header */}
         <div className={`
           px-6 py-4 border-b flex items-center justify-between
-          ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}
+          ${darkMode ? 'border-gray-800' : 'border-gray-200'}
         `}>
           <div>
             <h2 className="text-xl font-bold">Setlist Songs</h2>
@@ -371,7 +372,7 @@ const SetlistModal = () => {
         {/* Fixed Search Bar */}
         <div className={`
           px-6 py-3 border-b
-          ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}
+          ${darkMode ? 'border-gray-800' : 'border-gray-200'}
         `}>
           <div className="relative">
             <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'
