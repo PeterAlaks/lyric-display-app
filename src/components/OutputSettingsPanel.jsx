@@ -519,6 +519,18 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
         </Select>
       </div>
 
+      <div className="flex items-center justify-between gap-4 mt-4">
+        <Tooltip content="Color for translation lines in grouped lyrics" side="right">
+          <LabelWithIcon icon={Languages} text="Translation Colour" />
+        </Tooltip>
+        <Input
+          type="color"
+          value={settings.translationLineColor || '#FBBF24'}
+          onChange={(e) => update('translationLineColor', e.target.value)}
+          className={`h-9 w-12 p-1 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+        />
+      </div>
+
       <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
       {/* Next Line Settings */}

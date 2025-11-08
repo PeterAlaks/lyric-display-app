@@ -110,6 +110,11 @@ function OBSInstructions({ darkMode, localIP }) {
                             <CheckboxItem darkMode={darkMode}>Shutdown source when not visible</CheckboxItem>
                             <CheckboxItem darkMode={darkMode}>Refresh browser when scene becomes active</CheckboxItem>
                         </CheckboxList>
+                        <div className="mt-3">
+                            <TipBox darkMode={darkMode} type="warning">
+                                <Strong>Note for Low-End PCs:</Strong> "Refresh browser when scene becomes active" may cause brief white flashes when switching scenes on computers with limited resources. If you experience this, uncheck this option.
+                            </TipBox>
+                        </div>
                     </Step>
                     <Step number={7} darkMode={darkMode}>
                         Click <Strong>OK</Strong>. The source is ready!

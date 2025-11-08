@@ -268,4 +268,63 @@ export const StageDisplayHelp = ({ darkMode }) => (
     </div>
 );
 
-export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp };
+export const MobileControllerHelp = ({ darkMode }) => (
+    <div className="space-y-3">
+        <HelpSection
+            icon={ScreenShare}
+            title="Display Output Switch"
+            description="Control the visibility of lyrics on all connected output displays. Toggle ON to show lyrics on Output 1, Output 2, and Stage displays. Toggle OFF to hide lyrics while keeping the connection active."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={List}
+            title="Control Desktop Lyrics"
+            description="Select any lyric line to display it on all connected outputs. The selected line is automatically synced to the desktop control panel and all display screens. Scroll through lyrics and tap to advance during live presentations."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={FileText}
+            title="Compose & Submit Lyrics"
+            description="Create new lyrics on your mobile device using the Compose New Lyrics button. When finished, submit your draft for approval on the desktop control panel. Once approved, lyrics load into both mobile and desktop controllers."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={FolderOpen}
+            title="Access Setlist Files"
+            description="View and load songs from the setlist that was created on the desktop control panel. Tap any song in the setlist to load its lyrics instantly. Perfect for quickly switching between songs during live services."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={RefreshCw}
+            title="Sync Outputs"
+            description="Force a manual synchronization of all output displays with your current mobile state. Use this if displays get out of sync or when reconnecting. Sends current lyrics, line selection, and display toggle state to all connected screens."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Type}
+            title="Start Autoplay"
+            description="Automatically advance through lyrics at a set interval. Configure autoplay settings including interval timing, loop behavior, skip blank lines, and whether to start from the first line. Perfect for rehearsals or automated presentations."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Shield}
+            title="Secure Connection"
+            description="Connect your mobile controller to the desktop app using a 6-digit join code. Get the join code from the desktop app's connection status indicator. Note that the join code refreshes each time the desktop app restarts."
+            darkMode={darkMode}
+        />
+
+        <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
+            <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                📱 <strong>Mobile Tip:</strong> Use the search bar to quickly find specific lyrics within a song, and check the sync status at the top to see when your last action was sent to the desktop.
+            </p>
+        </div>
+    </div>
+);
+
+export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp, MobileControllerHelp };

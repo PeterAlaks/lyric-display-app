@@ -584,3 +584,37 @@ function buildCurrentState(clientInfo) {
 
   return state;
 }
+
+export function getConnectedClients() {
+  const clients = [];
+
+  const sessionMap = new Map();
+
+  connectedClients.forEach((client, socketId) => {
+    const key = `${client.type}_${client.sessionId}`;
+
+    if (!sessionMap.has(key)) {
+      sessionMap.set(key, {
+        id: socketId,
+        type: client.type,
+        sessionId: client.sessionId,
+        deviceId: client.deviceId,
+        connectedAt: client.connectedAt,
+        permissions: client.permissions,
+        socketCount: 1
+      });
+    } else {
+      sessionMap.get(key).socketCount++;
+    }
+  });
+
+  sessionMap.forEach((client) => {
+    clients.push(client);
+  });
+
+  return clients;
+}
+
+if (typeof global !== 'undefined') {
+  global.getConnectedClients = getConnectedClients;
+}

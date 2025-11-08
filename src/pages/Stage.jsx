@@ -279,7 +279,12 @@ const Stage = () => {
 
     if (text.includes('\n')) {
       const lines = text.split('\n');
-      const isTranslationGroup = lines.length === 2 && /^[\[({<].*[\])}>\s]*$/.test(lines[1].trim());
+
+      const lineIndex = lineType === 'live' ? currentLine :
+        lineType === 'next' ? currentLine + 1 :
+          currentLine - 1;
+      const lineObj = (lineIndex >= 0 && lineIndex < lyrics.length) ? lyrics[lineIndex] : null;
+      const isTranslationGroup = lineObj?.type === 'group' && lines.length === 2;
 
       return (
         <div style={{ lineHeight: 1.05 }}>

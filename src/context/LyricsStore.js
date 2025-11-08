@@ -190,6 +190,7 @@ const useLyricsStore = create(
         messageScrollSpeed: 3000,
         bottomBarColor: '#FFFFFF',
         bottomBarSize: 20,
+        translationLineColor: '#FBBF24',
         maxLinesEnabled: false,
         maxLines: 3,
         minFontSize: 24,

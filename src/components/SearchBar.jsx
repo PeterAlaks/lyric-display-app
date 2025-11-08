@@ -13,7 +13,7 @@ const SearchBar = ({
   onClear,
 }) => {
   return (
-    <div className="mt-3 w-full">
+    <div className="w-full">
       <div className="relative">
         <Input
           type="text"

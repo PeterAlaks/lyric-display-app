@@ -449,8 +449,7 @@ const Output2 = () => {
     if (processedText.includes('\n')) {
       const lines = processedText.split('\n');
 
-      const isTranslationGroup = lines.length === 2 &&
-        /^[\[({<].*[\])}>\s]*$/.test(lines[1].trim());
+      const isTranslationGroup = currentLine?.type === 'group' && lines.length === 2;
 
       const effectiveTranslationSize = translationFontSizeMode === 'custom'
         ? translationFontSize

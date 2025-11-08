@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
 import PreviewOutputsModal from '../PreviewOutputsModal';
-import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp } from '../HelpContent';
+import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp, MobileControllerHelp } from '../HelpContent';
 import { WelcomeSplash } from '../WelcomeSplash';
 import { IntegrationInstructions } from '../IntegrationInstructions';
 import SongInfoModal from '../SongInfoModal';
@@ -327,6 +327,9 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'StageDisplayHelp' && (
                         <StageDisplayHelp darkMode={isDark} />
+                      )}
+                      {modal.component === 'MobileControllerHelp' && (
+                        <MobileControllerHelp darkMode={isDark} />
                       )}
                       {modal.component === 'WelcomeSplash' && (
                         <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />

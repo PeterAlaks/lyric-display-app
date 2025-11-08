@@ -295,16 +295,14 @@ export const ControlSocketProvider = ({ children }) => {
         }, retryDelay);
     }, [connectSocketInternal]);
 
+    const pendingEmissionsRef = useRef(new Map());
+
     const createEmitFunction = useCallback((eventName) => {
         return (...args) => {
-            if (!socketRef.current?.connected || !readyRef.current) {
-                logWarn(`Cannot emit ${eventName} - socket not ready`);
-                return false;
-            }
+            if (!socketRef.current?.connected || !readyRef.current || authStatus !== 'authenticated') {
 
-            if (authStatus !== 'authenticated') {
-                logWarn(`Cannot emit ${eventName} - not authenticated`);
-                return false;
+                pendingEmissionsRef.current.set(eventName, { args });
+                return true;
             }
 
             socketRef.current.emit(eventName, ...args);
@@ -312,6 +310,16 @@ export const ControlSocketProvider = ({ children }) => {
             return true;
         };
     }, [authStatus]);
+
+    useEffect(() => {
+        if (readyRef.current && socketRef.current?.connected && authStatus === 'authenticated') {
+            pendingEmissionsRef.current.forEach((emission, eventName) => {
+                socketRef.current.emit(eventName, ...emission.args);
+                logDebug(`Emitted queued ${eventName}:`, ...emission.args);
+            });
+            pendingEmissionsRef.current.clear();
+        }
+    }, [readyRef.current, authStatus]);
 
     const emitLineUpdate = useCallback((value) => {
         const payload = (value && typeof value === 'object' && !Array.isArray(value))

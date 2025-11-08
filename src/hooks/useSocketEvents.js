@@ -64,17 +64,22 @@ const useSocketEvents = (role) => {
       }
     });
 
+    socket.on('lineUpdate', ({ index }) => {
+      logDebug('Received line update:', index);
+      selectLine(index);
+    });
+
+    socket.on('lyricsLoad', (lyrics) => {
+      logDebug('Received lyrics load:', lyrics?.length, 'lines');
+      setLyrics(lyrics);
+    });
+
+    socket.on('outputToggle', (state) => {
+      logDebug('Received output toggle:', state);
+      useLyricsStore.getState().setIsOutputOn(state);
+    });
+
     if (role === 'output' || role === 'output1' || role === 'output2' || role === 'stage') {
-      socket.on('lineUpdate', ({ index }) => {
-        logDebug('Received line update:', index);
-        selectLine(index);
-      });
-
-      socket.on('lyricsLoad', (lyrics) => {
-        logDebug('Received lyrics load:', lyrics?.length, 'lines');
-        setLyrics(lyrics);
-      });
-
       socket.on('styleUpdate', ({ output, settings }) => {
         logDebug('Received style update for', output, ':', settings);
 
@@ -108,11 +113,6 @@ const useSocketEvents = (role) => {
         } catch (e) {
           logWarn('Failed to apply output metrics:', e?.message || e);
         }
-      });
-
-      socket.on('outputToggle', (state) => {
-        logDebug('Received output toggle:', state);
-        useLyricsStore.getState().setIsOutputOn(state);
       });
     }
 

@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { List, useDynamicRowHeight, useListRef } from 'react-window';
 import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
-import useSocket from '../hooks/useSocket';
+import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from '../hooks/useToast';
 import { Ungroup } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -22,7 +22,7 @@ export default function LyricsList({
   const listRef = useListRef();
   const { lyrics = [], selectedLine, selectLine, setLyrics } = useLyricsState();
   const { darkMode } = useDarkModeState();
-  const { emitLineUpdate, emitLyricsLoad } = useSocket();
+  const { emitLineUpdate, emitLyricsLoad } = useControlSocket();
   const { showToast } = useToast();
   const [hoveredLineIndex, setHoveredLineIndex] = useState(null);
   const [hoveredButtonIndex, setHoveredButtonIndex] = useState(null);

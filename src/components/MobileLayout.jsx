@@ -283,10 +283,8 @@ const MobileLayout = () => {
   }, [lyricsFileName]);
 
   React.useEffect(() => {
-    if (isConnected && isAuthenticated && ready) {
-      emitAutoplayStateUpdate({ isActive: autoplayActive, clientType: 'mobile' });
-    }
-  }, [autoplayActive, isConnected, isAuthenticated, ready, emitAutoplayStateUpdate]);
+    emitAutoplayStateUpdate({ isActive: autoplayActive, clientType: 'mobile' });
+  }, [autoplayActive, emitAutoplayStateUpdate]);
 
   React.useEffect(() => {
     const handleAutoplayStateUpdate = (event) => {
@@ -316,7 +314,7 @@ const MobileLayout = () => {
             }`}
         >
           {/* Top Row - Title and Controls */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <img
                 src="/LyricDisplay-icon.png"
@@ -364,7 +362,7 @@ const MobileLayout = () => {
                 onClick={() => {
                   showModal({
                     title: 'Mobile Controller Help',
-                    component: 'ControlPanelHelp',
+                    component: 'MobileControllerHelp',
                     variant: 'info',
                     size: 'large',
                     dismissLabel: 'Got it'
@@ -383,34 +381,39 @@ const MobileLayout = () => {
             </div>
           </div>
 
-          {/* Compose New Lyrics Button - Full Width */}
-          <button
-            onClick={() => navigate('/new-song?mode=compose')}
-            className={`w-full py-3 px-4 mb-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${darkMode
-              ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
-              : 'bg-gradient-to-r from-blue-400 to-purple-600 hover:from-blue-500 hover:to-purple-700 text-white'
-              }`}
-          >
-            <FileText className="w-5 h-5" />
-            Compose New Lyrics
-          </button>
+          {/* Compose New Lyrics Button and Toggle Row */}
+          <div className="mb-8 space-y-3">
+            {/* Compose Button and Toggle */}
+            <div className="flex items-center justify-center gap-8">
+              <button
+                onClick={() => navigate('/new-song?mode=compose')}
+                className={`w-full md:max-w-md py-3 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 min-w-0 ${darkMode
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                  : 'bg-gradient-to-r from-blue-400 to-purple-600 hover:from-blue-500 hover:to-purple-700 text-white'
+                  }`}
+              >
+                <FileText className="w-5 h-5 flex-shrink-0" />
+                <span className="truncate">Create Lyrics</span>
+              </button>
 
-          {/* Toggle Row */}
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <Switch
-              checked={isOutputOn}
-              onCheckedChange={handleToggle}
-              className={`scale-[1.5] ${darkMode
-                ? 'data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600'
-                : 'data-[state=checked]:bg-black'
-                }`}
-            />
-            <span
-              className={`text-sm ml-3 ${darkMode ? 'text-gray-300' : 'text-gray-600'
-                }`}
-            >
-              {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
-            </span>
+              {/* Toggle Display Switch */}
+              <div className="flex items-center gap-5 flex-shrink-0">
+                <Switch
+                  checked={isOutputOn}
+                  onCheckedChange={handleToggle}
+                  className={`scale-[1.6] ${darkMode
+                    ? 'data-[state=checked]:bg-green-500 data[state=unchecked]:bg-gray-600'
+                    : 'data-[state=checked]:bg-black'
+                    }`}
+                />
+                <span
+                  className={`text-xs whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}
+                >
+                  {isOutputOn ? 'Output ON' : 'Output OFF'}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Current File Indicator */}
@@ -441,57 +444,66 @@ const MobileLayout = () => {
                   ? 'border-gray-600 bg-gray-800'
                   : 'border-gray-200 bg-white'
                   }`}>
-                  <SearchBar
-                    darkMode={darkMode}
-                    searchQuery={searchQuery}
-                    onSearch={handleSearch}
-                    totalMatches={totalMatches}
-                    currentMatchIndex={currentMatchIndex}
-                    onPrev={navigateToPreviousMatch}
-                    onNext={navigateToNextMatch}
-                    onClear={clearSearch}
-                  />
 
-                  {/* Autoplay Button */}
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={handleAutoplayToggle}
-                      disabled={remoteAutoplayActive}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${remoteAutoplayActive
-                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
-                        : autoplayActive
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : darkMode
+                  {/* Search Bar and Autoplay Controls - Responsive Layout */}
+                  <div className="flex flex-col md:flex-row md:items-center gap-3">
+                    {/* Search Bar - Full width on mobile, flex-1 on tablet+ */}
+                    <div className="flex-1">
+                      <SearchBar
+                        darkMode={darkMode}
+                        searchQuery={searchQuery}
+                        onSearch={handleSearch}
+                        totalMatches={totalMatches}
+                        currentMatchIndex={currentMatchIndex}
+                        onPrev={navigateToPreviousMatch}
+                        onNext={navigateToNextMatch}
+                        onClear={clearSearch}
+                      />
+                    </div>
+
+                    {/* Autoplay Controls - Below search on mobile, same row on tablet+ */}
+                    <div className="flex gap-2 md:w-auto md:flex-shrink-0">
+                      <button
+                        onClick={handleAutoplayToggle}
+                        disabled={remoteAutoplayActive}
+                        className={`flex-1 md:flex-initial md:min-w-[140px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${remoteAutoplayActive
+                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
+                          : autoplayActive
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : darkMode
+                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                          }`}
+                      >
+                        {autoplayActive ? (
+                          <>
+                            <Square className="w-4 h-4 fill-current" />
+                            <span className="hidden md:inline">Stop</span>
+                            <span className="md:hidden">Stop Autoplay</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            <span className="hidden md:inline">Autoplay</span>
+                            <span className="md:hidden">Start Autoplay</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Settings Button */}
+                      {!autoplayActive && !remoteAutoplayActive && (
+                        <button
+                          onClick={handleOpenAutoplaySettings}
+                          className={`p-2.5 rounded-lg transition-colors ${darkMode
                             ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                             : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                        }`}
-                    >
-                      {autoplayActive ? (
-                        <>
-                          <Square className="w-4 h-4 fill-current" />
-                          <span>Stop Autoplay</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4" />
-                          <span>Start Autoplay</span>
-                        </>
+                            }`}
+                          title="Autoplay settings"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
                       )}
-                    </button>
-
-                    {/* Settings Button */}
-                    {!autoplayActive && !remoteAutoplayActive && (
-                      <button
-                        onClick={handleOpenAutoplaySettings}
-                        className={`p-2.5 rounded-lg transition-colors ${darkMode
-                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                          }`}
-                        title="Autoplay settings"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    )}
+                    </div>
                   </div>
                 </div>
 
@@ -515,7 +527,7 @@ const MobileLayout = () => {
                     className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-gray-200'
                       }`}
                   >
-                    <List
+                    <ListMusic
                       className={`w-8 h-8 ${darkMode ? 'text-gray-400' : 'text-gray-400'
                         }`}
                     />
@@ -546,7 +558,8 @@ const MobileLayout = () => {
             ? 'text-gray-400 bg-gray-800 border-gray-700'
             : 'text-gray-600 bg-gray-50 border-gray-200'
             }`}
-        > © 2025 LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
+        >
+          © 2025 LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
         </div>
 
         {/* Setlist Modal */}
