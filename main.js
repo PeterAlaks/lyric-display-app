@@ -56,40 +56,62 @@ if (!isDev && process.env.FORCE_COMPATIBILITY) {
 const getMainWindow = () => mainWindow;
 initModalBridge(getMainWindow);
 
+async function showDisplayDetectionModal(display, isStartupCheck = false) {
+  if (!display || !display.id) return;
+
+  try {
+    const { getDisplayAssignment } = await import('./main/displayManager.js');
+    const assignment = getDisplayAssignment(display.id);
+
+    if (assignment) {
+      console.log(`[Main] Skipping modal for display ${display.id}, it already has assignment: ${assignment.outputKey}`);
+      return;
+    }
+
+    const title = isStartupCheck ? 'External Display Detected' : 'New Display Detected';
+    const headerDesc = isStartupCheck
+      ? 'An external display is connected. Configure how to use it.'
+      : 'Configure how to use the newly connected display';
+
+    const displayInfo = {
+      id: display.id,
+      name: display.name || display.label || `Display ${display.id}`,
+      bounds: display.bounds
+    };
+
+    console.log(`[Main] Showing display detection modal for ${display.id} (${displayInfo.name})`);
+
+    await requestRendererModal(
+      {
+        title: title,
+        headerDescription: headerDesc,
+        component: 'DisplayDetection',
+        variant: 'info',
+        size: 'lg',
+        dismissible: true,
+        actions: [],
+        displayInfo: displayInfo
+      },
+      {
+        timeout: 60000,
+        fallback: () => {
+          console.log('[Main] Display detection modal fallback');
+          return { dismissed: true };
+        }
+      }
+    );
+  } catch (error) {
+    console.error('[Main] Error showing display detection modal:', error);
+  }
+}
+
 const handleDisplayChange = async (changeType, display) => {
   if (changeType === 'added') {
-    console.log('[Main] New display detected:', display.id);
+    console.log('[Main] New display detected via listener:', display.id);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    try {
-      const result = await requestRendererModal(
-        {
-          title: 'New Display Detected',
-          headerDescription: 'Configure how to use the newly connected display',
-          component: 'DisplayDetection',
-          variant: 'info',
-          size: 'lg',
-          dismissible: true,
-          displayInfo: {
-            id: display.id,
-            name: display.label || `Display ${display.id}`,
-            bounds: display.bounds
-          }
-        },
-        {
-          timeout: 60000,
-          fallback: () => {
-            console.log('[Main] Display detection modal fallback - user may have dismissed');
-            return { dismissed: true };
-          }
-        }
-      );
-
-      console.log('[Main] Display detection modal result:', result);
-    } catch (error) {
-      console.error('[Main] Error showing display detection modal:', error);
-    }
+    await showDisplayDetectionModal(display, false);
   }
 };
 
@@ -132,7 +154,50 @@ app.whenReady().then(async () => {
     mainWindow = createWindow('/');
     menuAPI.createMenu();
 
+    mainWindow.on('close', () => {
+      console.log('[Main] Main window closing, shutting down output windows...');
+      try {
+        const windows = BrowserWindow.getAllWindows();
+        const outputRoutes = ['/stage', '/output1', '/output2'];
+
+        windows.forEach(win => {
+          if (!win || win.isDestroyed() || win.id === mainWindow.id) return;
+
+          try {
+            const url = win.webContents.getURL();
+            const isOutputWindow = outputRoutes.some(route => url.includes(route));
+            if (isOutputWindow) {
+              console.log('[Main] Closing output window:', url);
+              win.close();
+            }
+          } catch (err) {
+            console.warn('Error closing output window on main close:', err);
+          }
+        });
+      } catch (error) {
+        console.error('Error closing output windows on main close:', error);
+      }
+    });
+
     initDisplayManager(handleDisplayChange);
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    try {
+      const { getAllDisplays } = await import('./main/displayManager.js');
+      const allDisplays = getAllDisplays();
+      const externalDisplays = allDisplays.filter(d => !d.primary);
+
+      if (externalDisplays.length > 0) {
+        console.log(`[Main] Startup check: Found ${externalDisplays.length} external display(s).`);
+
+        await showDisplayDetectionModal(externalDisplays[0], true);
+      } else {
+        console.log('[Main] Startup check: No external displays found.');
+      }
+    } catch (error) {
+      console.error('[Main] Error during startup display check:', error);
+    }
 
     nativeTheme.themeSource = 'system';
     nativeTheme.on('updated', () => { if (mainWindow && !mainWindow.isDestroyed()) menuAPI.updateDarkModeMenu(); });
@@ -183,6 +248,36 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 app.on('before-quit', () => {
-  try { stopBackend(); } catch { }
-  try { cleanupDisplayManager(); } catch { }
+  try {
+    stopBackend();
+  } catch (error) {
+    console.error('Error stopping backend:', error);
+  }
+
+  try {
+    cleanupDisplayManager();
+  } catch (error) {
+    console.error('Error cleaning up display manager:', error);
+  }
+
+  try {
+    const windows = BrowserWindow.getAllWindows();
+    const outputRoutes = ['/stage', '/output1', '/output2'];
+
+    windows.forEach(win => {
+      if (!win || win.isDestroyed()) return;
+      try {
+        const url = win.webContents.getURL();
+        const isOutputWindow = outputRoutes.some(route => url.includes(route));
+        if (isOutputWindow) {
+          console.log('[Main] Closing output window on quit');
+          win.close();
+        }
+      } catch (err) {
+        console.warn('Error closing window on quit:', err);
+      }
+    });
+  } catch (error) {
+    console.error('Error closing output windows:', error);
+  }
 });

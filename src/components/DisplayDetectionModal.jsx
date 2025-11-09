@@ -5,8 +5,27 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Button } from '@/components/ui/button';
 
 const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManualOpen = false, isCurrentlyProjecting = false }) => {
-  const [autoUseForStage, setAutoUseForStage] = useState(true);
-  const [selectedOutput, setSelectedOutput] = useState('stage');
+  const storageKey = displayInfo?.id ? `display-modal-state-${displayInfo.id}` : 'display-modal-state';
+  const getInitialState = () => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return parsed;
+        } catch { }
+      }
+    }
+    return { autoUseForStage: true, selectedOutput: 'stage' };
+  };
+  const [autoUseForStage, setAutoUseForStage] = useState(getInitialState().autoUseForStage);
+  const [selectedOutput, setSelectedOutput] = useState(getInitialState().selectedOutput);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(storageKey, JSON.stringify({ autoUseForStage, selectedOutput }));
+    }
+  }, [autoUseForStage, selectedOutput, storageKey]);
   const [isSaving, setIsSaving] = useState(false);
 
   const displayName = displayInfo?.name || 'External Display';
@@ -32,6 +51,7 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
       await onSave?.({
         displayId,
         action: 'turnOff',
+        selectedOutput: autoUseForStage ? 'stage' : selectedOutput,
       });
     } finally {
       setIsSaving(false);
@@ -88,10 +108,11 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
           <Switch
             checked={autoUseForStage}
             onCheckedChange={setAutoUseForStage}
+            disabled={isCurrentlyProjecting}
             className={`flex-shrink-0 !h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-                ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-              }`}
+              ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+              : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+              } ${isCurrentlyProjecting ? 'opacity-50 cursor-not-allowed' : ''}`}
             thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
           />
         </div>
@@ -104,12 +125,12 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
               }`}>
               Select output display
             </label>
-            <Select value={selectedOutput} onValueChange={setSelectedOutput}>
+            <Select value={selectedOutput} onValueChange={setSelectedOutput} disabled={isCurrentlyProjecting}>
               <SelectTrigger className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'
-                }`}>
+                } ${isCurrentlyProjecting ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
                 <SelectItem value="output1">Output 1</SelectItem>
                 <SelectItem value="output2">Output 2</SelectItem>
                 <SelectItem value="stage">Stage</SelectItem>
@@ -124,8 +145,8 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
 
       {/* Info Box */}
       <div className={`p-3 rounded-lg border-l-4 ${darkMode
-          ? 'bg-blue-500/10 border-blue-500 text-gray-300'
-          : 'bg-blue-50 border-blue-500 text-gray-700'
+        ? 'bg-blue-500/10 border-blue-500 text-gray-300'
+        : 'bg-blue-50 border-blue-500 text-gray-700'
         }`}>
         <p className="text-xs leading-relaxed">
           <strong>Tip:</strong> You can change this setting later from the Window menu or by reconnecting the display.
@@ -142,7 +163,7 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
                   variant="outline"
                   onClick={handleClose}
                   disabled={isSaving}
-                  className={darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+                  className={darkMode ? 'bg-transparent border-gray-600 text-gray-200 hover:bg-gray-800 hover:text-white hover:border-gray-500' : ''}
                 >
                   Close
                 </Button>
@@ -150,7 +171,7 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
                   onClick={handleTurnOff}
                   disabled={isSaving}
                   variant="destructive"
-                  className={darkMode ? 'bg-red-600 hover:bg-red-700' : ''}
+                  className={darkMode ? 'bg-red-600 hover:bg-red-700 text-white border-0' : 'bg-red-600 hover:bg-red-700 text-white'}
                 >
                   {isSaving ? (
                     <>
@@ -171,15 +192,14 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
                   variant="outline"
                   onClick={handleClose}
                   disabled={isSaving}
-                  className={darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+                  className={darkMode ? 'bg-transparent border-gray-600 text-gray-200 hover:bg-gray-800 hover:text-white hover:border-gray-500' : ''}
                 >
                   Close
                 </Button>
                 <Button
                   onClick={handleProject}
                   disabled={isSaving}
-                  className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'
-                    } text-white`}
+                  className={darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white border-0' : 'bg-blue-600 hover:bg-blue-700 text-white'}
                 >
                   {isSaving ? (
                     <>
@@ -202,7 +222,7 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
               variant="outline"
               onClick={handleIgnore}
               disabled={isSaving}
-              className={darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+              className={darkMode ? 'bg-transparent border-gray-600 text-gray-200 hover:bg-gray-800 hover:text-white hover:border-gray-500' : ''}
             >
               <X className="w-4 h-4 mr-2" />
               Ignore
@@ -210,8 +230,7 @@ const DisplayDetectionModal = ({ darkMode, displayInfo, onSave, onCancel, isManu
             <Button
               onClick={handleProject}
               disabled={isSaving}
-              className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'
-                } text-white`}
+              className={darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white border-0' : 'bg-blue-600 hover:bg-blue-700 text-white'}
             >
               {isSaving ? (
                 <>

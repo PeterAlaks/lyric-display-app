@@ -363,11 +363,21 @@ export function ModalProvider({ children, isDark = false }) {
                                   config.selectedOutput,
                                   config.displayId
                                 );
-                              } else if (config.action === 'turnOff') {
-                                await window.electronAPI.display.removeAssignment(config.displayId);
-                              }
 
-                              closeModal(modal.id, { action: config.action });
+                                closeModal(modal.id, { action: 'project', output: config.selectedOutput });
+                              } else if (config.action === 'turnOff') {
+                                const outputToClose = config.selectedOutput;
+
+                                const closeResult = await window.electronAPI.display.closeOutputWindow(outputToClose);
+
+                                if (closeResult.success) {
+                                  await window.electronAPI.display.removeAssignment(config.displayId);
+                                  closeModal(modal.id, { action: 'turnOff', output: outputToClose });
+                                } else {
+                                  console.error('Failed to close output window:', closeResult.error);
+                                  closeModal(modal.id, { error: 'Failed to close output window' });
+                                }
+                              }
                             } catch (error) {
                               console.error('Error handling display action:', error);
                               closeModal(modal.id, { error: error.message });

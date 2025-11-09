@@ -391,6 +391,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                       variant: 'info',
                       size: 'lg',
                       dismissible: true,
+                      actions: [],
                       isManualOpen: true,
                       isCurrentlyProjecting,
                       displayInfo: {

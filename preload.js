@@ -160,7 +160,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAssignment: (displayId) => ipcRenderer.invoke('display:get-assignment', { displayId }),
     getAllAssignments: () => ipcRenderer.invoke('display:get-all-assignments'),
     removeAssignment: (displayId) => ipcRenderer.invoke('display:remove-assignment', { displayId }),
-    openOutputOnDisplay: (outputKey, displayId) => ipcRenderer.invoke('display:open-output-on-display', { outputKey, displayId })
+    openOutputOnDisplay: (outputKey, displayId) => ipcRenderer.invoke('display:open-output-on-display', { outputKey, displayId }),
+    closeOutputWindow: (outputKey) => ipcRenderer.invoke('display:close-output-window', { outputKey })
   }
 });
 

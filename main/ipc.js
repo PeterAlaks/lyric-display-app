@@ -427,6 +427,11 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
 
   ipcMain.handle('display:save-assignment', async (_event, { displayId, outputKey }) => {
     try {
+      if (!outputKey) {
+        displayManager.removeDisplayAssignment(displayId);
+        return { success: true };
+      }
+
       displayManager.saveDisplayAssignment(displayId, outputKey);
 
       const windows = BrowserWindow.getAllWindows();
@@ -530,4 +535,31 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       return { success: false, error: error.message };
     }
   });
+
+  ipcMain.handle('display:close-output-window', async (_event, { outputKey }) => {
+    try {
+      const route = outputKey === 'stage' ? '/stage' : outputKey === 'output1' ? '/output1' : '/output2';
+      const windows = BrowserWindow.getAllWindows();
+
+      for (const win of windows) {
+        if (!win || win.isDestroyed()) continue;
+        try {
+          const url = win.webContents.getURL();
+          if (url.includes(route)) {
+            console.log('[IPC] Closing output window for', route);
+            win.close();
+            return { success: true };
+          }
+        } catch (err) {
+          console.warn('Error checking window URL:', err);
+        }
+      }
+
+      return { success: false, error: 'Window not found' };
+    } catch (error) {
+      console.error('Error closing output window:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
 }

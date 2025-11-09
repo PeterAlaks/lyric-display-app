@@ -61,15 +61,34 @@ const Stage = () => {
   useEffect(() => {
     if (!socket) return;
 
-    const handleCurrentState = () => {
+    const handleCurrentState = (state) => {
+      logDebug('Stage: Received current state:', state);
+
       if (stateRequestTimeoutRef.current) {
         clearTimeout(stateRequestTimeoutRef.current);
         stateRequestTimeoutRef.current = null;
       }
       pendingStateRequestRef.current = false;
+
+      if (state.lyrics) setLyrics(state.lyrics);
+      if (state.selectedLine !== undefined) selectLine(state.selectedLine);
+      if (typeof state.isOutputOn === 'boolean') setIsOutputOn(state.isOutputOn);
+    };
+
+    const handleLineUpdate = ({ index }) => {
+      logDebug('Stage: Received line update:', index);
+      selectLine(index);
+    };
+
+    const handleLyricsLoad = (newLyrics) => {
+      logDebug('Stage: Received lyrics load:', newLyrics?.length, 'lines');
+      setLyrics(newLyrics);
+      selectLine(null);
     };
 
     socket.on('currentState', handleCurrentState);
+    socket.on('lineUpdate', handleLineUpdate);
+    socket.on('lyricsLoad', handleLyricsLoad);
 
     if (socket.connected) {
       setTimeout(() => requestCurrentStateWithRetry(0), 100);
@@ -81,8 +100,11 @@ const Stage = () => {
       }
       pendingStateRequestRef.current = false;
       socket.off('currentState', handleCurrentState);
+      socket.off('lineUpdate', handleLineUpdate);
+      socket.off('lyricsLoad', handleLyricsLoad);
     };
-  }, [socket, requestCurrentStateWithRetry]);
+
+  }, [socket, requestCurrentStateWithRetry, setLyrics, selectLine, setIsOutputOn]);
 
   useEffect(() => {
     const handleStageTimerUpdate = (event) => {
