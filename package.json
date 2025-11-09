@@ -100,6 +100,17 @@
         "to": "LyricDisplay Installation & Integration Guide.md"
       }
     ],
+    "win": {
+      "target": {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      "icon": "public/favicon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
     "nsis": {
       "oneClick": false,
       "allowElevation": true,
@@ -109,16 +120,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "LyricDisplay"
-    },
-    "win": {
-      "target": {
-        "target": "nsis",
-        "arch": [
-          "x64"
-        ]
-      },
-      "icon": "public/favicon.ico",
-      "requestedExecutionLevel": "asInvoker"
     },
     "mac": {
       "category": "public.app-category.music",
@@ -131,7 +132,27 @@
           ]
         }
       ],
-      "icon": "public/favicon.ico"
+      "icon": "public/favicon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "artifactName": "${productName}-${version}.${ext}"
     },
     "linux": {
       "target": [
@@ -140,10 +161,28 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/favicon.ico",
-      "category": "AudioVideo"
+      "category": "AudioVideo",
+      "artifactName": "${productName}-${version}.${ext}",
+      "desktop": {
+        "Name": "LyricDisplay",
+        "Comment": "Professional real-time lyric display",
+        "Categories": "AudioVideo;Audio;Music;"
+      }
     },
     "publish": [
       {
