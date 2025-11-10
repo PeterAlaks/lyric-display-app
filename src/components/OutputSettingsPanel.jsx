@@ -297,7 +297,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
           <SelectTrigger className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
             <SelectValue placeholder="Select font" />
           </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
             {fontOptions.map((font) => (
               <SelectItem key={font} value={font} style={{ fontFamily: font }} className={darkMode ? 'text-gray-200 hover:bg-gray-600' : ''}>
                 {font}
@@ -349,7 +349,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
             <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
               <SelectItem value="automatic">Automatic</SelectItem>
               <SelectItem value="custom">Custom</SelectItem>
             </SelectContent>
@@ -511,7 +511,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
           <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
             <SelectItem value="left">Left</SelectItem>
             <SelectItem value="center">Centre</SelectItem>
             <SelectItem value="right">Right</SelectItem>
@@ -620,7 +620,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
           <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
             <SelectItem value="left">Left</SelectItem>
             <SelectItem value="center">Centre</SelectItem>
             <SelectItem value="right">Right</SelectItem>
@@ -745,7 +745,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
           <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
             <SelectItem value="left">Left</SelectItem>
             <SelectItem value="center">Centre</SelectItem>
             <SelectItem value="right">Right</SelectItem>
@@ -994,7 +994,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
           <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
             <SelectItem value="none">None</SelectItem>
             <SelectItem value="fade">Fade</SelectItem>
             <SelectItem value="slide">Slide (Wheel)</SelectItem>
@@ -1136,10 +1136,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
   const handleFullScreenBackgroundTypeChange = (val) => {
     const updates = {
       fullScreenBackgroundType: val,
+      fullScreenBackgroundColor: (val === 'color' && !settings.fullScreenBackgroundColor) ? '#000000' : settings.fullScreenBackgroundColor,
     };
-    if (val === 'color' && !settings.fullScreenBackgroundColor) {
-      updates.fullScreenBackgroundColor = '#000000';
-    }
     applySettings(updates);
   };
 
@@ -1336,12 +1334,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
     : (settings.backgroundBandCustomLines ?? getDefaultCustomHeight());
 
   const handleBackgroundHeightModeChange = (mode) => {
-    const updates = { backgroundBandHeightMode: mode };
-
-    if (mode === 'custom' && !settings.backgroundBandCustomLines) {
-      updates.backgroundBandCustomLines = getDefaultCustomHeight();
-    }
-
+    const updates = {
+      backgroundBandHeightMode: mode,
+      backgroundBandCustomLines: (mode === 'custom' && !settings.backgroundBandCustomLines) ? getDefaultCustomHeight() : settings.backgroundBandCustomLines,
+    };
     applySettings(updates);
   };
 
@@ -1357,12 +1353,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
   };
 
   const handleTranslationFontSizeModeChange = (mode) => {
-    const updates = { translationFontSizeMode: mode };
-
-    if (mode === 'custom') {
-      updates.translationFontSize = currentFontSize;
-    }
-
+    const updates = {
+      translationFontSizeMode: mode,
+      translationFontSize: (mode === 'custom') ? currentFontSize : settings.translationFontSize,
+    };
     applySettings(updates);
   };
 
@@ -1461,7 +1455,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
               <SelectItem value="upper">Upper Third</SelectItem>
               <SelectItem value="center">Centre</SelectItem>
               <SelectItem value="lower">Lower Third</SelectItem>
@@ -1482,7 +1476,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             }`}>
             <SelectValue placeholder="Select font" />
           </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
             {fontOptions.map((font) => (
               <SelectItem
                 key={font}
@@ -1780,7 +1774,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
                 <SelectItem value="bound">Bound</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
@@ -1836,7 +1830,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             value={settings.fontColor}
             onChange={(e) => update('fontColor', e.target.value)}
             className={`h-9 w-12 p-1 ${darkMode
-              ? 'bg-gray-700 border-gray-600'
+              ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               }`}
           />
@@ -1861,7 +1855,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             value={translationLineColor}
             onChange={(e) => update('translationLineColor', e.target.value)}
             className={`h-9 w-12 p-1 ${darkMode
-              ? 'bg-gray-700 border-gray-600'
+              ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               }`}
           />
@@ -1879,7 +1873,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             value={settings.borderColor ?? '#000000'}
             onChange={(e) => update('borderColor', e.target.value)}
             className={`h-9 w-12 p-1 ${darkMode
-              ? 'bg-gray-700 border-gray-600'
+              ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               }`}
           />
@@ -1924,7 +1918,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             value={settings.dropShadowColor}
             onChange={(e) => update('dropShadowColor', e.target.value)}
             className={`h-9 w-12 p-1 ${darkMode
-              ? 'bg-gray-700 border-gray-600'
+              ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               }`}
           />
@@ -2037,7 +2031,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             onChange={(e) => update('backgroundColor', e.target.value)}
             disabled={fullScreenModeChecked}
             className={`h-9 w-12 p-1 ${darkMode
-              ? 'bg-gray-700 border-gray-600'
+              ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               } ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
             title={fullScreenModeChecked ? backgroundDisabledTooltip : undefined}
@@ -2085,7 +2079,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
                 <SelectItem value="adaptive">Adaptive</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
@@ -2227,7 +2221,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
               <SelectItem value="none">None</SelectItem>
               <SelectItem value="fade">Fade</SelectItem>
               <SelectItem value="scale">Scale</SelectItem>
@@ -2308,7 +2302,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}>
+            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
               <SelectItem value="color">Colour</SelectItem>
               <SelectItem value="media">Image / Video</SelectItem>
             </SelectContent>
@@ -2320,7 +2314,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
               value={fullScreenBackgroundColorValue}
               onChange={handleFullScreenColorChange}
               className={`ml-auto h-9 w-12 p-1 ${darkMode
-                ? 'bg-gray-700 border-gray-600'
+                ? 'bg-gray-700 border-gray-600 text-gray-200'
                 : 'bg-white border-gray-300'
                 }`}
             />
