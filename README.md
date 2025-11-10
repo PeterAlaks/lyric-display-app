@@ -43,7 +43,7 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 ## Installation
 
 ### Pre-built Releases (Recommended)
-1. Download the latest release by [clicking Here](https://mega.nz/file/lmZx1LbK#rWYpXP0WllmdUS8_2f1-nEWMwt7h4WH3s0OLBSgb0FI)
+1. Download the latest release by [clicking Here](https://mega.nz/file/hyIE0DLa#Br_7L0pJ5TtceaHb7xUCF-7rmDNTNHC5_ZofT_sADKE)
 2. Run the installer for your platform
 3. Launch LyricDisplay
 
