@@ -2,7 +2,7 @@
 
 Professional real-time lyric display for streaming, church services and other live events
 
-Version: 5.2.0 | Windows 10/11 (64-bit)
+Version: 5.7.0 | Windows 10/11 (64-bit)
 
 
 ###### **What is LyricDisplay?**

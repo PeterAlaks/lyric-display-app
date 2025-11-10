@@ -2,7 +2,7 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 5.2.0
+**Version:** 5.7.0
 **Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
@@ -213,14 +213,16 @@ lyric-display-app/
 |   |   |   ├── lrclib.js                   # LRCLIB lyrics provider definitions
 |   |   |   ├── lyricsOvh.js                # Lyrics.ovh lyrics provider definitions
 |   |   |   ├── openHymnal.js               # Open Hymnal lyrics provider definitions
-|   |   |   └── vagalume                    # Vagalume lyrics provider definitions
+|   |   |   └── vagalume.js                 # Vagalume lyrics provider definitions
 |   |   ├── cache.js                        # Online lyrics search data cache
 |   |   ├── fetchWithTimeout.js             # Fetch lyric data timeout moderator for providers
 |   |   ├── index.js                        # Main online lyrics search initializer and aggregator
 |   |   └── searchAlgorithm.js              # Online lyrics search algorithm
 |   ├── adminKey.js                         # Admin access key module
 |   ├── backend.js                          # Backend server starter
-|   ├── easyWorship.js                      # EasyWorship song data import and conversion engine
+|   ├── backend.js                          # Backend server starter
+|   ├── displayManager.js                   # External display detection and assignment module
+|   ├── easyWorship.js                      # EasyWorship song lyric files conversion module 
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
 |   ├── ipc.js                              # IPC handlers
 |   ├── menu.js                             # Window menu builder
@@ -236,7 +238,8 @@ lyric-display-app/
 ├── public/                                 # Static assets
 |   └── index.html                          # Browser web app entry point
 ├── scripts/                                # Custom npm scripts
-|   ├── release.js                          # Release publish assistant script
+|   ├── release-manager.js                  # General release publish assistant
+|   ├── release.js                          # Release main script
 |   └── update-version.js                   # Helper script for updating current version in readme and install guide
 ├── server/                                 # Express.js backend
 |   ├── events.js                           # Backend communication events
@@ -258,10 +261,12 @@ lyric-display-app/
 |   |   |   └── ModalProvider.jsx           # Global modal component
 |   |   ├── toast/
 |   |   |   └── ToastProvider.jsx           # Toast notifications component
-|   |   ├── ui/                             # Shadcn UI components
+|   |   ├── ui/                             # Reusable UI components
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
+|   |   ├── AutoplaySettings.jsx            # Autoplay settings modal
 |   |   ├── ConnectionBackoffBanner.jsx     # Global connection backoff modal component
 |   |   ├── ConnectionDiagnosticsModal.jsx  # Connection diagnostics modal component
+|   |   ├── DisplayDetectionModal.jsx       # Display detection modal component
 |   |   ├── DraftApprovalModal.jsx          # Approval modal component for lyric drafts submitted from secondary controllers
 |   |   ├── EasyWorshipImportModal.jsx      # Song import from local EasyWorship store wizard
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
@@ -308,7 +313,8 @@ lyric-display-app/
 │   ├── pages/                              # Route-based page components
 |   |   ├── ControlPanel.jsx                # Control panel page wrapper
 |   |   ├── Output1.jsx                     # Output 1 display
-|   |   └── Output2.jsx                     # Output 2 display
+|   |   ├── Output2.jsx                     # Output 2 display
+|   |   └── Stage.jsx                       # Stage output display
 │   ├── styles/
 |   |   └── fonts.css                       # Display font styles import and definitions
 │   ├── utils/
