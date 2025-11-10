@@ -1,0 +1,161 @@
+name: Build Multi-Platform Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          cd server
+          npm ci
+
+      - name: Build Windows installer
+        run: npm run electron-pack
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            dist/*.exe
+            dist/*.zip
+          retention-days: 5
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          cd server
+          npm ci
+
+      - name: Build macOS installer
+        run: npm run electron-pack
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          retention-days: 5
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          cd server
+          npm ci
+
+      - name: Build Linux installer
+        run: npm run electron-pack
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installer
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+          retention-days: 5
+
+  create-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R dist-artifacts
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist-artifacts/windows-installer/*
+            dist-artifacts/macos-installer/*
+            dist-artifacts/linux-installer/*
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          body: |
+            ## LyricDisplay v${{ steps.get_version.outputs.VERSION }}
+            
+            ### Downloads
+            
+            **Windows:**
+            - Download the `.exe` installer
+            
+            **macOS:**
+            - Download the `.dmg` installer
+            - Apple Silicon (M1/M2/M3) and Intel Macs supported
+            
+            **Linux:**
+            - Download the `.AppImage` for universal compatibility
+            - Or use `.deb` for Debian/Ubuntu or `.rpm` for Fedora/RHEL
+            
+            ### Installation
+            
+            See the [Installation Guide](https://github.com/PeterAlaks/lyric-display-app/blob/main/LyricDisplay%20Installation%20%26%20Integration%20Guide.md) for detailed setup instructions.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
