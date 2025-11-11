@@ -942,12 +942,7 @@ const LyricDisplayApp = () => {
                 />
               )}
             </div>
-
-            <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
-
-            <div className={`mt-4 pb-6 text-[12px] text-left space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              © 2025 LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
-            </div>
+            <div className="m-10"></div>
           </div>
         </div>
 

@@ -34,11 +34,6 @@ export function openInAppBrowser(initialUrl) {
     });
     inAppBrowserView.webContents.loadURL(initialUrl || 'https://www.google.com');
 
-    if (isDev) {
-      try { inAppBrowserWindow.webContents.openDevTools({ mode: 'detach' }); } catch { }
-      try { inAppBrowserView.webContents.openDevTools({ mode: 'detach' }); } catch { }
-    }
-
     inAppBrowserWindow.webContents.on('before-input-event', (event, input) => {
       try {
         if (input.control && input.shift && (input.key?.toLowerCase?.() === 'i')) {
