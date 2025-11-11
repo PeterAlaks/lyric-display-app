@@ -46,6 +46,7 @@ const LyricDisplayApp = () => {
   useDarkModeSync(darkMode, setDarkMode);
 
   const fileInputRef = useRef(null);
+  const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
   const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready, lastSyncTime } = useControlSocket();
@@ -660,226 +661,250 @@ const LyricDisplayApp = () => {
       {isDesktopApp && <DraftApprovalModal darkMode={darkMode} />}
       <div className={`flex h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Control Panel */}
-        <div className={`w-[420px] flex-shrink-0 shadow-lg p-6 overflow-y-auto ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <img
-              src="/LyricDisplay-icon.png"
-              alt="LyricDisplay"
-              className="h-8 w-8"
-            />
-            <div className="flex items-center gap-2">
-              {/* Online Lyrics Search Button */}
-              <Tooltip content="Search and import lyrics from online providers" side="bottom">
-                <button
-                  className={`p-2 rounded-lg font-medium transition-colors ${darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                  title="Search online for lyrics"
-                  onClick={handleOpenOnlineLyricsSearch}
-                >
-                  <Globe className="w-5 h-5" />
-                </button>
-              </Tooltip>
+        <div className={`w-[420px] flex-shrink-0 shadow-lg flex flex-col h-screen ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          {/* Fixed Header Section */}
+          <div className={`flex-shrink-0 p-6 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <img
+                src="/LyricDisplay-icon.png"
+                alt="LyricDisplay"
+                className="h-8 w-8"
+              />
+              <div className="flex items-center gap-2">
+                {/* Online Lyrics Search Button */}
+                <Tooltip content="Search and import lyrics from online providers" side="bottom">
+                  <button
+                    className={`p-2 rounded-lg font-medium transition-colors ${darkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    title="Search online for lyrics"
+                    onClick={handleOpenOnlineLyricsSearch}
+                  >
+                    <Globe className="w-5 h-5" />
+                  </button>
+                </Tooltip>
 
-              {/* Setlist Button */}
-              <Tooltip content="View and manage your song setlist (up to 25 songs)" side="bottom">
-                <button
-                  className={`p-2 rounded-lg font-medium transition-colors ${darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                  title="Open setlist"
-                  onClick={handleOpenSetlist}
-                >
-                  <ListMusic className="w-5 h-5" />
-                </button>
-              </Tooltip>
+                {/* Setlist Button */}
+                <Tooltip content="View and manage your song setlist (up to 25 songs)" side="bottom">
+                  <button
+                    className={`p-2 rounded-lg font-medium transition-colors ${darkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    title="Open setlist"
+                    onClick={handleOpenSetlist}
+                  >
+                    <ListMusic className="w-5 h-5" />
+                  </button>
+                </Tooltip>
 
-              {/* Sync Outputs Button - Icon Only */}
-              <Tooltip content="Force refresh all output displays with current state" side="bottom">
-                <button
-                  disabled={!isConnected || !isAuthenticated || !ready}
-                  className={`p-2 rounded-lg font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
-                    ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
-                    : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
-                    }`}
-                  title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync current state to outputs"}
-                  onClick={() => {
-                    if (!isConnected || !isAuthenticated) {
-                      showToast({
-                        title: 'Cannot Sync',
-                        message: 'Not connected or authenticated.',
-                        variant: 'warning'
-                      });
-                      return;
-                    }
+                {/* Sync Outputs Button - Icon Only */}
+                <Tooltip content="Force refresh all output displays with current state" side="bottom">
+                  <button
+                    disabled={!isConnected || !isAuthenticated || !ready}
+                    className={`p-2 rounded-lg font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
+                      ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
+                      : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
+                      }`}
+                    title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync current state to outputs"}
+                    onClick={() => {
+                      if (!isConnected || !isAuthenticated) {
+                        showToast({
+                          title: 'Cannot Sync',
+                          message: 'Not connected or authenticated.',
+                          variant: 'warning'
+                        });
+                        return;
+                      }
 
-                    try {
-                      let syncSuccess = true;
+                      try {
+                        let syncSuccess = true;
 
-                      if (lyrics && lyrics.length > 0) {
-                        if (!emitLyricsLoad(lyrics)) {
-                          syncSuccess = false;
-                        }
-                        if (selectedLine !== null && selectedLine !== undefined) {
-                          if (!emitLineUpdate(selectedLine)) {
+                        if (lyrics && lyrics.length > 0) {
+                          if (!emitLyricsLoad(lyrics)) {
+                            syncSuccess = false;
+                          }
+                          if (selectedLine !== null && selectedLine !== undefined) {
+                            if (!emitLineUpdate(selectedLine)) {
+                              syncSuccess = false;
+                            }
+                          }
+                          if (output1Settings && !emitStyleUpdate('output1', output1Settings)) {
+                            syncSuccess = false;
+                          }
+                          if (output2Settings && !emitStyleUpdate('output2', output2Settings)) {
                             syncSuccess = false;
                           }
                         }
-                        if (output1Settings && !emitStyleUpdate('output1', output1Settings)) {
+
+                        if (!emitOutputToggle(isOutputOn)) {
                           syncSuccess = false;
                         }
-                        if (output2Settings && !emitStyleUpdate('output2', output2Settings)) {
-                          syncSuccess = false;
+
+                        if (syncSuccess) {
+                          window.dispatchEvent(new CustomEvent('sync-completed', { detail: { source: 'manual' } }));
+                          showToast({
+                            title: 'Outputs Synced',
+                            message: 'Output displays updated successfully.',
+                            variant: 'success'
+                          });
+                        } else {
+                          showToast({
+                            title: 'Sync Failed',
+                            message: 'Outputs were not updated. Check the connection and try again.',
+                            variant: 'error'
+                          });
                         }
-                      }
-
-                      if (!emitOutputToggle(isOutputOn)) {
-                        syncSuccess = false;
-                      }
-
-                      if (syncSuccess) {
-                        window.dispatchEvent(new CustomEvent('sync-completed', { detail: { source: 'manual' } }));
-                        showToast({
-                          title: 'Outputs Synced',
-                          message: 'Output displays updated successfully.',
-                          variant: 'success'
-                        });
-                      } else {
+                      } catch (error) {
+                        console.error('Manual sync failed:', error);
                         showToast({
                           title: 'Sync Failed',
-                          message: 'Outputs were not updated. Check the connection and try again.',
+                          message: 'An unexpected error occurred while syncing outputs.',
                           variant: 'error'
                         });
                       }
-                    } catch (error) {
-                      console.error('Manual sync failed:', error);
-                      showToast({
-                        title: 'Sync Failed',
-                        message: 'An unexpected error occurred while syncing outputs.',
-                        variant: 'error'
-                      });
-                    }
-                  }}
+                    }}
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                  </button>
+                </Tooltip>
+
+                {/* Authentication Status Indicator */}
+                <AuthStatusIndicator
+                  authStatus={authStatus}
+                  connectionStatus={connectionStatus}
+                  onRetry={forceReconnect}
+                  onRefreshToken={refreshAuthToken}
+                  darkMode={darkMode}
+                />
+              </div>
+            </div>
+
+            {/* Load and Create Buttons */}
+            <div className="flex gap-3 mb-3">
+              <Tooltip content="Load a .txt or .lrc lyrics file from your computer" side="right">
+                <button
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
+                  onClick={openFileDialog}
                 >
-                  <RefreshCw className="w-5 h-5" />
+                  <FolderOpen className="w-5 h-5" />
+                  Load lyrics file (.txt, .lrc)
                 </button>
               </Tooltip>
-
-              {/* Authentication Status Indicator */}
-              <AuthStatusIndicator
-                authStatus={authStatus}
-                connectionStatus={connectionStatus}
-                onRetry={forceReconnect}
-                onRefreshToken={refreshAuthToken}
-                darkMode={darkMode}
-              />
+              <Tooltip content="Open the song canvas to create new lyrics from scratch" side="left">
+                <button
+                  className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    }`}
+                  onClick={handleCreateNewSong}
+                  title="Create new lyrics"
+                >
+                  <FileText className="w-5 h-5" />
+                </button>
+              </Tooltip>
             </div>
-          </div>
+            <input
+              type="file"
+              accept=".txt,.lrc"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
 
-          {/* Load and Create Buttons */}
-          <div className="flex gap-3 mb-3">
-            <Tooltip content="Load a .txt or .lrc lyrics file from your computer" side="right">
+            {/* Current File Indicator */}
+            {hasLyrics && (
+              <div className={`mb-6 text-sm font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                <FileMusic className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{lyricsFileName}</span>
+              </div>
+            )}
+
+            {/* Output Toggle */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4 pl-4">
+                <Switch
+                  checked={isOutputOn}
+                  onCheckedChange={handleToggle}
+                  className={`
+            scale-[1.8]
+            ${darkMode
+                      ? "data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600"
+                      : "data-[state=checked]:bg-black"}
+          `}
+                />
+                <span className={`text-sm ml-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
+                </span>
+              </div>
+
+              {/* Help trigger button */}
               <button
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
-                onClick={openFileDialog}
-              >
-                <FolderOpen className="w-5 h-5" />
-                Load lyrics file (.txt, .lrc)
-              </button>
-            </Tooltip>
-            <Tooltip content="Open the song canvas to create new lyrics from scratch" side="left">
-              <button
-                className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                onClick={() => {
+                  showModal({
+                    title: 'Control Panel Help',
+                    headerDescription: 'Master your LyricDisplay workflow with these essential tools',
+                    component: 'ControlPanelHelp',
+                    variant: 'info',
+                    size: 'large',
+                    dismissLabel: 'Got it'
+                  });
+                }}
+                className={`p-2 rounded-lg transition-colors ${darkMode
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                   }`}
-                onClick={handleCreateNewSong}
-                title="Create new lyrics"
+                title="Control Panel Help"
               >
-                <FileText className="w-5 h-5" />
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </button>
-            </Tooltip>
-          </div>
-          <input
-            type="file"
-            accept=".txt,.lrc"
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-
-          {/* Current File Indicator */}
-          {hasLyrics && (
-            <div className={`mb-6 text-sm font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              <FileMusic className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{lyricsFileName}</span>
-            </div>
-          )}
-
-          {/* Output Toggle */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4 pl-4">
-              <Switch
-                checked={isOutputOn}
-                onCheckedChange={handleToggle}
-                className={`
-        scale-[1.8]
-        ${darkMode
-                    ? "data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600"
-                    : "data-[state=checked]:bg-black"}
-      `}
-              />
-              <span className={`text-sm ml-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
-              </span>
             </div>
 
-            {/* Help trigger button */}
-            <button
-              onClick={() => {
-                showModal({
-                  title: 'Control Panel Help',
-                  headerDescription: 'Master your LyricDisplay workflow with these essential tools',
-                  component: 'ControlPanelHelp',
-                  variant: 'info',
-                  size: 'large',
-                  dismissLabel: 'Got it'
-                });
-              }}
-              className={`p-2 rounded-lg transition-colors ${darkMode
-                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                }`}
-              title="Control Panel Help"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
+            <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+
+            {/* Output Tabs */}
+            <Tabs value={activeTab} onValueChange={(val) => {
+              setHasInteractedWithTabs(true);
+              setActiveTab(val);
+
+              if (scrollableSettingsRef.current) {
+                scrollableSettingsRef.current.scrollTop = 0;
+              }
+            }}>
+              <TabsList className={`w-full p-1.5 h-11 mb-8 gap-2 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
+                <TabsTrigger value="output1" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+                  Output 1
+                </TabsTrigger>
+                <TabsTrigger value="output2" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+                  Output 2
+                </TabsTrigger>
+                <TabsTrigger value="stage" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+                  Stage
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
-          <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
-
-          {/* Output Tabs */}
-          <Tabs value={activeTab} onValueChange={(val) => {
-            setHasInteractedWithTabs(true);
-            setActiveTab(val);
-          }}>
-            <TabsList className={`w-full p-1.5 h-11 mb-8 gap-2 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
-              <TabsTrigger value="output1" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
-                Output 1
-              </TabsTrigger>
-              <TabsTrigger value="output2" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
-                Output 2
-              </TabsTrigger>
-              <TabsTrigger value="stage" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
-                Stage
-              </TabsTrigger>
-            </TabsList>
-
+          {/* Scrollable Settings Panel */}
+          <div
+            ref={scrollableSettingsRef}
+            className="flex-1 overflow-y-auto px-6 relative"
+            onScroll={(e) => {
+              const scrollTop = e.currentTarget.scrollTop;
+              const shadow = e.currentTarget.previousElementSibling;
+              if (shadow) {
+                if (scrollTop > 10) {
+                  shadow.classList.add('shadow-md');
+                } else {
+                  shadow.classList.remove('shadow-md');
+                }
+              }
+            }}
+          >
             {/* Tab Content */}
             <div>
               {activeTab === 'output1' && (
@@ -917,12 +942,12 @@ const LyricDisplayApp = () => {
                 />
               )}
             </div>
-          </Tabs>
 
-          <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+            <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
-          <div className={`mt-4 text-[12px] text-left space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            © 2025 LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
+            <div className={`mt-4 pb-6 text-[12px] text-left space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              © 2025 LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
+            </div>
           </div>
         </div>
 

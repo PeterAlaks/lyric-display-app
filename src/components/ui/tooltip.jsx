@@ -23,15 +23,27 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
             }
         };
 
+        const handleScroll = () => {
+            if (visible) {
+                setVisible(false);
+                if (globalActiveTooltip === instanceId.current) {
+                    globalActiveTooltip = null;
+                }
+            }
+        };
+
         document.addEventListener('click', handleClickOutside);
+        window.addEventListener('scroll', handleScroll, true);
+
         return () => {
             document.removeEventListener('click', handleClickOutside);
+            window.removeEventListener('scroll', handleScroll, true);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             if (globalActiveTooltip === instanceId.current) {
                 globalActiveTooltip = null;
             }
         };
-    }, []);
+    }, [visible]);
 
     useEffect(() => {
         if (visible) {

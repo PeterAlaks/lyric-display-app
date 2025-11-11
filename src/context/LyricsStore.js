@@ -186,6 +186,8 @@ const useLyricsStore = create(
         upcomingSongSize: 18,
         upcomingSongMode: 'automatic',
         upcomingSongFullScreen: false,
+        timerFullScreen: false,
+        customMessagesFullScreen: false,
         showTime: true,
         messageScrollSpeed: 3000,
         bottomBarColor: '#FFFFFF',

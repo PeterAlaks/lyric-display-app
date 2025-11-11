@@ -6,6 +6,19 @@ import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
 
+const pulseAnimation = `
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+`;
+
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = pulseAnimation;
+  document.head.appendChild(style);
+}
+
 const Stage = () => {
   const { socket, isConnected, connectionStatus, isAuthenticated } = useSocket('stage');
   const { lyrics, selectedLine, lyricsFileName, setLyrics, selectLine } = useLyricsState();
@@ -20,6 +33,7 @@ const Stage = () => {
   const [customMessages, setCustomMessages] = useState([]);
   const [timerState, setTimerState] = useState({ running: false, paused: false, endTime: null, remaining: null });
   const [upcomingSongUpdateTrigger, setUpcomingSongUpdateTrigger] = useState(0);
+  const [isTimerWarning, setIsTimerWarning] = React.useState(false);
 
   const requestCurrentStateWithRetry = useCallback((retryCount = 0) => {
     const maxRetries = 3;
@@ -209,6 +223,8 @@ const Stage = () => {
 
     upcomingSongMode = 'automatic',
     upcomingSongFullScreen = false,
+    timerFullScreen = false,
+    customMessagesFullScreen = false,
   } = stageSettings;
 
   useEffect(() => {
@@ -234,6 +250,7 @@ const Stage = () => {
   useEffect(() => {
     if (!timerState.running || timerState.paused || !timerState.endTime) {
       setTimerDisplay(timerState.remaining || null);
+      setIsTimerWarning(false);
       return;
     }
 
@@ -243,12 +260,15 @@ const Stage = () => {
 
       if (remaining <= 0) {
         setTimerDisplay('0:00');
+        setIsTimerWarning(false);
         return;
       }
 
       const minutes = Math.floor(remaining / 60000);
       const seconds = Math.floor((remaining % 60000) / 1000);
       setTimerDisplay(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+
+      setIsTimerWarning(remaining < 30000);
     };
 
     updateTimerDisplay();
@@ -466,7 +486,7 @@ const Stage = () => {
         {upcomingSongFullScreen ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 sm:px-12 md:px-16">
             <div className="w-full flex flex-col items-center justify-center gap-8">
-              {/* "Upcoming Song Label */}
+              {/* "Upcoming Song" Label */}
               <div
                 className="leading-none font-bold"
                 style={{
@@ -494,6 +514,63 @@ const Stage = () => {
                 {getUpcomingSongName()}
               </div>
             </div>
+          </div>
+        ) : timerFullScreen && timerDisplay ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-8 sm:px-12 md:px-16">
+            <div className="w-full flex flex-col items-center justify-center gap-8">
+              {/* "Time Left" Label */}
+              <div
+                className="leading-none font-bold"
+                style={{
+                  fontSize: `${responsiveUpcomingSongSize * 2.5}px`,
+                  color: isTimerWarning ? '#EF4444' : '#FFA500',
+                  textAlign: 'center',
+                  opacity: 1,
+                  animation: isTimerWarning ? 'pulse 1s infinite' : 'none',
+                }}
+              >
+                Time Left:
+              </div>
+
+              {/* Timer Display */}
+              <div
+                className="leading-none font-bold font-mono w-full"
+                style={{
+                  fontSize: `${responsiveLiveFontSize * 2}px`,
+                  color: isTimerWarning ? '#EF4444' : '#FFFFFF',
+                  textAlign: 'center',
+                  opacity: 1,
+                  animation: isTimerWarning ? 'pulse 1s infinite' : 'none',
+                }}
+              >
+                {timerDisplay}
+              </div>
+            </div>
+          </div>
+        ) : customMessagesFullScreen && currentMessage ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-8 sm:px-12 md:px-16">
+            <motion.div
+              key={`fullscreen-message-${currentMessageIndex}`}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.5 }}
+              className="w-full"
+            >
+              <div
+                className="leading-tight font-bold w-full"
+                style={{
+                  fontSize: `${responsiveLiveFontSize * 1.2}px`,
+                  color: '#FFFFFF',
+                  textAlign: 'center',
+                  wordBreak: 'break-word',
+                  hyphens: 'auto',
+                  opacity: 1,
+                }}
+              >
+                {currentMessage.text || currentMessage}
+              </div>
+            </motion.div>
           </div>
         ) : isVisible ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 sm:px-12 md:px-16">

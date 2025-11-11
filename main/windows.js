@@ -21,9 +21,9 @@ export function createWindow(route = '/') {
   win.once('ready-to-show', () => {
     setTimeout(() => {
       try { win.show(); } catch { }
-      if (isDev) {
-        try { win.webContents.openDevTools({ mode: 'detach' }); } catch { }
-      }
+      // if (isDev) {
+      //   try { win.webContents.openDevTools({ mode: 'detach' }); } catch { }
+      // }
     }, 100);
   });
 

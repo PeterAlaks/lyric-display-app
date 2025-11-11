@@ -1,4 +1,4 @@
-import { Menu, nativeTheme, dialog } from 'electron';
+import { Menu, nativeTheme, dialog, app } from 'electron';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { getRecents, subscribe, clearRecents } from './recents.js';
@@ -233,7 +233,56 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
       });
       return items;
     };
+
+    const isMac = process.platform === 'darwin';
+
     const template = [
+      ...(isMac ? [{
+        label: app.name,
+        submenu: [
+          {
+            label: `About ${app.name}`,
+            click: async () => {
+              const message = `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi`;
+
+              const result = await (showInAppModal
+                ? showInAppModal(
+                  {
+                    title: 'About LyricDisplay',
+                    description: message,
+                    variant: 'info',
+                    actions: [
+                      { label: 'OK', value: { response: 0 }, variant: 'outline' },
+                      { label: 'Check for Updates', value: { response: 1 } },
+                    ],
+                  },
+                  {
+                    fallback: () => dialog
+                      .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                      .then((res) => ({ response: res.response })),
+                    timeout: 600000,
+                  }
+                )
+                : dialog
+                  .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                  .then((res) => ({ response: res.response }))
+              );
+
+              if ((result?.response ?? -1) === 1) {
+                checkForUpdates?.(true);
+              }
+            },
+          },
+          { type: 'separator' },
+          { role: 'services' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideOthers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      }] : []),
       {
         label: 'File',
         submenu: [
@@ -301,12 +350,36 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
             }
           },
           { type: 'separator' },
-          { role: 'quit' },
+          ...(isMac ? [] : [{ role: 'quit' }]),
         ],
       },
       {
         label: 'Edit',
-        submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }],
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          ...(isMac ? [
+            { role: 'pasteAndMatchStyle' },
+            { role: 'delete' },
+            { role: 'selectAll' },
+            { type: 'separator' },
+            {
+              label: 'Speech',
+              submenu: [
+                { role: 'startSpeaking' },
+                { role: 'stopSpeaking' }
+              ]
+            }
+          ] : [
+            { role: 'delete' },
+            { type: 'separator' },
+            { role: 'selectAll' }
+          ])
+        ],
       },
       {
         label: 'View',
@@ -316,7 +389,9 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
           { type: 'separator' },
           { label: 'Dark Mode', type: 'checkbox', checked: false, click: toggleDarkMode },
           { type: 'separator' },
-          { role: 'resetzoom' }, { role: 'zoomin' }, { role: 'zoomout' },
+          { role: 'resetzoom' },
+          { role: 'zoomin' },
+          { role: 'zoomout' },
           { type: 'separator' },
           { role: 'togglefullscreen' },
         ],
@@ -325,6 +400,14 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
         label: 'Window',
         submenu: [
           { role: 'minimize' },
+          ...(isMac ? [
+            { type: 'separator' },
+            { role: 'front' },
+            { type: 'separator' },
+            { role: 'window' }
+          ] : [
+            { role: 'close' }
+          ]),
           {
             label: 'Keyboard Shortcuts',
             click: () => {
@@ -377,9 +460,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                           isCurrentlyProjecting = true;
                           break;
                         }
-                      } catch (err) {
-
-                      }
+                      } catch (err) { }
                     }
                   }
 
@@ -408,7 +489,6 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
               }
             }
           },
-          { role: 'close' }
         ],
       },
       {
@@ -442,10 +522,9 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
           },
           { type: 'separator' },
           { label: 'More About Author', click: async () => { const { shell } = await import('electron'); await shell.openExternal('https://linktr.ee/peteralaks'); } },
-          {
+          ...(isMac ? [] : [{
             label: 'About App',
             click: async () => {
-              const { app, dialog } = await import('electron');
               const message = `LyricDisplay\nVersion ${app.getVersion()}\nBy Peter Alakembi`;
 
               const result = await (showInAppModal
@@ -475,7 +554,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                 checkForUpdates?.(true);
               }
             },
-          },
+          }]),
           {
             label: 'Support Development',
             click: async () => {
