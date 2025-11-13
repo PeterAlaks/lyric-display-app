@@ -3,7 +3,7 @@ import { fetchWithTimeout } from '../fetchWithTimeout.js';
 import { app } from 'electron';
 
 const APP_VERSION = app.getVersion();
-const USER_AGENT = `LyricDisplay/${APP_VERSION} (+https://github.com/PeterAlaks/lyric-display-app)`;
+const USER_AGENT = `LyricDisplay/${APP_VERSION} (+https://lyricdisplay.app)`;
 const BASE_URL = 'https://hymnary.org';
 
 export const definition = {
