@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListMusic, RefreshCw, FileText, Play, Square, ChevronDown } from 'lucide-react';
-import { useLyricsState, useOutputState, useDarkModeState, useSetlistState, useAutoplaySettings } from '../hooks/useStoreSelectors';
+import { ListMusic, RefreshCw, FileText, Play, Square, ChevronDown, Sparkles } from 'lucide-react';
+import { useLyricsState, useOutputState, useDarkModeState, useSetlistState, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
@@ -13,13 +13,15 @@ import { useSyncTimer } from '../hooks/useSyncTimer';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { getLineDisplayText } from '../utils/parseLyrics';
+import { hasValidTimestamps, calculateTimestampDelay } from '../utils/timestampHelpers';
 
 const MobileLayout = () => {
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, selectedLine, selectLine } = useLyricsState();
+  const { lyrics, lyricsFileName, selectedLine, lyricsTimestamps, selectLine } = useLyricsState();
   const { darkMode } = useDarkModeState();
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles } = useSetlistState();
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
+  const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
 
   const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitAutoplayStateUpdate, isAuthenticated, connectionStatus, ready, lastSyncTime, isConnected } = useControlSocket();
 
@@ -35,9 +37,12 @@ const MobileLayout = () => {
   const navigate = useNavigate();
 
   const [autoplayActive, setAutoplayActive] = React.useState(false);
+  const [intelligentAutoplayActive, setIntelligentAutoplayActive] = React.useState(false);
   const [remoteAutoplayActive, setRemoteAutoplayActive] = React.useState(false);
   const autoplayIntervalRef = useRef(null);
+  const intelligentAutoplayTimeoutRef = useRef(null);
   const lyricsRef = useRef(lyrics);
+  const lyricsTimestampsRef = useRef(lyricsTimestamps);
   const selectedLineRef = useRef(selectedLine);
   const autoplaySettingsRef = useRef(autoplaySettings);
   const selectLineRef = useRef(selectLine);
@@ -47,6 +52,10 @@ const MobileLayout = () => {
   React.useEffect(() => {
     lyricsRef.current = lyrics;
   }, [lyrics]);
+
+  React.useEffect(() => {
+    lyricsTimestampsRef.current = lyricsTimestamps;
+  }, [lyricsTimestamps]);
 
   React.useEffect(() => {
     selectedLineRef.current = selectedLine;
@@ -279,12 +288,160 @@ const MobileLayout = () => {
   };
 
   React.useEffect(() => {
+    if (intelligentAutoplayTimeoutRef.current) {
+      clearTimeout(intelligentAutoplayTimeoutRef.current);
+      intelligentAutoplayTimeoutRef.current = null;
+    }
+
+    if (!intelligentAutoplayActive || !hasLyrics) {
+      return;
+    }
+
+    const scheduleNextLine = () => {
+      const currentLyrics = lyricsRef.current;
+      const currentTimestamps = lyricsTimestampsRef.current;
+      const currentSelectedLine = selectedLineRef.current;
+      const currentSettings = autoplaySettingsRef.current;
+      const currentSelectLine = selectLineRef.current;
+      const currentEmitLineUpdate = emitLineUpdateRef.current;
+      const currentShowToast = showToastRef.current;
+
+      if (!currentLyrics || currentLyrics.length === 0) {
+        setIntelligentAutoplayActive(false);
+        return;
+      }
+
+      const currentIndex = currentSelectedLine ?? -1;
+      let nextIndex = currentIndex + 1;
+
+      if (currentSettings.skipBlankLines) {
+        while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
+          nextIndex++;
+        }
+      }
+
+      if (nextIndex >= currentLyrics.length) {
+        setIntelligentAutoplayActive(false);
+        currentShowToast({
+          title: 'Intelligent Autoplay Complete',
+          message: 'Reached the end of lyrics.',
+          variant: 'success'
+        });
+        return;
+      }
+
+      const delay = calculateTimestampDelay(currentTimestamps, currentIndex, nextIndex);
+      const finalDelay = delay !== null ? delay : (currentSettings.interval * 1000);
+
+      intelligentAutoplayTimeoutRef.current = setTimeout(() => {
+        currentSelectLine(nextIndex);
+        currentEmitLineUpdate(nextIndex);
+        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+          detail: { lineIndex: nextIndex }
+        }));
+        scheduleNextLine();
+      }, finalDelay);
+    };
+
+    scheduleNextLine();
+
+    return () => {
+      if (intelligentAutoplayTimeoutRef.current) {
+        clearTimeout(intelligentAutoplayTimeoutRef.current);
+        intelligentAutoplayTimeoutRef.current = null;
+      }
+    };
+  }, [intelligentAutoplayActive, hasLyrics, isLineBlank]);
+
+  const handleIntelligentAutoplayToggle = React.useCallback(() => {
+    if (intelligentAutoplayActive) {
+      setIntelligentAutoplayActive(false);
+      showToast({
+        title: 'Intelligent Autoplay Stopped',
+        message: 'Timestamp-based progression paused.',
+        variant: 'info'
+      });
+    } else {
+      if (!hasSeenIntelligentAutoplayInfo) {
+        showModal({
+          title: 'Intelligent Autoplay',
+          component: 'IntelligentAutoplayInfo',
+          variant: 'info',
+          size: 'auto',
+          dismissible: true,
+          setDontShowAgain: (value) => {
+            if (value) {
+              setHasSeenIntelligentAutoplayInfo(true);
+            }
+          },
+          onStart: () => {
+            let startIndex = 0;
+            if (autoplaySettings.skipBlankLines) {
+              while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+                startIndex++;
+              }
+            }
+            if (startIndex >= lyrics.length) {
+              showToast({
+                title: 'Cannot Start Intelligent Autoplay',
+                message: 'No non-blank lines found.',
+                variant: 'warning'
+              });
+              return;
+            }
+            selectLine(startIndex);
+            emitLineUpdate(startIndex);
+            window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+              detail: { lineIndex: startIndex }
+            }));
+            setIntelligentAutoplayActive(true);
+            showToast({
+              title: 'Intelligent Autoplay Started',
+              message: 'Advancing based on lyric timestamps.',
+              variant: 'success'
+            });
+          },
+          actions: []
+        });
+      } else {
+        let startIndex = 0;
+        if (autoplaySettings.skipBlankLines) {
+          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+            startIndex++;
+          }
+        }
+        if (startIndex >= lyrics.length) {
+          showToast({
+            title: 'Cannot Start Intelligent Autoplay',
+            message: 'No non-blank lines found.',
+            variant: 'warning'
+          });
+          return;
+        }
+        selectLine(startIndex);
+        emitLineUpdate(startIndex);
+        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+          detail: { lineIndex: startIndex }
+        }));
+        setIntelligentAutoplayActive(true);
+        showToast({
+          title: 'Intelligent Autoplay Started',
+          message: 'Advancing based on lyric timestamps.',
+          variant: 'success'
+        });
+      }
+    }
+  }, [intelligentAutoplayActive, hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast, showModal]);
+
+  React.useEffect(() => {
     setAutoplayActive(false);
+    setIntelligentAutoplayActive(false);
   }, [lyricsFileName]);
 
   React.useEffect(() => {
-    emitAutoplayStateUpdate({ isActive: autoplayActive, clientType: 'mobile' });
-  }, [autoplayActive, emitAutoplayStateUpdate]);
+    const isAnyAutoplayActive = autoplayActive || intelligentAutoplayActive;
+    emitAutoplayStateUpdate({ isActive: isAnyAutoplayActive, clientType: 'mobile' });
+  }, [autoplayActive, intelligentAutoplayActive, emitAutoplayStateUpdate]);
 
   React.useEffect(() => {
     const handleAutoplayStateUpdate = (event) => {
@@ -445,9 +602,9 @@ const MobileLayout = () => {
                   : 'border-gray-200 bg-white'
                   }`}>
 
-                  {/* Search Bar and Autoplay Controls - Responsive Layout */}
+                  {/* Search Bar and Autoplay Controls */}
                   <div className="flex flex-col md:flex-row md:items-center gap-3">
-                    {/* Search Bar - Full width on mobile, flex-1 on tablet+ */}
+                    {/* Search Bar */}
                     <div className="flex-1">
                       <SearchBar
                         darkMode={darkMode}
@@ -461,12 +618,37 @@ const MobileLayout = () => {
                       />
                     </div>
 
-                    {/* Autoplay Controls - Below search on mobile, same row on tablet+ */}
+                    {/* Autoplay Controls */}
                     <div className="flex gap-2 md:w-auto md:flex-shrink-0">
+                      {/* Intelligent Autoplay Button */}
+                      {hasValidTimestamps(lyricsTimestamps) && (
+                        <button
+                          onClick={handleIntelligentAutoplayToggle}
+                          disabled={remoteAutoplayActive || autoplayActive}
+                          className={`p-2.5 rounded-lg text-sm font-medium transition-all ${remoteAutoplayActive || autoplayActive
+                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
+                            : intelligentAutoplayActive
+                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                              : darkMode
+                                ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/30 hover:to-blue-600/30 text-purple-300 border border-purple-500/30'
+                                : 'bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 text-purple-700 border border-purple-300'
+                            }`}
+                          title={
+                            remoteAutoplayActive || autoplayActive
+                              ? "Autoplay is active"
+                              : intelligentAutoplayActive
+                                ? "Stop intelligent autoplay"
+                                : "Start intelligent autoplay"
+                          }
+                        >
+                          <Sparkles className="w-4 h-4" />
+                        </button>
+                      )}
+
                       <button
                         onClick={handleAutoplayToggle}
-                        disabled={remoteAutoplayActive}
-                        className={`flex-1 md:flex-initial md:min-w-[140px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${remoteAutoplayActive
+                        disabled={remoteAutoplayActive || intelligentAutoplayActive}
+                        className={`flex-1 md:flex-initial md:min-w-[140px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${remoteAutoplayActive || intelligentAutoplayActive
                           ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
                           : autoplayActive
                             ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -491,7 +673,7 @@ const MobileLayout = () => {
                       </button>
 
                       {/* Settings Button */}
-                      {!autoplayActive && !remoteAutoplayActive && (
+                      {!autoplayActive && !remoteAutoplayActive && !intelligentAutoplayActive && (
                         <button
                           onClick={handleOpenAutoplaySettings}
                           className={`p-2.5 rounded-lg transition-colors ${darkMode

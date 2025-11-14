@@ -1,8 +1,8 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import AuthStatusIndicator from './AuthStatusIndicator';
@@ -28,13 +28,14 @@ import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSyncTimer } from '../hooks/useSyncTimer';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 import { getLineDisplayText } from '../utils/parseLyrics';
+import { hasValidTimestamps, calculateTimestampDelay, findNextValidTimestampIndex } from '../utils/timestampHelpers';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   // Global state management
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setSongMetadata } = useLyricsState();
+  const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, lyricsTimestamps, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setSongMetadata, setLyricsTimestamps } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
@@ -42,6 +43,7 @@ const LyricDisplayApp = () => {
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
+  const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
 
   useDarkModeSync(darkMode, setDarkMode);
 
@@ -78,6 +80,7 @@ const LyricDisplayApp = () => {
 
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
   const [autoplayActive, setAutoplayActive] = React.useState(false);
+  const [intelligentAutoplayActive, setIntelligentAutoplayActive] = React.useState(false);
   const [remoteAutoplayActive, setRemoteAutoplayActive] = React.useState(false);
   const [availableWidth, setAvailableWidth] = React.useState(1000);
   const headerContainerRef = useRef(null);
@@ -89,7 +92,9 @@ const LyricDisplayApp = () => {
   const { showModal } = useModal();
 
   const autoplayIntervalRef = useRef(null);
+  const intelligentAutoplayTimeoutRef = useRef(null);
   const lyricsRef = useRef(lyrics);
+  const lyricsTimestampsRef = useRef(lyricsTimestamps);
   const selectedLineRef = useRef(selectedLine);
   const autoplaySettingsRef = useRef(autoplaySettings);
   const selectLineRef = useRef(selectLine);
@@ -100,6 +105,10 @@ const LyricDisplayApp = () => {
   React.useEffect(() => {
     lyricsRef.current = lyrics;
   }, [lyrics]);
+
+  React.useEffect(() => {
+    lyricsTimestampsRef.current = lyricsTimestamps;
+  }, [lyricsTimestamps]);
 
   React.useEffect(() => {
     selectedLineRef.current = selectedLine;
@@ -154,10 +163,12 @@ const LyricDisplayApp = () => {
 
       const processedLines = parsed.processedLines;
       const rawText = parsed.rawText ?? (content || '');
+      const timestamps = parsed.timestamps || [];
       const finalBaseName = (finalFileName || '').replace(/\.(txt|lrc)$/i, '');
 
       setLyrics(processedLines);
-      setRawLyricsContent(rawText);
+      setRawLyricsContent(finalType === 'lrc' ? (content || rawText) : rawText);
+      setLyricsTimestamps(timestamps);
       selectLine(null);
       setLyricsFileName(finalBaseName);
 
@@ -176,8 +187,11 @@ const LyricDisplayApp = () => {
       }
 
       emitLyricsLoad(processedLines);
-      if (socket && socket.connected && finalBaseName) {
-        socket.emit('fileNameUpdate', finalBaseName);
+      if (socket && socket.connected) {
+        if (finalBaseName) {
+          socket.emit('fileNameUpdate', finalBaseName);
+        }
+        socket.emit('lyricsTimestampsUpdate', timestamps);
       }
 
       try {
@@ -217,12 +231,15 @@ const LyricDisplayApp = () => {
     const baseNamePieces = [lyric.title || 'Untitled Song', lyric.artist || providerName || providerId];
     const fallbackFileName = baseNamePieces.filter(Boolean).join(' - ');
 
+    const hasLrcTimestamps = /^\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(lyric.content.trim());
+    const fileType = hasLrcTimestamps ? 'lrc' : 'txt';
+
     const success = await processLoadedLyrics(
       {
         content: lyric.content,
         fileName: lyric.title || fallbackFileName,
-        fileType: 'txt',
-        enableOnlineLyricsSplitting: true,
+        fileType,
+        enableOnlineLyricsSplitting: !hasLrcTimestamps,
       },
       {
         fallbackFileName,
@@ -436,7 +453,11 @@ const LyricDisplayApp = () => {
 
       if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
         event.preventDefault();
-        handleAutoplayToggle();
+        if (event.shiftKey && hasValidTimestamps(lyricsTimestamps)) {
+          handleIntelligentAutoplayToggle();
+        } else {
+          handleAutoplayToggle();
+        }
         return;
       }
 
@@ -587,6 +608,79 @@ const LyricDisplayApp = () => {
     };
   }, [autoplayActive, hasLyrics, autoplaySettings.interval, isLineBlank]);
 
+  React.useEffect(() => {
+    if (intelligentAutoplayTimeoutRef.current) {
+      clearTimeout(intelligentAutoplayTimeoutRef.current);
+      intelligentAutoplayTimeoutRef.current = null;
+    }
+
+    if (!intelligentAutoplayActive || !hasLyrics) {
+      return;
+    }
+
+    const scheduleNextLine = () => {
+      const currentLyrics = lyricsRef.current;
+      const currentTimestamps = lyricsTimestampsRef.current;
+      const currentSelectedLine = selectedLineRef.current;
+      const currentSettings = autoplaySettingsRef.current;
+      const currentSelectLine = selectLineRef.current;
+      const currentEmitLineUpdate = emitLineUpdateRef.current;
+      const currentShowToast = showToastRef.current;
+
+      if (!currentLyrics || currentLyrics.length === 0) {
+        setIntelligentAutoplayActive(false);
+        return;
+      }
+
+      const currentIndex = currentSelectedLine ?? -1;
+      let nextIndex = currentIndex + 1;
+
+      if (currentSettings.skipBlankLines) {
+        while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
+          nextIndex++;
+        }
+      }
+
+      if (nextIndex >= currentLyrics.length) {
+        setIntelligentAutoplayActive(false);
+        currentShowToast({
+          title: 'Intelligent Autoplay Complete',
+          message: 'Reached the end of lyrics.',
+          variant: 'success'
+        });
+        return;
+      }
+
+      const delay = calculateTimestampDelay(currentTimestamps, currentIndex, nextIndex);
+
+      const finalDelay = delay !== null ? delay : (currentSettings.interval * 1000);
+
+      intelligentAutoplayTimeoutRef.current = setTimeout(() => {
+        isAutoplaySelectionRef.current = true;
+        currentSelectLine(nextIndex);
+        currentEmitLineUpdate(nextIndex);
+        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+          detail: { lineIndex: nextIndex }
+        }));
+
+        setTimeout(() => {
+          isAutoplaySelectionRef.current = false;
+        }, 50);
+
+        scheduleNextLine();
+      }, finalDelay);
+    };
+
+    scheduleNextLine();
+
+    return () => {
+      if (intelligentAutoplayTimeoutRef.current) {
+        clearTimeout(intelligentAutoplayTimeoutRef.current);
+        intelligentAutoplayTimeoutRef.current = null;
+      }
+    };
+  }, [intelligentAutoplayActive, hasLyrics, isLineBlank]);
+
   const handleOpenAutoplaySettings = () => {
     showModal({
       title: 'Autoplay Settings',
@@ -607,16 +701,100 @@ const LyricDisplayApp = () => {
     });
   };
 
+  const handleIntelligentAutoplayToggle = React.useCallback(() => {
+    if (intelligentAutoplayActive) {
+      setIntelligentAutoplayActive(false);
+      showToast({
+        title: 'Intelligent Autoplay Stopped',
+        message: 'Timestamp-based progression paused.',
+        variant: 'info'
+      });
+    } else {
+      if (!hasSeenIntelligentAutoplayInfo) {
+        showModal({
+          title: 'Intelligent Autoplay',
+          component: 'IntelligentAutoplayInfo',
+          variant: 'info',
+          size: 'auto',
+          dismissible: true,
+          setDontShowAgain: (value) => {
+            if (value) {
+              setHasSeenIntelligentAutoplayInfo(true);
+            }
+          },
+          onStart: () => {
+            let startIndex = 0;
+            if (autoplaySettings.skipBlankLines) {
+              while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+                startIndex++;
+              }
+            }
+            if (startIndex >= lyrics.length) {
+              showToast({
+                title: 'Cannot Start Intelligent Autoplay',
+                message: 'No non-blank lines found.',
+                variant: 'warning'
+              });
+              return;
+            }
+            selectLine(startIndex);
+            emitLineUpdate(startIndex);
+            window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+              detail: { lineIndex: startIndex }
+            }));
+
+            setIntelligentAutoplayActive(true);
+            showToast({
+              title: 'Intelligent Autoplay Started',
+              message: 'Advancing based on lyric timestamps.',
+              variant: 'success'
+            });
+          },
+          actions: []
+        });
+      } else {
+        let startIndex = 0;
+        if (autoplaySettings.skipBlankLines) {
+          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+            startIndex++;
+          }
+        }
+        if (startIndex >= lyrics.length) {
+          showToast({
+            title: 'Cannot Start Intelligent Autoplay',
+            message: 'No non-blank lines found.',
+            variant: 'warning'
+          });
+          return;
+        }
+        selectLine(startIndex);
+        emitLineUpdate(startIndex);
+        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+          detail: { lineIndex: startIndex }
+        }));
+
+        setIntelligentAutoplayActive(true);
+        showToast({
+          title: 'Intelligent Autoplay Started',
+          message: 'Advancing based on lyric timestamps.',
+          variant: 'success'
+        });
+      }
+    }
+  }, [intelligentAutoplayActive, hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast, showModal]);
+
   React.useEffect(() => {
     setAutoplayActive(false);
+    setIntelligentAutoplayActive(false);
   }, [lyricsFileName]);
 
   React.useEffect(() => {
     if (isConnected && isAuthenticated && ready) {
       const clientType = isDesktopApp ? 'desktop' : 'mobile';
-      emitAutoplayStateUpdate({ isActive: autoplayActive, clientType });
+      const isAnyAutoplayActive = autoplayActive || intelligentAutoplayActive;
+      emitAutoplayStateUpdate({ isActive: isAnyAutoplayActive, clientType });
     }
-  }, [autoplayActive, isConnected, isAuthenticated, ready, isDesktopApp, emitAutoplayStateUpdate]);
+  }, [autoplayActive, intelligentAutoplayActive, isConnected, isAuthenticated, ready, isDesktopApp, emitAutoplayStateUpdate]);
 
   React.useEffect(() => {
     const handleAutoplayStateUpdate = (event) => {
@@ -966,13 +1144,46 @@ const LyricDisplayApp = () => {
               </div>
               {hasLyrics && (
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Intelligent Autoplay Button */}
+                  {hasValidTimestamps(lyricsTimestamps) && (
+                    <Tooltip content={
+                      remoteAutoplayActive || autoplayActive
+                        ? "Autoplay is active"
+                        : intelligentAutoplayActive
+                          ? "Stop intelligent autoplay"
+                          : "Start timestamp-based autoplay"
+                    } side="bottom">
+                      <button
+                        onClick={handleIntelligentAutoplayToggle}
+                        disabled={remoteAutoplayActive || autoplayActive}
+                        className={`p-2 rounded-lg text-xs font-medium transition-all ${remoteAutoplayActive || autoplayActive
+                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
+                          : intelligentAutoplayActive
+                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                            : darkMode
+                              ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/30 hover:to-blue-600/30 text-purple-300 border border-purple-500/30'
+                              : 'bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 text-purple-700 border border-purple-300'
+                          }`}
+                        title={intelligentAutoplayActive ? "Stop intelligent autoplay" : "Start intelligent autoplay"}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </button>
+                    </Tooltip>
+                  )}
+
                   {/* Autoplay Button */}
-                  <Tooltip content={remoteAutoplayActive ? "Autoplay is active on mobile controller" : autoplayActive ? "Stop autoplay" : "Start automatic lyric progression"} side="bottom">
+                  <Tooltip content={
+                    remoteAutoplayActive || intelligentAutoplayActive
+                      ? "Autoplay is active"
+                      : autoplayActive
+                        ? "Stop autoplay"
+                        : "Start automatic lyric progression"
+                  } side="bottom">
                     <div className="relative flex">
                       <button
                         onClick={handleAutoplayToggle}
-                        disabled={remoteAutoplayActive}
-                        className={`flex items-center gap-2 text-xs font-medium transition-all ${remoteAutoplayActive
+                        disabled={remoteAutoplayActive || intelligentAutoplayActive}
+                        className={`flex items-center gap-2 text-xs font-medium transition-all ${remoteAutoplayActive || intelligentAutoplayActive
                           ? useIconOnlyButtons
                             ? 'bg-gray-400 text-gray-600 cursor-not-allowed px-2 py-2 rounded-lg opacity-60'
                             : 'bg-gray-400 text-gray-600 cursor-not-allowed px-4 py-2 rounded-lg opacity-60'
@@ -1002,8 +1213,8 @@ const LyricDisplayApp = () => {
                         )}
                       </button>
 
-                      {/* Settings dropdown trigger - Always show when not active */}
-                      {!autoplayActive && !remoteAutoplayActive && (
+                      {/* Settings dropdown trigger */}
+                      {!autoplayActive && !remoteAutoplayActive && !intelligentAutoplayActive && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

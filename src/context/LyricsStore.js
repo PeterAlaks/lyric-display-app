@@ -30,6 +30,8 @@ const useLyricsStore = create(
         startFromFirst: true,
         skipBlankLines: true,
       },
+      lyricsTimestamps: [],
+      hasSeenIntelligentAutoplayInfo: false,
 
       setLyrics: (lines) => set({ lyrics: lines }),
       setRawLyricsContent: (content) => set({ rawLyricsContent: content }),
@@ -43,6 +45,8 @@ const useLyricsStore = create(
       setSetlistModalOpen: (open) => set({ setlistModalOpen: open }),
       setSongMetadata: (metadata) => set({ songMetadata: metadata }),
       setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
+      setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
+      setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       addSetlistFiles: (newFiles) => set((state) => ({
         setlistFiles: [...state.setlistFiles, ...newFiles]
       })),
@@ -222,6 +226,8 @@ const useLyricsStore = create(
         output2Settings: state.output2Settings,
         stageSettings: state.stageSettings,
         autoplaySettings: state.autoplaySettings,
+        lyricsTimestamps: state.lyricsTimestamps,
+        hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

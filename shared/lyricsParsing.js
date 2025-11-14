@@ -466,7 +466,7 @@ export function parseTxtContent(rawText = '', options = {}) {
  * Enhanced with intelligent line splitting.
  * @param {string} rawText
  * @param {object} options - { enableSplitting: boolean, splitConfig: object }
- * @returns {{ rawText: string, processedLines: Array<string | object> }}
+ * @returns {{ rawText: string, processedLines: Array<string | object>, timestamps: Array<number | null> }}
  */
 export function parseLrcContent(rawText = '', options = {}) {
   const { enableSplitting = true, splitConfig = {} } = options;
@@ -497,15 +497,21 @@ export function parseLrcContent(rawText = '', options = {}) {
     if (!text) continue;
 
     if (times.length === 0) {
-      entries.push({ t: Number.MAX_SAFE_INTEGER, text });
+      entries.push({ t: null, text });
     } else {
       times.forEach((t) => entries.push({ t, text }));
     }
   }
 
-  entries.sort((a, b) => a.t - b.t);
+  entries.sort((a, b) => {
+    if (a.t === null && b.t === null) return 0;
+    if (a.t === null) return 1;
+    if (b.t === null) return -1;
+    return a.t - b.t;
+  });
 
   const processed = [];
+  const timestamps = [];
   const seen = new Set();
 
   for (const entry of entries) {
@@ -513,11 +519,13 @@ export function parseLrcContent(rawText = '', options = {}) {
     if (seen.has(key)) continue;
     seen.add(key);
     processed.push(entry.text);
+    timestamps.push(entry.t);
   }
 
   const splitLines = applyIntelligentSplitting(processed, { enableSplitting, splitConfig });
 
   const grouped = [];
+  const groupedTimestamps = [];
   for (let i = 0; i < splitLines.length; i += 1) {
     const main = splitLines[i];
     const next = splitLines[i + 1];
@@ -532,14 +540,16 @@ export function parseLrcContent(rawText = '', options = {}) {
         searchText: `${main} ${next}`,
         originalIndex: i,
       });
+      groupedTimestamps.push(timestamps[i] !== undefined ? timestamps[i] : null);
       i += 1;
     } else {
       grouped.push(main);
+      groupedTimestamps.push(timestamps[i] !== undefined ? timestamps[i] : null);
     }
   }
 
   const visibleRawText = splitLines.join('\n');
-  return { rawText: visibleRawText, processedLines: grouped };
+  return { rawText: visibleRawText, processedLines: grouped, timestamps: groupedTimestamps };
 }
 
 /**

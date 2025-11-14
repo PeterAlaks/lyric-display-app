@@ -6,6 +6,7 @@ import { detectArtistFromFilename } from '../utils/artistDetection';
 const useSocketEvents = (role) => {
   const {
     setLyrics,
+    setLyricsTimestamps,
     selectLine,
     updateOutputSettings,
     setSetlistFiles,
@@ -25,6 +26,9 @@ const useSocketEvents = (role) => {
 
       if (state.lyrics && state.lyrics.length > 0) {
         setLyrics(state.lyrics);
+        if (Array.isArray(state.lyricsTimestamps)) {
+          setLyricsTimestamps(state.lyricsTimestamps);
+        }
         if (state.lyricsFileName) {
           setLyricsFileName(state.lyricsFileName);
         }
@@ -72,6 +76,12 @@ const useSocketEvents = (role) => {
     socket.on('lyricsLoad', (lyrics) => {
       logDebug('Received lyrics load:', lyrics?.length, 'lines');
       setLyrics(lyrics);
+      selectLine(null);
+    });
+
+    socket.on('lyricsTimestampsUpdate', (timestamps) => {
+      logDebug('Received lyrics timestamps update:', timestamps?.length, 'timestamps');
+      setLyricsTimestamps(timestamps || []);
     });
 
     socket.on('outputToggle', (state) => {
@@ -283,6 +293,10 @@ const useSocketEvents = (role) => {
         if (currentLyrics.length === 0) {
           setLyrics(state.lyrics);
         }
+
+        if (Array.isArray(state.lyricsTimestamps)) {
+          setLyricsTimestamps(state.lyricsTimestamps);
+        }
       }
 
       if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
@@ -306,7 +320,7 @@ const useSocketEvents = (role) => {
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
     });
-  }, [role, setLyrics, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
+  }, [role, setLyrics, setLyricsTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,

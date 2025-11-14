@@ -9,6 +9,7 @@ import { IntegrationInstructions } from '../IntegrationInstructions';
 import SongInfoModal from '../SongInfoModal';
 import DisplayDetectionModal from '../DisplayDetectionModal';
 import AutoplaySettings from '../AutoplaySettings';
+import IntelligentAutoplayInfoModal from '../IntelligentAutoplayInfoModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -394,6 +395,18 @@ export function ModalProvider({ children, isDark = false }) {
                           settings={modal.settings}
                           onSave={modal.onSave}
                           close={(value) => closeModal(modal.id, value)}
+                        />
+                      )}
+                      {modal.component === 'IntelligentAutoplayInfo' && (
+                        <IntelligentAutoplayInfoModal
+                          darkMode={isDark}
+                          onStart={() => {
+                            if (modal.onStart) modal.onStart();
+                            closeModal(modal.id, { action: 'start' });
+                          }}
+                          onClose={() => closeModal(modal.id, { dismissed: true })}
+                          dontShowAgain={modal.dontShowAgain || false}
+                          setDontShowAgain={modal.setDontShowAgain}
                         />
                       )}
 

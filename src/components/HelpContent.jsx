@@ -64,7 +64,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
 
         <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
             <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
-                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to quickly load files, Ctrl/Cmd+N for new songs, and Ctrl/Cmd+P to toggle autoplay. The Display Output toggle controls visibility on all connected displays simultaneously.
+                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to quickly load files, Ctrl/Cmd+N for new songs, Ctrl/Cmd+P to toggle autoplay, and Ctrl/Cmd+Shift+P for intelligent autoplay (when timestamps are available). The Display Output toggle controls visibility on all connected displays simultaneously.
             </p>
         </div>
     </div>

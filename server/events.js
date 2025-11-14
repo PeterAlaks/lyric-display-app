@@ -2,6 +2,7 @@
 import { processRawTextToLines, parseLrcContent } from '../shared/lyricsParsing.js';
 
 let currentLyrics = [];
+let currentLyricsTimestamps = [];
 let currentLyricsFileName = '';
 let currentSelectedLine = null;
 let currentOutput1Settings = {};
@@ -180,6 +181,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
         }
 
         let processedLines;
+        let timestamps = [];
         let sanitizedRawContent = file.content;
         const isLrc = (file.fileType === 'lrc') ||
           (typeof file.originalName === 'string' && file.originalName.toLowerCase().endsWith('.lrc'));
@@ -187,20 +189,24 @@ export default function registerSocketEvents(io, { hasPermission }) {
         if (isLrc) {
           const parsed = parseLrcContent(file.content);
           processedLines = parsed.processedLines;
+          timestamps = parsed.timestamps || [];
           sanitizedRawContent = parsed.rawText;
         } else {
           processedLines = processRawTextToLines(file.content);
+          timestamps = [];
         }
 
         const cleanDisplayName = (file.displayName || file.originalName || '').replace(/\.(txt|lrc)$/i, '') || file.displayName;
 
         currentLyrics = processedLines;
+        currentLyricsTimestamps = timestamps;
         currentSelectedLine = null;
         currentLyricsFileName = cleanDisplayName;
 
-        console.log(`${clientType} client loaded "${cleanDisplayName}" from setlist (${processedLines.length} lines)`);
+        console.log(`${clientType} client loaded "${cleanDisplayName}" from setlist (${processedLines.length} lines, ${timestamps.length} timestamps)`);
 
         io.emit('lyricsLoad', processedLines);
+        io.emit('lyricsTimestampsUpdate', timestamps);
         io.emit('setlistLoadSuccess', {
           fileId,
           fileName: cleanDisplayName,
@@ -308,10 +314,22 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
 
       currentLyrics = lyrics;
+      currentLyricsTimestamps = [];
       currentSelectedLine = null;
       currentLyricsFileName = '';
       console.log(`Lyrics loaded by ${clientType} client:`, lyrics?.length, 'lines');
       io.emit('lyricsLoad', lyrics);
+    });
+
+    socket.on('lyricsTimestampsUpdate', (timestamps) => {
+      if (!hasPermission(socket, 'lyrics:write')) {
+        socket.emit('permissionError', 'Insufficient permissions to update timestamps');
+        return;
+      }
+
+      currentLyricsTimestamps = timestamps || [];
+      console.log(`Lyrics timestamps updated by ${clientType} client:`, timestamps?.length, 'timestamps');
+      io.emit('lyricsTimestampsUpdate', timestamps);
     });
 
     socket.on('styleUpdate', ({ output, settings }) => {
@@ -564,6 +582,7 @@ function buildCurrentState(clientInfo) {
   const timestamp = Date.now();
   const state = {
     lyrics: currentLyrics,
+    lyricsTimestamps: currentLyricsTimestamps,
     selectedLine: currentSelectedLine,
     output1Settings: currentOutput1Settings,
     output2Settings: currentOutput2Settings,

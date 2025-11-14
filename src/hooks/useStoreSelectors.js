@@ -13,10 +13,12 @@ export const useLyricsState = () =>
             selectedLine: state.selectedLine,
             lyricsFileName: state.lyricsFileName,
             songMetadata: state.songMetadata,
+            lyricsTimestamps: state.lyricsTimestamps,
             setLyrics: state.setLyrics,
             setRawLyricsContent: state.setRawLyricsContent,
             setLyricsFileName: state.setLyricsFileName,
             setSongMetadata: state.setSongMetadata,
+            setLyricsTimestamps: state.setLyricsTimestamps,
             selectLine: state.selectLine,
         }),
         shallow
@@ -124,6 +126,17 @@ export const useAutoplaySettings = () =>
         (state) => ({
             settings: state.autoplaySettings,
             setSettings: state.setAutoplaySettings,
+        }),
+        shallow
+    );
+
+export const useIntelligentAutoplayState = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            lyricsTimestamps: state.lyricsTimestamps,
+            hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
+            setHasSeenIntelligentAutoplayInfo: state.setHasSeenIntelligentAutoplayInfo,
         }),
         shallow
     );

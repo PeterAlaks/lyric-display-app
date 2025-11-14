@@ -10,6 +10,7 @@ const useSetlistActions = (emitSetlistAdd) => {
 
   const hasLyrics = useLyricsStore((state) => state.lyrics && state.lyrics.length > 0);
   const rawLyricsContent = useLyricsStore((state) => state.rawLyricsContent);
+  const lyricsTimestamps = useLyricsStore((state) => state.lyricsTimestamps);
   const { showToast } = useToast();
 
   const isFileAlreadyInSetlist = useCallback(() => {
@@ -49,14 +50,17 @@ const useSetlistActions = (emitSetlistAdd) => {
       return;
     }
 
+    const hasLrcTimestamps = lyricsTimestamps && lyricsTimestamps.length > 0;
+    const extension = hasLrcTimestamps ? '.lrc' : '.txt';
+
     const fileData = [{
-      name: `${lyricsFileName}.txt`,
+      name: `${lyricsFileName}${extension}`,
       content: rawLyricsContent,
       lastModified: Date.now()
     }];
     emitSetlistAdd(fileData);
     showToast({ title: 'Added to setlist', message: `${lyricsFileName}`, variant: 'success' });
-  }, [disabled, emitSetlistAdd, lyricsFileName, rawLyricsContent, isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, hasLyrics, showToast]);
+  }, [disabled, emitSetlistAdd, lyricsFileName, rawLyricsContent, lyricsTimestamps, isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, hasLyrics, showToast]);
 
   return { isFileAlreadyInSetlist, handleAddToSetlist, disabled, title };
 };
