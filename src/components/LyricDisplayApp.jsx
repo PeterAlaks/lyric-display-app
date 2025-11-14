@@ -430,6 +430,88 @@ const LyricDisplayApp = () => {
     }
   }, [autoplayActive, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast]);
 
+  const handleIntelligentAutoplayToggle = React.useCallback(() => {
+    if (intelligentAutoplayActive) {
+      setIntelligentAutoplayActive(false);
+      showToast({
+        title: 'Intelligent Autoplay Stopped',
+        message: 'Timestamp-based progression paused.',
+        variant: 'info'
+      });
+    } else {
+      if (!hasSeenIntelligentAutoplayInfo) {
+        showModal({
+          title: 'Intelligent Autoplay',
+          component: 'IntelligentAutoplayInfo',
+          variant: 'info',
+          size: 'auto',
+          dismissible: true,
+          setDontShowAgain: (value) => {
+            if (value) {
+              setHasSeenIntelligentAutoplayInfo(true);
+            }
+          },
+          onStart: () => {
+            let startIndex = 0;
+            if (autoplaySettings.skipBlankLines) {
+              while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+                startIndex++;
+              }
+            }
+            if (startIndex >= lyrics.length) {
+              showToast({
+                title: 'Cannot Start Intelligent Autoplay',
+                message: 'No non-blank lines found.',
+                variant: 'warning'
+              });
+              return;
+            }
+            selectLine(startIndex);
+            emitLineUpdate(startIndex);
+            window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+              detail: { lineIndex: startIndex }
+            }));
+
+            setIntelligentAutoplayActive(true);
+            showToast({
+              title: 'Intelligent Autoplay Started',
+              message: 'Advancing based on lyric timestamps.',
+              variant: 'success'
+            });
+          },
+          actions: []
+        });
+      } else {
+        let startIndex = 0;
+        if (autoplaySettings.skipBlankLines) {
+          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+            startIndex++;
+          }
+        }
+        if (startIndex >= lyrics.length) {
+          showToast({
+            title: 'Cannot Start Intelligent Autoplay',
+            message: 'No non-blank lines found.',
+            variant: 'warning'
+          });
+          return;
+        }
+        selectLine(startIndex);
+        emitLineUpdate(startIndex);
+        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+          detail: { lineIndex: startIndex }
+        }));
+
+        setIntelligentAutoplayActive(true);
+        showToast({
+          title: 'Intelligent Autoplay Started',
+          message: 'Advancing based on lyric timestamps.',
+          variant: 'success'
+        });
+      }
+    }
+  }, [intelligentAutoplayActive, hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast, showModal]);
+
   React.useEffect(() => {
     if (!hasLyrics) return;
 
@@ -451,7 +533,7 @@ const LyricDisplayApp = () => {
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'P')) {
         event.preventDefault();
         if (event.shiftKey && hasValidTimestamps(lyricsTimestamps)) {
           handleIntelligentAutoplayToggle();
@@ -524,7 +606,7 @@ const LyricDisplayApp = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasLyrics, lyrics, selectedLine, handleLineSelect, handleToggle, handleAutoplayToggle, searchQuery, clearSearch, totalMatches, highlightedLineIndex, isConnected, isAuthenticated, ready, showToast, setIsOutputOn, emitOutputToggle]);
+  }, [hasLyrics, lyrics, lyricsTimestamps, selectedLine, handleLineSelect, handleToggle, handleAutoplayToggle, handleIntelligentAutoplayToggle, searchQuery, clearSearch, totalMatches, highlightedLineIndex, isConnected, isAuthenticated, ready, showToast, setIsOutputOn, emitOutputToggle]);
 
   const { isFileAlreadyInSetlist, handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
@@ -700,88 +782,6 @@ const LyricDisplayApp = () => {
       actions: []
     });
   };
-
-  const handleIntelligentAutoplayToggle = React.useCallback(() => {
-    if (intelligentAutoplayActive) {
-      setIntelligentAutoplayActive(false);
-      showToast({
-        title: 'Intelligent Autoplay Stopped',
-        message: 'Timestamp-based progression paused.',
-        variant: 'info'
-      });
-    } else {
-      if (!hasSeenIntelligentAutoplayInfo) {
-        showModal({
-          title: 'Intelligent Autoplay',
-          component: 'IntelligentAutoplayInfo',
-          variant: 'info',
-          size: 'auto',
-          dismissible: true,
-          setDontShowAgain: (value) => {
-            if (value) {
-              setHasSeenIntelligentAutoplayInfo(true);
-            }
-          },
-          onStart: () => {
-            let startIndex = 0;
-            if (autoplaySettings.skipBlankLines) {
-              while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
-                startIndex++;
-              }
-            }
-            if (startIndex >= lyrics.length) {
-              showToast({
-                title: 'Cannot Start Intelligent Autoplay',
-                message: 'No non-blank lines found.',
-                variant: 'warning'
-              });
-              return;
-            }
-            selectLine(startIndex);
-            emitLineUpdate(startIndex);
-            window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-              detail: { lineIndex: startIndex }
-            }));
-
-            setIntelligentAutoplayActive(true);
-            showToast({
-              title: 'Intelligent Autoplay Started',
-              message: 'Advancing based on lyric timestamps.',
-              variant: 'success'
-            });
-          },
-          actions: []
-        });
-      } else {
-        let startIndex = 0;
-        if (autoplaySettings.skipBlankLines) {
-          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
-            startIndex++;
-          }
-        }
-        if (startIndex >= lyrics.length) {
-          showToast({
-            title: 'Cannot Start Intelligent Autoplay',
-            message: 'No non-blank lines found.',
-            variant: 'warning'
-          });
-          return;
-        }
-        selectLine(startIndex);
-        emitLineUpdate(startIndex);
-        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-          detail: { lineIndex: startIndex }
-        }));
-
-        setIntelligentAutoplayActive(true);
-        showToast({
-          title: 'Intelligent Autoplay Started',
-          message: 'Advancing based on lyric timestamps.',
-          variant: 'success'
-        });
-      }
-    }
-  }, [intelligentAutoplayActive, hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast, showModal]);
 
   React.useEffect(() => {
     setAutoplayActive(false);
