@@ -24,25 +24,26 @@ import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
-import { useSyncTimer } from '../hooks/useSyncTimer';
-import { detectArtistFromFilename } from '../utils/artistDetection';
-import { getLineDisplayText } from '../utils/parseLyrics';
-import { hasValidTimestamps, calculateTimestampDelay, findNextValidTimestampIndex } from '../utils/timestampHelpers';
+import { hasValidTimestamps } from '../utils/timestampHelpers';
+import { useAutoplayManager } from '../hooks/useAutoplayManager';
+import { useSyncOutputs } from '../hooks/useSyncOutputs';
+import { useLyricsLoader } from '../hooks/useLyricsLoader';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useElectronListeners } from '../hooks/useElectronListeners';
+import { useResponsiveWidth } from '../hooks/useResponsiveWidth';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
-  // Global state management
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, lyricsTimestamps, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setSongMetadata, setLyricsTimestamps } = useLyricsState();
+  const { lyrics, lyricsFileName, selectedLine, lyricsTimestamps, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setSongMetadata, setLyricsTimestamps } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
   const { darkMode, setDarkMode } = useDarkModeState();
-  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull } = useSetlistState();
+  const { setSetlistModalOpen } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
-  const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
+  const { settings: autoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
 
   useDarkModeSync(darkMode, setDarkMode);
@@ -51,13 +52,11 @@ const LyricDisplayApp = () => {
   const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitRequestSetlist, emitSetlistAdd, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready, lastSyncTime } = useControlSocket();
-
-  const secondsAgo = useSyncTimer(lastSyncTime);
+  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
 
-  const { activeTab, setActiveTab, getCurrentSettings, updateSettings } = useOutputSettings({
+  const { activeTab, setActiveTab } = useOutputSettings({
     output1Settings,
     output2Settings,
     stageSettings,
@@ -74,15 +73,8 @@ const LyricDisplayApp = () => {
     emitStyleUpdate,
   });
 
-  const [hasInteractedWithTabs, setHasInteractedWithTabs] = React.useState(false);
-
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
-
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
-  const [autoplayActive, setAutoplayActive] = React.useState(false);
-  const [intelligentAutoplayActive, setIntelligentAutoplayActive] = React.useState(false);
-  const [remoteAutoplayActive, setRemoteAutoplayActive] = React.useState(false);
-  const [availableWidth, setAvailableWidth] = React.useState(1000);
   const headerContainerRef = useRef(null);
 
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
@@ -91,224 +83,72 @@ const LyricDisplayApp = () => {
   const { showToast } = useToast();
   const { showModal } = useModal();
 
-  const autoplayIntervalRef = useRef(null);
-  const intelligentAutoplayTimeoutRef = useRef(null);
-  const lyricsRef = useRef(lyrics);
-  const lyricsTimestampsRef = useRef(lyricsTimestamps);
-  const selectedLineRef = useRef(selectedLine);
-  const autoplaySettingsRef = useRef(autoplaySettings);
-  const selectLineRef = useRef(selectLine);
-  const emitLineUpdateRef = useRef(emitLineUpdate);
-  const showToastRef = useRef(showToast);
-  const isAutoplaySelectionRef = useRef(false);
+  const { useIconOnlyButtons } = useResponsiveWidth(headerContainerRef, hasLyrics);
 
-  React.useEffect(() => {
-    lyricsRef.current = lyrics;
-  }, [lyrics]);
+  const {
+    autoplayActive,
+    intelligentAutoplayActive,
+    remoteAutoplayActive,
+    handleAutoplayToggle,
+    handleIntelligentAutoplayToggle,
+    handleOpenAutoplaySettings
+  } = useAutoplayManager({
+    lyrics,
+    lyricsTimestamps,
+    selectedLine,
+    autoplaySettings,
+    selectLine,
+    emitLineUpdate,
+    showToast,
+    showModal,
+    hasLyrics,
+    lyricsFileName,
+    hasSeenIntelligentAutoplayInfo,
+    setHasSeenIntelligentAutoplayInfo,
+    emitAutoplayStateUpdate,
+    isConnected,
+    isAuthenticated,
+    ready,
+    clientType: 'desktop'
+  });
 
-  React.useEffect(() => {
-    lyricsTimestampsRef.current = lyricsTimestamps;
-  }, [lyricsTimestamps]);
+  const { handleSyncOutputs } = useSyncOutputs({
+    isConnected,
+    isAuthenticated,
+    ready,
+    lyrics,
+    selectedLine,
+    isOutputOn,
+    emitLyricsLoad,
+    emitLineUpdate,
+    emitOutputToggle,
+    emitStyleUpdate,
+    output1Settings,
+    output2Settings,
+    showToast
+  });
 
-  React.useEffect(() => {
-    selectedLineRef.current = selectedLine;
-  }, [selectedLine]);
+  const { processLoadedLyrics, handleImportFromLibrary: baseHandleImportFromLibrary } = useLyricsLoader({
+    setLyrics,
+    setRawLyricsContent,
+    setLyricsTimestamps,
+    selectLine,
+    setLyricsFileName,
+    setSongMetadata,
+    emitLyricsLoad,
+    socket,
+    showToast
+  });
 
-  React.useEffect(() => {
-    autoplaySettingsRef.current = autoplaySettings;
-  }, [autoplaySettings]);
+  const handleImportFromLibrary = React.useCallback(async (params) => {
+    return baseHandleImportFromLibrary(params, lyrics);
+  }, [baseHandleImportFromLibrary, lyrics]);
 
-  React.useEffect(() => {
-    selectLineRef.current = selectLine;
-  }, [selectLine]);
-
-  React.useEffect(() => {
-    emitLineUpdateRef.current = emitLineUpdate;
-  }, [emitLineUpdate]);
-
-  React.useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
-
-  const processLoadedLyrics = React.useCallback(async ({ content, fileName, filePath, fileType }, context = {}) => {
-    const sanitize = (value) => (value || '')
-      .replace(/[<>:"/\\|?*]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    try {
-      const requestedType = (fileType || '').toLowerCase() === 'lrc' ? 'lrc' : ((fileType || '').toLowerCase() === 'txt' ? 'txt' : null);
-      const providedName = sanitize(fileName);
-      const fallbackName = sanitize(context.fallbackFileName);
-      const baseName = providedName || fallbackName || 'Imported Lyrics';
-      const hasExtension = /\.[a-z0-9]{2,5}$/i.test(providedName);
-      const inferredType = (!requestedType && providedName && providedName.toLowerCase().endsWith('.lrc')) ? 'lrc' : 'txt';
-      const finalType = requestedType || inferredType;
-      const extension = finalType === 'lrc' ? '.lrc' : '.txt';
-      const finalFileName = hasExtension ? providedName : `${baseName}${extension}`;
-
-      const enableSplitting = Boolean(context.enableOnlineLyricsSplitting || context.enableIntelligentSplitting);
-
-      const parsed = await parseLyricsFileAsync(null, {
-        rawText: content || '',
-        fileType: finalType,
-        name: finalFileName,
-        path: filePath,
-        enableSplitting,
-      });
-
-      if (!parsed || !Array.isArray(parsed.processedLines)) {
-        throw new Error('Invalid lyrics response');
-      }
-
-      const processedLines = parsed.processedLines;
-      const rawText = parsed.rawText ?? (content || '');
-      const timestamps = parsed.timestamps || [];
-      const finalBaseName = (finalFileName || '').replace(/\.(txt|lrc)$/i, '');
-
-      setLyrics(processedLines);
-      setRawLyricsContent(finalType === 'lrc' ? (content || rawText) : rawText);
-      setLyricsTimestamps(timestamps);
-      selectLine(null);
-      setLyricsFileName(finalBaseName);
-
-      if (!context.providerId) {
-        const detected = detectArtistFromFilename(finalBaseName);
-        const metadata = {
-          title: detected.title || finalBaseName,
-          artists: detected.artist ? [detected.artist] : [],
-          album: null,
-          year: null,
-          lyricLines: processedLines.length,
-          origin: finalType === 'lrc' ? 'Local (.lrc)' : 'Local (.txt)',
-          filePath: filePath || null
-        };
-        setSongMetadata(metadata);
-      }
-
-      emitLyricsLoad(processedLines);
-      if (socket && socket.connected) {
-        if (finalBaseName) {
-          socket.emit('fileNameUpdate', finalBaseName);
-        }
-        socket.emit('lyricsTimestampsUpdate', timestamps);
-      }
-
-      try {
-        if (filePath && window?.electronAPI?.addRecentFile) {
-          await window.electronAPI.addRecentFile(filePath);
-        }
-      } catch { }
-
-      showToast({
-        title: context.toastTitle || 'Lyrics loaded',
-        message: context.toastMessage || `${finalType === 'lrc' ? 'LRC' : 'Text'}: ${finalBaseName}`,
-        variant: context.toastVariant || 'success',
-      });
-
-      return true;
-    } catch (err) {
-      console.error('Failed to load lyrics content:', err);
-      showToast({
-        title: context.errorTitle || 'Failed to load lyrics',
-        message: context.errorMessage || 'The lyrics could not be processed.',
-        variant: 'error',
-      });
-      return false;
-    }
-  }, [emitLyricsLoad, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, showToast, socket]);
-
-  const handleImportFromLibrary = React.useCallback(async ({ providerId, providerName, lyric }) => {
-    if (!lyric || typeof lyric.content !== 'string' || !lyric.content.trim()) {
-      showToast({
-        title: 'Import failed',
-        message: 'The selected provider did not return lyric content.',
-        variant: 'error',
-      });
-      return false;
-    }
-
-    const baseNamePieces = [lyric.title || 'Untitled Song', lyric.artist || providerName || providerId];
-    const fallbackFileName = baseNamePieces.filter(Boolean).join(' - ');
-
-    const hasLrcTimestamps = /^\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(lyric.content.trim());
-    const fileType = hasLrcTimestamps ? 'lrc' : 'txt';
-
-    const success = await processLoadedLyrics(
-      {
-        content: lyric.content,
-        fileName: lyric.title || fallbackFileName,
-        fileType,
-        enableOnlineLyricsSplitting: !hasLrcTimestamps,
-      },
-      {
-        fallbackFileName,
-        toastTitle: 'Lyrics imported',
-        toastMessage: `Loaded from ${providerName || providerId}.`,
-        providerId,
-      }
-    );
-
-    if (success) {
-      const album = lyric.album || lyric.albumName || null;
-
-      const metadata = {
-        title: lyric.title || 'Untitled Song',
-        artists: lyric.artist ? [lyric.artist] : [],
-        album: album,
-        year: lyric.year || null,
-        lyricLines: lyrics.length,
-        origin: providerName || providerId,
-        filePath: null
-      };
-      setSongMetadata(metadata);
-    }
-
-    return success;
-  }, [processLoadedLyrics, showToast, lyrics, setSongMetadata]);
-
-  React.useEffect(() => {
-    if (!window?.electronAPI?.onOpenLyricsFromPath) return;
-    const off = window.electronAPI.onOpenLyricsFromPath(async (payload) => {
-      await processLoadedLyrics(payload || {});
-    });
-    return () => { try { off?.(); } catch { } };
-  }, [processLoadedLyrics]);
-
-  React.useEffect(() => {
-    if (!window?.electronAPI?.onOpenLyricsFromPathError) return;
-    const off = window.electronAPI.onOpenLyricsFromPathError(({ filePath }) => {
-      showToast({
-        title: 'File not found',
-        message: `The file could not be opened. It may have been moved or deleted.\n${filePath || ''}`,
-        variant: 'error'
-      });
-    });
-    return () => { try { off?.(); } catch { } };
-  }, [showToast]);
-
-  React.useEffect(() => {
-    const listener = (e) => {
-      const payload = e?.detail || {};
-      processLoadedLyrics(payload);
-    };
-    window.addEventListener('lyrics-opened', listener);
-    return () => window.removeEventListener('lyrics-opened', listener);
-  }, [processLoadedLyrics]);
-
-  React.useEffect(() => {
-    if (!window?.electronAPI?.onOpenEasyWorshipImport) return;
-
-    const off = window.electronAPI.onOpenEasyWorshipImport(() => {
-      setEasyWorshipModalOpen(true);
-    });
-
-    return () => {
-      try {
-        if (typeof off === 'function') off();
-      } catch { }
-    };
-  }, []);
+  useElectronListeners({
+    processLoadedLyrics,
+    showToast,
+    setEasyWorshipModalOpen
+  });
 
   const fontOptions = ['Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat', 'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'];
 
@@ -384,450 +224,22 @@ const LyricDisplayApp = () => {
     emitOutputToggle(!isOutputOn);
   };
 
-  const isLineBlank = React.useCallback((line) => {
-    if (!line) return true;
-    const displayText = getLineDisplayText(line);
-    return !displayText || displayText.trim() === '';
-  }, []);
+  useKeyboardShortcuts({
+    hasLyrics,
+    lyrics,
+    lyricsTimestamps,
+    selectedLine,
+    handleLineSelect,
+    handleToggle,
+    handleAutoplayToggle,
+    handleIntelligentAutoplayToggle,
+    searchQuery,
+    clearSearch,
+    totalMatches,
+    highlightedLineIndex
+  });
 
-  const handleAutoplayToggle = React.useCallback(() => {
-    if (autoplayActive) {
-      setAutoplayActive(false);
-      showToast({
-        title: 'Autoplay Stopped',
-        message: 'Automatic lyric progression paused.',
-        variant: 'info'
-      });
-    } else {
-      if (autoplaySettings.startFromFirst) {
-        let startIndex = 0;
-        if (autoplaySettings.skipBlankLines) {
-          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
-            startIndex++;
-          }
-        }
-        if (startIndex >= lyrics.length) {
-          showToast({
-            title: 'Cannot Start Autoplay',
-            message: 'No non-blank lines found.',
-            variant: 'warning'
-          });
-          return;
-        }
-        selectLine(startIndex);
-        emitLineUpdate(startIndex);
-        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-          detail: { lineIndex: startIndex }
-        }));
-      }
-
-      setAutoplayActive(true);
-      showToast({
-        title: 'Autoplay Started',
-        message: `Advancing every ${autoplaySettings.interval} second${autoplaySettings.interval !== 1 ? 's' : ''}.`,
-        variant: 'success'
-      });
-    }
-  }, [autoplayActive, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast]);
-
-  const handleIntelligentAutoplayToggle = React.useCallback(() => {
-    if (intelligentAutoplayActive) {
-      setIntelligentAutoplayActive(false);
-      showToast({
-        title: 'Intelligent Autoplay Stopped',
-        message: 'Timestamp-based progression paused.',
-        variant: 'info'
-      });
-    } else {
-      if (!hasSeenIntelligentAutoplayInfo) {
-        showModal({
-          title: 'Intelligent Autoplay',
-          component: 'IntelligentAutoplayInfo',
-          variant: 'info',
-          size: 'auto',
-          dismissible: true,
-          setDontShowAgain: (value) => {
-            if (value) {
-              setHasSeenIntelligentAutoplayInfo(true);
-            }
-          },
-          onStart: () => {
-            let startIndex = 0;
-            if (autoplaySettings.skipBlankLines) {
-              while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
-                startIndex++;
-              }
-            }
-            if (startIndex >= lyrics.length) {
-              showToast({
-                title: 'Cannot Start Intelligent Autoplay',
-                message: 'No non-blank lines found.',
-                variant: 'warning'
-              });
-              return;
-            }
-            selectLine(startIndex);
-            emitLineUpdate(startIndex);
-            window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-              detail: { lineIndex: startIndex }
-            }));
-
-            setIntelligentAutoplayActive(true);
-            showToast({
-              title: 'Intelligent Autoplay Started',
-              message: 'Advancing based on lyric timestamps.',
-              variant: 'success'
-            });
-          },
-          actions: []
-        });
-      } else {
-        let startIndex = 0;
-        if (autoplaySettings.skipBlankLines) {
-          while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
-            startIndex++;
-          }
-        }
-        if (startIndex >= lyrics.length) {
-          showToast({
-            title: 'Cannot Start Intelligent Autoplay',
-            message: 'No non-blank lines found.',
-            variant: 'warning'
-          });
-          return;
-        }
-        selectLine(startIndex);
-        emitLineUpdate(startIndex);
-        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-          detail: { lineIndex: startIndex }
-        }));
-
-        setIntelligentAutoplayActive(true);
-        showToast({
-          title: 'Intelligent Autoplay Started',
-          message: 'Advancing based on lyric timestamps.',
-          variant: 'success'
-        });
-      }
-    }
-  }, [intelligentAutoplayActive, hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo, autoplaySettings, lyrics, isLineBlank, selectLine, emitLineUpdate, showToast, showModal]);
-
-  React.useEffect(() => {
-    if (!hasLyrics) return;
-
-    const handleKeyDown = (event) => {
-      const activeElement = document.activeElement;
-      const isTyping = activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.isContentEditable
-      );
-
-      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-        event.preventDefault();
-        const searchInput = document.querySelector('[data-search-input]');
-        if (searchInput) {
-          searchInput.focus();
-          searchInput.select();
-        }
-        return;
-      }
-
-      if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'P')) {
-        event.preventDefault();
-        if (event.shiftKey && hasValidTimestamps(lyricsTimestamps)) {
-          handleIntelligentAutoplayToggle();
-        } else {
-          handleAutoplayToggle();
-        }
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        if (searchQuery) {
-          event.preventDefault();
-          clearSearch();
-          if (activeElement && activeElement.hasAttribute('data-search-input')) {
-            activeElement.blur();
-          }
-        }
-        return;
-      }
-
-      if (event.key === 'Enter' && activeElement && activeElement.hasAttribute('data-search-input')) {
-        event.preventDefault();
-        if (totalMatches > 0 && highlightedLineIndex !== null) {
-          handleLineSelect(highlightedLineIndex);
-          window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-            detail: { lineIndex: highlightedLineIndex }
-          }));
-        }
-        return;
-      }
-
-      if (isTyping) return;
-
-      if (event.key === ' ' || event.code === 'Space') {
-        event.preventDefault();
-        handleToggle();
-        return;
-      }
-
-      const isUpArrow = event.key === 'ArrowUp' || event.keyCode === 38;
-      const isDownArrow = event.key === 'ArrowDown' || event.keyCode === 40;
-      const isHome = event.key === 'Home';
-      const isEnd = event.key === 'End';
-
-      if (isUpArrow || isDownArrow || isHome || isEnd) {
-        event.preventDefault();
-
-        const currentIndex = selectedLine ?? -1;
-        let newIndex;
-
-        if (isHome) {
-          newIndex = 0;
-        } else if (isEnd) {
-          newIndex = lyrics.length - 1;
-        } else if (isUpArrow) {
-          newIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-        } else {
-          newIndex = currentIndex < lyrics.length - 1 ? currentIndex + 1 : lyrics.length - 1;
-        }
-
-        if (newIndex !== currentIndex) {
-          handleLineSelect(newIndex);
-
-          window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-            detail: { lineIndex: newIndex }
-          }));
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasLyrics, lyrics, lyricsTimestamps, selectedLine, handleLineSelect, handleToggle, handleAutoplayToggle, handleIntelligentAutoplayToggle, searchQuery, clearSearch, totalMatches, highlightedLineIndex, isConnected, isAuthenticated, ready, showToast, setIsOutputOn, emitOutputToggle]);
-
-  const { isFileAlreadyInSetlist, handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
-
-  React.useEffect(() => {
-    if (autoplayIntervalRef.current) {
-      clearInterval(autoplayIntervalRef.current);
-      autoplayIntervalRef.current = null;
-    }
-
-    if (!autoplayActive || !hasLyrics) {
-      return;
-    }
-
-    autoplayIntervalRef.current = setInterval(() => {
-      const currentLyrics = lyricsRef.current;
-      const currentSelectedLine = selectedLineRef.current;
-      const currentSettings = autoplaySettingsRef.current;
-      const currentSelectLine = selectLineRef.current;
-      const currentEmitLineUpdate = emitLineUpdateRef.current;
-      const currentShowToast = showToastRef.current;
-
-      if (!currentLyrics || currentLyrics.length === 0) {
-        setAutoplayActive(false);
-        return;
-      }
-
-      const currentIndex = currentSelectedLine ?? -1;
-      let nextIndex = currentIndex + 1;
-
-      if (currentSettings.skipBlankLines) {
-        while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
-          nextIndex++;
-        }
-      }
-
-      if (nextIndex >= currentLyrics.length) {
-        if (currentSettings.loop) {
-          nextIndex = 0;
-          if (currentSettings.skipBlankLines) {
-            while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
-              nextIndex++;
-            }
-          }
-          if (nextIndex >= currentLyrics.length) {
-            setAutoplayActive(false);
-            currentShowToast({
-              title: 'Autoplay Stopped',
-              message: 'No non-blank lines found.',
-              variant: 'info'
-            });
-            return;
-          }
-        } else {
-          setAutoplayActive(false);
-          currentShowToast({
-            title: 'Autoplay Complete',
-            message: 'Reached the end of lyrics.',
-            variant: 'success'
-          });
-          return;
-        }
-      }
-
-      isAutoplaySelectionRef.current = true;
-      currentSelectLine(nextIndex);
-      currentEmitLineUpdate(nextIndex);
-      window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-        detail: { lineIndex: nextIndex }
-      }));
-
-      setTimeout(() => {
-        isAutoplaySelectionRef.current = false;
-      }, 50);
-    }, autoplaySettings.interval * 1000);
-
-    return () => {
-      if (autoplayIntervalRef.current) {
-        clearInterval(autoplayIntervalRef.current);
-        autoplayIntervalRef.current = null;
-      }
-    };
-  }, [autoplayActive, hasLyrics, autoplaySettings.interval, isLineBlank]);
-
-  React.useEffect(() => {
-    if (intelligentAutoplayTimeoutRef.current) {
-      clearTimeout(intelligentAutoplayTimeoutRef.current);
-      intelligentAutoplayTimeoutRef.current = null;
-    }
-
-    if (!intelligentAutoplayActive || !hasLyrics) {
-      return;
-    }
-
-    const scheduleNextLine = () => {
-      const currentLyrics = lyricsRef.current;
-      const currentTimestamps = lyricsTimestampsRef.current;
-      const currentSelectedLine = selectedLineRef.current;
-      const currentSettings = autoplaySettingsRef.current;
-      const currentSelectLine = selectLineRef.current;
-      const currentEmitLineUpdate = emitLineUpdateRef.current;
-      const currentShowToast = showToastRef.current;
-
-      if (!currentLyrics || currentLyrics.length === 0) {
-        setIntelligentAutoplayActive(false);
-        return;
-      }
-
-      const currentIndex = currentSelectedLine ?? -1;
-      let nextIndex = currentIndex + 1;
-
-      if (currentSettings.skipBlankLines) {
-        while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
-          nextIndex++;
-        }
-      }
-
-      if (nextIndex >= currentLyrics.length) {
-        setIntelligentAutoplayActive(false);
-        currentShowToast({
-          title: 'Intelligent Autoplay Complete',
-          message: 'Reached the end of lyrics.',
-          variant: 'success'
-        });
-        return;
-      }
-
-      const delay = calculateTimestampDelay(currentTimestamps, currentIndex, nextIndex);
-
-      const finalDelay = delay !== null ? delay : (currentSettings.interval * 1000);
-
-      intelligentAutoplayTimeoutRef.current = setTimeout(() => {
-        isAutoplaySelectionRef.current = true;
-        currentSelectLine(nextIndex);
-        currentEmitLineUpdate(nextIndex);
-        window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-          detail: { lineIndex: nextIndex }
-        }));
-
-        setTimeout(() => {
-          isAutoplaySelectionRef.current = false;
-        }, 50);
-
-        scheduleNextLine();
-      }, finalDelay);
-    };
-
-    scheduleNextLine();
-
-    return () => {
-      if (intelligentAutoplayTimeoutRef.current) {
-        clearTimeout(intelligentAutoplayTimeoutRef.current);
-        intelligentAutoplayTimeoutRef.current = null;
-      }
-    };
-  }, [intelligentAutoplayActive, hasLyrics, isLineBlank]);
-
-  const handleOpenAutoplaySettings = () => {
-    showModal({
-      title: 'Autoplay Settings',
-      headerDescription: 'Configure automatic lyric progression',
-      component: 'AutoplaySettings',
-      variant: 'info',
-      size: 'sm',
-      settings: autoplaySettings,
-      onSave: (newSettings) => {
-        setAutoplaySettings(newSettings);
-        showToast({
-          title: 'Settings Saved',
-          message: 'Autoplay settings updated successfully.',
-          variant: 'success'
-        });
-      },
-      actions: []
-    });
-  };
-
-  React.useEffect(() => {
-    setAutoplayActive(false);
-    setIntelligentAutoplayActive(false);
-  }, [lyricsFileName]);
-
-  React.useEffect(() => {
-    if (isConnected && isAuthenticated && ready) {
-      const clientType = isDesktopApp ? 'desktop' : 'mobile';
-      const isAnyAutoplayActive = autoplayActive || intelligentAutoplayActive;
-      emitAutoplayStateUpdate({ isActive: isAnyAutoplayActive, clientType });
-    }
-  }, [autoplayActive, intelligentAutoplayActive, isConnected, isAuthenticated, ready, isDesktopApp, emitAutoplayStateUpdate]);
-
-  React.useEffect(() => {
-    const handleAutoplayStateUpdate = (event) => {
-      const { isActive, clientType } = event.detail;
-      const currentClientType = isDesktopApp ? 'desktop' : 'mobile';
-
-      if (clientType !== currentClientType) {
-        setRemoteAutoplayActive(isActive);
-      }
-    };
-
-    window.addEventListener('autoplay-state-update', handleAutoplayStateUpdate);
-    return () => window.removeEventListener('autoplay-state-update', handleAutoplayStateUpdate);
-  }, [isDesktopApp]);
-
-  React.useEffect(() => {
-    if (!headerContainerRef.current || !hasLyrics) return;
-
-    const updateWidth = () => {
-      if (headerContainerRef.current) {
-        setAvailableWidth(headerContainerRef.current.offsetWidth);
-      }
-    };
-
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(headerContainerRef.current);
-
-    updateWidth();
-
-    return () => observer.disconnect();
-  }, [hasLyrics]);
-
-  const useIconOnlyButtons = availableWidth < 700;
+  const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
   if (!isDesktopApp) {
     return <MobileLayout />;
@@ -887,63 +299,7 @@ const LyricDisplayApp = () => {
                       : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
                       }`}
                     title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync current state to outputs"}
-                    onClick={() => {
-                      if (!isConnected || !isAuthenticated) {
-                        showToast({
-                          title: 'Cannot Sync',
-                          message: 'Not connected or authenticated.',
-                          variant: 'warning'
-                        });
-                        return;
-                      }
-
-                      try {
-                        let syncSuccess = true;
-
-                        if (lyrics && lyrics.length > 0) {
-                          if (!emitLyricsLoad(lyrics)) {
-                            syncSuccess = false;
-                          }
-                          if (selectedLine !== null && selectedLine !== undefined) {
-                            if (!emitLineUpdate(selectedLine)) {
-                              syncSuccess = false;
-                            }
-                          }
-                          if (output1Settings && !emitStyleUpdate('output1', output1Settings)) {
-                            syncSuccess = false;
-                          }
-                          if (output2Settings && !emitStyleUpdate('output2', output2Settings)) {
-                            syncSuccess = false;
-                          }
-                        }
-
-                        if (!emitOutputToggle(isOutputOn)) {
-                          syncSuccess = false;
-                        }
-
-                        if (syncSuccess) {
-                          window.dispatchEvent(new CustomEvent('sync-completed', { detail: { source: 'manual' } }));
-                          showToast({
-                            title: 'Outputs Synced',
-                            message: 'Output displays updated successfully.',
-                            variant: 'success'
-                          });
-                        } else {
-                          showToast({
-                            title: 'Sync Failed',
-                            message: 'Outputs were not updated. Check the connection and try again.',
-                            variant: 'error'
-                          });
-                        }
-                      } catch (error) {
-                        console.error('Manual sync failed:', error);
-                        showToast({
-                          title: 'Sync Failed',
-                          message: 'An unexpected error occurred while syncing outputs.',
-                          variant: 'error'
-                        });
-                      }
-                    }}
+                    onClick={handleSyncOutputs}
                   >
                     <RefreshCw className="w-5 h-5" />
                   </button>
@@ -1046,9 +402,7 @@ const LyricDisplayApp = () => {
 
             {/* Output Tabs */}
             <Tabs value={activeTab} onValueChange={(val) => {
-              setHasInteractedWithTabs(true);
               setActiveTab(val);
-
               if (scrollableSettingsRef.current) {
                 scrollableSettingsRef.current.scrollTop = 0;
               }
