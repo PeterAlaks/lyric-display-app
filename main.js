@@ -18,7 +18,15 @@ if (!gotTheLock) {
   console.log('[Main] Another instance is already running. Exiting...');
   app.quit();
 } else {
-  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
+  app.on('second-instance', (_event, commandLine, _workingDirectory) => {
+    if (commandLine.length >= 2) {
+      const filePath = commandLine.find(arg => arg.endsWith('.txt') || arg.endsWith('.lrc'));
+      if (filePath) {
+        console.log('[Main] Second instance opened with file:', filePath);
+        handleFileOpen(filePath);
+      }
+    }
+
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -27,6 +35,15 @@ if (!gotTheLock) {
 }
 
 let mainWindow = null;
+let pendingFileToOpen = null;
+
+if (process.platform === 'win32' && process.argv.length >= 2) {
+  const filePath = process.argv.find(arg => arg.endsWith('.txt') || arg.endsWith('.lrc'));
+  if (filePath) {
+    pendingFileToOpen = filePath;
+    console.log('[Main] App launched with file (Windows):', filePath);
+  }
+}
 
 
 async function handleMissingAdminKey() {
@@ -114,6 +131,61 @@ const handleDisplayChange = async (changeType, display) => {
     await showDisplayDetectionModal(display, false);
   }
 };
+
+/**
+ * Handle opening a file from the operating system
+ * @param {string} filePath - Absolute path to the file
+ */
+async function handleFileOpen(filePath) {
+  if (!filePath) return;
+
+  console.log('[Main] Handling file open request:', filePath);
+
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext !== '.txt' && ext !== '.lrc') {
+    console.warn('[Main] Unsupported file type:', ext);
+    return;
+  }
+
+  try {
+    const fs = await import('fs/promises');
+    await fs.access(filePath);
+  } catch (error) {
+    console.error('[Main] File not accessible:', filePath, error);
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('open-lyrics-from-path-error', { filePath });
+    }
+    return;
+  }
+
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+    try {
+      const fs = await import('fs/promises');
+      const content = await fs.readFile(filePath, 'utf-8');
+      const fileName = path.basename(filePath);
+      const fileType = ext.substring(1);
+
+      console.log('[Main] Sending file to renderer:', fileName);
+
+      mainWindow.webContents.send('open-lyrics-from-path', {
+        content,
+        fileName,
+        filePath,
+        fileType
+      });
+
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    } catch (error) {
+      console.error('[Main] Error reading file:', error);
+      mainWindow.webContents.send('open-lyrics-from-path-error', { filePath });
+    }
+  } else {
+    pendingFileToOpen = filePath;
+    console.log('[Main] Window not ready, storing file for later:', filePath);
+  }
+}
 
 const menuAPI = makeMenuAPI({
   getMainWindow,
@@ -203,6 +275,14 @@ app.whenReady().then(async () => {
     nativeTheme.on('updated', () => { if (mainWindow && !mainWindow.isDestroyed()) menuAPI.updateDarkModeMenu(); });
 
     setTimeout(() => { if (!isDev) checkForUpdates(false); }, 2000);
+
+    if (pendingFileToOpen) {
+      console.log('[Main] Processing pending file:', pendingFileToOpen);
+      setTimeout(() => {
+        handleFileOpen(pendingFileToOpen);
+        pendingFileToOpen = null;
+      }, 1000);
+    }
   } catch (error) {
     console.error('Failed to start backend:', error);
 
@@ -243,6 +323,17 @@ app.whenReady().then(async () => {
       mainWindow = createWindow('/');
     }
   });
+});
+
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  console.log('[Main] macOS open-file event:', filePath);
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    handleFileOpen(filePath);
+  } else {
+    pendingFileToOpen = filePath;
+  }
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

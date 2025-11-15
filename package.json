@@ -109,7 +109,23 @@
       },
       "icon": "public/favicon.ico",
       "requestedExecutionLevel": "asInvoker",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "fileAssociations": [
+        {
+          "ext": "lrc",
+          "name": "LRC Lyric File",
+          "description": "Lyric file with timestamps",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "txt",
+          "name": "Text File",
+          "description": "Plain text lyric file",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -137,7 +153,23 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "fileAssociations": [
+        {
+          "ext": "lrc",
+          "name": "LRC Lyric File",
+          "description": "Lyric file with timestamps",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "txt",
+          "name": "Text File",
+          "description": "Plain text lyric file",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        }
+      ]
     },
     "dmg": {
       "contents": [
@@ -181,8 +213,23 @@
       "desktop": {
         "Name": "LyricDisplay",
         "Comment": "Professional real-time lyric display",
-        "Categories": "AudioVideo;Audio;Music;"
-      }
+        "Categories": "AudioVideo;Audio;Music;",
+        "MimeType": "text/plain;application/x-lrc;"
+      },
+      "fileAssociations": [
+        {
+          "ext": "lrc",
+          "name": "LRC Lyric File",
+          "description": "Lyric file with timestamps",
+          "mimeType": "application/x-lrc"
+        },
+        {
+          "ext": "txt",
+          "name": "Text File",
+          "description": "Plain text lyric file",
+          "mimeType": "text/plain"
+        }
+      ]
     },
     "publish": [
       {
