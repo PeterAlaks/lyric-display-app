@@ -10,6 +10,8 @@ import SongInfoModal from '../SongInfoModal';
 import DisplayDetectionModal from '../DisplayDetectionModal';
 import AutoplaySettings from '../AutoplaySettings';
 import IntelligentAutoplayInfoModal from '../IntelligentAutoplayInfoModal';
+import OutputTemplatesModal from '../OutputTemplatesModal';
+import StageTemplatesModal from '../StageTemplatesModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -407,6 +409,26 @@ export function ModalProvider({ children, isDark = false }) {
                           onClose={() => closeModal(modal.id, { dismissed: true })}
                           dontShowAgain={modal.dontShowAgain || false}
                           setDontShowAgain={modal.setDontShowAgain}
+                        />
+                      )}
+                      {modal.component === 'OutputTemplates' && (
+                        <OutputTemplatesModal
+                          darkMode={isDark}
+                          onApplyTemplate={(template) => {
+                            if (modal.onApplyTemplate) modal.onApplyTemplate(template);
+                            closeModal(modal.id, { action: 'applied', template });
+                          }}
+                          onClose={() => closeModal(modal.id, { dismissed: true })}
+                        />
+                      )}
+                      {modal.component === 'StageTemplates' && (
+                        <StageTemplatesModal
+                          darkMode={isDark}
+                          onApplyTemplate={(template) => {
+                            if (modal.onApplyTemplate) modal.onApplyTemplate(template);
+                            closeModal(modal.id, { action: 'applied', template });
+                          }}
+                          onClose={() => closeModal(modal.id, { dismissed: true })}
                         />
                       )}
 

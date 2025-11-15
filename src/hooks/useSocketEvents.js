@@ -294,7 +294,7 @@ const useSocketEvents = (role) => {
           setLyrics(state.lyrics);
         }
 
-        if (Array.isArray(state.lyricsTimestamps)) {
+        if (Array.isArray(state.lyricsTimestamps) && state.lyricsTimestamps.length > 0) {
           setLyricsTimestamps(state.lyricsTimestamps);
         }
       }

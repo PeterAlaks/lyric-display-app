@@ -11,7 +11,7 @@ import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
 import { logWarn } from '../utils/logger';
-import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ListMusic, ChevronDown, ChevronUp, ChevronRight, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2 } from 'lucide-react';
+import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ListMusic, ChevronDown, ChevronUp, ChevronRight, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2, HardDriveDownload } from 'lucide-react';
 
 const fontOptions = [
   'Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat',
@@ -280,28 +280,54 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
           STAGE DISPLAY SETTINGS
         </h3>
 
-        {/* Help trigger button */}
-        <button
-          onClick={() => {
-            showModal({
-              title: 'Stage Display Help',
-              headerDescription: 'Configure your stage display for performers and worship leaders',
-              component: 'StageDisplayHelp',
-              variant: 'info',
-              size: 'large',
-              dismissLabel: 'Got it'
-            });
-          }}
-          className={`p-1.5 rounded-lg transition-colors ${darkMode
-            ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-            : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-            }`}
-          title="Stage Display Help"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Templates trigger button */}
+          <button
+            onClick={() => {
+              showModal({
+                title: 'Stage Display Templates',
+                headerDescription: 'Choose from professionally designed stage display presets',
+                component: 'StageTemplates',
+                variant: 'info',
+                size: 'large',
+                dismissLabel: 'Close',
+                onApplyTemplate: (template) => {
+                  applySettings(template.settings);
+                }
+              });
+            }}
+            className={`p-1.5 rounded-lg transition-colors ${darkMode
+              ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+              : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              }`}
+            title="Stage Display Templates"
+          >
+            <HardDriveDownload className="w-4 h-4" />
+          </button>
+
+          {/* Help trigger button */}
+          <button
+            onClick={() => {
+              showModal({
+                title: 'Stage Display Help',
+                headerDescription: 'Configure your stage display for performers and worship leaders',
+                component: 'StageDisplayHelp',
+                variant: 'info',
+                size: 'large',
+                dismissLabel: 'Got it'
+              });
+            }}
+            className={`p-1.5 rounded-lg transition-colors ${darkMode
+              ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+              : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              }`}
+            title="Stage Display Help"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Font Style */}
@@ -1534,28 +1560,59 @@ const OutputSettingsPanel = ({ outputKey }) => {
           {outputKey.toUpperCase()} SETTINGS
         </h3>
 
-        {/* Help trigger button */}
-        <button
-          onClick={() => {
-            showModal({
-              title: 'Output Settings Help',
-              headerDescription: 'Customize every aspect of your lyric display appearance',
-              component: 'OutputSettingsHelp',
-              variant: 'info',
-              size: 'large',
-              dismissLabel: 'Got it'
-            });
-          }}
-          className={`p-1.5 rounded-lg transition-colors ${darkMode
-            ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-            : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-            }`}
-          title="Output Settings Help"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Templates trigger button */}
+          <button
+            onClick={() => {
+              showModal({
+                title: 'Output Templates',
+                headerDescription: 'Choose from professionally designed output presets',
+                component: 'OutputTemplates',
+                variant: 'info',
+                size: 'large',
+                dismissLabel: 'Close',
+                onApplyTemplate: (template) => {
+                  applySettings(template.settings);
+                  showToast({
+                    title: 'Template Applied',
+                    message: `${template.title} template has been applied successfully`,
+                    variant: 'success',
+                  });
+                }
+              });
+            }}
+            className={`p-1.5 rounded-lg transition-colors ${darkMode
+              ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+              : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              }`}
+            title="Output Templates"
+          >
+            <HardDriveDownload className="w-4 h-4" />
+          </button>
+
+          {/* Help trigger button */}
+          <button
+            onClick={() => {
+              showModal({
+                title: 'Output Settings Help',
+                headerDescription: 'Customize every aspect of your lyric display appearance',
+                component: 'OutputSettingsHelp',
+                variant: 'info',
+                size: 'large',
+                dismissLabel: 'Got it'
+              });
+            }}
+            className={`p-1.5 rounded-lg transition-colors ${darkMode
+              ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+              : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              }`}
+            title="Output Settings Help"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Lyrics Position */}
