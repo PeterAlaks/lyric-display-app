@@ -236,7 +236,6 @@ lyric-display-app/
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
 ├── public/                                 # Static assets
-|   └── index.html                          # Browser web app entry point
 ├── scripts/                                # Custom npm scripts
 |   ├── release-manager.js                  # General release publish assistant
 |   ├── release.js                          # Release main script
@@ -337,7 +336,7 @@ lyric-display-app/
 |   └── main.jsx                            # App entry point
 ├── .env                                    # Environment variables file
 ├── components.json                         # Shadcn UI config
-├── index.html                              # Alternative browser web app entry point
+├── index.html                              # Web app entry point
 ├── jsconfig.json                           # Path and settings configurations for JS
 ├── main.js                                 # Electron main process
 ├── package.json                            # Dependencies and scripts
