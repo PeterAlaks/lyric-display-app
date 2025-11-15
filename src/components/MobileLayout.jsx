@@ -24,7 +24,7 @@ const MobileLayout = () => {
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitAutoplayStateUpdate, isAuthenticated, connectionStatus, ready, lastSyncTime, isConnected } = useControlSocket();
+  const { emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitAutoplayStateUpdate, isAuthenticated, connectionStatus, ready, lastSyncTime, isConnected } = useControlSocket();
 
   const secondsAgo = useSyncTimer(lastSyncTime);
 
@@ -74,8 +74,7 @@ const MobileLayout = () => {
     emitLyricsLoad,
     emitLineUpdate,
     emitOutputToggle,
-    showToast,
-    socket
+    showToast
   });
 
   const handleLineSelect = (index) => {

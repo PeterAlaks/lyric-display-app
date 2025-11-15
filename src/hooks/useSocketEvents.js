@@ -26,8 +26,15 @@ const useSocketEvents = (role) => {
 
       if (state.lyrics && state.lyrics.length > 0) {
         setLyrics(state.lyrics);
+
         if (Array.isArray(state.lyricsTimestamps)) {
-          setLyricsTimestamps(state.lyricsTimestamps);
+          const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
+          const hasCurrentTimestamps = Array.isArray(currentTimestamps) && currentTimestamps.length > 0;
+          const hasIncomingTimestamps = state.lyricsTimestamps.length > 0;
+
+          if (hasIncomingTimestamps || !hasCurrentTimestamps) {
+            setLyricsTimestamps(state.lyricsTimestamps);
+          }
         }
         if (state.lyricsFileName) {
           setLyricsFileName(state.lyricsFileName);
@@ -294,8 +301,14 @@ const useSocketEvents = (role) => {
           setLyrics(state.lyrics);
         }
 
-        if (Array.isArray(state.lyricsTimestamps) && state.lyricsTimestamps.length > 0) {
-          setLyricsTimestamps(state.lyricsTimestamps);
+        if (Array.isArray(state.lyricsTimestamps)) {
+          const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
+          const hasCurrentTimestamps = Array.isArray(currentTimestamps) && currentTimestamps.length > 0;
+          const hasIncomingTimestamps = state.lyricsTimestamps.length > 0;
+
+          if (hasIncomingTimestamps || !hasCurrentTimestamps) {
+            setLyricsTimestamps(state.lyricsTimestamps);
+          }
         }
       }
 
@@ -393,11 +406,11 @@ const useSocketEvents = (role) => {
           const currentState = useLyricsStore.getState();
           if (currentState.lyrics.length > 0) {
             socket.emit('lyricsLoad', currentState.lyrics);
+            if (Array.isArray(currentState.lyricsTimestamps) && currentState.lyricsTimestamps.length > 0) {
+              socket.emit('lyricsTimestampsUpdate', currentState.lyricsTimestamps);
+            }
             if (currentState.lyricsFileName) {
               socket.emit('fileNameUpdate', currentState.lyricsFileName);
-            }
-            if (Array.isArray(currentState.lyricsTimestamps)) {
-              socket.emit('lyricsTimestampsUpdate', currentState.lyricsTimestamps);
             }
             if (typeof currentState.selectedLine === 'number') {
               socket.emit('lineUpdate', { index: currentState.selectedLine });
