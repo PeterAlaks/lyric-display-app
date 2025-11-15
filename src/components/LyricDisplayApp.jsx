@@ -125,7 +125,8 @@ const LyricDisplayApp = () => {
     emitStyleUpdate,
     output1Settings,
     output2Settings,
-    showToast
+    showToast,
+    socket
   });
 
   const { processLoadedLyrics, handleImportFromLibrary: baseHandleImportFromLibrary } = useLyricsLoader({

@@ -294,7 +294,12 @@ const Output2 = () => {
   const resolveBackgroundMediaSource = () => {
     if (!fullScreenBackgroundMedia) return null;
     if (fullScreenBackgroundMedia.dataUrl) return fullScreenBackgroundMedia.dataUrl;
-    if (fullScreenBackgroundMedia.url) return resolveBackendUrl(fullScreenBackgroundMedia.url);
+    if (fullScreenBackgroundMedia.url) {
+      if (fullScreenBackgroundMedia.bundled) {
+        return fullScreenBackgroundMedia.url;
+      }
+      return resolveBackendUrl(fullScreenBackgroundMedia.url);
+    }
     return null;
   };
 

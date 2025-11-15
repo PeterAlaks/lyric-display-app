@@ -396,6 +396,9 @@ const useSocketEvents = (role) => {
             if (currentState.lyricsFileName) {
               socket.emit('fileNameUpdate', currentState.lyricsFileName);
             }
+            if (Array.isArray(currentState.lyricsTimestamps)) {
+              socket.emit('lyricsTimestampsUpdate', currentState.lyricsTimestamps);
+            }
             if (typeof currentState.selectedLine === 'number') {
               socket.emit('lineUpdate', { index: currentState.selectedLine });
             }

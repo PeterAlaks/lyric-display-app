@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import useLyricsStore from '../context/LyricsStore';
 
 export const useSyncOutputs = ({
   isConnected,
@@ -13,7 +14,8 @@ export const useSyncOutputs = ({
   emitStyleUpdate,
   output1Settings,
   output2Settings,
-  showToast
+  showToast,
+  socket
 }) => {
   const handleSyncOutputs = useCallback(() => {
     if (!isConnected || !isAuthenticated || !ready) {
@@ -32,6 +34,12 @@ export const useSyncOutputs = ({
         if (!emitLyricsLoad(lyrics)) {
           syncSuccess = false;
         }
+
+        const currentState = useLyricsStore.getState();
+        if (socket && socket.connected && Array.isArray(currentState.lyricsTimestamps)) {
+          socket.emit('lyricsTimestampsUpdate', currentState.lyricsTimestamps);
+        }
+
         if (selectedLine !== null && selectedLine !== undefined) {
           if (!emitLineUpdate(selectedLine)) {
             syncSuccess = false;
@@ -89,7 +97,8 @@ export const useSyncOutputs = ({
     emitStyleUpdate,
     output1Settings,
     output2Settings,
-    showToast
+    showToast,
+    socket
   ]);
 
   return { handleSyncOutputs };

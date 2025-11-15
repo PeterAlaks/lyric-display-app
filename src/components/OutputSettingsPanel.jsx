@@ -1223,6 +1223,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
     const validateMedia = async () => {
       if (!settings.fullScreenMode || !settings.fullScreenBackgroundMedia?.url) return;
 
+      if (settings.fullScreenBackgroundMedia?.bundled) return;
+
       const mediaUrl = resolveBackendUrl(settings.fullScreenBackgroundMedia.url);
       try {
         const response = await fetch(mediaUrl, { method: 'HEAD' });
