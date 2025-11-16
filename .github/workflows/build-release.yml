@@ -31,6 +31,9 @@ jobs:
           cd server
           npm ci
 
+      - name: Clean dist folder
+        run: rm -rf dist
+
       - name: Build macOS installer
         run: npm run electron-pack
         env:
@@ -75,6 +78,9 @@ jobs:
         run: |
           cd server
           npm ci
+
+      - name: Clean dist folder
+        run: rm -rf dist
 
       - name: Build Linux installer
         run: npm run electron-pack
