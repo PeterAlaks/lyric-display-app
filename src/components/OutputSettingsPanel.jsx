@@ -1573,8 +1573,12 @@ const OutputSettingsPanel = ({ outputKey }) => {
                 variant: 'info',
                 size: 'large',
                 dismissLabel: 'Close',
+                outputKey: outputKey,
                 onApplyTemplate: (template) => {
-                  applySettings(template.settings);
+                  const templateSettings = template.getSettings
+                    ? template.getSettings(outputKey)
+                    : template.settings;
+                  applySettings(templateSettings);
                   showToast({
                     title: 'Template Applied',
                     message: `${template.title} template has been applied successfully`,

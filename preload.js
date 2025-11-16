@@ -40,6 +40,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('progress-update', (event, progress) => callback(progress));
   },
 
+  onLoadingStatus: (callback) => {
+    ipcRenderer.removeAllListeners('loading-status');
+    ipcRenderer.on('loading-status', (event, status) => callback(status));
+  },
+
 
   onAdminKeyAvailable: (callback) => {
     const channel = 'admin-key:available';
@@ -96,6 +101,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onOpenEasyWorshipImport: (callback) => {
     const channel = 'open-easyworship-import';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  onOpenSupportDevModal: (callback) => {
+    const channel = 'open-support-dev-modal';
     ipcRenderer.removeAllListeners(channel);
     ipcRenderer.on(channel, callback);
     return () => ipcRenderer.removeAllListeners(channel);

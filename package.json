@@ -109,7 +109,7 @@
       },
       "icon": "public/favicon.ico",
       "requestedExecutionLevel": "asInvoker",
-      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "artifactName": "${productName}-${version}-Windows-Setup.${ext}",
       "fileAssociations": [
         {
           "ext": "lrc",
@@ -146,10 +146,17 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "public/favicon.ico",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "artifactName": "${productName}-${version}-macOS-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
@@ -184,7 +191,7 @@
           "path": "/Applications"
         }
       ],
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}-macOS.${ext}"
     },
     "linux": {
       "target": [
@@ -209,7 +216,7 @@
       ],
       "icon": "public/favicon.ico",
       "category": "AudioVideo",
-      "artifactName": "${productName}-${version}.${ext}",
+      "artifactName": "${productName}-${version}-Linux.${ext}",
       "desktop": {
         "Name": "LyricDisplay",
         "Comment": "Professional real-time lyric display",
@@ -236,11 +243,6 @@
         "provider": "github",
         "owner": "PeterAlaks",
         "repo": "lyric-display-app"
-      },
-      {
-        "provider": "github",
-        "owner": "PeterAlaks",
-        "repo": "lyric-display-updates"
       }
     ]
   }

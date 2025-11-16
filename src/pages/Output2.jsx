@@ -359,6 +359,8 @@ const Output2 = () => {
   const textStrokeStyles = {
     WebkitTextStroke: textStrokeValue,
     textStroke: textStrokeValue,
+    paintOrder: 'stroke fill',
+    WebkitPaintOrder: 'stroke fill',
   };
 
   const processDisplayText = (text) => {

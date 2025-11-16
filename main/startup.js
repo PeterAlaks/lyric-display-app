@@ -8,6 +8,7 @@ import { getAdminKeyWithRetry } from './adminKey.js';
 import { initDisplayManager } from './displayManager.js';
 import { performStartupDisplayCheck } from './displayDetection.js';
 import { processPendingFile } from './fileHandler.js';
+import { updateLoadingStatus, closeLoadingWindow } from './loadingWindow.js';
 
 export async function handleMissingAdminKey() {
   const message = 'Lyric Display requires the administrative key to unlock local access.';
@@ -137,31 +138,43 @@ export async function handleBackendStartupError(error, requestRendererModal) {
  */
 export async function performStartupSequence({ menuAPI, requestRendererModal, handleDisplayChange }) {
   try {
+    updateLoadingStatus('Starting backend server');
     await startBackend();
     console.log('[Startup] Backend started successfully');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
+    updateLoadingStatus('Loading security credentials');
     const adminKey = await getAdminKeyWithRetry();
     if (!adminKey) {
+      closeLoadingWindow();
       await handleMissingAdminKey();
       return null;
     }
     console.log('[Startup] Admin key loaded and cached');
 
+    updateLoadingStatus('Loading lyrics providers');
     prewarmResources();
+    await new Promise(resolve => setTimeout(resolve, 800));
 
+    updateLoadingStatus('Preparing control panel');
     const mainWindow = createWindow('/');
     menuAPI.createMenu();
 
     setupMainWindowCloseHandler(mainWindow);
 
+    updateLoadingStatus('Detecting displays');
     initDisplayManager(handleDisplayChange);
+    await new Promise(resolve => setTimeout(resolve, 600));
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
+    updateLoadingStatus('Configuring outputs');
     await performStartupDisplayCheck(requestRendererModal);
 
     setupNativeTheme(mainWindow, menuAPI);
+
+    updateLoadingStatus('Finalizing');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    closeLoadingWindow();
 
     setTimeout(() => {
       if (!isDev) checkForUpdates(false);
@@ -172,6 +185,7 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     return mainWindow;
 
   } catch (error) {
+    closeLoadingWindow();
     return await handleBackendStartupError(error, requestRendererModal);
   }
 }

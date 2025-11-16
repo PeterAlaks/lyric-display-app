@@ -6,40 +6,6 @@ on:
       - 'v*'
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install server dependencies
-        run: |
-          cd server
-          npm ci
-
-      - name: Build Windows installer
-        run: npm run electron-pack
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: |
-            dist/*.exe
-            dist/*.zip
-          retention-days: 5
-
   build-macos:
     runs-on: macos-latest
     steps:
@@ -51,6 +17,11 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
         run: npm ci
@@ -87,6 +58,16 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev
+
       - name: Install dependencies
         run: npm ci
 
@@ -110,9 +91,11 @@ jobs:
             dist/*.rpm
           retention-days: 5
 
-  create-release:
-    needs: [build-windows, build-macos, build-linux]
+  upload-to-release:
+    needs: [build-macos, build-linux]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -129,15 +112,13 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Upload to existing release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist-artifacts/windows-installer/*
             dist-artifacts/macos-installer/*
             dist-artifacts/linux-installer/*
-          draft: false
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          fail_on_unmatched_files: false
           body: |
             ## LyricDisplay v${{ steps.get_version.outputs.VERSION }}
             

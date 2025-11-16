@@ -128,42 +128,58 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
           {
             label: `About ${app.name}`,
             click: async () => {
-              const message = [
-                `LyricDisplay`,
-                `Version ${app.getVersion()}`,
-                `\n© 2025 LyricDisplay. All rights reserved.`,
-                `Designed and developed by Peter Alakembi and David Okaliwe.`,
-                `\n____________________________________________\n`,
-                `Lyrics Provider Credits & Disclaimer:`,
-                `This application integrates optional online lyrics search features. All lyrics, metadata, and content obtained through these services remain the property of their respective copyright holders.`,
-                `\nLogos and brand marks of providers are used for identification and attribution only and do not imply endorsement or affiliation.`,
-                `\nThis feature is offered "as is" for convenience and educational purposes. LyricDisplay and its developers are not affiliated with these content providers.`
-              ].join('\n');
-
               const result = await (showInAppModal
                 ? showInAppModal(
                   {
                     title: 'About LyricDisplay',
-                    description: message,
+                    component: 'AboutApp',
                     variant: 'info',
+                    size: 'md',
+                    version: app.getVersion(),
                     actions: [
-                      { label: 'OK', value: { response: 0 }, variant: 'outline' },
-                      { label: 'Check for Updates', value: { response: 1 } },
+                      { label: 'Close', value: { action: 'close' }, variant: 'outline' },
+                      { label: 'Check for Updates', value: { action: 'checkUpdates' } },
                     ],
                   },
                   {
-                    fallback: () => dialog
-                      .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
-                      .then((res) => ({ response: res.response })),
+                    fallback: () => {
+                      const message = [
+                        `LyricDisplay`,
+                        `Version ${app.getVersion()}`,
+                        `\n© 2025 LyricDisplay. All rights reserved.`,
+                        `Designed and developed by Peter Alakembi and David Okaliwe.`,
+                        `\n____________________________________________\n`,
+                        `Lyrics Provider Credits & Disclaimer:`,
+                        `This application integrates optional online lyrics search features. All lyrics, metadata, and content obtained through these services remain the property of their respective copyright holders.`,
+                        `\nLogos and brand marks of providers are used for identification and attribution only and do not imply endorsement or affiliation.`,
+                        `\nThis feature is offered "as is" for convenience and educational purposes. LyricDisplay and its developers are not affiliated with these content providers.`
+                      ].join('\n');
+                      return dialog
+                        .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                        .then((res) => ({ response: res.response }));
+                    },
                     timeout: 600000,
                   }
                 )
-                : dialog
-                  .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
-                  .then((res) => ({ response: res.response }))
+                : (() => {
+                  const message = [
+                    `LyricDisplay`,
+                    `Version ${app.getVersion()}`,
+                    `\n© 2025 LyricDisplay. All rights reserved.`,
+                    `Designed and developed by Peter Alakembi and David Okaliwe.`,
+                    `\n____________________________________________\n`,
+                    `Lyrics Provider Credits & Disclaimer:`,
+                    `This application integrates optional online lyrics search features. All lyrics, metadata, and content obtained through these services remain the property of their respective copyright holders.`,
+                    `\nLogos and brand marks of providers are used for identification and attribution only and do not imply endorsement or affiliation.`,
+                    `\nThis feature is offered "as is" for convenience and educational purposes. LyricDisplay and its developers are not affiliated with these content providers.`
+                  ].join('\n');
+                  return dialog
+                    .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                    .then((res) => ({ response: res.response }));
+                })()
               );
 
-              if ((result?.response ?? -1) === 1) {
+              if (result?.action === 'checkUpdates') {
                 checkForUpdates?.(true);
               }
             },
@@ -420,51 +436,73 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
           ...(isMac ? [] : [{
             label: 'About App',
             click: async () => {
-              const message = [
-                `LyricDisplay`,
-                `Version ${app.getVersion()}`,
-                `\n© 2025 LyricDisplay. All rights reserved.`,
-                `Designed and developed by Peter Alakembi and David Okaliwe.`,
-                `\n____________________________________________\n`,
-                `Lyrics Provider Credits & Disclaimer:`,
-                `This application integrates optional online lyrics search features. All lyrics, metadata, and content obtained through these services remain the property of their respective copyright holders.`,
-                `\nLogos and brand marks of providers are used for identification and attribution only and do not imply endorsement or affiliation.`,
-                `\nThis feature is offered "as is" for convenience and educational purposes. LyricDisplay and its developers are not affiliated with these content providers.`
-              ].join('\n');
-
               const result = await (showInAppModal
                 ? showInAppModal(
                   {
                     title: 'About LyricDisplay',
-                    description: message,
+                    component: 'AboutApp',
                     variant: 'info',
+                    size: 'md',
+                    version: app.getVersion(),
                     actions: [
-                      { label: 'OK', value: { response: 0 }, variant: 'outline' },
-                      { label: 'Check for Updates', value: { response: 1 } },
+                      { label: 'Close', value: { action: 'close' }, variant: 'outline' },
+                      { label: 'Check for Updates', value: { action: 'checkUpdates' } },
                     ],
                   },
                   {
-                    fallback: () => dialog
-                      .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
-                      .then((res) => ({ response: res.response })),
+                    fallback: () => {
+                      const message = [
+                        `LyricDisplay`,
+                        `Version ${app.getVersion()}`,
+                        `\n© 2025 LyricDisplay. All rights reserved.`,
+                        `Designed and developed by Peter Alakembi and David Okaliwe.`,
+                        `\n____________________________________________\n`,
+                        `Lyrics Provider Credits & Disclaimer:`,
+                        `This application integrates optional online lyrics search features. All lyrics, metadata, and content obtained through these services remain the property of their respective copyright holders.`,
+                        `\nLogos and brand marks of providers are used for identification and attribution only and do not imply endorsement or affiliation.`,
+                        `\nThis feature is offered "as is" for convenience and educational purposes. LyricDisplay and its developers are not affiliated with these content providers.`
+                      ].join('\n');
+                      return dialog
+                        .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                        .then((res) => ({ response: res.response }));
+                    },
                     timeout: 600000,
                   }
                 )
-                : dialog
-                  .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
-                  .then((res) => ({ response: res.response }))
+                : (() => {
+                  const message = [
+                    `LyricDisplay`,
+                    `Version ${app.getVersion()}`,
+                    `\n© 2025 LyricDisplay. All rights reserved.`,
+                    `Designed and developed by Peter Alakembi and David Okaliwe.`,
+                    `\n____________________________________________\n`,
+                    `Lyrics Provider Credits & Disclaimer:`,
+                    `This application integrates optional online lyrics search features. All lyrics, metadata, and content obtained through these services remain the property of their respective copyright holders.`,
+                    `\nLogos and brand marks of providers are used for identification and attribution only and do not imply endorsement or affiliation.`,
+                    `\nThis feature is offered "as is" for convenience and educational purposes. LyricDisplay and its developers are not affiliated with these content providers.`
+                  ].join('\n');
+                  return dialog
+                    .showMessageBox({ type: 'info', buttons: ['OK', 'Check for Updates'], title: 'About LyricDisplay', message })
+                    .then((res) => ({ response: res.response }));
+                })()
               );
 
-              if ((result?.response ?? -1) === 1) {
+              if (result?.action === 'checkUpdates') {
                 checkForUpdates?.(true);
               }
             },
           }]),
           {
             label: 'Support Development',
-            click: async () => {
-              const { shell } = await import('electron');
-              await shell.openExternal('https://paystack.shop/pay/lyricdisplay-support');
+            click: () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                try {
+                  win.webContents.send('open-support-dev-modal');
+                } catch (err) {
+                  console.error('Failed to send support dev modal event:', err);
+                }
+              }
             }
           },
           { label: 'Check for Updates', click: () => checkForUpdates?.(true) },

@@ -11,6 +11,7 @@ import { handleFileOpen, extractFilePathFromArgs, setPendingFile } from './main/
 import { handleDisplayChange } from './main/displayDetection.js';
 import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
+import { createLoadingWindow } from './main/loadingWindow.js';
 
 if (!isDev && process.env.FORCE_COMPATIBILITY) {
   app.commandLine.appendSwitch('--disable-gpu-sandbox');
@@ -70,6 +71,8 @@ registerIpcHandlers({
 registerInAppBrowserIpc();
 
 app.whenReady().then(async () => {
+  createLoadingWindow();
+
   mainWindow = await performStartupSequence({
     menuAPI,
     requestRendererModal,

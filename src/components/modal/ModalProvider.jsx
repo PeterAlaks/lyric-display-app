@@ -12,6 +12,7 @@ import AutoplaySettings from '../AutoplaySettings';
 import IntelligentAutoplayInfoModal from '../IntelligentAutoplayInfoModal';
 import OutputTemplatesModal from '../OutputTemplatesModal';
 import StageTemplatesModal from '../StageTemplatesModal';
+import AboutAppModal from '../AboutAppModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -429,6 +430,13 @@ export function ModalProvider({ children, isDark = false }) {
                             closeModal(modal.id, { action: 'applied', template });
                           }}
                           onClose={() => closeModal(modal.id, { dismissed: true })}
+                        />
+                      )}
+                      {modal.component === 'AboutApp' && (
+                        <AboutAppModal
+                          darkMode={isDark}
+                          version={modal.version}
+                          onClose={(result) => closeModal(modal.id, result)}
                         />
                       )}
 

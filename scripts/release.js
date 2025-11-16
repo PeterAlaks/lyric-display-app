@@ -2,10 +2,8 @@ import { execSync } from 'child_process';
 import prompts from 'prompts';
 import chalk from 'chalk';
 import fs from 'fs';
-import path from 'path';
-import archiver from 'archiver';
-import { updateMegaLinks } from './update-version.js';
-import { packageAllPlatforms } from './release-manager.js';
+import { updateGitHubReleaseLinks } from './update-version.js';
+import { waitForGitHubActions } from './release-manager.js';
 
 function parseVersion(version) {
     const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
@@ -62,15 +60,6 @@ function checkRemoteTagExists(tagName) {
         return tags.includes(`refs/tags/${tagName}`);
     } catch (e) {
         console.log(chalk.yellow('Warning: Could not check remote tags'));
-        return false;
-    }
-}
-
-function checkLocalTagExists(tagName) {
-    try {
-        const tags = safeExec('git tag -l');
-        return tags.split('\n').includes(tagName);
-    } catch (e) {
         return false;
     }
 }
@@ -256,218 +245,6 @@ async function checkGitStateInteractive() {
     return { ok: true, branch };
 }
 
-function extractVersionFromZipName(name) {
-    const m = name.match(/LyricDisplay v(\d+\.\d+\.\d+(?:-[\w.-]+)?)\.zip/i);
-    return m ? m[1] : null;
-}
-
-async function createZipWithFiles({ distDir, setupPath, readmePath, outputZipPath }) {
-    return new Promise((resolve, reject) => {
-        const output = fs.createWriteStream(outputZipPath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
-
-        output.on('close', () => {
-            resolve({ bytes: archive.pointer() });
-        });
-        output.on('end', () => {
-            // no-op
-        });
-        archive.on('warning', (err) => {
-            console.warn('Archive warning:', err);
-        });
-        archive.on('error', (err) => {
-            reject(err);
-        });
-
-        archive.pipe(output);
-
-        archive.file(setupPath, { name: path.basename(setupPath) });
-
-        if (fs.existsSync(readmePath)) {
-            archive.file(readmePath, { name: path.basename(readmePath) });
-        } else {
-            console.log(chalk.yellow(`⚠️ README not found at ${readmePath}; skipping README in ZIP.`));
-        }
-
-        archive.finalize();
-    });
-}
-
-function escapeMegaPath(remotePath) {
-    const normalized = remotePath.replace(/\\/g, '/');
-    return `"${normalized.replace(/"/g, '\\"')}"`;
-}
-
-function normalizeMegaPath(megaPath) {
-    return megaPath.replace(/\\/g, '/');
-}
-
-async function handleMegaUpload(version, zipFilePath, zipFilename) {
-    console.log(chalk.blue('\n☁️ Starting MEGA upload process...'));
-
-    let whoami = '';
-    try {
-        whoami = safeExec('mega-whoami 2>&1', { timeout: 10000 });
-    } catch (e) {
-        console.log(chalk.yellow('\n⚠️ MEGA check timed out or failed. Skipping upload.'));
-        return null;
-    }
-
-    if (!whoami || /Not logged in|not found|ERR/i.test(whoami)) {
-        console.log(chalk.yellow('\n⚠️ MEGAcmd not logged in or not available in PATH. Skipping upload.'));
-        console.log(chalk.gray('To enable MEGA upload: Install MEGAcmd and run "mega-login your@email.com"'));
-        return null;
-    }
-
-    console.log(chalk.gray(`🔐 MEGA session: ${whoami}`));
-
-    const remoteFolder = process.env.MEGA_REMOTE_PATH || '/LyricDisplay';
-
-    try {
-        execSync(`mega-mkdir -p ${escapeMegaPath(remoteFolder)}`, {
-            stdio: 'pipe',
-            timeout: 15000
-        });
-        console.log(chalk.gray(`Created/verified remote folder: ${remoteFolder}`));
-    } catch (e) {
-        if (!/already exists/i.test(e.message)) {
-            console.log(chalk.yellow(`Note: ${e.message}`));
-        }
-    }
-
-    try {
-        const remoteFilePath = `${remoteFolder}/${zipFilename}`;
-        const lsOutput = safeExec(`mega-ls ${escapeMegaPath(remoteFilePath)} 2>&1 || echo "NOT_FOUND"`, { timeout: 10000 });
-
-        if (!lsOutput.includes('NOT_FOUND') && !lsOutput.includes('Couldn\'t find')) {
-            console.log(chalk.yellow(`\n⚠️ File already exists on MEGA: ${zipFilename}`));
-            const { overwrite } = await prompts({
-                type: 'confirm',
-                name: 'overwrite',
-                message: 'Overwrite existing file on MEGA?',
-                initial: true
-            });
-
-            if (!overwrite) {
-                console.log(chalk.gray('Skipping upload, using existing file.'));
-
-                try {
-                    const exportOutput = safeExec(`mega-export -a -f ${escapeMegaPath(remoteFilePath)}`, { timeout: 15000 });
-                    const linkMatch = exportOutput.match(/(https:\/\/mega\.nz\/[^\s]+)/);
-                    if (linkMatch) {
-                        return linkMatch[1];
-                    }
-                } catch (e) {
-                    console.log(chalk.yellow('Could not retrieve existing link.'));
-                }
-                return null;
-            }
-
-            try {
-                execSync(`mega-rm -f ${escapeMegaPath(remoteFilePath)}`, {
-                    stdio: 'inherit',
-                    timeout: 15000
-                });
-                console.log(chalk.gray('Removed existing remote file.'));
-            } catch (e) {
-                console.log(chalk.yellow(`Warning: Could not remove existing file: ${e.message}`));
-            }
-        }
-    } catch (e) {
-        console.log(chalk.gray('Could not check for existing remote file, proceeding with upload...'));
-    }
-
-    console.log(chalk.blue(`\n⬆️ Uploading ${zipFilename} to MEGA ${remoteFolder}...`));
-    console.log(chalk.gray('This may take several minutes depending on file size and connection speed...'));
-
-    try {
-        execSync(`mega-put "${zipFilePath}" ${escapeMegaPath(remoteFolder + '/')}`, {
-            stdio: 'inherit',
-            timeout: 300000
-        });
-        console.log(chalk.green('✅ Upload completed.'));
-    } catch (e) {
-        if (e.killed && e.signal === 'SIGTERM') {
-            console.error(chalk.red('❌ Upload timed out after 5 minutes.'));
-        } else {
-            console.error(chalk.red('❌ Upload failed:'), e.message);
-        }
-        throw e;
-    }
-
-    try {
-        const remoteFilePath = `${remoteFolder}/${zipFilename}`;
-        console.log(chalk.blue('Generating public link...'));
-        const exportOutput = safeExec(`mega-export -a -f ${escapeMegaPath(remoteFilePath)}`, { timeout: 20000 });
-
-        const linkMatch = exportOutput.match(/(https:\/\/mega\.nz\/[^\s]+)/);
-        if (linkMatch) {
-            const megaLink = linkMatch[1];
-            console.log(chalk.green(`\n🔗 Public MEGA link generated:\n${megaLink}`));
-            return megaLink;
-        } else {
-            console.log(chalk.yellow('⚠️ Could not parse MEGA link from output.'));
-            console.log(chalk.gray(`Raw output: ${exportOutput}`));
-            return null;
-        }
-    } catch (e) {
-        console.log(chalk.yellow('⚠️ Could not create public link via mega-export.'));
-        console.log(chalk.gray(`Try manually: mega-export -a -f "${remoteFolder}/${zipFilename}"`));
-        return null;
-    }
-}
-
-async function pruneMegaZips(remoteFolder) {
-    console.log(chalk.blue(`\n🧹 Pruning remote ZIPs, keeping latest two versions...`));
-    try {
-        const findOutput = safeExec(
-            `mega-find --name "LyricDisplay v*.zip" ${escapeMegaPath(remoteFolder)} 2>&1 || echo ""`,
-            { timeout: 30000 }
-        );
-
-        if (!findOutput || /not found|ERR/i.test(findOutput)) {
-            console.log(chalk.gray('No existing ZIPs found or mega-find not available.'));
-            return;
-        }
-
-        const lines = findOutput.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-
-        const items = lines.map(remotePath => {
-            const normalized = normalizeMegaPath(remotePath);
-            const base = path.basename(normalized);
-            const ver = extractVersionFromZipName(base);
-            return { remotePath: normalized, base, ver };
-        }).filter(i => i.ver);
-
-        console.log(chalk.gray(`Found ${items.length} existing ZIP(s) on MEGA.`));
-
-        if (items.length > 2) {
-            items.sort((a, b) => -compareVersions(a.ver, b.ver));
-            const toKeep = items.slice(0, 2);
-            const toDelete = items.slice(2);
-
-            console.log(chalk.gray(`Keeping: ${toKeep.map(i => i.base).join(', ')}`));
-
-            for (const item of toDelete) {
-                console.log(chalk.gray(`Removing old remote ZIP: ${item.base}`));
-                try {
-                    execSync(`mega-rm -f ${escapeMegaPath(item.remotePath)}`, {
-                        stdio: 'inherit',
-                        timeout: 15000
-                    });
-                } catch (e) {
-                    console.log(chalk.yellow(`Warning: failed to remove ${item.remotePath}: ${e.message}`));
-                }
-            }
-            console.log(chalk.green(`✅ Pruned ${toDelete.length} old ZIP(s).`));
-        } else {
-            console.log(chalk.gray('No pruning needed (≤ 2 ZIP(s) found).'));
-        }
-    } catch (e) {
-        console.log(chalk.yellow('Warning: could not prune remote ZIPs.'), e.message);
-    }
-}
-
 async function main() {
     const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
     let currentVersion = pkg.version;
@@ -480,14 +257,14 @@ async function main() {
 
     if (currentTagExists) {
         console.log(chalk.yellow(`\n⚠️ Tag v${currentVersion} already exists on remote repository.`));
-        console.log(chalk.gray('This usually means a release was partially completed.\n'));
+        console.log(chalk.gray('This usually means a release was already created for this version.\n'));
 
         const { resumeAction } = await prompts({
             type: 'select',
             name: 'resumeAction',
             message: 'What would you like to do?',
             choices: [
-                { title: '☁️ Only handle MEGA upload (skip version bump & GitHub)', value: 'mega-only' },
+                { title: '📝 Update documentation links only', value: 'update-docs' },
                 { title: '🔄 Start fresh release (will create new version)', value: 'new-release' },
                 { title: '❌ Cancel', value: 'cancel' }
             ]
@@ -498,100 +275,39 @@ async function main() {
             process.exit(0);
         }
 
-        if (resumeAction === 'mega-only') {
-            console.log(chalk.blue('\n📦 MEGA-only mode: Skipping version bump and GitHub push.\n'));
+        if (resumeAction === 'update-docs') {
+            console.log(chalk.blue('\n📝 Updating Installation Guide with GitHub release links...\n'));
 
             try {
-                const DIST_DIR = path.resolve('./dist');
-                const README_NAME = 'LyricDisplay Installation & Integration Guide.md';
-                const README_PATH = path.resolve(`./${README_NAME}`);
-                const zipFilename = `LyricDisplay v${currentVersion}.zip`;
-                const zipFilePath = path.join(DIST_DIR, zipFilename);
+                const updated = updateGitHubReleaseLinks(currentVersion, false);
 
-                if (!fs.existsSync(zipFilePath)) {
-                    console.log(chalk.yellow(`⚠️ ZIP file not found: ${zipFilePath}`));
-                    console.log(chalk.blue('Creating ZIP file...'));
+                if (updated) {
+                    console.log(chalk.green('\n✅ Installation Guide updated with GitHub release links'));
 
-                    const distFiles = fs.existsSync(DIST_DIR) ? fs.readdirSync(DIST_DIR) : [];
-                    const setupCandidates = distFiles.filter(f =>
-                        /setup/i.test(f) || /\.(exe|dmg|appimage|AppImage)$/i.test(f)
-                    );
-
-                    if (setupCandidates.length === 0) {
-                        console.log(chalk.red('❌ No setup executable found in dist/. Cannot create ZIP.'));
-                        process.exit(1);
-                    }
-
-                    let setupFile = setupCandidates.find(n => /setup.*\.exe$/i.test(n)) ||
-                        setupCandidates.find(n => /\.exe$/i.test(n)) ||
-                        setupCandidates.find(n => /\.dmg$/i.test(n)) ||
-                        setupCandidates.find(n => /\.AppImage$/i.test(n)) ||
-                        setupCandidates[0];
-
-                    const setupPath = path.join(DIST_DIR, setupFile);
-
-                    await createZipWithFiles({
-                        distDir: DIST_DIR,
-                        setupPath,
-                        readmePath: README_PATH,
-                        outputZipPath: zipFilePath
-                    });
-
-                    console.log(chalk.green(`✅ Zip created: ${zipFilePath}`));
-                }
-
-                const megaLink = await handleMegaUpload(currentVersion, zipFilePath, zipFilename);
-
-                if (megaLink) {
-                    await pruneMegaZips(process.env.MEGA_REMOTE_PATH || '/LyricDisplay');
-
-                    const { cleanupLocal } = await prompts({
+                    const { shouldCommit } = await prompts({
                         type: 'confirm',
-                        name: 'cleanupLocal',
-                        message: `Remove local ZIP file (${zipFilename})?`,
-                        initial: false
+                        name: 'shouldCommit',
+                        message: 'Commit and push the updated documentation to repository?',
+                        initial: true
                     });
 
-                    if (cleanupLocal) {
+                    if (shouldCommit) {
                         try {
-                            fs.unlinkSync(zipFilePath);
-                            console.log(chalk.green(`✅ Local ZIP removed: ${zipFilename}`));
+                            execSync('git add "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
+                            execSync(`git commit -m "docs: update download links for v${currentVersion}"`, { stdio: 'inherit' });
+                            execSync('git push', { stdio: 'inherit' });
+                            console.log(chalk.green('✅ Documentation updates committed and pushed to GitHub'));
                         } catch (e) {
-                            console.log(chalk.yellow(`Warning: Could not remove local ZIP: ${e.message}`));
-                        }
-                    }
-
-                    console.log(chalk.blue('\n📝 Updating documentation with new MEGA link and version...'));
-                    const updated = updateMegaLinks(megaLink, true);
-
-                    if (updated) {
-                        console.log(chalk.green('✅ Documentation files updated with new MEGA link and version'));
-
-                        const { shouldCommit } = await prompts({
-                            type: 'confirm',
-                            name: 'shouldCommit',
-                            message: 'Commit and push the updated documentation to repository?',
-                            initial: true
-                        });
-
-                        if (shouldCommit) {
-                            try {
-                                execSync('git add README.md "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
-                                execSync(`git commit -m "chore: update MEGA download links and version for v${currentVersion}"`, { stdio: 'inherit' });
-                                execSync('git push', { stdio: 'inherit' });
-                                console.log(chalk.green('✅ Documentation updates committed and pushed to GitHub'));
-                            } catch (e) {
-                                console.error(chalk.yellow('⚠️ Failed to commit/push updates:'), e.message);
-                                console.log(chalk.gray('You can manually commit these changes later'));
-                            }
+                            console.error(chalk.yellow('⚠️ Failed to commit/push updates:'), e.message);
+                            console.log(chalk.gray('You can manually commit these changes later'));
                         }
                     }
                 }
 
-                console.log(chalk.green('\n✨ MEGA upload complete!\n'));
+                console.log(chalk.green('\n✨ Documentation update complete!\n'));
                 process.exit(0);
             } catch (e) {
-                console.error(chalk.red('\n❌ MEGA upload failed:'), e.message);
+                console.error(chalk.red('\n❌ Documentation update failed:'), e.message);
                 process.exit(1);
             }
         }
@@ -657,6 +373,7 @@ async function main() {
         console.log(chalk.green(`\n✅ package.json updated to v${appliedVersion}`));
 
         console.log(chalk.blue('\n🛠️ Building and publishing release...'));
+        console.log(chalk.gray('This will build Windows installer and upload to GitHub Release'));
         execSync(`npm run electron-publish`, { stdio: 'inherit' });
 
         console.log(chalk.blue('\n☁️ Pushing commit and tags to GitHub...'));
@@ -699,85 +416,75 @@ async function main() {
         const version = appliedVersion;
         const releaseUrl = `https://github.com/PeterAlaks/lyric-display-app/releases/tag/v${version}`;
 
-        console.log(chalk.green.bold('\n✅ Release complete!'));
-        console.log(chalk.cyan(`\n🎉 Version ${chalk.bold(`v${version}`)} has been successfully published.`));
+        console.log(chalk.green.bold('\n✅ Windows build uploaded to GitHub Release!'));
+        console.log(chalk.cyan(`\n🎉 Version ${chalk.bold(`v${version}`)} release created.`));
         console.log(chalk.yellow(`\n🔗 View it here:`));
         console.log(chalk.underline.cyan(releaseUrl));
 
-        console.log(chalk.blue('\n⏳ GitHub Actions is building macOS and Linux versions...'));
-        console.log(chalk.gray('This may take 10-15 minutes. The script will wait automatically.\n'));
+        console.log(chalk.blue('\n⏳ GitHub Actions is now building macOS and Linux versions...'));
+        console.log(chalk.gray('This may take 10-15 minutes.\n'));
 
         const { waitForBuilds } = await prompts({
             type: 'confirm',
             name: 'waitForBuilds',
-            message: 'Wait for GitHub Actions and package all platforms now?',
+            message: 'Wait for GitHub Actions to complete and update documentation?',
             initial: true
         });
 
         if (waitForBuilds) {
-            try {
-                const megaLinks = await packageAllPlatforms(version);
+            const success = await waitForGitHubActions(version);
 
-                if (Object.keys(megaLinks).length > 0) {
-                    console.log(chalk.green('\n✅ Multi-platform packages uploaded to MEGA!'));
-                    console.log(chalk.cyan('\n🔗 Download Links:'));
+            if (success) {
+                console.log(chalk.blue('\n📝 Updating Installation Guide with GitHub release links...'));
 
-                    if (megaLinks.windows) console.log(chalk.gray(`Windows: ${megaLinks.windows}`));
-                    if (megaLinks.macos) console.log(chalk.gray(`macOS: ${megaLinks.macos}`));
-                    if (megaLinks.linux) console.log(chalk.gray(`Linux: ${megaLinks.linux}`));
+                const updated = updateGitHubReleaseLinks(version, false);
 
-                    // Update documentation with primary (Windows) link
-                    if (megaLinks.windows) {
-                        console.log(chalk.blue('\n📝 Updating documentation with download links...'));
-                        const updated = updateMegaLinks(megaLinks.windows, false);
+                if (updated) {
+                    const { shouldCommit } = await prompts({
+                        type: 'confirm',
+                        name: 'shouldCommit',
+                        message: 'Commit and push the updated download links?',
+                        initial: true
+                    });
 
-                        if (updated) {
-                            const { shouldCommit } = await prompts({
-                                type: 'confirm',
-                                name: 'shouldCommit',
-                                message: 'Commit and push the updated download links?',
-                                initial: true
-                            });
-
-                            if (shouldCommit) {
-                                try {
-                                    execSync('git add README.md "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
-                                    execSync(`git commit -m "chore: update download links for v${version}"`, { stdio: 'inherit' });
-                                    execSync('git push', { stdio: 'inherit' });
-                                    console.log(chalk.green('✅ Documentation updates pushed to GitHub'));
-                                } catch (e) {
-                                    console.error(chalk.yellow('⚠️ Failed to commit/push:', e.message));
-                                }
-                            }
+                    if (shouldCommit) {
+                        try {
+                            execSync('git add "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
+                            execSync(`git commit -m "docs: update download links for v${version}"`, { stdio: 'inherit' });
+                            execSync('git push', { stdio: 'inherit' });
+                            console.log(chalk.green('✅ Documentation updates pushed to GitHub'));
+                        } catch (e) {
+                            console.error(chalk.yellow('⚠️ Failed to commit/push:', e.message));
+                            console.log(chalk.gray('You can manually commit these changes later'));
                         }
                     }
-                } else {
-                    console.log(chalk.yellow('\n⚠️ No MEGA links generated. Builds may still be in progress.'));
                 }
-            } catch (e) {
-                console.error(chalk.red('\n❌ Multi-platform packaging failed:'), e.message);
-                console.log(chalk.gray('The GitHub release was still created successfully.'));
-                console.log(chalk.gray('You can manually download artifacts from:'));
-                console.log(chalk.underline.cyan('https://github.com/PeterAlaks/lyric-display-app/actions'));
+            } else {
+                console.log(chalk.yellow('\n⚠️ GitHub Actions did not complete successfully.'));
+                console.log(chalk.gray('You can update documentation later by re-running this script.'));
             }
         } else {
-            console.log(chalk.gray('\nℹ️  Skipping multi-platform packaging.'));
-            console.log(chalk.gray('You can manually download artifacts from GitHub Actions later:'));
-            console.log(chalk.underline.cyan('https://github.com/PeterAlaks/lyric-display-app/actions'));
+            console.log(chalk.gray('\nℹ️  Skipping wait for GitHub Actions.'));
+            console.log(chalk.gray('GitHub Actions will continue building in the background.'));
+            console.log(chalk.gray('You can update documentation later by re-running this script.'));
         }
 
         if (notes?.trim()) {
             console.log(chalk.gray(`\n📝 Release notes: ${notes.trim()}`));
         }
 
-        console.log(chalk.green('\n✨ All done! You can close this window or verify the release on GitHub.\n'));
+        console.log(chalk.green('\n✨ Release process complete!'));
+        console.log(chalk.gray('\nAll platform installers will be available at:'));
+        console.log(chalk.underline.cyan(releaseUrl));
+        console.log();
+
     } catch (err) {
         console.error(chalk.red.bold('\n❌ Release failed:'), err.message);
         console.log(chalk.yellow('\nTroubleshooting tips:'));
         console.log(chalk.gray('- Check if a version tag already exists: git tag -l'));
         console.log(chalk.gray('- Delete remote tag if needed: git push --delete origin v{version}'));
-        console.log(chalk.gray('- Check MEGA connection: mega-whoami'));
-        console.log(chalk.gray('- Re-run the script and select "MEGA-only" mode if GitHub release succeeded\n'));
+        console.log(chalk.gray('- Check GitHub Actions: https://github.com/PeterAlaks/lyric-display-app/actions'));
+        console.log(chalk.gray('- Re-run the script and select "Update documentation links only" if release succeeded\n'));
         process.exit(1);
     }
 }

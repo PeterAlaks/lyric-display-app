@@ -3,7 +3,8 @@ import { useEffect } from 'react';
 export const useElectronListeners = ({
   processLoadedLyrics,
   showToast,
-  setEasyWorshipModalOpen
+  setEasyWorshipModalOpen,
+  openSupportDevModal
 }) => {
 
   useEffect(() => {
@@ -48,4 +49,18 @@ export const useElectronListeners = ({
       } catch { }
     };
   }, [setEasyWorshipModalOpen]);
+
+  useEffect(() => {
+    if (!window?.electronAPI?.onOpenSupportDevModal) return;
+
+    const off = window.electronAPI.onOpenSupportDevModal(() => {
+      openSupportDevModal?.();
+    });
+
+    return () => {
+      try {
+        if (typeof off === 'function') off();
+      } catch { }
+    };
+  }, [openSupportDevModal]);
 };

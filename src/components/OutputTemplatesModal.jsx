@@ -3,7 +3,7 @@ import { Palette, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { outputTemplates } from '../utils/outputTemplates';
 
-const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose }) => {
+const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 'output1' }) => {
   const handleApply = (template) => {
     if (onApplyTemplate) {
       onApplyTemplate(template);
@@ -11,6 +11,13 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose }) => {
     if (onClose) {
       onClose();
     }
+  };
+
+  const getTemplateSettings = (template) => {
+    if (template.getSettings) {
+      return template.getSettings(outputKey);
+    }
+    return template.settings;
   };
 
   return (
@@ -34,61 +41,62 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose }) => {
 
         {/* Templates List */}
         <div className="space-y-3">
-          {outputTemplates.map((template) => (
-            <div
-              key={template.id}
-              className={`rounded-lg border p-4 transition-all hover:shadow-md ${
-                darkMode
+          {outputTemplates.map((template) => {
+            const settings = getTemplateSettings(template);
+            return (
+              <div
+                key={template.id}
+                className={`rounded-lg border p-4 transition-all hover:shadow-md ${darkMode
                   ? 'bg-gray-800 border-gray-700 hover:border-blue-500/50'
                   : 'bg-white border-gray-200 hover:border-blue-300'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                {/* Template Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                    <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {template.title}
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {template.description}
-                  </p>
-                  
-                  {/* Key Settings Preview */}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                      {template.settings.fontStyle}
-                    </span>
-                    <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                      {template.settings.fontSize}px
-                    </span>
-                    <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                      {template.settings.lyricsPosition}
-                    </span>
-                    {template.settings.transitionAnimation !== 'none' && (
-                      <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                        {template.settings.transitionAnimation}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                  }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  {/* Template Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                      <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {template.title}
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {template.description}
+                    </p>
 
-                {/* Apply Button */}
-                <Button
-                  onClick={() => handleApply(template)}
-                  className={`flex-shrink-0 ${
-                    darkMode
+                    {/* Key Settings Preview */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                        {settings.fontStyle}
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                        {settings.fontSize}px
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                        {settings.lyricsPosition}
+                      </span>
+                      {settings.transitionAnimation !== 'none' && (
+                        <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                          {settings.transitionAnimation}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Apply Button */}
+                  <Button
+                    onClick={() => handleApply(template)}
+                    className={`flex-shrink-0 ${darkMode
                       ? 'bg-blue-600 hover:bg-blue-700'
                       : 'bg-blue-500 hover:bg-blue-600'
-                  } text-white`}
-                >
-                  Apply
-                </Button>
+                      } text-white`}
+                  >
+                    Apply
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Info Note */}

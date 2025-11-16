@@ -31,6 +31,8 @@ import { useLyricsLoader } from '../hooks/useLyricsLoader';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useElectronListeners } from '../hooks/useElectronListeners';
 import { useResponsiveWidth } from '../hooks/useResponsiveWidth';
+import { useSupportDevModal } from '../hooks/useSupportDevModal';
+import SupportDevelopmentModal from './SupportDevelopmentModal';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -69,6 +71,7 @@ const LyricDisplayApp = () => {
         updateStageSettings(settings);
       }
       emitStyleUpdate(output, settings);
+      trackAction('settings_changed');
     },
     emitStyleUpdate,
   });
@@ -77,7 +80,16 @@ const LyricDisplayApp = () => {
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
   const headerContainerRef = useRef(null);
 
-  const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
+  const { isOpen: supportDevModalOpen, openModal: openSupportDevModal, closeModal: closeSupportDevModal, trackAction } = useSupportDevModal();
+
+  const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch: baseHandleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
+
+  const handleSearch = React.useCallback((query) => {
+    baseHandleSearch(query);
+    if (query) {
+      trackAction('search_performed');
+    }
+  }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast } = useToast();
@@ -141,13 +153,18 @@ const LyricDisplayApp = () => {
   });
 
   const handleImportFromLibrary = React.useCallback(async (params) => {
-    return baseHandleImportFromLibrary(params, lyrics);
-  }, [baseHandleImportFromLibrary, lyrics]);
+    const result = await baseHandleImportFromLibrary(params, lyrics);
+    if (result) {
+      trackAction('song_loaded');
+    }
+    return result;
+  }, [baseHandleImportFromLibrary, lyrics, trackAction]);
 
   useElectronListeners({
     processLoadedLyrics,
     showToast,
-    setEasyWorshipModalOpen
+    setEasyWorshipModalOpen,
+    openSupportDevModal
   });
 
   const fontOptions = ['Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat', 'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'];
@@ -202,12 +219,14 @@ const LyricDisplayApp = () => {
     const success = await handleFileUpload(file);
     if (success) {
       clearSearch();
+      trackAction('song_loaded');
     }
   };
 
   const handleLineSelect = (index) => {
     selectLine(index);
     emitLineUpdate(index);
+    trackAction('lyrics_edited');
   };
 
   const handleToggle = () => {
@@ -222,6 +241,9 @@ const LyricDisplayApp = () => {
 
     setIsOutputOn(!isOutputOn);
     emitOutputToggle(!isOutputOn);
+    if (!isOutputOn) {
+      trackAction('output_opened');
+    }
   };
 
   useKeyboardShortcuts({
@@ -743,6 +765,13 @@ const LyricDisplayApp = () => {
           isOpen={easyWorshipModalOpen}
           onClose={() => setEasyWorshipModalOpen(false)}
           darkMode={darkMode}
+        />
+
+        {/* Support Development Modal */}
+        <SupportDevelopmentModal
+          isOpen={supportDevModalOpen}
+          onClose={closeSupportDevModal}
+          isDark={darkMode}
         />
       </div>
     </>

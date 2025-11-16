@@ -9,17 +9,17 @@ const pkgPath = path.resolve(__dirname, '../package.json');
 const readmePath = path.resolve(__dirname, '../README.md');
 const guidePath = path.resolve(__dirname, '../LyricDisplay Installation & Integration Guide.md');
 
-const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-const version = pkg.version;
+function getCurrentVersion() {
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  return pkg.version;
+}
 
-/**
- * Replace version numbers in documentation files
- */
 function replaceVersion(filePath, regex, label) {
   if (!fs.existsSync(filePath)) {
     console.warn(`⚠️  ${label} file not found: ${filePath}`);
     return;
   }
+  const version = getCurrentVersion();
   let content = fs.readFileSync(filePath, 'utf8');
   const updated = content.replace(regex, `$1${version}`);
   fs.writeFileSync(filePath, updated);
@@ -27,68 +27,64 @@ function replaceVersion(filePath, regex, label) {
 }
 
 /**
- * Update MEGA download links in documentation files
- * @param {string} newMegaLink - The new MEGA public link
+ * Update GitHub release download links in Installation Guide only
+ * @param {string} version - Version number (e.g., "5.7.0")
  * @param {boolean} alsoUpdateVersion - Whether to also update version numbers in the same operation
  */
-export function updateMegaLinks(newMegaLink, alsoUpdateVersion = false) {
-  if (!newMegaLink || !newMegaLink.startsWith('https://mega.nz/')) {
-    console.warn('⚠️  Invalid MEGA link provided, skipping link update');
+export function updateGitHubReleaseLinks(version, alsoUpdateVersion = false) {
+  if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
+    console.warn('⚠️  Invalid version provided, skipping link update');
     return false;
   }
 
-  let filesUpdated = 0;
-
-  const megaLinkPattern = /https:\/\/mega\.nz\/[^\s\)]+/g;
-
-  if (fs.existsSync(guidePath)) {
-    let guideContent = fs.readFileSync(guidePath, 'utf8');
-    const guideMatches = guideContent.match(megaLinkPattern);
-
-    if (guideMatches && guideMatches.length > 0) {
-
-      guideContent = guideContent.replace(megaLinkPattern, newMegaLink);
-
-      if (alsoUpdateVersion) {
-        guideContent = guideContent.replace(/(Version:\s*)(\d+\.\d+\.\d+)/i, `$1${version}`);
-      }
-
-      fs.writeFileSync(guidePath, guideContent);
-      console.log(`✅ Updated ${guideMatches.length} MEGA link(s) in Installation Guide`);
-      if (alsoUpdateVersion) {
-        console.log(`✅ Updated Installation Guide to version ${version}`);
-      }
-      filesUpdated++;
-    }
+  if (!fs.existsSync(guidePath)) {
+    console.warn('⚠️  Installation Guide not found');
+    return false;
   }
 
-  if (fs.existsSync(readmePath)) {
-    let readmeContent = fs.readFileSync(readmePath, 'utf8');
-    const readmeMatches = readmeContent.match(megaLinkPattern);
+  const githubLinks = {
+    windows: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-Windows-Setup.exe`,
+    macos: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-macOS.dmg`,
+    linux: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-Linux.AppImage`
+  };
 
-    if (readmeMatches && readmeMatches.length > 0) {
+  let guideContent = fs.readFileSync(guidePath, 'utf8');
 
-      readmeContent = readmeContent.replace(megaLinkPattern, newMegaLink);
+  guideContent = guideContent.replace(
+    /(\[​Click here to download for Windows​\]\()[^\)]+(\))/,
+    `$1${githubLinks.windows}$2`
+  );
 
-      if (alsoUpdateVersion) {
-        readmeContent = readmeContent.replace(/(\*\*Version:\*\*\s*)(\d+\.\d+\.\d+)/i, `$1${version}`);
-      }
+  guideContent = guideContent.replace(
+    /(\[​Click here to download for MacOS​\]\()[^\)]+(\))/,
+    `$1${githubLinks.macos}$2`
+  );
 
-      fs.writeFileSync(readmePath, readmeContent);
-      console.log(`✅ Updated ${readmeMatches.length} MEGA link(s) in README.md`);
-      if (alsoUpdateVersion) {
-        console.log(`✅ Updated README.md to version ${version}`);
-      }
-      filesUpdated++;
-    }
+  guideContent = guideContent.replace(
+    /(\[​Click here to download for Linux​\]\()[^\)]+(\))/,
+    `$1${githubLinks.linux}$2`
+  );
+
+  if (alsoUpdateVersion) {
+    guideContent = guideContent.replace(
+      /(Version:\s*)(\d+\.\d+\.\d+)/i,
+      `$1${version}`
+    );
   }
 
-  return filesUpdated > 0;
+  fs.writeFileSync(guidePath, guideContent);
+
+  console.log(`✅ Updated Installation Guide with GitHub release links for v${version}`);
+  console.log(`   Windows: ${githubLinks.windows}`);
+  console.log(`   macOS: ${githubLinks.macos}`);
+  console.log(`   Linux: ${githubLinks.linux}`);
+  if (alsoUpdateVersion) {
+    console.log(`✅ Updated Installation Guide to version ${version}`);
+  }
+
+  return true;
 }
 
-/**
- * Update only version numbers (no MEGA links)
- */
 export function updateVersionOnly() {
   replaceVersion(readmePath, /(\*\*Version:\*\*\s*)(\d+\.\d+\.\d+)/i, 'README.md');
   replaceVersion(guidePath, /(Version:\s*)(\d+\.\d+\.\d+)/i, 'Installation Guide');
