@@ -2,7 +2,10 @@
   "name": "lyric-display-app",
   "version": "5.8.0",
   "description": "Real-time lyric display app with control panel and multiple output displays",
-  "author": "Peter Alakembi",
+  "author": {
+    "name": "Peter Alakembi",
+    "email": "peteralakembi@gmail.com"
+  },
   "main": "main.js",
   "type": "module",
   "scripts": {
