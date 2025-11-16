@@ -214,7 +214,7 @@
           ]
         }
       ],
-      "icon": "public/LyricDisplay-icon.png",
+      "icon": "public/favicon.png",
       "category": "AudioVideo",
       "artifactName": "${productName}-${version}-Linux.${ext}",
       "desktop": {
