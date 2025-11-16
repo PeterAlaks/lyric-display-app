@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
     runs-on: macos-latest
@@ -36,13 +39,12 @@ jobs:
           npm rebuild better-sqlite3 --build-from-source
           npm rebuild keytar --build-from-source
 
-      - name: Clean dist folder
-        run: rm -rf dist
+      - name: Build Vite app
+        run: npm run build
 
-      - name: Build macOS installer
-        run: npm run electron-pack
+      - name: Build macOS installers (without publishing)
+        run: npx electron-builder --mac --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload macOS artifacts
@@ -89,13 +91,11 @@ jobs:
           npm rebuild better-sqlite3 --build-from-source
           npm rebuild keytar --build-from-source
 
-      - name: Clean dist folder
-        run: rm -rf dist
+      - name: Build Vite app
+        run: npm run build
 
-      - name: Build Linux installer
-        run: npm run electron-pack
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Linux installers (without publishing)
+        run: npx electron-builder --linux --publish never
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
