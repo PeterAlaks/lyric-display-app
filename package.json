@@ -19,6 +19,7 @@
     "electron-pack": "npm run build && electron-builder",
     "electron-publish": "npm run update-version && npm run build && electron-builder --publish=always",
     "version": "npm run update-version && git add README.md \"LyricDisplay Installation & Integration Guide.md\"",
+    "postversion": "git add README.md \"LyricDisplay Installation & Integration Guide.md\" && git commit --amend --no-edit && echo \"✅ Documentation version updated\"",
     "release": "node scripts/release.js"
   },
   "dependencies": {
