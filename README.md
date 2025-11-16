@@ -220,18 +220,23 @@ lyric-display-app/
 |   |   └── searchAlgorithm.js              # Online lyrics search algorithm
 |   ├── adminKey.js                         # Admin access key module
 |   ├── backend.js                          # Backend server starter
-|   ├── backend.js                          # Backend server starter
-|   ├── displayManager.js                   # External display detection and assignment module
-|   ├── easyWorship.js                      # EasyWorship song lyric files conversion module 
+|   ├── cleanup.js                          # Cleanup utility for windows and other processes upon exit
+|   ├── displayDetection.js                 # External display detection in main process
+|   ├── displayManager.js                   # External assignment and management module
+|   ├── easyWorship.js                      # EasyWorship song lyric files conversion module
+|   ├── fileHandler.js                      # Main process file processing handler
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
 |   ├── ipc.js                              # IPC handlers
+|   ├── loadingWindow.js                    # Loading process window
 |   ├── menu.js                             # Window menu builder
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
 |   ├── providerCredentials.js              # secure storage utility for online lyrics provider credentials
 |   ├── recents.js                          # Module for token storage
-|   ├── secureTokenStore.js                 # Main token storage for desktop app
+|   ├── secureTokenStore.js                 # Main token storage for desktop 
+|   ├── singleInstance.js                   # Single app instance lock process
+|   ├── startup.js                          # Main app startup processes
 |   ├── updater.js                          # Module to manage app updates
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
@@ -261,6 +266,7 @@ lyric-display-app/
 |   |   ├── toast/
 |   |   |   └── ToastProvider.jsx           # Toast notifications component
 |   |   ├── ui/                             # Reusable UI components
+|   |   ├── AboutAppModal.jsx               # About the app modal
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
 |   |   ├── AutoplaySettings.jsx            # Autoplay settings modal
 |   |   ├── ConnectionBackoffBanner.jsx     # Global connection backoff modal component
@@ -270,7 +276,8 @@ lyric-display-app/
 |   |   ├── EasyWorshipImportModal.jsx      # Song import from local EasyWorship store wizard
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
 |   |   ├── HelpContent.jsx                 # Help and operation tips modal
-|   |   ├── IntegrationInstructions.jsx     # Integration help modal for OBS, VMix and Wirecast 
+|   |   ├── IntegrationInstructions.jsx     # Integration help modal for OBS, VMix and Wirecast
+|   |   ├── IntelligentAutoplayInfo.jsx     # Intelligent Autoplay info modal
 |   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
@@ -279,6 +286,7 @@ lyric-display-app/
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
 |   |   ├── OnlineLyricsWelcomeSplash.jsx   # Online Lyrics Search welcome and help modal component
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
+|   |   ├── OutputTemplatesModal.jsx        # Output settings templates modal
 |   |   ├── PreviewOutputsModal.jsx         # Display outputs preview modal
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
 |   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
@@ -286,25 +294,34 @@ lyric-display-app/
 |   |   ├── SetlistModal.jsx                # Setlist Modal
 |   |   ├── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
 |   |   ├── SongInfoModal.jsx               # Info modal for loaded lyrics
+|   |   ├── StageTemplatesModal.jsx         # Stage settings templates modal
+|   |   ├── SupportDevelopmentModal.jsx     # Support development modal
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
 │   ├── context/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/
 |   |   ├── useAuth.js                      # Authenticator hook for socket connections
+|   |   ├── useAutoplayManager.js           # Autoplay engine and logic
 |   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
 |   |   ├── useEditorClipboard.js           # Hook for cut, copy and paste handlers
 |   |   ├── useEditorHistory.js             # Hook for history state management of lyrics editor canvas
+|   |   ├── useElectronListeners.js         # Hook for listening to main process events and broadcasts for control panel
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
+|   |   ├── useKeyboardShortcuts.js         # Keyboard entry listener for control panel
+|   |   ├── useLyricsLoader.js              # Multi-source lyrics load processor for control panel 
 |   |   ├── useMenuShortcuts.js             # Hook for handling menu navigation/shortcuts
 |   |   ├── useModal.js                     # Global modal hook
 |   |   ├── useNetworkStatus.js             # Internet connection status hook
 |   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
+|   |   ├── useResponsiveWidth.js           # Window resize observer hook for control panel button responsiveness
 |   |   ├── useSearch.js                    # Hook for search bar functionality
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
 |   |   ├── useSocket.js                    # Main React hook for Socket.IO client
 |   |   ├── useSocketEvents.js              # Socket events hook
 |   |   ├── useStoreSelectors.js            # Centralized collection of Zustand selectors
+|   |   ├── useSupportDevModal.js           # Hook for processing show time and parameters for support development modal
+|   |   ├── useSyncOutputs.js               # Outputs sync manager for control panel
 |   |   ├── useSyncTimer.js                 # Last synced timer hook
 |   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
@@ -325,16 +342,17 @@ lyric-display-app/
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
 |   |   ├── maxLinesCalculator.js           # Calculator for maximum lines feature in outputs display
 |   |   ├── network.js                      # Network utility for backend URL resolution
+|   |   ├── outputTemplates.js              # Output templates for settings panel
 |   |   ├── parseLrc.js                     # LRC file parser
 |   |   ├── parseLyrics.js                  # Text file parser
 |   |   ├── secureTokenStore.js             # Secure token storage utility
+|   |   ├── timestampHelpers.js             # Timestamp helper utility for intelligent autoplay feature
 |   |   └── toastSounds.js                  # Toast notifications tones utility
 │   ├── workers/
 |   |   └── lyricsParser.worker.js          # Web worker that parses lyrics off the UI thread.
 |   ├── App.jsx                             # React app main component
 |   ├── index.css                           # Global CSS and custom style definitions
 |   └── main.jsx                            # App entry point
-├── .env                                    # Environment variables file
 ├── components.json                         # Shadcn UI config
 ├── index.html                              # Web app entry point
 ├── jsconfig.json                           # Path and settings configurations for JS

@@ -293,6 +293,11 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
                 dismissLabel: 'Close',
                 onApplyTemplate: (template) => {
                   applySettings(template.settings);
+                  showToast({
+                    title: 'Template Applied',
+                    message: `${template.title} template has been applied successfully`,
+                    variant: 'success',
+                  });
                 }
               });
             }}

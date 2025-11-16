@@ -2,7 +2,7 @@ import React from 'react';
 import { Sparkles, Clock, Zap, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const IntelligentAutoplayInfoModal = ({ darkMode, onStart, onClose, setDontShowAgain }) => {
+const IntelligentAutoplayInfo = ({ darkMode, onStart, onClose, setDontShowAgain }) => {
   const [dontShowAgain, setLocalDontShowAgain] = React.useState(false);
 
   const handleStart = () => {
@@ -123,4 +123,4 @@ const IntelligentAutoplayInfoModal = ({ darkMode, onStart, onClose, setDontShowA
   );
 };
 
-export default IntelligentAutoplayInfoModal;
+export default IntelligentAutoplayInfo;

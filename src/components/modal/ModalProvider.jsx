@@ -9,7 +9,7 @@ import { IntegrationInstructions } from '../IntegrationInstructions';
 import SongInfoModal from '../SongInfoModal';
 import DisplayDetectionModal from '../DisplayDetectionModal';
 import AutoplaySettings from '../AutoplaySettings';
-import IntelligentAutoplayInfoModal from '../IntelligentAutoplayInfoModal';
+import IntelligentAutoplayInfo from '../IntelligentAutoplayInfo';
 import OutputTemplatesModal from '../OutputTemplatesModal';
 import StageTemplatesModal from '../StageTemplatesModal';
 import AboutAppModal from '../AboutAppModal';
@@ -401,7 +401,7 @@ export function ModalProvider({ children, isDark = false }) {
                         />
                       )}
                       {modal.component === 'IntelligentAutoplayInfo' && (
-                        <IntelligentAutoplayInfoModal
+                        <IntelligentAutoplayInfo
                           darkMode={isDark}
                           onStart={() => {
                             if (modal.onStart) modal.onStart();
