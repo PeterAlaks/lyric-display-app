@@ -31,6 +31,11 @@ jobs:
           cd server
           npm ci
 
+      - name: Rebuild native modules for macOS
+        run: |
+          npm rebuild better-sqlite3 --build-from-source
+          npm rebuild keytar --build-from-source
+
       - name: Clean dist folder
         run: rm -rf dist
 
@@ -69,7 +74,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libsecret-1-dev
+          sudo apt-get install -y build-essential libsecret-1-dev rpm
 
       - name: Install dependencies
         run: npm ci
@@ -78,6 +83,11 @@ jobs:
         run: |
           cd server
           npm ci
+
+      - name: Rebuild native modules for Linux
+        run: |
+          npm rebuild better-sqlite3 --build-from-source
+          npm rebuild keytar --build-from-source
 
       - name: Clean dist folder
         run: rm -rf dist
@@ -97,7 +107,7 @@ jobs:
             dist/*.rpm
           retention-days: 5
 
-  upload-to-release:
+  create-release:
     needs: [build-macos, build-linux]
     runs-on: ubuntu-latest
     permissions:
@@ -118,9 +128,13 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Upload to existing release
+      - name: Create or update release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.ref_name }}
+          name: LyricDisplay v${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
           files: |
             dist-artifacts/macos-installer/*
             dist-artifacts/linux-installer/*
@@ -131,18 +145,36 @@ jobs:
             ### Downloads
             
             **Windows:**
-            - Download the `.exe` installer
+            - Download the `.exe` installer (built separately)
             
             **macOS:**
-            - Download the `.dmg` installer
-            - Apple Silicon (M1/M2/M3) and Intel Macs supported
+            - 🍎 **Apple Silicon (M1/M2/M3)**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-arm64.dmg`
+            - 💻 **Intel Macs**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-x64.dmg`
+            - Universal `.zip` also available
             
             **Linux:**
-            - Download the `.AppImage` for universal compatibility
-            - Or use `.deb` for Debian/Ubuntu or `.rpm` for Fedora/RHEL
+            - 📦 **AppImage** (recommended): Works on all distributions
+            - 🔷 **Debian/Ubuntu**: Use `.deb` package
+            - 🔶 **Fedora/RHEL**: Use `.rpm` package
             
             ### Installation
             
             See the [Installation Guide](https://github.com/PeterAlaks/lyric-display-app/blob/main/LyricDisplay%20Installation%20%26%20Integration%20Guide.md) for detailed setup instructions.
+            
+            ### Important Notes
+            
+            **macOS Security Warning:**
+            This app is not code-signed. When you first open it, macOS will show a security warning.
+            
+            To install:
+            1. Open the `.dmg` file
+            2. Drag LyricDisplay to Applications
+            3. **Right-click** the app and select **Open** (don't double-click)
+            4. Click **Open** in the security dialog
+            5. The app will now run normally
+            
+            **Linux AppImage:**
+            - Make the file executable: `chmod +x LyricDisplay-*.AppImage`
+            - Then run it: `./LyricDisplay-*.AppImage`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
