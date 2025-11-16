@@ -155,7 +155,7 @@
           ]
         }
       ],
-      "icon": "public/favicon.ico",
+      "icon": "public/favicon.icns",
       "artifactName": "${productName}-${version}-macOS-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -214,7 +214,7 @@
           ]
         }
       ],
-      "icon": "public/favicon.ico",
+      "icon": "public/LyricDisplay-icon.png",
       "category": "AudioVideo",
       "artifactName": "${productName}-${version}-Linux.${ext}",
       "desktop": {
