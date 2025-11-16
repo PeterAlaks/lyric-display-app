@@ -48,11 +48,11 @@ LyricDisplay is a free desktop app that provides perfectly clear, sharp and tran
 
 **1. Download Latest Release**
 
-&nbsp;  [​Click here to download for Windows​](https://mega.nz/file/hyIE0DLa#Br_7L0pJ5TtceaHb7xUCF-7rmDNTNHC5_ZofT_sADKE)
+&nbsp;  [​Click here to download for Windows​](https://github.com/PeterAlaks/lyric-display-app/releases/download/v5.8.0/LyricDisplay-5.8.0-Windows-Setup.exe)
 &nbsp;  Download: LyricDisplay-Setup.exe
-&nbsp;  [​Click here to download for MacOS​](https://mega.nz/file/hyIE0DLa#Br_7L0pJ5TtceaHb7xUCF-7rmDNTNHC5_ZofT_sADKE)
+&nbsp;  [​Click here to download for MacOS​](https://github.com/PeterAlaks/lyric-display-app/releases/download/v5.8.0/LyricDisplay-5.8.0-macOS.dmg)
 &nbsp;  Download: LyricDisplay-Setup.dmg
-&nbsp;  [​Click here to download for Linux​](https://mega.nz/file/hyIE0DLa#Br_7L0pJ5TtceaHb7xUCF-7rmDNTNHC5_ZofT_sADKE)
+&nbsp;  [​Click here to download for Linux​](https://github.com/PeterAlaks/lyric-display-app/releases/download/v5.8.0/LyricDisplay-5.8.0-Linux.AppImage)
 &nbsp;  Download: LyricDisplay-Setup
 
 **2. Run Installer**
