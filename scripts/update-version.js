@@ -14,82 +14,110 @@ function getCurrentVersion() {
   return pkg.version;
 }
 
-function replaceVersion(filePath, regex, label) {
-  if (!fs.existsSync(filePath)) {
-    console.warn(`⚠️  ${label} file not found: ${filePath}`);
-    return;
+/**
+ * Update version numbers in documentation files
+ * @param {string} version - Version number (e.g., "5.7.0")
+ */
+function updateVersionNumbers(version) {
+  if (!version) {
+    version = getCurrentVersion();
   }
-  const version = getCurrentVersion();
-  let content = fs.readFileSync(filePath, 'utf8');
-  const updated = content.replace(regex, `$1${version}`);
-  fs.writeFileSync(filePath, updated);
-  console.log(`✅ Updated ${label} to version ${version}`);
+
+  if (fs.existsSync(readmePath)) {
+    let readmeContent = fs.readFileSync(readmePath, 'utf8');
+    readmeContent = readmeContent.replace(
+      /(\*\*Version:\*\*\s*)(\d+\.\d+\.\d+)/i,
+      `$1${version}`
+    );
+    fs.writeFileSync(readmePath, readmeContent);
+    console.log(`✅ Updated README.md to version ${version}`);
+  }
+
+  if (fs.existsSync(guidePath)) {
+    let guideContent = fs.readFileSync(guidePath, 'utf8');
+    guideContent = guideContent.replace(
+      /(Version:\s*)(\d+\.\d+\.\d+)/i,
+      `$1${version}`
+    );
+    fs.writeFileSync(guidePath, guideContent);
+    console.log(`✅ Updated Installation Guide to version ${version}`);
+  }
 }
 
 /**
- * Update GitHub release download links in Installation Guide only
+ * Update GitHub release download links in documentation files
  * @param {string} version - Version number (e.g., "5.7.0")
- * @param {boolean} alsoUpdateVersion - Whether to also update version numbers in the same operation
  */
-export function updateGitHubReleaseLinks(version, alsoUpdateVersion = false) {
+function updateGitHubReleaseLinks(version) {
   if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
     console.warn('⚠️  Invalid version provided, skipping link update');
     return false;
   }
 
-  if (!fs.existsSync(guidePath)) {
-    console.warn('⚠️  Installation Guide not found');
-    return false;
-  }
-
   const githubLinks = {
     windows: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-Windows-Setup.exe`,
-    macos: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-macOS.dmg`,
+    macosArm: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-macOS-arm64.dmg`,
+    macosIntel: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-macOS-x64.dmg`,
     linux: `https://github.com/PeterAlaks/lyric-display-app/releases/download/v${version}/LyricDisplay-${version}-Linux.AppImage`
   };
 
-  let guideContent = fs.readFileSync(guidePath, 'utf8');
+  let updated = false;
 
-  guideContent = guideContent.replace(
-    /(\[​Click here to download for Windows​\]\()[^\)]+(\))/,
-    `$1${githubLinks.windows}$2`
-  );
+  if (fs.existsSync(guidePath)) {
+    let guideContent = fs.readFileSync(guidePath, 'utf8');
 
-  guideContent = guideContent.replace(
-    /(\[​Click here to download for MacOS​\]\()[^\)]+(\))/,
-    `$1${githubLinks.macos}$2`
-  );
-
-  guideContent = guideContent.replace(
-    /(\[​Click here to download for Linux​\]\()[^\)]+(\))/,
-    `$1${githubLinks.linux}$2`
-  );
-
-  if (alsoUpdateVersion) {
     guideContent = guideContent.replace(
-      /(Version:\s*)(\d+\.\d+\.\d+)/i,
-      `$1${version}`
+      /(\[​Click here to download for Windows​\]\()[^\)]+(\))/,
+      `$1${githubLinks.windows}$2`
     );
+
+    guideContent = guideContent.replace(
+      /(\[​Click here to download for Apple Silicon \(M1\/M2\/M3\)​\]\()[^\)]+(\))/,
+      `$1${githubLinks.macosArm}$2`
+    );
+
+    guideContent = guideContent.replace(
+      /(\[​Click here to download for Intel Mac​\]\()[^\)]+(\))/,
+      `$1${githubLinks.macosIntel}$2`
+    );
+
+    guideContent = guideContent.replace(
+      /(\[​Click here to download for Linux​\]\()[^\)]+(\))/,
+      `$1${githubLinks.linux}$2`
+    );
+
+    fs.writeFileSync(guidePath, guideContent);
+    console.log(`✅ Updated Installation Guide with GitHub release links for v${version}`);
+    console.log(`   Windows: ${githubLinks.windows}`);
+    console.log(`   macOS (Apple Silicon): ${githubLinks.macosArm}`);
+    console.log(`   macOS (Intel): ${githubLinks.macosIntel}`);
+    console.log(`   Linux: ${githubLinks.linux}`);
+    updated = true;
   }
 
-  fs.writeFileSync(guidePath, guideContent);
-
-  console.log(`✅ Updated Installation Guide with GitHub release links for v${version}`);
-  console.log(`   Windows: ${githubLinks.windows}`);
-  console.log(`   macOS: ${githubLinks.macos}`);
-  console.log(`   Linux: ${githubLinks.linux}`);
-  if (alsoUpdateVersion) {
-    console.log(`✅ Updated Installation Guide to version ${version}`);
-  }
-
-  return true;
+  return updated;
 }
 
-export function updateVersionOnly() {
-  replaceVersion(readmePath, /(\*\*Version:\*\*\s*)(\d+\.\d+\.\d+)/i, 'README.md');
-  replaceVersion(guidePath, /(Version:\s*)(\d+\.\d+\.\d+)/i, 'Installation Guide');
+/**
+ * Main function - handles both version updates and link updates
+ */
+function main() {
+  const args = process.argv.slice(2);
+
+  if (args[0] === '--update-links-only') {
+    const version = args[1] || getCurrentVersion();
+    console.log(`\n📝 Updating download links for v${version}...\n`);
+    updateGitHubReleaseLinks(version);
+    return;
+  }
+
+  const version = args[0] || getCurrentVersion();
+  console.log(`\n📝 Updating documentation version to v${version}...\n`);
+  updateVersionNumbers(version);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  updateVersionOnly();
+  main();
 }
+
+export { updateVersionNumbers, updateGitHubReleaseLinks };

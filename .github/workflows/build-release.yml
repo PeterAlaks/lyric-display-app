@@ -9,6 +9,50 @@ permissions:
   contents: write
 
 jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          cd server
+          npm ci
+
+      - name: Rebuild native modules for Windows
+        run: |
+          npm rebuild better-sqlite3 --build-from-source
+          npm rebuild keytar --build-from-source
+
+      - name: Build Vite app
+        run: npm run build
+
+      - name: Build Windows installer (without publishing)
+        run: npx electron-builder --win --publish never
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            dist/*.exe
+          retention-days: 5
+
   build-macos:
     runs-on: macos-latest
     steps:
@@ -108,7 +152,7 @@ jobs:
           retention-days: 5
 
   create-release:
-    needs: [build-macos, build-linux]
+    needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -128,6 +172,20 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+      - name: Read release notes from commit
+        id: release_notes
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          
+          if echo "$COMMIT_MSG" | grep -q "Release notes:"; then
+            NOTES=$(echo "$COMMIT_MSG" | sed -n '/Release notes:/,$p' | tail -n +2)
+            echo "CUSTOM_NOTES<<EOF" >> $GITHUB_OUTPUT
+            echo "$NOTES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "CUSTOM_NOTES=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create or update release
         uses: softprops/action-gh-release@v1
         with:
@@ -136,26 +194,29 @@ jobs:
           draft: false
           prerelease: false
           files: |
+            dist-artifacts/windows-installer/*
             dist-artifacts/macos-installer/*
             dist-artifacts/linux-installer/*
           fail_on_unmatched_files: false
           body: |
             ## LyricDisplay v${{ steps.get_version.outputs.VERSION }}
             
+            ${{ steps.release_notes.outputs.CUSTOM_NOTES }}
+            
             ### Downloads
             
             **Windows:**
-            - Download the `.exe` installer (built separately)
+            - **Windows 10/11 (64-bit)**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-Windows-Setup.exe`
             
             **macOS:**
-            - 🍎 **Apple Silicon (M1/M2/M3)**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-arm64.dmg`
-            - 💻 **Intel Macs**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-x64.dmg`
+            - **Apple Silicon (M1/M2/M3)**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-arm64.dmg`
+            - **Intel Macs**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-x64.dmg`
             - Universal `.zip` also available
             
             **Linux:**
-            - 📦 **AppImage** (recommended): Works on all distributions
-            - 🔷 **Debian/Ubuntu**: Use `.deb` package
-            - 🔶 **Fedora/RHEL**: Use `.rpm` package
+            - **AppImage** (recommended): `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-Linux.AppImage` - Works on all distributions
+            - **Debian/Ubuntu**: Use `.deb` package
+            - **Fedora/RHEL**: Use `.rpm` package
             
             ### Installation
             
@@ -178,3 +239,28 @@ jobs:
             - Then run it: `./LyricDisplay-*.AppImage`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js for documentation update
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies for update script
+        run: npm ci
+
+      - name: Update documentation with download links
+        run: node scripts/update-version.js --update-links-only ${{ steps.get_version.outputs.VERSION }}
+
+      - name: Commit and push documentation updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md "LyricDisplay Installation & Integration Guide.md"
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No documentation changes to commit"
+          else
+            git commit -m "docs: update download links for v${{ steps.get_version.outputs.VERSION }}"
+            git push origin HEAD:main
+          fi
