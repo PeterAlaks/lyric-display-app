@@ -1,0 +1,1 @@
+Added loading screen at begining of app, intelligent autoplay feature, output settings templates and so much more. A host of bug fixes and performance improvements too!
