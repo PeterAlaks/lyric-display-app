@@ -4,18 +4,6 @@ import chalk from 'chalk';
 import fs from 'fs';
 import { updateVersionNumbers, updateGitHubReleaseLinks } from './update-version.js';
 
-
-function parseVersion(version) {
-    const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
-    if (!match) return null;
-    return {
-        major: parseInt(match[1], 10),
-        minor: parseInt(match[2], 10),
-        patch: parseInt(match[3], 10),
-        pre: match[4] || null
-    };
-}
-
 function getNextVersions(version) {
     const [major, minor, patch] = version.split('.').map(Number);
     return {
@@ -52,7 +40,7 @@ function checkTagExists(tagName) {
 function checkGhCli() {
     try {
         safeExec('gh --version');
-        const status = safeExec('gh auth status');
+        safeExec('gh auth status');
         return true;
     } catch (e) {
         return false;
@@ -62,6 +50,7 @@ function checkGhCli() {
 async function waitForGitHubActions(commitSha) {
     console.log(chalk.blue('\nWaiting for GitHub Actions to complete...'));
     console.log(chalk.gray(`Tracking commit: ${commitSha.substring(0, 7)}`));
+    console.log(chalk.gray('This may take 15-20 minutes. Polling every 30 seconds.'));
 
     const maxAttempts = 60;
     let attempts = 0;
@@ -78,6 +67,7 @@ async function waitForGitHubActions(commitSha) {
                     return true;
                 } else if (run.conclusion === 'failure') {
                     console.log(chalk.red('\n❌ GitHub Actions build failed!'));
+                    console.log(chalk.yellow('Check the build log: https://github.com/PeterAlaks/lyric-display-app/actions'));
                     return false;
                 } else {
                     attempts++;
@@ -85,8 +75,11 @@ async function waitForGitHubActions(commitSha) {
                     await new Promise(resolve => setTimeout(resolve, 30000));
                 }
             } else {
-                console.log(chalk.gray('\nWaiting for workflow to start...'));
+                if (attempts === 0) {
+                    console.log(chalk.gray('Waiting for workflow to start...'));
+                }
                 attempts++;
+                process.stdout.write('.');
                 await new Promise(resolve => setTimeout(resolve, 30000));
             }
         } catch (e) {
@@ -95,15 +88,17 @@ async function waitForGitHubActions(commitSha) {
             await new Promise(resolve => setTimeout(resolve, 30000));
         }
     }
+
+    console.log(chalk.red('\n❌ Timed out waiting for GitHub Actions.'));
+    console.log(chalk.yellow('Check the build log: https://github.com/PeterAlaks/lyric-display-app/actions'));
     return false;
 }
-
 async function main() {
-    console.log(chalk.cyan.bold('\nLyricDisplay Release Assistant\n'));
+    console.log(chalk.cyan.bold('\nLyricDisplay Release Assistant (Fixed)\n'));
 
     if (!checkGhCli()) {
         console.log(chalk.red('ERROR: GitHub CLI (gh) is not installed or not authenticated.'));
-        console.log(chalk.gray('Run "gh auth login" to authenticate.'));
+        console.log(chalk.gray('Please install it and run "gh auth login" to authenticate.'));
         process.exit(1);
     }
 
@@ -111,11 +106,11 @@ async function main() {
         const status = safeExec('git status --porcelain');
         if (status) {
             console.log(chalk.red('ERROR: Git working directory is not clean.'));
-            console.log(chalk.yellow('Please commit or stash changes before releasing.'));
+            console.log(chalk.yellow('Please commit or stash all changes before releasing.'));
             process.exit(1);
         }
     } catch (e) {
-        console.log(chalk.red('ERROR: Not a valid git repository.'));
+        console.log(chalk.red('ERROR: Not a valid git repository or git not found.'));
         process.exit(1);
     }
 
@@ -137,7 +132,10 @@ async function main() {
         ]
     });
 
-    if (!bumpType) process.exit(0);
+    if (!bumpType) {
+        console.log(chalk.yellow('Release cancelled.'));
+        process.exit(0);
+    }
 
     const targetVersion = next[bumpType];
     const tagName = `v${targetVersion}`;
@@ -149,10 +147,10 @@ async function main() {
         process.exit(1);
     }
 
-    const { notes } = await prompts({
+    const { notes = '' } = await prompts({
         type: 'text',
         name: 'notes',
-        message: 'Release notes (optional):',
+        message: 'Release notes (optional, can be blank):',
         initial: ''
     });
 
@@ -166,8 +164,9 @@ async function main() {
         updateVersionNumbers(targetVersion);
         updateGitHubReleaseLinks(targetVersion);
 
-        console.log(chalk.blue('\n🔨 Building Windows installer locally (as requested)...'));
+        console.log(chalk.blue('\n🔨 Building Windows installer locally...'));
         execSync('npm run electron-pack', { stdio: 'inherit' });
+        console.log(chalk.green('✅ Local Windows build complete.'));
 
         console.log(chalk.blue('\n📦 Committing and Tagging...'));
 
@@ -178,24 +177,34 @@ async function main() {
 
         execSync(`git commit -m "${commitMsg}"`);
         execSync(`git tag ${tagName}`);
+        console.log(chalk.green('✅ Commit and tag created locally.'));
 
         console.log(chalk.blue('\n⬆️  Pushing to GitHub...'));
         execSync('git push');
         execSync(`git push origin ${tagName}`);
+        console.log(chalk.green('✅ Commit and tag pushed to origin.'));
 
         const commitSha = safeExec('git rev-parse HEAD');
-        await waitForGitHubActions(commitSha);
+        const ciSuccess = await waitForGitHubActions(commitSha);
+
+        if (!ciSuccess) {
+            console.log(chalk.red.bold('\n❌ CI FAILED.'));
+            console.log(chalk.yellow(`The release ${tagName} exists on GitHub, but the builds failed.`));
+            console.log(chalk.yellow('You will need to manually check the Actions tab and possibly create a new release.'));
+            process.exit(1);
+        }
 
         console.log(chalk.green.bold('\n✨ Release Complete! ✨'));
         console.log(chalk.cyan(`Tag: ${tagName}`));
+        console.log(chalk.cyan(`Release URL: https://github.com/PeterAlaks/lyric-display-app/releases/tag/${tagName}`));
         console.log(chalk.gray('Documentation and links were updated before the tag was created.'));
 
     } catch (e) {
-        console.error(chalk.red('\n❌ RELEASE FAILED'));
-        console.error(e.message);
+        console.error(chalk.red.bold('\n❌ RELEASE FAILED'));
+        console.error(chalk.gray(e.message));
         console.log(chalk.yellow('\nState Check:'));
-        console.log('Your local files might be modified (version bumped).');
-        console.log('You may need to: git reset --hard HEAD (if commit wasn\'t made)');
+        console.log('Your local files are likely modified.');
+        console.log(chalk.yellow('Run "git reset --hard HEAD" to clean your directory before trying again.'));
         process.exit(1);
     }
 }
