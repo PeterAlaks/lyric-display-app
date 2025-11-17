@@ -42,16 +42,10 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build Windows installer (without publishing)
-        run: npx electron-builder --win --publish never
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: |
-            dist/*.exe
-          retention-days: 5
+      - name: Build Windows installer
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
     runs-on: macos-latest
@@ -86,19 +80,11 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build macOS installers (without publishing)
-        run: npx electron-builder --mac --publish never
+      - name: Build macOS installers
+        run: npx electron-builder --mac --publish always
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-installer
-          path: |
-            dist/*.dmg
-            dist/*.zip
-          retention-days: 5
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
     runs-on: ubuntu-latest
@@ -138,20 +124,12 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build Linux installers (without publishing)
-        run: npx electron-builder --linux --publish never
+      - name: Build Linux installers
+        run: npx electron-builder --linux --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-installer
-          path: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
-          retention-days: 5
-
-  create-release:
+  update-release:
     needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     permissions:
@@ -160,44 +138,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist-artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -R dist-artifacts
-
       - name: Extract version from tag
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Read release notes from commit
+      - name: Read release notes from file
         id: release_notes
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          
-          if echo "$COMMIT_MSG" | grep -q "Release notes:"; then
-            NOTES=$(echo "$COMMIT_MSG" | sed -n '/Release notes:/,$p' | tail -n +2)
+          if [ -f "RELEASE_BODY.md" ]; then
             echo "CUSTOM_NOTES<<EOF" >> $GITHUB_OUTPUT
-            echo "$NOTES" >> $GITHUB_OUTPUT
+            cat RELEASE_BODY.md >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "CUSTOM_NOTES=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create or update release
+      - name: Update release description
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: LyricDisplay v${{ steps.get_version.outputs.VERSION }}
           draft: false
           prerelease: false
-          files: |
-            dist-artifacts/windows-installer/*
-            dist-artifacts/macos-installer/*
-            dist-artifacts/linux-installer/*
-          fail_on_unmatched_files: false
           body: |
             ## LyricDisplay v${{ steps.get_version.outputs.VERSION }}
             
@@ -205,37 +167,12 @@ jobs:
             
             ### Downloads
             
-            **Windows:**
-            - **Windows 10/11 (64-bit)**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-Windows-Setup.exe`
+            Choose the installer for your platform below. See the [Installation Guide](https://github.com/PeterAlaks/lyric-display-app/blob/main/LyricDisplay%20Installation%20%26%20Integration%20Guide.md) for setup instructions.
             
-            **macOS:**
-            - **Apple Silicon (M1/M2/M3)**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-arm64.dmg`
-            - **Intel Macs**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-x64.dmg`
-            - Universal `.zip` also available
+            **Windows:** `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-Windows-Setup.exe`  
+            **macOS:** Choose arm64 (Apple Silicon) or x64 (Intel)  
+            **Linux:** AppImage (universal), .deb (Debian/Ubuntu), or .rpm (Fedora/RHEL)
             
-            **Linux:**
-            - **AppImage** (recommended): `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-Linux.AppImage` - Works on all distributions
-            - **Debian/Ubuntu**: Use `.deb` package
-            - **Fedora/RHEL**: Use `.rpm` package
-            
-            ### Installation
-            
-            See the [Installation Guide](https://github.com/PeterAlaks/lyric-display-app/blob/main/LyricDisplay%20Installation%20%26%20Integration%20Guide.md) for detailed setup instructions.
-            
-            ### Important Notes
-            
-            **macOS Security Warning:**
-            This app is not code-signed. When you first open it, macOS will show a security warning.
-            
-            To install:
-            1. Open the `.dmg` file
-            2. Drag LyricDisplay to Applications
-            3. **Right-click** the app and select **Open** (don't double-click)
-            4. Click **Open** in the security dialog
-            5. The app will now run normally
-            
-            **Linux AppImage:**
-            - Make the file executable: `chmod +x LyricDisplay-*.AppImage`
-            - Then run it: `./LyricDisplay-*.AppImage`
+            **Note for macOS users:** Right-click the app and select "Open" on first launch to bypass Gatekeeper.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "5.8.0",
+  "version": "5.7.0",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": {
     "name": "Peter Alakembi",
@@ -236,7 +236,8 @@
       {
         "provider": "github",
         "owner": "PeterAlaks",
-        "repo": "lyric-display-app"
+        "repo": "lyric-display-app",
+        "releaseType": "release"
       }
     ]
   }

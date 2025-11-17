@@ -49,15 +49,15 @@ function checkGhCli() {
 
 async function waitForGitHubActions(commitSha) {
     console.log(chalk.blue('\nWaiting for GitHub Actions to complete...'));
-    console.log(chalk.gray(`Tracking commit: ${commitSha.substring(0, 7)}`));
-    console.log(chalk.gray('This may take 15-20 minutes. Polling every 30 seconds.'));
+    console.log(chalk.gray(`Tracking commit: ${commitSha.substring(0, 7)} (Polling every 30s)`));
+    console.log(chalk.gray('The release process will pause here until the CI build succeeds on GitHub.'));
 
     const maxAttempts = 60;
     let attempts = 0;
+    const runsCmd = `gh run list --workflow=build-release.yml --commit=${commitSha} --json conclusion,status --limit 1`;
 
     while (attempts < maxAttempts) {
         try {
-            const runsCmd = `gh run list --workflow=build-release.yml --commit=${commitSha} --json conclusion,status --limit 1`;
             const runs = JSON.parse(safeExec(runsCmd));
 
             if (runs.length > 0) {
@@ -65,36 +65,37 @@ async function waitForGitHubActions(commitSha) {
                 if (run.conclusion === 'success') {
                     console.log(chalk.green('\n✅ GitHub Actions build completed successfully!'));
                     return true;
-                } else if (run.conclusion === 'failure') {
-                    console.log(chalk.red('\n❌ GitHub Actions build failed!'));
+                } else if (run.conclusion === 'failure' || run.conclusion === 'cancelled') {
+                    console.log(chalk.red('\n❌ GitHub Actions build failed or was cancelled!'));
                     console.log(chalk.yellow('Check the build log: https://github.com/PeterAlaks/lyric-display-app/actions'));
                     return false;
                 } else {
                     attempts++;
-                    if (attempts % 2 === 0) process.stdout.write('.');
+                    process.stdout.write('.');
                     await new Promise(resolve => setTimeout(resolve, 30000));
                 }
             } else {
-                if (attempts === 0) {
-                    console.log(chalk.gray('Waiting for workflow to start...'));
-                }
                 attempts++;
+                if (attempts === 1) {
+                    console.log(chalk.gray('Workflow run not yet visible by commit SHA. Waiting for GitHub registration.'));
+                }
                 process.stdout.write('.');
                 await new Promise(resolve => setTimeout(resolve, 30000));
             }
         } catch (e) {
-            console.log(chalk.yellow('\n⚠️  Error checking status, retrying...'));
+            console.log(chalk.yellow(`\n⚠️  Error checking status (Attempt ${attempts + 1}/${maxAttempts}), retrying in 30s...`));
             attempts++;
             await new Promise(resolve => setTimeout(resolve, 30000));
         }
     }
 
     console.log(chalk.red('\n❌ Timed out waiting for GitHub Actions.'));
-    console.log(chalk.yellow('Check the build log: https://github.com/PeterAlaks/lyric-display-app/actions'));
+    console.log(chalk.yellow('This usually means the build is stuck or took longer than 30 minutes. Check the Actions tab manually.'));
     return false;
 }
+
 async function main() {
-    console.log(chalk.cyan.bold('\nLyricDisplay Release Assistant (Fixed)\n'));
+    console.log(chalk.cyan.bold('\n🚀 LyricDisplay Release Assistant\n'));
 
     if (!checkGhCli()) {
         console.log(chalk.red('ERROR: GitHub CLI (gh) is not installed or not authenticated.'));
@@ -150,7 +151,7 @@ async function main() {
     const { notes = '' } = await prompts({
         type: 'text',
         name: 'notes',
-        message: 'Release notes (optional, can be blank):',
+        message: 'Release notes (describe what changed in this version):',
         initial: ''
     });
 
@@ -168,12 +169,15 @@ async function main() {
         execSync('npm run electron-pack', { stdio: 'inherit' });
         console.log(chalk.green('✅ Local Windows build complete.'));
 
-        console.log(chalk.blue('\n📦 Committing and Tagging...'));
+        console.log(chalk.gray('Creating release body file...'));
+        const releaseBodyContent = notes || 'No release notes provided for this version.';
+        fs.writeFileSync('RELEASE_BODY.md', releaseBodyContent);
 
-        execSync('git add package.json package-lock.json README.md "LyricDisplay Installation & Integration Guide.md"');
+        console.log(chalk.blue('\n📦 Committing changes and creating tag...'));
 
-        const safeNotes = notes.replace(/"/g, '\\"');
-        const commitMsg = `chore: release ${tagName}\n\nRelease notes:\n${safeNotes}`;
+        execSync('git add package.json package-lock.json README.md "LyricDisplay Installation & Integration Guide.md" RELEASE_BODY.md');
+
+        const commitMsg = `chore: release ${tagName}`;
 
         execSync(`git commit -m "${commitMsg}"`);
         execSync(`git tag ${tagName}`);
@@ -197,7 +201,8 @@ async function main() {
         console.log(chalk.green.bold('\n✨ Release Complete! ✨'));
         console.log(chalk.cyan(`Tag: ${tagName}`));
         console.log(chalk.cyan(`Release URL: https://github.com/PeterAlaks/lyric-display-app/releases/tag/${tagName}`));
-        console.log(chalk.gray('Documentation and links were updated before the tag was created.'));
+        console.log(chalk.gray('All installers (Windows, macOS, Linux) have been built and published.'));
+        console.log(chalk.gray('Auto-updater metadata (latest.yml) has been generated.'));
 
     } catch (e) {
         console.error(chalk.red.bold('\n❌ RELEASE FAILED'));
