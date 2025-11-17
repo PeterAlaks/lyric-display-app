@@ -95,7 +95,7 @@ async function waitForGitHubActions(commitSha) {
 }
 
 async function main() {
-    console.log(chalk.cyan.bold('\n🚀 LyricDisplay Release Assistant\n'));
+    console.log(chalk.cyan.bold('\nLyricDisplay Release Assistant\n'));
 
     if (!checkGhCli()) {
         console.log(chalk.red('ERROR: GitHub CLI (gh) is not installed or not authenticated.'));
@@ -148,12 +148,84 @@ async function main() {
         process.exit(1);
     }
 
-    const { notes = '' } = await prompts({
-        type: 'text',
-        name: 'notes',
-        message: 'Release notes (describe what changed in this version):',
-        initial: ''
+    console.log(chalk.cyan('\n📝 Release Notes'));
+    console.log(chalk.gray('Enter your release notes below. You can use multiple lines.'));
+    console.log(chalk.gray('Press Ctrl+D (Unix) or Ctrl+Z (Windows) when done, or leave blank to skip.\n'));
+
+    const { notesMethod } = await prompts({
+        type: 'select',
+        name: 'notesMethod',
+        message: 'How would you like to provide release notes?',
+        choices: [
+            { title: 'Type inline (single line)', value: 'inline' },
+            { title: 'Use external editor (multi-line)', value: 'editor' },
+            { title: 'Skip (no release notes)', value: 'skip' }
+        ]
     });
+
+    let notes = '';
+
+    if (notesMethod === 'inline') {
+        const response = await prompts({
+            type: 'text',
+            name: 'notes',
+            message: 'Release notes:',
+            initial: ''
+        });
+        notes = response.notes || '';
+    } else if (notesMethod === 'editor') {
+        console.log(chalk.yellow('\nOpening your default editor...'));
+        console.log(chalk.gray('Save and close the file when done.'));
+        
+        const tempFile = '.release-notes-temp.txt';
+        const template = `# Enter your release notes below
+# Lines starting with # will be ignored
+# Save and close this file when done
+
+`;
+        
+        try {
+            fs.writeFileSync(tempFile, template);
+            
+            const editor = process.env.EDITOR || process.env.VISUAL || (process.platform === 'win32' ? 'notepad' : 'nano');
+            
+            execSync(`${editor} ${tempFile}`, { stdio: 'inherit' });
+            
+            const content = fs.readFileSync(tempFile, 'utf8');
+            notes = content
+                .split('\n')
+                .filter(line => !line.trim().startsWith('#'))
+                .join('\n')
+                .trim();
+            
+            fs.unlinkSync(tempFile);
+            
+            if (notes) {
+                console.log(chalk.green('\n✅ Release notes captured:'));
+                console.log(chalk.gray('─'.repeat(50)));
+                console.log(notes);
+                console.log(chalk.gray('─'.repeat(50)));
+                
+                const { confirm } = await prompts({
+                    type: 'confirm',
+                    name: 'confirm',
+                    message: 'Use these release notes?',
+                    initial: true
+                });
+                
+                if (!confirm) {
+                    notes = '';
+                    console.log(chalk.yellow('Release notes discarded.'));
+                }
+            } else {
+                console.log(chalk.yellow('No release notes provided.'));
+            }
+        } catch (e) {
+            console.log(chalk.red('Failed to open editor. Skipping release notes.'));
+            if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+            notes = '';
+        }
+    }
 
     console.log(chalk.blue(`\n🚀 Starting release process for ${tagName}...`));
 
@@ -169,15 +241,16 @@ async function main() {
         execSync('npm run electron-pack', { stdio: 'inherit' });
         console.log(chalk.green('✅ Local Windows build complete.'));
 
-        console.log(chalk.gray('Creating release body file...'));
-        const releaseBodyContent = notes || 'No release notes provided for this version.';
-        fs.writeFileSync('RELEASE_BODY.md', releaseBodyContent);
+        console.log(chalk.blue('\n📦 Committing and Tagging...'));
 
-        console.log(chalk.blue('\n📦 Committing changes and creating tag...'));
+        execSync('git add package.json package-lock.json README.md "LyricDisplay Installation & Integration Guide.md"');
 
-        execSync('git add package.json package-lock.json README.md "LyricDisplay Installation & Integration Guide.md" RELEASE_BODY.md');
-
-        const commitMsg = `chore: release ${tagName}`;
+        let commitMsg = `chore: release ${tagName}`;
+        
+        if (notes.trim()) {
+            const safeNotes = notes.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+            commitMsg += `\n\nRELEASE_NOTES_START\n${safeNotes}\nRELEASE_NOTES_END`;
+        }
 
         execSync(`git commit -m "${commitMsg}"`);
         execSync(`git tag ${tagName}`);
@@ -201,8 +274,7 @@ async function main() {
         console.log(chalk.green.bold('\n✨ Release Complete! ✨'));
         console.log(chalk.cyan(`Tag: ${tagName}`));
         console.log(chalk.cyan(`Release URL: https://github.com/PeterAlaks/lyric-display-app/releases/tag/${tagName}`));
-        console.log(chalk.gray('All installers (Windows, macOS, Linux) have been built and published.'));
-        console.log(chalk.gray('Auto-updater metadata (latest.yml) has been generated.'));
+        console.log(chalk.gray('Documentation and links were updated before the tag was created.'));
 
     } catch (e) {
         console.error(chalk.red.bold('\n❌ RELEASE FAILED'));

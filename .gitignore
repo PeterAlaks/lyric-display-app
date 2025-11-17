@@ -49,3 +49,4 @@ release/
 *.tmp
 *.temp
 *~
+.release-notes-temp.txt
