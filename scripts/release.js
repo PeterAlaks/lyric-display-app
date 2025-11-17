@@ -38,7 +38,7 @@ function checkTagExists(tagName) {
     try {
         const localTags = safeExec('git tag -l');
         if (localTags.split('\n').includes(tagName)) return 'local';
-    } catch (e) {}
+    } catch (e) { }
 
     try {
         const remoteTags = safeExec('git ls-remote --tags origin');
@@ -170,12 +170,12 @@ async function main() {
         execSync('npm run electron-pack', { stdio: 'inherit' });
 
         console.log(chalk.blue('\n📦 Committing and Tagging...'));
-        
+
         execSync('git add package.json package-lock.json README.md "LyricDisplay Installation & Integration Guide.md"');
-        
+
         const safeNotes = notes.replace(/"/g, '\\"');
         const commitMsg = `chore: release ${tagName}\n\nRelease notes:\n${safeNotes}`;
-        
+
         execSync(`git commit -m "${commitMsg}"`);
         execSync(`git tag ${tagName}`);
 
@@ -189,7 +189,7 @@ async function main() {
         console.log(chalk.green.bold('\n✨ Release Complete! ✨'));
         console.log(chalk.cyan(`Tag: ${tagName}`));
         console.log(chalk.gray('Documentation and links were updated before the tag was created.'));
-        
+
     } catch (e) {
         console.error(chalk.red('\n❌ RELEASE FAILED'));
         console.error(e.message);
