@@ -52,12 +52,136 @@ function safeExec(cmd, opts = {}) {
     }).toString().trim();
 }
 
+function checkLocalTagExists(tagName) {
+    try {
+        const tags = safeExec('git tag -l');
+        return tags.split('\n').includes(tagName);
+    } catch (e) {
+        return false;
+    }
+}
+
 function checkRemoteTagExists(tagName) {
     try {
         const tags = safeExec('git ls-remote --tags origin');
         return tags.includes(`refs/tags/${tagName}`);
     } catch (e) {
         console.log(chalk.yellow('Warning: Could not check remote tags'));
+        return false;
+    }
+}
+
+async function waitForGitHubActions(version) {
+    console.log(chalk.blue('\nWaiting for GitHub Actions to complete...'));
+    console.log(chalk.gray('Checking build status every 30 seconds...\n'));
+
+    const maxAttempts = 60;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+        try {
+            const runs = safeExec(
+                `gh run list --workflow=build-release.yml --json conclusion,status --limit 1`,
+                { timeout: 15000 }
+            );
+
+            const runData = JSON.parse(runs);
+            if (runData.length > 0) {
+                const run = runData[0];
+
+                if (run.conclusion === 'success') {
+                    console.log(chalk.green('\nSUCCESS: GitHub Actions build completed!'));
+                    return true;
+                } else if (run.conclusion === 'failure') {
+                    console.log(chalk.red('\nERROR: GitHub Actions build failed!'));
+                    console.log(chalk.gray('Check: https://github.com/PeterAlaks/lyric-display-app/actions\n'));
+
+                    const { actionOnFailure } = await prompts({
+                        type: 'select',
+                        name: 'actionOnFailure',
+                        message: 'What would you like to do?',
+                        choices: [
+                            { title: 'Wait and retry (builds might succeed on retry)', value: 'retry' },
+                            { title: 'Skip documentation update (fix manually later)', value: 'skip' },
+                            { title: 'Abort release (will need manual cleanup)', value: 'abort' }
+                        ]
+                    });
+
+                    if (actionOnFailure === 'retry') {
+                        console.log(chalk.blue('\nContinuing to wait for builds...'));
+                        attempts = 0;
+                        await new Promise(resolve => setTimeout(resolve, 30000));
+                        continue;
+                    } else if (actionOnFailure === 'skip') {
+                        console.log(chalk.yellow('\nSkipping documentation update.'));
+                        console.log(chalk.gray('Update manually later with: node scripts/update-version.js --update-links-only ' + version));
+                        return false;
+                    } else {
+                        console.log(chalk.red('\nAborting. Release and tag exist on GitHub but builds failed.'));
+                        console.log(chalk.gray('Manual cleanup may be required.'));
+                        return false;
+                    }
+                } else if (run.status === 'in_progress' || run.status === 'queued') {
+                    attempts++;
+                    if (attempts % 4 === 0) {
+                        console.log(chalk.gray(`Still building... (${attempts * 30}s elapsed)`));
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 30000));
+                } else {
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 30000));
+                }
+            } else {
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, 30000));
+            }
+        } catch (e) {
+            console.log(chalk.yellow('\nWARNING: Could not check GitHub Actions status'));
+            console.log(chalk.gray('Error: ' + e.message));
+
+            const { continueWaiting } = await prompts({
+                type: 'confirm',
+                name: 'continueWaiting',
+                message: 'Continue waiting for GitHub Actions?',
+                initial: true
+            });
+
+            if (!continueWaiting) {
+                return false;
+            }
+
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 30000));
+        }
+    }
+
+    console.log(chalk.red('\nERROR: Timed out waiting for GitHub Actions (30 minutes elapsed)'));
+
+    const { actionOnTimeout } = await prompts({
+        type: 'select',
+        name: 'actionOnTimeout',
+        message: 'What would you like to do?',
+        choices: [
+            { title: 'Continue waiting', value: 'continue' },
+            { title: 'Check manually and proceed if done', value: 'manual' },
+            { title: 'Exit (update docs manually later)', value: 'exit' }
+        ]
+    });
+
+    if (actionOnTimeout === 'continue') {
+        console.log(chalk.blue('\nContinuing to wait...'));
+        return await waitForGitHubActions(version);
+    } else if (actionOnTimeout === 'manual') {
+        const { buildsComplete } = await prompts({
+            type: 'confirm',
+            name: 'buildsComplete',
+            message: 'Have you verified that GitHub Actions completed successfully?',
+            initial: false
+        });
+        return buildsComplete;
+    } else {
+        console.log(chalk.yellow('\nExiting. Builds may still be running.'));
+        console.log(chalk.gray('Update docs later with: node scripts/update-version.js --update-links-only ' + version));
         return false;
     }
 }
@@ -243,6 +367,104 @@ async function checkGitStateInteractive() {
     return { ok: true, branch };
 }
 
+async function handleTagConflicts(appliedVersion) {
+    const localTagExists = checkLocalTagExists(`v${appliedVersion}`);
+    const remoteTagExists = checkRemoteTagExists(`v${appliedVersion}`);
+
+    if (localTagExists) {
+        console.log(chalk.yellow(`\nWARNING: Local tag v${appliedVersion} already exists.`));
+
+        const { handleLocal } = await prompts({
+            type: 'select',
+            name: 'handleLocal',
+            message: 'What would you like to do?',
+            choices: [
+                { title: 'Delete local tag and continue', value: 'delete' },
+                { title: 'Abort release', value: 'abort' }
+            ]
+        });
+
+        if (handleLocal === 'abort' || !handleLocal) {
+            console.log(chalk.red('Aborting release.'));
+            console.log(chalk.gray(`To delete manually: git tag -d v${appliedVersion}`));
+            return false;
+        }
+
+        try {
+            execSync(`git tag -d v${appliedVersion}`, { stdio: 'inherit' });
+            console.log(chalk.green('SUCCESS: Local tag deleted.'));
+        } catch (e) {
+            console.error(chalk.red('ERROR: Failed to delete local tag:'), e.message);
+            return false;
+        }
+    }
+
+    if (remoteTagExists) {
+        console.log(chalk.yellow(`\nWARNING: Remote tag v${appliedVersion} already exists.`));
+        console.log(chalk.gray('This usually means a release was already created for this version.\n'));
+
+        const { handleRemote } = await prompts({
+            type: 'select',
+            name: 'handleRemote',
+            message: 'What would you like to do?',
+            choices: [
+                { title: 'Force push tag (overwrites existing)', value: 'force' },
+                { title: 'Skip tag push and check if release exists', value: 'skip' },
+                { title: 'Abort release', value: 'abort' }
+            ]
+        });
+
+        if (handleRemote === 'abort' || !handleRemote) {
+            console.log(chalk.red('Aborting release.'));
+            console.log(chalk.gray(`To delete remote tag: git push --delete origin v${appliedVersion}`));
+            return false;
+        }
+
+        return handleRemote;
+    }
+
+    return 'normal';
+}
+
+async function handlePushFailure(appliedVersion, error) {
+    console.error(chalk.red('\nERROR: Failed to push to GitHub:'), error.message);
+    console.log(chalk.gray('This could be due to network issues or authentication problems.\n'));
+
+    const { pushAction } = await prompts({
+        type: 'select',
+        name: 'pushAction',
+        message: 'What would you like to do?',
+        choices: [
+            { title: 'Retry push', value: 'retry' },
+            { title: 'Undo version bump and abort', value: 'undo' },
+            { title: 'Exit (fix manually)', value: 'exit' }
+        ]
+    });
+
+    if (pushAction === 'retry') {
+        return 'retry';
+    } else if (pushAction === 'undo') {
+        console.log(chalk.blue('\nUndoing version bump...'));
+        try {
+            execSync('git reset --hard HEAD~1', { stdio: 'inherit' });
+            execSync(`git tag -d v${appliedVersion}`, { stdio: 'inherit' });
+            console.log(chalk.green('SUCCESS: Version bump undone.'));
+            console.log(chalk.gray('Repository restored to previous state.'));
+        } catch (undoErr) {
+            console.error(chalk.red('ERROR: Failed to undo:'), undoErr.message);
+            console.log(chalk.gray('Manual cleanup required:'));
+            console.log(chalk.gray(`  git reset --hard HEAD~1`));
+            console.log(chalk.gray(`  git tag -d v${appliedVersion}`));
+        }
+        return 'abort';
+    } else {
+        console.log(chalk.yellow('\nExiting. Fix the issue and run:'));
+        console.log(chalk.gray('  git push'));
+        console.log(chalk.gray(`  git push origin v${appliedVersion}`));
+        return 'abort';
+    }
+}
+
 async function main() {
     const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
     let currentVersion = pkg.version;
@@ -300,10 +522,11 @@ async function main() {
 
     try {
         let versionToUse = bumpType === 'custom' ? customVersion : bumpType;
+        const targetVersion = bumpType === 'custom' ? customVersion : next[bumpType];
 
-        console.log(chalk.blue(`\nBumping version to v${bumpType === 'custom' ? customVersion : next[bumpType]}...`));
+        console.log(chalk.blue(`\nBumping version to v${targetVersion}...`));
 
-        let commitMessage = `chore: release v${bumpType === 'custom' ? customVersion : next[bumpType]}`;
+        let commitMessage = `chore: release v${targetVersion}`;
         if (notes?.trim()) {
             commitMessage += `\n\nRelease notes:\n${notes.trim()}`;
         }
@@ -314,71 +537,82 @@ async function main() {
         const appliedVersion = updatedPkg.version;
         console.log(chalk.green(`\nSUCCESS: Version bumped to v${appliedVersion}`));
 
-        console.log(chalk.blue('\nPushing commit and tag to GitHub...'));
+        console.log(chalk.blue('\nBuilding Windows installer locally...'));
+        console.log(chalk.gray('This may take a few minutes...\n'));
 
-        const remoteTagExists = checkRemoteTagExists(`v${appliedVersion}`);
+        execSync('npm run electron-pack', { stdio: 'inherit' });
+        console.log(chalk.green('\nSUCCESS: Windows installer built locally'));
 
-        if (remoteTagExists) {
-            console.log(chalk.yellow(`\nWARNING: Tag v${appliedVersion} already exists on remote.`));
-            const { forceTag } = await prompts({
-                type: 'confirm',
-                name: 'forceTag',
-                message: 'Force push tag (this will overwrite the existing tag)?',
-                initial: false
-            });
-
-            if (!forceTag) {
-                console.log(chalk.red('Aborting. Please delete the remote tag manually or choose a different version.'));
-                console.log(chalk.gray(`To delete: git push --delete origin v${appliedVersion}`));
-                process.exit(1);
-            }
-        }
-
-        try {
-            execSync('git push', { stdio: 'inherit' });
-
-            if (remoteTagExists) {
-                execSync(`git push origin v${appliedVersion} --force`, { stdio: 'inherit' });
-                console.log(chalk.yellow('WARNING: Force-pushed tag to remote.'));
-            } else {
-                execSync(`git push origin v${appliedVersion}`, { stdio: 'inherit' });
-            }
-
-        } catch (pushErr) {
-            console.error(chalk.red('\nERROR: Push failed:'), pushErr.message);
-            console.log(chalk.yellow('\nTip: Ensure you have a remote set (git remote -v) and correct permissions.'));
-            console.log(chalk.gray('You can manually run: git push && git push --tags\n'));
+        const tagStatus = await handleTagConflicts(appliedVersion);
+        if (!tagStatus) {
             process.exit(1);
         }
 
-        const version = appliedVersion;
-        const releaseUrl = `https://github.com/PeterAlaks/lyric-display-app/releases/tag/v${version}`;
+        console.log(chalk.blue('\nPushing commit and tag to GitHub...'));
 
-        console.log(chalk.green.bold('\nSUCCESS: Version tag pushed to GitHub!'));
-        console.log(chalk.cyan(`\nRelease v${version} initiated`));
+        let pushSuccess = false;
+        while (!pushSuccess) {
+            try {
+                execSync('git push', { stdio: 'inherit' });
 
-        console.log(chalk.blue('\nGitHub Actions is now building all platform installers...'));
-        console.log(chalk.gray('This may take 15-20 minutes to complete all builds.\n'));
+                if (tagStatus === 'force') {
+                    execSync(`git push origin v${appliedVersion} --force`, { stdio: 'inherit' });
+                    console.log(chalk.yellow('WARNING: Force-pushed tag to remote.'));
+                } else if (tagStatus === 'skip') {
+                    console.log(chalk.gray('Skipped tag push (already exists on remote).'));
+                } else {
+                    execSync(`git push origin v${appliedVersion}`, { stdio: 'inherit' });
+                }
 
-        console.log(chalk.cyan('What happens next:'));
-        console.log(chalk.gray('  1. Windows build (5-7 minutes)'));
-        console.log(chalk.gray('  2. macOS build (5-7 minutes)'));
-        console.log(chalk.gray('  3. Linux build (5-7 minutes)'));
-        console.log(chalk.gray('  4. Release creation with all installers'));
-        console.log(chalk.gray('  5. Documentation auto-update with download links\n'));
+                console.log(chalk.green('SUCCESS: Commit and tag pushed to GitHub'));
+                pushSuccess = true;
 
-        console.log(chalk.yellow('Monitor build progress:'));
-        console.log(chalk.underline.cyan('https://github.com/PeterAlaks/lyric-display-app/actions'));
+            } catch (pushErr) {
+                const action = await handlePushFailure(appliedVersion, pushErr);
 
-        console.log(chalk.yellow('\nRelease will be available at:'));
-        console.log(chalk.underline.cyan(releaseUrl));
-
-        if (notes?.trim()) {
-            console.log(chalk.gray(`\nRelease notes included in commit`));
+                if (action === 'retry') {
+                    console.log(chalk.blue('\nRetrying push...'));
+                    continue;
+                } else {
+                    process.exit(1);
+                }
+            }
         }
 
-        console.log(chalk.green('\nRelease process initiated successfully!'));
-        console.log(chalk.gray('GitHub Actions will handle the rest automatically.\n'));
+        console.log(chalk.blue('\nGitHub Actions is now building Windows, macOS, and Linux installers...'));
+        console.log(chalk.gray('This typically takes 15-20 minutes.\n'));
+
+        const actionsSuccess = await waitForGitHubActions(appliedVersion);
+
+        if (!actionsSuccess) {
+            console.log(chalk.yellow('\nRelease created but builds incomplete or documentation not updated.'));
+            console.log(chalk.gray('Check GitHub Actions and update docs manually if needed.'));
+            process.exit(0);
+        }
+
+        console.log(chalk.blue('\nUpdating documentation with download links...'));
+
+        execSync(`node scripts/update-version.js --update-links-only ${appliedVersion}`, { stdio: 'inherit' });
+        execSync('git add README.md "LyricDisplay Installation & Integration Guide.md"', { stdio: 'inherit' });
+        execSync(`git commit -m "docs: update download links for v${appliedVersion}"`, { stdio: 'inherit' });
+        execSync('git push', { stdio: 'inherit' });
+
+        console.log(chalk.green('\nSUCCESS: Documentation updated and pushed'));
+
+        const releaseUrl = `https://github.com/PeterAlaks/lyric-display-app/releases/tag/v${appliedVersion}`;
+
+        console.log(chalk.green.bold('\n========================================'));
+        console.log(chalk.green.bold('RELEASE COMPLETE'));
+        console.log(chalk.green.bold('========================================\n'));
+
+        console.log(chalk.cyan(`Version: v${appliedVersion}`));
+        console.log(chalk.cyan(`Release URL: ${releaseUrl}\n`));
+
+        console.log(chalk.white('Download Links:'));
+        console.log(chalk.gray(`  Windows: https://github.com/PeterAlaks/lyric-display-app/releases/download/v${appliedVersion}/LyricDisplay-${appliedVersion}-Windows-Setup.exe`));
+        console.log(chalk.gray(`  macOS (Apple Silicon): https://github.com/PeterAlaks/lyric-display-app/releases/download/v${appliedVersion}/LyricDisplay-${appliedVersion}-macOS-arm64.dmg`));
+        console.log(chalk.gray(`  macOS (Intel): https://github.com/PeterAlaks/lyric-display-app/releases/download/v${appliedVersion}/LyricDisplay-${appliedVersion}-macOS-x64.dmg`));
+        console.log(chalk.gray(`  Linux: https://github.com/PeterAlaks/lyric-display-app/releases/download/v${appliedVersion}/LyricDisplay-${appliedVersion}-Linux.AppImage\n`));
 
     } catch (err) {
         console.error(chalk.red.bold('\nERROR: Release failed:'), err.message);

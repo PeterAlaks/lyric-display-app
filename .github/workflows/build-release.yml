@@ -239,28 +239,3 @@ jobs:
             - Then run it: `./LyricDisplay-*.AppImage`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js for documentation update
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies for update script
-        run: npm ci
-
-      - name: Update documentation with download links
-        run: node scripts/update-version.js --update-links-only ${{ steps.get_version.outputs.VERSION }}
-
-      - name: Commit and push documentation updates
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md "LyricDisplay Installation & Integration Guide.md"
-          
-          # Only commit if there are changes
-          if git diff --staged --quiet; then
-            echo "No documentation changes to commit"
-          else
-            git commit -m "docs: update download links for v${{ steps.get_version.outputs.VERSION }}"
-            git push origin HEAD:main
-          fi
