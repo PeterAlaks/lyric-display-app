@@ -251,15 +251,6 @@ async function main() {
     console.log(chalk.cyan.bold('\nLyricDisplay Release Assistant\n'));
     console.log(chalk.gray(`Current version: v${currentVersion}\n`));
 
-    const currentTagExists = checkRemoteTagExists(`v${currentVersion}`);
-
-    if (currentTagExists) {
-        console.log(chalk.yellow(`\nWARNING: Tag v${currentVersion} already exists on remote repository.`));
-        console.log(chalk.gray('This usually means a release was already created for this version.\n'));
-        console.log(chalk.red('Please create a new version bump to proceed with a release.\n'));
-        process.exit(1);
-    }
-
     const { bumpType } = await prompts({
         type: 'select',
         name: 'bumpType',
