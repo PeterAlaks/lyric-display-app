@@ -50,3 +50,4 @@ release/
 *.temp
 *~
 .release-notes-temp.txt
+.commit-msg-temp.txt

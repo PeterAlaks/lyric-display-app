@@ -53,7 +53,7 @@ jobs:
           name: windows-installer
           path: |
             dist/*.exe
-            dist/*.yml
+            dist/latest.yml
           retention-days: 5
 
   build-macos:
@@ -102,7 +102,7 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.zip
-            dist/*.yml
+            dist/latest-mac.yml
           retention-days: 5
 
   build-linux:
@@ -156,7 +156,7 @@ jobs:
             dist/*.AppImage
             dist/*.deb
             dist/*.rpm
-            dist/*.yml
+            dist/latest-linux.yml
           retention-days: 5
 
   create-release:
@@ -183,16 +183,19 @@ jobs:
       - name: Read release notes from commit
         id: release_notes
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%B)
+          git log -1 --pretty=%B > commit_msg.txt
           
-          if echo "$COMMIT_MSG" | grep -q "RELEASE_NOTES_START"; then
-            NOTES=$(echo "$COMMIT_MSG" | sed -n '/RELEASE_NOTES_START/,/RELEASE_NOTES_END/p' | sed '1d;$d')
+          if grep -q "RELEASE_NOTES_START" commit_msg.txt; then
             echo "CUSTOM_NOTES<<EOF" >> $GITHUB_OUTPUT
-            echo "$NOTES" >> $GITHUB_OUTPUT
+            sed -n '/RELEASE_NOTES_START/,/RELEASE_NOTES_END/p' commit_msg.txt | sed '1d;$d' >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
+            echo "Found release notes in commit message"
           else
             echo "CUSTOM_NOTES=" >> $GITHUB_OUTPUT
+            echo "No release notes found in commit message"
           fi
+          
+          rm -f commit_msg.txt
 
       - name: Create or update release
         uses: softprops/action-gh-release@v1

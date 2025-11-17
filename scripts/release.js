@@ -176,43 +176,43 @@ async function main() {
     } else if (notesMethod === 'editor') {
         console.log(chalk.yellow('\nOpening your default editor...'));
         console.log(chalk.gray('Save and close the file when done.'));
-        
+
         const tempFile = '.release-notes-temp.txt';
         const template = `# Enter your release notes below
 # Lines starting with # will be ignored
 # Save and close this file when done
 
 `;
-        
+
         try {
             fs.writeFileSync(tempFile, template);
-            
+
             const editor = process.env.EDITOR || process.env.VISUAL || (process.platform === 'win32' ? 'notepad' : 'nano');
-            
+
             execSync(`${editor} ${tempFile}`, { stdio: 'inherit' });
-            
+
             const content = fs.readFileSync(tempFile, 'utf8');
             notes = content
                 .split('\n')
                 .filter(line => !line.trim().startsWith('#'))
                 .join('\n')
                 .trim();
-            
+
             fs.unlinkSync(tempFile);
-            
+
             if (notes) {
                 console.log(chalk.green('\n✅ Release notes captured:'));
                 console.log(chalk.gray('─'.repeat(50)));
                 console.log(notes);
                 console.log(chalk.gray('─'.repeat(50)));
-                
+
                 const { confirm } = await prompts({
                     type: 'confirm',
                     name: 'confirm',
                     message: 'Use these release notes?',
                     initial: true
                 });
-                
+
                 if (!confirm) {
                     notes = '';
                     console.log(chalk.yellow('Release notes discarded.'));
@@ -246,13 +246,21 @@ async function main() {
         execSync('git add package.json package-lock.json README.md "LyricDisplay Installation & Integration Guide.md"');
 
         let commitMsg = `chore: release ${tagName}`;
-        
+
         if (notes.trim()) {
-            const safeNotes = notes.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-            commitMsg += `\n\nRELEASE_NOTES_START\n${safeNotes}\nRELEASE_NOTES_END`;
+            commitMsg += `\n\nRELEASE_NOTES_START\n${notes}\nRELEASE_NOTES_END`;
         }
 
-        execSync(`git commit -m "${commitMsg}"`);
+        const commitMsgFile = '.commit-msg-temp.txt';
+        fs.writeFileSync(commitMsgFile, commitMsg);
+
+        try {
+            execSync(`git commit -F "${commitMsgFile}"`);
+            fs.unlinkSync(commitMsgFile);
+        } catch (e) {
+            if (fs.existsSync(commitMsgFile)) fs.unlinkSync(commitMsgFile);
+            throw e;
+        }
         execSync(`git tag ${tagName}`);
         console.log(chalk.green('✅ Commit and tag created locally.'));
 
