@@ -42,7 +42,7 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build Windows installer (without publishing)
+      - name: Build and publish Windows installer
         run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -89,7 +89,7 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build macOS installers (without publishing)
+      - name: Build and publish macOS installers
         run: npx electron-builder --mac --publish always
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
@@ -143,7 +143,7 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build Linux installers (without publishing)
+      - name: Build and publish Linux installers
         run: npx electron-builder --linux --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

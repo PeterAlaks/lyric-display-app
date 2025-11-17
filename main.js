@@ -27,11 +27,13 @@ const hasLock = setupSingleInstanceLock((commandLine) => {
     const filePath = extractFilePathFromArgs(commandLine);
     if (filePath) {
       console.log('[Main] Second instance opened with file:', filePath);
-      handleFileOpen(filePath, mainWindow);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        handleFileOpen(filePath, mainWindow);
+      }
     }
   }
 
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   }
@@ -79,6 +81,12 @@ app.whenReady().then(async () => {
     handleDisplayChange: (changeType, display) =>
       handleDisplayChange(changeType, display, requestRendererModal)
   });
+
+  if (mainWindow) {
+    mainWindow.on('closed', () => {
+      mainWindow = null;
+    });
+  }
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
