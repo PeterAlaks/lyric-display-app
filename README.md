@@ -2,7 +2,7 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 5.8.0
+**Version:** 5.7.0
 **Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
@@ -242,8 +242,7 @@ lyric-display-app/
 |   └── windows.js                          # Main window builder
 ├── public/                                 # Static assets
 ├── scripts/                                # Custom npm scripts
-|   ├── release-manager.js                  # General release publish assistant
-|   ├── release.js                          # Release main script
+|   ├── release.js                          # Release assistant main script
 |   └── update-version.js                   # Helper script for updating current version in readme and install guide
 ├── server/                                 # Express.js backend
 |   ├── events.js                           # Backend communication events
