@@ -76,6 +76,7 @@
       "server/**/*",
       "shared/**/*",
       "main/**/*",
+      "public/**/*",
       "main.js",
       "preload.js",
       "package.json"
