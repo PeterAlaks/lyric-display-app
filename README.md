@@ -69,6 +69,7 @@ npm run electron-pack
 - **File Menu → Load Lyrics File** (Ctrl/Cmd+O)
 - **Drag & Drop**: Drop .txt files directly into the main panel
 - **New Song Canvas**: Create and format lyrics from scratch (Ctrl/Cmd+N)
+- **Online Lyrics Search**: Quickly search for and load lyrics from featured online providers (Icon in top bar)
 
 ### 2. Setting Up Outputs
 1. Configure **Output 1** and **Output 2** settings independently
@@ -88,18 +89,7 @@ npm run electron-pack
 
 ## File Format
 
-LyricDisplay accepts plain text (.txt) and lyrics (.lrc) files with the following format:
-
-```
-First verse line
-[Translation or alternative text]
-
-Second verse line
-Another line without translation
-
-Chorus line one
-[Chorus translation]
-```
+LyricDisplay accepts plain text (.txt) and lyrics (.lrc) files
 
 **Formatting Rules:**
 
@@ -110,9 +100,9 @@ Chorus line one
 ## Technical Architecture
 
 ### Frontend Stack
-- **React 18** with React Router for SPA navigation
+- **React** with Hash Router for SPA navigation
 - **Tailwind CSS** for responsive styling
-- **Radix UI** components for accessibility
+- **Radix/ShadCN UI** components for accessibility
 - **Zustand** for state management with persistence
 - **Lucide React** for modern iconography
 
@@ -122,51 +112,15 @@ Chorus line one
 - **Node.js** child processes for backend management
 
 ### Desktop Integration
-- **Electron 37** for cross-platform desktop application
+- **Electron** for cross-platform desktop application
 - **Auto-updater** with GitHub releases integration
 - **Native menus** with keyboard shortcuts
 - **System theme** synchronization
-
-## Configuration
-
-### Output Settings
-Each output can be independently configured:
-
-| Setting | Description | Range / Options |
-|---------|-------------|-----------------|
-| Lyrics Position | Choose where lyrics sit vertically | Upper Third, Centre, Lower Third (centre enforced in full screen) |
-| Font Style | Typography selection with live preview | 13 curated fonts |
-| Emphasis | Toggle text emphasis states | Bold, Italic, Underline, All Caps |
-| Font Size | Adjust displayed text size | 24–100 px |
-| Font Colour | Apply precise text colour | Hex colour picker |
-| Text Border | Outline lyrics for legibility | Colour picker + 0–10 px thickness |
-| Drop Shadow | Add depth behind text | Colour picker + 0–10 opacity |
-| Background | Panel fill behind lyrics | Colour picker + 0–10 opacity (disabled in full screen) |
-| X & Y Margins | Fine-tune screen position | Decimal offsets |
-| Full Screen Mode | Expand lyrics and manage full-screen backgrounds | Toggle + solid colour or uploaded image/video (≤200 MB) |
 
 ### Storage & Persistence
 - Settings automatically saved using Zustand persistence
 - Cross-session state restoration
 - Electron-store integration for native preferences
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| Ctrl/Cmd + O | Load lyrics file |
-| Ctrl/Cmd + N | New song canvas |
-| Ctrl/Cmd + P | Toggle autoplay |
-| Ctrl/Cmd + F | Jump to search |
-| Esc | Clear search query |
-| Ctrl/Cmd + T | In New song canvas - adds translation line |
-| Ctrl/Cmd + D | In New song canvas - duplicates current line |
-| Ctrl/Cmd + L | In New song canvas - selects current line |
-| Shift + ↑/↓ | Navigate search results |
-| Spacebar | Toggle display output |
-| ↑/↓ or Numpad ↑/↓ | Jump to next/previous selected lyric line |
-| Home | Jump to select first lyric line |
-| End | Jump to select last lyric line |
 
 ## Use Cases
 
@@ -195,7 +149,7 @@ Each output can be independently configured:
 5. Enable **Shutdown source when not visible** for performance
 6. **Refresh browser when scene becomes active** for reliability
 
-### VMIX Integration
+### vMix Integration
 - Add **Web Browser** input
 - Use same URL format as OBS
 - Configure as overlay for professional broadcast mixing
@@ -384,24 +338,9 @@ npm run electron-pack    # Package Electron app
 ### Common Issues
 
 **Output windows not displaying:**
-- Verify backend server is running (check console logs)
-- Ensure Socket.io connection is established
-- Try refreshing browser sources in OBS/VMIX
-
-**Auto-updater not working:**
-- Check internet connection
-- Verify GitHub repository access
-- Review console logs for specific errors
-
-**Styling not applying:**
-- Confirm Socket.io communication
-- Use "Sync Outputs" button to force state refresh
-- Check browser console for JavaScript errors
-
-### Performance Optimization
-- Close unused output windows when not needed
-- Use hardware acceleration in streaming software
-- Monitor CPU usage during extended sessions
+- Verify backend server is running (Port 4000 active)
+- Ensure Socket.io connection is established (Connected status in top bar)
+- Try refreshing browser sources in OBS/vMix/Wirecast
 
 ## License & Credits
 
@@ -438,9 +377,8 @@ Their inclusion does **not imply endorsement, partnership, or affiliation** with
 - David Okaliwe (Co-Developer)
 
 **Links:**
-- [GitHub Repository](https://github.com/PeterAlaks/lyric-display-app)
+- [Our Website](https://lyricdisplay.app)
 - [Developer Portfolio](https://linktr.ee/peteralaks)
-- [Documentation](https://github.com/PeterAlaks/lyric-display-app#readme)
 - [Support Development](https://paystack.shop/pay/lyricdisplay-support)
 
 ## Support
