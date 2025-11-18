@@ -4,7 +4,7 @@
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "author": {
     "name": "Peter Alakembi",
-    "email": "peteralakembi@gmail.com"
+    "email": "alakembipeter30@gmail.com"
   },
   "main": "main.js",
   "type": "module",
@@ -191,18 +191,6 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "rpm",
           "arch": [
             "x64"
           ]
