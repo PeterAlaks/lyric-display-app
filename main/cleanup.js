@@ -1,6 +1,7 @@
 import { BrowserWindow } from 'electron';
 import { stopBackend } from './backend.js';
 import { cleanupDisplayManager } from './displayManager.js';
+import { getLoadingWindow } from './loadingWindow.js';
 
 export function closeOutputWindows() {
   try {
@@ -25,7 +26,27 @@ export function closeOutputWindows() {
   }
 }
 
+let isCleaningUp = false;
+
 export function performCleanup() {
+  if (isCleaningUp) {
+    console.log('[Cleanup] Already cleaning up, skipping duplicate call');
+    return;
+  }
+
+  isCleaningUp = true;
+  console.log('[Cleanup] Starting cleanup process');
+
+  try {
+    const loadingWindow = getLoadingWindow();
+    if (loadingWindow && !loadingWindow.isDestroyed()) {
+      console.log('[Cleanup] Closing loading window');
+      loadingWindow.destroy();
+    }
+  } catch (error) {
+    console.error('[Cleanup] Error closing loading window:', error);
+  }
+
   try {
     stopBackend();
   } catch (error) {
@@ -39,4 +60,6 @@ export function performCleanup() {
   }
 
   closeOutputWindows();
+
+  console.log('[Cleanup] Cleanup process completed');
 }

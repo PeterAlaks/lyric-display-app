@@ -1,4 +1,3 @@
-// main/backend.js
 import path from 'path';
 import { fork } from 'child_process';
 import { resolveProductionPath } from './paths.js';
@@ -6,7 +5,6 @@ import { app } from 'electron';
 
 let backendProcess = null;
 
-// Health check function with retry
 async function waitForBackendHealth(maxAttempts = 20, intervalMs = 500) {
   let attempts = 0;
 
@@ -54,7 +52,6 @@ export function startBackend() {
 
     let isResolved = false;
 
-    // Extended timeout for complete startup
     const timeout = setTimeout(async () => {
       if (!isResolved) {
         console.log('Backend process timeout, attempting health check...');
@@ -116,7 +113,6 @@ export function startBackend() {
       }
     });
 
-    // Fallback health check after initial process startup
     setTimeout(async () => {
       if (!isResolved) {
         console.log('Attempting early health check...');
@@ -135,17 +131,30 @@ export function startBackend() {
 
 export function stopBackend() {
   if (backendProcess) {
+    console.log('[Backend] Stopping backend process...');
     try {
-      backendProcess.kill('SIGTERM');
+      if (process.platform === 'win32') {
+        console.log('[Backend] Using SIGKILL for Windows');
+        backendProcess.kill('SIGKILL');
+      } else {
+        backendProcess.kill('SIGTERM');
 
-      setTimeout(() => {
+        setTimeout(() => {
+          if (backendProcess && !backendProcess.killed) {
+            console.log('[Backend] Force killing backend process');
+            backendProcess.kill('SIGKILL');
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('[Backend] Error stopping backend:', error);
+      try {
         if (backendProcess && !backendProcess.killed) {
-          console.log('Force killing backend process');
           backendProcess.kill('SIGKILL');
         }
-      }, 5000);
-    } catch (error) {
-      console.error('Error stopping backend:', error);
+      } catch (killError) {
+        console.error('[Backend] Error force killing backend:', killError);
+      }
     }
     backendProcess = null;
   }

@@ -108,10 +108,15 @@ app.on('open-file', (event, filePath) => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    performCleanup();
     app.quit();
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  performCleanup();
+});
+
+app.on('will-quit', () => {
   performCleanup();
 });

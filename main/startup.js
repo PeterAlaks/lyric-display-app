@@ -47,7 +47,7 @@ export function prewarmResources() {
  * @param {BrowserWindow} mainWindow - The main window instance
  */
 export function setupMainWindowCloseHandler(mainWindow) {
-  mainWindow.on('close', () => {
+  mainWindow.on('close', (event) => {
     console.log('[Startup] Main window closing, shutting down output windows...');
     try {
       const windows = BrowserWindow.getAllWindows();

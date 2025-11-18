@@ -29,7 +29,7 @@ export function createLoadingWindow() {
     resizable: false,
     minimizable: false,
     maximizable: false,
-    closable: false,
+    closable: true,
     skipTaskbar: true,
     frame: false,
     transparent: true,
