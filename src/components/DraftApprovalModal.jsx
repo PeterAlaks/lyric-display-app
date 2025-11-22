@@ -6,6 +6,7 @@ import { useControlSocket } from '../context/ControlSocketProvider';
 import { useLyricsState } from '../hooks/useStoreSelectors';
 import useToast from '../hooks/useToast';
 import { processRawTextToLines } from '../utils/parseLyrics';
+import { parseLrc } from '../utils/parseLrc';
 
 const animationDuration = 220;
 
@@ -23,7 +24,7 @@ const DraftApprovalModal = ({ darkMode }) => {
     const displayDraftRef = useRef(null);
 
     const { emitLyricsDraftApprove, emitLyricsDraftReject } = useControlSocket();
-    const { setLyrics, setRawLyricsContent, setLyricsFileName, selectLine } = useLyricsState();
+    const { setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsTimestamps, selectLine } = useLyricsState();
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -90,12 +91,26 @@ const DraftApprovalModal = ({ darkMode }) => {
         try {
             const processedLines = currentDraft.processedLines || processRawTextToLines(currentDraft.rawText);
 
+            const hasLrcTimestamps = /^\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test((currentDraft.rawText || '').trim());
+            let timestamps = [];
+
+            if (hasLrcTimestamps) {
+                try {
+                    const parsed = parseLrc(currentDraft.rawText);
+                    timestamps = parsed.timestamps || [];
+                } catch (error) {
+                    console.warn('Failed to parse LRC timestamps from draft:', error);
+                }
+            }
+
             setLyrics(processedLines);
             setRawLyricsContent(currentDraft.rawText);
             setLyricsFileName(currentDraft.title);
+            setLyricsTimestamps(timestamps);
             selectLine(null);
 
             const success = emitLyricsDraftApprove({
+                draftId: currentDraft.draftId,
                 title: currentDraft.title,
                 rawText: currentDraft.rawText,
                 processedLines
@@ -125,7 +140,7 @@ const DraftApprovalModal = ({ darkMode }) => {
         } finally {
             setIsProcessing(false);
         }
-    }, [currentDraft, isProcessing, emitLyricsDraftApprove, setLyrics, setRawLyricsContent, setLyricsFileName, selectLine, showToast]);
+    }, [currentDraft, isProcessing, emitLyricsDraftApprove, setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsTimestamps, selectLine, showToast]);
 
     const handleReject = useCallback(() => {
         if (!currentDraft || isProcessing) return;
@@ -134,6 +149,8 @@ const DraftApprovalModal = ({ darkMode }) => {
 
         try {
             const success = emitLyricsDraftReject({
+                draftId: currentDraft.draftId,
+                title: currentDraft.title,
                 reason: rejectReason.trim() || 'No reason provided'
             });
 

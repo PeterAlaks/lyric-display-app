@@ -171,7 +171,7 @@ const useSocketEvents = (role) => {
       setSetlistFiles(files);
     });
 
-    socket.on('setlistLoadSuccess', ({ fileId, fileName, originalName, fileType, linesCount, rawContent, loadedBy }) => {
+    socket.on('setlistLoadSuccess', ({ fileId, fileName, originalName, fileType, linesCount, rawContent, loadedBy, origin, draftId }) => {
       logDebug(`Setlist file loaded: ${fileName} (${linesCount} lines) by ${loadedBy}`);
       setLyricsFileName(fileName);
       selectLine(null);
@@ -180,20 +180,29 @@ const useSocketEvents = (role) => {
       }
 
       const detected = detectArtistFromFilename(fileName);
+      let computedOrigin = 'Setlist (.txt)';
+      if (fileType === 'lrc') {
+        computedOrigin = 'Setlist (.lrc)';
+      }
+      if (fileType === 'draft' || origin === 'draft') {
+        computedOrigin = 'Secondary Controller Draft';
+      }
+
       const metadata = {
         title: detected.title || fileName,
         artists: detected.artist ? [detected.artist] : [],
         album: null,
         year: null,
         lyricLines: linesCount,
-        origin: fileType === 'lrc' ? 'Setlist (.lrc)' : 'Setlist (.txt)',
-        filePath: null
+        origin: computedOrigin,
+        filePath: null,
+        draftId: draftId || null
       };
       useLyricsStore.getState().setSongMetadata(metadata);
 
       try {
         window.dispatchEvent(new CustomEvent('setlist-load-success', {
-          detail: { fileId, fileName, originalName, fileType, linesCount, loadedBy },
+          detail: { fileId, fileName, originalName, fileType, linesCount, loadedBy, origin: computedOrigin, draftId: draftId || null },
         }));
       } catch { }
     });
@@ -260,17 +269,17 @@ const useSocketEvents = (role) => {
       }));
     });
 
-    socket.on('draftApproved', ({ success, title }) => {
+    socket.on('draftApproved', ({ success, title, draftId }) => {
       logDebug(`Draft approved: ${title}`);
       window.dispatchEvent(new CustomEvent('draft-approved', {
-        detail: { success, title },
+        detail: { success, title, draftId },
       }));
     });
 
-    socket.on('draftRejected', ({ success, reason }) => {
+    socket.on('draftRejected', ({ success, reason, draftId, title }) => {
       logDebug('Draft rejected:', reason);
       window.dispatchEvent(new CustomEvent('draft-rejected', {
-        detail: { success, reason },
+        detail: { success, reason, draftId, title },
       }));
     });
 

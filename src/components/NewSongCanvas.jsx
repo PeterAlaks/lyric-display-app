@@ -166,14 +166,27 @@ const NewSongCanvas = () => {
       });
     };
 
+    const handleDraftRejected = (event) => {
+      const { title, reason } = event.detail;
+      showModal({
+        title: 'Draft Rejected',
+        headerDescription: `Your draft "${title}" was rejected by the control panel`,
+        description: reason || 'No reason provided',
+        variant: 'error',
+        dismissLabel: 'Understood',
+      });
+    };
+
     window.addEventListener('draft-submitted', handleDraftSubmitted);
     window.addEventListener('draft-error', handleDraftError);
+    window.addEventListener('draft-rejected', handleDraftRejected);
 
     return () => {
       window.removeEventListener('draft-submitted', handleDraftSubmitted);
       window.removeEventListener('draft-error', handleDraftError);
+      window.removeEventListener('draft-rejected', handleDraftRejected);
     };
-  }, [showToast]);
+  }, [showToast, showModal]);
 
   const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef, showToast });
 

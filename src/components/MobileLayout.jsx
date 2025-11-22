@@ -77,6 +77,25 @@ const MobileLayout = () => {
     showToast
   });
 
+  React.useEffect(() => {
+    const handleDraftRejected = (event) => {
+      const { title, reason } = event.detail;
+      showModal({
+        title: 'Draft Rejected',
+        headerDescription: `Your draft "${title}" was rejected by the control panel`,
+        description: reason || 'No reason provided',
+        variant: 'error',
+        dismissLabel: 'Understood',
+      });
+    };
+
+    window.addEventListener('draft-rejected', handleDraftRejected);
+
+    return () => {
+      window.removeEventListener('draft-rejected', handleDraftRejected);
+    };
+  }, [showModal]);
+
   const handleLineSelect = (index) => {
     if (!isAuthenticated || !ready) {
       return;

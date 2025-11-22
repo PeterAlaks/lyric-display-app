@@ -18,6 +18,7 @@ let outputInstances = {
 };
 let currentStageTimerState = { running: false, paused: false, endTime: null, remaining: null };
 let currentStageMessages = [];
+let pendingDrafts = new Map();
 
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
@@ -438,7 +439,11 @@ export default function registerSocketEvents(io, { hasPermission }) {
         return;
       }
 
+      const timestamp = Date.now();
+      const draftId = `${sessionId}_${timestamp}`;
+
       const draftPayload = {
+        draftId,
         title: title || 'Untitled',
         rawText: rawText || '',
         processedLines: processedLines || [],
@@ -446,9 +451,20 @@ export default function registerSocketEvents(io, { hasPermission }) {
           clientType,
           deviceId,
           sessionId,
-          timestamp: Date.now()
+          timestamp
         }
       };
+
+      pendingDrafts.set(draftId, {
+        submitterSocketId: socket.id,
+        submitterSessionId: sessionId,
+        title: draftPayload.title,
+        timestamp
+      });
+
+      setTimeout(() => {
+        pendingDrafts.delete(draftId);
+      }, 10 * 60 * 1000);
 
       desktopClients.forEach(client => {
         if (client.socket && client.socket.connected) {
@@ -459,7 +475,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket.emit('draftSubmitted', { success: true, title });
     });
 
-    socket.on('lyricsDraftApprove', ({ title, rawText, processedLines }) => {
+    socket.on('lyricsDraftApprove', ({ draftId, title, rawText, processedLines }) => {
       if (!hasPermission(socket, 'lyrics:write')) {
         socket.emit('permissionError', 'Insufficient permissions to approve drafts');
         return;
@@ -477,23 +493,63 @@ export default function registerSocketEvents(io, { hasPermission }) {
         io.emit('setlistLoadSuccess', {
           fileId: null,
           fileName: title,
+          originalName: null,
+          fileType: 'draft',
           linesCount: currentLyrics.length,
           rawContent: rawText,
-          loadedBy: 'desktop'
+          loadedBy: 'desktop',
+          origin: 'draft'
         });
       }
 
-      socket.emit('draftApproved', { success: true, title });
+      if (draftId && pendingDrafts.has(draftId)) {
+        const draftInfo = pendingDrafts.get(draftId);
+        const submitterClients = Array.from(connectedClients.values())
+          .filter(c => c.sessionId === draftInfo.submitterSessionId)
+          .sort((a, b) => (b.connectedAt || 0) - (a.connectedAt || 0));
+
+        const targetClient = submitterClients[0];
+        if (targetClient?.socket && targetClient.socket.connected) {
+          targetClient.socket.emit('draftApproved', { success: true, title, draftId });
+        }
+
+        pendingDrafts.delete(draftId);
+      } else {
+        socket.emit('draftApproved', { success: true, title, draftId: draftId || null });
+      }
     });
 
-    socket.on('lyricsDraftReject', ({ reason }) => {
+    socket.on('lyricsDraftReject', ({ draftId, title, reason }) => {
       if (!hasPermission(socket, 'lyrics:write')) {
         socket.emit('permissionError', 'Insufficient permissions to reject drafts');
         return;
       }
 
-      console.log(`Desktop client rejected draft: ${reason || 'No reason provided'}`);
-      socket.emit('draftRejected', { success: true, reason });
+      console.log(`Desktop client rejected draft "${title}": ${reason || 'No reason provided'}`);
+
+      if (draftId && pendingDrafts.has(draftId)) {
+        const draftInfo = pendingDrafts.get(draftId);
+
+        const submitterClients = Array.from(connectedClients.values())
+          .filter(c => c.sessionId === draftInfo.submitterSessionId)
+          .sort((a, b) => (b.connectedAt || 0) - (a.connectedAt || 0));
+
+        const targetClient = submitterClients[0];
+        if (targetClient?.socket && targetClient.socket.connected) {
+          targetClient.socket.emit('draftRejected', {
+            success: true,
+            title: title || draftInfo.title,
+            reason: reason || 'No reason provided',
+            draftId
+          });
+        }
+
+        pendingDrafts.delete(draftId);
+        console.log(`Rejection notification sent to submitter (session: ${draftInfo.submitterSessionId})`);
+      } else {
+        console.warn(`Draft ${draftId} not found in pending drafts, cannot notify submitter`);
+        socket.emit('draftRejected', { success: true, reason, draftId: draftId || null, title: title || null });
+      }
     });
 
     socket.on('autoplayStateUpdate', ({ isActive, clientType: autoplayClientType }) => {
