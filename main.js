@@ -98,7 +98,7 @@ app.whenReady().then(async () => {
         defaultId: 0,
         cancelId: 0,
         title: 'Confirm Close',
-        message: 'Are you sure you want to close Lyric Display?',
+        message: 'Are you sure you want to close LyricDisplay?',
         detail: 'We just want to be sure you mean this, as closing the app will discard any ongoing lyric operations or unsaved changes.'
       });
 
