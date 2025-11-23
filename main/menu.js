@@ -138,7 +138,10 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                     version: app.getVersion(),
                     actions: [
                       { label: 'Close', value: { action: 'close' }, variant: 'outline' },
-                      { label: 'Check for Updates', value: { action: 'checkUpdates' } },
+                      {
+                        label: 'Check for Updates',
+                        value: { action: 'checkUpdates' }
+                      },
                     ],
                   },
                   {
@@ -180,7 +183,9 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
               );
 
               if (result?.action === 'checkUpdates') {
-                checkForUpdates?.(true);
+                setTimeout(() => {
+                  checkForUpdates?.(true);
+                }, 250);
               }
             },
           },
@@ -352,45 +357,59 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                     return;
                   }
 
-                  const display = externalDisplays[0];
-                  const assignment = getDisplayAssignment(display.id);
-
                   const { BrowserWindow } = await import('electron');
                   const windows = BrowserWindow.getAllWindows();
-                  let isCurrentlyProjecting = false;
+                  const displaysInfo = externalDisplays.map((display, index) => {
+                    const assignment = getDisplayAssignment(display.id);
+                    let isProjecting = false;
+                    let currentOutput = null;
 
-                  if (assignment) {
-                    const outputRoute = assignment.outputKey === 'stage' ? '/stage' :
-                      assignment.outputKey === 'output1' ? '/output1' : '/output2';
+                    if (assignment) {
+                      const outputRoute = assignment.outputKey === 'stage' ? '/stage' :
+                        assignment.outputKey === 'output1' ? '/output1' : '/output2';
 
-                    for (const w of windows) {
-                      if (!w || w.isDestroyed()) continue;
-                      try {
-                        const url = w.webContents.getURL();
-                        if (url.includes(outputRoute)) {
-                          isCurrentlyProjecting = true;
-                          break;
-                        }
-                      } catch (err) { }
+                      for (const w of windows) {
+                        if (!w || w.isDestroyed()) continue;
+                        try {
+                          const url = w.webContents.getURL();
+                          if (url.includes(outputRoute)) {
+                            isProjecting = true;
+                            currentOutput = assignment.outputKey;
+                            break;
+                          }
+                        } catch (err) { }
+                      }
                     }
-                  }
+
+                    let displayName = display.name || 'External Display';
+                    if (externalDisplays.length > 1) {
+                      displayName = `Display ${index + 1}`;
+                    }
+
+                    return {
+                      id: display.id,
+                      name: displayName,
+                      bounds: display.bounds,
+                      isProjecting,
+                      currentOutput
+                    };
+                  });
 
                   await (showInAppModal
                     ? showInAppModal({
                       title: 'Display Settings',
-                      headerDescription: 'Configure how to use connected displays',
+                      headerDescription: displaysInfo.length > 1
+                        ? 'Configure how to use connected displays'
+                        : 'Configure how to use the connected display',
                       component: 'DisplayDetection',
                       variant: 'info',
                       size: 'lg',
                       dismissible: true,
                       actions: [],
                       isManualOpen: true,
-                      isCurrentlyProjecting,
-                      displayInfo: {
-                        id: display.id,
-                        name: display.name,
-                        bounds: display.bounds
-                      }
+                      displays: displaysInfo,
+                      displayInfo: displaysInfo[0],
+                      isCurrentlyProjecting: displaysInfo[0].isProjecting
                     }, { timeout: 600000 })
                     : Promise.resolve()
                   );
@@ -446,7 +465,10 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                     version: app.getVersion(),
                     actions: [
                       { label: 'Close', value: { action: 'close' }, variant: 'outline' },
-                      { label: 'Check for Updates', value: { action: 'checkUpdates' } },
+                      {
+                        label: 'Check for Updates',
+                        value: { action: 'checkUpdates' }
+                      },
                     ],
                   },
                   {
@@ -488,7 +510,9 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
               );
 
               if (result?.action === 'checkUpdates') {
-                checkForUpdates?.(true);
+                setTimeout(() => {
+                  checkForUpdates?.(true);
+                }, 250);
               }
             },
           }]),

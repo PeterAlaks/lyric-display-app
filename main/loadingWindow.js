@@ -24,8 +24,8 @@ export function createLoadingWindow() {
   const version = getAppVersion();
 
   loadingWindow = new BrowserWindow({
-    width: 600,
-    height: 315,
+    width: 630,
+    height: 345,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -77,23 +77,25 @@ export function createLoadingWindow() {
         body {
           font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           overflow: hidden;
-          width: 600px;
-          height: 315px;
+          width: 630px;
+          height: 345px;
           background: transparent;
           -webkit-app-region: drag;
+          padding: 15px;
+          box-sizing: border-box;
         }
         
         .container {
           width: 100%;
           height: 100%;
           background: linear-gradient(135deg, #000000 0%, #1F2937 50%, #111827 100%);
-          border-radius: 20px;
+          border-radius: 18px;
           display: flex;
           flex-direction: column;
           justify-content: center;
           align-items: center;
           padding: 35px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.25);
           position: relative;
         }
         

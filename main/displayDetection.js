@@ -1,33 +1,71 @@
 /**
- * Show display detection modal for a newly connected display
- * @param {Object} display - Display object from Electron
+ * Show display detection modal for one or more displays
+ * @param {Object|Array} displayOrDisplays - Single display object or array of display objects
  * @param {boolean} isStartupCheck - Whether this is a startup check
  * @param {Function} requestRendererModal - Modal request function
  */
-export async function showDisplayDetectionModal(display, isStartupCheck, requestRendererModal) {
-  if (!display || !display.id) return;
+export async function showDisplayDetectionModal(displayOrDisplays, isStartupCheck, requestRendererModal) {
+
+  const displaysArray = Array.isArray(displayOrDisplays) ? displayOrDisplays : [displayOrDisplays];
+
+  if (!displaysArray || displaysArray.length === 0) {
+    console.warn('[DisplayDetection] No displays provided to showDisplayDetectionModal');
+    return;
+  }
 
   try {
+    const { BrowserWindow } = await import('electron');
     const { getDisplayAssignment } = await import('./displayManager.js');
-    const assignment = getDisplayAssignment(display.id);
 
-    if (assignment) {
-      console.log(`[DisplayDetection] Skipping modal for display ${display.id}, it already has assignment: ${assignment.outputKey}`);
-      return;
-    }
+    const windows = BrowserWindow.getAllWindows();
 
-    const title = isStartupCheck ? 'External Display Detected' : 'New Display Detected';
+    const displaysInfo = displaysArray.map((display, index) => {
+      const assignment = getDisplayAssignment(display.id);
+      let isProjecting = false;
+      let currentOutput = null;
+
+      if (assignment) {
+        const outputRoute = assignment.outputKey === 'stage' ? '/stage' :
+          assignment.outputKey === 'output1' ? '/output1' : '/output2';
+
+        for (const win of windows) {
+          if (!win || win.isDestroyed()) continue;
+          try {
+            const url = win.webContents.getURL();
+            if (url.includes(outputRoute)) {
+              isProjecting = true;
+              currentOutput = assignment.outputKey;
+              break;
+            }
+          } catch (err) {
+          }
+        }
+      }
+
+      let displayName = display.name || display.label || 'External Display';
+      if (displaysArray.length > 1) {
+        displayName = `Display ${index + 1}`;
+      }
+
+      return {
+        id: display.id,
+        name: displayName,
+        bounds: display.bounds,
+        isProjecting,
+        currentOutput
+      };
+    });
+
+    const displayCount = displaysInfo.length;
+    const title = isStartupCheck
+      ? (displayCount > 1 ? `${displayCount} External Displays Detected` : 'External Display Detected')
+      : (displayCount > 1 ? `${displayCount} New Displays Detected` : 'New Display Detected');
+
     const headerDesc = isStartupCheck
-      ? 'An external display is connected. Configure how to use it.'
-      : 'Configure how to use the newly connected display';
+      ? (displayCount > 1 ? 'Multiple external displays are connected. Configure how to use them.' : 'An external display is connected. Configure how to use it.')
+      : (displayCount > 1 ? 'Configure how to use the newly connected displays' : 'Configure how to use the newly connected display');
 
-    const displayInfo = {
-      id: display.id,
-      name: display.name || display.label || `Display ${display.id}`,
-      bounds: display.bounds
-    };
-
-    console.log(`[DisplayDetection] Showing display detection modal for ${display.id} (${displayInfo.name})`);
+    console.log(`[DisplayDetection] Showing display detection modal for ${displayCount} display(s):`, displaysInfo.map(d => `${d.id} (${d.name})`).join(', '));
 
     await requestRendererModal(
       {
@@ -38,7 +76,8 @@ export async function showDisplayDetectionModal(display, isStartupCheck, request
         size: 'lg',
         dismissible: true,
         actions: [],
-        displayInfo: displayInfo
+        displays: displaysInfo,
+        displayInfo: displaysInfo[0]
       },
       {
         timeout: 60000,
@@ -81,7 +120,7 @@ export async function performStartupDisplayCheck(requestRendererModal) {
 
     if (externalDisplays.length > 0) {
       console.log(`[DisplayDetection] Startup check: Found ${externalDisplays.length} external display(s).`);
-      await showDisplayDetectionModal(externalDisplays[0], true, requestRendererModal);
+      await showDisplayDetectionModal(externalDisplays, true, requestRendererModal);
     } else {
       console.log('[DisplayDetection] Startup check: No external displays found.');
     }

@@ -166,9 +166,6 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     initDisplayManager(handleDisplayChange);
     await new Promise(resolve => setTimeout(resolve, 600));
 
-    updateLoadingStatus('Configuring outputs');
-    await performStartupDisplayCheck(requestRendererModal);
-
     setupNativeTheme(mainWindow, menuAPI);
 
     updateLoadingStatus('Finalizing');
@@ -179,6 +176,10 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     setTimeout(() => {
       if (!isDev) checkForUpdates(false);
     }, 2000);
+
+    setTimeout(() => {
+      performStartupDisplayCheck(requestRendererModal);
+    }, 3000);
 
     processPendingFile(mainWindow);
 

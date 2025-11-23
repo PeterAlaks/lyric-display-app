@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';
@@ -68,7 +68,8 @@ const menuAPI = makeMenuAPI({
 registerIpcHandlers({
   getMainWindow,
   openInAppBrowser,
-  updateDarkModeMenu: menuAPI.updateDarkModeMenu
+  updateDarkModeMenu: menuAPI.updateDarkModeMenu,
+  checkForUpdates
 });
 registerInAppBrowserIpc();
 
@@ -83,6 +84,30 @@ app.whenReady().then(async () => {
   });
 
   if (mainWindow) {
+    mainWindow.on('close', async (event) => {
+
+      if (app.isQuitting) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const choice = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        buttons: ['Cancel', 'Close'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Confirm Close',
+        message: 'Are you sure you want to close Lyric Display?',
+        detail: 'We just want to be sure you mean this, as closing the app will discard any ongoing lyric operations or unsaved changes.'
+      });
+
+      if (choice.response === 1) {
+        app.isQuitting = true;
+        mainWindow.close();
+      }
+    });
+
     mainWindow.on('closed', () => {
       mainWindow = null;
     });
@@ -114,6 +139,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', (event) => {
+  app.isQuitting = true;
   performCleanup();
 });
 

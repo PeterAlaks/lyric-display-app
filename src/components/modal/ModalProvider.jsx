@@ -348,6 +348,7 @@ export function ModalProvider({ children, isDark = false }) {
                         <DisplayDetectionModal
                           darkMode={isDark}
                           displayInfo={modal.displayInfo}
+                          displays={modal.displays}
                           isManualOpen={modal.isManualOpen || false}
                           isCurrentlyProjecting={modal.isCurrentlyProjecting || false}
                           onSave={async (config) => {
@@ -447,7 +448,7 @@ export function ModalProvider({ children, isDark = false }) {
                       {!modal.component && modal.body && (
                         <div className="mt-3 text-sm text-gray-500 dark:text-gray-300">
                           {typeof modal.body === 'function'
-                            ? modal.body({ close: (value) => closeModal(modal.id, value) })
+                            ? modal.body({ close: (value) => closeModal(modal.id, value), isDark })
                             : modal.body}
                         </div>
                       )}

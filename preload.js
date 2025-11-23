@@ -1,4 +1,3 @@
-// preload.js (CommonJS)
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -64,7 +63,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeAllListeners(channel);
   },
 
-  // Updater events and actions
+  checkForUpdates: (showNoUpdateDialog) => ipcRenderer.invoke('updater:check', showNoUpdateDialog),
   onUpdateAvailable: (callback) => {
     const channel = 'updater:update-available';
     ipcRenderer.removeAllListeners(channel);
@@ -86,7 +85,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   requestUpdateDownload: () => ipcRenderer.invoke('updater:download'),
   requestInstallAndRestart: () => ipcRenderer.invoke('updater:install'),
 
-  // Menu-triggered shortcuts help
   onOpenShortcutsHelp: (callback) => {
     const channel = 'open-shortcuts-help';
     ipcRenderer.removeAllListeners(channel);
@@ -118,7 +116,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeAllListeners(channel);
   },
 
-  // In-app browser controls
   browserBack: () => ipcRenderer.send('browser-nav', 'back'),
   browserForward: () => ipcRenderer.send('browser-nav', 'forward'),
   browserReload: () => ipcRenderer.send('browser-nav', 'reload'),

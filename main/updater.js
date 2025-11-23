@@ -14,9 +14,15 @@ export function checkForUpdates(showNoUpdateDialog = false) {
   });
 
   autoUpdater.on('update-available', (info) => {
+    const updateInfo = {
+      version: info?.version,
+      releaseNotes: info?.releaseNotes,
+      releaseName: info?.releaseName,
+      releaseDate: info?.releaseDate
+    };
 
     BrowserWindow.getAllWindows().forEach(win => {
-      try { win.webContents.send('updater:update-available', { version: info?.version }); } catch { }
+      try { win.webContents.send('updater:update-available', updateInfo); } catch { }
     });
   });
 

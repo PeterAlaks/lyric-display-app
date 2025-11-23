@@ -15,7 +15,7 @@ const { autoUpdater } = updaterPkg;
 
 let cachedJoinCode = null;
 
-export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu }) {
+export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu, checkForUpdates }) {
   const broadcastAdminKeyAvailable = (adminKey) => {
     const payload = { hasKey: Boolean(adminKey) };
     const windows = BrowserWindow.getAllWindows();
@@ -372,6 +372,18 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   });
 
   // Updater controls
+  ipcMain.handle('updater:check', async (_event, showNoUpdateDialog = false) => {
+    try {
+      if (typeof checkForUpdates === 'function') {
+        checkForUpdates(showNoUpdateDialog);
+        return { success: true };
+      }
+      return { success: false, error: 'checkForUpdates function not available' };
+    } catch (e) {
+      return { success: false, error: e?.message || String(e) };
+    }
+  });
+
   ipcMain.handle('updater:download', async () => {
     try {
       const parent = getMainWindow?.();
