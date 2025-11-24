@@ -115,6 +115,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, (_e, payload) => callback(payload));
     return () => ipcRenderer.removeAllListeners(channel);
   },
+  onOpenSetlistFromPath: (callback) => {
+    const channel = 'open-setlist-from-path';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, payload) => callback(payload));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
 
   browserBack: () => ipcRenderer.send('browser-nav', 'back'),
   browserForward: () => ipcRenderer.send('browser-nav', 'forward'),
@@ -170,6 +176,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     removeAssignment: (displayId) => ipcRenderer.invoke('display:remove-assignment', { displayId }),
     openOutputOnDisplay: (outputKey, displayId) => ipcRenderer.invoke('display:open-output-on-display', { outputKey, displayId }),
     closeOutputWindow: (outputKey) => ipcRenderer.invoke('display:close-output-window', { outputKey })
+  },
+  setlist: {
+    save: (setlistData, defaultName) => ipcRenderer.invoke('setlist:save', { setlistData, defaultName }),
+    load: () => ipcRenderer.invoke('setlist:load'),
+    loadFromPath: (filePath) => ipcRenderer.invoke('setlist:load-from-path', { filePath }),
+    getUserHome: () => ipcRenderer.invoke('setlist:get-user-home'),
+    browseFiles: () => ipcRenderer.invoke('setlist:browse-files')
   }
 });
 

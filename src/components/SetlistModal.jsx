@@ -3,7 +3,8 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import useToast from '../hooks/useToast';
-import { X, Plus, Search, Trash2, Clock, GripVertical } from 'lucide-react';
+import useSetlistLoader from '../hooks/useSetlistLoader';
+import { X, Plus, Search, Trash2, Clock, GripVertical, Save, FolderOpen, Trash } from 'lucide-react';
 import { useSetlistState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
@@ -16,11 +17,11 @@ const SetlistModal = () => {
   const { darkMode } = useDarkModeState();
   const isDesktopApp = useIsDesktopApp();
 
-  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad, emitSetlistReorder } = useControlSocket();
+  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad, emitSetlistReorder, emitSetlistClear } = useControlSocket();
+  const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const fileInputRef = useRef(null);
   const pendingLoadRef = useRef({ id: null, displayName: '', originalName: '', fileType: null });
   const pendingAddRef = useRef([]);
   const { showToast } = useToast();
@@ -78,7 +79,7 @@ const SetlistModal = () => {
   };
 
   const handleFileSelect = useCallback(async () => {
-    if (!isDesktopApp) {
+    if (!isDesktopApp || !window?.electronAPI?.setlist?.browseFiles) {
       console.warn('File add only available on desktop app');
       return;
     }
@@ -93,61 +94,37 @@ const SetlistModal = () => {
       return;
     }
 
-    fileInputRef.current?.click();
-  }, [isDesktopApp, isSetlistFull]);
-
-  const handleFileChange = useCallback(async (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length === 0) return;
-
-    const availableSlots = getAvailableSetlistSlots();
-    if (files.length > availableSlots) {
-      showModal({
-        title: 'Setlist limit reached',
-        description: availableSlots === 0
-          ? 'No slots are left. Remove a song before adding new ones.'
-          : `You can add ${availableSlots} more ${availableSlots === 1 ? 'song' : 'songs'} right now.`,
-        variant: 'warn',
-        dismissLabel: 'Okay',
-      });
-      return;
-    }
-
-    const invalidFiles = files.filter(file => {
-      const lower = file.name.toLowerCase();
-      return !lower.endsWith('.txt') && !lower.endsWith('.lrc');
-    });
-    if (invalidFiles.length > 0) {
-      showModal({
-        title: 'Unsupported files',
-        description: 'Only .txt or .lrc lyric files can be added to the setlist.',
-        variant: 'error',
-        dismissLabel: 'Understood',
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const processedFiles = await Promise.all(
-        files.map(async (file) => {
-          const content = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsText(file);
-          });
+      const result = await window.electronAPI.setlist.browseFiles();
 
-          return {
-            name: file.name,
-            content,
-            lastModified: file.lastModified
-          };
-        })
-      );
+      if (result.canceled || !result.success || !result.files) {
+        setIsLoading(false);
+        return;
+      }
 
-      pendingAddRef.current = processedFiles.map((file) => {
+      const files = result.files;
+      if (files.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      const availableSlots = getAvailableSetlistSlots();
+      if (files.length > availableSlots) {
+        showModal({
+          title: 'Setlist limit reached',
+          description: availableSlots === 0
+            ? 'No slots are left. Remove a song before adding new ones.'
+            : `You can add ${availableSlots} more ${availableSlots === 1 ? 'song' : 'songs'} right now.`,
+          variant: 'warn',
+          dismissLabel: 'Okay',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      pendingAddRef.current = files.map((file) => {
         const lower = file.name.toLowerCase();
         const fileType = lower.endsWith('.lrc') ? 'lrc' : 'txt';
         const displayName = file.name.replace(/\.(txt|lrc)$/i, '') || file.name;
@@ -158,9 +135,7 @@ const SetlistModal = () => {
         };
       });
 
-      event.target.value = '';
-
-      const emitted = emitSetlistAdd(processedFiles);
+      const emitted = emitSetlistAdd(files);
       if (!emitted) {
         pendingAddRef.current = [];
         setIsLoading(false);
@@ -183,7 +158,7 @@ const SetlistModal = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [emitSetlistAdd, getAvailableSetlistSlots]);
+  }, [isDesktopApp, isSetlistFull, getAvailableSetlistSlots, emitSetlistAdd, showModal, showToast]);
 
   const handleRemoveFile = useCallback((fileId, event) => {
     event.stopPropagation();
@@ -206,6 +181,146 @@ const SetlistModal = () => {
     }
     setSetlistModalOpen(false);
   }, [emitSetlistLoad, list, setSetlistModalOpen]);
+
+  const handleSaveSetlist = useCallback(async () => {
+    if (!isDesktopApp || !window?.electronAPI?.setlist) {
+      console.warn('Setlist save only available on desktop app');
+      return;
+    }
+
+    if (list.length === 0) {
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+      const defaultName = `Setlist_${dateStr}_${timeStr}.ldset`;
+
+      const setlistData = {
+        version: '1.0',
+        savedAt: now.toISOString(),
+        itemCount: list.length,
+        items: list.map(file => ({
+          displayName: file.displayName,
+          originalName: file.originalName,
+          content: file.content,
+          lastModified: file.lastModified,
+          fileType: file.fileType,
+          metadata: file.metadata || null
+        }))
+      };
+
+      const result = await window.electronAPI.setlist.save(setlistData, defaultName);
+
+      if (result.success) {
+        showToast({
+          title: 'Setlist saved',
+          message: `Saved ${list.length} ${list.length === 1 ? 'song' : 'songs'}`,
+          variant: 'success',
+        });
+      } else if (!result.canceled) {
+        showToast({
+          title: 'Save failed',
+          message: result.error || 'Could not save setlist',
+          variant: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('Error saving setlist:', error);
+      showToast({
+        title: 'Save failed',
+        message: error.message || 'An error occurred',
+        variant: 'error',
+      });
+    }
+  }, [isDesktopApp, list, showToast]);
+
+  const handleClearSetlist = useCallback(async () => {
+    if (!isDesktopApp) {
+      console.warn('Clear setlist only available on desktop app');
+      return;
+    }
+
+    if (list.length === 0) {
+      return;
+    }
+
+    const result = await showModal({
+      title: 'Clear Setlist',
+      description: `Are you sure you want to clear all ${list.length} ${list.length === 1 ? 'song' : 'songs'} from the setlist? This action cannot be undone.`,
+      variant: 'warn',
+      actions: [
+        {
+          label: 'Cancel',
+          value: 'cancel',
+          variant: 'outline',
+        },
+        {
+          label: 'Clear All',
+          value: 'clear',
+          variant: 'destructive',
+          autoFocus: true,
+        },
+      ],
+    });
+
+    if (result !== 'clear') {
+      return;
+    }
+
+    try {
+      emitSetlistClear();
+      setSetlistFiles([]);
+
+      showToast({
+        title: 'Setlist cleared',
+        message: 'All songs removed from setlist',
+        variant: 'success',
+      });
+    } catch (error) {
+      console.error('Error clearing setlist:', error);
+      showToast({
+        title: 'Clear failed',
+        message: error.message || 'An error occurred',
+        variant: 'error',
+      });
+    }
+  }, [isDesktopApp, list.length, emitSetlistClear, setSetlistFiles, showModal, showToast]);
+
+  const handleLoadSetlist = useCallback(async () => {
+    if (!isDesktopApp || !window?.electronAPI?.setlist) {
+      console.warn('Setlist load only available on desktop app');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.setlist.load();
+
+      if (result.canceled || !result.success || !result.setlistData) {
+        if (!result.canceled && !result.success) {
+          showToast({
+            title: 'Load failed',
+            message: result.error || 'Could not load setlist',
+            variant: 'error',
+          });
+        }
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(result.setlistData)], { type: 'application/json' });
+      const file = new File([blob], 'setlist.ldset', { type: 'application/json' });
+      await loadSetlist(file);
+    } catch (error) {
+      console.error('Error loading setlist:', error);
+      showToast({
+        title: 'Load failed',
+        message: error.message || 'An error occurred',
+        variant: 'error',
+      });
+    }
+  }, [isDesktopApp, loadSetlist, showToast]);
 
   const clearSearch = () => {
     setSearchQuery('');
@@ -339,7 +454,56 @@ const SetlistModal = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Add Files Button - Desktop Only */}
+            {/* Clear Setlist Button */}
+            {isDesktopApp && (
+              <Button
+                onClick={handleClearSetlist}
+                disabled={list.length === 0}
+                variant="ghost"
+                size="icon"
+                className={`
+                  w-10 h-10
+                  ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${darkMode ? 'hover:bg-gray-700 hover:text-red-400' : 'hover:bg-gray-100 hover:text-red-600'}
+                `}
+                title={list.length === 0 ? 'Setlist is empty' : 'Clear all songs from setlist'}
+              >
+                <Trash className="w-4 h-4" />
+              </Button>
+            )}
+
+            {/* Save Setlist Button */}
+            {isDesktopApp && (
+              <Button
+                onClick={handleSaveSetlist}
+                disabled={list.length === 0}
+                variant="ghost"
+                size="icon"
+                className={`
+                  w-10 h-10
+                  ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
+                `}
+                title={list.length === 0 ? 'Setlist is empty' : 'Save setlist to file'}
+              >
+                <Save className="w-4 h-4" />
+              </Button>
+            )}
+
+            {/* Load Setlist Button */}
+            {isDesktopApp && (
+              <Button
+                onClick={handleLoadSetlist}
+                variant="ghost"
+                size="icon"
+                className={`w-10 h-10 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                title="Load setlist from file"
+              >
+                <FolderOpen className="w-4 h-4" />
+              </Button>
+            )}
+
+            {/* Add Files Button */}
             {isDesktopApp && (
               <Button
                 onClick={handleFileSelect}
@@ -488,15 +652,6 @@ const SetlistModal = () => {
         </div>
       </div>
 
-      {/* Hidden File Input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".txt,.lrc"
-        multiple
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
     </div>
   );
 };

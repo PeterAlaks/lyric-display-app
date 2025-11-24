@@ -270,6 +270,7 @@ lyric-display-app/
 |   |   ├── useResponsiveWidth.js           # Window resize observer hook for control panel button responsiveness
 |   |   ├── useSearch.js                    # Hook for search bar functionality
 |   |   ├── useSetlistActions.js            # Hook for setlist action functionality
+|   |   ├── useSetlistLoader.js             # Hook for setlist file loading functionality
 |   |   ├── useSocket.js                    # Main React hook for Socket.IO client
 |   |   ├── useSocketEvents.js              # Socket events hook
 |   |   ├── useStoreSelectors.js            # Centralized collection of Zustand selectors

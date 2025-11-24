@@ -84,27 +84,79 @@ app.whenReady().then(async () => {
   });
 
   if (mainWindow) {
+    let isShowingCloseConfirmation = false;
+
     mainWindow.on('close', async (event) => {
 
       if (app.isQuitting) {
         return;
       }
 
+      if (isShowingCloseConfirmation) {
+        event.preventDefault();
+        return;
+      }
+
       event.preventDefault();
+      isShowingCloseConfirmation = true;
 
-      const choice = await dialog.showMessageBox(mainWindow, {
-        type: 'question',
-        buttons: ['Cancel', 'Close'],
-        defaultId: 0,
-        cancelId: 0,
-        title: 'Confirm Close',
-        message: 'Are you sure you want to close LyricDisplay?',
-        detail: 'We just want to be sure you mean this, as closing the app will discard any ongoing lyric operations or unsaved changes.'
-      });
+      try {
+        const choice = await requestRendererModal(
+          {
+            variant: 'warning',
+            title: 'Confirm Close',
+            description: 'Are you sure you want to close LyricDisplay? This will discard any ongoing lyric operations or unsaved changes.',
+            size: 'sm',
+            actions: [
+              { label: 'Cancel', value: 0, variant: 'outline', autoFocus: true },
+              { label: 'Close', value: 1, variant: 'destructive' }
+            ],
+            dismissible: true,
+            allowBackdropClose: false
+          },
+          {
+            fallback: async () => {
+              const fallbackChoice = await dialog.showMessageBox(mainWindow, {
+                type: 'question',
+                buttons: ['Cancel', 'Close'],
+                defaultId: 0,
+                cancelId: 0,
+                title: 'Confirm Close',
+                message: 'Are you sure you want to close LyricDisplay?',
+                detail: 'We just want to be sure you mean this, as closing the app will discard any ongoing lyric operations or unsaved changes.'
+              });
+              return fallbackChoice;
+            }
+          }
+        );
 
-      if (choice.response === 1) {
-        app.isQuitting = true;
-        mainWindow.close();
+        if (choice.response === 1) {
+          app.isQuitting = true;
+
+          try {
+            const windows = BrowserWindow.getAllWindows();
+
+            windows.forEach(win => {
+              if (!win || win.isDestroyed() || win.id === mainWindow.id) return;
+
+              try {
+                console.log('[Main] Closing window:', win.getTitle());
+                win.destroy();
+              } catch (err) {
+                console.warn('[Main] Error closing window:', err);
+              }
+            });
+          } catch (error) {
+            console.error('[Main] Error closing windows:', error);
+          }
+
+          mainWindow.destroy();
+        } else {
+          isShowingCloseConfirmation = false;
+        }
+      } catch (error) {
+        console.error('Error showing close confirmation:', error);
+        isShowingCloseConfirmation = false;
       }
     });
 

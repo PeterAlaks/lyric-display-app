@@ -96,6 +96,11 @@ export function requestRendererModal(config = {}, options = {}) {
 }
 
 function normalizeModalResult(result) {
+
+  if (typeof result === 'number') {
+    return { response: result, data: result };
+  }
+
   if (result && typeof result === 'object') {
     if (typeof result.response === 'number') {
       return { response: result.response, data: result };

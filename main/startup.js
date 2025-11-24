@@ -48,6 +48,10 @@ export function prewarmResources() {
  */
 export function setupMainWindowCloseHandler(mainWindow) {
   mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      return;
+    }
+
     console.log('[Startup] Main window closing, shutting down output windows...');
     try {
       const windows = BrowserWindow.getAllWindows();

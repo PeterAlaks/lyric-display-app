@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLyricsState, useOutputState, useOutput1Settings } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useOutput1Settings, useIndividualOutputState } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
@@ -12,6 +12,7 @@ const Output1 = () => {
   const { lyrics, selectedLine, setLyrics, selectLine } = useLyricsState();
   const { isOutputOn, setIsOutputOn } = useOutputState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
+  const { output1Enabled } = useIndividualOutputState();
 
   const stateRequestTimeoutRef = useRef(null);
   const pendingStateRequestRef = useRef(false);
@@ -284,7 +285,7 @@ const Output1 = () => {
   };
   const effectiveLyricsPosition = fullScreenMode ? 'center' : (positionJustifyMap[lyricsPosition] ? lyricsPosition : 'lower');
   const justifyContent = positionJustifyMap[effectiveLyricsPosition] || 'flex-end';
-  const isVisible = Boolean(isOutputOn && line);
+  const isVisible = Boolean(isOutputOn && output1Enabled && line);
 
   const fullScreenBackgroundColorValue =
     fullScreenMode && fullScreenBackgroundType === 'color'

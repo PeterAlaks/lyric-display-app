@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useLyricsState, useOutputState, useStageSettings, useSetlistState } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useStageSettings, useSetlistState, useIndividualOutputState } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
@@ -25,6 +25,7 @@ const Stage = () => {
   const { isOutputOn, setIsOutputOn } = useOutputState();
   const { settings: stageSettings } = useStageSettings();
   const { setlistFiles } = useSetlistState();
+  const { stageEnabled } = useIndividualOutputState();
 
   const stateRequestTimeoutRef = useRef(null);
   const pendingStateRequestRef = useRef(false);
@@ -392,7 +393,7 @@ const Stage = () => {
   const responsiveBottomBarSize = bottomBarSize * scaleFactor;
 
   const currentLine = selectedLine !== null && selectedLine !== undefined ? selectedLine : null;
-  const isVisible = Boolean(isOutputOn && currentLine !== null && lyrics.length > 0);
+  const isVisible = Boolean(isOutputOn && stageEnabled && currentLine !== null && lyrics.length > 0);
 
   const getUpcomingSongName = useCallback(() => {
 

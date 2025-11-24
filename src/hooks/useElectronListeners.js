@@ -1,11 +1,17 @@
 import { useEffect } from 'react';
+import useSetlistLoader from './useSetlistLoader';
 
 export const useElectronListeners = ({
   processLoadedLyrics,
   showToast,
   setEasyWorshipModalOpen,
-  openSupportDevModal
+  openSupportDevModal,
+  setlistFiles,
+  setSetlistFiles,
+  emitSetlistAdd,
+  emitSetlistClear
 }) => {
+  const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
 
   useEffect(() => {
     if (!window?.electronAPI?.onOpenLyricsFromPath) return;
@@ -63,4 +69,44 @@ export const useElectronListeners = ({
       } catch { }
     };
   }, [openSupportDevModal]);
+
+  useEffect(() => {
+    if (!window?.electronAPI?.onOpenSetlistFromPath) return;
+
+    const handleOpenSetlistFromPath = async (payload) => {
+      const { filePath } = payload;
+      console.log('[ElectronListeners] Opening setlist from path:', filePath);
+
+      try {
+        const result = await window.electronAPI.setlist.loadFromPath(filePath);
+
+        if (result.success && result.setlistData) {
+          const blob = new Blob([JSON.stringify(result.setlistData)], { type: 'application/json' });
+          const file = new File([blob], 'setlist.ldset', { type: 'application/json' });
+
+          await loadSetlist(file);
+        } else {
+          showToast({
+            title: 'Load failed',
+            message: result.error || 'Could not load setlist',
+            variant: 'error',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading setlist from path:', error);
+        showToast({
+          title: 'Load failed',
+          message: error.message || 'An error occurred',
+          variant: 'error',
+        });
+      }
+    };
+
+    const cleanup = window.electronAPI.onOpenSetlistFromPath(handleOpenSetlistFromPath);
+    return () => {
+      try {
+        if (typeof cleanup === 'function') cleanup();
+      } catch { }
+    };
+  }, [loadSetlist, showToast]);
 };

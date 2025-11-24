@@ -1,5 +1,3 @@
-// File: src/hooks/useStoreSelectors.js
-
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import useLyricsStore from '../context/LyricsStore';
@@ -30,6 +28,20 @@ export const useOutputState = () =>
         (state) => ({
             isOutputOn: state.isOutputOn,
             setIsOutputOn: state.setIsOutputOn,
+        }),
+        shallow
+    );
+
+export const useIndividualOutputState = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            output1Enabled: state.output1Enabled,
+            output2Enabled: state.output2Enabled,
+            stageEnabled: state.stageEnabled,
+            setOutput1Enabled: state.setOutput1Enabled,
+            setOutput2Enabled: state.setOutput2Enabled,
+            setStageEnabled: state.setStageEnabled,
         }),
         shallow
     );

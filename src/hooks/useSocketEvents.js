@@ -61,6 +61,16 @@ const useSocketEvents = (role) => {
         useLyricsStore.getState().setIsOutputOn(state.isOutputOn);
       }
 
+      if (typeof state.output1Enabled === 'boolean') {
+        useLyricsStore.getState().setOutput1Enabled(state.output1Enabled);
+      }
+      if (typeof state.output2Enabled === 'boolean') {
+        useLyricsStore.getState().setOutput2Enabled(state.output2Enabled);
+      }
+      if (typeof state.stageEnabled === 'boolean') {
+        useLyricsStore.getState().setStageEnabled(state.stageEnabled);
+      }
+
       if (role === 'stage') {
         if (state.stageTimerState) {
           window.dispatchEvent(new CustomEvent('stage-timer-update', {
@@ -94,6 +104,18 @@ const useSocketEvents = (role) => {
     socket.on('outputToggle', (state) => {
       logDebug('Received output toggle:', state);
       useLyricsStore.getState().setIsOutputOn(state);
+    });
+
+    socket.on('individualOutputToggle', ({ output, enabled }) => {
+      logDebug('Received individual output toggle:', output, enabled);
+      const store = useLyricsStore.getState();
+      if (output === 'output1') {
+        store.setOutput1Enabled(enabled);
+      } else if (output === 'output2') {
+        store.setOutput2Enabled(enabled);
+      } else if (output === 'stage') {
+        store.setStageEnabled(enabled);
+      }
     });
 
     if (role === 'output' || role === 'output1' || role === 'output2' || role === 'stage') {
@@ -171,7 +193,7 @@ const useSocketEvents = (role) => {
       setSetlistFiles(files);
     });
 
-    socket.on('setlistLoadSuccess', ({ fileId, fileName, originalName, fileType, linesCount, rawContent, loadedBy, origin, draftId }) => {
+    socket.on('setlistLoadSuccess', ({ fileId, fileName, originalName, fileType, linesCount, rawContent, loadedBy, origin, draftId, metadata: savedMetadata }) => {
       logDebug(`Setlist file loaded: ${fileName} (${linesCount} lines) by ${loadedBy}`);
       setLyricsFileName(fileName);
       selectLine(null);
@@ -179,7 +201,6 @@ const useSocketEvents = (role) => {
         setRawLyricsContent(rawContent);
       }
 
-      const detected = detectArtistFromFilename(fileName);
       let computedOrigin = 'Setlist (.txt)';
       if (fileType === 'lrc') {
         computedOrigin = 'Setlist (.lrc)';
@@ -188,17 +209,29 @@ const useSocketEvents = (role) => {
         computedOrigin = 'Secondary Controller Draft';
       }
 
-      const metadata = {
-        title: detected.title || fileName,
-        artists: detected.artist ? [detected.artist] : [],
-        album: null,
-        year: null,
-        lyricLines: linesCount,
-        origin: computedOrigin,
-        filePath: null,
-        draftId: draftId || null
-      };
-      useLyricsStore.getState().setSongMetadata(metadata);
+      let finalMetadata;
+      if (savedMetadata && (savedMetadata.title || savedMetadata.artists?.length > 0)) {
+
+        finalMetadata = {
+          ...savedMetadata,
+          origin: computedOrigin,
+          lyricLines: linesCount,
+          draftId: draftId || null
+        };
+      } else {
+        const detected = detectArtistFromFilename(fileName);
+        finalMetadata = {
+          title: detected.title || fileName,
+          artists: detected.artist ? [detected.artist] : [],
+          album: null,
+          year: null,
+          lyricLines: linesCount,
+          origin: computedOrigin,
+          filePath: null,
+          draftId: draftId || null
+        };
+      }
+      useLyricsStore.getState().setSongMetadata(finalMetadata);
 
       try {
         window.dispatchEvent(new CustomEvent('setlist-load-success', {
@@ -341,6 +374,16 @@ const useSocketEvents = (role) => {
       }
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
+
+      if (typeof state.output1Enabled === 'boolean') {
+        useLyricsStore.getState().setOutput1Enabled(state.output1Enabled);
+      }
+      if (typeof state.output2Enabled === 'boolean') {
+        useLyricsStore.getState().setOutput2Enabled(state.output2Enabled);
+      }
+      if (typeof state.stageEnabled === 'boolean') {
+        useLyricsStore.getState().setStageEnabled(state.stageEnabled);
+      }
     });
   }, [role, setLyrics, setLyricsTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
 
@@ -425,6 +468,16 @@ const useSocketEvents = (role) => {
               socket.emit('lineUpdate', { index: currentState.selectedLine });
             }
             socket.emit('outputToggle', currentState.isOutputOn);
+
+            if (typeof currentState.output1Enabled === 'boolean') {
+              socket.emit('individualOutputToggle', { output: 'output1', enabled: currentState.output1Enabled });
+            }
+            if (typeof currentState.output2Enabled === 'boolean') {
+              socket.emit('individualOutputToggle', { output: 'output2', enabled: currentState.output2Enabled });
+            }
+            if (typeof currentState.stageEnabled === 'boolean') {
+              socket.emit('individualOutputToggle', { output: 'stage', enabled: currentState.stageEnabled });
+            }
           }
         }, 1000);
       }

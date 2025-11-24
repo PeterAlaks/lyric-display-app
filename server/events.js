@@ -9,6 +9,9 @@ let currentOutput1Settings = {};
 let currentOutput2Settings = {};
 let currentStageSettings = {};
 let currentIsOutputOn = false;
+let currentOutput1Enabled = true;
+let currentOutput2Enabled = true;
+let currentStageEnabled = true;
 let setlistFiles = [];
 let connectedClients = new Map();
 let outputInstances = {
@@ -114,6 +117,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
             lastModified: file.lastModified || Date.now(),
             addedAt: Date.now(),
             fileType: isLrc ? 'lrc' : 'txt',
+            metadata: file.metadata || null,
             addedBy: {
               clientType,
               deviceId,
@@ -215,7 +219,8 @@ export default function registerSocketEvents(io, { hasPermission }) {
           fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
           linesCount: processedLines.length,
           rawContent: sanitizedRawContent,
-          loadedBy: clientType
+          loadedBy: clientType,
+          metadata: file.metadata || null
         });
 
       } catch (error) {
@@ -306,6 +311,24 @@ export default function registerSocketEvents(io, { hasPermission }) {
       currentIsOutputOn = state;
       console.log(`Output toggled to ${state} by ${clientType} client`);
       io.emit('outputToggle', state);
+    });
+
+    socket.on('individualOutputToggle', ({ output, enabled }) => {
+      if (!hasPermission(socket, 'output:control')) {
+        socket.emit('permissionError', 'Insufficient permissions to control individual outputs');
+        return;
+      }
+
+      if (output === 'output1') {
+        currentOutput1Enabled = enabled;
+      } else if (output === 'output2') {
+        currentOutput2Enabled = enabled;
+      } else if (output === 'stage') {
+        currentStageEnabled = enabled;
+      }
+
+      console.log(`Individual output ${output} toggled to ${enabled} by ${clientType} client`);
+      io.emit('individualOutputToggle', { output, enabled });
     });
 
     socket.on('lyricsLoad', (lyrics) => {
@@ -644,6 +667,9 @@ function buildCurrentState(clientInfo) {
     output2Settings: currentOutput2Settings,
     stageSettings: currentStageSettings,
     isOutputOn: currentIsOutputOn,
+    output1Enabled: currentOutput1Enabled,
+    output2Enabled: currentOutput2Enabled,
+    stageEnabled: currentStageEnabled,
     setlistFiles,
     lyricsFileName: currentLyricsFileName || '',
     isDesktopClient: clientInfo?.type === 'desktop',

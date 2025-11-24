@@ -338,6 +338,7 @@ export const ControlSocketProvider = ({ children }) => {
     }, [createEmitFunction]);
 
     const emitOutputToggle = useCallback(createEmitFunction('outputToggle'), [createEmitFunction]);
+    const emitIndividualOutputToggle = useCallback(createEmitFunction('individualOutputToggle'), [createEmitFunction]);
     const emitSetlistAdd = useCallback(createEmitFunction('setlistAdd'), [createEmitFunction]);
     const emitSetlistRemove = useCallback(createEmitFunction('setlistRemove'), [createEmitFunction]);
     const emitSetlistLoad = useCallback(createEmitFunction('setlistLoad'), [createEmitFunction]);
@@ -429,6 +430,7 @@ export const ControlSocketProvider = ({ children }) => {
         emitLyricsLoad,
         emitStyleUpdate,
         emitOutputToggle,
+        emitIndividualOutputToggle,
         emitSetlistAdd,
         emitSetlistRemove,
         emitSetlistLoad,

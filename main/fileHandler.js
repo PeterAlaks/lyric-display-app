@@ -21,8 +21,18 @@ export function isSupportedLyricsFile(filePath) {
   return ext === '.txt' || ext === '.lrc';
 }
 
+export function isSupportedSetlistFile(filePath) {
+  if (!filePath) return false;
+  const ext = path.extname(filePath).toLowerCase();
+  return ext === '.ldset';
+}
+
+export function isSupportedFile(filePath) {
+  return isSupportedLyricsFile(filePath) || isSupportedSetlistFile(filePath);
+}
+
 export function extractFilePathFromArgs(args) {
-  return args.find(arg => isSupportedLyricsFile(arg));
+  return args.find(arg => isSupportedFile(arg));
 }
 
 /**
@@ -36,6 +46,23 @@ export async function handleFileOpen(filePath, mainWindow) {
   console.log('[FileHandler] Handling file open request:', filePath);
 
   const ext = path.extname(filePath).toLowerCase();
+
+  if (ext === '.ldset') {
+    console.log('[FileHandler] Opening setlist file:', filePath);
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+      try {
+        mainWindow.webContents.send('open-setlist-from-path', { filePath });
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+      } catch (error) {
+        console.error('[FileHandler] Error sending setlist to renderer:', error);
+      }
+    } else {
+      setPendingFile(filePath);
+    }
+    return;
+  }
+
   if (ext !== '.txt' && ext !== '.lrc') {
     console.warn('[FileHandler] Unsupported file type:', ext);
     return;

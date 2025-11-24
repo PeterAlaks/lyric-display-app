@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
+import useSetlistLoader from '../hooks/useSetlistLoader';
 import AuthStatusIndicator from './AuthStatusIndicator';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
 import LyricsList from './LyricsList';
@@ -43,7 +44,7 @@ const LyricDisplayApp = () => {
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
   const { darkMode, setDarkMode } = useDarkModeState();
-  const { setSetlistModalOpen } = useSetlistState();
+  const { setSetlistModalOpen, setlistFiles, setSetlistFiles } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
   const { settings: autoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
@@ -54,9 +55,10 @@ const LyricDisplayApp = () => {
   const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
+  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
+  const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
 
   const { activeTab, setActiveTab } = useOutputSettings({
     output1Settings,
@@ -164,7 +166,11 @@ const LyricDisplayApp = () => {
     processLoadedLyrics,
     showToast,
     setEasyWorshipModalOpen,
-    openSupportDevModal
+    openSupportDevModal,
+    setlistFiles,
+    setSetlistFiles,
+    emitSetlistAdd,
+    emitSetlistClear
   });
 
   const fontOptions = ['Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat', 'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'];
@@ -213,14 +219,25 @@ const LyricDisplayApp = () => {
     setOnlineLyricsModalOpen(false);
   };
 
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
+  const handleFileDrop = React.useCallback(async (file) => {
     if (!file) return;
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.ldset')) {
+      await loadSetlist(file);
+      return;
+    }
+
     const success = await handleFileUpload(file);
     if (success) {
       clearSearch();
       trackAction('song_loaded');
     }
+  }, [handleFileUpload, loadSetlist, clearSearch, trackAction]);
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await handleFileDrop(file);
   };
 
   const handleLineSelect = (index) => {
@@ -694,11 +711,7 @@ const LyricDisplayApp = () => {
                   e.preventDefault();
                   e.stopPropagation();
                   const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                  if (!file) return;
-                  const success = await handleFileUpload(file);
-                  if (success) {
-                    clearSearch();
-                  }
+                  await handleFileDrop(file);
                 }}
                 onDragOver={e => {
                   e.preventDefault();
@@ -723,8 +736,7 @@ const LyricDisplayApp = () => {
                   e.preventDefault();
                   e.stopPropagation();
                   const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                  if (!file) return;
-                  await handleFileUpload(file);
+                  await handleFileDrop(file);
                 }}
                 onDragOver={e => {
                   e.preventDefault();
@@ -741,7 +753,7 @@ const LyricDisplayApp = () => {
                     <FolderOpen className={`w-10 h-10 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} />
                   </div>
                   <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Drag and drop TXT lyric files here
+                    Drag and drop lyric files (.txt, .lrc) or setlists (.ldset) here
                   </p>
                 </div>
               </div>

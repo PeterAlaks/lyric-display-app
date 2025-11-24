@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { useLyricsFileName, useSetlistState, useIsDesktopApp } from './useStoreSelectors';
+import { useLyricsFileName, useSetlistState, useIsDesktopApp, useLyricsState } from './useStoreSelectors';
 import useLyricsStore from '../context/LyricsStore';
 import useToast from './useToast';
 
@@ -7,6 +7,7 @@ const useSetlistActions = (emitSetlistAdd) => {
   const isDesktopApp = useIsDesktopApp();
   const lyricsFileName = useLyricsFileName();
   const { setlistFiles, isSetlistFull } = useSetlistState();
+  const { songMetadata } = useLyricsState();
 
   const hasLyrics = useLyricsStore((state) => state.lyrics && state.lyrics.length > 0);
   const rawLyricsContent = useLyricsStore((state) => state.rawLyricsContent);
@@ -56,11 +57,12 @@ const useSetlistActions = (emitSetlistAdd) => {
     const fileData = [{
       name: `${lyricsFileName}${extension}`,
       content: rawLyricsContent,
-      lastModified: Date.now()
+      lastModified: Date.now(),
+      metadata: songMetadata || null
     }];
     emitSetlistAdd(fileData);
     showToast({ title: 'Added to setlist', message: `${lyricsFileName}`, variant: 'success' });
-  }, [disabled, emitSetlistAdd, lyricsFileName, rawLyricsContent, lyricsTimestamps, isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, hasLyrics, showToast]);
+  }, [disabled, emitSetlistAdd, lyricsFileName, rawLyricsContent, lyricsTimestamps, songMetadata, isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, hasLyrics, showToast]);
 
   return { isFileAlreadyInSetlist, handleAddToSetlist, disabled, title };
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDarkModeState, useOutput1Settings, useOutput2Settings, useStageSettings } from '../hooks/useStoreSelectors';
+import { useDarkModeState, useOutput1Settings, useOutput2Settings, useStageSettings, useIndividualOutputState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
 import { logWarn } from '../utils/logger';
-import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ListMusic, ChevronDown, ChevronUp, ChevronRight, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2, HardDriveDownload } from 'lucide-react';
+import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ListMusic, ChevronDown, ChevronUp, ChevronRight, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2, HardDriveDownload, Power } from 'lucide-react';
 
 const fontOptions = [
   'Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat',
@@ -29,7 +29,7 @@ const detectClientType = () => {
   return 'web';
 };
 
-const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWithIcon, showModal }) => {
+const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWithIcon, showModal, isOutputEnabled, handleToggleOutput }) => {
   const { emitStageTimerUpdate, emitStageMessagesUpdate } = useControlSocket();
   const { showToast } = useToast();
   const [customMessages, setCustomMessages] = React.useState([]);
@@ -281,6 +281,24 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
         </h3>
 
         <div className="flex items-center gap-2">
+          {/* Toggle Output Button */}
+          <Tooltip content={isOutputEnabled ? "Turn off Stage Display" : "Turn on Stage Display"} side="bottom">
+            <button
+              onClick={handleToggleOutput}
+              className={`p-1.5 rounded-lg transition-colors ${!isOutputEnabled
+                ? darkMode
+                  ? 'bg-red-600/80 text-white hover:bg-red-600'
+                  : 'bg-red-500 text-white hover:bg-red-600'
+                : darkMode
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                }`}
+              title={isOutputEnabled ? "Turn off Stage Display" : "Turn on Stage Display"}
+            >
+              <Power className="w-4 h-4" />
+            </button>
+          </Tooltip>
+
           {/* Templates trigger button */}
           <button
             onClick={() => {
@@ -1178,12 +1196,14 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
 
 const OutputSettingsPanel = ({ outputKey }) => {
   const { darkMode } = useDarkModeState();
-  const { emitStyleUpdate } = useControlSocket();
+  const { emitStyleUpdate, emitIndividualOutputToggle } = useControlSocket();
   const { showToast } = useToast();
   const { showModal } = useModal();
   const { ensureValidToken } = useAuth();
   const fileInputRef = React.useRef(null);
   const clientTypeRef = React.useRef(detectClientType());
+
+  const { output1Enabled, output2Enabled, stageEnabled, setOutput1Enabled, setOutput2Enabled, setStageEnabled } = useIndividualOutputState();
 
   const stageSettingsHook = useStageSettings();
 
@@ -1193,6 +1213,54 @@ const OutputSettingsPanel = ({ outputKey }) => {
       : outputKey === 'output1'
         ? useOutput1Settings()
         : useOutput2Settings();
+
+  const isOutputEnabled = outputKey === 'output1' ? output1Enabled
+    : outputKey === 'output2' ? output2Enabled
+      : stageEnabled;
+
+  const setOutputEnabled = outputKey === 'output1' ? setOutput1Enabled
+    : outputKey === 'output2' ? setOutput2Enabled
+      : setStageEnabled;
+
+  const handleToggleOutput = React.useCallback(() => {
+    const outputName = outputKey === 'output1' ? 'Output 1'
+      : outputKey === 'output2' ? 'Output 2'
+        : 'Stage Display';
+
+    const newState = !isOutputEnabled;
+    setOutputEnabled(newState);
+
+    emitIndividualOutputToggle({ output: outputKey, enabled: newState });
+
+    if (newState) {
+      showToast({
+        title: `${outputName} Enabled`,
+        message: `${outputName} has been turned on.`,
+        variant: 'success',
+      });
+    } else {
+      showToast({
+        title: `${outputName} Turned Off`,
+        message: `${outputName} has been disabled. The global toggle still controls overall state.`,
+        variant: 'success',
+        duration: 6000,
+        actions: [
+          {
+            label: 'Undo',
+            onClick: () => {
+              setOutputEnabled(true);
+              emitIndividualOutputToggle({ output: outputKey, enabled: true });
+              showToast({
+                title: `${outputName} Restored`,
+                message: `${outputName} has been re-enabled.`,
+                variant: 'success',
+              });
+            }
+          }
+        ]
+      });
+    }
+  }, [outputKey, isOutputEnabled, setOutputEnabled, emitIndividualOutputToggle, showToast]);
 
   if (outputKey === 'stage') {
     const applyStageSettings = React.useCallback((partial) => {
@@ -1220,6 +1288,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
         darkMode={darkMode}
         LabelWithIcon={LabelWithIcon}
         showModal={showModal}
+        isOutputEnabled={isOutputEnabled}
+        handleToggleOutput={handleToggleOutput}
       />
     );
   }
@@ -1568,6 +1638,29 @@ const OutputSettingsPanel = ({ outputKey }) => {
         </h3>
 
         <div className="flex items-center gap-2">
+          {/* Toggle Output Button */}
+          <Tooltip content={isOutputEnabled
+            ? `Turn off ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`
+            : `Turn on ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`}
+            side="bottom">
+            <button
+              onClick={handleToggleOutput}
+              className={`p-1.5 rounded-lg transition-colors ${!isOutputEnabled
+                ? darkMode
+                  ? 'bg-red-600/80 text-white hover:bg-red-600'
+                  : 'bg-red-500 text-white hover:bg-red-600'
+                : darkMode
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                }`}
+              title={isOutputEnabled
+                ? `Turn off ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`
+                : `Turn on ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`}
+            >
+              <Power className="w-4 h-4" />
+            </button>
+          </Tooltip>
+
           {/* Templates trigger button */}
           <button
             onClick={() => {
