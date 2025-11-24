@@ -123,6 +123,13 @@
           "description": "Plain text lyric file",
           "icon": "public/favicon.ico",
           "role": "Editor"
+        },
+        {
+          "ext": "ldset",
+          "name": "LyricDisplay Setlist",
+          "description": "LyricDisplay setlist file",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
         }
       ]
     },
@@ -169,6 +176,12 @@
           "name": "Text File",
           "description": "Plain text lyric file",
           "role": "Editor"
+        },
+        {
+          "ext": "ldset",
+          "name": "LyricDisplay Setlist",
+          "description": "LyricDisplay setlist file",
+          "role": "Editor"
         }
       ]
     },
@@ -199,7 +212,7 @@
       "icon": "public/favicon.png",
       "category": "AudioVideo",
       "artifactName": "${productName}-${version}-Linux.${ext}",
-      "maintainer": "Peter Alakembi <peteralakembi@gmail.com>",
+      "maintainer": "Peter Alakembi <alakembipeter30@gmail.com>",
       "desktop": {
         "Name": "LyricDisplay",
         "Comment": "Professional real-time lyric display",
@@ -218,6 +231,12 @@
           "name": "Text File",
           "description": "Plain text lyric file",
           "mimeType": "text/plain"
+        },
+        {
+          "ext": "ldset",
+          "name": "LyricDisplay Setlist",
+          "description": "LyricDisplay setlist file",
+          "mimeType": "application/x-ldset"
         }
       ]
     },
