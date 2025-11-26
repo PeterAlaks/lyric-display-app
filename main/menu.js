@@ -182,7 +182,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                 })()
               );
 
-              if (result?.action === 'checkUpdates') {
+              if (result?.data?.action === 'checkUpdates' || result?.action === 'checkUpdates') {
                 setTimeout(() => {
                   checkForUpdates?.(true);
                 }, 250);
@@ -509,7 +509,7 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
                 })()
               );
 
-              if (result?.action === 'checkUpdates') {
+              if (result?.data?.action === 'checkUpdates' || result?.action === 'checkUpdates') {
                 setTimeout(() => {
                   checkForUpdates?.(true);
                 }, 250);
