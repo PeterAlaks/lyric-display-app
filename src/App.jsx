@@ -127,6 +127,10 @@ function UpdaterBridge() {
         }
       }
 
+      if (formattedNotes.includes('---')) {
+        formattedNotes = formattedNotes.split('---')[0].trim();
+      }
+
       const descriptionParts = [];
 
       if (version) {
@@ -172,10 +176,13 @@ function UpdaterBridge() {
                     }`}>Release Notes</h4>
                 </div>
                 <div className="px-4 py-3 max-h-64 overflow-y-auto">
-                  <div className={`text-sm whitespace-pre-wrap leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
-                    {formattedNotes}
-                  </div>
+                  <div
+                    className={`text-sm leading-relaxed prose prose-sm max-w-none ${isDark
+                      ? 'text-gray-300 prose-headings:text-gray-100 prose-strong:text-gray-200 prose-code:text-gray-300 prose-a:text-blue-400'
+                      : 'text-gray-700 prose-headings:text-gray-900 prose-strong:text-gray-800 prose-code:text-gray-700 prose-a:text-blue-600'
+                      }`}
+                    dangerouslySetInnerHTML={{ __html: formattedNotes }}
+                  />
                 </div>
               </div>
             )}

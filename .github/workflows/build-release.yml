@@ -214,6 +214,8 @@ jobs:
             
             ${{ steps.release_notes.outputs.CUSTOM_NOTES }}
             
+            ---
+
             ### Downloads
             
             **Windows:**
@@ -222,16 +224,13 @@ jobs:
             **macOS:**
             - **Apple Silicon (M1/M2/M3)**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-arm64.dmg`
             - **Intel Macs**: Download `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-macOS-x64.dmg`
-            - Universal `.zip` also available
             
             **Linux:**
             - **AppImage** (recommended): `LyricDisplay-${{ steps.get_version.outputs.VERSION }}-Linux.AppImage` - Works on all distributions
-            - **Debian/Ubuntu**: Use `.deb` package
-            - **Fedora/RHEL**: Use `.rpm` package
             
             ### Installation
             
-            See the [Installation Guide](https://github.com/PeterAlaks/lyric-display-app/blob/main/LyricDisplay%20Installation%20%26%20Integration%20Guide.md) for detailed setup instructions.
+            See the [Installation Guide](https://github.com/PeterAlaks/lyric-display-app/blob/master/LyricDisplay%20Installation%20%26%20Integration%20Guide.md) for detailed setup instructions.
             
             ### Important Notes
             
