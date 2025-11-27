@@ -21,6 +21,10 @@ const Output1 = () => {
   const [isTruncated, setIsTruncated] = useState(false);
   const textContainerRef = useRef(null);
 
+  const [preloadedVideoUrl, setPreloadedVideoUrl] = useState(null);
+  const [isPreloading, setIsPreloading] = useState(false);
+  const preloadAbortControllerRef = useRef(null);
+
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
 
@@ -292,6 +296,100 @@ const Output1 = () => {
       ? fullScreenBackgroundColor || '#000000'
       : 'transparent';
 
+  useEffect(() => {
+    const preloadVideo = async () => {
+      if (!fullScreenMode || fullScreenBackgroundType !== 'media' || !fullScreenBackgroundMedia) {
+        return;
+      }
+
+      const media = fullScreenBackgroundMedia;
+      const isVideo = media.mimeType?.startsWith('video/') ||
+        (!media.mimeType && typeof media.url === 'string' && /\.(mp4|webm|ogg|m4v|mov)$/i.test(media.url));
+
+      if (!isVideo) {
+        return;
+      }
+
+      if (media.bundled) {
+        return;
+      }
+
+      const sourceUrl = media.url ? resolveBackendUrl(media.url) : null;
+      if (!sourceUrl || isPreloading) {
+        return;
+      }
+
+      const currentVideoId = `${media.url}-${media.uploadedAt}`;
+      const preloadedVideoId = preloadedVideoUrl ? preloadedVideoUrl.split('#')[1] : null;
+      if (preloadedVideoId === currentVideoId) {
+        return;
+      }
+
+      if (preloadedVideoUrl) {
+        URL.revokeObjectURL(preloadedVideoUrl);
+        setPreloadedVideoUrl(null);
+      }
+
+      if (preloadAbortControllerRef.current) {
+        preloadAbortControllerRef.current.abort();
+      }
+
+      setIsPreloading(true);
+      const abortController = new AbortController();
+      preloadAbortControllerRef.current = abortController;
+
+      try {
+        logDebug('Output1: Preloading video into memory:', sourceUrl);
+
+        const response = await fetch(sourceUrl, {
+          signal: abortController.signal,
+          cache: 'force-cache',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const blobUrlWithId = `${blobUrl}#${currentVideoId}`;
+        setPreloadedVideoUrl(blobUrlWithId);
+
+        logDebug('Output1: Video preloaded successfully, size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          logDebug('Output1: Video preload aborted');
+        } else {
+          logError('Output1: Failed to preload video:', error.message);
+        }
+      } finally {
+        setIsPreloading(false);
+        if (preloadAbortControllerRef.current === abortController) {
+          preloadAbortControllerRef.current = null;
+        }
+      }
+    };
+
+    preloadVideo();
+
+    return () => {
+      if (preloadAbortControllerRef.current) {
+        preloadAbortControllerRef.current.abort();
+        preloadAbortControllerRef.current = null;
+      }
+    };
+  }, [fullScreenMode, fullScreenBackgroundType, fullScreenBackgroundMedia?.url, fullScreenBackgroundMedia?.uploadedAt]);
+
+  useEffect(() => {
+    return () => {
+      if (preloadedVideoUrl) {
+        const cleanUrl = preloadedVideoUrl.split('#')[0];
+        URL.revokeObjectURL(cleanUrl);
+      }
+    };
+  }, [preloadedVideoUrl]);
+
   const resolveBackgroundMediaSource = () => {
     if (!fullScreenBackgroundMedia) return null;
     if (fullScreenBackgroundMedia.dataUrl) return fullScreenBackgroundMedia.dataUrl;
@@ -299,6 +397,15 @@ const Output1 = () => {
       if (fullScreenBackgroundMedia.bundled) {
         return fullScreenBackgroundMedia.url;
       }
+
+      const isVideo = fullScreenBackgroundMedia.mimeType?.startsWith('video/') ||
+        (!fullScreenBackgroundMedia.mimeType && typeof fullScreenBackgroundMedia.url === 'string' &&
+          /\.(mp4|webm|ogg|m4v|mov)$/i.test(fullScreenBackgroundMedia.url));
+
+      if (isVideo && preloadedVideoUrl) {
+        return preloadedVideoUrl.split('#')[0];
+      }
+
       return resolveBackendUrl(fullScreenBackgroundMedia.url);
     }
     return null;

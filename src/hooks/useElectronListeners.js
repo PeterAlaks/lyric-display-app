@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import useSetlistLoader from './useSetlistLoader';
+import { logDebug, logError } from '../utils/logger';
 
 export const useElectronListeners = ({
   processLoadedLyrics,
@@ -75,7 +76,7 @@ export const useElectronListeners = ({
 
     const handleOpenSetlistFromPath = async (payload) => {
       const { filePath } = payload;
-      console.log('[ElectronListeners] Opening setlist from path:', filePath);
+      logDebug('[ElectronListeners] Opening setlist from path:', filePath);
 
       try {
         const result = await window.electronAPI.setlist.loadFromPath(filePath);
@@ -93,7 +94,7 @@ export const useElectronListeners = ({
           });
         }
       } catch (error) {
-        console.error('Error loading setlist from path:', error);
+        logError('Error loading setlist from path:', error);
         showToast({
           title: 'Load failed',
           message: error.message || 'An error occurred',
