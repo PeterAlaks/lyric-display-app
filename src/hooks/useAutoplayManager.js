@@ -7,6 +7,7 @@ export const useAutoplayManager = ({
   lyricsTimestamps,
   selectedLine,
   autoplaySettings,
+  setAutoplaySettings,
   selectLine,
   emitLineUpdate,
   showToast,
@@ -318,7 +319,7 @@ export const useAutoplayManager = ({
       size: 'sm',
       settings: autoplaySettings,
       onSave: (newSettings) => {
-        autoplaySettings.setSettings?.(newSettings);
+        setAutoplaySettings?.(newSettings);
         showToast({
           title: 'Settings Saved',
           message: 'Autoplay settings updated successfully.',
@@ -327,7 +328,7 @@ export const useAutoplayManager = ({
       },
       actions: []
     });
-  }, [showModal, autoplaySettings, showToast]);
+  }, [showModal, autoplaySettings, setAutoplaySettings, showToast]);
 
   return {
     autoplayActive,

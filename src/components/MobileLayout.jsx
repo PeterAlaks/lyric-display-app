@@ -49,6 +49,7 @@ const MobileLayout = () => {
     lyricsTimestamps,
     selectedLine,
     autoplaySettings,
+    setAutoplaySettings,
     selectLine,
     emitLineUpdate,
     showToast,

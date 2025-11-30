@@ -46,7 +46,7 @@ const LyricDisplayApp = () => {
   const { darkMode, setDarkMode } = useDarkModeState();
   const { setSetlistModalOpen, setlistFiles, setSetlistFiles } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
-  const { settings: autoplaySettings } = useAutoplaySettings();
+  const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
 
   useDarkModeSync(darkMode, setDarkMode);
@@ -111,6 +111,7 @@ const LyricDisplayApp = () => {
     lyricsTimestamps,
     selectedLine,
     autoplaySettings,
+    setAutoplaySettings,
     selectLine,
     emitLineUpdate,
     showToast,
