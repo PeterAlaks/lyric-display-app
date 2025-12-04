@@ -1,6 +1,5 @@
 export const FEATURED_FONTS = [
   'Arial',
-  'Calibri',
   'Bebas Neue',
   'Fira Sans',
   'Inter',
