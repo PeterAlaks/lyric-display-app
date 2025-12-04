@@ -53,9 +53,3 @@ font-weight: 100 900; font-style: normal; font-display: swap; }
 
 /* Space Grotesk (variable font) */
 @font-face { font-family: 'Space Grotesk'; src: url('../assets/fonts/Space_Grotesk/SpaceGrotesk-VariableFont_wght.ttf') format('truetype'); font-weight: 100 700; font-style: normal; font-display: swap; }
-
-
-/* ===== Local Custom Font ===== */
-
-/* GarnetCapitals */
-@font-face { font-family: 'GarnetCapitals'; src: url('../assets/fonts/GarnetCapitals/garnet-capitals-bold.ttf') format('truetype'); font-weight: bold; font-style: normal; font-display: swap; }

@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getConnectionDiagnostics: () => ipcRenderer.invoke('get-connection-diagnostics'),
   newLyricsFile: () => ipcRenderer.invoke('new-lyrics-file'),
   getLocalIP: () => ipcRenderer.invoke('get-local-ip'),
+  getSystemFonts: () => ipcRenderer.invoke('fonts:list'),
   getPlatform: () => process.platform,
   onTriggerFileLoad: (callback) => {
     ipcRenderer.removeAllListeners('trigger-file-load');

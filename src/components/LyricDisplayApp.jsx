@@ -174,8 +174,6 @@ const LyricDisplayApp = () => {
     emitSetlistClear
   });
 
-  const fontOptions = ['Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat', 'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'];
-
   const openFileDialog = async () => {
     if (!isAuthenticated) {
       showToast({
@@ -487,7 +485,6 @@ const LyricDisplayApp = () => {
                     updateOutput1Settings(settings);
                     emitStyleUpdate('output1', settings);
                   }}
-                  fontOptions={fontOptions}
                 />
               )}
 
@@ -499,7 +496,6 @@ const LyricDisplayApp = () => {
                     updateOutput2Settings(settings);
                     emitStyleUpdate('output2', settings);
                   }}
-                  fontOptions={fontOptions}
                 />
               )}
 

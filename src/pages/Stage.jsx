@@ -296,6 +296,13 @@ const Stage = () => {
     const getEmphasisStyles = () => {
       const styles = {};
 
+      const boldValue = lineType === 'live'
+        ? liveBold
+        : lineType === 'next'
+          ? nextBold
+          : prevBold;
+      styles.fontWeight = boldValue ? 'bold' : 'normal';
+
       if (lineType === 'live') {
         if (liveItalic) styles.fontStyle = 'italic';
         if (liveUnderline) styles.textDecoration = 'underline';
@@ -348,7 +355,7 @@ const Stage = () => {
                   color: shouldUseTranslationColor ? (translationLineColor || '#FBBF24') : color,
                   fontSize: isTranslationLine ? `${fontSize * 0.8}px` : `${fontSize}px`,
                   lineHeight: 1.05,
-                  ...(index === 0 ? emphasisStyles : {}),
+                  ...(index === 0 ? emphasisStyles : { fontWeight: emphasisStyles.fontWeight }),
                 }}
               >
                 {displayText}

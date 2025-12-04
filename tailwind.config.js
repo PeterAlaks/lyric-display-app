@@ -1,4 +1,3 @@
-// tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 import tailwindcssAnimate from 'tailwindcss-animate';
 
@@ -10,7 +9,6 @@ export default {
       fontFamily: {
         sans: ['"Space Grotesk"', 'sans-serif'],
         grotesk: ['"Space Grotesk"', 'sans-serif'],
-        garnet: ['"GarnetCapitals"', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',

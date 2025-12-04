@@ -10,6 +10,7 @@ import { parseTxtContent, parseLrcContent } from '../shared/lyricsParsing.js';
 import { fetchLyricsByProvider, getProviderDefinitions, getProviderKeyState, removeProviderKey, saveProviderKey, searchAllProviders } from './lyricsProviders/index.js';
 import * as easyWorship from './easyWorship.js';
 import * as displayManager from './displayManager.js';
+import { loadSystemFonts } from './systemFonts.js';
 
 const { autoUpdater } = updaterPkg;
 
@@ -104,6 +105,16 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   ipcMain.handle('sync-native-dark-mode', (_event, isDark) => {
     try { nativeTheme.themeSource = isDark ? 'dark' : 'light'; return { success: true }; }
     catch (error) { return { success: false, error: error.message }; }
+  });
+
+  ipcMain.handle('fonts:list', async () => {
+    try {
+      const fonts = await loadSystemFonts();
+      return { success: true, fonts: fonts || [] };
+    } catch (error) {
+      console.error('Error listing system fonts:', error);
+      return { success: false, error: error.message, fonts: [] };
+    }
   });
 
   ipcMain.handle('get-local-ip', () => getLocalIPAddress());

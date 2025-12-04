@@ -9,6 +9,7 @@ import { initDisplayManager } from './displayManager.js';
 import { performStartupDisplayCheck } from './displayDetection.js';
 import { processPendingFile } from './fileHandler.js';
 import { updateLoadingStatus, closeLoadingWindow } from './loadingWindow.js';
+import { preloadSystemFonts } from './systemFonts.js';
 
 export async function handleMissingAdminKey() {
   const message = 'Lyric Display requires the administrative key to unlock local access.';
@@ -34,7 +35,8 @@ export async function handleMissingAdminKey() {
 export function prewarmResources() {
   Promise.all([
     import('./lyricsProviders/providers/openHymnal.js').then(mod => mod.loadDataset()),
-    prewarmCredentials()
+    prewarmCredentials(),
+    preloadSystemFonts()
   ]).then(() => {
     console.log('[Startup] Lyrics provider resources pre-warmed');
   }).catch(error => {

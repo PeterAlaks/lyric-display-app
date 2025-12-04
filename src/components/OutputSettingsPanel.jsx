@@ -12,11 +12,7 @@ import useAuth from '../hooks/useAuth';
 import { resolveBackendUrl } from '../utils/network';
 import { logWarn } from '../utils/logger';
 import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ListMusic, ChevronDown, ChevronUp, ChevronRight, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2, HardDriveDownload, Power } from 'lucide-react';
-
-const fontOptions = [
-  'Arial', 'Calibri', 'Bebas Neue', 'Fira Sans', 'GarnetCapitals', 'Inter', 'Lato', 'Montserrat',
-  'Noto Sans', 'Open Sans', 'Poppins', 'Roboto', 'Work Sans'
-];
+import FontSelect from './FontSelect';
 
 const MAX_MEDIA_SIZE_BYTES = 200 * 1024 * 1024;
 
@@ -358,18 +354,11 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, LabelWi
         <Tooltip content="Select font family for stage display" side="right">
           <LabelWithIcon icon={Type} text="Font Style" />
         </Tooltip>
-        <Select value={settings.fontStyle} onValueChange={(val) => update('fontStyle', val)}>
-          <SelectTrigger className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
-            <SelectValue placeholder="Select font" />
-          </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
-            {fontOptions.map((font) => (
-              <SelectItem key={font} value={font} style={{ fontFamily: font }} className={darkMode ? 'text-gray-200 hover:bg-gray-600' : ''}>
-                {font}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FontSelect
+          value={settings.fontStyle}
+          onChange={(val) => update('fontStyle', val)}
+          darkMode={darkMode}
+        />
       </div>
 
       {/* Background Color */}
@@ -1753,26 +1742,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
         <Tooltip content="Select font family for lyric display" side="right">
           <LabelWithIcon icon={Type} text="Font Style" />
         </Tooltip>
-        <Select value={settings.fontStyle} onValueChange={(val) => update('fontStyle', val)}>
-          <SelectTrigger className={`w-full ${darkMode
-            ? 'bg-gray-700 border-gray-600 text-gray-200'
-            : 'bg-white border-gray-300'
-            }`}>
-            <SelectValue placeholder="Select font" />
-          </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
-            {fontOptions.map((font) => (
-              <SelectItem
-                key={font}
-                value={font}
-                style={{ fontFamily: font }}
-                className={darkMode ? 'text-gray-200 hover:bg-gray-600' : ''}
-              >
-                {font}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FontSelect
+          value={settings.fontStyle}
+          onChange={(val) => update('fontStyle', val)}
+          darkMode={darkMode}
+        />
       </div>
 
       {/* Bold / Italic / Underline / All Caps */}

@@ -580,11 +580,11 @@ const Output2 = () => {
             return (
               <div
                 key={index}
-                className="font-medium"
                 style={{
                   ...textStrokeStyles,
                   color: (isTranslationGroup && index > 0) ? translationLineColor : 'inherit',
-                  fontSize: (isTranslationGroup && index > 0) ? `${effectiveTranslationSize}px` : 'inherit'
+                  fontSize: (isTranslationGroup && index > 0) ? `${effectiveTranslationSize}px` : 'inherit',
+                  fontWeight: bold ? 'bold' : 'normal',
                 }}
               >
                 {lineDisplayText}
