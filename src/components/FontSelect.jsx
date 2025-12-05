@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { List, useListRef } from 'react-window';
 import { Input } from "@/components/ui/input";
 import { ChevronDown, Check } from 'lucide-react';
 import { FEATURED_FONTS } from '../constants/fonts';
@@ -7,6 +8,12 @@ import { logWarn } from '../utils/logger';
 import { cn } from '@/lib/utils';
 
 const normalizeFontName = (font) => (typeof font === 'string' ? font.replace(/["']/g, '').trim() : '');
+const DROPDOWN_MAX_HEIGHT = 320;
+const FONT_ROW_HEIGHT = 40;
+const LABEL_ROW_HEIGHT = 32;
+const DIVIDER_ROW_HEIGHT = 16;
+const HELPER_ROW_HEIGHT = 28;
+const SCROLL_PADDING_PX = 4;
 
 const sortAndDeduplicate = (fonts) => Array.from(
   new Set(
@@ -56,6 +63,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
   const triggerRef = React.useRef(null);
   const menuRef = React.useRef(null);
   const [menuCoords, setMenuCoords] = React.useState(null);
+  const listRef = useListRef();
 
   const isDesktopApp = typeof window !== 'undefined' && Boolean(window.electronAPI?.getSystemFonts);
 
@@ -126,7 +134,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
       const rect = triggerRef.current.getBoundingClientRect();
       const triggerWidth = rect.width;
       const dropdownWidth = Math.max(triggerWidth, 320);
-      const menuHeight = menuRef.current?.offsetHeight || 320;
+      const menuHeight = menuRef.current?.offsetHeight || DROPDOWN_MAX_HEIGHT;
       const gap = 6;
       const minTop = 8;
 
@@ -183,7 +191,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
     const rect = triggerRef.current.getBoundingClientRect();
     const triggerWidth = rect.width;
     const dropdownWidth = Math.max(triggerWidth, 320);
-    const menuHeight = menuRef.current.offsetHeight || 0;
+    const menuHeight = menuRef.current?.offsetHeight || DROPDOWN_MAX_HEIGHT;
     const gap = 6;
     const minTop = 8;
 
@@ -214,16 +222,16 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
     }
   }, [open]);
 
-  const handleSelect = (font) => {
+  const handleSelect = React.useCallback((font) => {
     onChange(font);
     setOpen(false);
-  };
+  }, [onChange]);
 
-  const renderEmptyState = (text) => (
+  const renderEmptyState = React.useCallback((text) => (
     <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{text}</div>
-  );
+  ), [darkMode]);
 
-  const renderFontItem = (font) => (
+  const renderFontItem = React.useCallback((font) => (
     <button
       key={font}
       type="button"
@@ -244,10 +252,151 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
         <Check className="w-4 h-4 flex-shrink-0" />
       )}
     </button>
-  );
+  ), [darkMode, handleSelect, normalizedValue]);
 
   const labelClasses = `px-3 pt-3 pb-2 text-[11px] font-semibold tracking-wide uppercase ${darkMode ? 'text-gray-300' : 'text-gray-600'}`;
   const helperTextClasses = `px-3 pb-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`;
+
+  const listItems = React.useMemo(() => {
+    const items = [{ type: 'label', text: 'Featured Fonts' }];
+
+    if (visibleFeaturedFonts.length) {
+      visibleFeaturedFonts.forEach((font) => {
+        items.push({ type: 'font', font });
+      });
+    } else {
+      items.push({ type: 'empty', text: 'No matching featured fonts' });
+    }
+
+    items.push({ type: 'divider' });
+    items.push({ type: 'label', text: 'Installed Fonts' });
+
+    if (!isDesktopApp) {
+      items.push({ type: 'helper', text: 'System fonts are available in the desktop app' });
+    } else if (loadingFonts) {
+      items.push({ type: 'helper', text: 'Loading installed fonts...' });
+    }
+
+    if (isDesktopApp && !loadingFonts) {
+      if (visibleInstalledFonts.length) {
+        visibleInstalledFonts.forEach((font) => {
+          items.push({ type: 'font', font });
+        });
+      } else {
+        items.push({ type: 'empty', text: 'No installed fonts found' });
+      }
+    }
+
+    return items;
+  }, [visibleFeaturedFonts, isDesktopApp, loadingFonts, visibleInstalledFonts]);
+
+  const getRowHeight = React.useCallback((index, { items }) => {
+    const item = items[index];
+    if (!item) return FONT_ROW_HEIGHT;
+    switch (item.type) {
+      case 'label':
+        return LABEL_ROW_HEIGHT;
+      case 'divider':
+        return DIVIDER_ROW_HEIGHT;
+      case 'helper':
+      case 'empty':
+        return HELPER_ROW_HEIGHT;
+      case 'font':
+      default:
+        return FONT_ROW_HEIGHT;
+    }
+  }, []);
+
+  const rowPropsData = React.useMemo(() => ({
+    items: listItems,
+    renderFontItem,
+    renderEmptyState,
+    labelClasses,
+    helperTextClasses,
+    darkMode
+  }), [listItems, renderFontItem, renderEmptyState, labelClasses, helperTextClasses, darkMode]);
+
+  const VirtualRow = React.useCallback(
+    ({
+      index,
+      style,
+      ariaAttributes,
+      items,
+      renderFontItem,
+      renderEmptyState,
+      labelClasses,
+      helperTextClasses,
+      darkMode
+    }) => {
+      const item = items[index];
+      if (!item) return null;
+
+      const rowStyle = { ...style, width: '100%' };
+
+      switch (item.type) {
+        case 'label':
+          return (
+            <div style={rowStyle} {...ariaAttributes}>
+              <div className={cn(
+                labelClasses,
+                darkMode ? 'bg-gray-700 text-gray-400' : 'bg-white text-gray-500'
+              )} style={{
+                marginRight: `-${SCROLL_PADDING_PX}px`,
+                width: `calc(100% + ${SCROLL_PADDING_PX}px)`
+              }}>
+                {item.text}
+              </div>
+            </div>
+          );
+        case 'divider':
+          return (
+            <div style={rowStyle} {...ariaAttributes} className="py-2">
+              <div className={cn('h-px w-full', darkMode ? 'bg-gray-600/60' : 'bg-gray-200')} />
+            </div>
+          );
+        case 'helper':
+          return (
+            <div style={rowStyle} {...ariaAttributes}>
+              <div className={helperTextClasses}>{item.text}</div>
+            </div>
+          );
+        case 'empty':
+          return (
+            <div style={rowStyle} {...ariaAttributes}>
+              {renderEmptyState(item.text)}
+            </div>
+          );
+        case 'font':
+        default:
+          return (
+            <div style={rowStyle} {...ariaAttributes}>
+              {renderFontItem(item.font)}
+            </div>
+          );
+      }
+    },
+    [labelClasses, helperTextClasses, darkMode, renderFontItem, renderEmptyState]
+  );
+
+  const [stickyLabel, setStickyLabel] = React.useState(listItems[0]?.type === 'label' ? listItems[0].text : '');
+
+  const handleRowsRendered = React.useCallback(({ startIndex }) => {
+    const start = typeof startIndex === 'number' ? startIndex : 0;
+    let current = '';
+    for (let i = start; i >= 0; i -= 1) {
+      const item = listItems[i];
+      if (item?.type === 'label') {
+        current = item.text;
+        break;
+      }
+    }
+    setStickyLabel((prev) => (prev === current ? prev : current));
+  }, [listItems]);
+
+  React.useEffect(() => {
+    const firstLabel = listItems.find((item) => item.type === 'label');
+    setStickyLabel(firstLabel?.text || '');
+  }, [listItems]);
 
   return (
     <div className="relative flex-1 min-w-0" ref={containerRef}>
@@ -320,7 +469,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
             </div>
           </div>
 
-          <div
+          <List
             className={cn(
               'max-h-80 overflow-y-auto pr-1 pb-2',
               darkMode
@@ -328,32 +477,38 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
                 : 'scrollbar-thumb-gray-500 scrollbar-track-gray-200',
               'scrollbar-thin'
             )}
-            style={{ scrollbarGutter: 'stable' }}
+            style={{
+              maxHeight: `${DROPDOWN_MAX_HEIGHT}px`,
+              scrollbarGutter: 'stable',
+              width: '100%',
+              overflowX: 'hidden'
+            }}
+            defaultHeight={DROPDOWN_MAX_HEIGHT}
+            listRef={listRef}
+            rowCount={listItems.length}
+            rowHeight={getRowHeight}
+            rowComponent={VirtualRow}
+            rowProps={rowPropsData}
+            onRowsRendered={handleRowsRendered}
           >
-            <div className={cn(
-              labelClasses,
-              'sticky top-0 z-10',
-              darkMode ? 'bg-gray-700 text-gray-400' : 'bg-white text-gray-500'
-            )}>Featured Fonts</div>
-            {visibleFeaturedFonts.length
-              ? visibleFeaturedFonts.map(renderFontItem)
-              : renderEmptyState('No matching featured fonts')}
-
-            <div className={cn('my-2 h-px', darkMode ? 'bg-gray-600/60' : 'bg-gray-200')} />
-
-            <div className={cn(
-              labelClasses,
-              'sticky top-0 z-10',
-              darkMode ? 'bg-gray-700 text-gray-400' : 'bg-white text-gray-500'
-            )}>Installed Fonts</div>
-            {!isDesktopApp && <div className={helperTextClasses}>System fonts are available in the desktop app</div>}
-            {isDesktopApp && loadingFonts && <div className={helperTextClasses}>Loading installed fonts...</div>}
-            {isDesktopApp && !loadingFonts && (
-              visibleInstalledFonts.length
-                ? visibleInstalledFonts.map(renderFontItem)
-                : renderEmptyState('No installed fonts found')
+            {stickyLabel && (
+              <div
+                className={cn(
+                  labelClasses,
+                  'sticky top-0 z-20 pointer-events-none block w-full',
+                  darkMode ? 'bg-gray-700 text-gray-400' : 'bg-white text-gray-500'
+                )}
+                style={{
+                  left: 0,
+                  right: `-${SCROLL_PADDING_PX}px`,
+                  width: `calc(100% + ${SCROLL_PADDING_PX}px)`
+                }}
+                aria-hidden="true"
+              >
+                {stickyLabel}
+              </div>
             )}
-          </div>
+          </List>
         </div>,
         document.body
       )}
