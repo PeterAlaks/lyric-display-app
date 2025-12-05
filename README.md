@@ -191,6 +191,7 @@ lyric-display-app/
 |   ├── secureTokenStore.js                 # Main token storage for desktop 
 |   ├── singleInstance.js                   # Single app instance lock process
 |   ├── startup.js                          # Main app startup processes
+|   ├── systemFonts.js                      # Helper module for loading system installed fonts
 |   ├── updater.js                          # Module to manage app updates
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
@@ -250,6 +251,8 @@ lyric-display-app/
 |   |   ├── StageTemplatesModal.jsx         # Stage settings templates modal
 |   |   ├── SupportDevelopmentModal.jsx     # Support development modal
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
+│   ├── constants/
+|   |   └── fonts.js                        # Featured fonts dropdown store
 │   ├── context/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
 |   |   └── LyricsStore.js                  # Zustand store definitions
