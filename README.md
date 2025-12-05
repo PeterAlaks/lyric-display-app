@@ -8,12 +8,12 @@
 
 ## Overview
 
-LyricDisplay is a comprehensive Electron-based application designed for use in professional live production environments alongside streaming/recording software. It provides real-time lyric synchronization across multiple transparent output displays, making it ideal for church services, concerts, and live streaming setups where lyrics need to be displayed both in-house and for broadcast.
+LyricDisplay is a comprehensive Electron-based application designed for use in professional live production environments alongside streaming/recording software. It provides real-time lyric synchronization across multiple transparent output displays, making it ideal for church services, concerts, and live streaming setups where lyrics need to be displayed in distinct display points.
 
 ## Key Features
 
 ### Multi-Output Display System
-- **Dual Independent Outputs**: Two separate output pages with individual styling controls
+- **Dual Independent Outputs**: Two separate output pages plus stage output page with individual styling controls
 - **Transparent Backgrounds**: Perfect for OBS/VMIX browser source capture
 - **Real-time Synchronization**: Instant updates across all connected displays
 - **Browser Source Compatible**: Works seamlessly with popular streaming software
@@ -25,7 +25,7 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 - **Search & Navigation**: Advanced search with match highlighting and keyboard navigation
 
 ### Comprehensive Styling Engine
-- **13 Professional Fonts**: 13 pro fonts from Google Fonts
+- **10 Professional Featured Fonts**: 10 pro fonts from Google Fonts in addition to locally installed fonts
 - **Typography Controls**: Bold, italic, underline, and all-caps options
 - **Color Customization**: Independent font and drop shadow colors
 - **Background Controls**: Adjustable opacity and color settings
@@ -388,7 +388,7 @@ Their inclusion does **not imply endorsement, partnership, or affiliation** with
 ## Support
 
 For technical support, feature requests, or bug reports:
-- Open an issue on GitHub
+- Open an issue on the issues tab
 - Check existing documentation
 - Review troubleshooting section
 
