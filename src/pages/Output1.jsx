@@ -256,6 +256,11 @@ const Output1 = () => {
   const backgroundStrength = clamp(Number(backgroundOpacity) || 0, 0, 10);
   const verticalMarginRem = clamp(Number(yMargin) || 0, 0, 20);
   const horizontalMarginRem = clamp(Number(xMargin) || 0, 0, 20);
+  const horizontalPaddingStyle = {
+    paddingLeft: `${horizontalMarginRem}rem`,
+    paddingRight: `${horizontalMarginRem}rem`,
+    boxSizing: 'border-box',
+  };
 
   const getTextShadow = () => {
     if (!dropShadowColor || dropShadowStrength === 0) return 'none';
@@ -623,8 +628,7 @@ const Output1 = () => {
                 backgroundColor: getBandBackground(),
                 paddingTop: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
                 paddingBottom: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
-                paddingLeft: `${horizontalMarginRem}rem`,
-                paddingRight: `${horizontalMarginRem}rem`,
+                ...horizontalPaddingStyle,
                 height: getBackgroundBandHeight(),
                 display: 'flex',
                 justifyContent: 'center',
@@ -718,6 +722,7 @@ const Output1 = () => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 width: '100%',
+                ...horizontalPaddingStyle,
                 opacity: isVisible ? 1 : 0,
                 transition: 'opacity 300ms ease-in-out',
                 pointerEvents: isVisible ? 'auto' : 'none',
