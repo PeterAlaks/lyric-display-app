@@ -129,6 +129,7 @@ async function main() {
             { title: `Patch (v${currentVersion} -> v${next.patch})`, value: 'patch' },
             { title: `Minor (v${currentVersion} -> v${next.minor})`, value: 'minor' },
             { title: `Major (v${currentVersion} -> v${next.major})`, value: 'major' },
+            { title: 'Custom (enter version manually)', value: 'custom' },
             { title: 'Cancel', value: null }
         ]
     });
@@ -138,7 +139,29 @@ async function main() {
         process.exit(0);
     }
 
-    const targetVersion = next[bumpType];
+    let targetVersion;
+
+    if (bumpType === 'custom') {
+        const { customVersion } = await prompts({
+            type: 'text',
+            name: 'customVersion',
+            message: 'Enter custom version number (e.g., 1.2.3):',
+            validate: value => {
+                if (!value) return 'Version number is required';
+                if (!/^\d+\.\d+\.\d+$/.test(value)) return 'Version must be in format: major.minor.patch (e.g., 1.2.3)';
+                return true;
+            }
+        });
+
+        if (!customVersion) {
+            console.log(chalk.yellow('Release cancelled.'));
+            process.exit(0);
+        }
+
+        targetVersion = customVersion;
+    } else {
+        targetVersion = next[bumpType];
+    }
     const tagName = `v${targetVersion}`;
 
     const conflict = checkTagExists(tagName);
