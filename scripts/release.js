@@ -173,7 +173,7 @@ async function main() {
 
     console.log(chalk.cyan('\n📝 Release Notes'));
     console.log(chalk.gray('Enter your release notes below. You can use multiple lines.'));
-    console.log(chalk.gray('Press Ctrl+D (Unix) or Ctrl+Z (Windows) when done, or leave blank to skip.\n'));
+    console.log(chalk.gray('Save and close when done, or leave blank and close to skip.\n'));
 
     const { notesMethod } = await prompts({
         type: 'select',
