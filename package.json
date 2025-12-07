@@ -217,10 +217,12 @@
       "artifactName": "${productName}-${version}-Linux.${ext}",
       "maintainer": "Peter Alakembi <alakembipeter30@gmail.com>",
       "desktop": {
-        "Name": "LyricDisplay",
-        "Comment": "Professional real-time lyric display",
-        "Categories": "AudioVideo;Audio;Music;",
-        "MimeType": "text/plain;application/x-lrc;"
+        "entry": {
+          "Name": "LyricDisplay",
+          "Comment": "Professional real-time lyric display",
+          "Categories": "AudioVideo;Audio;Music;",
+          "MimeType": "text/plain;application/x-lrc;"
+        }
       },
       "fileAssociations": [
         {
