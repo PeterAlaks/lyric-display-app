@@ -63,7 +63,7 @@
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
-    "electron": "^39.2.6",
+    "electron": "^37.2.5",
     "electron-builder": "^24.13.3",
     "husky": "^9.1.7",
     "postcss": "^8.5.6",
