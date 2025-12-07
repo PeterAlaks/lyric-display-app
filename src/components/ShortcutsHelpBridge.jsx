@@ -4,23 +4,48 @@ import { useModalContext } from './modal/ModalProvider';
 import { useDarkModeState } from '../hooks/useStoreSelectors';
 
 const SHORTCUTS = [
-  { label: 'Open Lyrics File', combo: 'Ctrl/Cmd + O' },
-  { label: 'New Lyrics', combo: 'Ctrl/Cmd + N' },
-  { label: 'Focus Search Bar', combo: 'Ctrl/Cmd + F' },
-  { label: 'Toggle Autoplay', combo: 'Ctrl/Cmd + P' },
-  { label: 'Toggle Intelligent Autoplay', combo: 'Ctrl/Cmd + Shift + P' },
-  { label: 'Clear Search', combo: 'Escape' },
-  { label: 'Jump to First Match (in search)', combo: 'Enter' },
-  { label: 'Navigate to Previous Lyric Line', combo: 'Up Arrow / Numpad ↑' },
-  { label: 'Navigate to Next Lyric Line', combo: 'Down Arrow / Numpad ↓' },
-  { label: 'Jump to First Lyric Line', combo: 'Home' },
-  { label: 'Jump to Last Lyric Line', combo: 'End' },
-  { label: 'Toggle Display Output', combo: 'Spacebar' },
-  { label: 'Add Translation Line in Canvas', combo: 'Ctrl/Cmd + T' },
-  { label: 'Duplicate Line in Canvas', combo: 'Ctrl/Cmd + D' },
-  { label: 'Select Line in Canvas', combo: 'Ctrl/Cmd + L' },
-  { label: 'Navigate Previous Search Results', combo: 'Shift + Up Arrow' },
-  { label: 'Navigate Next Search Results', combo: 'Shift + Down Arrow' },
+  { 
+    category: 'File Operations',
+    items: [
+      { label: 'Open Lyrics File', combo: 'Ctrl/Cmd + O' },
+      { label: 'New Lyrics', combo: 'Ctrl/Cmd + N' },
+    ]
+  },
+  { 
+    category: 'Search & Navigation',
+    items: [
+      { label: 'Focus Search Bar', combo: 'Ctrl/Cmd + F' },
+      { label: 'Clear Search', combo: 'Escape' },
+      { label: 'Jump to First Match', combo: 'Enter' },
+      { label: 'Navigate Previous Search Results', combo: 'Shift + ↑' },
+      { label: 'Navigate Next Search Results', combo: 'Shift + ↓' },
+    ]
+  },
+  { 
+    category: 'Playback Control',
+    items: [
+      { label: 'Toggle Autoplay', combo: 'Ctrl/Cmd + P' },
+      { label: 'Toggle Intelligent Autoplay', combo: 'Ctrl/Cmd + Shift + P' },
+      { label: 'Toggle Display Output', combo: 'Spacebar' },
+    ]
+  },
+  { 
+    category: 'Lyric Navigation',
+    items: [
+      { label: 'Navigate to Previous Line', combo: '↑ / Numpad ↑' },
+      { label: 'Navigate to Next Line', combo: '↓ / Numpad ↓' },
+      { label: 'Jump to First Line', combo: 'Home' },
+      { label: 'Jump to Last Line', combo: 'End' },
+    ]
+  },
+  { 
+    category: 'Canvas Editing',
+    items: [
+      { label: 'Add Translation Line', combo: 'Ctrl/Cmd + T' },
+      { label: 'Duplicate Line', combo: 'Ctrl/Cmd + D' },
+      { label: 'Select Line', combo: 'Ctrl/Cmd + L' },
+    ]
+  },
 ];
 
 export default function ShortcutsHelpBridge() {
@@ -30,13 +55,13 @@ export default function ShortcutsHelpBridge() {
   const openShortcutsModal = useCallback(() => {
     showModal({
       title: 'Keyboard Shortcuts',
-      headerDescription: 'Helpful keyboard shortcuts for faster navigation and actions',
+      headerDescription: 'Master these shortcuts to navigate and control the app efficiently',
       variant: 'info',
       size: 'auto',
       icon: <Keyboard className="h-6 w-6" aria-hidden />,
-      dismissLabel: 'Close',
+      dismissLabel: 'Got it',
       allowBackdropClose: true,
-      className: 'sm:min-w-[500px] max-w-2xl',
+      className: 'sm:min-w-[700px] max-w-4xl',
       body: <ShortcutsList darkMode={darkMode} />,
     });
   }, [showModal, darkMode]);
@@ -61,11 +86,44 @@ export default function ShortcutsHelpBridge() {
 
 function ShortcutsList({ darkMode }) {
   return (
-    <div className="space-y-3">
-      {SHORTCUTS.map(({ label, combo }) => (
-        <div key={combo} className="flex items-center justify-between gap-4">
-          <span className={`truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{label}</span>
-          <span className={`whitespace-nowrap font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{combo}</span>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+      {SHORTCUTS.map(({ category, items }) => (
+        <div 
+          key={category} 
+          className={`rounded-xl border p-4 ${
+            darkMode 
+              ? 'bg-gray-800/30 border-gray-700/50' 
+              : 'bg-gray-50/50 border-gray-200'
+          }`}
+        >
+          <h3 className={`text-xs font-bold uppercase tracking-wider mb-3 pb-2 border-b ${
+            darkMode 
+              ? 'text-blue-400 border-gray-700' 
+              : 'text-blue-600 border-gray-200'
+          }`}>
+            {category}
+          </h3>
+          <div className="space-y-2.5">
+            {items.map(({ label, combo }) => (
+              <div 
+                key={combo} 
+                className="flex items-center justify-between gap-4"
+              >
+                <span className={`text-sm ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  {label}
+                </span>
+                <kbd className={`inline-flex items-center px-2.5 py-1 text-xs font-mono font-semibold rounded-md border shadow-sm whitespace-nowrap ${
+                  darkMode 
+                    ? 'bg-gray-900 text-blue-300 border-gray-600' 
+                    : 'bg-white text-gray-700 border-gray-300'
+                }`}>
+                  {combo}
+                </kbd>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>

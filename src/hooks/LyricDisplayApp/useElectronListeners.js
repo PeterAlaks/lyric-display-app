@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import useSetlistLoader from './useSetlistLoader';
-import { logDebug, logError } from '../utils/logger';
+import useSetlistLoader from '../SetlistModal/useSetlistLoader';
+import { logDebug, logError } from '../../utils/logger';
 
 export const useElectronListeners = ({
   processLoadedLyrics,

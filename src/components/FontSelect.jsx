@@ -53,7 +53,14 @@ const loadSystemFonts = async () => {
   return cachedSystemFontPromise;
 };
 
-const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) => {
+const FontSelect = ({
+  value,
+  onChange,
+  darkMode,
+  placeholder = 'Select font',
+  triggerClassName = '',
+  containerClassName = ''
+}) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [installedFonts, setInstalledFonts] = React.useState([]);
   const [loadingFonts, setLoadingFonts] = React.useState(false);
@@ -64,6 +71,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
   const menuRef = React.useRef(null);
   const [menuCoords, setMenuCoords] = React.useState(null);
   const listRef = useListRef();
+  const activeFontIndexRef = React.useRef(null);
 
   const isDesktopApp = typeof window !== 'undefined' && Boolean(window.electronAPI?.getSystemFonts);
 
@@ -185,6 +193,33 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
     };
   }, [open]);
 
+  React.useEffect(() => {
+    if (!open) return undefined;
+
+    const handleFocusIn = (event) => {
+      if (menuRef.current?.contains(event.target)) return;
+      if (triggerRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+
+    const handleWindowBlur = () => setOpen(false);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('blur', handleWindowBlur);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focusin', handleFocusIn);
+      window.removeEventListener('blur', handleWindowBlur);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [open]);
+
   React.useLayoutEffect(() => {
     if (!open || !triggerRef.current || !menuRef.current) return;
 
@@ -219,6 +254,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
   React.useEffect(() => {
     if (!open) {
       setSearchTerm('');
+      activeFontIndexRef.current = null;
     }
   }, [open]);
 
@@ -230,29 +266,6 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
   const renderEmptyState = React.useCallback((text) => (
     <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{text}</div>
   ), [darkMode]);
-
-  const renderFontItem = React.useCallback((font) => (
-    <button
-      key={font}
-      type="button"
-      onClick={() => handleSelect(font)}
-      style={{ fontFamily: font }}
-      className={cn(
-        'w-full text-left flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md transition-colors truncate',
-        darkMode
-          ? 'text-gray-200 hover:bg-gray-600 focus:bg-gray-600'
-          : 'text-gray-800 hover:bg-gray-100 focus:bg-gray-200',
-        normalizedValue && normalizedValue.toLowerCase() === font.toLowerCase()
-          ? (darkMode ? 'bg-gray-600' : 'bg-gray-100')
-          : ''
-      )}
-    >
-      <span className="truncate" title={font}>{font}</span>
-      {normalizedValue && normalizedValue.toLowerCase() === font.toLowerCase() && (
-        <Check className="w-4 h-4 flex-shrink-0" />
-      )}
-    </button>
-  ), [darkMode, handleSelect, normalizedValue]);
 
   const labelClasses = `px-3 pt-3 pb-2 text-[11px] font-semibold tracking-wide uppercase ${darkMode ? 'text-gray-300' : 'text-gray-600'}`;
   const helperTextClasses = `px-3 pb-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`;
@@ -289,6 +302,156 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
 
     return items;
   }, [visibleFeaturedFonts, isDesktopApp, loadingFonts, visibleInstalledFonts]);
+
+  const listItemsRef = React.useRef(listItems);
+  React.useEffect(() => {
+    listItemsRef.current = listItems;
+  }, [listItems]);
+
+  const findFirstFontIndex = React.useCallback(() => (
+    listItemsRef.current.findIndex((item) => item.type === 'font')
+  ), []);
+
+  const findLastFontIndex = React.useCallback(() => {
+    const items = listItemsRef.current;
+    for (let i = items.length - 1; i >= 0; i -= 1) {
+      if (items[i]?.type === 'font') {
+        return i;
+      }
+    }
+    return -1;
+  }, []);
+
+  const focusFontAtIndex = React.useCallback((targetIndex) => {
+    const items = listItemsRef.current;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    if (items[targetIndex]?.type !== 'font') return;
+
+    activeFontIndexRef.current = targetIndex;
+    listRef.current?.scrollToRow?.({ index: targetIndex, align: 'auto' });
+
+    requestAnimationFrame(() => {
+      const button = menuRef.current?.querySelector(`[data-font-index="${targetIndex}"]`);
+      if (button) {
+        button.focus();
+      }
+    });
+  }, [listRef, menuRef]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const items = listItemsRef.current;
+    const currentIndex = activeFontIndexRef.current;
+
+    if (currentIndex == null) return;
+
+    const ensureIndex = (idx) => {
+      if (idx == null || idx < 0 || idx >= items.length) return findFirstFontIndex();
+      return items[idx]?.type === 'font' ? idx : findFirstFontIndex();
+    };
+
+    const targetIndex = ensureIndex(currentIndex);
+    if (typeof targetIndex === 'number' && targetIndex >= 0) {
+      requestAnimationFrame(() => focusFontAtIndex(targetIndex));
+    }
+  }, [listItems, open, findFirstFontIndex, focusFontAtIndex]);
+
+  const getNextFontIndex = React.useCallback((currentIndex, delta) => {
+    const items = listItemsRef.current;
+    let idx = currentIndex + delta;
+    while (idx >= 0 && idx < items.length) {
+      if (items[idx]?.type === 'font') {
+        return idx;
+      }
+      idx += delta;
+    }
+    return -1;
+  }, []);
+
+  const stopNavigationEvent = React.useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.nativeEvent?.stopImmediatePropagation) {
+      event.nativeEvent.stopImmediatePropagation();
+    }
+  }, []);
+
+  const handleMenuKeyDown = React.useCallback((event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      stopNavigationEvent(event);
+    }
+  }, [stopNavigationEvent]);
+
+  const handleFontItemKeyDown = React.useCallback((event, index) => {
+    // Keep arrow key navigation inside the font menu so it doesn't bubble to the main panel
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+
+    stopNavigationEvent(event);
+    const delta = event.key === 'ArrowDown' ? 1 : -1;
+    const nextIndex = getNextFontIndex(index, delta);
+
+    if (nextIndex >= 0) {
+      focusFontAtIndex(nextIndex);
+    } else if (searchInputRef.current) {
+      searchInputRef.current.focus();
+      activeFontIndexRef.current = null;
+    }
+  }, [focusFontAtIndex, getNextFontIndex, searchInputRef, stopNavigationEvent]);
+
+  const handleSearchKeyDown = React.useCallback((event) => {
+    // Prevent main panel shortcuts from triggering while navigating the font menu
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+      stopNavigationEvent(event);
+    } else {
+      event.stopPropagation();
+    }
+
+    if (event.key === 'Escape') {
+      setOpen(false);
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      const firstFontIndex = findFirstFontIndex();
+      if (firstFontIndex >= 0) {
+        focusFontAtIndex(firstFontIndex);
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      const lastFontIndex = findLastFontIndex();
+      if (lastFontIndex >= 0) {
+        focusFontAtIndex(lastFontIndex);
+      }
+    }
+  }, [findFirstFontIndex, findLastFontIndex, focusFontAtIndex]);
+
+  const renderFontItem = React.useCallback((font, index) => (
+    <button
+      key={font}
+      type="button"
+      data-font-index={index}
+      onClick={() => handleSelect(font)}
+      onKeyDown={(event) => handleFontItemKeyDown(event, index)}
+      onFocus={() => { activeFontIndexRef.current = index; }}
+      style={{ fontFamily: font }}
+      className={cn(
+        'w-full text-left flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-r-md rounded-l-none transition-colors truncate focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
+        darkMode
+          ? 'text-gray-200 hover:bg-gray-600 focus:bg-gray-600'
+          : 'text-gray-800 hover:bg-gray-100 focus:bg-gray-200',
+        normalizedValue && normalizedValue.toLowerCase() === font.toLowerCase()
+          ? (darkMode ? 'bg-gray-600' : 'bg-gray-100')
+          : ''
+      )}
+    >
+      <span className="truncate" title={font}>{font}</span>
+      {normalizedValue && normalizedValue.toLowerCase() === font.toLowerCase() && (
+        <Check className="w-4 h-4 flex-shrink-0" />
+      )}
+    </button>
+  ), [darkMode, handleSelect, normalizedValue, handleFontItemKeyDown]);
 
   const getRowHeight = React.useCallback((index, { items }) => {
     const item = items[index];
@@ -370,7 +533,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
         default:
           return (
             <div style={rowStyle} {...ariaAttributes}>
-              {renderFontItem(item.font)}
+              {renderFontItem(item.font, index)}
             </div>
           );
       }
@@ -398,17 +561,22 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
     setStickyLabel(firstLabel?.text || '');
   }, [listItems]);
 
+  const containerClasses = containerClassName || 'relative flex-1 min-w-0';
+
   return (
-    <div className="relative flex-1 min-w-0" ref={containerRef}>
+    <div className={cn(containerClasses)} ref={containerRef}>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          'flex h-9 items-center justify-between whitespace-nowrap rounded-md border px-3 py-2 text-sm shadow-sm w-full truncate',
+          'flex h-9 items-center justify-between whitespace-nowrap rounded-md border px-3 py-2 text-sm shadow-sm truncate',
+          triggerClassName || 'w-full',
           darkMode
             ? 'border-gray-600 bg-gray-700 text-gray-200'
             : 'border-gray-300 bg-white text-gray-800'
         )}
+        onKeyDown={handleMenuKeyDown}
+        style={{ outline: 'none' }}
         ref={triggerRef}
       >
         <span className="truncate">{value || placeholder}</span>
@@ -418,6 +586,7 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
       {open && createPortal(
         <div
           ref={menuRef}
+          onKeyDown={handleMenuKeyDown}
           className={cn(
             'fixed z-[2100] rounded-md border shadow-lg',
             darkMode
@@ -440,18 +609,14 @@ const FontSelect = ({ value, onChange, darkMode, placeholder = 'Select font' }) 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search fonts"
+                onFocus={() => { activeFontIndexRef.current = null; }}
                 className={cn(
-                  'h-9 pr-9 text-sm placeholder:text-sm focus-visible:ring-1 focus-visible:border-gray-400 focus-visible:ring-gray-400',
+                  'h-9 pr-9 text-sm placeholder:text-sm focus-visible:outline-none focus-visible:ring-0 focus-visible:border-gray-400',
                   darkMode
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus-visible:border-gray-300 focus-visible:ring-gray-300/70'
+                    ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus-visible:border-gray-300'
                     : 'bg-white border-gray-300 text-gray-800 placeholder:text-gray-500'
                 )}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setOpen(false);
-                  }
-                }}
+                onKeyDown={handleSearchKeyDown}
               />
               {searchTerm && (
                 <button

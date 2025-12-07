@@ -292,7 +292,7 @@ const Output2 = () => {
     center: 'center',
     lower: 'flex-end',
   };
-  const effectiveLyricsPosition = fullScreenMode ? 'center' : (positionJustifyMap[lyricsPosition] ? lyricsPosition : 'lower');
+  const effectiveLyricsPosition = positionJustifyMap[lyricsPosition] ? lyricsPosition : 'lower';
   const justifyContent = positionJustifyMap[effectiveLyricsPosition] || 'flex-end';
   const isVisible = Boolean(isOutputOn && output2Enabled && line);
 

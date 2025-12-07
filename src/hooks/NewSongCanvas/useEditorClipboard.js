@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { formatLyrics } from '../utils/lyricsFormat';
+import { formatLyrics } from '../../utils/lyricsFormat';
 
 const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => {
   const handleCut = useCallback(async () => {

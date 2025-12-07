@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import useToast from './useToast';
-import useModal from './useModal';
+import useToast from '../useToast';
+import useModal from '../useModal';
 
 const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear }) => {
   const { showToast } = useToast();

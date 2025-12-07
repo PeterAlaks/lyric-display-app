@@ -3,7 +3,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import useToast from '../hooks/useToast';
-import useSetlistLoader from '../hooks/useSetlistLoader';
+import useSetlistLoader from '../hooks/SetlistModal/useSetlistLoader';
 import { X, Plus, Search, Trash2, Clock, GripVertical, Save, FolderOpen, Trash } from 'lucide-react';
 import { useSetlistState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';

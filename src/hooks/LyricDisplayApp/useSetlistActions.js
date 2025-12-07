@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
-import { useLyricsFileName, useSetlistState, useIsDesktopApp, useLyricsState } from './useStoreSelectors';
-import useLyricsStore from '../context/LyricsStore';
-import useToast from './useToast';
+import { useLyricsFileName, useSetlistState, useIsDesktopApp, useLyricsState } from '../useStoreSelectors';
+import useLyricsStore from '../../context/LyricsStore';
+import useToast from '../useToast';
 
 const useSetlistActions = (emitSetlistAdd) => {
   const isDesktopApp = useIsDesktopApp();

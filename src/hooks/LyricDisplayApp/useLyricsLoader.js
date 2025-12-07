@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
-import { detectArtistFromFilename } from '../utils/artistDetection';
+import { parseLyricsFileAsync } from '../../utils/asyncLyricsParser';
+import { detectArtistFromFilename } from '../../utils/artistDetection';
 
 export const useLyricsLoader = ({
   setLyrics,

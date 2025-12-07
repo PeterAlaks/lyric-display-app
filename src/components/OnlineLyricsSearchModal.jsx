@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import useToast from '../hooks/useToast';
 import OnlineLyricsWelcomeSplash from './OnlineLyricsWelcomeSplash';
-import useNetworkStatus from '../hooks/useNetworkStatus';
+import useNetworkStatus from '../hooks/OnlineLyricsSearchModal/useNetworkStatus';
 import { classifyError } from '../utils/errorClassification';
 
 const DEFAULT_TAB = 'libraries';

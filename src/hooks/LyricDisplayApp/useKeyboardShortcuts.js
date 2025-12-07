@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { hasValidTimestamps } from '../utils/timestampHelpers';
+import { hasValidTimestamps } from '../../utils/timestampHelpers';
 
 export const useKeyboardShortcuts = ({
   hasLyrics,
