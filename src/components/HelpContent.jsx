@@ -82,7 +82,7 @@ export const OutputSettingsHelp = ({ darkMode }) => (
         <HelpSection
             icon={Type}
             title="Font Style & Size"
-            description="Select from 13 professional fonts including Arial, Bebas Neue, Inter, Montserrat, and more. Adjust size from 24-100px to ensure perfect readability on any screen or projector."
+            description="Select from 10 featured professional fonts as well as your locally installed fonts. Adjust size from 24-100px to ensure perfect readability on any screen or projector."
             darkMode={darkMode}
         />
 

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip } from '@/components/ui/tooltip';
+import { ColorPicker } from "@/components/ui/color-picker";
 
 export const LabelWithIcon = ({ icon: Icon, text, darkMode }) => (
   <div className="flex items-center gap-2 min-w-[140px]">
@@ -69,11 +70,11 @@ export const FontSettingsRow = ({
         className={`w-20 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
       />
       <Paintbrush className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-      <Input
-        type="color"
+      <ColorPicker
         value={colorValue}
-        onChange={(e) => onColorChange(e.target.value)}
-        className={`h-9 w-12 p-1 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+        onChange={onColorChange}
+        darkMode={darkMode}
+        className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
       />
     </div>
   </div>
@@ -99,10 +100,18 @@ export const EmphasisRow = ({
       <Tooltip content="Make text bold" side="top">
         <Button
           size="icon"
-          variant={boldValue ? 'default' : 'outline'}
+          variant="outline"
           onClick={() => onBoldChange(!boldValue)}
           title="Bold"
-          className={!boldValue && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+          className={
+            boldValue
+              ? darkMode
+                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+              : darkMode
+                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+          }
         >
           <Bold className="w-4 h-4" />
         </Button>
@@ -110,10 +119,18 @@ export const EmphasisRow = ({
       <Tooltip content="Make text italic" side="top">
         <Button
           size="icon"
-          variant={italicValue ? 'default' : 'outline'}
+          variant="outline"
           onClick={() => onItalicChange(!italicValue)}
           title="Italic"
-          className={!italicValue && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+          className={
+            italicValue
+              ? darkMode
+                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+              : darkMode
+                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+          }
         >
           <Italic className="w-4 h-4" />
         </Button>
@@ -121,10 +138,18 @@ export const EmphasisRow = ({
       <Tooltip content="Underline text" side="top">
         <Button
           size="icon"
-          variant={underlineValue ? 'default' : 'outline'}
+          variant="outline"
           onClick={() => onUnderlineChange(!underlineValue)}
           title="Underline"
-          className={!underlineValue && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+          className={
+            underlineValue
+              ? darkMode
+                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+              : darkMode
+                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+          }
         >
           <Underline className="w-4 h-4" />
         </Button>
@@ -132,10 +157,18 @@ export const EmphasisRow = ({
       <Tooltip content="Convert text to uppercase" side="top">
         <Button
           size="icon"
-          variant={allCapsValue ? 'default' : 'outline'}
+          variant="outline"
           onClick={() => onAllCapsChange(!allCapsValue)}
           title="All Caps"
-          className={!allCapsValue && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+          className={
+            allCapsValue
+              ? darkMode
+                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+              : darkMode
+                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+          }
         >
           <CaseUpper className="w-4 h-4" />
         </Button>

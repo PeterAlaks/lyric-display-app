@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip } from '@/components/ui/tooltip';
+import { ColorPicker } from "@/components/ui/color-picker";
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import useAuth from '../hooks/useAuth';
@@ -17,7 +18,7 @@ import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenMo
 import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2, HardDriveDownload, Power } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
-import { blurInputOnEnter, AdvancedToggle, LabelWithIcon } from './OutputSettingsShared';
+import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow } from './OutputSettingsShared';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true, darkMode }) => (
   <div className="flex items-center justify-between gap-4">
@@ -107,14 +108,11 @@ const FontColorSection = ({
         ariaLabel="Toggle font color advanced settings"
       />
     </Tooltip>
-    <Input
-      type="color"
+    <ColorPicker
       value={fontColor}
-      onChange={(e) => onChange(e.target.value)}
-      className={`h-9 w-12 p-1 ${darkMode
-        ? 'bg-gray-700 border-gray-600 text-gray-200'
-        : 'bg-white border-gray-300'
-        }`}
+      onChange={onChange}
+      darkMode={darkMode}
+      className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
     />
   </SettingRow>
 );
@@ -141,14 +139,11 @@ const DropShadowSection = ({
         ariaLabel="Toggle drop shadow advanced settings"
       />
     </Tooltip>
-    <Input
-      type="color"
+    <ColorPicker
       value={settings.dropShadowColor}
-      onChange={(e) => update('dropShadowColor', e.target.value)}
-      className={`h-9 w-12 p-1 ${darkMode
-        ? 'bg-gray-700 border-gray-600 text-gray-200'
-        : 'bg-white border-gray-300'
-        }`}
+      onChange={(val) => update('dropShadowColor', val)}
+      darkMode={darkMode}
+      className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
     />
     <Input
       type="number"
@@ -189,16 +184,12 @@ const BackgroundSection = ({
         ariaLabel="Toggle background advanced settings"
       />
     </Tooltip>
-    <Input
-      type="color"
+    <ColorPicker
       value={settings.backgroundColor}
-      onChange={(e) => update('backgroundColor', e.target.value)}
+      onChange={(val) => update('backgroundColor', val)}
       disabled={fullScreenModeChecked}
-      className={`h-9 w-12 p-1 ${darkMode
-        ? 'bg-gray-700 border-gray-600 text-gray-200'
-        : 'bg-white border-gray-300'
-        } ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
-      title={fullScreenModeChecked ? backgroundDisabledTooltip : undefined}
+      darkMode={darkMode}
+      className={`${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
     />
     <Input
       type="number"
@@ -548,57 +539,18 @@ const OutputSettingsPanel = ({ outputKey }) => {
       />
 
       {/* Bold / Italic / Underline / All Caps */}
-      <div className="flex items-center justify-between gap-4">
-        <Tooltip content="Apply text styling: bold, italic, underline, or all caps" side="right">
-          <LabelWithIcon icon={TextQuote} text="Emphasis" darkMode={darkMode} />
-        </Tooltip>
-        <div className="flex gap-2 flex-wrap">
-          <Tooltip content="Make text bold" side="top">
-            <Button
-              size="icon"
-              variant={settings.bold ? 'default' : 'outline'}
-              onClick={() => update('bold', !settings.bold)}
-              title="Bold"
-              className={!settings.bold && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-            >
-              <Bold className="w-4 h-4" />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Make text italic" side="top">
-            <Button
-              size="icon"
-              variant={settings.italic ? 'default' : 'outline'}
-              onClick={() => update('italic', !settings.italic)}
-              title="Italic"
-              className={!settings.italic && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-            >
-              <Italic className="w-4 h-4" />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Underline text" side="top">
-            <Button
-              size="icon"
-              variant={settings.underline ? 'default' : 'outline'}
-              onClick={() => update('underline', !settings.underline)}
-              title="Underline"
-              className={!settings.underline && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-            >
-              <Underline className="w-4 h-4" />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Convert text to uppercase" side="top">
-            <Button
-              size="icon"
-              variant={settings.allCaps ? 'default' : 'outline'}
-              onClick={() => update('allCaps', !settings.allCaps)}
-              title="All Caps"
-              className={!settings.allCaps && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
-            >
-              <CaseUpper className="w-4 h-4" />
-            </Button>
-          </Tooltip>
-        </div>
-      </div>
+      <EmphasisRow
+        darkMode={darkMode}
+        icon={TextQuote}
+        boldValue={settings.bold}
+        italicValue={settings.italic}
+        underlineValue={settings.underline}
+        allCapsValue={settings.allCaps}
+        onBoldChange={(val) => update('bold', val)}
+        onItalicChange={(val) => update('italic', val)}
+        onUnderlineChange={(val) => update('underline', val)}
+        onAllCapsChange={(val) => update('allCaps', val)}
+      />
 
       {/* Font Size */}
       <div className="flex items-center justify-between gap-4">
@@ -743,10 +695,18 @@ const OutputSettingsPanel = ({ outputKey }) => {
           <Tooltip content="Enable adaptive text fitting with max lines limit" side="top">
             <Button
               size="icon"
-              variant={settings.maxLinesEnabled ? 'default' : 'outline'}
+              variant="outline"
               onClick={() => update('maxLinesEnabled', !settings.maxLinesEnabled)}
               title="Max Lines"
-              className={!settings.maxLinesEnabled && darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+              className={
+                settings.maxLinesEnabled
+                  ? darkMode
+                    ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                    : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                  : darkMode
+                    ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                    : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+              }
             >
               <ListStart className="w-4 h-4" />
             </Button>
@@ -873,14 +833,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
           <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
             Translation Colour
           </label>
-          <Input
-            type="color"
+          <ColorPicker
             value={translationLineColor}
-            onChange={(e) => update('translationLineColor', e.target.value)}
-            className={`h-9 w-12 p-1 ${darkMode
-              ? 'bg-gray-700 border-gray-600 text-gray-200'
-              : 'bg-white border-gray-300'
-              }`}
+            onChange={(val) => update('translationLineColor', val)}
+            darkMode={darkMode}
+            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
           />
         </div>
       </div>
@@ -891,14 +848,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
           <LabelWithIcon icon={Frame} text="Text Border" darkMode={darkMode} />
         </Tooltip>
         <div className="flex gap-2 items-center">
-          <Input
-            type="color"
+          <ColorPicker
             value={settings.borderColor ?? '#000000'}
-            onChange={(e) => update('borderColor', e.target.value)}
-            className={`h-9 w-12 p-1 ${darkMode
-              ? 'bg-gray-700 border-gray-600 text-gray-200'
-              : 'bg-white border-gray-300'
-              }`}
+            onChange={(val) => update('borderColor', val)}
+            darkMode={darkMode}
+            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
           />
           <Input
             type="number"
@@ -1201,14 +1155,11 @@ const OutputSettingsPanel = ({ outputKey }) => {
           </Select>
 
           {fullScreenBackgroundTypeValue === 'color' ? (
-            <Input
-              type="color"
+            <ColorPicker
               value={fullScreenBackgroundColorValue}
-              onChange={(e) => handleFullScreenColorChange(e.target.value)}
-              className={`ml-auto h-9 w-12 p-1 ${darkMode
-                ? 'bg-gray-700 border-gray-600 text-gray-200'
-                : 'bg-white border-gray-300'
-                }`}
+              onChange={handleFullScreenColorChange}
+              darkMode={darkMode}
+              className={`ml-auto ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
             />
           ) : (
             <div className="flex items-center gap-2 ml-auto min-w-0 max-w-full">

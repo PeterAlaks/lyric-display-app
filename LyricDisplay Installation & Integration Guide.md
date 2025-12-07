@@ -18,14 +18,16 @@ LyricDisplay is a free desktop app that provides perfectly clear, sharp and tran
 
 **Key Features:**
 
-\- TXT and LRC file lyric display system
-\- Dual independent outputs with transparent backgrounds
+\- TXT and LRC file upload and display system
+\- Dual independent outputs with pure transparent background support
 \- Real-time sync across displays
-\- Translation support (bracketed lines)
-\- 13 professional fonts with full styling controls
+\- Quick lyric content create and edit with translation display support
+\- Comprehensive lyric styling controls with 10 featured fonts
 \- Keyboard-supported workflow
 \- Secondary mobile/web controllers with join-code security
 \- Auto-updates via GitHub releases
+\- EasyWorship song import and conversion to txt file for easy use
+\- Many more features
 
 
 ###### **System Requirements**

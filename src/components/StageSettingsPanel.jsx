@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip } from '@/components/ui/tooltip';
+import { ColorPicker } from "@/components/ui/color-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
 import { Type, Paintbrush, TextCursorInput, TextQuote, Square, AlignVerticalSpaceAround, ScreenShare, ListMusic, ChevronRight, Languages, Wand2, HardDriveDownload, Power } from 'lucide-react';
 import FontSelect from './FontSelect';
@@ -152,11 +153,11 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         <Tooltip content="Set background color for stage display" side="right">
           <LabelWithIcon icon={Square} text="Background" darkMode={darkMode} />
         </Tooltip>
-        <Input
-          type="color"
+        <ColorPicker
           value={settings.backgroundColor}
-          onChange={(e) => update('backgroundColor', e.target.value)}
-          className={`h-9 w-12 p-1 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+          onChange={(val) => update('backgroundColor', val)}
+          darkMode={darkMode}
+          className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
         />
       </div>
 
@@ -298,11 +299,11 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         <Tooltip content="Color for translation lines in grouped lyrics" side="right">
           <LabelWithIcon icon={Languages} text="Translation Colour" darkMode={darkMode} />
         </Tooltip>
-        <Input
-          type="color"
+        <ColorPicker
           value={settings.translationLineColor || '#FBBF24'}
-          onChange={(e) => update('translationLineColor', e.target.value)}
-          className={`h-9 w-12 p-1 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+          onChange={(val) => update('translationLineColor', val)}
+          darkMode={darkMode}
+          className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
         />
       </div>
 
@@ -364,11 +365,11 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
           />
           <Paintbrush className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-          <Input
-            type="color"
+          <ColorPicker
             value={settings.nextArrowColor}
-            onChange={(e) => update('nextArrowColor', e.target.value)}
-            className={`h-9 w-12 p-1 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+            onChange={(val) => update('nextArrowColor', val)}
+            darkMode={darkMode}
+            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
           />
         </div>
       </div>
