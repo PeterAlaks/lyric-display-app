@@ -11,6 +11,7 @@ import { fetchLyricsByProvider, getProviderDefinitions, getProviderKeyState, rem
 import * as easyWorship from './easyWorship.js';
 import * as displayManager from './displayManager.js';
 import { loadSystemFonts } from './systemFonts.js';
+import { saveDarkModePreference } from './themePreferences.js';
 
 const { autoUpdater } = updaterPkg;
 
@@ -103,8 +104,13 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   });
 
   ipcMain.handle('sync-native-dark-mode', (_event, isDark) => {
-    try { nativeTheme.themeSource = isDark ? 'dark' : 'light'; return { success: true }; }
-    catch (error) { return { success: false, error: error.message }; }
+    try {
+      nativeTheme.themeSource = isDark ? 'dark' : 'light';
+      saveDarkModePreference(isDark);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   });
 
   ipcMain.handle('fonts:list', async () => {

@@ -10,6 +10,7 @@ import { performStartupDisplayCheck } from './displayDetection.js';
 import { processPendingFile } from './fileHandler.js';
 import { updateLoadingStatus, closeLoadingWindow } from './loadingWindow.js';
 import { preloadSystemFonts } from './systemFonts.js';
+import { getSavedDarkMode } from './themePreferences.js';
 
 export async function handleMissingAdminKey() {
   const message = 'Lyric Display requires the administrative key to unlock local access.';
@@ -85,7 +86,6 @@ export function setupMainWindowCloseHandler(mainWindow) {
  * @param {Object} menuAPI - Menu API object
  */
 export function setupNativeTheme(mainWindow, menuAPI) {
-  nativeTheme.themeSource = 'system';
   nativeTheme.on('updated', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       menuAPI.updateDarkModeMenu();
@@ -163,7 +163,20 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     await new Promise(resolve => setTimeout(resolve, 800));
 
     updateLoadingStatus('Preparing control panel');
+
+    const savedDarkMode = getSavedDarkMode();
+    if (typeof savedDarkMode === 'boolean') {
+      nativeTheme.themeSource = savedDarkMode ? 'dark' : 'light';
+    }
+
     const mainWindow = createWindow('/');
+    mainWindow.webContents.once('did-finish-load', () => {
+      try {
+        menuAPI.updateDarkModeMenu();
+      } catch (error) {
+        console.warn('[Startup] Failed to sync dark mode after load:', error);
+      }
+    });
     menuAPI.createMenu();
 
     setupMainWindowCloseHandler(mainWindow);
