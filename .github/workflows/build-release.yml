@@ -234,18 +234,17 @@ jobs:
             
             ### Important Notes
             
-            **macOS Security Warning:**
-            This app is not code-signed. When you first open it, macOS will show a security warning.
-            
-            To install:
-            1. Open the `.dmg` file
-            2. Drag LyricDisplay to Applications
-            3. **Right-click** the app and select **Open** (don't double-click)
-            4. Click **Open** in the security dialog
-            5. The app will now run normally
-            
-            **Linux AppImage:**
-            - Make the file executable: `chmod +x LyricDisplay-*.AppImage`
-            - Then run it: `./LyricDisplay-*.AppImage`
+            **Security Notice:**
+            Because this build is not code-signed, your operating system may show a security warning the first time you open it.
+
+            To install and run:
+            1. Download the installer file for your operating system.
+            2. Open or extract the file as required.
+            3. Launch the app. If a security prompt appears, choose the option that allows you to proceed (for example: "Open", "Run anyway", or similar).
+            4. After approving it once, the app will open normally on subsequent launches.
+
+            If your system requires executable permission (common on some Linux environments):
+            chmod +x LyricDisplay-*.AppImage
+            ./LyricDisplay-*.AppImage`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
