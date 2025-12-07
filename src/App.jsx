@@ -16,6 +16,7 @@ import useModal from '@/hooks/useModal';
 import ElectronModalBridge from './components/ElectronModalBridge';
 import QRCodeDialogBridge from './components/QRCodeDialogBridge';
 import { ControlSocketProvider } from './context/ControlSocketProvider';
+import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from './utils/markdownParser';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
 
@@ -113,23 +114,9 @@ function UpdaterBridge() {
       const releaseName = info?.releaseName || '';
       const releaseNotes = info?.releaseNotes || '';
       const releaseDate = info?.releaseDate || '';
-
-      let formattedNotes = '';
-      if (releaseNotes) {
-        if (typeof releaseNotes === 'string') {
-          formattedNotes = releaseNotes;
-        } else if (Array.isArray(releaseNotes)) {
-          formattedNotes = releaseNotes.map(note => {
-            if (typeof note === 'string') return note;
-            if (note?.note) return note.note;
-            return '';
-          }).filter(Boolean).join('\n\n');
-        }
-      }
-
-      if (formattedNotes.includes('---')) {
-        formattedNotes = formattedNotes.split('---')[0].trim();
-      }
+      let formattedNotes = formatReleaseNotes(releaseNotes);
+      formattedNotes = trimReleaseNotes(formattedNotes);
+      formattedNotes = convertMarkdownToHTML(formattedNotes);
 
       const descriptionParts = [];
 
@@ -177,10 +164,11 @@ function UpdaterBridge() {
                 </div>
                 <div className="px-4 py-3 max-h-64 overflow-y-auto">
                   <div
-                    className={`text-sm leading-relaxed prose prose-sm max-w-none ${isDark
-                      ? 'text-gray-300 prose-headings:text-gray-100 prose-strong:text-gray-200 prose-code:text-gray-300 prose-a:text-blue-400'
-                      : 'text-gray-700 prose-headings:text-gray-900 prose-strong:text-gray-800 prose-code:text-gray-700 prose-a:text-blue-600'
-                      }`}
+                    className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                    style={{
+                      lineHeight: '1.6',
+                      color: isDark ? '#d1d5db' : '#374151'
+                    }}
                     dangerouslySetInnerHTML={{ __html: formattedNotes }}
                   />
                 </div>

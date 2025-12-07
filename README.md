@@ -312,6 +312,7 @@ lyric-display-app/
 |   |   ├── errorClassification.js          # Network error detection and description utility
 |   |   ├── logger.js                       # Simple event and error logger utility
 |   |   ├── lyricsFormat.js                 # Format lyrics utility for new/edit song canvas
+|   |   ├── markdownParser.js               # Helper utility for converting markdown to HTML
 |   |   ├── maxLinesCalculator.js           # Calculator for maximum lines feature in outputs display
 |   |   ├── network.js                      # Network utility for backend URL resolution
 |   |   ├── outputTemplates.js              # Output templates for settings panel
