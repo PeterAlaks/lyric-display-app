@@ -84,9 +84,9 @@ export default function registerSocketEvents(io, { hasPermission }) {
         }
 
         const totalAfterAdd = setlistFiles.length + files.length;
-        if (totalAfterAdd > 25) {
-          console.error('setlistAdd: Would exceed 25 file limit');
-          socket.emit('setlistError', `Cannot add ${files.length} files. Maximum 25 files allowed.`);
+        if (totalAfterAdd > 50) {
+          console.error('setlistAdd: Would exceed 50 file limit');
+          socket.emit('setlistError', `Cannot add ${files.length} files. Maximum 50 files allowed.`);
           return;
         }
 

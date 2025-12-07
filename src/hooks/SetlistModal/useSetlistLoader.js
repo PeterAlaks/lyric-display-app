@@ -65,10 +65,10 @@ const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitS
         return false;
       }
 
-      if (items.length > 25) {
+      if (items.length > 50) {
         showToast({
           title: 'Setlist too large',
-          message: `Setlist contains ${items.length} songs. Maximum is 25.`,
+          message: `Setlist contains ${items.length} songs. Maximum is 50.`,
           variant: 'error',
         });
         return false;

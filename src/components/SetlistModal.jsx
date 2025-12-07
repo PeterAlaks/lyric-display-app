@@ -87,7 +87,7 @@ const SetlistModal = () => {
     if (isSetlistFull()) {
       showModal({
         title: 'Setlist is full',
-        description: 'You already have the maximum of 25 songs in the setlist.',
+        description: 'You already have the maximum of 50 songs in the setlist.',
         variant: 'warn',
         dismissLabel: 'Got it',
       });
@@ -449,7 +449,7 @@ const SetlistModal = () => {
           <div>
             <h2 className="text-xl font-bold">Setlist Songs</h2>
             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Add up to 25 lyric files to setlist ({setlistFiles.length}/25)
+              Add up to 50 lyric files to setlist ({setlistFiles.length}/50)
             </p>
           </div>
 
@@ -511,10 +511,10 @@ const SetlistModal = () => {
                 variant="ghost"
                 className={`
     flex items-center gap-2 px-3 py-2
-    ${isSetlistFull() ? 'opacity-50 cursor-not-allowed' : ''}
+                ${isSetlistFull() ? 'opacity-50 cursor-not-allowed' : ''}
     ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
   `}
-                title={isSetlistFull() ? 'Setlist is full (25 files)' : 'Add files to setlist'}
+                title={isSetlistFull() ? 'Setlist is full (50 files)' : 'Add files to setlist'}
               >
                 <Plus className="w-4 h-4" />
                 Add Files

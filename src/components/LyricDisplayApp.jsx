@@ -315,7 +315,7 @@ const LyricDisplayApp = () => {
                 </Tooltip>
 
                 {/* Setlist Button */}
-                <Tooltip content="View and manage your song setlist (up to 25 songs)" side="bottom">
+                <Tooltip content="View and manage your song setlist (up to 50 songs)" side="bottom">
                   <button
                     className={`p-2 rounded-lg font-medium transition-colors ${darkMode
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'

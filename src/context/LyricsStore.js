@@ -202,12 +202,12 @@ const useLyricsStore = create(
 
       isSetlistFull: () => {
         const state = get();
-        return state.setlistFiles.length >= 25;
+        return state.setlistFiles.length >= 50;
       },
 
       getAvailableSetlistSlots: () => {
         const state = get();
-        return Math.max(0, 25 - state.setlistFiles.length);
+        return Math.max(0, 50 - state.setlistFiles.length);
       },
 
       output1Settings: defaultOutput1Settings,

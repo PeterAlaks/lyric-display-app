@@ -25,7 +25,7 @@ const useSetlistActions = (emitSetlistAdd) => {
 
   const title = useMemo(() => {
     if (!isDesktopApp) return 'Only available on desktop app';
-    if (isSetlistFull()) return 'Setlist is full (25 files maximum)';
+    if (isSetlistFull()) return 'Setlist is full (50 files maximum)';
     if (isFileAlreadyInSetlist()) return 'File already in setlist';
     return 'Add current file to setlist';
   }, [isDesktopApp, isSetlistFull, isFileAlreadyInSetlist]);
@@ -37,7 +37,7 @@ const useSetlistActions = (emitSetlistAdd) => {
         return;
       }
       if (isSetlistFull()) {
-        showToast({ title: 'Setlist full', message: '25 files maximum reached', variant: 'warn' });
+        showToast({ title: 'Setlist full', message: '50 files maximum reached', variant: 'warn' });
         return;
       }
       if (isFileAlreadyInSetlist()) {

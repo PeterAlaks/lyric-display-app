@@ -126,7 +126,7 @@ export const useCanAddToSetlist = () =>
     useLyricsStore(
         (state) =>
             state.isDesktopApp &&
-            state.setlistFiles.length < 25 &&
+            state.setlistFiles.length < 50 &&
             state.lyricsFileName != null &&
             state.lyrics != null &&
             state.lyrics.length > 0
