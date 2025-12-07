@@ -229,6 +229,7 @@ lyric-display-app/
 |   |   ├── DraftApprovalModal.jsx          # Approval modal component for lyric drafts submitted from secondary controllers
 |   |   ├── EasyWorshipImportModal.jsx      # Song import from local EasyWorship store wizard
 |   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
+|   |   ├── FontSelect.jsx                  # Custom font selection overlay
 |   |   ├── HelpContent.jsx                 # Help and operation tips modal
 |   |   ├── IntegrationInstructions.jsx     # Integration help modal for OBS, VMix and Wirecast
 |   |   ├── IntelligentAutoplayInfo.jsx     # Intelligent Autoplay info modal
@@ -240,6 +241,7 @@ lyric-display-app/
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
 |   |   ├── OnlineLyricsWelcomeSplash.jsx   # Online Lyrics Search welcome and help modal component
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
+|   |   ├── OutputSettingsShared.jsx        # Shared UI components for output and stage settings panel
 |   |   ├── OutputTemplatesModal.jsx        # Output settings templates modal
 |   |   ├── PreviewOutputsModal.jsx         # Display outputs preview modal
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
@@ -248,6 +250,7 @@ lyric-display-app/
 |   |   ├── SetlistModal.jsx                # Setlist Modal
 |   |   ├── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
 |   |   ├── SongInfoModal.jsx               # Info modal for loaded lyrics
+|   |   ├── StageSettingsPanel.jsx          # Stage settings interface
 |   |   ├── StageTemplatesModal.jsx         # Stage settings templates modal
 |   |   ├── SupportDevelopmentModal.jsx     # Support development modal
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
@@ -257,29 +260,41 @@ lyric-display-app/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/
+|   |   ├── LyricDisplayApp/
+|   |   |   ├── useElectronListeners.js     # Hook for listening to main process events and broadcasts for control panel
+|   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for control panel
+|   |   |   ├── useLyricsLoader.js          # Multi-source lyrics load processor for control panel 
+|   |   |   ├── useMenuShortcuts.js         # Hook for handling menu navigation/shortcuts
+|   |   |   ├── useOutputSettings.js        # Hook for output settings tab switcher
+|   |   |   ├── useResponsiveWidth.js       # Window resize observer hook for control panel button responsiveness
+|   |   |   ├── useSetlistActions.js        # Hook for setlist action functionality
+|   |   |   └── useSupportDevModal.js       # Hook for processing show time and parameters for support development modal
+|   |   ├── MobileLayout/
+|   |   |   └── useSyncTimer.js             # Last synced timer hook
+|   |   ├── NewSongCanvas/
+|   |   |   ├── useEditorClipboard.js       # Hook for cut, copy and paste handlers
+|   |   |   └── useEditorHistory.js         # Hook for history state management of lyrics editor canvas
+|   |   ├── OnlineLyricsSearchModal/
+|   |   |   └── useNetworkStatus.js         # Internet connection status hook
+|   |   ├── OutputSettingsPanel/
+|   |   |   ├── useAdvancedSectio....js     # Hook for advanced sections visibility states
+|   |   |   ├── useFullscreenBackground.js  # Hook for handling fullscreen background controls
+|   |   |   ├── useFullscreenModeState.js   # Fullscreen mode and settings visibility state hook
+|   |   |   ├── useOutputToggle.js          # Individual output switch manager
+|   |   |   ├── useStageDisplayControls.js  # Hook for stage display controls
+|   |   |   └── useTypographyAndBands.js    # Background band and related logic hook
+|   |   ├── SetlistModal/
+|   |   |   └── useSetlistLoader.js         # Hook for setlist file loading functionality
 |   |   ├── useAuth.js                      # Authenticator hook for socket connections
 |   |   ├── useAutoplayManager.js           # Autoplay engine and logic
 |   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
-|   |   ├── useEditorClipboard.js           # Hook for cut, copy and paste handlers
-|   |   ├── useEditorHistory.js             # Hook for history state management of lyrics editor canvas
-|   |   ├── useElectronListeners.js         # Hook for listening to main process events and broadcasts for control panel
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
-|   |   ├── useKeyboardShortcuts.js         # Keyboard entry listener for control panel
-|   |   ├── useLyricsLoader.js              # Multi-source lyrics load processor for control panel 
-|   |   ├── useMenuShortcuts.js             # Hook for handling menu navigation/shortcuts
 |   |   ├── useModal.js                     # Global modal hook
-|   |   ├── useNetworkStatus.js             # Internet connection status hook
-|   |   ├── useOutputSettings.js            # Hook for output settings tab switcher
-|   |   ├── useResponsiveWidth.js           # Window resize observer hook for control panel button responsiveness
 |   |   ├── useSearch.js                    # Hook for search bar functionality
-|   |   ├── useSetlistActions.js            # Hook for setlist action functionality
-|   |   ├── useSetlistLoader.js             # Hook for setlist file loading functionality
 |   |   ├── useSocket.js                    # Main React hook for Socket.IO client
 |   |   ├── useSocketEvents.js              # Socket events hook
 |   |   ├── useStoreSelectors.js            # Centralized collection of Zustand selectors
-|   |   ├── useSupportDevModal.js           # Hook for processing show time and parameters for support development modal
 |   |   ├── useSyncOutputs.js               # Outputs sync manager for control panel
-|   |   ├── useSyncTimer.js                 # Last synced timer hook
 |   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
 |   |   └── utils.js                        # UI library utility functions
