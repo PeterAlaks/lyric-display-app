@@ -192,6 +192,7 @@ lyric-display-app/
 |   ├── singleInstance.js                   # Single app instance lock process
 |   ├── startup.js                          # Main app startup processes
 |   ├── systemFonts.js                      # Helper module for loading system installed fonts
+|   ├── themePreferences.js                 # Theme manager for main process dark mode sync
 |   ├── updater.js                          # Module to manage app updates
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
