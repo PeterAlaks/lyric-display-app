@@ -102,7 +102,6 @@ export const EmphasisRow = ({
           size="icon"
           variant="outline"
           onClick={() => onBoldChange(!boldValue)}
-          title="Bold"
           className={
             boldValue
               ? darkMode
@@ -121,7 +120,6 @@ export const EmphasisRow = ({
           size="icon"
           variant="outline"
           onClick={() => onItalicChange(!italicValue)}
-          title="Italic"
           className={
             italicValue
               ? darkMode
@@ -140,7 +138,6 @@ export const EmphasisRow = ({
           size="icon"
           variant="outline"
           onClick={() => onUnderlineChange(!underlineValue)}
-          title="Underline"
           className={
             underlineValue
               ? darkMode
@@ -159,7 +156,6 @@ export const EmphasisRow = ({
           size="icon"
           variant="outline"
           onClick={() => onAllCapsChange(!allCapsValue)}
-          title="All Caps"
           className={
             allCapsValue
               ? darkMode

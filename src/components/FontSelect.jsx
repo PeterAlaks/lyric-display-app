@@ -14,6 +14,7 @@ const LABEL_ROW_HEIGHT = 32;
 const DIVIDER_ROW_HEIGHT = 16;
 const HELPER_ROW_HEIGHT = 28;
 const SCROLL_PADDING_PX = 4;
+const ANIMATION_DURATION = 220;
 
 const sortAndDeduplicate = (fonts) => Array.from(
   new Set(
@@ -64,21 +65,81 @@ const FontSelect = ({
   const [searchTerm, setSearchTerm] = React.useState('');
   const [installedFonts, setInstalledFonts] = React.useState([]);
   const [loadingFonts, setLoadingFonts] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
+  const [menuState, setMenuState] = React.useState('closed');
   const searchInputRef = React.useRef(null);
   const containerRef = React.useRef(null);
   const triggerRef = React.useRef(null);
   const menuRef = React.useRef(null);
   const [menuCoords, setMenuCoords] = React.useState(null);
+  const closeTimerRef = React.useRef(null);
+  const animationFrameRef = React.useRef(null);
   const listRef = useListRef();
   const activeFontIndexRef = React.useRef(null);
+  const isMenuVisible = menuState !== 'closed';
+  const isMenuInteractive = menuState === 'open' || menuState === 'opening';
+  const isMenuExiting = menuState === 'closing';
+  const computeMenuPosition = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const triggerWidth = rect.width;
+    const dropdownWidth = Math.max(triggerWidth, 320);
+    const menuHeight = menuRef.current?.offsetHeight || DROPDOWN_MAX_HEIGHT;
+    const gap = 6;
+    const minTop = 8;
+
+    let left = rect.left;
+    left = Math.min(left, window.innerWidth - dropdownWidth - 8);
+    left = Math.max(8, left);
+
+    const aboveTop = rect.top - menuHeight - gap;
+    const belowTop = rect.bottom + gap;
+    let top = aboveTop >= minTop ? aboveTop : belowTop;
+
+    const maxTop = window.innerHeight - menuHeight - gap;
+    if (top > maxTop) top = maxTop;
+    if (top < minTop) top = minTop;
+
+    setMenuCoords((prev) => {
+      const next = { left, top, width: dropdownWidth };
+      if (prev && prev.left === next.left && prev.top === next.top && prev.width === next.width) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
+  const clearAnimationTimers = React.useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
+  const openMenu = React.useCallback(() => {
+    if (menuState === 'open' || menuState === 'opening') return;
+    clearAnimationTimers();
+    setMenuState('opening');
+    animationFrameRef.current = requestAnimationFrame(() => {
+      animationFrameRef.current = null;
+      setMenuState('open');
+    });
+  }, [clearAnimationTimers, menuState]);
+  const closeMenu = React.useCallback(() => {
+    if (menuState === 'closed' || menuState === 'closing') return;
+    clearAnimationTimers();
+    setMenuState('closing');
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      setMenuState('closed');
+    }, ANIMATION_DURATION);
+  }, [clearAnimationTimers, menuState]);
 
   const isDesktopApp = typeof window !== 'undefined' && Boolean(window.electronAPI?.getSystemFonts);
-
-  const featuredFonts = React.useMemo(() => FEATURED_FONTS, []);
   const featuredFontsSet = React.useMemo(
-    () => new Set(featuredFonts.map((font) => normalizeFontName(font).toLowerCase())),
-    [featuredFonts]
+    () => new Set(FEATURED_FONTS.map((font) => normalizeFontName(font).toLowerCase())),
+    []
   );
   const normalizedValue = normalizeFontName(value);
 
@@ -125,147 +186,105 @@ const FontSelect = ({
     return cleaned;
   }, [installedFonts, featuredFontsSet, normalizedValue]);
 
-  const visibleFeaturedFonts = filterFonts(featuredFonts);
+  const visibleFeaturedFonts = filterFonts(FEATURED_FONTS);
   const visibleInstalledFonts = filterFonts(installedOnly);
 
   React.useEffect(() => {
-    if (open && searchInputRef.current) {
+    if (isMenuInteractive && searchInputRef.current) {
       searchInputRef.current.focus();
     }
-  }, [open]);
+  }, [isMenuInteractive]);
 
-  React.useEffect(() => {
-    if (!open) return undefined;
+  React.useLayoutEffect(() => {
+    if (!isMenuVisible) return undefined;
 
-    const computePosition = () => {
-      if (!triggerRef.current) return;
-      const rect = triggerRef.current.getBoundingClientRect();
-      const triggerWidth = rect.width;
-      const dropdownWidth = Math.max(triggerWidth, 320);
-      const menuHeight = menuRef.current?.offsetHeight || DROPDOWN_MAX_HEIGHT;
-      const gap = 6;
-      const minTop = 8;
-
-      let left = rect.left;
-      left = Math.min(left, window.innerWidth - dropdownWidth - 8);
-      left = Math.max(8, left);
-
-      const aboveTop = rect.top - menuHeight - gap;
-      const belowTop = rect.bottom + gap;
-      let top = aboveTop >= minTop ? aboveTop : belowTop;
-
-      const maxTop = window.innerHeight - menuHeight - gap;
-      if (top > maxTop) top = maxTop;
-      if (top < minTop) top = minTop;
-
-      setMenuCoords((prev) => {
-        const next = { left, top, width: dropdownWidth };
-        if (prev && prev.left === next.left && prev.top === next.top && prev.width === next.width) {
-          return prev;
-        }
-        return next;
-      });
-    };
-
-    const raf = requestAnimationFrame(computePosition);
+    const raf = requestAnimationFrame(computeMenuPosition);
 
     const handleClickOutside = (event) => {
       if (menuRef.current && menuRef.current.contains(event.target)) return;
       if (containerRef.current && containerRef.current.contains(event.target)) return;
-      setOpen(false);
+      closeMenu();
     };
 
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
-        setOpen(false);
+        closeMenu();
+      }
+    };
+
+    const handleFocusIn = (event) => {
+      if (menuRef.current?.contains(event.target)) return;
+      if (triggerRef.current?.contains(event.target)) return;
+      closeMenu();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        closeMenu();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside, true);
     document.addEventListener('keydown', handleEscape);
-    window.addEventListener('resize', computePosition);
+    window.addEventListener('resize', computeMenuPosition);
+    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('blur', closeMenu);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelAnimationFrame(raf);
       document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('resize', computePosition);
-    };
-  }, [open]);
-
-  React.useEffect(() => {
-    if (!open) return undefined;
-
-    const handleFocusIn = (event) => {
-      if (menuRef.current?.contains(event.target)) return;
-      if (triggerRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-
-    const handleWindowBlur = () => setOpen(false);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        setOpen(false);
-      }
-    };
-
-    window.addEventListener('focusin', handleFocusIn);
-    window.addEventListener('blur', handleWindowBlur);
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
+      window.removeEventListener('resize', computeMenuPosition);
       window.removeEventListener('focusin', handleFocusIn);
-      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('blur', closeMenu);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [open]);
-
-  React.useLayoutEffect(() => {
-    if (!open || !triggerRef.current || !menuRef.current) return;
-
-    const rect = triggerRef.current.getBoundingClientRect();
-    const triggerWidth = rect.width;
-    const dropdownWidth = Math.max(triggerWidth, 320);
-    const menuHeight = menuRef.current?.offsetHeight || DROPDOWN_MAX_HEIGHT;
-    const gap = 6;
-    const minTop = 8;
-
-    let left = rect.left;
-    left = Math.min(left, window.innerWidth - dropdownWidth - 8);
-    left = Math.max(8, left);
-
-    const aboveTop = rect.top - menuHeight - gap;
-    const belowTop = rect.bottom + gap;
-    let top = aboveTop >= minTop ? aboveTop : belowTop;
-
-    const maxTop = window.innerHeight - menuHeight - gap;
-    if (top > maxTop) top = maxTop;
-    if (top < minTop) top = minTop;
-
-    setMenuCoords((prev) => {
-      const next = { left, top, width: dropdownWidth };
-      if (prev && prev.left === next.left && prev.top === next.top && prev.width === next.width) {
-        return prev;
-      }
-      return next;
-    });
-  }, [open, visibleFeaturedFonts, visibleInstalledFonts, loadingFonts]);
+  }, [
+    closeMenu,
+    computeMenuPosition,
+    isMenuVisible,
+    loadingFonts,
+    visibleFeaturedFonts.length,
+    visibleInstalledFonts.length
+  ]);
 
   React.useEffect(() => {
-    if (!open) {
+    if (menuState === 'closed') {
       setSearchTerm('');
       activeFontIndexRef.current = null;
     }
-  }, [open]);
+  }, [menuState]);
+
+  React.useEffect(() => () => {
+    clearAnimationTimers();
+  }, [clearAnimationTimers]);
+
+  React.useEffect(() => {
+    if (!isMenuVisible) return undefined;
+
+    const blockOutsideScroll = (event) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const opts = { passive: false, capture: true };
+    window.addEventListener('wheel', blockOutsideScroll, opts);
+    window.addEventListener('touchmove', blockOutsideScroll, opts);
+
+    return () => {
+      window.removeEventListener('wheel', blockOutsideScroll, opts);
+      window.removeEventListener('touchmove', blockOutsideScroll, opts);
+    };
+  }, [isMenuVisible]);
 
   const handleSelect = React.useCallback((font) => {
     onChange(font);
-    setOpen(false);
-  }, [onChange]);
-
-  const renderEmptyState = React.useCallback((text) => (
-    <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{text}</div>
-  ), [darkMode]);
+    closeMenu();
+  }, [closeMenu, onChange]);
 
   const labelClasses = `px-3 pt-3 pb-2 text-[11px] font-semibold tracking-wide uppercase ${darkMode ? 'text-gray-300' : 'text-gray-600'}`;
   const helperTextClasses = `px-3 pb-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`;
@@ -339,7 +358,7 @@ const FontSelect = ({
   }, [listRef, menuRef]);
 
   React.useEffect(() => {
-    if (!open) return;
+    if (!isMenuInteractive) return;
     const items = listItemsRef.current;
     const currentIndex = activeFontIndexRef.current;
 
@@ -354,7 +373,7 @@ const FontSelect = ({
     if (typeof targetIndex === 'number' && targetIndex >= 0) {
       requestAnimationFrame(() => focusFontAtIndex(targetIndex));
     }
-  }, [listItems, open, findFirstFontIndex, focusFontAtIndex]);
+  }, [listItems, isMenuInteractive, findFirstFontIndex, focusFontAtIndex]);
 
   const getNextFontIndex = React.useCallback((currentIndex, delta) => {
     const items = listItemsRef.current;
@@ -383,7 +402,6 @@ const FontSelect = ({
   }, [stopNavigationEvent]);
 
   const handleFontItemKeyDown = React.useCallback((event, index) => {
-    // Keep arrow key navigation inside the font menu so it doesn't bubble to the main panel
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
 
     stopNavigationEvent(event);
@@ -399,7 +417,6 @@ const FontSelect = ({
   }, [focusFontAtIndex, getNextFontIndex, searchInputRef, stopNavigationEvent]);
 
   const handleSearchKeyDown = React.useCallback((event) => {
-    // Prevent main panel shortcuts from triggering while navigating the font menu
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
       stopNavigationEvent(event);
     } else {
@@ -407,7 +424,7 @@ const FontSelect = ({
     }
 
     if (event.key === 'Escape') {
-      setOpen(false);
+      closeMenu();
       return;
     }
 
@@ -425,7 +442,15 @@ const FontSelect = ({
         focusFontAtIndex(lastFontIndex);
       }
     }
-  }, [findFirstFontIndex, findLastFontIndex, focusFontAtIndex]);
+  }, [closeMenu, findFirstFontIndex, findLastFontIndex, focusFontAtIndex]);
+
+  const handleToggleMenu = React.useCallback(() => {
+    if (menuState === 'closed' || menuState === 'closing') {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  }, [closeMenu, menuState, openMenu]);
 
   const renderFontItem = React.useCallback((font, index) => (
     <button
@@ -473,11 +498,10 @@ const FontSelect = ({
   const rowPropsData = React.useMemo(() => ({
     items: listItems,
     renderFontItem,
-    renderEmptyState,
     labelClasses,
     helperTextClasses,
     darkMode
-  }), [listItems, renderFontItem, renderEmptyState, labelClasses, helperTextClasses, darkMode]);
+  }), [listItems, renderFontItem, labelClasses, helperTextClasses, darkMode]);
 
   const VirtualRow = React.useCallback(
     ({
@@ -486,7 +510,6 @@ const FontSelect = ({
       ariaAttributes,
       items,
       renderFontItem,
-      renderEmptyState,
       labelClasses,
       helperTextClasses,
       darkMode
@@ -526,7 +549,9 @@ const FontSelect = ({
         case 'empty':
           return (
             <div style={rowStyle} {...ariaAttributes}>
-              {renderEmptyState(item.text)}
+              <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {item.text}
+              </div>
             </div>
           );
         case 'font':
@@ -538,7 +563,7 @@ const FontSelect = ({
           );
       }
     },
-    [labelClasses, helperTextClasses, darkMode, renderFontItem, renderEmptyState]
+    [labelClasses, helperTextClasses, darkMode, renderFontItem]
   );
 
   const [stickyLabel, setStickyLabel] = React.useState(listItems[0]?.type === 'label' ? listItems[0].text : '');
@@ -562,12 +587,15 @@ const FontSelect = ({
   }, [listItems]);
 
   const containerClasses = containerClassName || 'relative flex-1 min-w-0';
+  const panelStateClass = isMenuExiting || menuState === 'opening'
+    ? 'translate-y-8 opacity-0 scale-95'
+    : 'translate-y-0 opacity-100 scale-100';
 
   return (
     <div className={cn(containerClasses)} ref={containerRef}>
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleToggleMenu}
         className={cn(
           'flex h-9 items-center justify-between whitespace-nowrap rounded-md border px-3 py-2 text-sm shadow-sm truncate',
           triggerClassName || 'w-full',
@@ -583,12 +611,13 @@ const FontSelect = ({
         <ChevronDown className="h-4 w-4 opacity-60" />
       </button>
 
-      {open && createPortal(
+      {isMenuVisible && createPortal(
         <div
           ref={menuRef}
           onKeyDown={handleMenuKeyDown}
           className={cn(
-            'fixed z-[2100] rounded-md border shadow-lg',
+            'fixed z-[2100] rounded-md border shadow-lg transition-all duration-200 ease-out transform',
+            panelStateClass,
             darkMode
               ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300 text-gray-800'

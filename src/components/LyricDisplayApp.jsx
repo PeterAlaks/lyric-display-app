@@ -307,7 +307,6 @@ const LyricDisplayApp = () => {
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                       }`}
-                    title="Search online for lyrics"
                     onClick={handleOpenOnlineLyricsSearch}
                   >
                     <Globe className="w-5 h-5" />
@@ -321,7 +320,6 @@ const LyricDisplayApp = () => {
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                       }`}
-                    title="Open setlist"
                     onClick={handleOpenSetlist}
                   >
                     <ListMusic className="w-5 h-5" />
@@ -336,7 +334,6 @@ const LyricDisplayApp = () => {
                       ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
                       : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
                       }`}
-                    title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync current state to outputs"}
                     onClick={handleSyncOutputs}
                   >
                     <RefreshCw className="w-5 h-5" />
@@ -372,7 +369,6 @@ const LyricDisplayApp = () => {
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                     }`}
                   onClick={handleCreateNewSong}
-                  title="Create new lyrics"
                 >
                   <FileText className="w-5 h-5" />
                 </button>
@@ -413,27 +409,28 @@ const LyricDisplayApp = () => {
               </div>
 
               {/* Help trigger button */}
-              <button
-                onClick={() => {
-                  showModal({
-                    title: 'Control Panel Help',
-                    headerDescription: 'Master your LyricDisplay workflow with these essential tools',
-                    component: 'ControlPanelHelp',
-                    variant: 'info',
-                    size: 'large',
-                    dismissLabel: 'Got it'
-                  });
-                }}
-                className={`p-2 rounded-lg transition-colors ${darkMode
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                  }`}
-                title="Control Panel Help"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
+              <Tooltip content="Control Panel Help" side="bottom">
+                <button
+                  onClick={() => {
+                    showModal({
+                      title: 'Control Panel Help',
+                      headerDescription: 'Master your LyricDisplay workflow with these essential tools',
+                      component: 'ControlPanelHelp',
+                      variant: 'info',
+                      size: 'large',
+                      dismissLabel: 'Got it'
+                    });
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${darkMode
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              </Tooltip>
             </div>
 
             <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
