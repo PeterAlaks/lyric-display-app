@@ -279,6 +279,14 @@ const LyricDisplayApp = () => {
 
   const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
+  const iconButtonClass = (disabled = false) => {
+    const base = 'p-2 rounded-lg font-medium transition-colors';
+    if (disabled) {
+      return `${base} ${darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`;
+    }
+    return `${base} ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`;
+  };
+
   if (!isDesktopApp) {
     return <MobileLayout />;
   }
@@ -303,10 +311,7 @@ const LyricDisplayApp = () => {
                 {/* Online Lyrics Search Button */}
                 <Tooltip content="Search and import lyrics from online providers" side="bottom">
                   <button
-                    className={`p-2 rounded-lg font-medium transition-colors ${darkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
+                    className={iconButtonClass(false)}
                     onClick={handleOpenOnlineLyricsSearch}
                   >
                     <Globe className="w-5 h-5" />
@@ -316,10 +321,7 @@ const LyricDisplayApp = () => {
                 {/* Setlist Button */}
                 <Tooltip content="View and manage your song setlist (up to 50 songs)" side="bottom">
                   <button
-                    className={`p-2 rounded-lg font-medium transition-colors ${darkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
+                    className={iconButtonClass(false)}
                     onClick={handleOpenSetlist}
                   >
                     <ListMusic className="w-5 h-5" />
@@ -330,10 +332,7 @@ const LyricDisplayApp = () => {
                 <Tooltip content="Force refresh all output displays with current state" side="bottom">
                   <button
                     disabled={!isConnected || !isAuthenticated || !ready}
-                    className={`p-2 rounded-lg font-medium transition-colors ${(!isConnected || !isAuthenticated || !ready)
-                      ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
-                      : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
-                      }`}
+                    className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
                     onClick={handleSyncOutputs}
                   >
                     <RefreshCw className="w-5 h-5" />

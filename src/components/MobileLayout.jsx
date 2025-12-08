@@ -78,6 +78,14 @@ const MobileLayout = () => {
     showToast
   });
 
+  const iconButtonClass = (disabled = false) => {
+    const base = 'p-2.5 rounded-lg transition-colors';
+    if (disabled) {
+      return `${base} ${darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`;
+    }
+    return `${base} ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`;
+  };
+
   React.useEffect(() => {
     const handleDraftRejected = (event) => {
       const { title, reason } = event.detail;
@@ -153,10 +161,7 @@ const MobileLayout = () => {
               {/* Setlist Button */}
               <button
                 onClick={handleOpenSetlist}
-                className={`p-2.5 rounded-lg transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
+                className={iconButtonClass(false)}
                 title="Open setlist"
               >
                 <ListMusic className="w-5 h-5" />
@@ -165,10 +170,7 @@ const MobileLayout = () => {
               <button
                 onClick={handleSyncOutputs}
                 disabled={!isConnected || !isAuthenticated || !ready}
-                className={`p-2.5 rounded-lg transition-colors ${(!isConnected || !isAuthenticated || !ready)
-                  ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50')
-                  : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
-                  }`}
+                className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
                 title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync outputs"}
               >
                 <RefreshCw className="w-5 h-5" />
@@ -183,10 +185,7 @@ const MobileLayout = () => {
                     dismissLabel: 'Got it'
                   });
                 }}
-                className={`p-2.5 rounded-lg transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
+                className={iconButtonClass(false)}
                 title="Help"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

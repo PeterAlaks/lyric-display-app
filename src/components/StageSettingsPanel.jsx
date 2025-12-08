@@ -9,8 +9,10 @@ import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDispla
 import { Type, Paintbrush, TextCursorInput, TextQuote, Square, AlignVerticalSpaceAround, ScreenShare, ListMusic, ChevronRight, Languages, Wand2, HardDriveDownload, Power } from 'lucide-react';
 import FontSelect from './FontSelect';
 import { blurInputOnEnter, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
+import useToast from '../hooks/useToast';
 
 const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showModal, isOutputEnabled, handleToggleOutput }) => {
+  const { showToast } = useToast();
   const {
     state,
     setters,
@@ -52,6 +54,153 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
     handleStopTimer,
     handleTimerDurationChange
   } = handlers;
+
+  const switchBaseClasses = `!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
+    ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+    : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+    }`;
+  const switchThumbClass = "!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1";
+
+  const FullScreenToggleRow = ({ label, checked, onChange, disabled, ariaLabel }) => (
+    <div className="flex items-center justify-between w-full">
+      <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${disabled ? 'opacity-50' : ''}`}>
+        {label}
+      </label>
+      <div className="flex items-center gap-3">
+        <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${disabled ? 'opacity-50' : ''}`}>
+          {checked ? 'Enabled' : 'Disabled'}
+        </span>
+        <Switch
+          checked={checked}
+          onCheckedChange={onChange}
+          disabled={disabled}
+          aria-label={ariaLabel}
+          className={`${switchBaseClasses} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          thumbClassName={switchThumbClass}
+        />
+      </div>
+    </div>
+  );
+
+  const lineSections = [
+    {
+      title: 'Live Line (Current)',
+      sizeKey: 'liveFontSize',
+      colorKey: 'liveColor',
+      boldKey: 'liveBold',
+      italicKey: 'liveItalic',
+      underlineKey: 'liveUnderline',
+      allCapsKey: 'liveAllCaps',
+      alignKey: 'liveAlign',
+      tooltip: 'Font size and color for current lyric line',
+      alignTooltip: 'Text alignment for current line',
+      extra: (
+        <div className="flex items-center justify-between gap-4 mt-4">
+          <Tooltip content="Color for translation lines in grouped lyrics" side="right">
+            <LabelWithIcon icon={Languages} text="Translation Colour" darkMode={darkMode} />
+          </Tooltip>
+          <ColorPicker
+            value={settings.translationLineColor || '#FBBF24'}
+            onChange={(val) => update('translationLineColor', val)}
+            darkMode={darkMode}
+            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+          />
+        </div>
+      )
+    },
+    {
+      title: 'Next Line (Upcoming)',
+      sizeKey: 'nextFontSize',
+      colorKey: 'nextColor',
+      boldKey: 'nextBold',
+      italicKey: 'nextItalic',
+      underlineKey: 'nextUnderline',
+      allCapsKey: 'nextAllCaps',
+      alignKey: 'nextAlign',
+      tooltip: 'Font size and color for upcoming lyric line',
+      alignTooltip: 'Text alignment for upcoming line',
+      extra: (
+        <div className="flex items-center justify-between gap-4 mt-4">
+          <Tooltip content="Show arrow indicator before upcoming line" side="right">
+            <LabelWithIcon icon={ChevronRight} text="Arrow" darkMode={darkMode} />
+          </Tooltip>
+          <div className="flex items-center gap-2 justify-end w-full">
+            <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              {settings.showNextArrow ? 'Enabled' : 'Disabled'}
+            </span>
+            <Switch
+              checked={settings.showNextArrow}
+              onCheckedChange={(checked) => update('showNextArrow', checked)}
+              aria-label="Toggle show arrow"
+              className={switchBaseClasses}
+              thumbClassName={switchThumbClass}
+            />
+            <Paintbrush className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <ColorPicker
+              value={settings.nextArrowColor}
+              onChange={(val) => update('nextArrowColor', val)}
+              darkMode={darkMode}
+              className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Previous Line',
+      sizeKey: 'prevFontSize',
+      colorKey: 'prevColor',
+      boldKey: 'prevBold',
+      italicKey: 'prevItalic',
+      underlineKey: 'prevUnderline',
+      allCapsKey: 'prevAllCaps',
+      alignKey: 'prevAlign',
+      tooltip: 'Font size and color for previous lyric line',
+      alignTooltip: 'Text alignment for previous line'
+    }
+  ];
+
+  const renderLineSection = (section) => (
+    <>
+      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>{section.title}</h4>
+
+      <FontSettingsRow
+        darkMode={darkMode}
+        sizeValue={settings[section.sizeKey]}
+        colorValue={settings[section.colorKey]}
+        onSizeChange={(val) => update(section.sizeKey, val)}
+        onColorChange={(val) => update(section.colorKey, val)}
+        minSize={24}
+        maxSize={200}
+        tooltip={section.tooltip}
+      />
+
+      <EmphasisRow
+        darkMode={darkMode}
+        LabelWithIcon={LabelWithIcon}
+        icon={TextQuote}
+        boldValue={settings[section.boldKey]}
+        italicValue={settings[section.italicKey]}
+        underlineValue={settings[section.underlineKey]}
+        allCapsValue={settings[section.allCapsKey]}
+        onBoldChange={(val) => update(section.boldKey, val)}
+        onItalicChange={(val) => update(section.italicKey, val)}
+        onUnderlineChange={(val) => update(section.underlineKey, val)}
+        onAllCapsChange={(val) => update(section.allCapsKey, val)}
+      />
+
+      <AlignmentRow
+        darkMode={darkMode}
+        LabelWithIcon={LabelWithIcon}
+        icon={AlignVerticalSpaceAround}
+        value={settings[section.alignKey]}
+        onChange={(val) => update(section.alignKey, val)}
+        tooltip={section.alignTooltip || 'Text alignment'}
+      />
+
+      {section.extra}
+    </>
+  );
 
   return (
     <div className="space-y-4" onKeyDown={blurInputOnEnter}>
@@ -218,7 +367,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                     handleConfirmUpcomingSongName();
                   }
                 }}
-                className={`w-[160px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
               {hasUnsavedUpcomingSongName && settings.upcomingSongMode === 'custom' && (
                 <Button
@@ -232,189 +381,24 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             </div>
           </div>
 
-          {/* Full Screen Toggle */}
-          <div className="flex items-center justify-between w-full">
-            <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.timerFullScreen || settings.customMessagesFullScreen) ? 'opacity-50' : ''}`}>
-              Send Full Screen
-            </label>
-            <div className="flex items-center gap-3">
-              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                {settings.upcomingSongFullScreen ? 'Enabled' : 'Disabled'}
-              </span>
-              <Switch
-                checked={settings.upcomingSongFullScreen || false}
-                onCheckedChange={(checked) => handleFullScreenToggle('upcomingSong', checked)}
-                disabled={settings.timerFullScreen || settings.customMessagesFullScreen}
-                aria-label="Toggle upcoming song full screen"
-                className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  } ${(settings.timerFullScreen || settings.customMessagesFullScreen) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
-
-      {/* Live Line Settings */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Live Line (Current)</h4>
-
-      <FontSettingsRow
-        darkMode={darkMode}
-        sizeValue={settings.liveFontSize}
-        colorValue={settings.liveColor}
-        onSizeChange={(val) => update('liveFontSize', val)}
-        onColorChange={(val) => update('liveColor', val)}
-        minSize={24}
-        maxSize={200}
-        tooltip="Font size and color for current lyric line"
-      />
-
-      <EmphasisRow
-        darkMode={darkMode}
-        LabelWithIcon={LabelWithIcon}
-        icon={TextQuote}
-        boldValue={settings.liveBold}
-        italicValue={settings.liveItalic}
-        underlineValue={settings.liveUnderline}
-        allCapsValue={settings.liveAllCaps}
-        onBoldChange={(val) => update('liveBold', val)}
-        onItalicChange={(val) => update('liveItalic', val)}
-        onUnderlineChange={(val) => update('liveUnderline', val)}
-        onAllCapsChange={(val) => update('liveAllCaps', val)}
-      />
-
-      <AlignmentRow
-        darkMode={darkMode}
-        LabelWithIcon={LabelWithIcon}
-        icon={AlignVerticalSpaceAround}
-        value={settings.liveAlign}
-        onChange={(val) => update('liveAlign', val)}
-        tooltip="Text alignment for current line"
-      />
-
-      <div className="flex items-center justify-between gap-4 mt-4">
-        <Tooltip content="Color for translation lines in grouped lyrics" side="right">
-          <LabelWithIcon icon={Languages} text="Translation Colour" darkMode={darkMode} />
-        </Tooltip>
-        <ColorPicker
-          value={settings.translationLineColor || '#FBBF24'}
-          onChange={(val) => update('translationLineColor', val)}
-          darkMode={darkMode}
-          className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
-        />
-      </div>
-
-      <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
-
-      {/* Next Line Settings */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Next Line (Upcoming)</h4>
-
-      <FontSettingsRow
-        darkMode={darkMode}
-        sizeValue={settings.nextFontSize}
-        colorValue={settings.nextColor}
-        onSizeChange={(val) => update('nextFontSize', val)}
-        onColorChange={(val) => update('nextColor', val)}
-        minSize={24}
-        maxSize={200}
-        tooltip="Font size and color for upcoming lyric line"
-      />
-
-      <EmphasisRow
-        darkMode={darkMode}
-        LabelWithIcon={LabelWithIcon}
-        icon={TextQuote}
-        boldValue={settings.nextBold}
-        italicValue={settings.nextItalic}
-        underlineValue={settings.nextUnderline}
-        allCapsValue={settings.nextAllCaps}
-        onBoldChange={(val) => update('nextBold', val)}
-        onItalicChange={(val) => update('nextItalic', val)}
-        onUnderlineChange={(val) => update('nextUnderline', val)}
-        onAllCapsChange={(val) => update('nextAllCaps', val)}
-      />
-
-      <AlignmentRow
-        darkMode={darkMode}
-        LabelWithIcon={LabelWithIcon}
-        icon={AlignVerticalSpaceAround}
-        value={settings.nextAlign}
-        onChange={(val) => update('nextAlign', val)}
-        tooltip="Text alignment for upcoming line"
-      />
-
-      <div className="flex items-center justify-between gap-4 mt-4">
-        <Tooltip content="Show arrow indicator before upcoming line" side="right">
-          <LabelWithIcon icon={ChevronRight} text="Arrow" darkMode={darkMode} />
-        </Tooltip>
-        <div className="flex items-center gap-2 justify-end w-full">
-          <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            {settings.showNextArrow ? 'Enabled' : 'Disabled'}
-          </span>
-          <Switch
-            checked={settings.showNextArrow}
-            onCheckedChange={(checked) => update('showNextArrow', checked)}
-            aria-label="Toggle show arrow"
-            className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-              ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-              : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-              }`}
-            thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
-          />
-          <Paintbrush className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-          <ColorPicker
-            value={settings.nextArrowColor}
-            onChange={(val) => update('nextArrowColor', val)}
-            darkMode={darkMode}
-            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+          <FullScreenToggleRow
+            label="Send Full Screen"
+            checked={settings.upcomingSongFullScreen || false}
+            onChange={(checked) => handleFullScreenToggle('upcomingSong', checked)}
+            disabled={settings.timerFullScreen || settings.customMessagesFullScreen}
+            ariaLabel="Toggle upcoming song full screen"
           />
         </div>
       </div>
 
       <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
-      {/* Previous Line Settings */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Previous Line</h4>
-
-      <FontSettingsRow
-        darkMode={darkMode}
-        sizeValue={settings.prevFontSize}
-        colorValue={settings.prevColor}
-        onSizeChange={(val) => update('prevFontSize', val)}
-        onColorChange={(val) => update('prevColor', val)}
-        minSize={24}
-        maxSize={200}
-        tooltip="Font size and color for previous lyric line"
-      />
-
-      <EmphasisRow
-        darkMode={darkMode}
-        LabelWithIcon={LabelWithIcon}
-        icon={TextQuote}
-        boldValue={settings.prevBold}
-        italicValue={settings.prevItalic}
-        underlineValue={settings.prevUnderline}
-        allCapsValue={settings.prevAllCaps}
-        onBoldChange={(val) => update('prevBold', val)}
-        onItalicChange={(val) => update('prevItalic', val)}
-        onUnderlineChange={(val) => update('prevUnderline', val)}
-        onAllCapsChange={(val) => update('prevAllCaps', val)}
-      />
-
-      <AlignmentRow
-        darkMode={darkMode}
-        LabelWithIcon={LabelWithIcon}
-        icon={AlignVerticalSpaceAround}
-        value={settings.prevAlign}
-        onChange={(val) => update('prevAlign', val)}
-        tooltip="Text alignment for previous line"
-      />
-
-      <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+      {lineSections.map((section) => (
+        <React.Fragment key={section.title}>
+          {renderLineSection(section)}
+          <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+        </React.Fragment>
+      ))}
 
       {/* Song Info Settings */}
       <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Top Bar</h4>
@@ -460,11 +444,8 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             checked={settings.showTime}
             onCheckedChange={(checked) => update('showTime', checked)}
             aria-label="Toggle show time"
-            className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-              ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-              : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-              }`}
-            thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
+            className={switchBaseClasses}
+            thumbClassName={switchThumbClass}
           />
         </div>
       </div>
@@ -506,28 +487,13 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         style={{ marginTop: timerAdvancedExpanded ? undefined : 0 }}
       >
         <div className="space-y-3">
-          {/* Full Screen Toggle */}
-          <div className="flex items-center justify-between w-full">
-            <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.upcomingSongFullScreen || settings.customMessagesFullScreen) ? 'opacity-50' : ''}`}>
-              Send Full Screen
-            </label>
-            <div className="flex items-center gap-3">
-              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${(settings.upcomingSongFullScreen || settings.customMessagesFullScreen) ? 'opacity-50' : ''}`}>
-                {settings.timerFullScreen ? 'Enabled' : 'Disabled'}
-              </span>
-              <Switch
-                checked={settings.timerFullScreen || false}
-                onCheckedChange={(checked) => handleFullScreenToggle('timer', checked)}
-                disabled={settings.upcomingSongFullScreen || settings.customMessagesFullScreen}
-                aria-label="Toggle timer full screen"
-                className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  } ${(settings.upcomingSongFullScreen || settings.customMessagesFullScreen) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-          </div>
+          <FullScreenToggleRow
+            label="Send Full Screen"
+            checked={settings.timerFullScreen || false}
+            onChange={(checked) => handleFullScreenToggle('timer', checked)}
+            disabled={settings.upcomingSongFullScreen || settings.customMessagesFullScreen}
+            ariaLabel="Toggle timer full screen"
+          />
         </div>
       </div>
 
@@ -634,28 +600,13 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         style={{ marginTop: customMessagesAdvancedExpanded ? undefined : 0 }}
       >
         <div className="space-y-3">
-          {/* Full Screen Toggle */}
-          <div className="flex items-center justify-between w-full">
-            <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.upcomingSongFullScreen || settings.timerFullScreen) ? 'opacity-50' : ''}`}>
-              Send Full Screen
-            </label>
-            <div className="flex items-center gap-3">
-              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${(settings.upcomingSongFullScreen || settings.timerFullScreen) ? 'opacity-50' : ''}`}>
-                {settings.customMessagesFullScreen ? 'Enabled' : 'Disabled'}
-              </span>
-              <Switch
-                checked={settings.customMessagesFullScreen || false}
-                onCheckedChange={(checked) => handleFullScreenToggle('customMessages', checked)}
-                disabled={settings.upcomingSongFullScreen || settings.timerFullScreen}
-                aria-label="Toggle custom messages full screen"
-                className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  } ${(settings.upcomingSongFullScreen || settings.timerFullScreen) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-          </div>
+          <FullScreenToggleRow
+            label="Send Full Screen"
+            checked={settings.customMessagesFullScreen || false}
+            onChange={(checked) => handleFullScreenToggle('customMessages', checked)}
+            disabled={settings.upcomingSongFullScreen || settings.timerFullScreen}
+            ariaLabel="Toggle custom messages full screen"
+          />
         </div>
       </div>
 
