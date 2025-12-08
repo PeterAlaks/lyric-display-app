@@ -9,7 +9,7 @@ import SetlistModal from './SetlistModal';
 import { Switch } from "@/components/ui/switch";
 import useSearch from '../hooks/useSearch';
 import SearchBar from './SearchBar';
-import { useSyncTimer } from '../hooks/MobileLayout/useSyncTimer';
+import { useSyncTimer } from '../hooks/useSyncTimer';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { hasValidTimestamps } from '../utils/timestampHelpers';

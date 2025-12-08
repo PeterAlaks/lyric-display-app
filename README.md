@@ -270,8 +270,6 @@ lyric-display-app/
 |   |   |   ├── useResponsiveWidth.js       # Window resize observer hook for control panel button responsiveness
 |   |   |   ├── useSetlistActions.js        # Hook for setlist action functionality
 |   |   |   └── useSupportDevModal.js       # Hook for processing show time and parameters for support development modal
-|   |   ├── MobileLayout/
-|   |   |   └── useSyncTimer.js             # Last synced timer hook
 |   |   ├── NewSongCanvas/
 |   |   |   ├── useEditorClipboard.js       # Hook for cut, copy and paste handlers
 |   |   |   └── useEditorHistory.js         # Hook for history state management of lyrics editor canvas
@@ -296,6 +294,7 @@ lyric-display-app/
 |   |   ├── useSocketEvents.js              # Socket events hook
 |   |   ├── useStoreSelectors.js            # Centralized collection of Zustand selectors
 |   |   ├── useSyncOutputs.js               # Outputs sync manager for control panel
+|   |   ├── useSyncTimer.js                 # Last synced timer hook
 |   |   └── useToast.js                     # Toast notifications hook
 │   ├── lib/
 |   |   └── utils.js                        # UI library utility functions

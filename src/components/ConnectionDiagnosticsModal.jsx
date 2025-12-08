@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Clock, Users, AlertCircle, CheckCircle, RefreshCw, RefreshCcw, Monitor, Smartphone, Globe } from 'lucide-react';
 import { resolveBackendUrl } from '../utils/network';
+import { useSyncTimer } from '../hooks/useSyncTimer';
 
 const CLIENT_TYPE_LABELS = {
     desktop: 'Desktop Control Panel',
@@ -25,7 +26,8 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
     const [connectedClients, setConnectedClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [lastSyncTime, setLastSyncTime] = useState(null);
-    const [secondsAgo, setSecondsAgo] = useState(0);
+
+    const secondsAgo = useSyncTimer(lastSyncTime);
 
     useEffect(() => {
         const updateSyncTime = () => {
@@ -48,23 +50,6 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
         window.addEventListener('sync-completed', handleSyncCompleted);
         return () => window.removeEventListener('sync-completed', handleSyncCompleted);
     }, []);
-
-    useEffect(() => {
-        if (!lastSyncTime) {
-            setSecondsAgo(0);
-            return;
-        }
-
-        const updateTimer = () => {
-            const now = Date.now();
-            const diff = now - lastSyncTime;
-            setSecondsAgo(Math.floor(diff / 1000));
-        };
-
-        updateTimer();
-        const interval = setInterval(updateTimer, 1000);
-        return () => clearInterval(interval);
-    }, [lastSyncTime]);
 
     const getAuthToken = async () => {
         try {
