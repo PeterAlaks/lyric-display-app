@@ -10,6 +10,7 @@ import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 
 const SetlistModal = () => {
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull, getAvailableSetlistSlots, setSetlistFiles } = useSetlistState();
@@ -456,69 +457,73 @@ const SetlistModal = () => {
           <div className="flex items-center gap-2">
             {/* Clear Setlist Button */}
             {isDesktopApp && (
-              <Button
-                onClick={handleClearSetlist}
-                disabled={list.length === 0}
-                variant="ghost"
-                size="icon"
-                className={`
+              <Tooltip content={list.length === 0 ? 'Setlist is empty' : 'Clear all songs from setlist'}>
+                <Button
+                  onClick={handleClearSetlist}
+                  disabled={list.length === 0}
+                  variant="ghost"
+                  size="icon"
+                  className={`
                   w-10 h-10
                   ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
                   ${darkMode ? 'hover:bg-gray-700 hover:text-red-400' : 'hover:bg-gray-100 hover:text-red-600'}
                 `}
-                title={list.length === 0 ? 'Setlist is empty' : 'Clear all songs from setlist'}
-              >
-                <Trash className="w-4 h-4" />
-              </Button>
+                >
+                  <Trash className="w-4 h-4" />
+                </Button>
+              </Tooltip>
             )}
 
             {/* Save Setlist Button */}
             {isDesktopApp && (
-              <Button
-                onClick={handleSaveSetlist}
-                disabled={list.length === 0}
-                variant="ghost"
-                size="icon"
-                className={`
+              <Tooltip content={list.length === 0 ? 'Setlist is empty' : 'Save setlist to file'}>
+                <Button
+                  onClick={handleSaveSetlist}
+                  disabled={list.length === 0}
+                  variant="ghost"
+                  size="icon"
+                  className={`
                   w-10 h-10
                   ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
                   ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
                 `}
-                title={list.length === 0 ? 'Setlist is empty' : 'Save setlist to file'}
-              >
-                <Save className="w-4 h-4" />
-              </Button>
+                >
+                  <Save className="w-4 h-4" />
+                </Button>
+              </Tooltip>
             )}
 
             {/* Load Setlist Button */}
             {isDesktopApp && (
-              <Button
-                onClick={handleLoadSetlist}
-                variant="ghost"
-                size="icon"
-                className={`w-10 h-10 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                title="Load setlist from file"
-              >
-                <FolderOpen className="w-4 h-4" />
-              </Button>
+              <Tooltip content="Load setlist from file">
+                <Button
+                  onClick={handleLoadSetlist}
+                  variant="ghost"
+                  size="icon"
+                  className={`w-10 h-10 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                >
+                  <FolderOpen className="w-4 h-4" />
+                </Button>
+              </Tooltip>
             )}
 
             {/* Add Files Button */}
             {isDesktopApp && (
-              <Button
-                onClick={handleFileSelect}
-                disabled={isSetlistFull() || isLoading}
-                variant="ghost"
-                className={`
+              <Tooltip content={isSetlistFull() ? 'Setlist is full (50 files)' : 'Add files to setlist'}>
+                <Button
+                  onClick={handleFileSelect}
+                  disabled={isSetlistFull() || isLoading}
+                  variant="ghost"
+                  className={`
     flex items-center gap-2 px-3 py-2
                 ${isSetlistFull() ? 'opacity-50 cursor-not-allowed' : ''}
     ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
   `}
-                title={isSetlistFull() ? 'Setlist is full (50 files)' : 'Add files to setlist'}
-              >
-                <Plus className="w-4 h-4" />
-                Add Files
-              </Button>
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Files
+                </Button>
+              </Tooltip>
             )}
 
             {/* Close Button */}
@@ -727,18 +732,19 @@ const SortableSetlistItem = ({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           {isDesktopApp && (
-            <button
-              type="button"
-              ref={setActivatorNodeRef}
-              className={`mt-1 hidden sm:flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${handleClasses} ${canReorder ? 'cursor-grab active:cursor-grabbing opacity-100' : 'cursor-not-allowed opacity-40'}`}
-              onClick={(event) => event.stopPropagation()}
-              title={reorderTitle}
-              aria-label="Reorder setlist item"
-              {...(canReorder ? attributes : {})}
-              {...(canReorder ? listeners : {})}
-            >
-              <GripVertical className="w-4 h-4" />
-            </button>
+            <Tooltip content={reorderTitle}>
+              <button
+                type="button"
+                ref={setActivatorNodeRef}
+                className={`mt-1 hidden sm:flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${handleClasses} ${canReorder ? 'cursor-grab active:cursor-grabbing opacity-100' : 'cursor-not-allowed opacity-40'}`}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="Reorder setlist item"
+                {...(canReorder ? attributes : {})}
+                {...(canReorder ? listeners : {})}
+              >
+                <GripVertical className="w-4 h-4" />
+              </button>
+            </Tooltip>
           )}
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-base truncate mb-1">
@@ -752,14 +758,15 @@ const SortableSetlistItem = ({
         </div>
 
         {isDesktopApp && (
-          <button
-            type="button"
-            onClick={handleRemove}
-            className={`opacity-0 group-hover:opacity-100 p-2 rounded-md transition-opacity ${removeButtonClasses}`}
-            title="Remove from setlist"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <Tooltip content="Remove from setlist">
+            <button
+              type="button"
+              onClick={handleRemove}
+              className={`opacity-0 group-hover:opacity-100 p-2 rounded-md transition-opacity ${removeButtonClasses}`}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>

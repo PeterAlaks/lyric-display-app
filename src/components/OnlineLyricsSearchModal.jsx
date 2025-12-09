@@ -3,6 +3,7 @@ import { Search, X, ExternalLink, Loader2, Key, Trash2, Globe2, BookOpen, AlertT
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tooltip } from "@/components/ui/tooltip";
 import useToast from '../hooks/useToast';
 import OnlineLyricsWelcomeSplash from './OnlineLyricsWelcomeSplash';
 import useNetworkStatus from '../hooks/OnlineLyricsSearchModal/useNetworkStatus';
@@ -578,31 +579,33 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           </div>
           <div className="flex items-center gap-2">
             {/* Network Status Indicator */}
-            <div
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-colors ${isOnline
-                ? (darkMode ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700')
-                : (darkMode ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse' : 'bg-red-50 border-red-200 text-red-700 animate-pulse')
-                }`}
-              title={isOnline ? 'Connected to internet' : 'No internet connection'}
-            >
-              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-[10px] font-semibold uppercase tracking-wide">
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
-            </div>
+            <Tooltip content={isOnline ? 'Connected to the internet' : 'No internet connection'}>
+              <div
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-colors ${isOnline
+                  ? (darkMode ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700')
+                  : (darkMode ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse' : 'bg-red-50 border-red-200 text-red-700 animate-pulse')
+                  }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-[10px] font-semibold uppercase tracking-wide">
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+            </Tooltip>
             {/* Help Button */}
-            <button
-              onClick={() => setShowWelcomeSplash(true)}
-              className={`p-1.5 rounded-md transition-colors ${darkMode
-                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                }`}
-              title="How to use Online Lyrics Search"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
+            <Tooltip content="How to use Online Lyrics Search">
+              <button
+                onClick={() => setShowWelcomeSplash(true)}
+                className={`p-1.5 rounded-md transition-colors ${darkMode
+                  ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            </Tooltip>
 
             {/* Close Button */}
             <button

@@ -29,7 +29,7 @@ const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitS
       if (setlistFiles && setlistFiles.length > 0) {
         const result = await showModal({
           title: 'Load Setlist',
-          description: `Loading a setlist will clear the existing ${setlistFiles.length} ${setlistFiles.length === 1 ? 'song' : 'songs'} on the setlist. Do you want to proceed?`,
+          description: `Loading a saved setlist will clear the ${setlistFiles.length} ${setlistFiles.length === 1 ? 'song' : 'songs'} currently on the setlist. Do you want to proceed?`,
           variant: 'warn',
           actions: [
             {
