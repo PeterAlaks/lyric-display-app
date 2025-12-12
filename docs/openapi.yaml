@@ -1,0 +1,347 @@
+# view it using https://docs.scalar.com/swagger-editor
+
+openapi: 3.0.0
+
+info:
+  title: Lyric Display App REST API
+  version: 1.0.0
+  description: API documentation for the Lyric Display App's Express REST API.
+
+servers:
+  - url: http://localhost:4000
+    description: Local Development Server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/auth/token:
+    post:
+      summary: Generate an authentication token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - clientType
+                - deviceId
+              properties:
+                clientType:
+                  type: string
+                  enum: [desktop, web, output1, output2, stage, mobile]
+                deviceId:
+                  type: string
+                sessionId:
+                  type: string
+                adminKey:
+                  type: string
+                  description: Required for desktop clients in production
+                joinCode:
+                  type: string
+                  description: Required for controller clients (web, mobile)
+      responses:
+        '200':
+          description: Token generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad request (missing fields or invalid client type)
+        '403':
+          description: Forbidden (invalid admin key or join code)
+        '423':
+          description: Locked (too many invalid join code attempts)
+        '500':
+          description: Server error
+
+  /api/auth/join-code:
+    get:
+      summary: Get current join code
+      security: []
+      responses:
+        '200':
+          description: Current join code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  joinCode:
+                    type: string
+                    nullable: true
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh an authentication token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Missing token
+        '401':
+          description: Invalid or expired token
+
+  /api/auth/validate:
+    post:
+      summary: Validate an authentication token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  clientType:
+                    type: string
+                  deviceId:
+                    type: string
+                  sessionId:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                  expiresAt:
+                    type: integer
+        '400':
+          description: Missing token
+        '401':
+          description: Invalid token
+
+  /api/connection/clients:
+    get:
+      summary: Get connected clients
+      description: Requires 'lyrics:read' permission
+      responses:
+        '200':
+          description: List of connected clients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  clients:
+                    type: array
+                    items:
+                      type: object
+                  totalCount:
+                    type: integer
+                  timestamp:
+                    type: integer
+        '403':
+          description: Insufficient permissions
+
+  /api/media/backgrounds:
+    post:
+      summary: Upload background media
+      description: Requires 'settings:write' permission
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                background:
+                  type: string
+                  format: binary
+                outputKey:
+                  type: string
+                  description: Optional output identifier (e.g. output1) to cleanup old files
+      responses:
+        '200':
+          description: Upload successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  originalName:
+                    type: string
+                  mimeType:
+                    type: string
+                  size:
+                    type: integer
+                  uploadedAt:
+                    type: integer
+        '400':
+          description: Upload failed
+
+  /api/admin/secrets/status:
+    get:
+      summary: Get secrets status
+      description: Localhost access only
+      security: [] 
+      responses:
+        '200':
+          description: Secrets status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretsStatus'
+        '403':
+          description: Local access only
+
+  /api/admin/secrets/rotate:
+    post:
+      summary: Rotate JWT secret
+      description: Localhost access only
+      security: []
+      responses:
+        '200':
+          description: Rotation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  lastRotated:
+                    type: string
+        '500':
+          description: Rotation failed
+
+  /api/health:
+    get:
+      summary: Simple health check
+      security: []
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                  environment:
+                    type: string
+                  security:
+                    type: object
+
+  /api/health/ready:
+    get:
+      summary: Readiness check
+      security: []
+      responses:
+        '200':
+          description: Server is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessStatus'
+        '503':
+          description: Server is not ready
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresIn:
+          type: string
+        clientType:
+          type: string
+        deviceId:
+          type: string
+        sessionId:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    SecretsStatus:
+      type: object
+      properties:
+        exists:
+          type: boolean
+        lastRotated:
+          type: string
+          nullable: true
+        daysSinceRotation:
+          type: integer
+          nullable: true
+        needsRotation:
+          type: boolean
+        configPath:
+          type: string
+        storageBackend:
+          type: string
+        hasGraceSecret:
+          type: boolean
+
+    ReadinessStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        serverListening:
+          type: boolean
+        timestamp:
+          type: string
+        checks:
+          type: object
+        uptime:
+          type: number
+        port:
+          type: integer
+        secretsStatus:
+          $ref: '#/components/schemas/SecretsStatus'
+        failedChecks:
+          type: array
+          items:
+            type: string
