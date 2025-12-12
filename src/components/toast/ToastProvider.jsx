@@ -6,6 +6,21 @@ export const ToastContext = createContext(null);
 let idSeq = 1;
 
 export function ToastProvider({ children, position = 'bottom-right', offset = 20, max = 3, isDark = false }) {
+  const [muted, setMuted] = useState(() => {
+    try {
+      const stored = localStorage.getItem('toast-muted');
+      return stored === 'true';
+    } catch { return false; }
+  });
+
+  const toggleMute = useCallback(() => {
+    setMuted(prev => {
+      const next = !prev;
+      try { localStorage.setItem('toast-muted', String(next)); } catch { }
+      return next;
+    });
+  }, []);
+
   const [toasts, setToasts] = useState([]);
   const removeTimer = useRef(new Map());
   const exitTimer = useRef(new Map());
@@ -37,7 +52,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
       return arr;
     });
 
-    if (typeof playTone === 'function') {
+    if (typeof playTone === 'function' && !muted) {
       try { playTone(variant); } catch { }
     }
 
@@ -50,7 +65,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
       removeTimer.current.set(id, t);
     }
     return id;
-  }, [remove]);
+  }, [remove, muted]);
 
   useEffect(() => () => {
     removeTimer.current.forEach((t) => clearTimeout(t));
@@ -59,7 +74,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     exitTimer.current.clear();
   }, []);
 
-  const value = useMemo(() => ({ show, remove }), [show, remove]);
+  const value = useMemo(() => ({ show, remove, muted, toggleMute }), [show, remove, muted, toggleMute]);
 
   const posStyle = useMemo(() => {
     const base = { position: 'fixed', zIndex: 9999, pointerEvents: 'none' };
