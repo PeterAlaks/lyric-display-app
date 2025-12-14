@@ -1,6 +1,3 @@
-// Project: LyricDisplay App
-// File: src/components/LyricsList.jsx
-
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { List, useDynamicRowHeight, useListRef } from 'react-window';
 import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
@@ -22,7 +19,7 @@ export default function LyricsList({
   const listRef = useListRef();
   const { lyrics = [], selectedLine, selectLine, setLyrics } = useLyricsState();
   const { darkMode } = useDarkModeState();
-  const { emitLineUpdate, emitLyricsLoad } = useControlSocket();
+  const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup } = useControlSocket();
   const { showToast } = useToast();
   const [hoveredLineIndex, setHoveredLineIndex] = useState(null);
   const [hoveredButtonIndex, setHoveredButtonIndex] = useState(null);
@@ -95,7 +92,9 @@ export default function LyricsList({
 
       setLyrics(newLyrics);
 
-      if (emitLyricsLoad) {
+      if (emitSplitNormalGroup) {
+        emitSplitNormalGroup({ index, line1: line.line1, line2: line.line2 });
+      } else if (emitLyricsLoad) {
         emitLyricsLoad(newLyrics);
       }
 
@@ -114,7 +113,7 @@ export default function LyricsList({
 
       setHoveredLineIndex(null);
     },
-    [lyrics, setLyrics, emitLyricsLoad, showToast, selectedLine, selectLine, emitLineUpdate]
+    [lyrics, setLyrics, emitSplitNormalGroup, emitLyricsLoad, showToast, selectedLine, selectLine, emitLineUpdate]
   );
 
   const highlightSearchTerm = (text, searchTerm) => {

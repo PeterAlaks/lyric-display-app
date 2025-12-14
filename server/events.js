@@ -343,6 +343,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
       currentLyricsFileName = '';
       console.log(`Lyrics loaded by ${clientType} client:`, lyrics?.length, 'lines');
       io.emit('lyricsLoad', lyrics);
+      io.emit('lyricsTimestampsUpdate', currentLyricsTimestamps);
     });
 
     socket.on('lyricsTimestampsUpdate', (timestamps) => {
@@ -354,6 +355,46 @@ export default function registerSocketEvents(io, { hasPermission }) {
       currentLyricsTimestamps = timestamps || [];
       console.log(`Lyrics timestamps updated by ${clientType} client:`, timestamps?.length, 'timestamps');
       io.emit('lyricsTimestampsUpdate', timestamps);
+    });
+
+    socket.on('splitNormalGroup', (payload = {}) => {
+      if (!hasPermission(socket, 'output:control')) {
+        socket.emit('permissionError', 'Insufficient permissions to split groups');
+        return;
+      }
+
+      const index = typeof payload === 'number' ? payload : payload?.index;
+      if (!Number.isInteger(index) || index < 0 || index >= currentLyrics.length) {
+        socket.emit('lyricsSplitError', 'Invalid group index');
+        return;
+      }
+
+      const target = currentLyrics[index];
+      if (!target || target.type !== 'normal-group') {
+        socket.emit('lyricsSplitError', 'Selected line is not a normal group');
+        return;
+      }
+
+      const newLyrics = [...currentLyrics];
+      newLyrics.splice(index, 1, target.line1, target.line2);
+      currentLyrics = newLyrics;
+      currentLyricsTimestamps = [];
+
+      if (typeof currentSelectedLine === 'number') {
+        if (currentSelectedLine > index) {
+          currentSelectedLine += 1;
+        }
+      }
+
+      console.log(`Normal group split at index ${index} by ${clientType} client (${deviceId})`);
+      io.emit('lyricsLoad', currentLyrics);
+      io.emit('lyricsTimestampsUpdate', currentLyricsTimestamps);
+
+      if (typeof currentSelectedLine === 'number') {
+        io.emit('lineUpdate', { index: currentSelectedLine });
+      }
+
+      socket.emit('lyricsSplitSuccess', { index });
     });
 
     socket.on('styleUpdate', ({ output, settings }) => {

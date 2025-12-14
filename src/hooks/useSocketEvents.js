@@ -28,13 +28,9 @@ const useSocketEvents = (role) => {
         setLyrics(state.lyrics);
 
         if (Array.isArray(state.lyricsTimestamps)) {
-          const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
-          const hasCurrentTimestamps = Array.isArray(currentTimestamps) && currentTimestamps.length > 0;
-          const hasIncomingTimestamps = state.lyricsTimestamps.length > 0;
-
-          if (hasIncomingTimestamps || !hasCurrentTimestamps) {
-            setLyricsTimestamps(state.lyricsTimestamps);
-          }
+          setLyricsTimestamps(state.lyricsTimestamps);
+        } else {
+          setLyricsTimestamps([]);
         }
         if (state.lyricsFileName) {
           setLyricsFileName(state.lyricsFileName);
@@ -93,6 +89,7 @@ const useSocketEvents = (role) => {
     socket.on('lyricsLoad', (lyrics) => {
       logDebug('Received lyrics load:', lyrics?.length, 'lines');
       setLyrics(lyrics);
+      setLyricsTimestamps([]);
       selectLine(null);
     });
 
@@ -344,13 +341,9 @@ const useSocketEvents = (role) => {
         }
 
         if (Array.isArray(state.lyricsTimestamps)) {
-          const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
-          const hasCurrentTimestamps = Array.isArray(currentTimestamps) && currentTimestamps.length > 0;
-          const hasIncomingTimestamps = state.lyricsTimestamps.length > 0;
-
-          if (hasIncomingTimestamps || !hasCurrentTimestamps) {
-            setLyricsTimestamps(state.lyricsTimestamps);
-          }
+          setLyricsTimestamps(state.lyricsTimestamps);
+        } else {
+          setLyricsTimestamps([]);
         }
       }
 
