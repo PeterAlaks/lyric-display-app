@@ -4,6 +4,8 @@ import { detectArtistFromFilename } from '../../utils/artistDetection';
 
 export const useLyricsLoader = ({
   setLyrics,
+  setLyricsSections = () => { },
+  setLineToSection = () => { },
   setRawLyricsContent,
   setLyricsTimestamps,
   selectLine,
@@ -47,9 +49,13 @@ export const useLyricsLoader = ({
       const processedLines = parsed.processedLines;
       const rawText = parsed.rawText ?? (content || '');
       const timestamps = parsed.timestamps || [];
+      const sections = parsed.sections || [];
+      const lineToSection = parsed.lineToSection || {};
       const finalBaseName = (finalFileName || '').replace(/\.(txt|lrc)$/i, '');
 
       setLyrics(processedLines);
+      if (setLyricsSections) setLyricsSections(sections);
+      if (setLineToSection) setLineToSection(lineToSection);
       setRawLyricsContent(finalType === 'lrc' ? (content || rawText) : rawText);
       setLyricsTimestamps(timestamps);
       selectLine(null);

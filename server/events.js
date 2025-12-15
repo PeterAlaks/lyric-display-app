@@ -1,10 +1,11 @@
-// server/events.js
-import { processRawTextToLines, parseLrcContent } from '../shared/lyricsParsing.js';
+import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../shared/lyricsParsing.js';
 
 let currentLyrics = [];
 let currentLyricsTimestamps = [];
 let currentLyricsFileName = '';
 let currentSelectedLine = null;
+let currentLyricsSections = [];
+let currentLineToSection = {};
 let currentOutput1Settings = {};
 let currentOutput2Settings = {};
 let currentStageSettings = {};
@@ -188,6 +189,8 @@ export default function registerSocketEvents(io, { hasPermission }) {
         let processedLines;
         let timestamps = [];
         let sanitizedRawContent = file.content;
+        let sections = [];
+        let lineToSection = {};
         const isLrc = (file.fileType === 'lrc') ||
           (typeof file.originalName === 'string' && file.originalName.toLowerCase().endsWith('.lrc'));
 
@@ -196,9 +199,14 @@ export default function registerSocketEvents(io, { hasPermission }) {
           processedLines = parsed.processedLines;
           timestamps = parsed.timestamps || [];
           sanitizedRawContent = parsed.rawText;
+          sections = parsed.sections || [];
+          lineToSection = parsed.lineToSection || {};
         } else {
           processedLines = processRawTextToLines(file.content);
           timestamps = [];
+          const derived = deriveSectionsFromProcessedLines(processedLines);
+          sections = derived.sections || [];
+          lineToSection = derived.lineToSection || {};
         }
 
         const cleanDisplayName = (file.displayName || file.originalName || '').replace(/\.(txt|lrc)$/i, '') || file.displayName;
@@ -207,11 +215,14 @@ export default function registerSocketEvents(io, { hasPermission }) {
         currentLyricsTimestamps = timestamps;
         currentSelectedLine = null;
         currentLyricsFileName = cleanDisplayName;
+        currentLyricsSections = sections;
+        currentLineToSection = lineToSection;
 
         console.log(`${clientType} client loaded "${cleanDisplayName}" from setlist (${processedLines.length} lines, ${timestamps.length} timestamps)`);
 
         io.emit('lyricsLoad', processedLines);
         io.emit('lyricsTimestampsUpdate', timestamps);
+        io.emit('lyricsSectionsUpdate', { sections, lineToSection });
         io.emit('setlistLoadSuccess', {
           fileId,
           fileName: cleanDisplayName,
@@ -220,7 +231,11 @@ export default function registerSocketEvents(io, { hasPermission }) {
           linesCount: processedLines.length,
           rawContent: sanitizedRawContent,
           loadedBy: clientType,
-          metadata: file.metadata || null
+          metadata: {
+            ...(file.metadata || {}),
+            sections,
+            lineToSection,
+          }
         });
 
       } catch (error) {
@@ -339,11 +354,15 @@ export default function registerSocketEvents(io, { hasPermission }) {
 
       currentLyrics = lyrics;
       currentLyricsTimestamps = [];
+      const derived = deriveSectionsFromProcessedLines(currentLyrics);
+      currentLyricsSections = derived.sections || [];
+      currentLineToSection = derived.lineToSection || {};
       currentSelectedLine = null;
       currentLyricsFileName = '';
       console.log(`Lyrics loaded by ${clientType} client:`, lyrics?.length, 'lines');
       io.emit('lyricsLoad', lyrics);
       io.emit('lyricsTimestampsUpdate', currentLyricsTimestamps);
+      io.emit('lyricsSectionsUpdate', { sections: currentLyricsSections, lineToSection: currentLineToSection });
     });
 
     socket.on('lyricsTimestampsUpdate', (timestamps) => {
@@ -379,6 +398,9 @@ export default function registerSocketEvents(io, { hasPermission }) {
       newLyrics.splice(index, 1, target.line1, target.line2);
       currentLyrics = newLyrics;
       currentLyricsTimestamps = [];
+      const derived = deriveSectionsFromProcessedLines(currentLyrics);
+      currentLyricsSections = derived.sections || [];
+      currentLineToSection = derived.lineToSection || {};
 
       if (typeof currentSelectedLine === 'number') {
         if (currentSelectedLine > index) {
@@ -389,6 +411,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
       console.log(`Normal group split at index ${index} by ${clientType} client (${deviceId})`);
       io.emit('lyricsLoad', currentLyrics);
       io.emit('lyricsTimestampsUpdate', currentLyricsTimestamps);
+      io.emit('lyricsSectionsUpdate', { sections: currentLyricsSections, lineToSection: currentLineToSection });
 
       if (typeof currentSelectedLine === 'number') {
         io.emit('lineUpdate', { index: currentSelectedLine });
@@ -548,11 +571,15 @@ export default function registerSocketEvents(io, { hasPermission }) {
       currentLyrics = processedLines || [];
       currentSelectedLine = null;
       currentLyricsFileName = title || '';
+      const derived = deriveSectionsFromProcessedLines(currentLyrics);
+      currentLyricsSections = derived.sections || [];
+      currentLineToSection = derived.lineToSection || {};
 
       console.log(`Desktop client approved draft: "${title}" (${processedLines?.length || 0} lines)`);
 
       io.emit('lyricsLoad', currentLyrics);
       io.emit('fileNameUpdate', currentLyricsFileName);
+      io.emit('lyricsSectionsUpdate', { sections: currentLyricsSections, lineToSection: currentLineToSection });
       if (rawText) {
         io.emit('setlistLoadSuccess', {
           fileId: null,
@@ -704,6 +731,8 @@ function buildCurrentState(clientInfo) {
     lyrics: currentLyrics,
     lyricsTimestamps: currentLyricsTimestamps,
     selectedLine: currentSelectedLine,
+    lyricsSections: currentLyricsSections,
+    lineToSection: currentLineToSection,
     output1Settings: currentOutput1Settings,
     output2Settings: currentOutput2Settings,
     stageSettings: currentStageSettings,
