@@ -4,14 +4,16 @@ import { useModalContext } from './modal/ModalProvider';
 import { useDarkModeState } from '../hooks/useStoreSelectors';
 
 const SHORTCUTS = [
-  { 
+  {
     category: 'File Operations',
     items: [
       { label: 'Open Lyrics File', combo: 'Ctrl/Cmd + O' },
       { label: 'New Lyrics', combo: 'Ctrl/Cmd + N' },
+      { label: 'Open Setlist Modal', combo: 'Ctrl/Cmd + Shift + S' },
+      { label: 'Open Online Lyrics Search', combo: 'Ctrl/Cmd + Shift + O' },
     ]
   },
-  { 
+  {
     category: 'Search & Navigation',
     items: [
       { label: 'Focus Search Bar', combo: 'Ctrl/Cmd + F' },
@@ -21,7 +23,7 @@ const SHORTCUTS = [
       { label: 'Navigate Next Search Results', combo: 'Shift + ↓' },
     ]
   },
-  { 
+  {
     category: 'Playback Control',
     items: [
       { label: 'Toggle Autoplay', combo: 'Ctrl/Cmd + P' },
@@ -29,7 +31,7 @@ const SHORTCUTS = [
       { label: 'Toggle Display Output', combo: 'Spacebar' },
     ]
   },
-  { 
+  {
     category: 'Lyric Navigation',
     items: [
       { label: 'Navigate to Previous Line', combo: '↑ / Numpad ↑' },
@@ -38,7 +40,7 @@ const SHORTCUTS = [
       { label: 'Jump to Last Line', combo: 'End' },
     ]
   },
-  { 
+  {
     category: 'Canvas Editing',
     items: [
       { label: 'Add Translation Line', combo: 'Ctrl/Cmd + T' },
@@ -88,37 +90,33 @@ function ShortcutsList({ darkMode }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
       {SHORTCUTS.map(({ category, items }) => (
-        <div 
-          key={category} 
-          className={`rounded-xl border p-4 ${
-            darkMode 
-              ? 'bg-gray-800/30 border-gray-700/50' 
-              : 'bg-gray-50/50 border-gray-200'
-          }`}
+        <div
+          key={category}
+          className={`rounded-xl border p-4 ${darkMode
+            ? 'bg-gray-800/30 border-gray-700/50'
+            : 'bg-gray-50/50 border-gray-200'
+            }`}
         >
-          <h3 className={`text-xs font-bold uppercase tracking-wider mb-3 pb-2 border-b ${
-            darkMode 
-              ? 'text-blue-400 border-gray-700' 
-              : 'text-blue-600 border-gray-200'
-          }`}>
+          <h3 className={`text-xs font-bold uppercase tracking-wider mb-3 pb-2 border-b ${darkMode
+            ? 'text-blue-400 border-gray-700'
+            : 'text-blue-600 border-gray-200'
+            }`}>
             {category}
           </h3>
           <div className="space-y-2.5">
             {items.map(({ label, combo }) => (
-              <div 
-                key={combo} 
+              <div
+                key={combo}
                 className="flex items-center justify-between gap-4"
               >
-                <span className={`text-sm ${
-                  darkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}>
+                <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
                   {label}
                 </span>
-                <kbd className={`inline-flex items-center px-2.5 py-1 text-xs font-mono font-semibold rounded-md border shadow-sm whitespace-nowrap ${
-                  darkMode 
-                    ? 'bg-gray-900 text-blue-300 border-gray-600' 
-                    : 'bg-white text-gray-700 border-gray-300'
-                }`}>
+                <kbd className={`inline-flex items-center px-2.5 py-1 text-xs font-mono font-semibold rounded-md border shadow-sm whitespace-nowrap ${darkMode
+                  ? 'bg-gray-900 text-blue-300 border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300'
+                  }`}>
                   {combo}
                 </kbd>
               </div>

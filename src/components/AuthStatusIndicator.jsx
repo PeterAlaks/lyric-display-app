@@ -1,6 +1,6 @@
 // src/components/AuthStatusIndicator.jsx
 import React, { useCallback, useEffect } from 'react';
-import { Shield, ShieldAlert, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Shield, ShieldAlert, ShieldCheck, RefreshCw, Copy } from 'lucide-react';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -101,15 +101,15 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
 
   const getStatusIcon = () => {
     if (authStatus === 'authenticated' && connectionStatus === 'connected') {
-      return <ShieldCheck className="w-5 h-5 text-green-500" />;
+      return <ShieldCheck className="w-4 h-4 text-green-500" />;
     }
     if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') {
-      return <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />;
+      return <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />;
     }
     if (authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error') {
-      return <ShieldAlert className="w-5 h-5 text-red-500" />;
+      return <ShieldAlert className="w-4 h-4 text-red-500" />;
     }
-    return <Shield className="w-5 h-5 text-gray-400" />;
+    return <Shield className="w-4 h-4 text-gray-400" />;
   };
 
   const getStatusText = () => {
@@ -225,15 +225,19 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
         </p>
         <div className="flex items-center gap-3">
           <p
-            className={`text-lg font-semibold tracking-[0.3em] tabular-nums flex-1 ${darkMode ? 'text-white' : 'text-gray-900'
+            className={`text-lg font-semibold tracking-[0.3em] tabular-nums ${darkMode ? 'text-white' : 'text-gray-900'
               }`}
           >
             {joinCode}
           </p>
           <button
             onClick={handleCopyJoinCode}
-            className="px-3 py-1.5 rounded-md text-sm font-medium bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700 transition-all duration-200"
+            className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 border ${darkMode
+              ? 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 border-gray-600/50'
+              : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border-gray-300/50'
+              }`}
           >
+            <Copy className="w-3.5 h-3.5" />
             Copy
           </button>
         </div>
@@ -284,7 +288,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     <Tooltip content="See current socket connection status and mobile controller join code" side="bottom">
       <button
         onClick={showAuthModal}
-        className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${darkMode
+        className={`px-3 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 ${darkMode
           ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
           : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
           }`}

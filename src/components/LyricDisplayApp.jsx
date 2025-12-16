@@ -287,13 +287,15 @@ const LyricDisplayApp = () => {
     searchQuery,
     clearSearch,
     totalMatches,
-    highlightedLineIndex
+    highlightedLineIndex,
+    handleOpenSetlist,
+    handleOpenOnlineLyricsSearch
   });
 
   const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
   const iconButtonClass = (disabled = false) => {
-    const base = 'p-2 rounded-lg font-medium transition-colors';
+    const base = 'p-2.5 rounded-lg font-medium transition-colors';
     if (disabled) {
       return `${base} ${darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`;
     }
@@ -322,22 +324,22 @@ const LyricDisplayApp = () => {
               />
               <div className="flex items-center gap-2">
                 {/* Online Lyrics Search Button */}
-                <Tooltip content="Search and import lyrics from online providers" side="bottom">
+                <Tooltip content={<span>Search and import lyrics from online providers - <strong>Ctrl+Shift+O</strong></span>} side="bottom">
                   <button
                     className={iconButtonClass(false)}
                     onClick={handleOpenOnlineLyricsSearch}
                   >
-                    <Globe className="w-5 h-5" />
+                    <Globe className="w-4 h-4" />
                   </button>
                 </Tooltip>
 
                 {/* Setlist Button */}
-                <Tooltip content="View and manage your song setlist (up to 50 songs)" side="bottom">
+                <Tooltip content={<span>View and manage your song setlist (up to 50 songs) - <strong>Ctrl+Shift+S</strong></span>} side="bottom">
                   <button
                     className={iconButtonClass(false)}
                     onClick={handleOpenSetlist}
                   >
-                    <ListMusic className="w-5 h-5" />
+                    <ListMusic className="w-4 h-4" />
                   </button>
                 </Tooltip>
 
@@ -348,7 +350,7 @@ const LyricDisplayApp = () => {
                     className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
                     onClick={handleSyncOutputs}
                   >
-                    <RefreshCw className="w-5 h-5" />
+                    <RefreshCw className="w-4 h-4" />
                   </button>
                 </Tooltip>
 
@@ -358,7 +360,7 @@ const LyricDisplayApp = () => {
                     className={iconButtonClass(false)}
                     onClick={toggleMute}
                   >
-                    {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                    {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                   </button>
                 </Tooltip>
 
@@ -375,7 +377,7 @@ const LyricDisplayApp = () => {
 
             {/* Load and Create Buttons */}
             <div className="flex gap-3 mb-3">
-              <Tooltip content="Load a .txt or .lrc lyrics file from your computer" side="right">
+              <Tooltip content={<span>Load a .txt or .lrc lyrics file from your computer - <strong>Ctrl+O</strong></span>} side="right">
                 <button
                   className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
                   onClick={openFileDialog}
@@ -384,7 +386,7 @@ const LyricDisplayApp = () => {
                   Load lyrics file (.txt, .lrc)
                 </button>
               </Tooltip>
-              <Tooltip content="Open the song canvas to create new lyrics from scratch" side="left">
+              <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="left">
                 <button
                   className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
                     ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'

@@ -13,7 +13,9 @@ export const useKeyboardShortcuts = ({
   searchQuery,
   clearSearch,
   totalMatches,
-  highlightedLineIndex
+  highlightedLineIndex,
+  handleOpenSetlist,
+  handleOpenOnlineLyricsSearch
 }) => {
   useEffect(() => {
     if (!hasLyrics) return;
@@ -25,6 +27,18 @@ export const useKeyboardShortcuts = ({
         activeElement.tagName === 'TEXTAREA' ||
         activeElement.isContentEditable
       );
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 's' || event.key === 'S')) {
+        event.preventDefault();
+        handleOpenSetlist();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'o' || event.key === 'O')) {
+        event.preventDefault();
+        handleOpenOnlineLyricsSearch();
+        return;
+      }
 
       if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
         event.preventDefault();
@@ -120,6 +134,8 @@ export const useKeyboardShortcuts = ({
     searchQuery,
     clearSearch,
     totalMatches,
-    highlightedLineIndex
+    highlightedLineIndex,
+    handleOpenSetlist,
+    handleOpenOnlineLyricsSearch
   ]);
 };
