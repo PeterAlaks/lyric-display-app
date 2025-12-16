@@ -86,6 +86,21 @@ function isSongSeparator(line) {
 }
 
 /**
+ * Convert a structure tag line into a clean section label.
+ * @param {string} line
+ * @returns {string}
+ */
+function getSectionLabelFromLine(line = '') {
+  const cleaned = String(line)
+    .replace(/^[\s\[\(\{<]+/, '')
+    .replace(/[\]\)\}>]+$/, '')
+    .replace(/\s*:\s*$/, '')
+    .trim();
+
+  return cleaned.replace(/\s+/g, ' ') || 'Section';
+}
+
+/**
  * Check if a line is a structure tag (Verse, Chorus, etc.)
  * @param {string} line
  * @returns {boolean}
@@ -438,6 +453,68 @@ export function processRawTextToLines(rawText = '', options = {}) {
 }
 
 /**
+ * Derive section metadata from processed lyric lines without altering the lines.
+ * @param {Array<string|object>} processedLines
+ * @returns {{ sections: Array<{id: string, label: string, startLine: number, endLine: number|null}>, lineToSection: Record<number, string> }}
+ */
+export function deriveSectionsFromProcessedLines(processedLines = []) {
+  const sections = [];
+  const lineToSection = {};
+
+  let currentSection = null;
+
+  for (let i = 0; i < processedLines.length; i += 1) {
+    const item = processedLines[i];
+    const isTag = typeof item === 'string' && isStructureTag(item);
+
+    if (isTag) {
+      const label = getSectionLabelFromLine(item);
+      let startLine = i + 1;
+
+      while (
+        startLine < processedLines.length &&
+        typeof processedLines[startLine] === 'string' &&
+        isStructureTag(processedLines[startLine])
+      ) {
+        startLine += 1;
+      }
+
+      if (startLine >= processedLines.length) {
+        startLine = i;
+      }
+
+      const id = `section_${sections.length}_${i}`;
+
+      currentSection = {
+        id,
+        label,
+        startLine,
+        endLine: startLine >= 0 ? startLine : null,
+      };
+      sections.push(currentSection);
+
+      if (startLine >= 0) {
+        lineToSection[startLine] = id;
+      }
+      continue;
+    }
+
+    if (currentSection) {
+      currentSection.endLine = i;
+      lineToSection[i] = currentSection.id;
+    }
+  }
+
+  sections.forEach((section) => {
+    if (section.endLine == null || section.endLine < section.startLine) {
+      section.endLine = section.startLine;
+    }
+  });
+
+  return { sections, lineToSection };
+}
+
+/**
  * Parse plain text lyric content into processed lines with translation and normal groupings.
  * Enhanced with intelligent line splitting.
  * @param {string} rawText
@@ -446,6 +523,7 @@ export function processRawTextToLines(rawText = '', options = {}) {
  */
 export function parseTxtContent(rawText = '', options = {}) {
   const processedLines = processRawTextToLines(rawText, options);
+  const { sections, lineToSection } = deriveSectionsFromProcessedLines(processedLines);
 
   const reconstructed = processedLines.map(line => {
     if (typeof line === 'string') return line;
@@ -458,7 +536,7 @@ export function parseTxtContent(rawText = '', options = {}) {
     return '';
   }).join('\n\n');
 
-  return { rawText: reconstructed, processedLines };
+  return { rawText: reconstructed, processedLines, sections, lineToSection };
 }
 
 /**
@@ -549,7 +627,8 @@ export function parseLrcContent(rawText = '', options = {}) {
   }
 
   const visibleRawText = splitLines.join('\n');
-  return { rawText: visibleRawText, processedLines: grouped, timestamps: groupedTimestamps };
+  const { sections, lineToSection } = deriveSectionsFromProcessedLines(grouped);
+  return { rawText: visibleRawText, processedLines: grouped, timestamps: groupedTimestamps, sections, lineToSection };
 }
 
 /**

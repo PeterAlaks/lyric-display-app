@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import useLyricsStore from '../context/LyricsStore';
 import { logDebug, logError, logWarn } from '../utils/logger';
 import { detectArtistFromFilename } from '../utils/artistDetection';
+import { deriveSectionsFromProcessedLines } from '../../shared/lyricsParsing.js';
 
 const useSocketEvents = (role) => {
   const {
@@ -13,11 +14,27 @@ const useSocketEvents = (role) => {
     setIsDesktopApp,
     setLyricsFileName,
     setRawLyricsContent,
+    setLyricsSections,
+    setLineToSection,
   } = useLyricsStore();
 
   const setlistNameRef = useRef(new Map());
 
   const setupApplicationEventHandlers = useCallback((socket, clientType, isDesktopApp) => {
+    const applySections = (sections, lineToSection, fallbackLyrics) => {
+      let targetSections = Array.isArray(sections) ? sections : null;
+      let targetLineToSection = (lineToSection && typeof lineToSection === 'object') ? lineToSection : null;
+
+      if (!targetSections && Array.isArray(fallbackLyrics)) {
+        const derived = deriveSectionsFromProcessedLines(fallbackLyrics);
+        targetSections = derived.sections;
+        targetLineToSection = derived.lineToSection;
+      }
+
+      setLyricsSections(targetSections || []);
+      setLineToSection(targetLineToSection || {});
+    };
+
     socket.on('currentState', (state) => {
       logDebug('Received enhanced current state:', state);
       if (window.dispatchEvent) {
@@ -28,13 +45,9 @@ const useSocketEvents = (role) => {
         setLyrics(state.lyrics);
 
         if (Array.isArray(state.lyricsTimestamps)) {
-          const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
-          const hasCurrentTimestamps = Array.isArray(currentTimestamps) && currentTimestamps.length > 0;
-          const hasIncomingTimestamps = state.lyricsTimestamps.length > 0;
-
-          if (hasIncomingTimestamps || !hasCurrentTimestamps) {
-            setLyricsTimestamps(state.lyricsTimestamps);
-          }
+          setLyricsTimestamps(state.lyricsTimestamps);
+        } else {
+          setLyricsTimestamps([]);
         }
         if (state.lyricsFileName) {
           setLyricsFileName(state.lyricsFileName);
@@ -71,6 +84,8 @@ const useSocketEvents = (role) => {
         useLyricsStore.getState().setStageEnabled(state.stageEnabled);
       }
 
+      applySections(state.lyricsSections || state.sections, state.lineToSection, state.lyrics);
+
       if (role === 'stage') {
         if (state.stageTimerState) {
           window.dispatchEvent(new CustomEvent('stage-timer-update', {
@@ -90,15 +105,26 @@ const useSocketEvents = (role) => {
       selectLine(index);
     });
 
-    socket.on('lyricsLoad', (lyrics) => {
+    socket.on('lyricsLoad', (payload) => {
+      const lyrics = Array.isArray(payload) ? payload : payload?.lyrics;
+      const sections = Array.isArray(payload?.sections) ? payload.sections : null;
+      const lineToSection = payload?.lineToSection;
+
       logDebug('Received lyrics load:', lyrics?.length, 'lines');
       setLyrics(lyrics);
+      setLyricsTimestamps([]);
       selectLine(null);
+      applySections(sections, lineToSection, lyrics);
     });
 
     socket.on('lyricsTimestampsUpdate', (timestamps) => {
       logDebug('Received lyrics timestamps update:', timestamps?.length, 'timestamps');
       setLyricsTimestamps(timestamps || []);
+    });
+
+    socket.on('lyricsSectionsUpdate', ({ sections, lineToSection }) => {
+      logDebug('Received lyrics sections update');
+      applySections(sections, lineToSection);
     });
 
     socket.on('outputToggle', (state) => {
@@ -199,6 +225,14 @@ const useSocketEvents = (role) => {
       selectLine(null);
       if (rawContent) {
         setRawLyricsContent(rawContent);
+      }
+      if (savedMetadata?.sections) {
+        setLyricsSections(savedMetadata.sections);
+        setLineToSection(savedMetadata.lineToSection || {});
+      } else if (linesCount && useLyricsStore.getState().lyrics?.length) {
+        const derived = deriveSectionsFromProcessedLines(useLyricsStore.getState().lyrics);
+        setLyricsSections(derived.sections || []);
+        setLineToSection(derived.lineToSection || {});
       }
 
       let computedOrigin = 'Setlist (.txt)';
@@ -344,15 +378,12 @@ const useSocketEvents = (role) => {
         }
 
         if (Array.isArray(state.lyricsTimestamps)) {
-          const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
-          const hasCurrentTimestamps = Array.isArray(currentTimestamps) && currentTimestamps.length > 0;
-          const hasIncomingTimestamps = state.lyricsTimestamps.length > 0;
-
-          if (hasIncomingTimestamps || !hasCurrentTimestamps) {
-            setLyricsTimestamps(state.lyricsTimestamps);
-          }
+          setLyricsTimestamps(state.lyricsTimestamps);
+        } else {
+          setLyricsTimestamps([]);
         }
       }
+      applySections(state.lyricsSections || state.sections, state.lineToSection, state.lyrics);
 
       if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
         const currentLyrics = useLyricsStore.getState().lyrics;
@@ -385,7 +416,7 @@ const useSocketEvents = (role) => {
         useLyricsStore.getState().setStageEnabled(state.stageEnabled);
       }
     });
-  }, [role, setLyrics, setLyricsTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
+  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,

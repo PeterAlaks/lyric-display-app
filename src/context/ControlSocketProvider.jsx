@@ -350,6 +350,7 @@ export const ControlSocketProvider = ({ children }) => {
     const emitLyricsDraftReject = useCallback(createEmitFunction('lyricsDraftReject'), [createEmitFunction]);
     const emitStageTimerUpdate = useCallback(createEmitFunction('stageTimerUpdate'), [createEmitFunction]);
     const emitStageMessagesUpdate = useCallback(createEmitFunction('stageMessagesUpdate'), [createEmitFunction]);
+    const emitSplitNormalGroup = useCallback(createEmitFunction('splitNormalGroup'), [createEmitFunction]);
     const emitAutoplayStateUpdate = useCallback(createEmitFunction('autoplayStateUpdate'), [createEmitFunction]);
 
     const forceReconnect = useCallback(() => {
@@ -442,6 +443,7 @@ export const ControlSocketProvider = ({ children }) => {
         emitLyricsDraftReject,
         emitStageTimerUpdate,
         emitStageMessagesUpdate,
+        emitSplitNormalGroup,
         emitAutoplayStateUpdate,
         connectionStatus,
         authStatus,

@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { RefreshCw, FolderOpen, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -39,7 +40,7 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, selectedLine, lyricsTimestamps, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setSongMetadata, setLyricsTimestamps } = useLyricsState();
+  const { lyrics, lyricsFileName, selectedLine, lyricsTimestamps, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setSongMetadata, setLyricsTimestamps } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
@@ -85,6 +86,17 @@ const LyricDisplayApp = () => {
   const { isOpen: supportDevModalOpen, openModal: openSupportDevModal, closeModal: closeSupportDevModal, trackAction } = useSupportDevModal();
 
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch: baseHandleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
+
+  React.useEffect(() => {
+    const handleResetScroll = () => {
+      if (lyricsContainerRef.current) {
+        lyricsContainerRef.current.scrollTop = 0;
+      }
+    };
+
+    window.addEventListener('reset-lyrics-scroll', handleResetScroll);
+    return () => window.removeEventListener('reset-lyrics-scroll', handleResetScroll);
+  }, [lyricsContainerRef]);
 
   const handleSearch = React.useCallback((query) => {
     baseHandleSearch(query);
@@ -145,6 +157,8 @@ const LyricDisplayApp = () => {
 
   const { processLoadedLyrics, handleImportFromLibrary: baseHandleImportFromLibrary } = useLyricsLoader({
     setLyrics,
+    setLyricsSections,
+    setLineToSection,
     setRawLyricsContent,
     setLyricsTimestamps,
     selectLine,
@@ -379,7 +393,7 @@ const LyricDisplayApp = () => {
                     }`}
                   onClick={handleCreateNewSong}
                 >
-                  <FileText className="w-5 h-5" />
+                  <FilePlusCorner className="w-5 h-5" />
                 </button>
               </Tooltip>
             </div>

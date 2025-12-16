@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
-import { Type, Paintbrush, TextCursorInput, TextQuote, Square, AlignVerticalSpaceAround, ScreenShare, ListMusic, ChevronRight, Languages, Wand2, HardDriveDownload, Power } from 'lucide-react';
+import { Type, Paintbrush, TextCursorInput, TextQuote, Square, AlignVerticalSpaceAround, ScreenShare, ListMusic, ChevronRight, Languages, Wand2, Palette, Power } from 'lucide-react';
 import FontSelect from './FontSelect';
 import { blurInputOnEnter, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
 import useToast from '../hooks/useToast';
@@ -254,7 +254,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                 : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <HardDriveDownload className="w-4 h-4" />
+              <Palette className="w-4 h-4" />
             </button>
           </Tooltip>
 
