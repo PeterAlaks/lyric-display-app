@@ -142,11 +142,11 @@ const MobileLayout = () => {
               <img
                 src="/LyricDisplay-icon.png"
                 alt="LyricDisplay"
-                className="h-9 w-9"
+                className="h-8 w-8"
               />
               <div>
                 <h1
-                  className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                  className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
                 >
                   LyricDisplay
                 </h1>
@@ -157,14 +157,14 @@ const MobileLayout = () => {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Setlist Button */}
               <button
                 onClick={handleOpenSetlist}
                 className={iconButtonClass(false)}
                 title="Open setlist"
               >
-                <ListMusic className="w-5 h-5" />
+                <ListMusic className="w-4 h-4" />
               </button>
               {/* Sync Outputs Button */}
               <button
@@ -173,14 +173,14 @@ const MobileLayout = () => {
                 className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
                 title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync outputs"}
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className="w-4 h-4" />
               </button>
               <button
                 onClick={toggleMute}
                 className={iconButtonClass(false)}
                 title={muted ? "Unmute toast sounds" : "Mute toast sounds"}
               >
-                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
               <button
                 onClick={() => {
@@ -195,7 +195,7 @@ const MobileLayout = () => {
                 className={iconButtonClass(false)}
                 title="Help"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
