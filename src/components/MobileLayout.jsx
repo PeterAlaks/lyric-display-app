@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListMusic, RefreshCw, FileText, Play, Square, ChevronDown, Sparkles } from 'lucide-react';
+import { ListMusic, RefreshCw, FileText, Play, Square, ChevronDown, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { useLyricsState, useOutputState, useDarkModeState, useSetlistState, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
@@ -32,7 +32,7 @@ const MobileLayout = () => {
     containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch, } = useSearch(lyrics);
 
   const hasLyrics = lyrics && lyrics.length > 0;
-  const { showToast } = useToast();
+  const { showToast, muted, toggleMute } = useToast();
   const { showModal } = useModal();
 
   const navigate = useNavigate();
@@ -174,6 +174,13 @@ const MobileLayout = () => {
                 title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync outputs"}
               >
                 <RefreshCw className="w-5 h-5" />
+              </button>
+              <button
+                onClick={toggleMute}
+                className={iconButtonClass(false)}
+                title={muted ? "Unmute toast sounds" : "Mute toast sounds"}
+              >
+                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => {
@@ -403,7 +410,7 @@ const MobileLayout = () => {
 
         {/* Setlist Modal */}
         <SetlistModal />
-      </div>
+      </div >
     </>
   );
 };

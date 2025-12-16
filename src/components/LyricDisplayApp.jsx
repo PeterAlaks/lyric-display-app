@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw, FolderOpen, FileText, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { RefreshCw, FolderOpen, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
@@ -105,7 +106,7 @@ const LyricDisplayApp = () => {
   }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
-  const { showToast } = useToast();
+  const { showToast, muted, toggleMute } = useToast();
   const { showModal } = useModal();
 
   const { useIconOnlyButtons } = useResponsiveWidth(headerContainerRef, hasLyrics);
@@ -349,6 +350,16 @@ const LyricDisplayApp = () => {
                     onClick={handleSyncOutputs}
                   >
                     <RefreshCw className="w-5 h-5" />
+                  </button>
+                </Tooltip>
+
+                {/* Mute Toast Sounds Button */}
+                <Tooltip content={muted ? "Unmute toast sounds" : "Mute toast sounds"} side="bottom">
+                  <button
+                    className={iconButtonClass(false)}
+                    onClick={toggleMute}
+                  >
+                    {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                   </button>
                 </Tooltip>
 

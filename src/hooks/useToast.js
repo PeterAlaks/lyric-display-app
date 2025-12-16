@@ -7,7 +7,7 @@ export default function useToast() {
   if (!ctx) {
     return { showToast: () => { }, removeToast: () => { } };
   }
-  const { show, remove } = ctx;
+  const { show, remove, muted, toggleMute } = ctx;
   const showToast = (opts) => show({ playTone, ...opts });
-  return { showToast, removeToast: remove };
+  return { showToast, removeToast: remove, muted, toggleMute };
 }
