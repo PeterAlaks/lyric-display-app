@@ -443,10 +443,10 @@ export function ModalProvider({ children, isDark = false }) {
 
                       {/* Render standard description/body modals */}
                       {!modal.component && modal.description && (
-                        <p className="whitespace-pre-wrap">{modal.description}</p>
+                        <p className="whitespace-pre-wrap font-semibold">{modal.description}</p>
                       )}
                       {!modal.component && modal.body && (
-                        <div className="mt-3 text-sm text-gray-500 dark:text-gray-300">
+                        <div className={cn("text-sm text-gray-500 dark:text-gray-300", modal.description && "mt-3")}>
                           {typeof modal.body === 'function'
                             ? modal.body({ close: (value) => closeModal(modal.id, value), isDark })
                             : modal.body}
@@ -471,6 +471,11 @@ export function ModalProvider({ children, isDark = false }) {
                           ? 'dark:text-red-200 dark:hover:text-red-100'
                           : 'bg-transparent border border-gray-500 text-white hover:text-white hover:border-gray-400 hover:bg-gray-800/40'
                         : '';
+                      const destructiveOverride = buttonVariant === 'destructive'
+                        ? isDark
+                          ? '!bg-red-600 hover:!bg-red-700'
+                          : '!bg-red-500 hover:!bg-red-600'
+                        : '';
                       return (
                         <Button
                           key={`${modal.id}-action-${idx}`}
@@ -494,7 +499,7 @@ export function ModalProvider({ children, isDark = false }) {
                               closeModal(modal.id, actionResult, { actionIndex: idx });
                             }
                           }}
-                          className={cn('min-w-[96px] justify-center', darkTextClass, action.className)}
+                          className={cn('min-w-[96px] justify-center', darkTextClass, destructiveOverride, action.className)}
                           autoFocus={action.autoFocus ?? (!anyAutoFocus && idx === 0)}
                           disabled={action.disabled}
                         >

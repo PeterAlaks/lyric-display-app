@@ -1,6 +1,3 @@
-// utils/lyricsFormat.js
-// Enhanced utilities for formatting and reconstructing lyrics text
-
 import { preprocessText, splitLongLine } from '../../shared/lineSplitting.js';
 import { NORMAL_GROUP_CONFIG, STRUCTURE_TAGS_CONFIG, STRUCTURE_TAG_PATTERNS, BRACKET_PAIRS } from '../../shared/lyricsParsing.js';
 
@@ -15,11 +12,34 @@ const ENGLISH_HINT_REGEXES = ENGLISH_HINT_WORDS.map((word) => new RegExp(`\\b${w
 const normalizePunctuation = (line) => {
   if (!line) return '';
 
-  return line
+  const standardTimestampRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
+  const enhancedTimestampRegex = /<(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?>/g;
+  const timestamps = [];
+  let match;
+  let workingLine = line;
+
+  while ((match = standardTimestampRegex.exec(line)) !== null) {
+    timestamps.push(match[0]);
+  }
+
+  while ((match = enhancedTimestampRegex.exec(line)) !== null) {
+    timestamps.push(match[0]);
+  }
+
+  workingLine = workingLine.replace(standardTimestampRegex, '<<<TIMESTAMP>>>');
+  workingLine = workingLine.replace(enhancedTimestampRegex, '<<<TIMESTAMP>>>');
+
+  workingLine = workingLine
     .replace(/^[.,\-]+/, '')
     .replace(/^\.+/, '')
     .replace(/^[\u2024\u2025\u2026]+/, '')
     .replace(/[.\u2024\u2025\u2026]/g, '');
+
+  timestamps.forEach((timestamp) => {
+    workingLine = workingLine.replace('<<<TIMESTAMP>>>', timestamp);
+  });
+
+  return workingLine;
 };
 
 const capitalizeFirstCharacter = (line) => {
@@ -175,6 +195,42 @@ const couldFormNormalGroup = (line1, line2) => {
 };
 
 /**
+ * @param {string} line - Line to process
+ * @returns {string} - Line with timestamps at the beginning with proper spacing
+ */
+const moveTimestampsToStart = (line) => {
+  if (!line || typeof line !== 'string') return line;
+
+  const standardTimestampRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
+  const enhancedTimestampRegex = /<(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?>/g;
+
+  const standardTimestamps = [];
+  const enhancedTimestamps = [];
+  let match;
+
+  while ((match = standardTimestampRegex.exec(line)) !== null) {
+    standardTimestamps.push(match[0]);
+  }
+
+  while ((match = enhancedTimestampRegex.exec(line)) !== null) {
+    enhancedTimestamps.push(match[0]);
+  }
+
+  if (standardTimestamps.length === 0 && enhancedTimestamps.length === 0) {
+    return line;
+  }
+
+  let lineWithoutTimestamps = line.replace(standardTimestampRegex, '').replace(enhancedTimestampRegex, '').trim();
+  const allTimestamps = standardTimestamps.join('') + enhancedTimestamps.join('');
+
+  if (lineWithoutTimestamps) {
+    return allTimestamps + ' ' + lineWithoutTimestamps;
+  }
+
+  return allTimestamps;
+};
+
+/**
  * Enhanced formatLyrics with optional intelligent line splitting
  * @param {string} text - Raw lyrics text
  * @param {object} options - { enableSplitting: boolean, splitConfig: object }
@@ -209,7 +265,8 @@ export const formatLyrics = (text, options = {}) => {
     const trimmedInput = rawLine.trim();
     if (!trimmedInput) continue;
 
-    const punctuationNormalized = normalizePunctuation(trimmedInput);
+    const timestampNormalized = moveTimestampsToStart(trimmedInput);
+    const punctuationNormalized = normalizePunctuation(timestampNormalized);
 
     const nextLine = lines[i + 1];
     const nextIsBracketed = nextLine && isBracketedTranslationLine(nextLine.trim());

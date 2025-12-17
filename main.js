@@ -105,12 +105,12 @@ app.whenReady().then(async () => {
           {
             variant: 'warning',
             title: 'Confirm Close',
-            description: 'Are you sure you want to close LyricDisplay? This will discard any ongoing lyric operations or unsaved changes.',
             size: 'sm',
             actions: [
               { label: 'Cancel', value: 0, variant: 'outline', autoFocus: true },
               { label: 'Close', value: 1, variant: 'destructive' }
             ],
+            body: 'Are you sure you want to close LyricDisplay? This will discard any ongoing lyric operations or unsaved changes.',
             dismissible: true,
             allowBackdropClose: false
           },

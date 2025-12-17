@@ -1,12 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen, Undo, Redo } from 'lucide-react';
+import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen, Undo, Redo, ChevronRight } from 'lucide-react';
 import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useDarkModeSync from '../hooks/useDarkModeSync';
 import useEditorClipboard from '../hooks/NewSongCanvas/useEditorClipboard';
 import useEditorHistory from '../hooks/NewSongCanvas/useEditorHistory';
+import { useKeyboardShortcuts } from '../hooks/NewSongCanvas/useKeyboardShortcuts';
+import useLrcEligibility from '../hooks/NewSongCanvas/useLrcEligibility';
+import useFileSave from '../hooks/NewSongCanvas/useFileSave.js';
+import useTimestampOperations from '../hooks/NewSongCanvas/useTimestampOperations';
+import useLineOperations from '../hooks/NewSongCanvas/useLineOperations';
+import useTitlePrefill from '../hooks/NewSongCanvas/useTitlePrefill';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from '@/components/ui/tooltip';
@@ -14,13 +20,25 @@ import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
 import { processRawTextToLines } from '../utils/parseLyrics';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
+import useContextSubmenus from '../hooks/NewSongCanvas/useContextSubmenus';
+import useLineMeasurements from '../hooks/NewSongCanvas/useLineMeasurements';
+import useContextMenuPosition from '../hooks/NewSongCanvas/useContextMenuPosition';
 
-const BRACKET_PAIRS = {
-  '(': ')',
-  '{': '}',
-  '[': ']',
-  '<': '>'
-};
+const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
+const METADATA_OPTIONS = [
+  { key: 'ti', label: 'Title [ti:]' },
+  { key: 'ar', label: 'Artist [ar:]' },
+  { key: 'al', label: 'Album [al:]' },
+  { key: 'au', label: 'Author [au:]' },
+  { key: 'lr', label: 'Lyricist [lr:]' },
+  { key: 'length', label: 'Length [length:]' },
+  { key: 'by', label: 'LRC Author [by:]' },
+  { key: 'offset', label: 'Offset [offset:]' },
+  { key: 're', label: 'Player/Editor [re:]' },
+  { key: 'tool', label: 'Tool [tool:]' },
+  { key: 've', label: 'Version [ve:]' },
+  { key: '#', label: 'Comment [#]' },
+];
 
 const NewSongCanvas = () => {
   const navigate = useNavigate();
@@ -40,15 +58,16 @@ const NewSongCanvas = () => {
   const textareaRef = useRef(null);
   const baseContentRef = useRef('');
   const baseTitleRef = useRef('');
+  const loadSignatureRef = useRef(null);
 
   const { content, setContent, undo, redo, canUndo, canRedo } = useEditorHistory('');
   const [fileName, setFileName] = useState('');
   const [title, setTitle] = useState('');
   const editorContainerRef = useRef(null);
-  const measurementContainerRef = useRef(null);
   const measurementRefs = useRef([]);
-  const toolbarRef = useRef(null);
   const contextMenuRef = useRef(null);
+  const timestampSubmenuRef = useRef(null);
+  const metadataSubmenuRef = useRef(null);
   const touchLongPressTimeoutRef = useRef(null);
   const touchStartPositionRef = useRef(null);
   const touchMovedRef = useRef(false);
@@ -56,18 +75,50 @@ const NewSongCanvas = () => {
   const lastKnownScrollRef = useRef(0);
 
   const [scrollTop, setScrollTop] = useState(0);
-  const [lineMetrics, setLineMetrics] = useState([]);
   const [editorPadding, setEditorPadding] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [selectedLineIndex, setSelectedLineIndex] = useState(null);
-  const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0, lineIndex: null, mode: 'line' });
-  const [toolbarDimensions, setToolbarDimensions] = useState({ width: 0, height: 0 });
+  const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0, lineIndex: null, mode: 'line', cursorOffset: null });
   const [contextMenuDimensions, setContextMenuDimensions] = useState({ width: 0, height: 0 });
   const [pendingFocus, setPendingFocus] = useState(null);
 
+  const lines = useMemo(() => content.split('\n'), [content]);
+
+  const { contextMenuPosition, menuWidth } = useContextMenuPosition({
+    contextMenuState,
+    contextMenuDimensions,
+    containerSize
+  });
+
+  const {
+    activeSubmenu,
+    setActiveSubmenu,
+    submenuOffsets,
+    submenuHorizontal,
+    submenuMaxHeight,
+    handleRootItemEnter,
+    handleContextMenuEnter,
+    handleContextMenuLeave,
+    handleSubmenuTriggerEnter,
+    handleSubmenuTriggerLeave,
+    handleSubmenuPanelEnter,
+    handleSubmenuPanelLeave,
+    cancelSubmenuClose
+  } = useContextSubmenus({
+    containerSize,
+    contextMenuPosition,
+    menuWidth,
+    editorContainerRef,
+    timestampSubmenuRef,
+    metadataSubmenuRef,
+    contextMenuVisible: contextMenuState.visible
+  });
+
   const closeContextMenu = useCallback(() => {
-    setContextMenuState({ visible: false, x: 0, y: 0, lineIndex: null, mode: 'line' });
-  }, []);
+    setActiveSubmenu(null);
+    setContextMenuState({ visible: false, x: 0, y: 0, lineIndex: null, mode: 'line', cursorOffset: null });
+    cancelSubmenuClose();
+  }, [cancelSubmenuClose, setActiveSubmenu]);
 
   const clearTouchLongPress = useCallback(() => {
     if (touchLongPressTimeoutRef.current !== null) {
@@ -86,6 +137,16 @@ const NewSongCanvas = () => {
       lastKnownScrollRef.current = currentScroll;
     }
     updater();
+  }, []);
+
+  const getLineStartOffset = useCallback((segments, targetIndex) => {
+    if (!Array.isArray(segments) || targetIndex <= 0) return 0;
+    let offset = 0;
+    const cappedIndex = Math.max(0, Math.min(targetIndex, segments.length - 1));
+    for (let i = 0; i < cappedIndex; i += 1) {
+      offset += (segments[i]?.length ?? 0) + 1;
+    }
+    return offset;
   }, []);
 
   useDarkModeSync(darkMode, setDarkMode);
@@ -120,24 +181,22 @@ const NewSongCanvas = () => {
 
   useEffect(() => {
     if (!editMode) return;
-    if (rawLyricsContent) {
-      setContent(rawLyricsContent);
-    } else if (lyrics && lyrics.length > 0) {
-      const text = reconstructEditableText(lyrics);
-      setContent(text);
-    } else {
-      setContent('');
-    }
-    setFileName(lyricsFileName || '');
-    setTitle(lyricsFileName || '');
 
     const nextContent = rawLyricsContent
       ? rawLyricsContent
       : (lyrics && lyrics.length > 0)
         ? reconstructEditableText(lyrics)
         : '';
-    baseContentRef.current = nextContent || '';
-    baseTitleRef.current = (lyricsFileName || '') || '';
+    const nextTitle = lyricsFileName || '';
+    const loadSignature = `${nextTitle}::${nextContent}`;
+    if (loadSignatureRef.current !== loadSignature) {
+      setContent(nextContent);
+      setFileName(nextTitle);
+      setTitle(nextTitle);
+      baseContentRef.current = nextContent || '';
+      baseTitleRef.current = nextTitle || '';
+      loadSignatureRef.current = loadSignature;
+    }
   }, [editMode, lyrics, lyricsFileName, rawLyricsContent]);
 
   useEffect(() => {
@@ -147,6 +206,7 @@ const NewSongCanvas = () => {
     setTitle('');
     baseContentRef.current = '';
     baseTitleRef.current = '';
+    loadSignatureRef.current = null;
   }, [editMode]);
 
   React.useEffect(() => {
@@ -190,14 +250,81 @@ const NewSongCanvas = () => {
 
   const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef, showToast });
 
-  const lines = useMemo(() => content.split('\n'), [content]);
+  // Use LRC eligibility hook
+  const lrcEligibility = useLrcEligibility(content);
 
-  const isLineWrappedWithTranslation = useCallback((rawLine) => {
-    const trimmed = (rawLine ?? '').trim();
-    if (trimmed.length < 2) return false;
-    const ending = BRACKET_PAIRS[trimmed[0]];
-    return Boolean(ending && trimmed.endsWith(ending));
+  // Define focusLine before using it in hooks
+  const focusLine = useCallback((lineIndex) => {
+    if (lineIndex === null || lineIndex === undefined) return;
+    setPendingFocus({ type: 'line', lineIndex });
   }, []);
+
+  // Use file save hook
+  const { handleSave, handleSaveAndLoad, baseContentRef: fileSaveBaseContentRef, baseTitleRef: fileSaveBaseTitleRef } = useFileSave({
+    content,
+    title,
+    fileName,
+    setFileName,
+    setTitle,
+    setRawLyricsContent,
+    handleFileUpload,
+    showModal,
+    showToast,
+    lrcEligibility
+  });
+
+  // Use timestamp operations hook
+  const { insertStandardTimestampAtLine, insertEnhancedTimestampAtCursor, insertMetadataTagAtCursor } = useTimestampOperations({
+    textareaRef,
+    setContent,
+    closeContextMenu,
+    setSelectedLineIndex,
+    getLineStartOffset,
+    contextMenuState,
+    lastKnownScrollRef
+  });
+
+  // Use line operations hook
+  const { handleAddTranslation, handleCopyLine, handleDuplicateLine, isLineWrappedWithTranslation } = useLineOperations({
+    lines,
+    textareaRef,
+    setContent,
+    closeContextMenu,
+    focusLine,
+    preserveTextareaScroll,
+    showToast,
+    lastKnownScrollRef,
+    setSelectedLineIndex
+  });
+
+  const selectedLineText = selectedLineIndex !== null ? (lines[selectedLineIndex] ?? '') : '';
+  const selectedLineHasContent = selectedLineText.trim().length > 0;
+  const selectedLineIsWrapped = selectedLineHasContent && isLineWrappedWithTranslation(selectedLineText);
+
+  const {
+    measurementContainerRef,
+    toolbarRef,
+    lineMetrics,
+    toolbarTop,
+    toolbarLeft,
+    highlightVisible,
+    highlightTop,
+    highlightHeight,
+    toolbarVisible,
+    canAddTranslationOnSelectedLine,
+    selectedMetric
+  } = useLineMeasurements({
+    content,
+    containerSize,
+    editorPadding,
+    lines,
+    measurementRefs,
+    selectedLineIndex,
+    selectedLineHasContent,
+    selectedLineIsWrapped,
+    scrollTop,
+    contextMenuVisible: contextMenuState.visible
+  });
 
   useEffect(() => {
     measurementRefs.current = measurementRefs.current.slice(0, lines.length);
@@ -272,54 +399,51 @@ const NewSongCanvas = () => {
   }, []);
 
   useLayoutEffect(() => {
-    if (!measurementContainerRef.current) {
-      setLineMetrics([]);
-      return;
-    }
-    const metrics = measurementRefs.current.map((node) => {
-      if (!node) return null;
-      const widthNode = node.firstElementChild || node;
-      const width = Math.max(
-        widthNode ? widthNode.scrollWidth : 0,
-        widthNode ? widthNode.offsetWidth : 0
-      );
-      return {
-        top: node.offsetTop,
-        height: node.offsetHeight,
-        width,
-      };
-    });
-    setLineMetrics(metrics);
-  }, [content, containerSize]);
-
-  useLayoutEffect(() => {
-    if (selectedLineIndex === null || !toolbarRef.current) return;
-    const rect = toolbarRef.current.getBoundingClientRect();
-    setToolbarDimensions({ width: rect.width, height: rect.height });
-  }, [selectedLineIndex]);
-
-  useLayoutEffect(() => {
     if (!contextMenuState.visible || !contextMenuRef.current) return;
     const rect = contextMenuRef.current.getBoundingClientRect();
     setContextMenuDimensions({ width: rect.width, height: rect.height });
   }, [contextMenuState.visible]);
 
+
+  const handleBack = useCallback(() => {
+    const hasChanges = (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
+    if (hasChanges) {
+      showToast({
+        title: 'Unsaved changes',
+        message: 'You have unsaved changes. Discard them?',
+        variant: 'warn',
+        duration: 0,
+        actions: [
+          { label: 'Yes, discard', onClick: () => navigate('/') },
+          { label: 'Cancel', onClick: () => { } },
+        ],
+      });
+      return;
+    }
+    navigate('/');
+  }, [content, title, showToast, navigate]);
+
   useEffect(() => {
     return () => {
       clearTouchLongPress();
+      cancelSubmenuClose();
     };
-  }, [clearTouchLongPress]);
+  }, [clearTouchLongPress, cancelSubmenuClose]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        setSelectedLineIndex(null);
-        closeContextMenu();
+        if (contextMenuState.visible || selectedLineIndex !== null) {
+          setSelectedLineIndex(null);
+          closeContextMenu();
+        } else {
+          handleBack();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeContextMenu]);
+  }, [closeContextMenu, contextMenuState.visible, selectedLineIndex, handleBack]);
 
   useEffect(() => {
     const handleMouseDown = (event) => {
@@ -392,150 +516,6 @@ const NewSongCanvas = () => {
       window.clearTimeout(timeout);
     };
   }, [pendingFocus, lineOffsets, lines]);
-
-  const handleBack = () => {
-    const hasChanges = (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
-    if (hasChanges) {
-      showToast({
-        title: 'Unsaved changes',
-        message: 'You have unsaved changes. Discard them?',
-        variant: 'warn',
-        duration: 0,
-        actions: [
-          { label: 'Yes, discard', onClick: () => navigate('/') },
-          { label: 'Cancel', onClick: () => { } },
-        ],
-      });
-      return;
-    }
-    navigate('/');
-  };
-
-  const handleSave = async () => {
-    if (!content.trim() || !title.trim()) {
-      showModal({
-        title: 'Missing song details',
-        description: 'Enter both a song title and lyrics before saving.',
-        variant: 'warn',
-        dismissLabel: 'Will do',
-      });
-      return;
-    }
-
-    if (window.electronAPI && window.electronAPI.showSaveDialog) {
-      try {
-        const result = await window.electronAPI.showSaveDialog({
-          defaultPath: (title && `${title}.txt`) || fileName || 'untitled.txt',
-          filters: [{ name: 'Text Files', extensions: ['txt'] }]
-        });
-
-        if (!result.canceled) {
-          await window.electronAPI.writeFile(result.filePath, content);
-          const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
-          setFileName(baseName);
-          setTitle(baseName);
-          baseContentRef.current = content;
-          baseTitleRef.current = baseName;
-        }
-      } catch (err) {
-        console.error('Failed to save file:', err);
-        showModal({
-          title: 'Save failed',
-          description: 'We could not save the lyric file. Please try again.',
-          variant: 'error',
-          dismissLabel: 'Close',
-        });
-      }
-    } else {
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = (title && `${title}.txt`) || fileName || 'lyrics.txt';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      baseContentRef.current = content;
-      baseTitleRef.current = title || fileName || 'lyrics';
-    }
-  };
-
-  const handleSaveAndLoad = async () => {
-    if (!content.trim() || !title.trim()) {
-      showModal({
-        title: 'Missing song details',
-        description: 'Enter both a song title and lyrics before saving and loading.',
-        variant: 'warn',
-        dismissLabel: 'Got it',
-      });
-      return;
-    }
-
-    if (window.electronAPI && window.electronAPI.showSaveDialog) {
-      try {
-        const result = await window.electronAPI.showSaveDialog({
-          defaultPath: (title && `${title}.txt`) || fileName || 'untitled.txt',
-          filters: [{ name: 'Text Files', extensions: ['txt'] }]
-        });
-
-        if (!result.canceled) {
-          await window.electronAPI.writeFile(result.filePath, content);
-          const baseName = result.filePath.split(/[\\/]/).pop().replace(/\.txt$/i, '');
-
-          const blob = new Blob([content], { type: 'text/plain' });
-          const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
-
-          setRawLyricsContent(content);
-          await handleFileUpload(file, { rawText: content });
-          try {
-            if (window.electronAPI?.addRecentFile) {
-              await window.electronAPI.addRecentFile(result.filePath);
-            }
-          } catch { }
-
-          navigate('/');
-        }
-      } catch (err) {
-        console.error('Failed to save and load file:', err);
-        showModal({
-          title: 'Save and load failed',
-          description: 'We could not save and reload the lyrics. Please try again.',
-          variant: 'error',
-          dismissLabel: 'Close',
-        });
-      }
-    } else {
-      try {
-        const baseName = title || fileName || 'lyrics';
-        const blob = new Blob([content], { type: 'text/plain' });
-        const file = new File([blob], `${baseName}.txt`, { type: 'text/plain' });
-
-        setRawLyricsContent(content);
-        await handleFileUpload(file, { rawText: content });
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${baseName}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        baseContentRef.current = content;
-        navigate('/');
-      } catch (err) {
-        console.error('Failed to process lyrics:', err);
-        showModal({
-          title: 'Processing error',
-          description: 'We could not process the lyrics. Please try again.',
-          variant: 'error',
-          dismissLabel: 'Close',
-        });
-      }
-    }
-  };
 
   const handleLoadDraft = useCallback(async () => {
     if (!content.trim() || !title.trim()) {
@@ -645,87 +625,10 @@ const NewSongCanvas = () => {
     return null;
   }, [lineMetrics]);
 
-  const focusLine = useCallback((lineIndex) => {
-    if (lineIndex === null || lineIndex === undefined) return;
-    setPendingFocus({ type: 'line', lineIndex });
-  }, []);
-
   const focusInsideBrackets = useCallback((lineIndex) => {
     if (lineIndex === null || lineIndex === undefined) return;
     setPendingFocus({ type: 'translation', lineIndex });
   }, []);
-
-  const handleAddTranslation = useCallback((lineIndex) => {
-    if (lineIndex === null || lineIndex === undefined) return;
-    const lineText = lines[lineIndex] ?? '';
-    if (isLineWrappedWithTranslation(lineText)) {
-      focusLine(lineIndex);
-      closeContextMenu();
-      return;
-    }
-
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const currentContent = textarea.value;
-    const currentScroll = textarea.scrollTop;
-    const segments = currentContent.split('\n');
-    const safeIndex = Math.max(0, Math.min(lineIndex, segments.length - 1));
-
-    let newCursorPos = 0;
-    for (let i = 0; i <= safeIndex; i++) {
-      newCursorPos += segments[i].length + 1;
-    }
-    newCursorPos += 1;
-
-    segments.splice(safeIndex + 1, 0, '()');
-    const newContent = segments.join('\n');
-
-    textarea.value = newContent;
-    textarea.focus();
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-    textarea.scrollTop = currentScroll;
-
-    setContent(newContent);
-    lastKnownScrollRef.current = currentScroll;
-    setSelectedLineIndex(lineIndex + 1);
-    closeContextMenu();
-  }, [closeContextMenu, isLineWrappedWithTranslation, lines, focusLine]);
-
-  const handleCopyLine = useCallback(async (lineIndex) => {
-    const lineText = lines[lineIndex] ?? '';
-    try {
-      await navigator.clipboard.writeText(lineText);
-      showToast({
-        title: 'Line copied',
-        message: 'Lyric line copied to clipboard.',
-        variant: 'success'
-      });
-    } catch (err) {
-      console.error('Failed to copy line:', err);
-      showToast({
-        title: 'Copy failed',
-        message: 'Unable to copy the selected line.',
-        variant: 'error'
-      });
-    }
-    focusLine(lineIndex);
-    closeContextMenu();
-  }, [closeContextMenu, focusLine, lines, showToast]);
-
-  const handleDuplicateLine = useCallback((lineIndex) => {
-    preserveTextareaScroll(() => {
-      setContent((prev) => {
-        const segments = prev.split('\n');
-        const safeIndex = Math.max(0, Math.min(lineIndex, segments.length - 1));
-        const lineToDuplicate = segments[safeIndex] ?? '';
-        segments.splice(safeIndex + 1, 0, '', lineToDuplicate);
-        return segments.join('\n');
-      });
-    });
-    focusLine(lineIndex + 2);
-    closeContextMenu();
-  }, [closeContextMenu, focusLine, preserveTextareaScroll, setContent]);
 
   const getLineIndexFromOffset = useCallback((offset) => {
     if (offset <= 0) return 0;
@@ -776,6 +679,7 @@ const NewSongCanvas = () => {
     if (!editorContainerRef.current) return;
     const rect = editorContainerRef.current.getBoundingClientRect();
     const textarea = textareaRef.current;
+    const previousCursorOffset = textarea ? textarea.selectionStart : null;
     const rawX = event.clientX - rect.left;
     const rawY = event.clientY - rect.top;
     const hasSelection = Boolean(
@@ -791,12 +695,14 @@ const NewSongCanvas = () => {
 
     if (hasSelection) {
       const selectionLineIndex = selectedLineIndex ?? (textarea ? getLineIndexFromOffset(textarea.selectionStart) : null);
+      setActiveSubmenu(null);
       setContextMenuState({
         visible: true,
         x: safeX,
         y: safeY,
         lineIndex: selectionLineIndex,
-        mode: 'selection'
+        mode: 'selection',
+        cursorOffset: previousCursorOffset
       });
       return;
     }
@@ -807,17 +713,22 @@ const NewSongCanvas = () => {
 
     const offsets = lineOffsets[lineIndex];
     if (offsets && textarea) {
-      textarea.focus();
-      textarea.setSelectionRange(offsets.start, offsets.end);
+      try {
+        textarea.focus({ preventScroll: true });
+      } catch (err) {
+        textarea.focus();
+      }
     }
 
     setSelectedLineIndex(lineIndex);
+    setActiveSubmenu(null);
     setContextMenuState({
       visible: true,
       x: safeX,
       y: safeY,
       lineIndex,
-      mode: 'line'
+      mode: 'line',
+      cursorOffset: previousCursorOffset ?? (offsets ? offsets.start : null)
     });
   }, [contextMenuDimensions.height, contextMenuDimensions.width, findLineIndexByPosition, getLineIndexFromOffset, lineOffsets, scrollTop, selectedLineIndex]);
 
@@ -875,101 +786,81 @@ const NewSongCanvas = () => {
     touchStartPositionRef.current = null;
   }, [clearTouchLongPress]);
 
+  const handleAddDefaultTags = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const defaultTags = '[ti:Song Title]\n[ar:Song Artist]\n[al:Song Album]\n[by:LRC Author]\n[length:00:00]\n\n';
+    const currentContent = textarea.value;
+    const newContent = defaultTags + currentContent;
+    const currentScroll = textarea.scrollTop;
+
+    textarea.value = newContent;
+    textarea.focus({ preventScroll: true });
+    textarea.setSelectionRange(0, 0);
+    textarea.scrollTop = currentScroll;
+
+    setContent(newContent);
+    lastKnownScrollRef.current = currentScroll;
+    closeContextMenu();
+  }, [closeContextMenu, setContent]);
+
   const handleCleanupFromContext = useCallback(() => {
     handleCleanup();
     closeContextMenu();
   }, [closeContextMenu, handleCleanup]);
 
+  const {
+    isTitlePrefilled,
+    handleContentKeyDown,
+    handleContentPaste,
+    handleTitleChange
+  } = useTitlePrefill(content, title, setTitle, editMode, textareaRef);
+
   const isContentEmpty = !content.trim();
   const isTitleEmpty = !title.trim();
 
-  const fallbackLineHeight = 24;
-  const selectedMetric = selectedLineIndex !== null ? lineMetrics[selectedLineIndex] : null;
-  const selectedLineText = selectedLineIndex !== null ? (lines[selectedLineIndex] ?? '') : '';
-  const selectedLineHasContent = selectedLineText.trim().length > 0;
-  const selectedLineIsWrapped = selectedLineHasContent && isLineWrappedWithTranslation(selectedLineText);
-  const highlightTop = selectedMetric ? selectedMetric.top - scrollTop : null;
-  const highlightHeight = selectedMetric ? Math.max(selectedMetric.height || 0, fallbackLineHeight) : fallbackLineHeight;
-  const highlightVisible = Boolean(
-    selectedMetric &&
-    selectedLineHasContent &&
-    highlightTop !== null &&
-    containerSize.height > 0 &&
-    highlightTop + highlightHeight > 0 &&
-    highlightTop < containerSize.height
-  );
-
-  const contentWidth = Math.max(containerSize.width - editorPadding.left - editorPadding.right, 0);
-  const toolbarHeight = toolbarDimensions.height || 36;
-  const toolbarWidth = toolbarDimensions.width || 200;
-
-  const toolbarAnchorX = selectedMetric ? editorPadding.left + Math.min(selectedMetric.width + 12, contentWidth) : 0;
-  let toolbarLeft = toolbarAnchorX - toolbarWidth;
-  if (toolbarLeft < editorPadding.left) {
-    toolbarLeft = editorPadding.left;
-  }
-  if (toolbarLeft + toolbarWidth > editorPadding.left + contentWidth) {
-    toolbarLeft = Math.max(editorPadding.left, editorPadding.left + contentWidth - toolbarWidth);
-  }
-  let toolbarTop = 0;
-  if (selectedMetric) {
-    const lineTop = selectedMetric.top - scrollTop;
-    const lineHeight = Math.max(selectedMetric.height || 0, fallbackLineHeight);
-    const lineBottom = lineTop + lineHeight;
-    const desiredAbove = lineTop - toolbarHeight - 8;
-    const minTop = editorPadding.top + 8;
-    const maxTop = containerSize.height > 0 ? containerSize.height - toolbarHeight - 8 : null;
-
-    if (desiredAbove < minTop) {
-      toolbarTop = lineBottom + 8;
-    } else {
-      toolbarTop = desiredAbove;
+  const getSaveButtonTooltip = () => {
+    if (isContentEmpty && isTitleEmpty) {
+      return "Enter a song title and add lyrics content to save";
     }
-
-    if (maxTop !== null && toolbarTop > maxTop) {
-      toolbarTop = Math.max(minTop, maxTop);
-    } else if (toolbarTop < minTop) {
-      toolbarTop = minTop;
+    if (isTitleEmpty) {
+      return "Enter a song title to save";
     }
-  }
-  const toolbarWithinBounds = containerSize.height <= 0 || (toolbarTop < containerSize.height && toolbarTop + toolbarHeight > 0);
-  const toolbarVisible = Boolean(
-    highlightVisible &&
-    selectedLineIndex !== null &&
-    !contextMenuState.visible &&
-    toolbarWithinBounds
-  );
-  const canAddTranslationOnSelectedLine = selectedLineHasContent && !selectedLineIsWrapped;
+    if (isContentEmpty) {
+      return "Add lyrics content to save";
+    }
+    return composeMode ? "Submit draft for approval" : "Save lyrics file to disk";
+  };
 
-  const fallbackMenuWidth = contextMenuState.mode === 'selection' ? 168 : 192;
-  const fallbackMenuHeight = contextMenuState.mode === 'selection' ? 152 : 192;
-  const menuWidth = contextMenuDimensions.width || fallbackMenuWidth;
-  const menuHeight = contextMenuDimensions.height || fallbackMenuHeight;
-  const contextMenuPosition = contextMenuState.visible ? {
-    left: Math.max(
-      8,
-      Math.min(
-        contextMenuState.x,
-        containerSize.width > 0
-          ? Math.max(8, containerSize.width - menuWidth - 8)
-          : contextMenuState.x
-      )
-    ),
-    top: Math.max(
-      8,
-      Math.min(
-        contextMenuState.y,
-        containerSize.height > 0
-          ? Math.max(8, containerSize.height - menuHeight - 8)
-          : contextMenuState.y
-      )
-    )
-  } : null;
+  const getSaveAndLoadButtonTooltip = () => {
+    if (isContentEmpty && isTitleEmpty) {
+      return "Enter a song title and add lyrics content to load";
+    }
+    if (isTitleEmpty) {
+      return "Enter a song title to load";
+    }
+    if (isContentEmpty) {
+      return "Add lyrics content to load";
+    }
+    return composeMode ? "Submit draft for approval" : "Save file and load into control panel";
+  };
+
+  useKeyboardShortcuts({
+    handleBack,
+    handleSave,
+    handleSaveAndLoad: composeMode ? handleLoadDraft : handleSaveAndLoad,
+    handleCleanup,
+    isContentEmpty,
+    isTitleEmpty,
+    composeMode
+  });
 
   const contextMenuLineText = contextMenuState.lineIndex !== null ? (lines[contextMenuState.lineIndex] ?? '') : '';
   const contextMenuLineHasContent = contextMenuLineText.trim().length > 0;
   const contextMenuLineIsWrapped = contextMenuLineHasContent && isLineWrappedWithTranslation(contextMenuLineText);
   const canAddTranslationInContextMenu = contextMenuState.mode === 'line' && contextMenuLineHasContent && !contextMenuLineIsWrapped;
+  const contextMenuLineHasTimestamp = STANDARD_LRC_START_REGEX.test(contextMenuLineText.trim());
 
 
   return (
@@ -1062,45 +953,54 @@ const NewSongCanvas = () => {
             <Input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={handleTitleChange}
               maxLength={65}
               placeholder="Enter song title..."
-              className={`flex-1 px-3 py-1.5 rounded-md ${darkMode
-                ? "bg-gray-700 text-gray-200 placeholder-gray-400 border-gray-600"
-                : "bg-white text-gray-900 placeholder-gray-400 border-gray-300"
+              className={`flex-1 px-3 py-1.5 rounded-md ${isTitlePrefilled ? 'italic' : ''
+                } ${darkMode
+                  ? `bg-gray-700 placeholder-gray-400 border-gray-600 ${isTitlePrefilled ? 'text-gray-400' : 'text-gray-200'}`
+                  : `bg-white placeholder-gray-400 border-gray-300 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`
                 }`}
             />
             {composeMode ? (
-              <Button
-                onClick={handleLoadDraft}
-                disabled={isContentEmpty || isTitleEmpty}
-                className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700"
-                size="sm"
-              >
-                <FolderOpen className="w-4 h-4 mr-1" /> Load
-              </Button>
+              <Tooltip content={getSaveAndLoadButtonTooltip()} side="left">
+                <span className="inline-block">
+                  <Button
+                    onClick={handleLoadDraft}
+                    disabled={isContentEmpty || isTitleEmpty}
+                    className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700"
+                    size="sm"
+                  >
+                    <FolderOpen className="w-4 h-4 mr-1" /> Load
+                  </Button>
+                </span>
+              </Tooltip>
             ) : (
               <>
-                <Tooltip content="Save lyrics file" side="left">
-                  <Button
-                    onClick={handleSave}
-                    disabled={isContentEmpty || isTitleEmpty}
-                    variant="ghost"
-                    size="sm"
-                    title="Save"
-                  >
-                    <Save className="w-4 h-4" />
-                  </Button>
+                <Tooltip content={getSaveButtonTooltip()} side="left">
+                  <span className="inline-block">
+                    <Button
+                      onClick={handleSave}
+                      disabled={isContentEmpty || isTitleEmpty}
+                      variant="ghost"
+                      size="sm"
+                      title="Save"
+                    >
+                      <Save className="w-4 h-4" />
+                    </Button>
+                  </span>
                 </Tooltip>
-                <Tooltip content="Save file and load into control panel" side="left">
-                  <Button
-                    onClick={handleSaveAndLoad}
-                    disabled={isContentEmpty || isTitleEmpty}
-                    className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white"
-                    size="sm"
-                  >
-                    <FolderOpen className="w-4 h-4 mr-1" /> Save & Load
-                  </Button>
+                <Tooltip content={getSaveAndLoadButtonTooltip()} side="left">
+                  <span className="inline-block">
+                    <Button
+                      onClick={handleSaveAndLoad}
+                      disabled={isContentEmpty || isTitleEmpty}
+                      className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white"
+                      size="sm"
+                    >
+                      <FolderOpen className="w-4 h-4 mr-1" /> Save & Load
+                    </Button>
+                  </span>
                 </Tooltip>
               </>
             )}
@@ -1154,15 +1054,15 @@ const NewSongCanvas = () => {
           </div>
           {/* Desktop Toolbar */}
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Tooltip content="Undo last change (Ctrl+Z)" side="bottom">
+            <Tooltip content={<span>Undo last change - <strong>Ctrl+Z</strong></span>} side="bottom">
               <Button onClick={handleUndo} disabled={!canUndo} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
                 <Undo className="w-4 h-4" />
               </Button>
             </Tooltip>
-            <Tooltip content="Redo last undone change (Ctrl+Shift+Z)" side="bottom">
+            <Tooltip content={<span>Redo last undone change - <strong>Ctrl+Shift+Z</strong></span>} side="bottom">
               <Button onClick={handleRedo} disabled={!canRedo} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
+                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
                 <Redo className="w-4 h-4" />
               </Button>
             </Tooltip>
@@ -1226,35 +1126,40 @@ const NewSongCanvas = () => {
             <Input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={handleTitleChange}
               maxLength={65}
               placeholder="Enter song title..."
-              className={`px-3 py-1.5 rounded-md flex-shrink min-w-[100px] max-w-sm ${darkMode
-                ? "bg-gray-700 text-gray-200 placeholder-gray-400 border-gray-600"
-                : "bg-white text-gray-900 placeholder-gray-400 border-gray-300"
+              className={`px-3 py-1.5 rounded-md flex-shrink min-w-[100px] max-w-sm ${isTitlePrefilled ? 'italic' : ''
+                } ${darkMode
+                  ? `bg-gray-700 placeholder-gray-400 border-gray-600 ${isTitlePrefilled ? 'text-gray-400' : 'text-gray-200'}`
+                  : `bg-white placeholder-gray-400 border-gray-300 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`
                 }`}
             />
 
             {!composeMode && (
-              <Tooltip content="Save lyrics file to disk" side="bottom">
-                <Button
-                  onClick={handleSave}
-                  disabled={isContentEmpty || isTitleEmpty}
-                  variant="ghost"
-                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
-                >
-                  <Save className="w-4 h-4" /> Save
-                </Button>
+              <Tooltip content={getSaveButtonTooltip()} side="bottom">
+                <span className="inline-block">
+                  <Button
+                    onClick={handleSave}
+                    disabled={isContentEmpty || isTitleEmpty}
+                    variant="ghost"
+                    className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+                  >
+                    <Save className="w-4 h-4" /> Save
+                  </Button>
+                </span>
               </Tooltip>
             )}
-            <Tooltip content={composeMode ? "Submit draft for approval" : "Save file and load into control panel"} side="bottom">
-              <Button
-                onClick={composeMode ? handleLoadDraft : handleSaveAndLoad}
-                disabled={isContentEmpty || isTitleEmpty}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700"
-              >
-                <FolderOpen className="w-4 h-4" /> {composeMode ? 'Load Draft' : 'Save and Load'}
-              </Button>
+            <Tooltip content={getSaveAndLoadButtonTooltip()} side="bottom">
+              <span className="inline-block">
+                <Button
+                  onClick={composeMode ? handleLoadDraft : handleSaveAndLoad}
+                  disabled={isContentEmpty || isTitleEmpty}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700"
+                >
+                  <FolderOpen className="w-4 h-4" /> {composeMode ? 'Load Draft' : 'Save and Load'}
+                </Button>
+              </span>
             </Tooltip>
           </div>
         </div>
@@ -1275,10 +1180,16 @@ const NewSongCanvas = () => {
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            onPaste={handleTextareaPaste}
+            onPaste={(e) => {
+              handleTextareaPaste(e);
+              handleContentPaste();
+            }}
             onScroll={handleTextareaScroll}
             onClick={handleTextareaSelect}
-            onKeyDown={handleTextareaKeyDown}
+            onKeyDown={(e) => {
+              handleTextareaKeyDown(e);
+              handleContentKeyDown(e, textareaRef);
+            }}
             onKeyUp={handleTextareaSelect}
             onSelect={handleTextareaSelect}
             placeholder="Start typing your lyrics here, or paste existing content..."
@@ -1336,11 +1247,11 @@ const NewSongCanvas = () => {
                     event.preventDefault();
                     event.stopPropagation();
                     if (selectedLineIndex !== null) {
-                      handleCopyLine(selectedLineIndex);
+                      insertStandardTimestampAtLine(selectedLineIndex);
                     }
                   }}
                 >
-                  Copy Line
+                  Add Timestamp
                 </button>
               </div>
             )}
@@ -1348,11 +1259,13 @@ const NewSongCanvas = () => {
             {contextMenuState.visible && contextMenuPosition && (
               <div
                 ref={contextMenuRef}
-                className={`pointer-events-auto absolute z-30 w-44 rounded-lg border py-1 text-sm shadow-lg ${darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-800 border-gray-200'}`}
+                className={`pointer-events-auto absolute z-30 w-44 rounded-lg border py-1 text-[13px] shadow-lg ${darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-800 border-gray-200'}`}
                 style={{
                   top: contextMenuPosition.top,
                   left: contextMenuPosition.left
                 }}
+                onMouseEnter={handleContextMenuEnter}
+                onMouseLeave={handleContextMenuLeave}
               >
                 {contextMenuState.mode === 'selection' ? (
                   <>
@@ -1365,6 +1278,7 @@ const NewSongCanvas = () => {
                         await handleCut();
                         closeContextMenu();
                       }}
+                      onMouseEnter={handleRootItemEnter}
                     >
                       Cut
                     </button>
@@ -1377,6 +1291,7 @@ const NewSongCanvas = () => {
                         await handleCopy();
                         closeContextMenu();
                       }}
+                      onMouseEnter={handleRootItemEnter}
                     >
                       Copy
                     </button>
@@ -1389,6 +1304,7 @@ const NewSongCanvas = () => {
                         await handlePaste();
                         closeContextMenu();
                       }}
+                      onMouseEnter={handleRootItemEnter}
                     >
                       Paste
                     </button>
@@ -1400,25 +1316,72 @@ const NewSongCanvas = () => {
                         event.stopPropagation();
                         handleCleanupFromContext();
                       }}
+                      onMouseEnter={handleRootItemEnter}
                     >
                       Cleanup
                     </button>
                   </>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        if (contextMenuState.lineIndex !== null) {
-                          handleCopyLine(contextMenuState.lineIndex);
-                        }
-                      }}
+                    <div
+                      className="relative"
+                      onMouseEnter={() => handleSubmenuTriggerEnter('timestamp')}
+                      onFocus={() => handleSubmenuTriggerEnter('timestamp')}
+                      onMouseLeave={handleSubmenuTriggerLeave}
                     >
-                      Copy Line
-                    </button>
+                      <button
+                        type="button"
+                        className={`flex w-full items-center justify-between px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setActiveSubmenu('timestamp');
+                        }}
+                      >
+                        <span>Add Timestamp</span>
+                        <ChevronRight className={`h-4 w-4 ${submenuHorizontal === 'left' ? 'transform rotate-180' : ''}`} />
+                      </button>
+                      {activeSubmenu === 'timestamp' && (
+                        <div
+                          ref={timestampSubmenuRef}
+                          className={`absolute ${submenuHorizontal === 'right' ? 'left-[calc(100%+8px)]' : 'right-[calc(100%+8px)]'} z-40 w-48 rounded-lg border py-1 text-[13px] shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800'} overflow-y-auto`}
+                          style={{
+                            top: submenuOffsets.timestamp ?? 0,
+                            maxHeight: submenuMaxHeight
+                          }}
+                          onMouseEnter={handleSubmenuPanelEnter}
+                          onMouseLeave={handleSubmenuPanelLeave}
+                        >
+                          <button
+                            type="button"
+                            className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              if (contextMenuState.lineIndex !== null) {
+                                insertStandardTimestampAtLine(contextMenuState.lineIndex);
+                              }
+                            }}
+                          >
+                            Standard Timestamp
+                          </button>
+                          <button
+                            type="button"
+                            className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${!contextMenuLineHasTimestamp ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!contextMenuLineHasTimestamp}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              if (contextMenuState.lineIndex !== null && contextMenuLineHasTimestamp) {
+                                insertEnhancedTimestampAtCursor(contextMenuState.lineIndex);
+                              }
+                            }}
+                          >
+                            Enhanced Timestamp
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     {contextMenuState.lineIndex !== null && canAddTranslationInContextMenu && (
                       <button
                         type="button"
@@ -1430,6 +1393,7 @@ const NewSongCanvas = () => {
                             handleAddTranslation(contextMenuState.lineIndex);
                           }
                         }}
+                        onMouseEnter={handleRootItemEnter}
                       >
                         Add Translation
                       </button>
@@ -1441,12 +1405,87 @@ const NewSongCanvas = () => {
                         event.preventDefault();
                         event.stopPropagation();
                         if (contextMenuState.lineIndex !== null) {
+                          handleCopyLine(contextMenuState.lineIndex);
+                        }
+                      }}
+                      onMouseEnter={handleRootItemEnter}
+                    >
+                      Copy Line
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (contextMenuState.lineIndex !== null) {
                           handleDuplicateLine(contextMenuState.lineIndex);
                         }
                       }}
+                      onMouseEnter={handleRootItemEnter}
                     >
                       Duplicate Line
                     </button>
+                    <div
+                      className="relative"
+                      onMouseEnter={() => handleSubmenuTriggerEnter('metadata')}
+                      onFocus={() => handleSubmenuTriggerEnter('metadata')}
+                      onMouseLeave={handleSubmenuTriggerLeave}
+                    >
+                      <button
+                        type="button"
+                        className={`flex w-full items-center justify-between px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setActiveSubmenu('metadata');
+                        }}
+                      >
+                        <span>Add Metadata</span>
+                        <ChevronRight className={`h-4 w-4 ${submenuHorizontal === 'left' ? 'transform rotate-180' : ''}`} />
+                      </button>
+                      {activeSubmenu === 'metadata' && (
+                        <div
+                          ref={metadataSubmenuRef}
+                          className={`absolute ${submenuHorizontal === 'right' ? 'left-[calc(100%+8px)]' : 'right-[calc(100%+8px)]'} z-40 w-52 rounded-lg border py-1 text-[13px] shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800'} overflow-y-auto`}
+                          style={{
+                            top: submenuOffsets.metadata ?? 0,
+                            maxHeight: submenuMaxHeight
+                          }}
+                          onMouseEnter={handleSubmenuPanelEnter}
+                          onMouseLeave={handleSubmenuPanelLeave}
+                        >
+                          <button
+                            type="button"
+                            className={`flex w-full items-center px-3 py-2 text-left font-semibold transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 bg-gray-750' : 'hover:bg-gray-100 bg-gray-50'}`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              handleAddDefaultTags();
+                            }}
+                          >
+                            Add Default Tags
+                          </button>
+                          <div className={`my-1 h-px ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                          {METADATA_OPTIONS.map((option) => (
+                            <button
+                              key={option.key}
+                              type="button"
+                              className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                if (contextMenuState.lineIndex !== null) {
+                                  insertMetadataTagAtCursor(contextMenuState.lineIndex, option.key);
+                                }
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
                       className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
@@ -1455,6 +1494,7 @@ const NewSongCanvas = () => {
                         event.stopPropagation();
                         handleCleanupFromContext();
                       }}
+                      onMouseEnter={handleRootItemEnter}
                     >
                       Cleanup
                     </button>

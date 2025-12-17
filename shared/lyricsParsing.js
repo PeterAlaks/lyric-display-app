@@ -1,6 +1,3 @@
-// shared/lyricsParsing.js
-// Enhanced utilities for parsing TXT and LRC lyric content with intelligent line splitting
-
 import { preprocessText, enhancedTextProcessing, splitLongLine, validateProcessing } from './lineSplitting.js';
 
 export const BRACKET_PAIRS = [
@@ -37,7 +34,7 @@ export const STRUCTURE_TAG_PATTERNS = [
 ];
 
 const TIME_TAG_REGEX = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
-const META_TAG_REGEX = /^\s*\[(ti|ar|al|by|offset):.*\]\s*$/i;
+const META_TAG_REGEX = /^\s*\[(ti|ar|al|by|offset|length|au|lr|re|tool|ve|#):.*\]\s*$/i;
 
 const TIMESTAMP_LIKE_PATTERNS = [
   /\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/g,
@@ -571,6 +568,10 @@ export function parseLrcContent(rawText = '', options = {}) {
     let text = line.replace(TIME_TAG_REGEX, '').trim();
 
     text = preprocessText(text);
+
+    if (!text && times.length > 0) {
+      text = '♪';
+    }
 
     if (!text) continue;
 

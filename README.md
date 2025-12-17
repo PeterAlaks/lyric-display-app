@@ -271,8 +271,17 @@ lyric-display-app/
 |   |   |   ├── useSetlistActions.js        # Hook for setlist action functionality
 |   |   |   └── useSupportDevModal.js       # Hook for processing show time and parameters for support development modal
 |   |   ├── NewSongCanvas/
+|   |   |   ├── useContextMenuPosition.js   # Hook for space-aware context menu positioning
+|   |   |   ├── useContextSubmenus.js       # Context submenus definitions and logic
 |   |   |   ├── useEditorClipboard.js       # Hook for cut, copy and paste handlers
-|   |   |   └── useEditorHistory.js         # Hook for history state management of lyrics editor canvas
+|   |   |   ├── useEditorHistory.js         # Hook for history state management of lyrics editor canvas
+|   |   |   ├── useFileSave.js              # Canvas file operations hook
+|   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for canvas
+|   |   |   ├── useLineMeasurements.js      # Hook for measuring and calculating line dimensions in canvas
+|   |   |   ├── useLineOperations.js        # Hook for line manipulation operations in canvas
+|   |   |   ├── useLrcEligibility.js        # Hook for determining LRC format eligibility
+|   |   |   ├── useTimestampOperations.js   # Hook for timestamp handling and operations
+|   |   |   └── useTitlePrefill.js          # Hook for auto-prefilling song title in canvas
 |   |   ├── OnlineLyricsSearchModal/
 |   |   |   └── useNetworkStatus.js         # Internet connection status hook
 |   |   ├── OutputSettingsPanel/
@@ -320,6 +329,7 @@ lyric-display-app/
 |   |   ├── parseLyrics.js                  # Text file parser
 |   |   ├── secureTokenStore.js             # Secure token storage utility
 |   |   ├── timestampHelpers.js             # Timestamp helper utility for intelligent autoplay feature
+|   |   ├── titlePrefill.js                 # Title prefill utility for song canvas
 |   |   └── toastSounds.js                  # Toast notifications tones utility
 │   ├── workers/
 |   |   └── lyricsParser.worker.js          # Web worker that parses lyrics off the UI thread.

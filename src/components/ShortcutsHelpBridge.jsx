@@ -41,6 +41,17 @@ const SHORTCUTS = [
     ]
   },
   {
+    category: 'Song Canvas',
+    items: [
+      { label: 'Go Back to Control Panel', combo: 'Escape / Backspace' },
+      { label: 'Save File', combo: 'Ctrl/Cmd + S' },
+      { label: 'Save and Load', combo: 'Ctrl/Cmd + Shift + L' },
+      { label: 'Cleanup Lyrics', combo: 'Ctrl/Cmd + Shift + C' },
+      { label: 'Undo', combo: 'Ctrl/Cmd + Z' },
+      { label: 'Redo', combo: 'Ctrl/Cmd + Shift + Z' },
+    ]
+  },
+  {
     category: 'Canvas Editing',
     items: [
       { label: 'Add Translation Line', combo: 'Ctrl/Cmd + T' },
