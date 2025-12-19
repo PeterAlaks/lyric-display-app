@@ -221,6 +221,46 @@ function applyIntelligentSplitting(rawLines, options = {}) {
 }
 
 /**
+ * Apply intelligent line splitting while keeping timestamp association intact.
+ * @param {{ text: string, t: number|null }[]} entries
+ * @param {object} options
+ * @returns {{ text: string, t: number|null }[]}
+ */
+function applyIntelligentSplittingWithTimestamps(entries = [], options = {}) {
+  const { enableSplitting = true, splitConfig = {} } = options;
+
+  if (!enableSplitting) return entries;
+
+  const result = [];
+
+  for (let i = 0; i < entries.length; i += 1) {
+    const entry = entries[i];
+    if (!entry || typeof entry.text !== 'string') continue;
+
+    const trimmed = entry.text.trim();
+    if (!trimmed) continue;
+
+    if (isTranslationLine(trimmed)) {
+      result.push({ text: trimmed, t: entry.t });
+      continue;
+    }
+
+    const nextEntry = entries[i + 1];
+    const nextIsTrans = nextEntry && isTranslationLine(String(nextEntry.text || '').trim());
+
+    if (nextIsTrans) {
+      result.push({ text: trimmed, t: entry.t });
+      continue;
+    }
+
+    const segments = splitLongLine(trimmed, splitConfig);
+    segments.forEach(seg => result.push({ text: seg, t: entry.t }));
+  }
+
+  return result;
+}
+
+/**
  * Groups clusters of raw lines into either individual strings, translation groups, or normal groups.
  * Handles both translation grouping (bracketed) and normal grouping (two-line pairs).
  * @param {Array<{ line: string, originalIndex: number }[]>} clusters
@@ -589,45 +629,45 @@ export function parseLrcContent(rawText = '', options = {}) {
     return a.t - b.t;
   });
 
-  const processed = [];
-  const timestamps = [];
+  const uniqueEntries = [];
   const seen = new Set();
 
   for (const entry of entries) {
     const key = `${entry.t}|${entry.text}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    processed.push(entry.text);
-    timestamps.push(entry.t);
+    uniqueEntries.push(entry);
   }
 
-  const splitLines = applyIntelligentSplitting(processed, { enableSplitting, splitConfig });
+  const splitEntries = applyIntelligentSplittingWithTimestamps(uniqueEntries, { enableSplitting, splitConfig });
 
   const grouped = [];
   const groupedTimestamps = [];
-  for (let i = 0; i < splitLines.length; i += 1) {
-    const main = splitLines[i];
-    const next = splitLines[i + 1];
+  for (let i = 0; i < splitEntries.length; i += 1) {
+    const main = splitEntries[i];
+    const next = splitEntries[i + 1];
+    const nextIsTranslation = next && isTranslationLine(next.text);
+    const sameTimestamp = next && main.t === next.t;
 
-    if (next && isTranslationLine(next) && !isTranslationLine(main)) {
+    if (next && nextIsTranslation && !isTranslationLine(main.text) && sameTimestamp) {
       grouped.push({
         type: 'group',
         id: `lrc_group_${i}`,
-        mainLine: main,
-        translation: next,
-        displayText: `${main}\n${next}`,
-        searchText: `${main} ${next}`,
+        mainLine: main.text,
+        translation: next.text,
+        displayText: `${main.text}\n${next.text}`,
+        searchText: `${main.text} ${next.text}`,
         originalIndex: i,
       });
-      groupedTimestamps.push(timestamps[i] !== undefined ? timestamps[i] : null);
+      groupedTimestamps.push(main.t !== undefined ? main.t : null);
       i += 1;
     } else {
-      grouped.push(main);
-      groupedTimestamps.push(timestamps[i] !== undefined ? timestamps[i] : null);
+      grouped.push(main.text);
+      groupedTimestamps.push(main.t !== undefined ? main.t : null);
     }
   }
 
-  const visibleRawText = splitLines.join('\n');
+  const visibleRawText = splitEntries.map(entry => entry.text).join('\n');
   const { sections, lineToSection } = deriveSectionsFromProcessedLines(grouped);
   return { rawText: visibleRawText, processedLines: grouped, timestamps: groupedTimestamps, sections, lineToSection };
 }

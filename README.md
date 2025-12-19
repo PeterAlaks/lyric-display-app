@@ -324,6 +324,7 @@ lyric-display-app/
 |   |   ├── markdownParser.js               # Helper utility for converting markdown to HTML
 |   |   ├── maxLinesCalculator.js           # Calculator for maximum lines feature in outputs display
 |   |   ├── network.js                      # Network utility for backend URL resolution
+|   |   ├── numberinput.js                  # Integer value sanitization utility for settings panel
 |   |   ├── outputTemplates.js              # Output templates for settings panel
 |   |   ├── parseLrc.js                     # LRC file parser
 |   |   ├── parseLyrics.js                  # Text file parser

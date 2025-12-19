@@ -50,7 +50,7 @@ const NewSongCanvas = () => {
   const isController = composeMode;
 
   const { darkMode, setDarkMode } = useDarkModeState();
-  const { lyrics, lyricsFileName, rawLyricsContent, setRawLyricsContent } = useLyricsState();
+  const { lyrics, lyricsFileName, rawLyricsContent, songMetadata, setRawLyricsContent, setSongMetadata, setPendingSavedVersion } = useLyricsState();
 
   const { emitLyricsDraftSubmit } = useControlSocket();
 
@@ -83,6 +83,11 @@ const NewSongCanvas = () => {
   const [pendingFocus, setPendingFocus] = useState(null);
 
   const lines = useMemo(() => content.split('\n'), [content]);
+  const isContentEmpty = !content.trim();
+  const isTitleEmpty = !title.trim();
+  const hasUnsavedChanges = React.useMemo(() => {
+    return (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
+  }, [content, title]);
 
   const { contextMenuPosition, menuWidth } = useContextMenuPosition({
     contextMenuState,
@@ -250,17 +255,14 @@ const NewSongCanvas = () => {
 
   const { handleCut, handleCopy, handlePaste, handleCleanup, handleTextareaPaste } = useEditorClipboard({ content, setContent, textareaRef, showToast });
 
-  // Use LRC eligibility hook
   const lrcEligibility = useLrcEligibility(content);
 
-  // Define focusLine before using it in hooks
   const focusLine = useCallback((lineIndex) => {
     if (lineIndex === null || lineIndex === undefined) return;
     setPendingFocus({ type: 'line', lineIndex });
   }, []);
 
-  // Use file save hook
-  const { handleSave, handleSaveAndLoad, baseContentRef: fileSaveBaseContentRef, baseTitleRef: fileSaveBaseTitleRef } = useFileSave({
+  const { handleSave, handleSaveAndLoad } = useFileSave({
     content,
     title,
     fileName,
@@ -270,10 +272,16 @@ const NewSongCanvas = () => {
     handleFileUpload,
     showModal,
     showToast,
-    lrcEligibility
+    lrcEligibility,
+    baseContentRef,
+    baseTitleRef,
+    existingFilePath: songMetadata?.filePath,
+    songMetadata,
+    setSongMetadata,
+    setPendingSavedVersion,
+    editMode
   });
 
-  // Use timestamp operations hook
   const { insertStandardTimestampAtLine, insertEnhancedTimestampAtCursor, insertMetadataTagAtCursor } = useTimestampOperations({
     textareaRef,
     setContent,
@@ -284,7 +292,6 @@ const NewSongCanvas = () => {
     lastKnownScrollRef
   });
 
-  // Use line operations hook
   const { handleAddTranslation, handleCopyLine, handleDuplicateLine, isLineWrappedWithTranslation } = useLineOperations({
     lines,
     textareaRef,
@@ -404,15 +411,14 @@ const NewSongCanvas = () => {
     setContextMenuDimensions({ width: rect.width, height: rect.height });
   }, [contextMenuState.visible]);
 
-
   const handleBack = useCallback(() => {
-    const hasChanges = (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
-    if (hasChanges) {
+    if (hasUnsavedChanges) {
       showToast({
         title: 'Unsaved changes',
         message: 'You have unsaved changes. Discard them?',
         variant: 'warn',
         duration: 0,
+        dedupeKey: 'unsaved-changes',
         actions: [
           { label: 'Yes, discard', onClick: () => navigate('/') },
           { label: 'Cancel', onClick: () => { } },
@@ -421,7 +427,7 @@ const NewSongCanvas = () => {
       return;
     }
     navigate('/');
-  }, [content, title, showToast, navigate]);
+  }, [hasUnsavedChanges, showToast, navigate]);
 
   useEffect(() => {
     return () => {
@@ -817,9 +823,6 @@ const NewSongCanvas = () => {
     handleTitleChange
   } = useTitlePrefill(content, title, setTitle, editMode, textareaRef);
 
-  const isContentEmpty = !content.trim();
-  const isTitleEmpty = !title.trim();
-
   const getSaveButtonTooltip = () => {
     if (isContentEmpty && isTitleEmpty) {
       return "Enter a song title and add lyrics content to save";
@@ -853,7 +856,9 @@ const NewSongCanvas = () => {
     handleCleanup,
     isContentEmpty,
     isTitleEmpty,
-    composeMode
+    composeMode,
+    editMode,
+    hasUnsavedChanges
   });
 
   const contextMenuLineText = contextMenuState.lineIndex !== null ? (lines[contextMenuState.lineIndex] ?? '') : '';
@@ -981,7 +986,7 @@ const NewSongCanvas = () => {
                   <span className="inline-block">
                     <Button
                       onClick={handleSave}
-                      disabled={isContentEmpty || isTitleEmpty}
+                      disabled={isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges)}
                       variant="ghost"
                       size="sm"
                       title="Save"
@@ -994,7 +999,7 @@ const NewSongCanvas = () => {
                   <span className="inline-block">
                     <Button
                       onClick={handleSaveAndLoad}
-                      disabled={isContentEmpty || isTitleEmpty}
+                      disabled={isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges)}
                       className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white"
                       size="sm"
                     >
@@ -1141,7 +1146,7 @@ const NewSongCanvas = () => {
                 <span className="inline-block">
                   <Button
                     onClick={handleSave}
-                    disabled={isContentEmpty || isTitleEmpty}
+                    disabled={isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges)}
                     variant="ghost"
                     className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
                   >
@@ -1154,7 +1159,7 @@ const NewSongCanvas = () => {
               <span className="inline-block">
                 <Button
                   onClick={composeMode ? handleLoadDraft : handleSaveAndLoad}
-                  disabled={isContentEmpty || isTitleEmpty}
+                  disabled={isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700"
                 >
                   <FolderOpen className="w-4 h-4" /> {composeMode ? 'Load Draft' : 'Save and Load'}

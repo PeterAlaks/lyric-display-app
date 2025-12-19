@@ -26,6 +26,7 @@ import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { hasValidTimestamps } from '../utils/timestampHelpers';
+import { parseLrcContent } from '../../shared/lyricsParsing.js';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
 import { useSyncOutputs } from '../hooks/useSyncOutputs';
 import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
@@ -39,7 +40,7 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, selectedLine, lyricsTimestamps, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setSongMetadata, setLyricsTimestamps } = useLyricsState();
+  const { lyrics, lyricsFileName, rawLyricsContent, selectedLine, lyricsTimestamps, pendingSavedVersion, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setSongMetadata, setLyricsTimestamps, clearPendingSavedVersion } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
@@ -109,6 +110,30 @@ const LyricDisplayApp = () => {
   const { showModal } = useModal();
 
   const { useIconOnlyButtons } = useResponsiveWidth(headerContainerRef, hasLyrics);
+
+  React.useEffect(() => {
+    if (!hasLyrics) return;
+    if (hasValidTimestamps(lyricsTimestamps)) return;
+    if (!rawLyricsContent) return;
+
+    const looksLikeLrc = /\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(rawLyricsContent);
+    if (!looksLikeLrc) return;
+
+    try {
+      const parsed = parseLrcContent(rawLyricsContent);
+      const lengthsMatch = Array.isArray(parsed?.processedLines) && parsed.processedLines.length === lyrics.length;
+
+      if (lengthsMatch && Array.isArray(parsed.timestamps) && parsed.timestamps.length > 0) {
+        setLyricsTimestamps(parsed.timestamps);
+        if (parsed.sections && parsed.lineToSection) {
+          setLyricsSections(parsed.sections);
+          setLineToSection(parsed.lineToSection);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to regenerate timestamps from stored lyrics:', err);
+    }
+  }, [hasLyrics, lyrics, lyricsTimestamps, rawLyricsContent, setLyricsSections, setLineToSection, setLyricsTimestamps]);
 
   const {
     autoplayActive,
@@ -186,6 +211,56 @@ const LyricDisplayApp = () => {
     emitSetlistAdd,
     emitSetlistClear
   });
+
+  const handledSavedVersionRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!pendingSavedVersion) return;
+
+    const key = pendingSavedVersion.createdAt || `${pendingSavedVersion.filePath || ''}-${pendingSavedVersion.fileName || ''}`;
+    if (handledSavedVersionRef.current === key) {
+      clearPendingSavedVersion();
+      return;
+    }
+    handledSavedVersionRef.current = key;
+
+    const { rawText, fileName: savedBaseName, filePath, extension } = pendingSavedVersion;
+    const safeBaseName = savedBaseName || lyricsFileName || 'lyrics';
+    const savedFileName = `${safeBaseName}.${extension || 'txt'}`;
+
+    const loadSavedVersion = async () => {
+      try {
+        await processLoadedLyrics(
+          {
+            content: rawText || '',
+            fileName: savedFileName,
+            filePath: filePath || null,
+            fileType: extension || 'txt'
+          },
+          { fallbackFileName: savedFileName }
+        );
+      } catch (error) {
+        console.error('Failed to reload saved lyrics from pending version:', error);
+        showToast({
+          title: 'Load failed',
+          message: 'Could not load the last saved lyrics file.',
+          variant: 'error'
+        });
+      }
+    };
+
+    showToast({
+      title: 'Lyrics updated',
+      message: 'The control panel may have older lyrics. Load the last saved version?',
+      variant: 'info',
+      duration: 7000,
+      actions: [
+        { label: 'Load saved lyrics', onClick: loadSavedVersion }
+      ]
+    });
+
+    clearPendingSavedVersion();
+  }, [pendingSavedVersion, clearPendingSavedVersion, processLoadedLyrics, rawLyricsContent, lyricsFileName, showToast]);
 
   const openFileDialog = async () => {
     if (!isAuthenticated) {

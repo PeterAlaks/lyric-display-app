@@ -14,6 +14,7 @@ export const useLyricsState = () =>
             lyricsTimestamps: state.lyricsTimestamps,
             lyricsSections: state.lyricsSections,
             lineToSection: state.lineToSection,
+            pendingSavedVersion: state.pendingSavedVersion,
             setLyrics: state.setLyrics,
             setLyricsSections: state.setLyricsSections,
             setLineToSection: state.setLineToSection,
@@ -22,6 +23,8 @@ export const useLyricsState = () =>
             setSongMetadata: state.setSongMetadata,
             setLyricsTimestamps: state.setLyricsTimestamps,
             selectLine: state.selectLine,
+            setPendingSavedVersion: state.setPendingSavedVersion,
+            clearPendingSavedVersion: state.clearPendingSavedVersion,
         }),
         shallow
     );

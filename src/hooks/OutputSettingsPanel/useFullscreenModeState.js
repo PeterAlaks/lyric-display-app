@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-const useFullscreenModeState = ({ settings, applySettings }) => {
+const useFullscreenModeState = ({ settings, applySettings, expand = false }) => {
   const fullScreenModeChecked = Boolean(settings.fullScreenMode);
   const lyricsPositionValue = settings.lyricsPosition ?? 'lower';
   const fullScreenBackgroundTypeValue = settings.fullScreenBackgroundType ?? 'color';
@@ -44,10 +44,10 @@ const useFullscreenModeState = ({ settings, applySettings }) => {
   };
 
   const fullScreenOptionsWrapperClass = useMemo(() => (
-    fullScreenModeChecked
-      ? 'max-h-40 opacity-100 translate-y-0 pointer-events-auto mt-2'
+    expand
+      ? 'max-h-48 opacity-100 translate-y-0 pointer-events-auto mt-2'
       : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-  ), [fullScreenModeChecked]);
+  ), [expand]);
 
   return {
     fullScreenModeChecked,

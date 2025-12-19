@@ -7,7 +7,9 @@ export const useKeyboardShortcuts = ({
   handleCleanup,
   isContentEmpty,
   isTitleEmpty,
-  composeMode
+  composeMode,
+  editMode = false,
+  hasUnsavedChanges = true
 }) => {
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -22,7 +24,7 @@ export const useKeyboardShortcuts = ({
       }
 
       if ((event.ctrlKey || event.metaKey) && (event.key === 's' || event.key === 'S') && !event.shiftKey) {
-        if (!composeMode && !isContentEmpty && !isTitleEmpty) {
+        if (!composeMode && !isContentEmpty && !isTitleEmpty && (!editMode || hasUnsavedChanges)) {
           event.preventDefault();
           handleSave();
         }
@@ -30,7 +32,7 @@ export const useKeyboardShortcuts = ({
       }
 
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'l' || event.key === 'L')) {
-        if (!isContentEmpty && !isTitleEmpty) {
+        if (!isContentEmpty && !isTitleEmpty && (!editMode || hasUnsavedChanges)) {
           event.preventDefault();
           handleSaveAndLoad();
         }
@@ -48,5 +50,5 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleBack, handleSave, handleSaveAndLoad, handleCleanup, isContentEmpty, isTitleEmpty, composeMode]);
+  }, [composeMode, editMode, handleBack, handleCleanup, handleSave, handleSaveAndLoad, hasUnsavedChanges, isContentEmpty, isTitleEmpty]);
 };

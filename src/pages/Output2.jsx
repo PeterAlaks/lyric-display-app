@@ -204,6 +204,7 @@ const Output2 = () => {
     fullScreenBackgroundType = 'color',
     fullScreenBackgroundColor = '#000000',
     fullScreenBackgroundMedia,
+    alwaysShowBackground = false,
     xMargin = 0,
     yMargin = 0,
     maxLinesEnabled = false,
@@ -294,16 +295,18 @@ const Output2 = () => {
   };
   const effectiveLyricsPosition = positionJustifyMap[lyricsPosition] ? lyricsPosition : 'lower';
   const justifyContent = positionJustifyMap[effectiveLyricsPosition] || 'flex-end';
-  const isVisible = Boolean(isOutputOn && output2Enabled && line);
+  const isOutputActive = Boolean(isOutputOn && output2Enabled);
+  const isVisible = Boolean(isOutputActive && line);
+  const shouldShowFullScreenBackground = fullScreenMode && (alwaysShowBackground || isOutputActive);
 
   const fullScreenBackgroundColorValue =
-    fullScreenMode && fullScreenBackgroundType === 'color'
+    shouldShowFullScreenBackground && fullScreenBackgroundType === 'color'
       ? fullScreenBackgroundColor || '#000000'
       : 'transparent';
 
   useEffect(() => {
     const preloadVideo = async () => {
-      if (!fullScreenMode || fullScreenBackgroundType !== 'media' || !fullScreenBackgroundMedia) {
+      if (!shouldShowFullScreenBackground || fullScreenBackgroundType !== 'media' || !fullScreenBackgroundMedia) {
         return;
       }
 
@@ -384,7 +387,7 @@ const Output2 = () => {
         preloadAbortControllerRef.current = null;
       }
     };
-  }, [fullScreenMode, fullScreenBackgroundType, fullScreenBackgroundMedia?.url, fullScreenBackgroundMedia?.uploadedAt]);
+  }, [fullScreenMode, fullScreenBackgroundType, fullScreenBackgroundMedia?.url, fullScreenBackgroundMedia?.uploadedAt, shouldShowFullScreenBackground]);
 
   useEffect(() => {
     return () => {
@@ -396,7 +399,7 @@ const Output2 = () => {
   }, [preloadedVideoUrl]);
 
   const resolveBackgroundMediaSource = () => {
-    if (!fullScreenBackgroundMedia) return null;
+    if (!shouldShowFullScreenBackground || !fullScreenBackgroundMedia) return null;
     if (fullScreenBackgroundMedia.dataUrl) return fullScreenBackgroundMedia.dataUrl;
     if (fullScreenBackgroundMedia.url) {
       if (fullScreenBackgroundMedia.bundled) {
@@ -417,7 +420,7 @@ const Output2 = () => {
   };
 
   const renderFullScreenMedia = () => {
-    if (!fullScreenMode || fullScreenBackgroundType !== 'media') {
+    if (!shouldShowFullScreenBackground || fullScreenBackgroundType !== 'media') {
       return null;
     }
 

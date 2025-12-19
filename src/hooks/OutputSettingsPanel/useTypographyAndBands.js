@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect } from 'react';
+import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const useTypographyAndBands = ({ settings, applySettings }) => {
   const translationFontSizeMode = settings.translationFontSizeMode ?? 'bound';
@@ -40,7 +41,8 @@ const useTypographyAndBands = ({ settings, applySettings }) => {
   };
 
   const handleCustomLinesChange = (value) => {
-    const numValue = parseInt(value, 10);
+    const fallback = settings.backgroundBandCustomLines ?? getDefaultCustomHeight();
+    const numValue = sanitizeIntegerInput(value, fallback, { min: 1 });
 
     if (maxLinesEnabled && numValue > maxLinesValue) {
       applySettings({ backgroundBandCustomLines: maxLinesValue });
@@ -59,7 +61,11 @@ const useTypographyAndBands = ({ settings, applySettings }) => {
   };
 
   const handleTranslationFontSizeChange = (value) => {
-    const numValue = parseInt(value, 10);
+    const numValue = sanitizeIntegerInput(
+      value,
+      translationFontSize ?? currentFontSize,
+      { min: 12, max: currentFontSize, clampMin: false }
+    );
 
     if (numValue > currentFontSize) {
       applySettings({ translationFontSize: currentFontSize });

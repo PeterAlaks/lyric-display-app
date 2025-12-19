@@ -58,6 +58,7 @@ const useFileUpload = () => {
       selectLine(null);
 
       const baseName = file.name.replace(/\.(txt|lrc)$/i, '');
+      const filePath = additionalOptions.filePath || file?.path || null;
       setLyricsFileName(baseName);
 
       const detected = detectArtistFromFilename(baseName);
@@ -68,7 +69,7 @@ const useFileUpload = () => {
         year: null,
         lyricLines: parsed.processedLines.length,
         origin: isLrc ? 'Local (.lrc)' : 'Local (.txt)',
-        filePath: file?.path || null
+        filePath
       };
       setSongMetadata(metadata);
 
@@ -83,7 +84,6 @@ const useFileUpload = () => {
       }
 
       try {
-        const filePath = file?.path;
         if (filePath && window?.electronAPI?.addRecentFile) {
           await window.electronAPI.addRecentFile(filePath);
         }

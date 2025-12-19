@@ -446,7 +446,10 @@ export function ModalProvider({ children, isDark = false }) {
                         <p className="whitespace-pre-wrap font-semibold">{modal.description}</p>
                       )}
                       {!modal.component && modal.body && (
-                        <div className={cn("text-sm text-gray-500 dark:text-gray-300", modal.description && "mt-3")}>
+                        <div
+                          className={cn("text-sm text-gray-500 dark:text-gray-300", modal.description && "mt-3")}
+                          style={typeof modal.body === 'string' ? { whiteSpace: 'pre-wrap' } : undefined}
+                        >
                           {typeof modal.body === 'function'
                             ? modal.body({ close: (value) => closeModal(modal.id, value), isDark })
                             : modal.body}

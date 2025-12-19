@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
+import { sanitizeIntegerInput } from '../utils/numberInput';
 
 export const LabelWithIcon = ({ icon: Icon, text, darkMode }) => (
   <div className="flex items-center gap-2 min-w-[140px]">
@@ -64,7 +65,13 @@ export const FontSettingsRow = ({
       <Input
         type="number"
         value={sizeValue}
-        onChange={(e) => onSizeChange(parseInt(e.target.value))}
+        onChange={(e) => onSizeChange(
+          sanitizeIntegerInput(
+            e.target.value,
+            sizeValue ?? minSize,
+            { min: minSize, max: maxSize, clampMin: false }
+          )
+        )}
         min={minSize}
         max={maxSize}
         className={`w-20 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}

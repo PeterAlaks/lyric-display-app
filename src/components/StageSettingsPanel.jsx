@@ -10,6 +10,7 @@ import { Type, Paintbrush, TextCursorInput, TextQuote, Square, AlignVerticalSpac
 import FontSelect from './FontSelect';
 import { blurInputOnEnter, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
 import useToast from '../hooks/useToast';
+import { sanitizeIntegerInput } from '../utils/numberInput';
 
 const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showModal, isOutputEnabled, handleToggleOutput }) => {
   const { showToast } = useToast();
@@ -581,7 +582,14 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
           <Input
             type="number"
             value={settings.messageScrollSpeed}
-            onChange={(e) => update('messageScrollSpeed', parseInt(e.target.value))}
+            onChange={(e) => update(
+              'messageScrollSpeed',
+              sanitizeIntegerInput(
+                e.target.value,
+                settings.messageScrollSpeed ?? 3000,
+                { min: 1000, max: 10000, clampMin: false }
+              )
+            )}
             min="1000"
             max="10000"
             step="500"
@@ -675,7 +683,14 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
           <Input
             type="number"
             value={settings.transitionSpeed}
-            onChange={(e) => update('transitionSpeed', parseInt(e.target.value))}
+            onChange={(e) => update(
+              'transitionSpeed',
+              sanitizeIntegerInput(
+                e.target.value,
+                settings.transitionSpeed ?? 300,
+                { min: 100, max: 1000, clampMin: false }
+              )
+            )}
             min="100"
             max="1000"
             step="50"

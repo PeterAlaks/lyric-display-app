@@ -24,12 +24,26 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
   const [toasts, setToasts] = useState([]);
   const removeTimer = useRef(new Map());
   const exitTimer = useRef(new Map());
+  const lastToneAt = useRef(0);
+  const TONE_GAP_MS = 350;
+
+  const clearTimersForId = (id) => {
+    const t = removeTimer.current.get(id);
+    if (t) {
+      clearTimeout(t);
+      removeTimer.current.delete(id);
+    }
+    const ex = exitTimer.current.get(id);
+    if (ex) {
+      clearTimeout(ex);
+      exitTimer.current.delete(id);
+    }
+  };
 
   const remove = useCallback((id) => {
 
     setToasts((prev) => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
-    const t = removeTimer.current.get(id);
-    if (t) { clearTimeout(t); removeTimer.current.delete(id); }
+    clearTimersForId(id);
     const ex = setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
       exitTimer.current.delete(id);
@@ -37,23 +51,32 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     exitTimer.current.set(id, ex);
   }, []);
 
-  const show = useCallback(({ title, message, variant = 'info', duration = 4000, actions = [], playTone }) => {
+  const show = useCallback(({ title, message, variant = 'info', duration = 4000, actions = [], playTone, dedupeKey }) => {
     const id = idSeq++;
-    const toast = { id, title, message, variant, actions, createdAt: Date.now(), entering: true, exiting: false };
+    const toast = { id, title, message, variant, actions, createdAt: Date.now(), entering: true, exiting: false, dedupeKey: dedupeKey || null };
     setToasts((prev) => {
-      const arr = [...prev, toast];
+      const next = dedupeKey
+        ? prev.filter((t) => {
+          if (t.dedupeKey !== dedupeKey) return true;
+          clearTimersForId(t.id);
+          return false;
+        })
+        : [...prev];
+
+      const arr = [...next, toast];
       if (arr.length > max) {
         const removed = arr.shift();
-        const tOld = removed && removeTimer.current.get(removed.id);
-        if (tOld) { clearTimeout(tOld); removeTimer.current.delete(removed.id); }
-        const tExit = removed && exitTimer.current.get(removed.id);
-        if (tExit) { clearTimeout(tExit); exitTimer.current.delete(removed.id); }
+        if (removed) {
+          clearTimersForId(removed.id);
+        }
       }
       return arr;
     });
 
-    if (typeof playTone === 'function' && !muted) {
+    const now = Date.now();
+    if (typeof playTone === 'function' && !muted && (now - lastToneAt.current > TONE_GAP_MS)) {
       try { playTone(variant); } catch { }
+      lastToneAt.current = now;
     }
 
     requestAnimationFrame(() => {

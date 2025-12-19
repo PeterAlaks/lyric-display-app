@@ -31,6 +31,7 @@ export const defaultOutput1Settings = {
   fullScreenBackgroundColor: '#000000',
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
+  alwaysShowBackground: false,
   fullScreenRestorePosition: null,
   xMargin: 3.5,
   yMargin: 2,
@@ -76,6 +77,7 @@ export const defaultOutput2Settings = {
   fullScreenBackgroundColor: '#000000',
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
+  alwaysShowBackground: false,
   fullScreenRestorePosition: null,
   xMargin: 3.5,
   yMargin: 2,
@@ -171,6 +173,7 @@ const useLyricsStore = create(
       },
       lyricsTimestamps: [],
       hasSeenIntelligentAutoplayInfo: false,
+      pendingSavedVersion: null,
 
       setLyrics: (lines) => set({ lyrics: lines }),
       setLyricsSections: (sections) => set({ lyricsSections: Array.isArray(sections) ? sections : [] }),
@@ -191,6 +194,8 @@ const useLyricsStore = create(
       setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
       setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
+      setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
+      clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
       addSetlistFiles: (newFiles) => set((state) => ({
         setlistFiles: [...state.setlistFiles, ...newFiles]
       })),

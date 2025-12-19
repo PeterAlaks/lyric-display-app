@@ -19,6 +19,7 @@ import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, 
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
 import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow } from './OutputSettingsShared';
+import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true, darkMode }) => (
   <div className="flex items-center justify-between gap-4">
@@ -148,7 +149,10 @@ const DropShadowSection = ({
     <Input
       type="number"
       value={settings.dropShadowOpacity}
-      onChange={(e) => update('dropShadowOpacity', parseInt(e.target.value))}
+      onChange={(e) => update(
+        'dropShadowOpacity',
+        sanitizeIntegerInput(e.target.value, settings.dropShadowOpacity ?? 0, { min: 0, max: 10 })
+      )}
       min="0"
       max="10"
       className={`w-20 ${darkMode
@@ -167,45 +171,79 @@ const BackgroundSection = ({
   setBackgroundAdvancedExpanded,
   fullScreenModeChecked,
   backgroundDisabledTooltip
-}) => (
-  <SettingRow
-    icon={Square}
-    label="Background"
-    tooltip="Set background band with custom color and opacity behind lyrics"
-    rightClassName="flex items-center gap-2 justify-end w-full"
-    darkMode={darkMode}
-  >
-    <Tooltip content={backgroundAdvancedExpanded ? "Hide advanced settings" : "Show advanced settings"} side="top">
-      <AdvancedToggle
-        expanded={backgroundAdvancedExpanded}
-        onToggle={() => setBackgroundAdvancedExpanded(!backgroundAdvancedExpanded)}
+}) => {
+  const [opacityInput, setOpacityInput] = React.useState(() => String(settings.backgroundOpacity ?? 0));
+
+  React.useEffect(() => {
+    const normalized = settings.backgroundOpacity ?? 0;
+    const currentNumeric = parseFloat(opacityInput);
+    if (!Number.isNaN(currentNumeric) && currentNumeric === normalized) {
+      return;
+    }
+    setOpacityInput(String(normalized));
+  }, [opacityInput, settings.backgroundOpacity]);
+
+  const handleOpacityChange = (value) => {
+    setOpacityInput(value);
+    const parsed = sanitizeNumberInput(
+      value,
+      settings.backgroundOpacity ?? 0,
+      { min: 0, max: 10, clampMin: false }
+    );
+    if (Number.isFinite(parsed) && parsed !== settings.backgroundOpacity) {
+      update('backgroundOpacity', parsed);
+    }
+  };
+
+  const handleOpacityBlur = () => {
+    const parsed = sanitizeNumberInput(opacityInput, settings.backgroundOpacity ?? 0, { min: 0, max: 10 });
+    setOpacityInput(String(parsed));
+    update('backgroundOpacity', parsed);
+  };
+
+  return (
+    <SettingRow
+      icon={Square}
+      label="Background"
+      tooltip="Set background band with custom color and opacity behind lyrics"
+      rightClassName="flex items-center gap-2 justify-end w-full"
+      darkMode={darkMode}
+    >
+      <Tooltip content={backgroundAdvancedExpanded ? "Hide advanced settings" : "Show advanced settings"} side="top">
+        <AdvancedToggle
+          expanded={backgroundAdvancedExpanded}
+          onToggle={() => setBackgroundAdvancedExpanded(!backgroundAdvancedExpanded)}
+          disabled={fullScreenModeChecked}
+          darkMode={darkMode}
+          ariaLabel="Toggle background advanced settings"
+        />
+      </Tooltip>
+      <ColorPicker
+        value={settings.backgroundColor}
+        onChange={(val) => update('backgroundColor', val)}
         disabled={fullScreenModeChecked}
         darkMode={darkMode}
-        ariaLabel="Toggle background advanced settings"
+        className={`${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
-    </Tooltip>
-    <ColorPicker
-      value={settings.backgroundColor}
-      onChange={(val) => update('backgroundColor', val)}
-      disabled={fullScreenModeChecked}
-      darkMode={darkMode}
-      className={`${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
-    />
-    <Input
-      type="number"
-      value={settings.backgroundOpacity ?? 0}
-      onChange={(e) => update('backgroundOpacity', parseInt(e.target.value))}
-      min="0"
-      max="10"
-      disabled={fullScreenModeChecked}
-      className={`w-20 ${darkMode
-        ? 'bg-gray-700 border-gray-600 text-gray-200'
-        : 'bg-white border-gray-300'
-        } ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
-      title={fullScreenModeChecked ? backgroundDisabledTooltip : undefined}
-    />
-  </SettingRow>
-);
+      <Input
+        type="number"
+        value={opacityInput}
+        onChange={(e) => handleOpacityChange(e.target.value)}
+        onBlur={handleOpacityBlur}
+        min="0"
+        max="10"
+        step="0.1"
+        inputMode="decimal"
+        disabled={fullScreenModeChecked}
+        className={`w-20 ${darkMode
+          ? 'bg-gray-700 border-gray-600 text-gray-200'
+          : 'bg-white border-gray-300'
+          } ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
+        title={fullScreenModeChecked ? backgroundDisabledTooltip : undefined}
+      />
+    </SettingRow>
+  );
+};
 
 const MarginsSection = ({ darkMode, settings, update }) => (
   <SettingRow
@@ -218,7 +256,10 @@ const MarginsSection = ({ darkMode, settings, update }) => (
     <Input
       type="number"
       value={settings.xMargin}
-      onChange={(e) => update('xMargin', parseFloat(e.target.value))}
+      onChange={(e) => update(
+        'xMargin',
+        sanitizeNumberInput(e.target.value, settings.xMargin ?? 0)
+      )}
       className={`w-20 ${darkMode
         ? 'bg-gray-700 border-gray-600 text-gray-200'
         : 'bg-white border-gray-300'
@@ -227,7 +268,10 @@ const MarginsSection = ({ darkMode, settings, update }) => (
     <Input
       type="number"
       value={settings.yMargin}
-      onChange={(e) => update('yMargin', parseFloat(e.target.value))}
+      onChange={(e) => update(
+        'yMargin',
+        sanitizeNumberInput(e.target.value, settings.yMargin ?? 0)
+      )}
       className={`w-20 ${darkMode
         ? 'bg-gray-700 border-gray-600 text-gray-200'
         : 'bg-white border-gray-300'
@@ -371,6 +415,26 @@ const OutputSettingsPanel = ({ outputKey }) => {
   }, [settings.fullScreenMode, settings.fullScreenBackgroundMedia?.url, validateExistingMedia]);
 
   const {
+    fontSizeAdvancedExpanded,
+    setFontSizeAdvancedExpanded,
+    fontColorAdvancedExpanded,
+    setFontColorAdvancedExpanded,
+    dropShadowAdvancedExpanded,
+    setDropShadowAdvancedExpanded,
+    backgroundAdvancedExpanded,
+    setBackgroundAdvancedExpanded,
+    transitionAdvancedExpanded,
+    setTransitionAdvancedExpanded,
+    fullScreenAdvancedExpanded,
+    setFullScreenAdvancedExpanded
+  } = useAdvancedSectionPersistence(outputKey, {
+    autoOpenTriggers: {
+      fontSizeAdvancedExpanded: settings.maxLinesEnabled,
+      fullScreenAdvancedExpanded: settings.fullScreenMode,
+    }
+  });
+
+  const {
     fullScreenModeChecked,
     lyricsPositionValue,
     fullScreenBackgroundTypeValue,
@@ -381,26 +445,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
     handleFullScreenToggle,
     handleFullScreenBackgroundTypeChange,
     handleFullScreenColorChange
-  } = useFullscreenModeState({ settings, applySettings });
-
-  const {
-    fontSizeAdvancedExpanded,
-    setFontSizeAdvancedExpanded,
-    fontColorAdvancedExpanded,
-    setFontColorAdvancedExpanded,
-    dropShadowAdvancedExpanded,
-    setDropShadowAdvancedExpanded,
-    backgroundAdvancedExpanded,
-    setBackgroundAdvancedExpanded,
-    transitionAdvancedExpanded,
-    setTransitionAdvancedExpanded
-  } = useAdvancedSectionPersistence(outputKey);
-
-  React.useEffect(() => {
-    if (settings.maxLinesEnabled && !fontSizeAdvancedExpanded) {
-      setFontSizeAdvancedExpanded(true);
-    }
-  }, [settings.maxLinesEnabled, fontSizeAdvancedExpanded, setFontSizeAdvancedExpanded]);
+  } = useFullscreenModeState({ settings, applySettings, expand: fullScreenAdvancedExpanded });
 
   const {
     translationFontSizeMode,
@@ -421,6 +466,70 @@ const OutputSettingsPanel = ({ outputKey }) => {
     handleTranslationFontSizeModeChange,
     handleTranslationFontSizeChange
   } = useTypographyAndBands({ settings, applySettings });
+
+  const prevFullScreenRef = React.useRef(fullScreenModeChecked);
+  const fullScreenAdvancedRef = React.useRef(null);
+  React.useEffect(() => {
+    const wasFullScreen = prevFullScreenRef.current;
+    if (!wasFullScreen && fullScreenModeChecked) {
+      setFullScreenAdvancedExpanded(true);
+    }
+    prevFullScreenRef.current = fullScreenModeChecked;
+  }, [fullScreenModeChecked, setFullScreenAdvancedExpanded]);
+
+  const fullScreenAdvancedVisible = fullScreenAdvancedExpanded;
+  const fullScreenControlsDisabled = !fullScreenModeChecked && fullScreenAdvancedExpanded;
+
+  React.useEffect(() => {
+    if (!fullScreenAdvancedVisible) return;
+    const scrollTarget = fullScreenAdvancedRef.current;
+    if (!scrollTarget) return;
+
+    const findScrollableParent = (node) => {
+      let current = node?.parentElement;
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const canScroll = current.scrollHeight > current.clientHeight &&
+          /(auto|scroll|overlay)/i.test(style.overflowY || '');
+        if (canScroll) return current;
+        current = current.parentElement;
+      }
+      return null;
+    };
+
+    const scrollToReveal = () => {
+      const container = findScrollableParent(scrollTarget);
+      const padding = 24;
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = scrollTarget.getBoundingClientRect();
+        const overflowBottom = targetRect.bottom - containerRect.bottom + padding;
+        if (overflowBottom > 0) {
+          container.scrollTo({
+            top: container.scrollTop + overflowBottom,
+            behavior: 'smooth'
+          });
+        }
+        return;
+      }
+
+      const targetRect = scrollTarget.getBoundingClientRect();
+      const overflowWindow = targetRect.bottom - window.innerHeight + padding;
+      if (overflowWindow > 0) {
+        window.scrollBy({ top: overflowWindow, behavior: 'smooth' });
+      }
+    };
+
+    const timeout = window.setTimeout(scrollToReveal, 120);
+    return () => window.clearTimeout(timeout);
+  }, [fullScreenAdvancedVisible]);
+
+  const handleFullScreenToggleWithExpand = React.useCallback((checked) => {
+    handleFullScreenToggle(checked);
+    if (checked) {
+      setFullScreenAdvancedExpanded(true);
+    }
+  }, [handleFullScreenToggle, setFullScreenAdvancedExpanded]);
 
   const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true }) => (
     <div className="flex items-center justify-between gap-4">
@@ -677,8 +786,12 @@ const OutputSettingsPanel = ({ outputKey }) => {
                       type="number"
                       value={Number.isFinite(displayFontSize) ? displayFontSize : 24}
                       onChange={(e) => {
-                        const next = parseInt(e.target.value, 10);
-                        if (!Number.isNaN(next)) update('fontSize', next);
+                        const next = sanitizeIntegerInput(
+                          e.target.value,
+                          settings.fontSize ?? 24,
+                          { min: 24, max: 100, clampMin: false }
+                        );
+                        update('fontSize', next);
                       }}
                       min="24"
                       max="100"
@@ -730,7 +843,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
             <Input
               type="number"
               value={settings.maxLines ?? 3}
-              onChange={(e) => update('maxLines', parseInt(e.target.value))}
+              onChange={(e) => update(
+                'maxLines',
+                sanitizeIntegerInput(e.target.value, settings.maxLines ?? 3, { min: 1, max: 10 })
+              )}
               min="1"
               max="10"
               disabled={!maxLinesEnabled}
@@ -747,7 +863,14 @@ const OutputSettingsPanel = ({ outputKey }) => {
             <Input
               type="number"
               value={settings.minFontSize ?? 24}
-              onChange={(e) => update('minFontSize', parseInt(e.target.value))}
+              onChange={(e) => update(
+                'minFontSize',
+                sanitizeIntegerInput(
+                  e.target.value,
+                  settings.minFontSize ?? 24,
+                  { min: 12, max: 100, clampMin: false }
+                )
+              )}
               min="12"
               max="100"
               disabled={!maxLinesEnabled}
@@ -855,7 +978,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
           <Input
             type="number"
             value={settings.borderSize ?? 0}
-            onChange={(e) => update('borderSize', parseInt(e.target.value, 10))}
+            onChange={(e) => update(
+              'borderSize',
+              sanitizeIntegerInput(e.target.value, settings.borderSize ?? 0, { min: 0, max: 10 })
+            )}
             min="0"
             max="10"
             className={`w-20 ${darkMode
@@ -892,7 +1018,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
               <Input
                 type="number"
                 value={dropShadowOffsetX}
-                onChange={(e) => update('dropShadowOffsetX', parseInt(e.target.value, 10))}
+                onChange={(e) => update(
+                  'dropShadowOffsetX',
+                  sanitizeIntegerInput(e.target.value, settings.dropShadowOffsetX ?? 0, { min: -50, max: 50 })
+                )}
                 min="-50"
                 max="50"
                 className={`w-16 ${darkMode
@@ -910,7 +1039,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
               <Input
                 type="number"
                 value={dropShadowOffsetY}
-                onChange={(e) => update('dropShadowOffsetY', parseInt(e.target.value, 10))}
+                onChange={(e) => update(
+                  'dropShadowOffsetY',
+                  sanitizeIntegerInput(e.target.value, settings.dropShadowOffsetY ?? 8, { min: -50, max: 50 })
+                )}
                 min="-50"
                 max="50"
                 className={`w-16 ${darkMode
@@ -928,7 +1060,10 @@ const OutputSettingsPanel = ({ outputKey }) => {
               <Input
                 type="number"
                 value={dropShadowBlur}
-                onChange={(e) => update('dropShadowBlur', parseInt(e.target.value, 10))}
+                onChange={(e) => update(
+                  'dropShadowBlur',
+                  sanitizeIntegerInput(e.target.value, settings.dropShadowBlur ?? 10, { min: 0, max: 50 })
+                )}
                 min="0"
                 max="50"
                 className={`w-16 ${darkMode
@@ -1047,7 +1182,14 @@ const OutputSettingsPanel = ({ outputKey }) => {
               <Input
                 type="number"
                 value={backgroundBandVerticalPadding}
-                onChange={(e) => update('backgroundBandVerticalPadding', parseInt(e.target.value, 10))}
+                onChange={(e) => update(
+                  'backgroundBandVerticalPadding',
+                  sanitizeIntegerInput(
+                    e.target.value,
+                    settings.backgroundBandVerticalPadding ?? 20,
+                    { min: 0, max: 100 }
+                  )
+                )}
                 min="0"
                 max="100"
                 className={`w-16 ${darkMode
@@ -1092,7 +1234,14 @@ const OutputSettingsPanel = ({ outputKey }) => {
           <Input
             type="number"
             value={settings.transitionSpeed ?? 150}
-            onChange={(e) => update('transitionSpeed', parseInt(e.target.value, 10))}
+            onChange={(e) => update(
+              'transitionSpeed',
+              sanitizeIntegerInput(
+                e.target.value,
+                settings.transitionSpeed ?? 150,
+                { min: 100, max: 2000, clampMin: false }
+              )
+            )}
             min="100"
             max="2000"
             step="50"
@@ -1107,16 +1256,26 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Full Screen Mode */}
       <div className="flex items-center justify-between gap-4">
-        <Tooltip content="Enable full screen display with custom background settings" side="right">
-          <LabelWithIcon icon={ScreenShare} text="Full Screen Mode" darkMode={darkMode} />
-        </Tooltip>
+        <div className="flex items-center gap-2">
+          <Tooltip content="Enable full screen display with custom background settings" side="right">
+            <LabelWithIcon icon={ScreenShare} text="Full Screen Mode" darkMode={darkMode} />
+          </Tooltip>
+          <Tooltip content={fullScreenAdvancedExpanded ? "Hide advanced settings" : "Show advanced settings"} side="top">
+            <AdvancedToggle
+              expanded={fullScreenAdvancedExpanded}
+              onToggle={() => setFullScreenAdvancedExpanded(!fullScreenAdvancedExpanded)}
+              darkMode={darkMode}
+              ariaLabel="Toggle full screen advanced settings"
+            />
+          </Tooltip>
+        </div>
         <div className="flex items-center gap-3 justify-end w-full">
           <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {fullScreenModeChecked ? 'Enabled' : 'Disabled'}
           </span>
           <Switch
             checked={fullScreenModeChecked}
-            onCheckedChange={handleFullScreenToggle}
+            onCheckedChange={handleFullScreenToggleWithExpand}
             aria-label="Toggle full screen mode"
             className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
               ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
@@ -1129,20 +1288,23 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
       {/* Fullscreen Mode Settings Row */}
       <div
+        ref={fullScreenAdvancedRef}
         className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${fullScreenOptionsWrapperClass}`}
-        aria-hidden={!fullScreenModeChecked}
-        style={{ marginTop: fullScreenModeChecked ? undefined : 0 }}
+        aria-hidden={!fullScreenAdvancedVisible}
+        style={{ marginTop: fullScreenAdvancedVisible ? undefined : 0 }}
       >
-        <div className="flex items-center gap-3 justify-between w-full pt-2">
+        <div className={`flex items-center gap-3 justify-between w-full pt-2 ${fullScreenControlsDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
           <Select
             value={fullScreenBackgroundTypeValue}
             onValueChange={handleFullScreenBackgroundTypeChange}
+            disabled={fullScreenControlsDisabled}
           >
             <SelectTrigger
+              disabled={fullScreenControlsDisabled}
               className={`w-[200px] ${darkMode
                 ? 'bg-gray-700 border-gray-600 text-gray-200'
                 : 'bg-white border-gray-300'
-                }`}
+                } ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <SelectValue />
             </SelectTrigger>
@@ -1157,7 +1319,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
               value={fullScreenBackgroundColorValue}
               onChange={handleFullScreenColorChange}
               darkMode={darkMode}
-              className={`ml-auto ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+              disabled={fullScreenControlsDisabled}
+              className={`ml-auto ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             />
           ) : (
             <div className="flex items-center gap-2 ml-auto min-w-0 max-w-full">
@@ -1167,11 +1330,13 @@ const OutputSettingsPanel = ({ outputKey }) => {
                 accept="image/*,video/*"
                 className="hidden"
                 onChange={handleMediaSelection}
+                disabled={fullScreenControlsDisabled}
               />
               <Button
                 variant="outline"
                 onClick={triggerFileDialog}
-                className={`h-9 px-4 flex-shrink-0 ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}`}
+                disabled={fullScreenControlsDisabled}
+                className={`h-9 px-4 flex-shrink-0 ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {hasBackgroundMedia ? 'File Added' : 'Add File'}
               </Button>
@@ -1185,6 +1350,22 @@ const OutputSettingsPanel = ({ outputKey }) => {
               )}
             </div>
           )}
+        </div>
+
+        <div className="flex items-center justify-between w-full pt-3">
+          <Tooltip content="Show fullscreen background even when the output is toggled off" side="right">
+            <LabelWithIcon icon={ScreenShare} text="Always Show Background" darkMode={darkMode} />
+          </Tooltip>
+          <Switch
+            checked={Boolean(settings.alwaysShowBackground)}
+            onCheckedChange={(checked) => update('alwaysShowBackground', checked)}
+            aria-label="Toggle always show background"
+            className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+              ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+              : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+              }`}
+            thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+          />
         </div>
       </div>
 

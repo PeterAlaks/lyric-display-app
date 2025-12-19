@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useControlSocket } from '../../context/ControlSocketProvider';
 import useToast from '../useToast';
+import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const STORAGE_KEYS = {
   customUpcomingSongName: 'stage_custom_upcoming_song_name',
@@ -107,7 +108,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     const storedPaused = sessionStorage.getItem(STORAGE_KEYS.timerPaused);
 
     if (storedDuration) {
-      setTimerDuration(parseInt(storedDuration, 10));
+      setTimerDuration(sanitizeIntegerInput(storedDuration, 0, { min: 0, max: 180 }));
     }
 
     if (storedRunning === 'true' && storedEndTime) {
@@ -243,7 +244,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
   };
 
   const handleTimerDurationChange = (value) => {
-    const duration = parseInt(value, 10);
+    const duration = sanitizeIntegerInput(value, timerDuration ?? 0, { min: 0, max: 180 });
     setTimerDuration(duration);
     sessionStorage.setItem(STORAGE_KEYS.timerDuration, duration.toString());
   };
