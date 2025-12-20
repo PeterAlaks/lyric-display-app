@@ -13,7 +13,7 @@ import { preloadSystemFonts } from './systemFonts.js';
 import { getSavedDarkMode } from './themePreferences.js';
 
 export async function handleMissingAdminKey() {
-  const message = 'Lyric Display requires the administrative key to unlock local access.';
+  const message = 'LyricDisplay requires the administrative key to unlock local access.';
   console.error('[Startup] Admin key unavailable after retries; keeping renderer hidden.');
 
   try {

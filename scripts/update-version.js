@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 const pkgPath = path.resolve(__dirname, '../package.json');
 const readmePath = path.resolve(__dirname, '../README.md');
 const guidePath = path.resolve(__dirname, '../LyricDisplay Installation & Integration Guide.md');
+const openapiPath = path.resolve(__dirname, '../docs/openapi.yaml');
+const asyncapiPath = path.resolve(__dirname, '../docs/asyncapi.yaml');
 
 function getCurrentVersion() {
   if (!fs.existsSync(pkgPath)) return '0.0.0';
@@ -25,7 +27,7 @@ function updateVersionNumbers(version) {
       `$1${version}`
     );
     fs.writeFileSync(readmePath, content);
-    console.log(`✅ Updated README.md to version ${version}`);
+    console.log(`ƒo. Updated README.md to version ${version}`);
   }
 
   if (fs.existsSync(guidePath)) {
@@ -35,13 +37,33 @@ function updateVersionNumbers(version) {
       `$1${version}`
     );
     fs.writeFileSync(guidePath, content);
-    console.log(`✅ Updated Installation Guide to version ${version}`);
+    console.log(`ƒo. Updated Installation Guide to version ${version}`);
+  }
+
+  if (fs.existsSync(openapiPath)) {
+    let content = fs.readFileSync(openapiPath, 'utf8');
+    content = content.replace(
+      /(version:\s*)(\d+\.\d+\.\d+)/i,
+      `$1${version}`
+    );
+    fs.writeFileSync(openapiPath, content);
+    console.log(`ƒo. Updated OpenAPI spec to version ${version}`);
+  }
+
+  if (fs.existsSync(asyncapiPath)) {
+    let content = fs.readFileSync(asyncapiPath, 'utf8');
+    content = content.replace(
+      /(version:\s*)(\d+\.\d+\.\d+)/i,
+      `$1${version}`
+    );
+    fs.writeFileSync(asyncapiPath, content);
+    console.log(`ƒo. Updated AsyncAPI spec to version ${version}`);
   }
 }
 
 function updateGitHubReleaseLinks(version) {
   if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
-    console.warn('⚠️  Invalid version provided, skipping link update');
+    console.warn('Invalid version provided, skipping link update');
     return false;
   }
 
@@ -76,7 +98,7 @@ function updateGitHubReleaseLinks(version) {
     );
 
     fs.writeFileSync(guidePath, content);
-    console.log(`✅ Updated Installation Guide with links for v${version}`);
+    console.log(`Updated Installation Guide with links for v${version}`);
     return true;
   }
   return false;
@@ -86,7 +108,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const version = args[0] || getCurrentVersion();
 
-  console.log(`\n📝 Updating documentation version to v${version}...\n`);
+  console.log(`\nUpdating documentation version to v${version}...\n`);
   updateVersionNumbers(version);
 
   updateGitHubReleaseLinks(version);
