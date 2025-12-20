@@ -1,0 +1,851 @@
+# use https://studio.asyncapi.com/ to view this
+
+asyncapi: 3.0.0
+
+info:
+  title: LyricDisplay App Socket.IO API
+  version: 5.10.4 
+  description: |
+    Real-time control surface for LyricDisplay over Socket.IO. All connections must provide
+    a JWT in the Socket.IO auth payload (`auth.token`), minted via `/api/auth/token`.
+    Event permissions are enforced server-side per token scopes. Querystring tokens are rejected.
+
+servers:
+  realtime:
+    host: localhost:4000
+    protocol: socket.io
+    description: Development server
+
+channels:
+  socketChannel:
+    address: /
+    messages:
+      # Client -> Server (receive)
+      clientConnect:
+        $ref: '#/components/messages/clientConnect'
+      splitNormalGroup:
+        $ref: '#/components/messages/splitNormalGroup'
+      requestCurrentState:
+        $ref: '#/components/messages/requestCurrentState'
+      requestSetlist:
+        $ref: '#/components/messages/requestSetlist'
+      setlistAdd:
+        $ref: '#/components/messages/setlistAdd'
+      setlistRemove:
+        $ref: '#/components/messages/setlistRemove'
+      setlistLoad:
+        $ref: '#/components/messages/setlistLoad'
+      setlistClear:
+        $ref: '#/components/messages/setlistClear'
+      setlistReorder:
+        $ref: '#/components/messages/setlistReorder'
+      lineUpdate:
+        $ref: '#/components/messages/lineUpdate'
+      outputToggle:
+        $ref: '#/components/messages/outputToggle'
+      individualOutputToggle:
+        $ref: '#/components/messages/individualOutputToggle'
+      lyricsLoad:
+        $ref: '#/components/messages/lyricsLoad'
+      lyricsTimestampsUpdate:
+        $ref: '#/components/messages/lyricsTimestampsUpdate'
+      lyricsSectionsUpdate:
+        $ref: '#/components/messages/lyricsSectionsUpdate'
+      styleUpdate:
+        $ref: '#/components/messages/styleUpdate'
+      stageTimerUpdate:
+        $ref: '#/components/messages/stageTimerUpdate'
+      stageMessagesUpdate:
+        $ref: '#/components/messages/stageMessagesUpdate'
+      outputMetrics:
+        $ref: '#/components/messages/outputMetrics'
+      fileNameUpdate:
+        $ref: '#/components/messages/fileNameUpdate'
+      lyricsDraftSubmit:
+        $ref: '#/components/messages/lyricsDraftSubmit'
+      lyricsDraftApprove:
+        $ref: '#/components/messages/lyricsDraftApprove'
+      lyricsDraftReject:
+        $ref: '#/components/messages/lyricsDraftReject'
+      autoplayStateUpdate:
+        $ref: '#/components/messages/autoplayStateUpdate'
+      heartbeat:
+        $ref: '#/components/messages/heartbeat'
+      disconnect:
+        $ref: '#/components/messages/disconnect'
+
+      # Server -> Client (send)
+      authError:
+        $ref: '#/components/messages/authError'
+      currentState:
+        $ref: '#/components/messages/currentState'
+      lyricsSectionsUpdate:
+        $ref: '#/components/messages/lyricsSectionsUpdate'
+      permissionError:
+        $ref: '#/components/messages/permissionError'
+      setlistUpdate:
+        $ref: '#/components/messages/setlistUpdate'
+      setlistError:
+        $ref: '#/components/messages/setlistError'
+      setlistAddSuccess:
+        $ref: '#/components/messages/setlistAddSuccess'
+      setlistRemoveSuccess:
+        $ref: '#/components/messages/setlistRemoveSuccess'
+      setlistLoadSuccess:
+        $ref: '#/components/messages/setlistLoadSuccess'
+      setlistClearSuccess:
+        $ref: '#/components/messages/setlistClearSuccess'
+      setlistReorderSuccess:
+        $ref: '#/components/messages/setlistReorderSuccess'
+      serverLineUpdate:
+        $ref: '#/components/messages/serverLineUpdate'
+      serverOutputToggle:
+        $ref: '#/components/messages/serverOutputToggle'
+      serverIndividualOutputToggle:
+        $ref: '#/components/messages/serverIndividualOutputToggle'
+      serverLyricsLoad:
+        $ref: '#/components/messages/serverLyricsLoad'
+      serverLyricsTimestampsUpdate:
+        $ref: '#/components/messages/serverLyricsTimestampsUpdate'
+      serverStyleUpdate:
+        $ref: '#/components/messages/serverStyleUpdate'
+      lyricsSplitSuccess:
+        $ref: '#/components/messages/lyricsSplitSuccess'
+      lyricsSplitError:
+        $ref: '#/components/messages/lyricsSplitError'
+      serverStageTimerUpdate:
+        $ref: '#/components/messages/serverStageTimerUpdate'
+      serverStageMessagesUpdate:
+        $ref: '#/components/messages/serverStageMessagesUpdate'
+      serverOutputMetrics:
+        $ref: '#/components/messages/serverOutputMetrics'
+      serverFileNameUpdate:
+        $ref: '#/components/messages/serverFileNameUpdate'
+      draftError:
+        $ref: '#/components/messages/draftError'
+      lyricsDraftReceived:
+        $ref: '#/components/messages/lyricsDraftReceived'
+      draftSubmitted:
+        $ref: '#/components/messages/draftSubmitted'
+      draftApproved:
+        $ref: '#/components/messages/draftApproved'
+      draftRejected:
+        $ref: '#/components/messages/draftRejected'
+      serverAutoplayStateUpdate:
+        $ref: '#/components/messages/serverAutoplayStateUpdate'
+      heartbeat_ack:
+        $ref: '#/components/messages/heartbeat_ack'
+      clientDisconnected:
+        $ref: '#/components/messages/clientDisconnected'
+      periodicStateSync:
+        $ref: '#/components/messages/periodicStateSync'
+
+operations:
+  clientEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/socketChannel'
+    messages:
+      - $ref: '#/channels/socketChannel/messages/clientConnect'
+      - $ref: '#/channels/socketChannel/messages/requestCurrentState'
+      - $ref: '#/channels/socketChannel/messages/splitNormalGroup'
+      - $ref: '#/channels/socketChannel/messages/requestSetlist'
+      - $ref: '#/channels/socketChannel/messages/setlistAdd'
+      - $ref: '#/channels/socketChannel/messages/setlistRemove'
+      - $ref: '#/channels/socketChannel/messages/setlistLoad'
+      - $ref: '#/channels/socketChannel/messages/setlistClear'
+      - $ref: '#/channels/socketChannel/messages/setlistReorder'
+      - $ref: '#/channels/socketChannel/messages/lineUpdate'
+      - $ref: '#/channels/socketChannel/messages/outputToggle'
+      - $ref: '#/channels/socketChannel/messages/individualOutputToggle'
+      - $ref: '#/channels/socketChannel/messages/lyricsLoad'
+      - $ref: '#/channels/socketChannel/messages/lyricsTimestampsUpdate'
+      - $ref: '#/channels/socketChannel/messages/lyricsSectionsUpdate'
+      - $ref: '#/channels/socketChannel/messages/styleUpdate'
+      - $ref: '#/channels/socketChannel/messages/stageTimerUpdate'
+      - $ref: '#/channels/socketChannel/messages/stageMessagesUpdate'
+      - $ref: '#/channels/socketChannel/messages/outputMetrics'
+      - $ref: '#/channels/socketChannel/messages/fileNameUpdate'
+      - $ref: '#/channels/socketChannel/messages/lyricsDraftSubmit'
+      - $ref: '#/channels/socketChannel/messages/lyricsDraftApprove'
+      - $ref: '#/channels/socketChannel/messages/lyricsDraftReject'
+      - $ref: '#/channels/socketChannel/messages/autoplayStateUpdate'
+      - $ref: '#/channels/socketChannel/messages/heartbeat'
+      - $ref: '#/channels/socketChannel/messages/disconnect'
+  
+  serverEvents:
+    action: send
+    channel:
+      $ref: '#/channels/socketChannel'
+    messages:
+      - $ref: '#/channels/socketChannel/messages/authError'
+      - $ref: '#/channels/socketChannel/messages/currentState'
+      - $ref: '#/channels/socketChannel/messages/lyricsSectionsUpdate'
+      - $ref: '#/channels/socketChannel/messages/permissionError'
+      - $ref: '#/channels/socketChannel/messages/setlistUpdate'
+      - $ref: '#/channels/socketChannel/messages/setlistError'
+      - $ref: '#/channels/socketChannel/messages/setlistAddSuccess'
+      - $ref: '#/channels/socketChannel/messages/setlistRemoveSuccess'
+      - $ref: '#/channels/socketChannel/messages/setlistLoadSuccess'
+      - $ref: '#/channels/socketChannel/messages/setlistClearSuccess'
+      - $ref: '#/channels/socketChannel/messages/setlistReorderSuccess'
+      - $ref: '#/channels/socketChannel/messages/serverLineUpdate'
+      - $ref: '#/channels/socketChannel/messages/serverOutputToggle'
+      - $ref: '#/channels/socketChannel/messages/serverIndividualOutputToggle'
+      - $ref: '#/channels/socketChannel/messages/serverLyricsLoad'
+      - $ref: '#/channels/socketChannel/messages/serverLyricsTimestampsUpdate'
+      - $ref: '#/channels/socketChannel/messages/serverStyleUpdate'
+      - $ref: '#/channels/socketChannel/messages/lyricsSplitSuccess'
+      - $ref: '#/channels/socketChannel/messages/lyricsSplitError'
+      - $ref: '#/channels/socketChannel/messages/serverStageTimerUpdate'
+      - $ref: '#/channels/socketChannel/messages/serverStageMessagesUpdate'
+      - $ref: '#/channels/socketChannel/messages/serverOutputMetrics'
+      - $ref: '#/channels/socketChannel/messages/serverFileNameUpdate'
+      - $ref: '#/channels/socketChannel/messages/draftError'
+      - $ref: '#/channels/socketChannel/messages/lyricsDraftReceived'
+      - $ref: '#/channels/socketChannel/messages/draftSubmitted'
+      - $ref: '#/channels/socketChannel/messages/draftApproved'
+      - $ref: '#/channels/socketChannel/messages/draftRejected'
+      - $ref: '#/channels/socketChannel/messages/serverAutoplayStateUpdate'
+      - $ref: '#/channels/socketChannel/messages/heartbeat_ack'
+      - $ref: '#/channels/socketChannel/messages/clientDisconnected'
+      - $ref: '#/channels/socketChannel/messages/periodicStateSync'
+
+components:
+  schemas:
+    LyricLine:
+      oneOf:
+        - type: string
+          description: A simple single line of lyrics
+        - type: object
+          description: A structured line group (e.g. translation or two-line group)
+          properties:
+            type:
+              type: string
+              enum: ['group', 'normal-group']
+            id:
+              type: string
+            mainLine:
+              type: string
+              description: Primary line text (for 'group')
+            translation:
+              type: string
+              description: Translation text (for 'group')
+            line1:
+              type: string
+              description: First line (for 'normal-group')
+            line2:
+              type: string
+              description: Second line (for 'normal-group')
+            displayText:
+              type: string
+              description: Combined text for display
+            searchText:
+              type: string
+              description: Combined text for search
+            originalIndex:
+              type: integer
+            sections:
+              type: array
+              description: Optional derived sections for LRC or TXT parsing
+              items:
+                type: object
+            lineToSection:
+              type: object
+              description: Mapping of line index to section index
+    
+    SetlistItemInput:
+      type: object
+      required:
+        - name
+        - content
+      properties:
+        name:
+          type: string
+        content:
+          type: string
+        lastModified:
+          type: integer
+        metadata:
+          type: object
+
+    SetlistItem:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        originalName:
+          type: string
+          nullable: true
+        content:
+          type: string
+        lastModified:
+          type: integer
+        addedAt:
+          type: integer
+        fileType:
+          type: string
+          enum: ['lrc', 'txt']
+        metadata:
+          type: object
+          nullable: true
+        sections:
+          type: array
+          nullable: true
+          items:
+            type: object
+        lineToSection:
+          type: object
+          nullable: true
+        addedBy:
+          type: object
+          properties:
+            clientType:
+              type: string
+            deviceId:
+              type: string
+            sessionId:
+              type: string
+
+  messages:
+    # Client -> Server
+    clientConnect:
+      name: clientConnect
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            enum: ['desktop', 'web', 'output1', 'output2', 'stage', 'mobile']
+      description: Must be sent after successful authenticated connection.
+      x-permissions: ['lyrics:read']
+    splitNormalGroup:
+      name: splitNormalGroup
+      payload:
+        oneOf:
+          - type: integer
+          - type: object
+            properties:
+              index:
+                type: integer
+      description: Split a 'normal-group' line into two separate lines.
+      x-permissions: ['output:control']
+    requestCurrentState:
+      name: requestCurrentState
+      payload:
+        type: 'null'
+      x-permissions: ['lyrics:read']
+    requestSetlist:
+      name: requestSetlist
+      payload:
+        type: 'null'
+      x-permissions: ['setlist:read']
+    setlistAdd:
+      name: setlistAdd
+      payload:
+        type: array
+        items:
+          $ref: '#/components/schemas/SetlistItemInput'
+      description: Adds up to 50 items total; rejects duplicates by normalized name.
+      x-permissions: ['setlist:write']
+    setlistRemove:
+      name: setlistRemove
+      payload:
+        type: string
+        description: File ID to remove
+      description: Non-admin clients may only remove items they added.
+      x-permissions: ['setlist:write']
+    setlistLoad:
+      name: setlistLoad
+      payload:
+        type: string
+        description: File ID to load
+      x-permissions: ['setlist:read']
+    setlistClear:
+      name: setlistClear
+      payload:
+        type: 'null'
+      x-permissions: ['setlist:delete']
+    setlistReorder:
+      name: setlistReorder
+      payload:
+        oneOf:
+          - type: array
+            items:
+              type: string
+          - type: object
+            properties:
+              orderedIds:
+                type: array
+                items:
+                  type: string
+      x-permissions: ['setlist:write']
+    lineUpdate:
+      name: lineUpdate
+      payload:
+        type: object
+        properties:
+          index:
+            type: integer
+            description: Index of the selected line
+      x-permissions: ['output:control']
+    outputToggle:
+      name: outputToggle
+      payload:
+        type: boolean
+      x-permissions: ['output:control']
+    individualOutputToggle:
+      name: individualOutputToggle
+      payload:
+        type: object
+        properties:
+          output:
+            type: string
+            enum: ['output1', 'output2', 'stage']
+          enabled:
+            type: boolean
+      x-permissions: ['output:control']
+    lyricsLoad:
+      name: lyricsLoad
+      payload:
+        type: array
+        items:
+          $ref: '#/components/schemas/LyricLine'
+      x-permissions: ['lyrics:write']
+    lyricsTimestampsUpdate:
+      name: lyricsTimestampsUpdate
+      payload:
+        type: array
+        items:
+          type: object
+          properties:
+            time:
+              type: number
+            lineIndex:
+              type: integer
+      x-permissions: ['lyrics:write']
+    lyricsSectionsUpdate:
+      name: lyricsSectionsUpdate
+      payload:
+        type: object
+        properties:
+          sections:
+            type: array
+          lineToSection:
+            type: object
+      description: Sends derived sections and mapping for loaded lyrics.
+      x-permissions: ['lyrics:write']
+    styleUpdate:
+      name: styleUpdate
+      payload:
+        type: object
+        properties:
+          output:
+            type: string
+            enum: ['output1', 'output2', 'stage']
+          settings:
+            type: object
+      description: Update styling for a specific output. Mirrors to all clients.
+      x-permissions: ['settings:write']
+    stageTimerUpdate:
+      name: stageTimerUpdate
+      payload:
+        type: object
+        properties:
+          running:
+            type: boolean
+          paused:
+            type: boolean
+          endTime:
+            type: integer
+            nullable: true
+          remaining:
+            type: integer
+            nullable: true
+      x-permissions: ['output:control']
+    stageMessagesUpdate:
+      name: stageMessagesUpdate
+      payload:
+        type: array
+        items:
+          type: object
+      x-permissions: ['output:control']
+    outputMetrics:
+      name: outputMetrics
+      payload:
+        type: object
+        properties:
+          output:
+            type: string
+            enum: ['output1', 'output2']
+          metrics:
+            type: object
+            properties:
+              adjustedFontSize:
+                type: number
+              autosizerActive:
+                type: boolean
+              viewportWidth:
+                type: number
+              viewportHeight:
+                type: number
+              timestamp:
+                type: integer
+      description: Output instances publish autosizer and viewport metrics.
+      x-permissions: ['lyrics:read']
+    fileNameUpdate:
+      name: fileNameUpdate
+      payload:
+        type: string
+      x-permissions: ['lyrics:write']
+    lyricsDraftSubmit:
+      name: lyricsDraftSubmit
+      payload:
+        type: object
+        properties:
+          title:
+            type: string
+          rawText:
+            type: string
+          processedLines:
+            type: array
+            items:
+              $ref: '#/components/schemas/LyricLine'
+      description: Controllers submit drafts; desktop must approve.
+      x-permissions: ['lyrics:draft']
+    lyricsDraftApprove:
+      name: lyricsDraftApprove
+      payload:
+        type: object
+        properties:
+          draftId:
+            type: string
+          title:
+            type: string
+          rawText:
+            type: string
+          processedLines:
+            type: array
+            items:
+              $ref: '#/components/schemas/LyricLine'
+      x-permissions: ['lyrics:write']
+    lyricsDraftReject:
+      name: lyricsDraftReject
+      payload:
+        type: object
+        properties:
+          draftId:
+            type: string
+          title:
+            type: string
+          reason:
+            type: string
+      x-permissions: ['lyrics:write']
+    autoplayStateUpdate:
+      name: autoplayStateUpdate
+      payload:
+        type: object
+        properties:
+          isActive:
+            type: boolean
+          clientType:
+            type: string
+      x-permissions: ['output:control']
+    heartbeat:
+      name: heartbeat
+      payload:
+        type: 'null'
+    disconnect:
+      name: disconnect
+      payload:
+        type: string
+        description: Reason for disconnection
+
+    # Server -> Client
+    authError:
+      name: authError
+      payload:
+        type: string
+    currentState:
+      name: currentState
+      payload:
+        type: object
+        properties:
+          lyrics:
+            type: array
+            items:
+              $ref: '#/components/schemas/LyricLine'
+          lyricsTimestamps:
+            type: array
+            items:
+              type: object
+          lyricsSections:
+            type: array
+          lineToSection:
+            type: object
+          setlistFiles:
+            type: array
+            items:
+              $ref: '#/components/schemas/SetlistItem'
+          output1Settings:
+            type: object
+          output2Settings:
+            type: object
+          stageSettings:
+            type: object
+          isOutputOn:
+            type: boolean
+          output1Enabled:
+            type: boolean
+          output2Enabled:
+            type: boolean
+          stageEnabled:
+            type: boolean
+          lyricsFileName:
+            type: string
+          isDesktopClient:
+            type: boolean
+          clientPermissions:
+            type: array
+            items:
+              type: string
+          timestamp:
+            type: integer
+          syncTimestamp:
+            type: integer
+          # ... Add other state properties as required
+    permissionError:
+      name: permissionError
+      payload:
+        type: string
+    setlistUpdate:
+      name: setlistUpdate
+      payload:
+        type: array
+        items:
+          $ref: '#/components/schemas/SetlistItem'
+    setlistError:
+      name: setlistError
+      payload:
+        type: string
+    setlistAddSuccess:
+      name: setlistAddSuccess
+      payload:
+        type: object
+        properties:
+          addedCount:
+            type: integer
+          totalCount:
+            type: integer
+    setlistRemoveSuccess:
+      name: setlistRemoveSuccess
+      payload:
+        type: string
+        description: Removed file ID
+    setlistLoadSuccess:
+      name: setlistLoadSuccess
+      payload:
+        type: object
+        properties:
+          fileId:
+            type: string
+            nullable: true
+          fileName:
+            type: string
+          originalName:
+             type: string
+             nullable: true
+          fileType:
+            type: string
+          linesCount:
+            type: integer
+          rawContent:
+            type: string
+          loadedBy:
+            type: string
+          origin:
+             type: string
+             nullable: true
+          metadata:
+            type: object
+    setlistClearSuccess:
+      name: setlistClearSuccess
+      payload:
+        type: 'null'
+    setlistReorderSuccess:
+      name: setlistReorderSuccess
+      payload:
+        type: object
+        properties:
+          orderedIds:
+            type: array
+            items:
+              type: string
+          totalCount:
+            type: integer
+    serverLineUpdate:
+      name: lineUpdate
+      payload:
+        type: object
+        properties:
+          index:
+            type: integer
+    serverOutputToggle:
+      name: outputToggle
+      payload:
+        type: boolean
+    serverIndividualOutputToggle:
+      name: individualOutputToggle
+      payload:
+        type: object
+        properties:
+          output:
+            type: string
+          enabled:
+            type: boolean
+    serverLyricsLoad:
+      name: lyricsLoad
+      payload:
+        type: array
+        items:
+          $ref: '#/components/schemas/LyricLine'
+    serverLyricsTimestampsUpdate:
+      name: lyricsTimestampsUpdate
+      payload:
+        type: array
+        items:
+          type: object
+    lyricsSectionsUpdate:
+      name: lyricsSectionsUpdate
+      payload:
+        type: object
+        properties:
+          sections:
+            type: array
+          lineToSection:
+            type: object
+    serverStyleUpdate:
+      name: styleUpdate
+      payload:
+        type: object
+        properties:
+          output:
+            type: string
+          settings:
+            type: object
+    lyricsSplitSuccess:
+      name: lyricsSplitSuccess
+      payload:
+        type: object
+        properties:
+          index:
+            type: integer
+    lyricsSplitError:
+      name: lyricsSplitError
+      payload:
+        type: string
+    serverStageTimerUpdate:
+      name: stageTimerUpdate
+      payload:
+        type: object
+    serverStageMessagesUpdate:
+      name: stageMessagesUpdate
+      payload:
+        type: array
+    serverOutputMetrics:
+      name: outputMetrics
+      payload:
+        type: object
+        properties:
+          output:
+            type: string
+          metrics:
+            type: object
+          allInstances:
+            type: array
+          instanceCount:
+            type: integer
+    serverFileNameUpdate:
+      name: fileNameUpdate
+      payload:
+        type: string
+    draftError:
+      name: draftError
+      payload:
+        type: string
+    lyricsDraftReceived:
+      name: lyricsDraftReceived
+      payload:
+        type: object
+        properties:
+          draftId:
+            type: string
+    draftSubmitted:
+      name: draftSubmitted
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          title:
+            type: string
+    draftApproved:
+      name: draftApproved
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          title:
+            type: string
+          draftId:
+            type: string
+    draftRejected:
+      name: draftRejected
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          title:
+            type: string
+          reason:
+            type: string
+          draftId:
+            type: string
+    serverAutoplayStateUpdate:
+      name: autoplayStateUpdate
+      payload:
+        type: object
+        properties:
+          isActive:
+            type: boolean
+          clientType:
+            type: string
+    heartbeat_ack:
+      name: heartbeat_ack
+      payload:
+        type: object
+        properties:
+          timestamp:
+            type: integer
+    clientDisconnected:
+      name: clientDisconnected
+      payload:
+        type: object
+        properties:
+          clientType:
+            type: string
+          deviceId:
+            type: string
+          disconnectedAt:
+            type: integer
+          reason:
+            type: string
+    periodicStateSync:
+      name: periodicStateSync
+      payload:
+        type: object
+        # same as currentState
