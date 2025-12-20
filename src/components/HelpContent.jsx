@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, Paintbrush, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, Italic, Underline, CaseUpper, ScreenShare } from 'lucide-react';
+import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, Paintbrush, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, Italic, Underline, CaseUpper, ScreenShare, Search, Timer, Hand } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -188,6 +188,20 @@ export const SongCanvasHelp = ({ darkMode }) => (
         />
 
         <HelpSection
+            icon={Search}
+            title="Search & Replace"
+            description="Open search inside the canvas with Ctrl/Cmd+F. Use arrow buttons or Shift+Up/Down to move between matches, clear with the X, and close the bar when done. Press Ctrl/Cmd+H to expand replace; Replace or Replace All apply to the current query while focus stays in search."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Timer}
+            title="Timestamp Tools"
+            description="Add timestamps from the inline toolbar or the right-click menu. Use Standard Timestamp on any line, and Enhanced Timestamp when a line already has a time tag for finer sync. Timestamp actions respect your current cursor/line selection."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
             icon={FileText}
             title="Save & Load Options"
             description="Save lyrics as .txt files to your computer, or use 'Save & Load' to save AND immediately load into the control panel. Desktop app remembers recent files for quick access."
@@ -196,7 +210,7 @@ export const SongCanvasHelp = ({ darkMode }) => (
 
         <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-green-900/20 border border-green-700/30' : 'bg-green-50 border border-green-200'}`}>
             <p className={`text-sm font-medium ${darkMode ? 'text-green-300' : 'text-green-800'}`}>
-                ⌨️ <strong>Keyboard Shortcuts:</strong> Ctrl/Cmd+Z/Y for undo/redo, Ctrl/Cmd+T for translation, Ctrl/Cmd+D for duplicate, Ctrl/Cmd+L to select line. Mobile controllers can submit drafts for desktop approval.
+                Note: <strong>Keyboard Shortcuts:</strong> Ctrl/Cmd+Z or Shift+Z for undo/redo, Ctrl/Cmd+T for translation, Ctrl/Cmd+D for duplicate, Ctrl/Cmd+L to select line, Ctrl/Cmd+F to search, Ctrl/Cmd+H to expand replace, Shift+Up/Down to cycle search results. Mobile controllers can submit drafts for desktop approval.
             </p>
         </div>
     </div>
@@ -309,6 +323,13 @@ export const MobileControllerHelp = ({ darkMode }) => (
             icon={Type}
             title="Start Autoplay"
             description="Automatically advance through lyrics at a set interval. Configure autoplay settings including interval timing, loop behavior, skip blank lines, and whether to start from the first line. Perfect for rehearsals or automated presentations."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Hand}
+            title="Select Mode via Long Press"
+            description="Long-press any lyric line to enter select mode and reveal the header row with Close, Select All, and a three-dot menu. While in select mode, tapping lines toggles selection instead of sending to output; use the ellipsis to open the context menu for the current selection."
             darkMode={darkMode}
         />
 

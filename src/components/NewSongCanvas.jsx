@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen, Undo, Redo, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen, Undo, Redo, ChevronRight, Search, ChevronDown, ChevronUp, X, FilePlusCorner } from 'lucide-react';
 import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
@@ -16,13 +16,15 @@ import useTitlePrefill from '../hooks/NewSongCanvas/useTitlePrefill';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from '@/components/ui/tooltip';
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator, ContextMenuSubmenu } from '@/components/ui/context-menu';
 import { formatLyrics, reconstructEditableText } from '../utils/lyricsFormat';
 import { processRawTextToLines } from '../utils/parseLyrics';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
-import useContextSubmenus from '../hooks/NewSongCanvas/useContextSubmenus';
+import useContextSubmenus from '../hooks/useContextSubmenus';
 import useLineMeasurements from '../hooks/NewSongCanvas/useLineMeasurements';
-import useContextMenuPosition from '../hooks/NewSongCanvas/useContextMenuPosition';
+import useContextMenuPosition from '../hooks/useContextMenuPosition';
+import useCanvasSearch from '../hooks/NewSongCanvas/useCanvasSearch';
 
 const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
 const METADATA_OPTIONS = [
@@ -47,7 +49,6 @@ const NewSongCanvas = () => {
   const mode = params.get("mode") || "new";
   const editMode = mode === "edit";
   const composeMode = mode === "compose";
-  const isController = composeMode;
 
   const { darkMode, setDarkMode } = useDarkModeState();
   const { lyrics, lyricsFileName, rawLyricsContent, songMetadata, setRawLyricsContent, setSongMetadata, setPendingSavedVersion } = useLyricsState();
@@ -73,6 +74,7 @@ const NewSongCanvas = () => {
   const touchMovedRef = useRef(false);
   const pendingScrollRestoreRef = useRef(null);
   const lastKnownScrollRef = useRef(0);
+  const highlightUpdateFrameRef = useRef(null);
 
   const [scrollTop, setScrollTop] = useState(0);
   const [editorPadding, setEditorPadding] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
@@ -81,6 +83,7 @@ const NewSongCanvas = () => {
   const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0, lineIndex: null, mode: 'line', cursorOffset: null });
   const [contextMenuDimensions, setContextMenuDimensions] = useState({ width: 0, height: 0 });
   const [pendingFocus, setPendingFocus] = useState(null);
+  const [searchHighlightRect, setSearchHighlightRect] = useState(null);
 
   const lines = useMemo(() => content.split('\n'), [content]);
   const isContentEmpty = !content.trim();
@@ -113,11 +116,33 @@ const NewSongCanvas = () => {
     containerSize,
     contextMenuPosition,
     menuWidth,
-    editorContainerRef,
-    timestampSubmenuRef,
-    metadataSubmenuRef,
+    triggerContainerRef: editorContainerRef,
+    submenuRefs: { timestamp: timestampSubmenuRef, metadata: metadataSubmenuRef },
     contextMenuVisible: contextMenuState.visible
   });
+
+  const {
+    closeSearchBar,
+    currentMatchIndex,
+    handleClearSearch,
+    handleNextMatch,
+    handlePreviousMatch,
+    handleReplaceAll,
+    handleReplaceCurrent,
+    handleReplaceValueChange,
+    handleSearchInputChange,
+    openReplaceBar,
+    openSearchBar,
+    replaceInputRef,
+    replaceValue,
+    matches,
+    searchBarVisible,
+    searchExpanded,
+    searchInputRef,
+    searchQuery,
+    toggleSearchExpansion,
+    totalMatches,
+  } = useCanvasSearch({ content, setContent, textareaRef });
 
   const closeContextMenu = useCallback(() => {
     setActiveSubmenu(null);
@@ -429,6 +454,27 @@ const NewSongCanvas = () => {
     navigate('/');
   }, [hasUnsavedChanges, showToast, navigate]);
 
+  const handleStartNewSong = useCallback(() => {
+    const navigateToNew = () => navigate('/new-song?mode=new');
+
+    if (hasUnsavedChanges) {
+      showToast({
+        title: 'Unsaved changes',
+        message: 'You have unsaved changes. Discard them?',
+        variant: 'warn',
+        duration: 0,
+        dedupeKey: 'unsaved-changes',
+        actions: [
+          { label: 'Yes, discard', onClick: navigateToNew },
+          { label: 'Cancel', onClick: () => { } },
+        ],
+      });
+      return;
+    }
+
+    navigateToNew();
+  }, [hasUnsavedChanges, navigate, showToast]);
+
   useEffect(() => {
     return () => {
       clearTouchLongPress();
@@ -436,10 +482,113 @@ const NewSongCanvas = () => {
     };
   }, [clearTouchLongPress, cancelSubmenuClose]);
 
+  const updateSearchHighlight = useCallback((shouldScroll) => {
+    if (!searchBarVisible || !matches || matches.length === 0) {
+      setSearchHighlightRect(null);
+      return;
+    }
+    const textarea = textareaRef.current;
+    const measurementContainer = measurementContainerRef.current;
+    if (!textarea || !measurementContainer) {
+      setSearchHighlightRect(null);
+      return;
+    }
+
+    const safeIndex = Math.max(0, Math.min(currentMatchIndex, matches.length - 1));
+    const match = matches[safeIndex];
+    const lineIndex = lineOffsets.findIndex(({ start, end }) => match.start >= start && match.start <= end);
+    if (lineIndex === -1) {
+      setSearchHighlightRect(null);
+      return;
+    }
+
+    const lineNode = measurementRefs.current[lineIndex];
+    const spanNode = lineNode?.querySelector('span');
+    const textNode = spanNode?.firstChild;
+    const lineText = lines[lineIndex] ?? '';
+
+    if (!textNode || typeof textNode.textContent !== 'string') {
+      setSearchHighlightRect(null);
+      return;
+    }
+
+    const lineStart = lineOffsets[lineIndex]?.start ?? 0;
+    const colStart = Math.max(0, Math.min(lineText.length, match.start - lineStart));
+    const colEnd = Math.max(colStart, Math.min(lineText.length, colStart + (match.end - match.start)));
+
+    const range = document.createRange();
+    range.setStart(textNode, colStart);
+    range.setEnd(textNode, colEnd);
+    const rangeRect = range.getBoundingClientRect();
+    const containerRect = measurementContainer.getBoundingClientRect();
+
+    const scrollY = textarea.scrollTop || 0;
+    const top = rangeRect.top - containerRect.top - scrollY;
+    const left = rangeRect.left - containerRect.left;
+    const height = rangeRect.height || spanNode.offsetHeight || 0;
+    const width = rangeRect.width || 0;
+
+    if (height === 0 || width === 0) {
+      setSearchHighlightRect(null);
+      return;
+    }
+
+    setSearchHighlightRect({ top, left, height, width });
+
+    if (!shouldScroll) return;
+
+    const viewHeight = textarea.clientHeight || 0;
+    const paddingTop = editorPadding.top || 0;
+    const paddingBottom = editorPadding.bottom || 0;
+    const buffer = 8;
+    const scrollMax = Math.max(0, textarea.scrollHeight - viewHeight);
+    const targetTopAbsolute = rangeRect.top - containerRect.top - paddingTop - buffer;
+    const targetCenter = targetTopAbsolute + height / 2;
+    const desiredScroll = Math.max(0, Math.min(scrollMax, targetCenter - viewHeight / 2));
+
+    const viewStart = scrollY;
+    const viewEnd = scrollY + viewHeight;
+    const targetTopView = targetTopAbsolute;
+    const targetBottomView = targetTopAbsolute + height + buffer * 2;
+
+    let nextScroll = null;
+    if (targetTopView < viewStart || targetBottomView > viewEnd) {
+      nextScroll = desiredScroll;
+    }
+
+    if (nextScroll !== null) {
+      textarea.scrollTo({ top: nextScroll, behavior: 'smooth' });
+      lastKnownScrollRef.current = nextScroll;
+      setScrollTop(nextScroll);
+    }
+  }, [currentMatchIndex, editorPadding.bottom, editorPadding.top, lineOffsets, lines, matches, measurementContainerRef, searchBarVisible, textareaRef]);
+
+  useEffect(() => {
+    updateSearchHighlight(true);
+  }, [updateSearchHighlight]);
+
+  useEffect(() => {
+    if (highlightUpdateFrameRef.current) {
+      cancelAnimationFrame(highlightUpdateFrameRef.current);
+    }
+    highlightUpdateFrameRef.current = requestAnimationFrame(() => {
+      updateSearchHighlight(false);
+      highlightUpdateFrameRef.current = null;
+    });
+    return () => {
+      if (highlightUpdateFrameRef.current) {
+        cancelAnimationFrame(highlightUpdateFrameRef.current);
+        highlightUpdateFrameRef.current = null;
+      }
+    };
+  }, [scrollTop, updateSearchHighlight]);
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        if (contextMenuState.visible || selectedLineIndex !== null) {
+        if (searchBarVisible) {
+          closeSearchBar();
+        } else if (contextMenuState.visible || selectedLineIndex !== null) {
           setSelectedLineIndex(null);
           closeContextMenu();
         } else {
@@ -449,7 +598,7 @@ const NewSongCanvas = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeContextMenu, contextMenuState.visible, selectedLineIndex, handleBack]);
+  }, [closeContextMenu, contextMenuState.visible, selectedLineIndex, handleBack, closeSearchBar, searchBarVisible]);
 
   useEffect(() => {
     const handleMouseDown = (event) => {
@@ -816,6 +965,14 @@ const NewSongCanvas = () => {
     closeContextMenu();
   }, [closeContextMenu, handleCleanup]);
 
+  const handleSearchButtonClick = useCallback(() => {
+    if (searchBarVisible) {
+      closeSearchBar();
+    } else {
+      openSearchBar();
+    }
+  }, [closeSearchBar, openSearchBar, searchBarVisible]);
+
   const {
     isTitlePrefilled,
     handleContentKeyDown,
@@ -849,11 +1006,18 @@ const NewSongCanvas = () => {
     return composeMode ? "Submit draft for approval" : "Save file and load into control panel";
   };
 
+  const toolbarGhostClass = darkMode
+    ? 'text-gray-200 hover:text-white hover:bg-gray-700/70 active:bg-gray-700/80 focus-visible:ring-1 focus-visible:ring-blue-500/60'
+    : '';
+
   useKeyboardShortcuts({
     handleBack,
     handleSave,
     handleSaveAndLoad: composeMode ? handleLoadDraft : handleSaveAndLoad,
     handleCleanup,
+    handleStartNewSong,
+    handleOpenSearchBar: openSearchBar,
+    handleOpenReplaceBar: openReplaceBar,
     isContentEmpty,
     isTitleEmpty,
     composeMode,
@@ -916,38 +1080,58 @@ const NewSongCanvas = () => {
               </button>
             </div>
 
-            <div className="w-[72px]"></div>
+            <div className="flex items-center justify-end min-w-[96px]">
+              {editMode && (
+                <Tooltip content="Start a new song canvas" side="left">
+                  <button
+                    onClick={handleStartNewSong}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    <FilePlusCorner className="w-4 h-4" />
+                    New
+                  </button>
+                </Tooltip>
+              )}
+            </div>
           </div>
 
           {/* Row 1: Undo, Redo, Cut, Copy, Paste, Cleanup */}
           <div className="flex items-center justify-center gap-1 mb-3">
             <Tooltip content="Undo last change" side="top">
-              <Button onClick={handleUndo} disabled={!canUndo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Undo (Ctrl+Z)">
+              <Button onClick={handleUndo} disabled={!canUndo} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Undo (Ctrl+Z)">
                 <Undo className="w-4 h-4" />
               </Button>
             </Tooltip>
             <Tooltip content="Redo last undone change" side="top">
-              <Button onClick={handleRedo} disabled={!canRedo} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Redo (Ctrl+Shift+Z)">
+              <Button onClick={handleRedo} disabled={!canRedo} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Redo (Ctrl+Shift+Z)">
                 <Redo className="w-4 h-4" />
               </Button>
             </Tooltip>
+            <Tooltip content="Search in canvas (Ctrl+F)" side="top">
+              <Button onClick={handleSearchButtonClick} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Search (Ctrl+F)">
+                <Search className="w-4 h-4" />
+              </Button>
+            </Tooltip>
             <Tooltip content="Cut selected text" side="top">
-              <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cut">
+              <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Cut">
                 <Scissors className="w-4 h-4" />
               </Button>
             </Tooltip>
             <Tooltip content="Copy selected text" side="top">
-              <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Copy">
+              <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Copy">
                 <Copy className="w-4 h-4" />
               </Button>
             </Tooltip>
             <Tooltip content="Paste from clipboard" side="top">
-              <Button onClick={handlePaste} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Paste">
+              <Button onClick={handlePaste} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Paste">
                 <ClipboardPaste className="w-4 h-4" />
               </Button>
             </Tooltip>
             <Tooltip content="Auto-format and clean up lyrics" side="top">
-              <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`} title="Cleanup">
+              <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Cleanup">
                 <Wand2 className="w-4 h-4" />
               </Button>
             </Tooltip>
@@ -973,7 +1157,7 @@ const NewSongCanvas = () => {
                   <Button
                     onClick={handleLoadDraft}
                     disabled={isContentEmpty || isTitleEmpty}
-                    className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700"
+                    className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700 text-sm"
                     size="sm"
                   >
                     <FolderOpen className="w-4 h-4 mr-1" /> Load
@@ -990,6 +1174,7 @@ const NewSongCanvas = () => {
                       variant="ghost"
                       size="sm"
                       title="Save"
+                      className="text-sm"
                     >
                       <Save className="w-4 h-4" />
                     </Button>
@@ -1000,7 +1185,7 @@ const NewSongCanvas = () => {
                     <Button
                       onClick={handleSaveAndLoad}
                       disabled={isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges)}
-                      className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white"
+                      className="whitespace-nowrap bg-gradient-to-r from-blue-400 to-purple-600 text-white text-sm"
                       size="sm"
                     >
                       <FolderOpen className="w-4 h-4 mr-1" /> Save & Load
@@ -1055,20 +1240,46 @@ const NewSongCanvas = () => {
                 </svg>
               </button>
             </div>
-            <div className="w-[72px]"></div>
+            <div className="flex items-center justify-end min-w-[96px]">
+              {editMode && (
+                <Tooltip content="Start a new song canvas" side="left">
+                  <button
+                    onClick={handleStartNewSong}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    <FilePlusCorner className="w-4 h-4" />
+                    New
+                  </button>
+                </Tooltip>
+              )}
+            </div>
           </div>
           {/* Desktop Toolbar */}
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-start gap-2">
             <Tooltip content={<span>Undo last change - <strong>Ctrl+Z</strong></span>} side="bottom">
               <Button onClick={handleUndo} disabled={!canUndo} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
+                className={`${toolbarGhostClass}`}>
                 <Undo className="w-4 h-4" />
               </Button>
             </Tooltip>
             <Tooltip content={<span>Redo last undone change - <strong>Ctrl+Shift+Z</strong></span>} side="bottom">
               <Button onClick={handleRedo} disabled={!canRedo} variant="ghost"
-                className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}>
+                className={`${toolbarGhostClass}`}>
                 <Redo className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content={<span>Search in canvas - <strong>Ctrl+F</strong></span>} side="bottom">
+              <Button
+                onClick={handleSearchButtonClick}
+                variant="ghost"
+                size="sm"
+                className={`${toolbarGhostClass} ${searchBarVisible ? (darkMode ? 'bg-blue-900/40' : 'bg-blue-50 text-blue-700') : ''}`}
+                title="Search (Ctrl+F)"
+              >
+                <Search className="w-4 h-4" />
               </Button>
             </Tooltip>
             <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
@@ -1077,25 +1288,29 @@ const NewSongCanvas = () => {
             <div className="flex flex-wrap items-center gap-2">
               <Tooltip content="Cut selected text" side="bottom">
                 <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost"
-                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  size="sm"
+                  className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
                   <Scissors className="w-4 h-4" /> Cut
                 </Button>
               </Tooltip>
               <Tooltip content="Copy selected text" side="bottom">
                 <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost"
-                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  size="sm"
+                  className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
                   <Copy className="w-4 h-4" /> Copy
                 </Button>
               </Tooltip>
               <Tooltip content="Paste from clipboard" side="bottom">
                 <Button onClick={handlePaste} variant="ghost"
-                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  size="sm"
+                  className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
                   <ClipboardPaste className="w-4 h-4" /> Paste
                 </Button>
               </Tooltip>
               <Tooltip content="Auto-format and clean up lyrics" side="bottom">
                 <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost"
-                  className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''} hidden lg:flex`}>
+                  size="sm"
+                  className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
                   <Wand2 className="w-4 h-4" /> Cleanup
                 </Button>
               </Tooltip>
@@ -1103,22 +1318,22 @@ const NewSongCanvas = () => {
               {/* Icon-only versions appear below lg */}
               <div className="flex lg:hidden gap-1">
                 <Tooltip content="Cut" side="bottom">
-                  <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" title="Cut">
+                  <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={toolbarGhostClass} title="Cut">
                     <Scissors className="w-4 h-4" />
                   </Button>
                 </Tooltip>
                 <Tooltip content="Copy" side="bottom">
-                  <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" title="Copy">
+                  <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={toolbarGhostClass} title="Copy">
                     <Copy className="w-4 h-4" />
                   </Button>
                 </Tooltip>
                 <Tooltip content="Paste" side="bottom">
-                  <Button onClick={handlePaste} variant="ghost" size="sm" title="Paste">
+                  <Button onClick={handlePaste} variant="ghost" size="sm" className={toolbarGhostClass} title="Paste">
                     <ClipboardPaste className="w-4 h-4" />
                   </Button>
                 </Tooltip>
                 <Tooltip content="Cleanup" side="bottom">
-                  <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" title="Cleanup">
+                  <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={toolbarGhostClass} title="Cleanup">
                     <Wand2 className="w-4 h-4" />
                   </Button>
                 </Tooltip>
@@ -1134,7 +1349,7 @@ const NewSongCanvas = () => {
               onChange={handleTitleChange}
               maxLength={65}
               placeholder="Enter song title..."
-              className={`px-3 py-1.5 rounded-md flex-shrink min-w-[100px] max-w-sm ${isTitlePrefilled ? 'italic' : ''
+              className={`px-3 py-1.5 rounded-md flex-shrink min-w-[100px] max-w-xs ${isTitlePrefilled ? 'italic' : ''
                 } ${darkMode
                   ? `bg-gray-700 placeholder-gray-400 border-gray-600 ${isTitlePrefilled ? 'text-gray-400' : 'text-gray-200'}`
                   : `bg-white placeholder-gray-400 border-gray-300 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`
@@ -1148,7 +1363,8 @@ const NewSongCanvas = () => {
                     onClick={handleSave}
                     disabled={isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges)}
                     variant="ghost"
-                    className={`${darkMode ? 'text-gray-200 hover:text-gray-100' : ''}`}
+                    size="sm"
+                    className={`${toolbarGhostClass} text-sm`}
                   >
                     <Save className="w-4 h-4" /> Save
                   </Button>
@@ -1160,9 +1376,10 @@ const NewSongCanvas = () => {
                 <Button
                   onClick={composeMode ? handleLoadDraft : handleSaveAndLoad}
                   disabled={isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700"
+                  size="sm"
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-md font-medium hover:from-blue-500 hover:to-purple-700 text-sm whitespace-nowrap"
                 >
-                  <FolderOpen className="w-4 h-4" /> {composeMode ? 'Load Draft' : 'Save and Load'}
+                  <FolderOpen className="w-4 h-4" /> {composeMode ? 'Load Draft' : 'Save & Load'}
                 </Button>
               </span>
             </Tooltip>
@@ -1205,7 +1422,146 @@ const NewSongCanvas = () => {
             spellCheck={false}
           />
 
-          <div className="pointer-events-none absolute inset-0 z-10">
+          {searchBarVisible && (
+            <div className="absolute top-4 right-4 z-20 w-full max-w-sm pointer-events-auto">
+              <div className={`relative rounded-lg border shadow-lg p-3 ${darkMode ? 'bg-gray-900/95 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-stretch gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSearchExpansion}
+                    className={`px-2.5 rounded-md border transition-colors h-10 ${darkMode
+                      ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    title="Expand for replace"
+                  >
+                    <ChevronRight className={`w-4 h-4 transition-transform ${searchExpanded ? 'rotate-90' : ''}`} />
+                  </button>
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search in canvas..."
+                        value={searchQuery}
+                        onChange={(e) => handleSearchInputChange(e.target.value)}
+                        className={`pr-20 text-sm h-10 ${darkMode
+                          ? 'border-gray-700 bg-gray-800 text-gray-100 placeholder-gray-400'
+                          : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'
+                          }`}
+                      />
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        {searchQuery && totalMatches > 0 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handlePreviousMatch}
+                              className={`p-1 rounded transition-colors ${darkMode
+                                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                              title="Previous match"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleNextMatch}
+                              className={`p-1 rounded transition-colors ${darkMode
+                                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                              title="Next match"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={handleClearSearch}
+                            className={`p-1 rounded transition-colors ${darkMode
+                              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                              }`}
+                            title="Clear search"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className={`mt-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {searchQuery
+                        ? (totalMatches > 0
+                          ? `Result ${currentMatchIndex + 1} of ${totalMatches}`
+                          : 'No matches found')
+                        : 'Type to search this canvas'}
+                    </div>
+                    {searchExpanded && (
+                      <div className="mt-3 space-y-2">
+                        <Input
+                          ref={replaceInputRef}
+                          type="text"
+                          placeholder="Replace with..."
+                          value={replaceValue}
+                          onChange={(e) => handleReplaceValueChange(e.target.value)}
+                          className={`text-sm ${darkMode
+                            ? 'border-gray-700 bg-gray-800 text-gray-100 placeholder-gray-400'
+                            : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'
+                            }`}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleReplaceCurrent}
+                            disabled={!searchQuery || totalMatches === 0}
+                            className={`${darkMode ? 'border-gray-600 text-gray-100 hover:bg-gray-800' : ''} text-xs`}
+                          >
+                            Replace
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleReplaceAll}
+                            disabled={!searchQuery || totalMatches === 0}
+                            className="bg-blue-500 text-white hover:bg-blue-600 text-xs"
+                          >
+                            Replace All
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeSearchBar}
+                    className={`px-2.5 rounded-md border transition-colors h-10 ${darkMode
+                      ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    title="Close search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+            {searchHighlightRect && (
+              <div
+                className="absolute rounded-sm bg-yellow-200/60 dark:bg-yellow-300/50 transition-opacity duration-150"
+                style={{
+                  top: searchHighlightRect.top,
+                  height: searchHighlightRect.height,
+                  left: searchHighlightRect.left,
+                  width: searchHighlightRect.width
+                }}
+              />
+            )}
             {highlightVisible && (
               <div
                 className="absolute rounded-sm bg-blue-500/10 transition-opacity duration-150 dark:bg-blue-400/15"
@@ -1262,21 +1618,19 @@ const NewSongCanvas = () => {
             )}
 
             {contextMenuState.visible && contextMenuPosition && (
-              <div
+              <ContextMenu
                 ref={contextMenuRef}
-                className={`pointer-events-auto absolute z-30 w-44 rounded-lg border py-1 text-[13px] shadow-lg ${darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-800 border-gray-200'}`}
-                style={{
-                  top: contextMenuPosition.top,
-                  left: contextMenuPosition.left
-                }}
+                visible
+                position={contextMenuPosition}
+                darkMode={darkMode}
+                className="w-44"
                 onMouseEnter={handleContextMenuEnter}
                 onMouseLeave={handleContextMenuLeave}
+                onMeasured={setContextMenuDimensions}
               >
                 {contextMenuState.mode === 'selection' ? (
                   <>
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                    <ContextMenuItem
                       onClick={async (event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1284,12 +1638,11 @@ const NewSongCanvas = () => {
                         closeContextMenu();
                       }}
                       onMouseEnter={handleRootItemEnter}
+                      darkMode={darkMode}
                     >
                       Cut
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                    </ContextMenuItem>
+                    <ContextMenuItem
                       onClick={async (event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1297,12 +1650,11 @@ const NewSongCanvas = () => {
                         closeContextMenu();
                       }}
                       onMouseEnter={handleRootItemEnter}
+                      darkMode={darkMode}
                     >
                       Copy
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                    </ContextMenuItem>
+                    <ContextMenuItem
                       onClick={async (event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1310,21 +1662,21 @@ const NewSongCanvas = () => {
                         closeContextMenu();
                       }}
                       onMouseEnter={handleRootItemEnter}
+                      darkMode={darkMode}
                     >
                       Paste
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                    </ContextMenuItem>
+                    <ContextMenuItem
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
                         handleCleanupFromContext();
                       }}
                       onMouseEnter={handleRootItemEnter}
+                      darkMode={darkMode}
                     >
                       Cleanup
-                    </button>
+                    </ContextMenuItem>
                   </>
                 ) : (
                   <>
@@ -1334,63 +1686,57 @@ const NewSongCanvas = () => {
                       onFocus={() => handleSubmenuTriggerEnter('timestamp')}
                       onMouseLeave={handleSubmenuTriggerLeave}
                     >
-                      <button
-                        type="button"
-                        className={`flex w-full items-center justify-between px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                      <ContextMenuItem
+                        className="justify-between"
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
                           setActiveSubmenu('timestamp');
                         }}
+                        darkMode={darkMode}
                       >
                         <span>Add Timestamp</span>
                         <ChevronRight className={`h-4 w-4 ${submenuHorizontal === 'left' ? 'transform rotate-180' : ''}`} />
-                      </button>
-                      {activeSubmenu === 'timestamp' && (
-                        <div
-                          ref={timestampSubmenuRef}
-                          className={`absolute ${submenuHorizontal === 'right' ? 'left-[calc(100%+8px)]' : 'right-[calc(100%+8px)]'} z-40 w-48 rounded-lg border py-1 text-[13px] shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800'} overflow-y-auto`}
-                          style={{
-                            top: submenuOffsets.timestamp ?? 0,
-                            maxHeight: submenuMaxHeight
+                      </ContextMenuItem>
+                      <ContextMenuSubmenu
+                        ref={timestampSubmenuRef}
+                        open={activeSubmenu === 'timestamp'}
+                        direction={submenuHorizontal}
+                        offsetTop={submenuOffsets.timestamp ?? 0}
+                        maxHeight={submenuMaxHeight}
+                        darkMode={darkMode}
+                        onMouseEnter={handleSubmenuPanelEnter}
+                        onMouseLeave={handleSubmenuPanelLeave}
+                      >
+                        <ContextMenuItem
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (contextMenuState.lineIndex !== null) {
+                              insertStandardTimestampAtLine(contextMenuState.lineIndex);
+                            }
                           }}
-                          onMouseEnter={handleSubmenuPanelEnter}
-                          onMouseLeave={handleSubmenuPanelLeave}
+                          darkMode={darkMode}
                         >
-                          <button
-                            type="button"
-                            className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              if (contextMenuState.lineIndex !== null) {
-                                insertStandardTimestampAtLine(contextMenuState.lineIndex);
-                              }
-                            }}
-                          >
-                            Standard Timestamp
-                          </button>
-                          <button
-                            type="button"
-                            className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${!contextMenuLineHasTimestamp ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!contextMenuLineHasTimestamp}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              if (contextMenuState.lineIndex !== null && contextMenuLineHasTimestamp) {
-                                insertEnhancedTimestampAtCursor(contextMenuState.lineIndex);
-                              }
-                            }}
-                          >
-                            Enhanced Timestamp
-                          </button>
-                        </div>
-                      )}
+                          Standard Timestamp
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          disabled={!contextMenuLineHasTimestamp}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (contextMenuState.lineIndex !== null && contextMenuLineHasTimestamp) {
+                              insertEnhancedTimestampAtCursor(contextMenuState.lineIndex);
+                            }
+                          }}
+                          darkMode={darkMode}
+                        >
+                          Enhanced Timestamp
+                        </ContextMenuItem>
+                      </ContextMenuSubmenu>
                     </div>
                     {contextMenuState.lineIndex !== null && canAddTranslationInContextMenu && (
-                      <button
-                        type="button"
-                        className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                      <ContextMenuItem
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
@@ -1399,13 +1745,12 @@ const NewSongCanvas = () => {
                           }
                         }}
                         onMouseEnter={handleRootItemEnter}
+                        darkMode={darkMode}
                       >
                         Add Translation
-                      </button>
+                      </ContextMenuItem>
                     )}
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                    <ContextMenuItem
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1414,12 +1759,11 @@ const NewSongCanvas = () => {
                         }
                       }}
                       onMouseEnter={handleRootItemEnter}
+                      darkMode={darkMode}
                     >
                       Copy Line
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                    </ContextMenuItem>
+                    <ContextMenuItem
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1428,84 +1772,82 @@ const NewSongCanvas = () => {
                         }
                       }}
                       onMouseEnter={handleRootItemEnter}
+                      darkMode={darkMode}
                     >
                       Duplicate Line
-                    </button>
+                    </ContextMenuItem>
                     <div
                       className="relative"
                       onMouseEnter={() => handleSubmenuTriggerEnter('metadata')}
                       onFocus={() => handleSubmenuTriggerEnter('metadata')}
                       onMouseLeave={handleSubmenuTriggerLeave}
                     >
-                      <button
-                        type="button"
-                        className={`flex w-full items-center justify-between px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                      <ContextMenuItem
+                        className="justify-between"
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
                           setActiveSubmenu('metadata');
                         }}
+                        darkMode={darkMode}
                       >
                         <span>Add Metadata</span>
                         <ChevronRight className={`h-4 w-4 ${submenuHorizontal === 'left' ? 'transform rotate-180' : ''}`} />
-                      </button>
-                      {activeSubmenu === 'metadata' && (
-                        <div
-                          ref={metadataSubmenuRef}
-                          className={`absolute ${submenuHorizontal === 'right' ? 'left-[calc(100%+8px)]' : 'right-[calc(100%+8px)]'} z-40 w-52 rounded-lg border py-1 text-[13px] shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800'} overflow-y-auto`}
-                          style={{
-                            top: submenuOffsets.metadata ?? 0,
-                            maxHeight: submenuMaxHeight
+                      </ContextMenuItem>
+                      <ContextMenuSubmenu
+                        ref={metadataSubmenuRef}
+                        open={activeSubmenu === 'metadata'}
+                        direction={submenuHorizontal}
+                        offsetTop={submenuOffsets.metadata ?? 0}
+                        maxHeight={submenuMaxHeight}
+                        darkMode={darkMode}
+                        className="w-52"
+                        onMouseEnter={handleSubmenuPanelEnter}
+                        onMouseLeave={handleSubmenuPanelLeave}
+                      >
+                        <ContextMenuItem
+                          className="font-semibold"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleAddDefaultTags();
                           }}
-                          onMouseEnter={handleSubmenuPanelEnter}
-                          onMouseLeave={handleSubmenuPanelLeave}
+                          darkMode={darkMode}
                         >
-                          <button
-                            type="button"
-                            className={`flex w-full items-center px-3 py-2 text-left font-semibold transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 bg-gray-750' : 'hover:bg-gray-100 bg-gray-50'}`}
+                          Add Default Tags
+                        </ContextMenuItem>
+                        <ContextMenuSeparator darkMode={darkMode} />
+                        {METADATA_OPTIONS.map((option) => (
+                          <ContextMenuItem
+                            key={option.key}
                             onClick={(event) => {
                               event.preventDefault();
                               event.stopPropagation();
-                              handleAddDefaultTags();
+                              if (contextMenuState.lineIndex !== null) {
+                                insertMetadataTagAtCursor(contextMenuState.lineIndex, option.key);
+                              }
                             }}
+                            darkMode={darkMode}
                           >
-                            Add Default Tags
-                          </button>
-                          <div className={`my-1 h-px ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
-                          {METADATA_OPTIONS.map((option) => (
-                            <button
-                              key={option.key}
-                              type="button"
-                              className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                if (contextMenuState.lineIndex !== null) {
-                                  insertMetadataTagAtCursor(contextMenuState.lineIndex, option.key);
-                                }
-                              }}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                            {option.label}
+                          </ContextMenuItem>
+                        ))}
+                      </ContextMenuSubmenu>
                     </div>
-                    <button
-                      type="button"
-                      className={`flex w-full items-center px-3 py-2 text-left transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                    <ContextMenuItem
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
                         handleCleanupFromContext();
                       }}
                       onMouseEnter={handleRootItemEnter}
+                      darkMode={darkMode}
                     >
                       Cleanup
-                    </button>
+                    </ContextMenuItem>
                   </>
                 )}
-              </div>
+              </ContextMenu>
             )}
           </div>
 

@@ -7,13 +7,12 @@ const useContextSubmenus = ({
   containerSize,
   contextMenuPosition,
   menuWidth,
-  editorContainerRef,
-  timestampSubmenuRef,
-  metadataSubmenuRef,
+  triggerContainerRef,
+  submenuRefs = {},
   contextMenuVisible
 }) => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
-  const [submenuOffsets, setSubmenuOffsets] = useState({ timestamp: 0, metadata: 0 });
+  const [submenuOffsets, setSubmenuOffsets] = useState({});
   const submenuCloseTimeoutRef = useRef(null);
 
   const cancelSubmenuClose = useCallback(() => {
@@ -75,9 +74,9 @@ const useContextSubmenus = ({
   }, [containerSize.height]);
 
   const updateSubmenuOffset = useCallback((submenuKey, submenuElement) => {
-    if (!submenuElement || !editorContainerRef.current) return;
+    if (!submenuElement || !triggerContainerRef.current) return;
 
-    const containerRect = editorContainerRef.current.getBoundingClientRect();
+    const containerRect = triggerContainerRef.current.getBoundingClientRect();
     const triggerRect = submenuElement.parentElement?.getBoundingClientRect();
 
     if (!containerRect || !containerRect.height || !triggerRect) return;
@@ -95,18 +94,16 @@ const useContextSubmenus = ({
       if (currentTop === clampedTop) return current;
       return { ...current, [submenuKey]: clampedTop };
     });
-  }, [editorContainerRef, submenuMaxHeight]);
+  }, [triggerContainerRef, submenuMaxHeight]);
 
   useLayoutEffect(() => {
     if (!contextMenuVisible) return;
 
-    if (activeSubmenu === 'timestamp' && timestampSubmenuRef.current) {
-      updateSubmenuOffset('timestamp', timestampSubmenuRef.current);
-    }
-
-    if (activeSubmenu === 'metadata' && metadataSubmenuRef.current) {
-      updateSubmenuOffset('metadata', metadataSubmenuRef.current);
-    }
+    Object.entries(submenuRefs).forEach(([key, ref]) => {
+      if (activeSubmenu === key && ref?.current) {
+        updateSubmenuOffset(key, ref.current);
+      }
+    });
   }, [
     activeSubmenu,
     contextMenuVisible,
@@ -114,8 +111,7 @@ const useContextSubmenus = ({
     contextMenuPosition?.left,
     containerSize.height,
     updateSubmenuOffset,
-    timestampSubmenuRef,
-    metadataSubmenuRef
+    submenuRefs
   ]);
 
   return {

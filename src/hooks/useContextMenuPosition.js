@@ -3,10 +3,15 @@ import { useMemo } from 'react';
 const useContextMenuPosition = ({
   contextMenuState,
   contextMenuDimensions,
-  containerSize
+  containerSize,
+  fallbackDimensions = { width: 192, height: 224, selectionWidth: 168, selectionHeight: 152 }
 }) => {
-  const fallbackMenuWidth = contextMenuState.mode === 'selection' ? 168 : 192;
-  const fallbackMenuHeight = contextMenuState.mode === 'selection' ? 152 : 224;
+  const fallbackMenuWidth = contextMenuState.mode === 'selection'
+    ? (fallbackDimensions.selectionWidth || 168)
+    : fallbackDimensions.width;
+  const fallbackMenuHeight = contextMenuState.mode === 'selection'
+    ? (fallbackDimensions.selectionHeight || 152)
+    : fallbackDimensions.height;
   const menuWidth = contextMenuDimensions.width || fallbackMenuWidth;
   const menuHeight = contextMenuDimensions.height || fallbackMenuHeight;
 
@@ -33,7 +38,15 @@ const useContextMenuPosition = ({
         )
       )
     };
-  }, [containerSize.height, containerSize.width, contextMenuState.visible, contextMenuState.x, contextMenuState.y, menuHeight, menuWidth]);
+  }, [
+    containerSize.height,
+    containerSize.width,
+    contextMenuState.visible,
+    contextMenuState.x,
+    contextMenuState.y,
+    menuHeight,
+    menuWidth
+  ]);
 
   return {
     contextMenuPosition,

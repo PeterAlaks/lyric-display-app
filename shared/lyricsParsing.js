@@ -62,7 +62,7 @@ export function isTranslationLine(line) {
  * @param {string} line
  * @returns {boolean}
  */
-function isNormalGroupCandidate(line) {
+export function isNormalGroupCandidate(line) {
   if (!line || typeof line !== 'string') return false;
   if (!NORMAL_GROUP_CONFIG.ENABLED) return false;
   const trimmed = line.trim();

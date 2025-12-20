@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListMusic, RefreshCw, FileText, Play, Square, ChevronDown, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { ListMusic, RefreshCw, FileText, Play, Square, ChevronDown, Sparkles, Volume2, VolumeX, CheckSquare, MoreHorizontal, X } from 'lucide-react';
 import { useLyricsState, useOutputState, useDarkModeState, useSetlistState, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
@@ -34,6 +34,11 @@ const MobileLayout = () => {
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast, muted, toggleMute } = useToast();
   const { showModal } = useModal();
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selectionStats, setSelectionStats] = React.useState({ totalSelected: 0, totalLines: 0 });
+  const selectionApiRef = React.useRef(null);
+  const ellipsisButtonRef = React.useRef(null);
+  const selectionControlsRef = React.useRef(null);
 
   const navigate = useNavigate();
 
@@ -121,6 +126,30 @@ const MobileLayout = () => {
   const handleOpenSetlist = () => {
     setSetlistModalOpen(true);
   };
+
+  const handleEnterSelectionMode = React.useCallback(() => {
+    setSelectionMode(true);
+  }, []);
+
+  const handleCloseSelectionMode = React.useCallback(() => {
+    setSelectionMode(false);
+    selectionApiRef.current?.clearSelection?.();
+  }, []);
+
+  const handleSelectAll = React.useCallback(() => {
+    if (!hasLyrics) return;
+    if (selectionStats.totalLines > 0 && selectionStats.totalSelected === selectionStats.totalLines) {
+      selectionApiRef.current?.clearSelection?.();
+    } else {
+      selectionApiRef.current?.selectAll?.();
+    }
+  }, [hasLyrics, selectionStats]);
+
+  const handleOpenContextMenuFromEllipsis = React.useCallback(() => {
+    selectionApiRef.current?.openContextMenuForSelection?.(ellipsisButtonRef.current);
+  }, []);
+
+  const isAllSelected = selectionMode && selectionStats.totalLines > 0 && selectionStats.totalSelected === selectionStats.totalLines;
 
   return (
     <>
@@ -351,6 +380,66 @@ const MobileLayout = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Selection Mode Controls */}
+                  <div
+                    ref={selectionControlsRef}
+                    className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ${selectionMode
+                      ? 'mt-3 max-h-20 opacity-100 translate-y-0'
+                      : 'mt-0 max-h-0 opacity-0 -translate-y-2 pointer-events-none'
+                      }`}
+                  >
+                    <div
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-3 ${darkMode
+                        ? 'bg-gray-900/60 border-gray-700 text-gray-100'
+                        : 'bg-gray-50 border-gray-200 text-gray-800'
+                        }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={handleCloseSelectionMode}
+                        className={`p-2 rounded-lg transition-colors ${darkMode
+                          ? 'hover:bg-gray-700 text-gray-100'
+                          : 'hover:bg-gray-200 text-gray-800'
+                          }`}
+                        title="Close select mode"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSelectAll}
+                        className={`flex-1 flex items-center gap-3 text-sm font-semibold rounded-lg px-3 py-2 transition-colors ${darkMode
+                          ? 'hover:bg-gray-800/80'
+                          : 'hover:bg-gray-100'
+                          }`}
+                      >
+                        {isAllSelected ? (
+                          <CheckSquare className="w-4 h-4" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                        <span className="truncate">Select all</span>
+                        <span className="text-xs font-medium text-gray-500">
+                          {selectionStats.totalSelected}/{selectionStats.totalLines || 0}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ref={ellipsisButtonRef}
+                        onClick={handleOpenContextMenuFromEllipsis}
+                        className={`p-2 rounded-lg transition-colors ${darkMode
+                          ? 'hover:bg-gray-700 text-gray-100'
+                          : 'hover:bg-gray-200 text-gray-800'
+                          }`}
+                        title="More actions"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Scrollable Lyrics List */}
@@ -362,6 +451,13 @@ const MobileLayout = () => {
                     searchQuery={searchQuery}
                     highlightedLineIndex={highlightedLineIndex}
                     onSelectLine={handleLineSelect}
+                    selectionMode={selectionMode}
+                    onEnterSelectionMode={handleEnterSelectionMode}
+                    onSelectionStateChange={setSelectionStats}
+                    onContextMenuApiReady={(api) => {
+                      selectionApiRef.current = api;
+                    }}
+                    clickAwayIgnoreRefs={[selectionControlsRef, ellipsisButtonRef]}
                   />
                 </div>
               </>

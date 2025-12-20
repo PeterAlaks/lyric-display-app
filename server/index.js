@@ -434,7 +434,7 @@ function getClientPermissions(clientType) {
       'output:control', 'settings:write', 'admin:full'
     ],
     web: [
-      'lyrics:read', 'lyrics:draft',
+      'lyrics:read', 'lyrics:write', 'lyrics:draft',
       'setlist:read',
       'output:control', 'settings:read', 'settings:write'
     ],
@@ -442,7 +442,7 @@ function getClientPermissions(clientType) {
     output2: ['lyrics:read', 'settings:read'],
     stage: ['lyrics:read', 'settings:read'],
     mobile: [
-      'lyrics:read', 'lyrics:draft',
+      'lyrics:read', 'lyrics:write', 'lyrics:draft',
       'setlist:read',
       'output:control', 'settings:read', 'settings:write'
     ]

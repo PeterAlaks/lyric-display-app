@@ -5,6 +5,9 @@ export const useKeyboardShortcuts = ({
   handleSave,
   handleSaveAndLoad,
   handleCleanup,
+  handleStartNewSong,
+  handleOpenSearchBar,
+  handleOpenReplaceBar,
   isContentEmpty,
   isTitleEmpty,
   composeMode,
@@ -20,6 +23,22 @@ export const useKeyboardShortcuts = ({
       if (event.key === 'Backspace' && !isTypingInInput && !isTypingInTextarea) {
         event.preventDefault();
         handleBack();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'f' || event.key === 'F')) {
+        event.preventDefault();
+        if (handleOpenSearchBar) {
+          handleOpenSearchBar();
+        }
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'h' || event.key === 'H')) {
+        event.preventDefault();
+        if (handleOpenReplaceBar) {
+          handleOpenReplaceBar();
+        }
         return;
       }
 
@@ -46,9 +65,17 @@ export const useKeyboardShortcuts = ({
         }
         return;
       }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'n' || event.key === 'N')) {
+        if (handleStartNewSong) {
+          event.preventDefault();
+          handleStartNewSong();
+        }
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [composeMode, editMode, handleBack, handleCleanup, handleSave, handleSaveAndLoad, hasUnsavedChanges, isContentEmpty, isTitleEmpty]);
+  }, [composeMode, editMode, handleBack, handleCleanup, handleOpenReplaceBar, handleOpenSearchBar, handleSave, handleSaveAndLoad, handleStartNewSong, hasUnsavedChanges, isContentEmpty, isTitleEmpty]);
 };

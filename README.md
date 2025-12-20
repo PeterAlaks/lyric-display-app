@@ -271,8 +271,7 @@ lyric-display-app/
 |   |   |   ├── useSetlistActions.js        # Hook for setlist action functionality
 |   |   |   └── useSupportDevModal.js       # Hook for processing show time and parameters for support development modal
 |   |   ├── NewSongCanvas/
-|   |   |   ├── useContextMenuPosition.js   # Hook for space-aware context menu positioning
-|   |   |   ├── useContextSubmenus.js       # Context submenus definitions and logic
+|   |   |   ├── useCanvasSearch.js          # Content search hook for editing area/canvas
 |   |   |   ├── useEditorClipboard.js       # Hook for cut, copy and paste handlers
 |   |   |   ├── useEditorHistory.js         # Hook for history state management of lyrics editor canvas
 |   |   |   ├── useFileSave.js              # Canvas file operations hook
@@ -295,6 +294,8 @@ lyric-display-app/
 |   |   |   └── useSetlistLoader.js         # Hook for setlist file loading functionality
 |   |   ├── useAuth.js                      # Authenticator hook for socket connections
 |   |   ├── useAutoplayManager.js           # Autoplay engine and logic
+|   |   ├── useContextMenuPosition.js       # Hook for space-aware context menu positioning
+|   |   ├── useContextSubmenus.js           # Context submenus definitions and logic
 |   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
 |   |   ├── useModal.js                     # Global modal hook

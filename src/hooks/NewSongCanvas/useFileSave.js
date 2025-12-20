@@ -260,11 +260,17 @@ const useFileSave = ({
     });
     if (action === 'cancel') return { canceled: true };
     if (action === 'save-new') {
+      const preferredExtension = target.extension;
+      const format = await promptForFileFormat(preferredExtension);
+      if (!format) return { canceled: true };
+      if (format === 'lrc' && !lrcEligibility.eligible) return { canceled: true };
+
+      const extension = format === 'lrc' ? 'lrc' : 'txt';
       const dir = getDirectoryFromPath(target.path);
       const baseName = resolveBaseName();
       const res = await saveWithDialog({
         payload,
-        extension: target.extension,
+        extension,
         baseName,
         defaultDir: dir,
         notifyPendingReload: !alsoLoad,
@@ -318,7 +324,7 @@ const useFileSave = ({
       });
       return null;
     }
-  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, resolveBaseName, saveWithDialog, showToast, title, verifyExistingPath]);
+  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, saveWithDialog, showToast, title, verifyExistingPath]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim() || !title.trim()) {
