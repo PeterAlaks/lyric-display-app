@@ -3,9 +3,13 @@
 openapi: 3.0.0
 
 info:
-  title: Lyric Display App REST API
-  version: 1.0.0
-  description: API documentation for the Lyric Display App's Express REST API.
+  title: LyricDisplay App REST API
+  version: 5.10.4
+  description: >
+    API documentation for the LyricDisplay App's Express REST API. JWTs minted here
+    are required for Socket.IO connections (`auth.token`). Desktop tokens in production
+    require the admin key; web/mobile controller tokens require the 6-digit join code
+    and are rate-limited.
 
 servers:
   - url: http://localhost:4000
@@ -42,6 +46,9 @@ paths:
                 joinCode:
                   type: string
                   description: Required for controller clients (web, mobile)
+                deviceId:
+                  type: string
+                  description: Stable device identifier used for rate limiting and permissions
       responses:
         '200':
           description: Token generated successfully
@@ -147,6 +154,8 @@ paths:
     get:
       summary: Get connected clients
       description: Requires 'lyrics:read' permission
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: List of connected clients
@@ -172,6 +181,8 @@ paths:
     post:
       summary: Upload background media
       description: Requires 'settings:write' permission
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -185,6 +196,9 @@ paths:
                 outputKey:
                   type: string
                   description: Optional output identifier (e.g. output1) to cleanup old files
+        description: >
+          Accepts images (jpeg, png, gif, webp, avif) and videos (mp4, webm, ogg, mov);
+          maximum size 200 MB. Existing media for the same output may be cleaned up.
       responses:
         '200':
           description: Upload successful
