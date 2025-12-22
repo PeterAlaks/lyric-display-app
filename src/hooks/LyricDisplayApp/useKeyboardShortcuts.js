@@ -10,6 +10,8 @@ export const useKeyboardShortcuts = ({
   handleToggle,
   handleAutoplayToggle,
   handleIntelligentAutoplayToggle,
+  handleClearOutput,
+  handleOutputTabSwitch,
   searchQuery,
   clearSearch,
   totalMatches,
@@ -60,6 +62,13 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'c' || event.key === 'C')) {
+        if (isTyping) return;
+        event.preventDefault();
+        handleClearOutput();
+        return;
+      }
+
       if (event.key === 'Escape') {
         if (searchQuery) {
           event.preventDefault();
@@ -83,6 +92,24 @@ export const useKeyboardShortcuts = ({
       }
 
       if (isTyping) return;
+
+      if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (event.key === '1') {
+          event.preventDefault();
+          handleOutputTabSwitch('output1');
+          return;
+        }
+        if (event.key === '2') {
+          event.preventDefault();
+          handleOutputTabSwitch('output2');
+          return;
+        }
+        if (event.key === '3') {
+          event.preventDefault();
+          handleOutputTabSwitch('stage');
+          return;
+        }
+      }
 
       if (event.key === ' ' || event.code === 'Space') {
         event.preventDefault();
@@ -131,6 +158,8 @@ export const useKeyboardShortcuts = ({
     handleToggle,
     handleAutoplayToggle,
     handleIntelligentAutoplayToggle,
+    handleClearOutput,
+    handleOutputTabSwitch,
     searchQuery,
     clearSearch,
     totalMatches,

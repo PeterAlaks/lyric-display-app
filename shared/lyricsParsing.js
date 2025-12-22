@@ -661,6 +661,26 @@ export function parseLrcContent(rawText = '', options = {}) {
       });
       groupedTimestamps.push(main.t !== undefined ? main.t : null);
       i += 1;
+    } else if (
+      next &&
+      sameTimestamp &&
+      !isTranslationLine(main.text) &&
+      !isTranslationLine(next.text) &&
+      isNormalGroupCandidate(main.text) &&
+      isNormalGroupCandidate(next.text)
+    ) {
+      const normalGroup = {
+        type: 'normal-group',
+        id: `lrc_normal_group_${i}`,
+        line1: main.text,
+        line2: next.text,
+        displayText: `${main.text}\n${next.text}`,
+        searchText: `${main.text} ${next.text}`,
+        originalIndex: i,
+      };
+      grouped.push(normalGroup);
+      groupedTimestamps.push(main.t !== undefined ? main.t : null);
+      i += 1;
     } else {
       grouped.push(main.text);
       groupedTimestamps.push(main.t !== undefined ? main.t : null);

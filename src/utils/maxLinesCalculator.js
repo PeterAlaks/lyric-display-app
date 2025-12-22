@@ -81,10 +81,9 @@ export const measureLineCount = ({
       if (index > 0) totalGapHeight += GAP_PX;
     });
 
-
     const lineHeightPx = testFontSize * 1.05;
-    const gapLines = Math.ceil(totalGapHeight / lineHeightPx);
-    const finalLineCount = Math.ceil(totalLines + gapLines);
+    const totalLineUnits = totalLines + (totalGapHeight / lineHeightPx);
+    const finalLineCount = (totalLineUnits % 1 < 0.15) ? Math.floor(totalLineUnits) : Math.ceil(totalLineUnits);
     return finalLineCount;
   } else {
 

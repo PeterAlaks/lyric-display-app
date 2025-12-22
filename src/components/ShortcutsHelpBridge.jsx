@@ -29,6 +29,7 @@ const SHORTCUTS = [
       { label: 'Toggle Autoplay', combo: 'Ctrl/Cmd + P' },
       { label: 'Toggle Intelligent Autoplay', combo: 'Ctrl/Cmd + Shift + P' },
       { label: 'Toggle Display Output', combo: 'Spacebar' },
+      { label: 'Clear Output (deselect active line)', combo: 'Ctrl/Cmd + C' },
     ]
   },
   {
@@ -57,6 +58,14 @@ const SHORTCUTS = [
       { label: 'Add Translation Line', combo: 'Ctrl/Cmd + T' },
       { label: 'Duplicate Line', combo: 'Ctrl/Cmd + D' },
       { label: 'Select Line', combo: 'Ctrl/Cmd + L' },
+    ]
+  },
+  {
+    category: 'Output Settings',
+    items: [
+      { label: 'Switch to Output 1 tab', combo: '1' },
+      { label: 'Switch to Output 2 tab', combo: '2' },
+      { label: 'Switch to Stage tab', combo: '3' },
     ]
   },
 ];

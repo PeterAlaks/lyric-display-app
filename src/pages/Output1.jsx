@@ -268,6 +268,9 @@ const Output1 = () => {
     const opacityHex = toHexOpacity(dropShadowStrength);
     return `${dropShadowOffsetX}px ${dropShadowOffsetY}px ${dropShadowBlur}px ${dropShadowColor}${opacityHex}`;
   };
+  const dropShadowPadding = (maxLinesEnabled && dropShadowStrength > 0)
+    ? Math.max(dropShadowBlur, Math.abs(dropShadowOffsetY))
+    : 0;
 
   const getBandBackground = () => {
     const opacityHex = toHexOpacity(backgroundStrength);
@@ -679,6 +682,7 @@ const Output1 = () => {
                         wordWrap: 'break-word',
                         wordBreak: 'break-word',
                         overflowWrap: 'break-word',
+                        paddingBottom: dropShadowPadding ? `${dropShadowPadding}px` : undefined,
                       }}
                     >
                       {renderContent()}
@@ -711,6 +715,7 @@ const Output1 = () => {
                     wordWrap: 'break-word',
                     wordBreak: 'break-word',
                     overflowWrap: 'break-word',
+                    paddingBottom: dropShadowPadding ? `${dropShadowPadding}px` : undefined,
                   }}
                 >
                   {renderContent()}
@@ -767,6 +772,7 @@ const Output1 = () => {
                         wordWrap: 'break-word',
                         wordBreak: 'break-word',
                         overflowWrap: 'break-word',
+                        paddingBottom: dropShadowPadding ? `${dropShadowPadding}px` : undefined,
                       }}
                     >
                       {renderContent()}
@@ -799,6 +805,7 @@ const Output1 = () => {
                     wordWrap: 'break-word',
                     wordBreak: 'break-word',
                     overflowWrap: 'break-word',
+                    paddingBottom: dropShadowPadding ? `${dropShadowPadding}px` : undefined,
                   }}
                 >
                   {renderContent()}

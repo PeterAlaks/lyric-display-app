@@ -25,7 +25,16 @@ export default function LyricsList({
   clickAwayIgnoreRefs = [],
 }) {
   const listRef = useListRef();
-  const { lyrics = [], lyricsSections = [], lineToSection = {}, selectedLine, selectLine, setLyrics } = useLyricsState();
+  const {
+    lyrics = [],
+    lyricsSections = [],
+    lineToSection = {},
+    lyricsTimestamps = [],
+    selectedLine,
+    selectLine,
+    setLyrics,
+    setLyricsTimestamps
+  } = useLyricsState();
   const { darkMode } = useDarkModeState();
   const isDesktopApp = useIsDesktopApp();
   const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup } = useControlSocket();
@@ -376,12 +385,17 @@ export default function LyricsList({
   }, [lyrics, selectedIndicesArray]);
 
   const cloneLyrics = useCallback(() => lyrics.map((line) => (typeof line === 'string' ? line : { ...line })), [lyrics]);
+  const cloneTimestamps = useCallback(
+    () => (Array.isArray(lyricsTimestamps) ? [...lyricsTimestamps] : []),
+    [lyricsTimestamps]
+  );
 
   const takeSnapshot = useCallback(() => ({
     lyrics: cloneLyrics(),
     selectedLine,
-    selection: selectedIndicesArray
-  }), [cloneLyrics, selectedIndicesArray, selectedLine]);
+    selection: selectedIndicesArray,
+    timestamps: cloneTimestamps()
+  }), [cloneLyrics, cloneTimestamps, selectedIndicesArray, selectedLine]);
 
   const pushHistorySnapshot = useCallback((snapshot) => {
     setHistoryPast((prev) => {
@@ -409,11 +423,12 @@ export default function LyricsList({
     historyMutationRef.current = true;
     suppressScrollResetRef.current = true;
     setLyrics(snapshot.lyrics);
+    setLyricsTimestamps(snapshot.timestamps || []);
     if (emitLyricsLoad) emitLyricsLoad(snapshot.lyrics);
     selectLine(snapshot.selectedLine ?? null);
     setSelectedIndices(new Set(snapshot.selection || []));
     selectionAnchorRef.current = snapshot.selection?.[snapshot.selection.length - 1] ?? null;
-  }, [emitLyricsLoad, selectLine, setLyrics]);
+  }, [emitLyricsLoad, selectLine, setLyrics, setLyricsTimestamps]);
 
   const handleUndo = useCallback(() => {
     setHistoryPast((past) => {
@@ -502,16 +517,37 @@ export default function LyricsList({
     const line2 = lyrics[second];
     if (!isGroupableLine(line1) || !isGroupableLine(line2)) return;
 
+    const hasTimestampData = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length > 0;
+    const timestampsAligned = hasTimestampData && lyricsTimestamps.length === lyrics.length;
+    const firstTimestamp = timestampsAligned ? lyricsTimestamps[first] : null;
+    const secondTimestamp = timestampsAligned ? lyricsTimestamps[second] : null;
+    const timestampsMatch = timestampsAligned && firstTimestamp === secondTimestamp;
+
     const snapshot = takeSnapshot();
     const grouped = buildGroup(line1, line2, first);
     const newLyrics = [...lyrics];
     newLyrics.splice(first, 2, grouped);
+    let nextTimestamps = timestampsAligned ? [...lyricsTimestamps] : lyricsTimestamps;
+    let disabledIntelligentAutoplay = false;
+
+    if (timestampsAligned) {
+      if (timestampsMatch) {
+        nextTimestamps.splice(first, 2, firstTimestamp ?? null);
+      } else {
+        nextTimestamps = [];
+        disabledIntelligentAutoplay = true;
+      }
+    }
+
     const nextSelectedLine = remapSelectedLineAfterGroup(selectedLine, first);
 
     pushHistorySnapshot(snapshot);
     historyMutationRef.current = true;
     suppressScrollResetRef.current = true;
     setLyrics(newLyrics);
+    if (timestampsAligned || disabledIntelligentAutoplay) {
+      setLyricsTimestamps(nextTimestamps);
+    }
     if (emitLyricsLoad) emitLyricsLoad(newLyrics);
 
     if (typeof nextSelectedLine === 'number') {
@@ -523,12 +559,20 @@ export default function LyricsList({
     selectionAnchorRef.current = first;
     closeContextMenu();
 
-    showToast({
-      title: 'Lines grouped',
-      message: 'Selected lines have been combined.',
-      variant: 'success',
-    });
-  }, [buildGroup, canGroupSelected, closeContextMenu, emitLyricsLoad, emitLineUpdate, isGroupableLine, lyrics, pushHistorySnapshot, selectedIndicesArray, selectedLine, selectLine, setLyrics, showToast, takeSnapshot]);
+    if (disabledIntelligentAutoplay) {
+      showToast({
+        title: 'Intelligent autoplay disabled',
+        message: 'Grouped lines had different timestamps. Timestamp-based autoplay is unavailable until you undo this grouping.',
+        variant: 'warn',
+      });
+    } else {
+      showToast({
+        title: 'Lines grouped',
+        message: 'Selected lines have been combined.',
+        variant: 'success',
+      });
+    }
+  }, [buildGroup, canGroupSelected, closeContextMenu, emitLyricsLoad, emitLineUpdate, isGroupableLine, lyrics, lyricsTimestamps, pushHistorySnapshot, selectedIndicesArray, selectedLine, selectLine, setLyrics, setLyricsTimestamps, showToast, takeSnapshot]);
 
   const performUngroup = useCallback((index) => {
     const line = lyrics[index];
@@ -537,12 +581,21 @@ export default function LyricsList({
     const snapshot = takeSnapshot();
     const newLyrics = [...lyrics];
     newLyrics.splice(index, 1, line.line1, line.line2);
+    const timestampsAligned = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length === lyrics.length;
+    const nextTimestamps = timestampsAligned ? [...lyricsTimestamps] : lyricsTimestamps;
+    if (timestampsAligned) {
+      const groupTimestamp = lyricsTimestamps[index];
+      nextTimestamps.splice(index, 1, groupTimestamp ?? null, groupTimestamp ?? null);
+    }
     const nextSelectedLine = remapSelectedLineAfterUngroup(selectedLine, index);
 
     pushHistorySnapshot(snapshot);
     historyMutationRef.current = true;
     suppressScrollResetRef.current = true;
     setLyrics(newLyrics);
+    if (timestampsAligned) {
+      setLyricsTimestamps(nextTimestamps);
+    }
 
     if (emitSplitNormalGroup) {
       emitSplitNormalGroup({ index, line1: line.line1, line2: line.line2 });
@@ -567,7 +620,7 @@ export default function LyricsList({
       message: 'The grouped lines have been separated',
       variant: 'success',
     });
-  }, [closeContextMenu, emitLyricsLoad, emitLineUpdate, emitSplitNormalGroup, lyrics, pushHistorySnapshot, remapSelectedLineAfterUngroup, selectedLine, selectLine, setLyrics, showToast, takeSnapshot]);
+  }, [closeContextMenu, emitLyricsLoad, emitLineUpdate, emitSplitNormalGroup, lyrics, lyricsTimestamps, pushHistorySnapshot, remapSelectedLineAfterUngroup, selectedLine, selectLine, setLyrics, setLyricsTimestamps, showToast, takeSnapshot]);
 
   const handleSplitGroup = useCallback(
     (event, index) => {
@@ -711,8 +764,8 @@ export default function LyricsList({
         base += 'bg-orange-200 text-orange-900 border-2 border-orange-400';
       else if (isMultiSelected)
         base += darkMode
-          ? 'bg-gray-700 text-gray-100 ring-2 ring-blue-400/70'
-          : 'bg-white text-gray-800 ring-2 ring-blue-400/70';
+          ? 'bg-blue-900/30 text-blue-50 ring-2 ring-blue-400/80'
+          : 'bg-blue-50 text-blue-900 ring-2 ring-blue-400/80';
       else
         base += darkMode
           ? 'bg-gray-700 text-gray-100 hover:bg-gray-600'

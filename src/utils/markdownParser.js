@@ -16,13 +16,31 @@ function sanitizeHtml(html) {
   return safe;
 }
 
+function applyDefaultHtmlStyling(html) {
+  if (!html) return '';
+  const applyStyle = (input, tag, style) => {
+    const regex = new RegExp(`<${tag}(?![^>]*\\bstyle\\s*=)([^>]*)>`, 'gi');
+    return input.replace(regex, (_match, attrs = '') => `<${tag}${attrs} style="${style}">`);
+  };
+
+  let styled = html;
+  styled = applyStyle(styled, 'ul', 'margin-top: 0.5rem; margin-bottom: 0.5rem; padding-left: 1.5rem; list-style-type: disc;');
+  styled = applyStyle(styled, 'ol', 'margin-top: 0.5rem; margin-bottom: 0.5rem; padding-left: 1.5rem; list-style-type: decimal;');
+  styled = applyStyle(styled, 'li', 'margin-bottom: 0.25rem;');
+  styled = applyStyle(styled, 'p', 'margin-bottom: 0.75rem; line-height: 1.6;');
+  styled = applyStyle(styled, 'h1', 'font-size: 1.875rem; font-weight: 700; margin-top: 0; margin-bottom: 1rem; line-height: 1.2;');
+  styled = applyStyle(styled, 'h2', 'font-size: 1.5rem; font-weight: 700; margin-top: 0; margin-bottom: 1rem; line-height: 1.3;');
+  styled = applyStyle(styled, 'h3', 'font-size: 1.125rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; line-height: 1.4;');
+  return styled;
+}
+
 export function convertMarkdownToHTML(markdown) {
   if (!markdown) return '';
 
   const original = String(markdown).trim();
 
   if (isLikelyHtml(original)) {
-    return sanitizeHtml(original);
+    return applyDefaultHtmlStyling(sanitizeHtml(original));
   }
 
   let html = original;

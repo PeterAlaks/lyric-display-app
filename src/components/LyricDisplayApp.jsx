@@ -350,6 +350,19 @@ const LyricDisplayApp = () => {
     }
   };
 
+  const handleClearOutput = React.useCallback(() => {
+    selectLine(null);
+    emitLineUpdate(null);
+  }, [emitLineUpdate, selectLine]);
+
+  const handleOutputTabSwitch = React.useCallback((tab) => {
+    if (tab !== 'output1' && tab !== 'output2' && tab !== 'stage') return;
+    setActiveTab(tab);
+    if (scrollableSettingsRef.current) {
+      scrollableSettingsRef.current.scrollTop = 0;
+    }
+  }, [setActiveTab]);
+
   useKeyboardShortcuts({
     hasLyrics,
     lyrics,
@@ -359,6 +372,8 @@ const LyricDisplayApp = () => {
     handleToggle,
     handleAutoplayToggle,
     handleIntelligentAutoplayToggle,
+    handleClearOutput,
+    handleOutputTabSwitch,
     searchQuery,
     clearSearch,
     totalMatches,
@@ -535,12 +550,7 @@ const LyricDisplayApp = () => {
             <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
             {/* Output Tabs */}
-            <Tabs value={activeTab} onValueChange={(val) => {
-              setActiveTab(val);
-              if (scrollableSettingsRef.current) {
-                scrollableSettingsRef.current.scrollTop = 0;
-              }
-            }}>
+            <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
               <TabsList className={`w-full p-1.5 h-11 mb-8 gap-2 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
                 <TabsTrigger value="output1" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                   Output 1

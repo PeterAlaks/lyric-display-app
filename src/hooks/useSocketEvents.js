@@ -144,7 +144,9 @@ const useSocketEvents = (role) => {
       }
     });
 
-    if (role === 'output' || role === 'output1' || role === 'output2' || role === 'stage') {
+    const shouldHandleOutputMetrics = role === 'control' || role === 'output' || role === 'output1' || role === 'output2' || role === 'stage';
+
+    if (shouldHandleOutputMetrics) {
       socket.on('styleUpdate', ({ output, settings }) => {
         logDebug('Received style update for', output, ':', settings);
 

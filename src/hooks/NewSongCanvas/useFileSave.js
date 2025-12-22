@@ -35,11 +35,12 @@ const useFileSave = ({
   }, [fileName, title]);
 
   const getExistingTarget = useCallback(() => {
+    if (!editMode) return null;
     const normalizedPath = (existingFilePath || '').trim();
     if (!normalizedPath) return null;
     const extension = normalizedPath.toLowerCase().endsWith('.lrc') ? 'lrc' : 'txt';
     return { path: normalizedPath, extension };
-  }, [existingFilePath]);
+  }, [editMode, existingFilePath]);
 
   const getDirectoryFromPath = useCallback((targetPath) => {
     if (!targetPath) return '';
@@ -236,6 +237,8 @@ const useFileSave = ({
   const tryDirectSaveToExistingPath = useCallback(async (payload, { alsoLoad = false } = {}) => {
     const target = getExistingTarget();
     if (!target) return null;
+    const hasLoadedBaseContent = Boolean((baseContentRef.current || '').trim());
+    if (!hasLoadedBaseContent) return null;
     if (target.extension === 'lrc' && !lrcEligibility.eligible) return null;
     if (!window?.electronAPI?.writeFile) return null;
 
