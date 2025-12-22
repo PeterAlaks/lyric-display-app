@@ -722,29 +722,67 @@ const NewSongCanvas = () => {
     }
   }, [content, title, emitLyricsDraftSubmit, resetHistory, showToast, showModal, navigate]);
 
+  const restoreFromHistoryMeta = useCallback((meta, fallbackMeta = null) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const selectionStart = typeof meta?.selectionStart === 'number'
+      ? meta.selectionStart
+      : (typeof fallbackMeta?.selectionStart === 'number' ? fallbackMeta.selectionStart : null);
+    const selectionEnd = typeof meta?.selectionEnd === 'number'
+      ? meta.selectionEnd
+      : (typeof fallbackMeta?.selectionEnd === 'number'
+        ? fallbackMeta.selectionEnd
+        : selectionStart);
+    const scrollTopValue = typeof meta?.scrollTop === 'number'
+      ? meta.scrollTop
+      : (typeof fallbackMeta?.scrollTop === 'number'
+        ? fallbackMeta.scrollTop
+        : lastKnownScrollRef.current);
+
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      if (typeof scrollTopValue === 'number') {
+        textareaRef.current.scrollTop = scrollTopValue;
+        lastKnownScrollRef.current = scrollTopValue;
+        setScrollTop(scrollTopValue);
+      }
+      try {
+        textareaRef.current.focus({ preventScroll: true });
+      } catch (err) {
+        textareaRef.current.focus();
+      }
+      if (selectionStart !== null && selectionEnd !== null) {
+        textareaRef.current.setSelectionRange(selectionStart, selectionEnd);
+      }
+    });
+  }, []);
+
   const handleUndo = useCallback(() => {
-    const previousContent = undo();
-    if (previousContent !== null && textareaRef.current) {
-      const currentScroll = lastKnownScrollRef.current;
-      requestAnimationFrame(() => {
-        if (textareaRef.current && typeof currentScroll === 'number') {
-          textareaRef.current.scrollTop = currentScroll;
-        }
-      });
+    const fallbackMeta = textareaRef.current ? {
+      selectionStart: textareaRef.current.selectionStart,
+      selectionEnd: textareaRef.current.selectionEnd,
+      scrollTop: textareaRef.current.scrollTop
+    } : { scrollTop: lastKnownScrollRef.current };
+
+    const previousEntry = undo();
+    if (previousEntry?.meta) {
+      restoreFromHistoryMeta(previousEntry.meta, fallbackMeta);
     }
-  }, [undo]);
+  }, [restoreFromHistoryMeta, undo]);
 
   const handleRedo = useCallback(() => {
-    const nextContent = redo();
-    if (nextContent !== null && textareaRef.current) {
-      const currentScroll = lastKnownScrollRef.current;
-      requestAnimationFrame(() => {
-        if (textareaRef.current && typeof currentScroll === 'number') {
-          textareaRef.current.scrollTop = currentScroll;
-        }
-      });
+    const fallbackMeta = textareaRef.current ? {
+      selectionStart: textareaRef.current.selectionStart,
+      selectionEnd: textareaRef.current.selectionEnd,
+      scrollTop: textareaRef.current.scrollTop
+    } : { scrollTop: lastKnownScrollRef.current };
+
+    const nextEntry = redo();
+    if (nextEntry?.meta) {
+      restoreFromHistoryMeta(nextEntry.meta, fallbackMeta);
     }
-  }, [redo]);
+  }, [redo, restoreFromHistoryMeta]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -801,6 +839,27 @@ const NewSongCanvas = () => {
     setSelectedLineIndex(null);
     closeContextMenu();
   }, [closeContextMenu]);
+
+  const handleContentChange = useCallback((event) => {
+    const {
+      value,
+      selectionStart,
+      selectionEnd,
+      scrollTop: currentScrollTop
+    } = event.target;
+    const safeScroll = typeof currentScrollTop === 'number' ? currentScrollTop : lastKnownScrollRef.current;
+    lastKnownScrollRef.current = safeScroll;
+    if (typeof safeScroll === 'number') {
+      setScrollTop(safeScroll);
+    }
+    setContent(value, {
+      selectionStart,
+      selectionEnd,
+      scrollTop: safeScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'typing'
+    });
+  }, [setContent]);
 
   const handleTextareaSelect = useCallback(() => {
     if (!textareaRef.current) return;
@@ -957,7 +1016,13 @@ const NewSongCanvas = () => {
     textarea.setSelectionRange(0, 0);
     textarea.scrollTop = currentScroll;
 
-    setContent(newContent);
+    setContent(newContent, {
+      selectionStart: 0,
+      selectionEnd: 0,
+      scrollTop: currentScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'metadata'
+    });
     lastKnownScrollRef.current = currentScroll;
     closeContextMenu();
   }, [closeContextMenu, setContent]);
@@ -1403,7 +1468,7 @@ const NewSongCanvas = () => {
           <textarea
             ref={textareaRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={handleContentChange}
             onPaste={(e) => {
               handleTextareaPaste(e);
               handleContentPaste();

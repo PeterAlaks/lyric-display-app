@@ -11,7 +11,14 @@ const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => 
     try {
       await navigator.clipboard.writeText(selectedText);
       const newContent = content.substring(0, start) + content.substring(end);
-      setContent(newContent);
+      const scrollTop = textareaRef.current.scrollTop || 0;
+      setContent(newContent, {
+        selectionStart: start,
+        selectionEnd: start,
+        scrollTop,
+        timestamp: Date.now(),
+        coalesceKey: 'edit'
+      });
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(start, start);
     } catch (err) {
@@ -40,9 +47,17 @@ const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => 
       const end = textareaRef.current.selectionEnd;
       const formattedText = formatLyrics(clipboardText);
       const newContent = content.substring(0, start) + formattedText + content.substring(end);
-      setContent(newContent);
+      const nextCursor = start + formattedText.length;
+      const scrollTop = textareaRef.current.scrollTop || 0;
+      setContent(newContent, {
+        selectionStart: nextCursor,
+        selectionEnd: nextCursor,
+        scrollTop,
+        timestamp: Date.now(),
+        coalesceKey: 'edit'
+      });
       textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(start + formattedText.length, start + formattedText.length);
+      textareaRef.current.setSelectionRange(nextCursor, nextCursor);
     } catch (err) {
       console.error('Failed to paste text:', err);
     }
@@ -56,11 +71,19 @@ const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => 
     const end = textareaRef.current.selectionEnd;
     const formattedText = formatLyrics(clipboardText);
     const newContent = content.substring(0, start) + formattedText + content.substring(end);
-    setContent(newContent);
+    const nextCursor = start + formattedText.length;
+    const scrollTop = textareaRef.current.scrollTop || 0;
+    setContent(newContent, {
+      selectionStart: nextCursor,
+      selectionEnd: nextCursor,
+      scrollTop,
+      timestamp: Date.now(),
+      coalesceKey: 'edit'
+    });
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(start + formattedText.length, start + formattedText.length);
+        textareaRef.current.setSelectionRange(nextCursor, nextCursor);
       }
     }, 0);
   }, [content, setContent, textareaRef]);
@@ -69,13 +92,21 @@ const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => 
     const formattedContent = formatLyrics(content, {
       enableSplitting: true,
     });
-    setContent(formattedContent);
+    const scrollTop = textareaRef.current?.scrollTop || 0;
+    const cursor = textareaRef.current?.selectionStart ?? null;
+    setContent(formattedContent, {
+      selectionStart: cursor,
+      selectionEnd: cursor,
+      scrollTop,
+      timestamp: Date.now(),
+      coalesceKey: 'cleanup'
+    });
     showToast({
       title: 'Lyrics cleaned',
       message: 'Formatting applied successfully.',
       variant: 'success'
     });
-  }, [content, setContent]);
+  }, [content, setContent, textareaRef]);
 
 
   return { handleCut, handleCopy, handlePaste, handleTextareaPaste, handleCleanup };

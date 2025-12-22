@@ -70,7 +70,13 @@ const useLineOperations = ({
     textarea.setSelectionRange(newCursorPos, newCursorPos);
     textarea.scrollTop = currentScroll;
 
-    setContent(newContent);
+    setContent(newContent, {
+      selectionStart: newCursorPos,
+      selectionEnd: newCursorPos,
+      scrollTop: currentScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'structure'
+    });
     lastKnownScrollRef.current = currentScroll;
     setSelectedLineIndex(lineIndex + 1);
     closeContextMenu();
@@ -99,12 +105,19 @@ const useLineOperations = ({
 
   const handleDuplicateLine = useCallback((lineIndex) => {
     preserveTextareaScroll(() => {
+      const currentScroll = textareaRef.current?.scrollTop ?? lastKnownScrollRef.current ?? 0;
       setContent((prev) => {
         const segments = prev.split('\n');
         const safeIndex = Math.max(0, Math.min(lineIndex, segments.length - 1));
         const lineToDuplicate = segments[safeIndex] ?? '';
         segments.splice(safeIndex + 1, 0, '', lineToDuplicate);
         return segments.join('\n');
+      }, {
+        selectionStart: null,
+        selectionEnd: null,
+        scrollTop: currentScroll,
+        timestamp: Date.now(),
+        coalesceKey: 'structure'
       });
     });
     focusLine(lineIndex + 2);

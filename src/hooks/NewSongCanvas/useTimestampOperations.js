@@ -54,7 +54,13 @@ const useTimestampOperations = ({
     textarea.setSelectionRange(caretStart, caretEnd);
     textarea.scrollTop = currentScroll;
 
-    setContent(newContent);
+    setContent(newContent, {
+      selectionStart: caretStart,
+      selectionEnd: caretEnd,
+      scrollTop: currentScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'timestamp'
+    });
     lastKnownScrollRef.current = currentScroll;
     setSelectedLineIndex(safeIndex);
     closeContextMenu();
@@ -98,7 +104,13 @@ const useTimestampOperations = ({
     textarea.setSelectionRange(caretStart, caretEnd);
     textarea.scrollTop = currentScroll;
 
-    setContent(newContent);
+    setContent(newContent, {
+      selectionStart: caretStart,
+      selectionEnd: caretEnd,
+      scrollTop: currentScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'timestamp'
+    });
     lastKnownScrollRef.current = currentScroll;
     setSelectedLineIndex(safeIndex);
     closeContextMenu();
@@ -136,7 +148,13 @@ const useTimestampOperations = ({
     textarea.setSelectionRange(caretPos, caretPos);
     textarea.scrollTop = currentScroll;
 
-    setContent(newContent);
+    setContent(newContent, {
+      selectionStart: caretPos,
+      selectionEnd: caretPos,
+      scrollTop: currentScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'metadata'
+    });
     lastKnownScrollRef.current = currentScroll;
     setSelectedLineIndex(safeIndex);
     closeContextMenu();

@@ -182,11 +182,19 @@ const useCanvasSearch = ({ content, setContent, textareaRef }) => {
     const nextIndex = updatedMatches.length === 0
       ? 0
       : Math.min(safeIndex, updatedMatches.length - 1);
+    const caret = match.start + replaceValue.length;
+    const scrollTop = textareaRef.current?.scrollTop ?? null;
 
     pendingFocusIndexRef.current = nextIndex;
     setCurrentMatchIndex(nextIndex);
-    setContent(updatedContent);
-  }, [content, currentMatchIndex, findMatchesInText, matches, replaceValue, searchQuery, setContent]);
+    setContent(updatedContent, {
+      selectionStart: caret,
+      selectionEnd: caret,
+      scrollTop,
+      timestamp: Date.now(),
+      coalesceKey: 'replace'
+    });
+  }, [content, currentMatchIndex, findMatchesInText, matches, replaceValue, searchQuery, setContent, textareaRef]);
 
   const handleReplaceAll = useCallback(() => {
     if (!searchQuery.trim() || matches.length === 0) return;
@@ -201,10 +209,19 @@ const useCanvasSearch = ({ content, setContent, textareaRef }) => {
 
     updatedContent += content.slice(lastIndex);
 
+    const caret = updatedContent.length;
+    const scrollTop = textareaRef.current?.scrollTop ?? null;
+
     pendingFocusIndexRef.current = 0;
     setCurrentMatchIndex(0);
-    setContent(updatedContent);
-  }, [content, matches, replaceValue, searchQuery, setContent]);
+    setContent(updatedContent, {
+      selectionStart: caret,
+      selectionEnd: caret,
+      scrollTop,
+      timestamp: Date.now(),
+      coalesceKey: 'replace'
+    });
+  }, [content, matches, replaceValue, searchQuery, setContent, textareaRef]);
 
   return {
     closeSearchBar,
