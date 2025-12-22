@@ -5,7 +5,7 @@ import { app } from 'electron';
 
 let backendProcess = null;
 
-async function waitForBackendHealth(maxAttempts = 20, intervalMs = 500) {
+async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -68,7 +68,7 @@ export function startBackend() {
           reject(new Error('Backend startup timeout'));
         }
       }
-    }, 15000);
+    }, 30000);
 
     backendProcess.on('error', (err) => {
       console.error('Backend process error:', err);
