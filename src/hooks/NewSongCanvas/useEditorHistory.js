@@ -9,13 +9,19 @@ const useEditorHistory = (initialContent = '') => {
   const pushHistory = useCallback((newContent) => {
     if (isUndoRedoRef.current) {
       isUndoRedoRef.current = false;
+    }
+
+    const truncatedHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
+    const lastEntry = truncatedHistory[truncatedHistory.length - 1];
+
+    if (lastEntry === newContent) {
+      historyRef.current = truncatedHistory;
       return;
     }
 
-    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
-
-    historyRef.current.push(newContent);
-    historyIndexRef.current += 1;
+    truncatedHistory.push(newContent);
+    historyRef.current = truncatedHistory;
+    historyIndexRef.current = truncatedHistory.length - 1;
 
     if (historyRef.current.length > 50) {
       historyRef.current.shift();
@@ -53,6 +59,13 @@ const useEditorHistory = (initialContent = '') => {
   const canUndo = historyIndexRef.current > 0;
   const canRedo = historyIndexRef.current < historyRef.current.length - 1;
 
+  const resetHistory = useCallback((newContent = '') => {
+    historyRef.current = [newContent];
+    historyIndexRef.current = 0;
+    isUndoRedoRef.current = false;
+    setContent(newContent);
+  }, []);
+
   return {
     content,
     setContent: setContentWithHistory,
@@ -60,6 +73,7 @@ const useEditorHistory = (initialContent = '') => {
     redo,
     canUndo,
     canRedo,
+    resetHistory,
   };
 };
 

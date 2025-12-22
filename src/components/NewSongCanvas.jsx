@@ -61,7 +61,7 @@ const NewSongCanvas = () => {
   const baseTitleRef = useRef('');
   const loadSignatureRef = useRef(null);
 
-  const { content, setContent, undo, redo, canUndo, canRedo } = useEditorHistory('');
+  const { content, setContent, undo, redo, canUndo, canRedo, resetHistory } = useEditorHistory('');
   const [fileName, setFileName] = useState('');
   const [title, setTitle] = useState('');
   const editorContainerRef = useRef(null);
@@ -187,9 +187,11 @@ const NewSongCanvas = () => {
     if (window.electronAPI) {
       const handleNavigateToNewSong = () => {
         if (!editMode) {
-          setContent('');
+          resetHistory('');
           setFileName('');
           setTitle('');
+          baseContentRef.current = '';
+          baseTitleRef.current = '';
         } else {
           navigate('/new-song?mode=new');
         }
@@ -201,7 +203,7 @@ const NewSongCanvas = () => {
         window.electronAPI.removeAllListeners('navigate-to-new-song');
       };
     }
-  }, [editMode, navigate, setRawLyricsContent]);
+  }, [editMode, navigate, resetHistory, setRawLyricsContent]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -220,24 +222,24 @@ const NewSongCanvas = () => {
     const nextTitle = lyricsFileName || '';
     const loadSignature = `${nextTitle}::${nextContent}`;
     if (loadSignatureRef.current !== loadSignature) {
-      setContent(nextContent);
+      resetHistory(nextContent);
       setFileName(nextTitle);
       setTitle(nextTitle);
       baseContentRef.current = nextContent || '';
       baseTitleRef.current = nextTitle || '';
       loadSignatureRef.current = loadSignature;
     }
-  }, [editMode, lyrics, lyricsFileName, rawLyricsContent]);
+  }, [editMode, lyrics, lyricsFileName, rawLyricsContent, resetHistory]);
 
   useEffect(() => {
     if (editMode) return;
-    setContent('');
+    resetHistory('');
     setFileName('');
     setTitle('');
     baseContentRef.current = '';
     baseTitleRef.current = '';
     loadSignatureRef.current = null;
-  }, [editMode]);
+  }, [editMode, resetHistory]);
 
   React.useEffect(() => {
     const handleDraftSubmitted = (event) => {
@@ -703,7 +705,7 @@ const NewSongCanvas = () => {
       }
 
       setTimeout(() => {
-        setContent('');
+        resetHistory('');
         setTitle('');
         baseContentRef.current = '';
         baseTitleRef.current = '';
@@ -718,7 +720,7 @@ const NewSongCanvas = () => {
         dismissLabel: 'Close',
       });
     }
-  }, [content, title, emitLyricsDraftSubmit, showToast, showModal, navigate]);
+  }, [content, title, emitLyricsDraftSubmit, resetHistory, showToast, showModal, navigate]);
 
   const handleUndo = useCallback(() => {
     const previousContent = undo();
