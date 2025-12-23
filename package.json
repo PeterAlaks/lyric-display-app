@@ -17,7 +17,7 @@
     "electron": "electron .",
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run build && electron-builder",
-    "version": "node scripts/update-version.js && git add README.md \"LyricDisplay Installation & Integration Guide.md\"",
+    "version": "node scripts/update-version.js && git add README.md \"INSTALLATION.md\"",
     "release": "node scripts/release.js"
   },
   "dependencies": {
@@ -99,8 +99,8 @@
     ],
     "extraFiles": [
       {
-        "from": "LyricDisplay Installation & Integration Guide.md",
-        "to": "LyricDisplay Installation & Integration Guide.md"
+        "from": "INSTALLATION.md",
+        "to": "INSTALLATION.md"
       }
     ],
     "win": {

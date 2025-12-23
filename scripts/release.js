@@ -266,7 +266,7 @@ async function main() {
 
         console.log(chalk.blue('\n📦 Committing and Tagging...'));
 
-        execSync('git add package.json package-lock.json README.md "LyricDisplay Installation & Integration Guide.md"');
+        execSync('git add package.json package-lock.json README.md "INSTALLATION.md"');
 
         let commitMsg = `chore: release ${tagName}`;
 

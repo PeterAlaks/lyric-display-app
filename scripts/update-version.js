@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const pkgPath = path.resolve(__dirname, '../package.json');
 const readmePath = path.resolve(__dirname, '../README.md');
-const guidePath = path.resolve(__dirname, '../LyricDisplay Installation & Integration Guide.md');
+const guidePath = path.resolve(__dirname, '../INSTALLATION.md');
 const openapiPath = path.resolve(__dirname, '../docs/openapi.yaml');
 const asyncapiPath = path.resolve(__dirname, '../docs/asyncapi.yaml');
 
