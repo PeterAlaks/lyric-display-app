@@ -1,5 +1,9 @@
 let knownArtistsList = [];
 let knownArtistsLoaded = false;
+let normalizedKnownArtists = [];
+
+const normalizationCache = new Map();
+const MAX_CACHE_SIZE = 1000;
 
 try {
     const module = await import('../../shared/data/knownArtists.json', {
@@ -11,9 +15,6 @@ try {
 } catch (err) {
     console.warn('[SearchAlgorithm] Failed to load knownArtists.json, artist inference will be limited:', err.message);
 }
-
-const normalizationCache = new Map();
-const MAX_CACHE_SIZE = 1000;
 
 /**
  * Normalize text for comparison: remove accents, punctuation, extra spaces
@@ -42,6 +43,19 @@ function normalizeText(text) {
     normalizationCache.set(text, normalized);
 
     return normalized;
+}
+
+/**
+ * Ensure the normalized artist cache is populated once
+ */
+function ensureNormalizedArtists() {
+    if (!knownArtistsLoaded) return [];
+
+    if (normalizedKnownArtists.length !== knownArtistsList.length) {
+        normalizedKnownArtists = knownArtistsList.map((artist) => normalizeText(artist));
+    }
+
+    return normalizedKnownArtists;
 }
 
 /**
@@ -238,7 +252,7 @@ export function analyzeQuery(query, options = {}) {
     }
 
     if (!inferredArtist && knownArtistsLoaded && meaningfulWords.length >= 1) {
-        const normalizedArtists = knownArtistsList.map(a => normalizeText(a));
+        const normalizedArtists = ensureNormalizedArtists();
 
         // Phase 1: Exact substring match (prefer longest match)
         let bestMatch = null;
@@ -261,7 +275,7 @@ export function analyzeQuery(query, options = {}) {
             let bestFuzzyMatch = null;
             let bestFuzzyScore = 0;
 
-            const searchLimit = Math.min(normalizedArtists.length, 500);
+            const searchLimit = normalizedArtists.length;
 
             for (let i = 0; i < searchLimit; i++) {
                 const artist = normalizedArtists[i];
@@ -500,10 +514,26 @@ export function mergeResults(chunks, options = {}) {
         query = '',
         minScoreThreshold = null,
         scoringOptions = {},
+        onMergeMeta = null,
+        providerPenalties = null,
+        includeDedupDroppped = false,
     } = options;
 
     const queryAnalysis = analyzeQuery(query);
     const scoredResults = [];
+    const mergeMeta = {
+        thresholdApplied: null,
+        fallbackApplied: false,
+        knownArtistsLoaded,
+        knownArtistsCount: knownArtistsList.length,
+        providerPenaltiesApplied: Boolean(providerPenalties && typeof providerPenalties.get === 'function'),
+        inferred: {
+            artist: queryAnalysis.inferredArtist,
+            title: queryAnalysis.inferredTitle,
+            confidence: queryAnalysis.confidence,
+        },
+        lowQualityResults: [],
+    };
 
     chunks.forEach((chunk) => {
         chunk.results.forEach((item, resultIndex) => {
@@ -513,9 +543,14 @@ export function mergeResults(chunks, options = {}) {
                 scoringOptions
             );
 
+            const providerPenalty = providerPenalties?.get?.(item.provider) || 0;
+            const adjustedScore = score - providerPenalty;
+
             scoredResults.push({
                 item,
-                score,
+                score: adjustedScore,
+                rawScore: score,
+                providerPenalty,
                 signals,
                 isExact,
             });
@@ -548,17 +583,24 @@ export function mergeResults(chunks, options = {}) {
             threshold = 5000;
         }
     }
+    mergeMeta.thresholdApplied = threshold;
 
-    const filtered = scoredResults.filter(r => r.score >= threshold);
+    let filtered = scoredResults.filter(r => r.score >= threshold);
 
     const merged = [];
     const seen = new Map();
+    const droppedViaDedup = [];
+
+    if (filtered.length === 0 && scoredResults.length > 0) {
+        filtered = scoredResults;
+        mergeMeta.fallbackApplied = true;
+    }
 
     for (const scored of filtered) {
         if (merged.length >= limit) break;
 
         const item = scored.item;
-        const dedupKey = `${normalizeText(item.title)}|${normalizeText(item.artist)}`;
+        const dedupKey = buildDedupKey(item);
 
         const existing = seen.get(dedupKey);
         if (!existing) {
@@ -566,12 +608,34 @@ export function mergeResults(chunks, options = {}) {
             merged.push(item);
         } else if (scored.score > existing) {
             const existingIndex = merged.findIndex(m =>
-                `${normalizeText(m.title)}|${normalizeText(m.artist)}` === dedupKey
+                buildDedupKey(m) === dedupKey
             );
             if (existingIndex !== -1) {
+                const droppedItem = merged[existingIndex];
+                if (includeDedupDroppped) droppedViaDedup.push(droppedItem);
                 merged[existingIndex] = item;
                 seen.set(dedupKey, scored.score);
             }
+        } else if (includeDedupDroppped) {
+            droppedViaDedup.push(item);
+        }
+    }
+
+    // Collect low quality candidates (below threshold, not already merged)
+    const lowQuality = [];
+    scoredResults.forEach((scored) => {
+        if (scored.score >= threshold) return;
+        const dedupKey = buildDedupKey(scored.item);
+        if (!seen.has(dedupKey)) {
+            lowQuality.push(scored.item);
+        }
+    });
+
+    if (typeof onMergeMeta === 'function') {
+        try {
+            onMergeMeta({ ...mergeMeta, lowQualityResults: [...lowQuality, ...droppedViaDedup] });
+        } catch (err) {
+            console.warn('[LyricsSearch] Failed to publish merge meta:', err?.message || err);
         }
     }
 
@@ -594,4 +658,18 @@ export function getCacheStats() {
         knownArtistsLoaded,
         knownArtistsCount: knownArtistsList.length,
     };
+}
+
+function buildDedupKey(item) {
+    const titleKey = normalizeText(item.title || '');
+    const artistKey = normalizeText(item.artist || '');
+    const providerKey = item.provider || 'unknown';
+    const durationKey = item.metadata?.duration ? String(item.metadata.duration) : '';
+    const snippetKey = item.snippet ? normalizeText(item.snippet).slice(0, 40) : '';
+
+    if (artistKey) {
+        return `${titleKey}|${artistKey}`;
+    }
+
+    return `${titleKey}|${providerKey}|${durationKey || snippetKey}`;
 }

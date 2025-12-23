@@ -8,6 +8,7 @@ import useToast from '../hooks/useToast';
 import OnlineLyricsWelcomeSplash from './OnlineLyricsWelcomeSplash';
 import useNetworkStatus from '../hooks/OnlineLyricsSearchModal/useNetworkStatus';
 import { classifyError } from '../utils/errorClassification';
+import { useKeyboardShortcuts } from '../hooks/OnlineLyricsSearchModal/useKeyboardShortcuts';
 
 const DEFAULT_TAB = 'libraries';
 const INITIAL_STATE = {
@@ -28,12 +29,15 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const [query, setQuery] = useState('');
   const [suggestionResults, setSuggestionResults] = useState([]);
   const [fullResults, setFullResults] = useState([]);
+  const [lowQualityResults, setLowQualityResults] = useState([]);
+  const [showingLowQuality, setShowingLowQuality] = useState(false);
   const [providerStatuses, setProviderStatuses] = useState([]);
   const [providerDefinitions, setProviderDefinitions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [loadingFullResults, setLoadingFullResults] = useState(false);
   const [selectionLoadingId, setSelectionLoadingId] = useState(null);
   const [showFullResults, setShowFullResults] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [keyEditor, setKeyEditor] = useState(null);
   const [keyInputValue, setKeyInputValue] = useState('');
   const [savingKey, setSavingKey] = useState(false);
@@ -122,6 +126,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       setSuggestionResults(INITIAL_STATE.suggestionResults);
       setProviderStatuses(INITIAL_STATE.providerStatuses);
       setFullResults(INITIAL_STATE.fullResults);
+      setLowQualityResults([]);
+      setShowingLowQuality(false);
       setShowFullResults(false);
       setSelectionLoadingId(null);
       setActiveTab(DEFAULT_TAB);
@@ -141,6 +147,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     setFullResults(INITIAL_STATE.fullResults);
     setShowFullResults(false);
     setSelectionLoadingId(null);
+    setSelectionIndex(-1);
     setActiveTab(DEFAULT_TAB);
     setKeyEditor(null);
     setKeyInputValue('');
@@ -166,11 +173,13 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   }, [isOpen, hasElectronBridge]);
 
   useEffect(() => {
-    if (!isOpen || activeTab !== 'libraries' || !hasElectronBridge) return;
+    if (!isOpen || activeTab !== 'libraries' || !hasElectronBridge || !isSearchFocused) return;
     const trimmed = query.trim();
     if (!trimmed) {
       setSuggestionResults([]);
       setLoadingSuggestions(false);
+      setLowQualityResults([]);
+      setShowingLowQuality(false);
       return;
     }
 
@@ -193,6 +202,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           if (partialPayload?.results) {
             setSuggestionResults(partialPayload.results);
             setProviderStatuses(partialPayload.meta?.providers || []);
+            setLowQualityResults(partialPayload.meta?.search?.lowQualityResults || []);
+            setShowingLowQuality(false);
           }
         });
         partialResultsCleanupRef.current = cleanup;
@@ -242,7 +253,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         partialResultsCleanupRef.current = null;
       }
     };
-  }, [query, activeTab, isOpen, hasElectronBridge]);
+  }, [query, activeTab, isOpen, hasElectronBridge, isSearchFocused]);
+
+  useEffect(() => {
+    setSelectionIndex(-1);
+  }, [suggestionResults, fullResults, showFullResults, isOpen]);
 
 
   const providerMap = useMemo(() => {
@@ -263,6 +278,10 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     resetState();
     onClose?.();
   };
+
+  const combinedFullResults = showFullResults
+    ? (showingLowQuality ? [...fullResults, ...lowQualityResults] : fullResults)
+    : fullResults;
 
   const performFullSearch = async () => {
     if (!query.trim() || !hasElectronBridge) return;
@@ -285,6 +304,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         if (partialPayload?.results) {
           setFullResults(partialPayload.results);
           setProviderStatuses(partialPayload.meta?.providers || []);
+          setLowQualityResults(partialPayload.meta?.search?.lowQualityResults || []);
+          setShowingLowQuality(false);
         }
       });
 
@@ -300,6 +321,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       if (response?.success) {
         setFullResults(response.results || []);
         setProviderStatuses(response.meta?.providers || []);
+        setLowQualityResults(response.meta?.search?.lowQualityResults || []);
+        setShowingLowQuality(false);
       } else {
         setFullResults([]);
         throw new Error(response?.error || 'No results found.');
@@ -310,6 +333,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       if (requestId !== fullSearchRequestRef.current) return;
       setLoadingFullResults(false);
       setFullResults([]);
+      setLowQualityResults([]);
+      setShowingLowQuality(false);
       const classified = classifyError(error);
       setLastError({ ...classified, context: 'fullSearch' });
       showToast({
@@ -353,15 +378,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       });
     } finally {
       setSelectionLoadingId(null);
-    }
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key !== 'Enter') return;
-    if (activeTab === 'google') {
-      handleGoogleSearch();
-    } else if (activeTab === 'libraries') {
-      performFullSearch();
     }
   };
 
@@ -431,7 +447,35 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     }
   };
 
+  const handleShowLowQuality = () => {
+    setShowingLowQuality(true);
+  };
+
+  const {
+    selectionIndex,
+    setSelectionIndex,
+    suggestionListRef,
+    fullResultsRef,
+  } = useKeyboardShortcuts({
+    isOpen: isOpen && visible,
+    activeTab,
+    showFullResults,
+    suggestionResults,
+    fullResults: combinedFullResults,
+    onSelectResult: handleSelectResult,
+    onPerformFullSearch: performFullSearch,
+  });
+
+  const handleGoogleInputKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleGoogleSearch();
+    }
+  };
+
   const renderSuggestionList = (items) => {
+    if (!isSearchFocused) return null;
+
     if (!items?.length) {
       if (!query.trim()) {
         return null;
@@ -446,19 +490,26 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     }
 
     return (
-      <div className={`mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-56 overflow-y-auto`}>
-        {items.map((item) => {
+      <div
+        ref={suggestionListRef}
+        className={`mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-56 overflow-y-auto`}
+      >
+        {items.map((item, index) => {
           const providerName = providerMap.get(item.provider)?.displayName || item.provider;
           const isLoading = selectionLoadingId === item.id;
+          const isSelected = selectionIndex === index && !showFullResults;
           return (
             <button
+              data-result-row
               key={item.id}
               onClick={() => handleSelectResult(item)}
               disabled={isLoading}
               className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${darkMode
-                ? 'hover:bg-gray-700 disabled:hover:bg-gray-800/90'
-                : 'hover:bg-gray-100 disabled:hover:bg-white'
+                ? `${isSelected ? 'bg-blue-900/40 border-l-2 border-blue-500/70' : ''} hover:bg-gray-700 disabled:hover:bg-gray-800/90`
+                : `${isSelected ? 'bg-blue-50 border-l-2 border-blue-500/70' : ''} hover:bg-gray-100 disabled:hover:bg-white`
                 }`}
+              aria-selected={isSelected}
+              onMouseEnter={() => setSelectionIndex(index)}
             >
               <div className="min-w-0">
                 <p className={`truncate text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{item.title}</p>
@@ -514,20 +565,27 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     }
 
     return (
-      <div className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-72 overflow-y-auto`}>
-        {items.map((item) => {
+      <div
+        ref={fullResultsRef}
+        className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-72 overflow-y-auto`}
+      >
+        {items.map((item, index) => {
           const provider = providerMap.get(item.provider);
           const providerName = provider?.displayName || item.provider;
           const isLoading = selectionLoadingId === item.id;
+          const isSelected = selectionIndex === index && showFullResults;
           return (
             <button
+              data-result-row
               key={item.id}
               onClick={() => handleSelectResult(item)}
               disabled={isLoading}
               className={`w-full border-b px-4 py-4 text-left transition last:border-b-0 ${darkMode
-                ? 'border-gray-700 hover:bg-gray-700/70 disabled:hover:bg-transparent'
-                : 'border-gray-200 hover:bg-gray-100 disabled:hover:bg-white'
+                ? `${isSelected ? 'bg-blue-900/40 border-blue-500/70' : 'border-gray-700'} hover:bg-gray-700/70 disabled:hover:bg-transparent`
+                : `${isSelected ? 'bg-blue-50 border-blue-500/70' : 'border-gray-200'} hover:bg-gray-100 disabled:hover:bg-white`
                 }`}
+              aria-selected={isSelected}
+              onMouseEnter={() => setSelectionIndex(index)}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 space-y-1">
@@ -549,6 +607,17 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
             </button>
           );
         })}
+        {lowQualityResults.length > 0 && !showingLowQuality && (
+          <div className={`w-full px-4 py-3 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <button
+              onClick={handleShowLowQuality}
+              disabled={loadingFullResults}
+              className={`text-sm underline underline-offset-4 ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-900'}`}
+            >
+              All Results
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -651,7 +720,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     type="text"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    onKeyDown={handleKeyDown}
+                    onKeyDown={handleGoogleInputKeyDown}
                     autoFocus={activeTab === 'google'}
                     placeholder="Enter song title and artist"
                     className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10 h-10' : 'pr-10 h-10'}
@@ -752,8 +821,14 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                       <Input
                         type="text"
                         value={query}
-                        onChange={(event) => { setQuery(event.target.value); setShowFullResults(false); }}
-                        onKeyDown={handleKeyDown}
+                        onChange={(event) => { setQuery(event.target.value); setShowFullResults(false); setShowingLowQuality(false); }}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => {
+                          setIsSearchFocused(false);
+                          setSuggestionResults([]);
+                          setLoadingSuggestions(false);
+                          setSelectionIndex(-1);
+                        }}
                         autoFocus={activeTab === 'libraries'}
                         placeholder="Search for song titles, artists or hymns"
                         className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10 h-10' : 'pr-10 h-10'}
@@ -765,6 +840,9 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                             setShowFullResults(false);
                             setSuggestionResults([]);
                             setFullResults([]);
+                            setLowQualityResults([]);
+                            setShowingLowQuality(false);
+                            setIsSearchFocused(false);
                           }}
                           className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${darkMode
                             ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
@@ -777,14 +855,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                       )}
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <Button
-                        variant="secondary"
-                        disabled={loadingSuggestions || loadingFullResults}
-                        onClick={() => setShowFullResults(false)}
-                        className="h-10"
-                      >
-                        Live Suggestions
-                      </Button>
                       <Button
                         onClick={performFullSearch}
                         disabled={!query.trim() || loadingFullResults}
@@ -831,15 +901,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     </div>
                   )}
 
-                  {loadingSuggestions && !showFullResults && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Fetching matches...
-                    </div>
-                  )}
-
                   {!showFullResults && renderSuggestionList(suggestionResults)}
-                  {showFullResults && renderFullResults(fullResults)}
+                  {showFullResults && renderFullResults(combinedFullResults)}
 
                   {/* Featured Libraries */}
                   {providerDefinitions?.length > 0 && (
@@ -918,13 +981,21 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                                   {providerStatuses.map((provider) => (
                                     <li key={provider.id} className="flex items-center justify-between gap-3">
                                       <span className="font-medium">{provider.displayName}</span>
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex flex-wrap items-center gap-2">
                                         <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200/40 text-gray-600'}`}>
                                           {provider.count} hit{provider.count === 1 ? '' : 's'}
                                         </span>
-                                        {provider.duration && (
-                                          <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1000 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                                        {provider.duration != null && (
+                                          <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1200 ? 'text-yellow-500' : 'text-gray-500'}`}>
                                             {provider.duration}ms
+                                          </span>
+                                        )}
+                                        {provider.penalty > 0 && (
+                                          <span className="text-[10px] text-yellow-500">penalty -{provider.penalty}</span>
+                                        )}
+                                        {provider.health?.requests > 0 && (
+                                          <span className={`text-[10px] ${provider.health.failures > 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                                            {Math.round((provider.health.failures / provider.health.requests) * 100)}% fail
                                           </span>
                                         )}
                                         {provider.errors?.[0] && (

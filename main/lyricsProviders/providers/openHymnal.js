@@ -25,6 +25,7 @@ let lastLoadedPath = null;
 let fuse = null;
 
 const normalizeText = (text) => (text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+const splitWords = (text) => normalizeText(text).split(/\s+/).filter(Boolean);
 
 export const loadDataset = async () => {
   const overridePath = process.env.OPEN_HYMNAL_DATA_PATH || process.env.LYRICDISPLAY_OPEN_HYMNAL_PATH || null;
@@ -126,8 +127,50 @@ export async function search(query, { limit = 10 } = {}) {
     return { results: [], errors: ['Open Hymnal dataset is unavailable.'] };
   }
 
-  const results = fuse.search(query, { limit }).map((result) => result.item);
-  const limited = results.map(normalizeEntry);
+  const results = fuse.search(query, { limit: Math.max(limit, 20) }).map((result) => result.item);
+  const normalizedResults = results.map(normalizeEntry);
+
+  // Fallback lyric-line matching for common queries (e.g., famous opening lines)
+  const normalizedQuery = normalizeText(query);
+  const queryWords = splitWords(query);
+  const existingIds = new Set(normalizedResults.map((r) => r.id));
+  const scoredFallbacks = [];
+
+  if (normalizedQuery.length >= 10 && queryWords.length >= 3) {
+    for (const entry of dataset) {
+      const text = collectText(entry);
+      const normalizedText = normalizeText(`${entry?.title || ''} ${text}`);
+      let score = 0;
+
+      if (normalizedText.includes(normalizedQuery)) {
+        score = 1.0;
+      } else {
+        let matched = 0;
+        for (const w of queryWords) {
+          if (w.length < 3) continue;
+          if (normalizedText.includes(w)) matched++;
+        }
+        score = matched / queryWords.length;
+      }
+
+      if (score >= 0.45) {
+        scoredFallbacks.push({ entry, score });
+      }
+    }
+  }
+
+  scoredFallbacks
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .forEach(({ entry }) => {
+      const normalized = normalizeEntry(entry);
+      if (!existingIds.has(normalized.id)) {
+        normalizedResults.push(normalized);
+        existingIds.add(normalized.id);
+      }
+    });
+
+  const limited = normalizedResults.slice(0, limit);
   console.timeEnd('openHymnal-search');
   return { results: limited, errors: [] };
 }

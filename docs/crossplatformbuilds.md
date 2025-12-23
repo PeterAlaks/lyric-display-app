@@ -1,6 +1,6 @@
 # Cross-Platform Build System
 
-This reflects the current release flow (tag-driven builds on GitHub Actions, no MEGA uploads).
+This reflects the current release flow (tag-driven builds on GitHub Actions).
 
 ## What happens when you run `npm run release`
 1) Preconditions: clean git tree, GitHub CLI (`gh`) installed and authenticated, deps installed (`npm ci` + `cd server && npm ci` once), and Windows build tools available.

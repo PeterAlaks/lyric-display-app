@@ -282,6 +282,7 @@ lyric-display-app/
 |   |   |   ├── useTimestampOperations.js   # Hook for timestamp handling and operations
 |   |   |   └── useTitlePrefill.js          # Hook for auto-prefilling song title in canvas
 |   |   ├── OnlineLyricsSearchModal/
+|   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for online lyrics search modal
 |   |   |   └── useNetworkStatus.js         # Internet connection status hook
 |   |   ├── OutputSettingsPanel/
 |   |   |   ├── useAdvancedSectio....js     # Hook for advanced sections visibility states
@@ -339,6 +340,7 @@ lyric-display-app/
 |   ├── index.css                           # Global CSS and custom style definitions
 |   └── main.jsx                            # App entry point
 ├── components.json                         # Shadcn UI config
+├── CONTRIBUTING.md                         # Contribution guides for project
 ├── index.html                              # Web app entry point
 ├── jsconfig.json                           # Path and settings configurations for JS
 ├── main.js                                 # Electron main process
