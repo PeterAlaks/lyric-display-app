@@ -59,6 +59,43 @@ function ensureNormalizedArtists() {
 }
 
 /**
+ * Heuristic to decide if a substring looks like an artist name
+ * Helps avoid mis-splitting queries on " by " with generic words
+ */
+function isLikelyArtistCandidate(candidate) {
+    const normalized = normalizeText(candidate);
+    if (!normalized) return false;
+    if (/\d/.test(normalized)) return false;
+
+    const tokens = getMeaningfulWords(normalized);
+    if (tokens.length === 0 || tokens.length > 4) return false;
+
+    const normalizedArtists = ensureNormalizedArtists();
+
+    if (tokens.length === 1) {
+        if (normalizedArtists.length === 0) return false;
+        if (normalizedArtists.includes(normalized)) return true;
+        for (const artist of normalizedArtists) {
+            if (fuzzyMatch(artist, normalized, 0.85) >= 0.85) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    if (normalizedArtists.length > 0) {
+        for (const artist of normalizedArtists) {
+            if (artist === normalized) return true;
+            if (fuzzyMatch(artist, normalized, 0.85) >= 0.85) {
+                return true;
+            }
+        }
+    }
+
+    return tokens.length >= 2;
+}
+
+/**
  * Split text into words
  */
 function getWords(text) {
@@ -233,12 +270,25 @@ export function analyzeQuery(query, options = {}) {
     let inferredTitle = null;
     let confidence = 0;
 
+    let splitApplied = false;
+    let skipArtistInference = false;
+
     if (normalized.includes(' by ')) {
         const lastByIndex = normalized.lastIndexOf(' by ');
-        inferredTitle = normalized.substring(0, lastByIndex).trim();
-        inferredArtist = normalized.substring(lastByIndex + 4).trim();
-        confidence = 0.95;
-    } else if (normalized.includes(' - ')) {
+        const candidateTitle = normalized.substring(0, lastByIndex).trim();
+        const candidateArtist = normalized.substring(lastByIndex + 4).trim();
+        if (isLikelyArtistCandidate(candidateArtist)) {
+            inferredTitle = candidateTitle;
+            inferredArtist = candidateArtist;
+            confidence = 0.95;
+            splitApplied = true;
+        }
+        if (!splitApplied) {
+            skipArtistInference = true;
+        }
+    }
+
+    if (!splitApplied && normalized.includes(' - ')) {
         const parts = normalized.split(' - ');
         if (parts.length === 2) {
             inferredTitle = parts[0].trim();
@@ -251,7 +301,7 @@ export function analyzeQuery(query, options = {}) {
         }
     }
 
-    if (!inferredArtist && knownArtistsLoaded && meaningfulWords.length >= 1) {
+    if (!inferredArtist && !skipArtistInference && knownArtistsLoaded && meaningfulWords.length >= 1) {
         const normalizedArtists = ensureNormalizedArtists();
 
         // Phase 1: Exact substring match (prefer longest match)
@@ -274,16 +324,18 @@ export function analyzeQuery(query, options = {}) {
             // Phase 2: Fuzzy matching (more expensive, only if exact match failed)
             let bestFuzzyMatch = null;
             let bestFuzzyScore = 0;
+            let bestWordMatch = null;
+            let bestWordScore = 0;
 
             const searchLimit = normalizedArtists.length;
 
             for (let i = 0; i < searchLimit; i++) {
                 const artist = normalizedArtists[i];
 
-                const score = fuzzyMatch(artist, normalized, artistMatchThreshold);
-                if (score > bestFuzzyScore) {
+                const queryScore = fuzzyMatch(artist, normalized, artistMatchThreshold);
+                if (queryScore > bestFuzzyScore) {
                     bestFuzzyMatch = artist;
-                    bestFuzzyScore = score;
+                    bestFuzzyScore = queryScore;
                 }
 
                 for (const word of meaningfulWords) {
@@ -292,15 +344,35 @@ export function analyzeQuery(query, options = {}) {
                         bestFuzzyMatch = artist;
                         bestFuzzyScore = wordScore;
                     }
+                    if (wordScore > bestWordScore) {
+                        bestWordMatch = artist;
+                        bestWordScore = wordScore;
+                    }
                 }
             }
 
-            if (bestFuzzyMatch && bestFuzzyScore >= artistMatchThreshold) {
-                inferredArtist = bestFuzzyMatch;
-                const artistWords = getWords(bestFuzzyMatch);
+            const highWordThreshold = Math.max(wordMatchThreshold, 0.8);
+            const highQueryThreshold = Math.max(artistMatchThreshold + 0.1, 0.8);
+            const preferWordHit = bestWordScore >= highWordThreshold;
+            const allowQueryMatch = normalized.length >= 8 && bestFuzzyScore >= highQueryThreshold;
+
+            let chosenMatch = null;
+            let chosenScore = 0;
+
+            if (preferWordHit) {
+                chosenMatch = bestWordMatch;
+                chosenScore = bestWordScore;
+            } else if (allowQueryMatch) {
+                chosenMatch = bestFuzzyMatch;
+                chosenScore = bestFuzzyScore;
+            }
+
+            if (chosenMatch && chosenScore >= artistMatchThreshold) {
+                inferredArtist = chosenMatch;
+                const artistWords = getWords(chosenMatch);
                 const remainingWords = words.filter(w => !artistWords.includes(w));
                 inferredTitle = remainingWords.join(' ').trim() || normalized;
-                confidence = bestFuzzyScore * 0.7;
+                confidence = chosenScore * 0.7;
             }
         }
     }

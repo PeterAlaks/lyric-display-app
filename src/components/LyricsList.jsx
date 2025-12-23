@@ -8,6 +8,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import useContextMenuPosition from '../hooks/useContextMenuPosition';
 import { STRUCTURE_TAG_PATTERNS, isNormalGroupCandidate } from '../../shared/lyricsParsing.js';
+import useElectronListeners from '../hooks/LyricsList/useElectronListeners';
 
 const DEFAULT_ROW_HEIGHT = 48;
 const ROW_GAP = 8;
@@ -481,6 +482,8 @@ export default function LyricsList({
     window.addEventListener('keydown', handleKeyClose);
     return () => window.removeEventListener('keydown', handleKeyClose);
   }, [closeContextMenu, contextMenuState.visible]);
+
+  useElectronListeners({ canUndo, canRedo, handleUndo, handleRedo });
 
   useEffect(() => {
     if (!contextMenuState.visible) return;

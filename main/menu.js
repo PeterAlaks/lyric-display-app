@@ -4,6 +4,22 @@ import { promises as fs } from 'fs';
 import { getRecents, subscribe, clearRecents } from './recents.js';
 
 export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, showInAppModal }) {
+  let undoRedoState = { canUndo: false, canRedo: false };
+
+  function updateUndoRedoMenu() {
+    const menu = Menu.getApplicationMenu();
+    if (!menu) return;
+
+    const editMenu = menu.items.find(item => item.label === 'Edit');
+    if (!editMenu) return;
+
+    const undoItem = editMenu.submenu.items.find(item => item.label === 'Undo');
+    const redoItem = editMenu.submenu.items.find(item => item.label === 'Redo');
+
+    if (undoItem) undoItem.enabled = undoRedoState.canUndo;
+    if (redoItem) redoItem.enabled = undoRedoState.canRedo;
+  }
+
   function updateDarkModeMenu() {
     const win = getMainWindow?.();
     if (win && !win.isDestroyed()) {
@@ -272,8 +288,28 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
       {
         label: 'Edit',
         submenu: [
-          { role: 'undo' },
-          { role: 'redo' },
+          {
+            label: 'Undo',
+            accelerator: 'CmdOrCtrl+Z',
+            enabled: false,
+            click: () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                win.webContents.send('menu-undo');
+              }
+            }
+          },
+          {
+            label: 'Redo',
+            accelerator: isMac ? 'Cmd+Shift+Z' : 'Ctrl+Y',
+            enabled: false,
+            click: () => {
+              const win = getMainWindow?.();
+              if (win && !win.isDestroyed()) {
+                win.webContents.send('menu-redo');
+              }
+            }
+          },
           { type: 'separator' },
           { role: 'cut' },
           { role: 'copy' },
@@ -543,5 +579,13 @@ export function makeMenuAPI({ getMainWindow, createWindow, checkForUpdates, show
     subscribe(() => { createMenu(); });
   } catch { }
 
-  return { createMenu, updateDarkModeMenu, toggleDarkMode };
+  return {
+    createMenu,
+    updateDarkModeMenu,
+    toggleDarkMode,
+    updateUndoRedoState: (state) => {
+      undoRedoState = state;
+      updateUndoRedoMenu();
+    }
+  };
 }

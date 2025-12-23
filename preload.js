@@ -110,6 +110,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, callback);
     return () => ipcRenderer.removeAllListeners(channel);
   },
+  onMenuUndo: (callback) => {
+    const channel = 'menu-undo';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  onMenuRedo: (callback) => {
+    const channel = 'menu-redo';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  notifyUndoRedoState: (canUndo, canRedo) => ipcRenderer.send('undo-redo-state', { canUndo, canRedo }),
   onOpenLyricsFromPathError: (callback) => {
     const channel = 'open-lyrics-from-path-error';
     ipcRenderer.removeAllListeners(channel);

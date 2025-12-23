@@ -69,6 +69,7 @@ registerIpcHandlers({
   getMainWindow,
   openInAppBrowser,
   updateDarkModeMenu: menuAPI.updateDarkModeMenu,
+  updateUndoRedoState: menuAPI.updateUndoRedoState,
   checkForUpdates
 });
 registerInAppBrowserIpc();

@@ -970,47 +970,9 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                       >
                         <div className="overflow-hidden">
                           <div className={`px-4 pb-4 space-y-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                            {/* Provider Status */}
-                            {providerStatuses?.length > 0 && (
-                              <div className="pt-4">
-                                <p className={`font-medium mb-3 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                  <Globe2 className="w-4 h-4" />
-                                  Provider status
-                                </p>
-                                <ul className="space-y-1 text-xs">
-                                  {providerStatuses.map((provider) => (
-                                    <li key={provider.id} className="flex items-center justify-between gap-3">
-                                      <span className="font-medium">{provider.displayName}</span>
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200/40 text-gray-600'}`}>
-                                          {provider.count} hit{provider.count === 1 ? '' : 's'}
-                                        </span>
-                                        {provider.duration != null && (
-                                          <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1200 ? 'text-yellow-500' : 'text-gray-500'}`}>
-                                            {provider.duration}ms
-                                          </span>
-                                        )}
-                                        {provider.penalty > 0 && (
-                                          <span className="text-[10px] text-yellow-500">penalty -{provider.penalty}</span>
-                                        )}
-                                        {provider.health?.requests > 0 && (
-                                          <span className={`text-[10px] ${provider.health.failures > 0 ? 'text-red-500' : 'text-gray-500'}`}>
-                                            {Math.round((provider.health.failures / provider.health.requests) * 100)}% fail
-                                          </span>
-                                        )}
-                                        {provider.errors?.[0] && (
-                                          <span className="text-[10px] text-red-500">{provider.errors[0]}</span>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
                             {/* Provider Access Keys */}
                             {providerDefinitions.some((provider) => provider.requiresKey) && (
-                              <div className={providerStatuses?.length > 0 ? 'pt-0' : 'pt-4'}>
+                              <div className="pt-4">
                                 <p className={`mb-3 flex items-center gap-2 text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
                                   <Key className="w-4 h-4" />
                                   Provider access keys
@@ -1090,6 +1052,44 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                                     );
                                   })}
                                 </div>
+                              </div>
+                            )}
+
+                            {/* Provider Status */}
+                            {providerStatuses?.length > 0 && (
+                              <div className={providerDefinitions.some((provider) => provider.requiresKey) ? 'pt-0' : 'pt-4'}>
+                                <p className={`font-medium mb-3 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  <Globe2 className="w-4 h-4" />
+                                  Provider status
+                                </p>
+                                <ul className="space-y-1 text-xs">
+                                  {providerStatuses.map((provider) => (
+                                    <li key={provider.id} className="flex items-center justify-between gap-3">
+                                      <span className="font-medium">{provider.displayName}</span>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200/40 text-gray-600'}`}>
+                                          {provider.count} hit{provider.count === 1 ? '' : 's'}
+                                        </span>
+                                        {provider.duration != null && (
+                                          <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1200 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                                            {provider.duration}ms
+                                          </span>
+                                        )}
+                                        {provider.penalty > 0 && (
+                                          <span className="text-[10px] text-yellow-500">penalty -{provider.penalty}</span>
+                                        )}
+                                        {provider.health?.requests > 0 && (
+                                          <span className={`text-[10px] ${provider.health.failures > 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                                            {Math.round((provider.health.failures / provider.health.requests) * 100)}% fail
+                                          </span>
+                                        )}
+                                        {provider.errors?.[0] && (
+                                          <span className="text-[10px] text-red-500">{provider.errors[0]}</span>
+                                        )}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
                             )}
                           </div>

@@ -25,6 +25,7 @@ import useContextSubmenus from '../hooks/useContextSubmenus';
 import useLineMeasurements from '../hooks/NewSongCanvas/useLineMeasurements';
 import useContextMenuPosition from '../hooks/useContextMenuPosition';
 import useCanvasSearch from '../hooks/NewSongCanvas/useCanvasSearch';
+import useElectronListeners from '../hooks/NewSongCanvas/useElectronListeners';
 
 const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
 const METADATA_OPTIONS = [
@@ -1098,6 +1099,7 @@ const NewSongCanvas = () => {
   const canAddTranslationInContextMenu = contextMenuState.mode === 'line' && contextMenuLineHasContent && !contextMenuLineIsWrapped;
   const contextMenuLineHasTimestamp = STANDARD_LRC_START_REGEX.test(contextMenuLineText.trim());
 
+  useElectronListeners({ canUndo, canRedo, handleUndo, handleRedo });
 
   return (
     <div className={`flex flex-col h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>

@@ -17,7 +17,14 @@ const { autoUpdater } = updaterPkg;
 
 let cachedJoinCode = null;
 
-export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu, checkForUpdates }) {
+export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu, updateUndoRedoState, checkForUpdates }) {
+
+  ipcMain.on('undo-redo-state', (_event, { canUndo, canRedo }) => {
+    if (typeof updateUndoRedoState === 'function') {
+      updateUndoRedoState({ canUndo, canRedo });
+    }
+  });
+
   const broadcastAdminKeyAvailable = (adminKey) => {
     const payload = { hasKey: Boolean(adminKey) };
     const windows = BrowserWindow.getAllWindows();

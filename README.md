@@ -270,10 +270,13 @@ lyric-display-app/
 |   |   |   ├── useResponsiveWidth.js       # Window resize observer hook for control panel button responsiveness
 |   |   |   ├── useSetlistActions.js        # Hook for setlist action functionality
 |   |   |   └── useSupportDevModal.js       # Hook for processing show time and parameters for support development modal
+|   |   ├── LyricsList/
+|   |   |   └── useElectronListeners.js     # Hook for listening to main process events and broadcasts for lyrics list
 |   |   ├── NewSongCanvas/
 |   |   |   ├── useCanvasSearch.js          # Content search hook for editing area/canvas
 |   |   |   ├── useEditorClipboard.js       # Hook for cut, copy and paste handlers
 |   |   |   ├── useEditorHistory.js         # Hook for history state management of lyrics editor canvas
+|   |   |   ├── useElectronListeners.js     # Hook for listening to main process events and broadcasts for new song canvas
 |   |   |   ├── useFileSave.js              # Canvas file operations hook
 |   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for canvas
 |   |   |   ├── useLineMeasurements.js      # Hook for measuring and calculating line dimensions in canvas
