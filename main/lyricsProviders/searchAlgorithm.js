@@ -1,9 +1,14 @@
 let knownArtistsList = [];
 let knownArtistsLoaded = false;
 let normalizedKnownArtists = [];
+let normalizedArtistTokens = [];
+const artistTokenIndex = new Map();
+const artistTrigramIndex = new Map();
+let artistIndexesBuilt = false;
 
 const normalizationCache = new Map();
 const MAX_CACHE_SIZE = 1000;
+const ARTIST_CANDIDATE_LIMIT = 60;
 
 try {
     const module = await import('../../shared/data/knownArtists.json', {
@@ -53,9 +58,49 @@ function ensureNormalizedArtists() {
 
     if (normalizedKnownArtists.length !== knownArtistsList.length) {
         normalizedKnownArtists = knownArtistsList.map((artist) => normalizeText(artist));
+        artistIndexesBuilt = false; // invalidate indexes when source list changes
     }
 
     return normalizedKnownArtists;
+}
+
+/**
+ * Build fast lookup structures for artist matching:
+ * - tokens per artist
+ * - token -> artist indexes
+ * - trigram -> artist indexes (cheap similarity prefilter)
+ */
+function ensureArtistIndexes() {
+    const normalizedArtists = ensureNormalizedArtists();
+    if (!normalizedArtists.length) return normalizedArtists;
+    if (artistIndexesBuilt && normalizedArtistTokens.length === normalizedArtists.length) {
+        return normalizedArtists;
+    }
+
+    normalizedArtistTokens = new Array(normalizedArtists.length);
+    artistTokenIndex.clear();
+    artistTrigramIndex.clear();
+
+    normalizedArtists.forEach((artist, idx) => {
+        const tokens = getMeaningfulWords(artist);
+        normalizedArtistTokens[idx] = tokens;
+
+        tokens.forEach((token) => {
+            const list = artistTokenIndex.get(token) || [];
+            list.push(idx);
+            artistTokenIndex.set(token, list);
+        });
+
+        const trigrams = getTrigrams(artist);
+        trigrams.forEach((tri) => {
+            const list = artistTrigramIndex.get(tri) || [];
+            list.push(idx);
+            artistTrigramIndex.set(tri, list);
+        });
+    });
+
+    artistIndexesBuilt = true;
+    return normalizedArtists;
 }
 
 /**
@@ -131,6 +176,59 @@ const STOP_WORDS = new Set([
 function getMeaningfulWords(text) {
     const words = getWords(text);
     return words.filter(w => !STOP_WORDS.has(w) && w.length >= 2);
+}
+
+/**
+ * Generate trigrams for a string (used to cheaply prefilter candidates)
+ */
+function getTrigrams(text) {
+    const trigrams = new Set();
+    if (!text || text.length < 3) return trigrams;
+    for (let i = 0; i < text.length - 2; i++) {
+        trigrams.add(text.slice(i, i + 3));
+    }
+    return trigrams;
+}
+
+/**
+ * Retrieve a reduced set of plausible artist candidates using token/trigram indexes.
+ * Falls back to the full list (capped) if indexes produce nothing.
+ */
+function getArtistCandidates(normalizedQuery, meaningfulWords, limit = ARTIST_CANDIDATE_LIMIT) {
+    const normalizedArtists = ensureArtistIndexes();
+    if (!normalizedArtists.length) return [];
+
+    const candidateScores = new Map();
+    const bump = (idx, score) => {
+        candidateScores.set(idx, (candidateScores.get(idx) || 0) + score);
+    };
+
+    // Token hits are strong signals
+    meaningfulWords.forEach((word) => {
+        const hits = artistTokenIndex.get(word);
+        if (hits) {
+            hits.forEach((idx) => bump(idx, 3));
+        }
+    });
+
+    // Trigram overlap to catch partial matches
+    const queryTrigrams = getTrigrams(normalizedQuery);
+    queryTrigrams.forEach((tri) => {
+        const hits = artistTrigramIndex.get(tri);
+        if (hits) {
+            hits.forEach((idx) => bump(idx, 1));
+        }
+    });
+
+    // If nothing matched, provide a bounded fallback to avoid empty candidate sets
+    if (candidateScores.size === 0) {
+        const count = Math.min(normalizedArtists.length, limit);
+        return Array.from({ length: count }, (_, i) => i);
+    }
+
+    const scored = Array.from(candidateScores.entries());
+    scored.sort((a, b) => b[1] - a[1]);
+    return scored.slice(0, limit).map(([idx]) => idx);
 }
 
 
@@ -302,12 +400,14 @@ export function analyzeQuery(query, options = {}) {
     }
 
     if (!inferredArtist && !skipArtistInference && knownArtistsLoaded && meaningfulWords.length >= 1) {
-        const normalizedArtists = ensureNormalizedArtists();
+        const normalizedArtists = ensureArtistIndexes();
+        const candidateIndexes = getArtistCandidates(normalized, meaningfulWords);
 
-        // Phase 1: Exact substring match (prefer longest match)
+        // Phase 1: Exact substring match (prefer longest match) within candidates
         let bestMatch = null;
         let bestLength = 0;
-        for (const artist of normalizedArtists) {
+        for (const idx of candidateIndexes) {
+            const artist = normalizedArtists[idx];
             if (normalized.includes(artist) && artist.length > bestLength) {
                 bestMatch = artist;
                 bestLength = artist.length;
@@ -321,16 +421,21 @@ export function analyzeQuery(query, options = {}) {
             inferredTitle = remainingWords.join(' ').trim() || normalized;
             confidence = 0.75;
         } else {
-            // Phase 2: Fuzzy matching (more expensive, only if exact match failed)
+            // Phase 2: Fuzzy matching (candidate-limited)
             let bestFuzzyMatch = null;
             let bestFuzzyScore = 0;
             let bestWordMatch = null;
             let bestWordScore = 0;
 
-            const searchLimit = normalizedArtists.length;
+            for (const idx of candidateIndexes) {
+                const artist = normalizedArtists[idx];
 
-            for (let i = 0; i < searchLimit; i++) {
-                const artist = normalizedArtists[i];
+                // Cheap length gate to avoid hopeless comparisons
+                const maxLen = Math.max(artist.length, normalized.length);
+                const minLen = Math.min(artist.length, normalized.length);
+                if (minLen === 0 || (maxLen / Math.max(minLen, 1) > 3 && maxLen > 8)) {
+                    continue;
+                }
 
                 const queryScore = fuzzyMatch(artist, normalized, artistMatchThreshold);
                 if (queryScore > bestFuzzyScore) {
