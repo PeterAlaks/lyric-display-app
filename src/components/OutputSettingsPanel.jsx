@@ -469,6 +469,8 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
   const prevFullScreenRef = React.useRef(fullScreenModeChecked);
   const fullScreenAdvancedRef = React.useRef(null);
+  const prevFullScreenAdvancedExpandedRef = React.useRef(fullScreenAdvancedExpanded);
+
   React.useEffect(() => {
     const wasFullScreen = prevFullScreenRef.current;
     if (!wasFullScreen && fullScreenModeChecked) {
@@ -481,47 +483,57 @@ const OutputSettingsPanel = ({ outputKey }) => {
   const fullScreenControlsDisabled = !fullScreenModeChecked && fullScreenAdvancedExpanded;
 
   React.useEffect(() => {
-    if (!fullScreenAdvancedVisible) return;
-    const scrollTarget = fullScreenAdvancedRef.current;
-    if (!scrollTarget) return;
+    const wasExpanded = prevFullScreenAdvancedExpandedRef.current;
+    const isNowExpanded = fullScreenAdvancedVisible;
 
-    const findScrollableParent = (node) => {
-      let current = node?.parentElement;
-      while (current) {
-        const style = window.getComputedStyle(current);
-        const canScroll = current.scrollHeight > current.clientHeight &&
-          /(auto|scroll|overlay)/i.test(style.overflowY || '');
-        if (canScroll) return current;
-        current = current.parentElement;
-      }
-      return null;
-    };
-
-    const scrollToReveal = () => {
-      const container = findScrollableParent(scrollTarget);
-      const padding = 24;
-      if (container) {
-        const containerRect = container.getBoundingClientRect();
-        const targetRect = scrollTarget.getBoundingClientRect();
-        const overflowBottom = targetRect.bottom - containerRect.bottom + padding;
-        if (overflowBottom > 0) {
-          container.scrollTo({
-            top: container.scrollTop + overflowBottom,
-            behavior: 'smooth'
-          });
-        }
+    if (!wasExpanded && isNowExpanded) {
+      const scrollTarget = fullScreenAdvancedRef.current;
+      if (!scrollTarget) {
+        prevFullScreenAdvancedExpandedRef.current = isNowExpanded;
         return;
       }
 
-      const targetRect = scrollTarget.getBoundingClientRect();
-      const overflowWindow = targetRect.bottom - window.innerHeight + padding;
-      if (overflowWindow > 0) {
-        window.scrollBy({ top: overflowWindow, behavior: 'smooth' });
-      }
-    };
+      const findScrollableParent = (node) => {
+        let current = node?.parentElement;
+        while (current) {
+          const style = window.getComputedStyle(current);
+          const canScroll = current.scrollHeight > current.clientHeight &&
+            /(auto|scroll|overlay)/i.test(style.overflowY || '');
+          if (canScroll) return current;
+          current = current.parentElement;
+        }
+        return null;
+      };
 
-    const timeout = window.setTimeout(scrollToReveal, 120);
-    return () => window.clearTimeout(timeout);
+      const scrollToReveal = () => {
+        const container = findScrollableParent(scrollTarget);
+        const padding = 24;
+        if (container) {
+          const containerRect = container.getBoundingClientRect();
+          const targetRect = scrollTarget.getBoundingClientRect();
+          const overflowBottom = targetRect.bottom - containerRect.bottom + padding;
+          if (overflowBottom > 0) {
+            container.scrollTo({
+              top: container.scrollTop + overflowBottom,
+              behavior: 'smooth'
+            });
+          }
+          return;
+        }
+
+        const targetRect = scrollTarget.getBoundingClientRect();
+        const overflowWindow = targetRect.bottom - window.innerHeight + padding;
+        if (overflowWindow > 0) {
+          window.scrollBy({ top: overflowWindow, behavior: 'smooth' });
+        }
+      };
+
+      const timeout = window.setTimeout(scrollToReveal, 120);
+      prevFullScreenAdvancedExpandedRef.current = isNowExpanded;
+      return () => window.clearTimeout(timeout);
+    }
+
+    prevFullScreenAdvancedExpandedRef.current = isNowExpanded;
   }, [fullScreenAdvancedVisible]);
 
   const handleFullScreenToggleWithExpand = React.useCallback((checked) => {
