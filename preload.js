@@ -20,6 +20,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLocalIP: () => ipcRenderer.invoke('get-local-ip'),
   getSystemFonts: () => ipcRenderer.invoke('fonts:list'),
   getPlatform: () => process.platform,
+  getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  windowControls: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
+    toggleFullscreen: () => ipcRenderer.invoke('window:toggle-fullscreen'),
+    close: () => ipcRenderer.invoke('window:close'),
+    reload: () => ipcRenderer.invoke('window:reload'),
+    toggleDevTools: () => ipcRenderer.invoke('window:devtools'),
+    setZoom: (direction) => ipcRenderer.invoke('window:zoom', direction),
+    getState: () => ipcRenderer.invoke('window:get-state'),
+  },
+  onWindowState: (callback) => {
+    const channel = 'window-state';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_event, state) => callback?.(state));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
   onTriggerFileLoad: (callback) => {
     ipcRenderer.removeAllListeners('trigger-file-load');
     ipcRenderer.on('trigger-file-load', callback);
@@ -56,6 +73,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   openInAppBrowser: (url) => ipcRenderer.invoke('open-in-app-browser', url),
   addRecentFile: (filePath) => ipcRenderer.invoke('add-recent-file', filePath),
+  recents: {
+    list: () => ipcRenderer.invoke('recents:list'),
+    clear: () => ipcRenderer.invoke('recents:clear'),
+    open: (filePath) => ipcRenderer.invoke('recents:open', filePath),
+    onChange: (callback) => {
+      const channel = 'recents:update';
+      ipcRenderer.removeAllListeners(channel);
+      ipcRenderer.on(channel, (_event, list) => callback?.(list));
+      return () => ipcRenderer.removeAllListeners(channel);
+    }
+  },
   openOutputWindow: (outputNumber) => ipcRenderer.invoke('open-output-window', outputNumber),
   onOpenLyricsFromPath: (callback) => {
     const channel = 'open-lyrics-from-path';
@@ -85,6 +113,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   requestUpdateDownload: () => ipcRenderer.invoke('updater:download'),
   requestInstallAndRestart: () => ipcRenderer.invoke('updater:install'),
+  displaySettings: {
+    openModal: () => ipcRenderer.invoke('display:open-settings-modal')
+  },
 
   onOpenShortcutsHelp: (callback) => {
     const channel = 'open-shortcuts-help';

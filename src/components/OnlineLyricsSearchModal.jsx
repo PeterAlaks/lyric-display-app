@@ -632,8 +632,14 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     (exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100',
   ].join(' ');
 
+  const topMenuHeight = typeof document !== 'undefined'
+    ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
+    : '0px';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ top: topMenuHeight }}>
       <div
         className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${(exiting || entering) ? 'opacity-0' : 'opacity-100'}`}
         onClick={() => onClose?.()}

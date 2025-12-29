@@ -26,10 +26,14 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
 
     window.electronAPI.onTriggerFileLoad(handleTriggerFileLoad);
     window.electronAPI.onNavigateToNewSong(handleNavigateToNewSong);
+    window.addEventListener('trigger-file-load', handleTriggerFileLoad);
+    window.addEventListener('navigate-to-new-song', handleNavigateToNewSong);
 
     return () => {
       window.electronAPI.removeAllListeners('trigger-file-load');
       window.electronAPI.removeAllListeners('navigate-to-new-song');
+      window.removeEventListener('trigger-file-load', handleTriggerFileLoad);
+      window.removeEventListener('navigate-to-new-song', handleNavigateToNewSong);
     };
   }, [navigate, fileInputRef]);
 };

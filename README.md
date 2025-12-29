@@ -182,7 +182,7 @@ lyric-display-app/
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
 |   ├── ipc.js                              # IPC handlers
 |   ├── loadingWindow.js                    # Loading process window
-|   ├── menu.js                             # Window menu builder
+|   ├── menuBridge.js                       # Renderer/menu bridge (dark mode, undo/redo state)
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
@@ -329,7 +329,7 @@ lyric-display-app/
 |   |   ├── markdownParser.js               # Helper utility for converting markdown to HTML
 |   |   ├── maxLinesCalculator.js           # Calculator for maximum lines feature in outputs display
 |   |   ├── network.js                      # Network utility for backend URL resolution
-|   |   ├── numberinput.js                  # Integer value sanitization utility for settings panel
+|   |   ├── numberInput.js                  # Integer value sanitization utility for settings panel
 |   |   ├── outputTemplates.js              # Output templates for settings panel
 |   |   ├── parseLrc.js                     # LRC file parser
 |   |   ├── parseLyrics.js                  # Text file parser

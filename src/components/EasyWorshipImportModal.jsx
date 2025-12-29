@@ -288,8 +288,14 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
 
     if (!isVisible) return null;
 
+    const topMenuHeight = typeof document !== 'undefined'
+        ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
+        : '0px';
+
     return (
-        <div className="fixed inset-0 z-[1400] flex items-center justify-center p-4">
+        <div
+            className="fixed inset-x-0 bottom-0 z-[1400] flex items-center justify-center p-4"
+            style={{ top: topMenuHeight }}>
             {/* Backdrop */}
             <div
                 className={cn(

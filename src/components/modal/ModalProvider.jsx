@@ -74,6 +74,11 @@ export function ModalProvider({ children, isDark = false }) {
   const resolverMap = useRef(new Map());
   const removalTimers = useRef(new Map());
   const bodyOverflowRef = useRef(null);
+  const topMenuHeight = useMemo(() => {
+    if (typeof document === 'undefined') return '0px';
+    const val = getComputedStyle(document.body).getPropertyValue('--top-menu-height');
+    return val && val.trim() ? val.trim() : '0px';
+  }, [modals.length]);
 
   const showModal = useCallback((config = {}) => {
     const id = modalIdSeq++;
@@ -200,8 +205,11 @@ export function ModalProvider({ children, isDark = false }) {
     [showModal, closeModal]
   );
 
+  const modalMaxHeight = `calc(100vh - ${topMenuHeight} - 80px)`;
+
   const content = modals.length > 0 ? (
-    <div className="pointer-events-none fixed inset-0 z-[1300] flex flex-col">
+    <div
+      className="pointer-events-none fixed inset-0 z-[1300] flex flex-col">
       {modals.map((modal, index) => {
         const palette = variantPalette(modal.variant, isDark);
         const IconComponent = variantIcon(modal.variant);
@@ -228,7 +236,7 @@ export function ModalProvider({ children, isDark = false }) {
           <div
             key={modal.id}
             className="pointer-events-none fixed inset-0 flex flex-col"
-            style={{ zIndex }}
+            style={{ zIndex, top: topMenuHeight }}
             aria-modal="true"
             role="dialog"
             aria-labelledby={`modal-${modal.id}-title`}
@@ -246,7 +254,8 @@ export function ModalProvider({ children, isDark = false }) {
               }}
             />
 
-            <div className="pointer-events-none relative flex min-h-full items-center justify-center px-4 py-10">
+            <div
+              className="pointer-events-none relative flex h-full items-center justify-center px-4 py-10">
               <div
                 className={cn(
                   'pointer-events-auto transform rounded-2xl border shadow-2xl ring-1 transition-all duration-200 flex flex-col',
@@ -257,7 +266,7 @@ export function ModalProvider({ children, isDark = false }) {
                   sizeClass,
                   modal.className
                 )}
-                style={{ maxHeight: 'calc(100vh - 80px)' }}
+                style={{ maxHeight: modalMaxHeight }}
               >
                 {/* Fixed Header */}
                 <div className={cn(

@@ -13,17 +13,25 @@ const useElectronListeners = ({ canUndo, canRedo, handleUndo, handleRedo }) => {
   useEffect(() => {
     if (!window.electronAPI) return;
 
+    const undoHandler = () => { if (canUndo) handleUndo(); };
+    const redoHandler = () => { if (canRedo) handleRedo(); };
+
     const cleanupUndo = window.electronAPI.onMenuUndo(() => {
-      if (canUndo) handleUndo();
+      undoHandler();
     });
 
     const cleanupRedo = window.electronAPI.onMenuRedo(() => {
-      if (canRedo) handleRedo();
+      redoHandler();
     });
+
+    window.addEventListener('menu-undo', undoHandler);
+    window.addEventListener('menu-redo', redoHandler);
 
     return () => {
       if (cleanupUndo) cleanupUndo();
       if (cleanupRedo) cleanupRedo();
+      window.removeEventListener('menu-undo', undoHandler);
+      window.removeEventListener('menu-redo', redoHandler);
     };
   }, [canUndo, canRedo, handleUndo, handleRedo]);
 

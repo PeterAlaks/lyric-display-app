@@ -170,14 +170,6 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     }
 
     const mainWindow = createWindow('/');
-    mainWindow.webContents.once('did-finish-load', () => {
-      try {
-        menuAPI.updateDarkModeMenu();
-      } catch (error) {
-        console.warn('[Startup] Failed to sync dark mode after load:', error);
-      }
-    });
-    menuAPI.createMenu();
 
     setupMainWindowCloseHandler(mainWindow);
 

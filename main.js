@@ -1,11 +1,11 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, Menu } from 'electron';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';
 import { checkForUpdates } from './main/updater.js';
 import { registerIpcHandlers } from './main/ipc.js';
 import { openInAppBrowser, registerInAppBrowserIpc } from './main/inAppBrowser.js';
-import { makeMenuAPI } from './main/menu.js';
+import { makeMenuAPI } from './main/menuBridge.js';
 import { setupSingleInstanceLock } from './main/singleInstance.js';
 import { handleFileOpen, extractFilePathFromArgs, setPendingFile } from './main/fileHandler.js';
 import { handleDisplayChange } from './main/displayDetection.js';
@@ -70,11 +70,13 @@ registerIpcHandlers({
   openInAppBrowser,
   updateDarkModeMenu: menuAPI.updateDarkModeMenu,
   updateUndoRedoState: menuAPI.updateUndoRedoState,
-  checkForUpdates
+  checkForUpdates,
+  requestRendererModal
 });
 registerInAppBrowserIpc();
 
 app.whenReady().then(async () => {
+  try { Menu.setApplicationMenu(null); } catch { }
   createLoadingWindow();
 
   mainWindow = await performStartupSequence({

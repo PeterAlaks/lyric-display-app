@@ -1102,7 +1102,7 @@ const NewSongCanvas = () => {
   useElectronListeners({ canUndo, canRedo, handleUndo, handleRedo });
 
   return (
-    <div className={`flex flex-col h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`flex flex-col h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {/* Fixed Header */}
       <div className={`shadow-sm border-b p-4 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
         {/* Mobile Layout - Two Rows */}

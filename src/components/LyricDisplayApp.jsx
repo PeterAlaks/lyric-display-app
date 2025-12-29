@@ -400,19 +400,14 @@ const LyricDisplayApp = () => {
     <>
       <ConnectionBackoffBanner darkMode={darkMode} />
       {isDesktopApp && <DraftApprovalModal darkMode={darkMode} />}
-      <div className={`flex h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+      <div className={`flex h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Control Panel */}
-        <div className={`w-[420px] flex-shrink-0 shadow-lg flex flex-col h-screen ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`w-[420px] flex-shrink-0 shadow-lg flex flex-col h-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           {/* Fixed Header Section */}
           <div className={`flex-shrink-0 p-6 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <img
-                src="/LyricDisplay-icon.png"
-                alt="LyricDisplay"
-                className="h-8 w-8"
-              />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto">
                 {/* Online Lyrics Search Button */}
                 <Tooltip content={<span>Search and import lyrics from online providers - <strong>Ctrl+Shift+O</strong></span>} side="bottom">
                   <button
@@ -621,7 +616,7 @@ const LyricDisplayApp = () => {
         </div>
 
         {/* Right Main Area */}
-        <div className="flex-1 min-w-0 p-6 flex flex-col h-screen">
+        <div className="flex-1 min-w-0 p-6 flex flex-col h-full">
           {/* Fixed Header */}
           <div className="mb-6 flex-shrink-0 min-w-0" ref={headerContainerRef}>
             <div className="flex items-center justify-between gap-4">

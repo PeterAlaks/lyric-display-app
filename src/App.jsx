@@ -17,6 +17,7 @@ import ElectronModalBridge from './components/ElectronModalBridge';
 import QRCodeDialogBridge from './components/QRCodeDialogBridge';
 import { ControlSocketProvider } from './context/ControlSocketProvider';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from './utils/markdownParser';
+import DesktopShell from './components/WindowChrome/DesktopShell';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
 
@@ -35,17 +36,21 @@ export default function App() {
           <Router>
             <Routes>
               <Route path="/" element={
-                <ControlSocketProvider>
-                  <ControlPanel />
-                </ControlSocketProvider>
+                <DesktopShell>
+                  <ControlSocketProvider>
+                    <ControlPanel />
+                  </ControlSocketProvider>
+                </DesktopShell>
               } />
               <Route path="/output1" element={<Output1 />} />
               <Route path="/output2" element={<Output2 />} />
               <Route path="/stage" element={<Stage />} />
               <Route path="/new-song" element={
-                <ControlSocketProvider>
-                  <NewSongCanvas />
-                </ControlSocketProvider>
+                <DesktopShell>
+                  <ControlSocketProvider>
+                    <NewSongCanvas />
+                  </ControlSocketProvider>
+                </DesktopShell>
               } />
             </Routes>
           </Router>

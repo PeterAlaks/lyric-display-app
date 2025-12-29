@@ -31,7 +31,11 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
 
     if (!visible) return null;
 
-    const overlayClasses = `fixed inset-0 z-[2000] flex items-center justify-center p-4 transition-all duration-300 ${entering || exiting ? 'opacity-0' : 'opacity-100'
+    const topMenuHeight = typeof document !== 'undefined'
+        ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
+        : '0px';
+
+    const overlayClasses = `fixed inset-x-0 bottom-0 z-[2000] flex items-center justify-center p-4 transition-all duration-300 ${entering || exiting ? 'opacity-0' : 'opacity-100'
         }`;
 
     const contentClasses = `relative w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl transform transition-all duration-300 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
@@ -103,7 +107,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
     ];
 
     return (
-        <div className={overlayClasses}>
+        <div className={overlayClasses} style={{ top: topMenuHeight }}>
             {/* Backdrop */}
             <div
                 className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${entering || exiting ? 'opacity-0' : 'opacity-100'

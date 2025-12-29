@@ -44,30 +44,42 @@ export const useElectronListeners = ({
   }, [processLoadedLyrics]);
 
   useEffect(() => {
-    if (!window?.electronAPI?.onOpenEasyWorshipImport) return;
+    const handler = () => setEasyWorshipModalOpen(true);
+    let off;
 
-    const off = window.electronAPI.onOpenEasyWorshipImport(() => {
-      setEasyWorshipModalOpen(true);
-    });
+    try {
+      if (window?.electronAPI?.onOpenEasyWorshipImport) {
+        off = window.electronAPI.onOpenEasyWorshipImport(handler);
+      }
+    } catch { }
+
+    window.addEventListener('open-easyworship-import', handler);
 
     return () => {
       try {
         if (typeof off === 'function') off();
       } catch { }
+      window.removeEventListener('open-easyworship-import', handler);
     };
   }, [setEasyWorshipModalOpen]);
 
   useEffect(() => {
-    if (!window?.electronAPI?.onOpenSupportDevModal) return;
+    const handler = () => openSupportDevModal?.();
+    let off;
 
-    const off = window.electronAPI.onOpenSupportDevModal(() => {
-      openSupportDevModal?.();
-    });
+    try {
+      if (window?.electronAPI?.onOpenSupportDevModal) {
+        off = window.electronAPI.onOpenSupportDevModal(handler);
+      }
+    } catch { }
+
+    window.addEventListener('open-support-dev-modal', handler);
 
     return () => {
       try {
         if (typeof off === 'function') off();
       } catch { }
+      window.removeEventListener('open-support-dev-modal', handler);
     };
   }, [openSupportDevModal]);
 

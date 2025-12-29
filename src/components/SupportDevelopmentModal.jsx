@@ -65,9 +65,14 @@ export function SupportDevelopmentModal({ isOpen, onClose, isDark = false }) {
     ? 'translate-y-8 opacity-0 scale-95'
     : 'translate-y-0 opacity-100 scale-100';
 
+  const topMenuHeight = typeof document !== 'undefined'
+    ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
+    : '0px';
+
   const content = (
     <div
       className="fixed inset-0 z-[1300] flex items-center justify-center px-4 py-10"
+      style={{ top: topMenuHeight }}
       aria-modal="true"
       role="dialog"
       aria-labelledby="support-dev-modal-title"

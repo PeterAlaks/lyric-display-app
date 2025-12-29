@@ -1,5 +1,5 @@
-import { ipcMain, dialog, nativeTheme, BrowserWindow } from 'electron';
-import { addRecent } from './recents.js';
+import { ipcMain, dialog, nativeTheme, BrowserWindow, app } from 'electron';
+import { addRecent, getRecents, clearRecents, subscribe as subscribeRecents } from './recents.js';
 import { readFile, writeFile } from 'fs/promises';
 import { getLocalIPAddress } from './utils.js';
 import * as secureTokenStore from './secureTokenStore.js';
@@ -12,18 +12,31 @@ import * as easyWorship from './easyWorship.js';
 import * as displayManager from './displayManager.js';
 import { loadSystemFonts } from './systemFonts.js';
 import { saveDarkModePreference } from './themePreferences.js';
+import { handleFileOpen } from './fileHandler.js';
 
 const { autoUpdater } = updaterPkg;
 
 let cachedJoinCode = null;
 
-export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu, updateUndoRedoState, checkForUpdates }) {
+export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDarkModeMenu, updateUndoRedoState, checkForUpdates, requestRendererModal }) {
 
   ipcMain.on('undo-redo-state', (_event, { canUndo, canRedo }) => {
     if (typeof updateUndoRedoState === 'function') {
       updateUndoRedoState({ canUndo, canRedo });
     }
   });
+
+  try {
+    subscribeRecents((recentsList) => {
+      const windows = BrowserWindow.getAllWindows();
+      for (const win of windows) {
+        if (!win || win.isDestroyed()) continue;
+        try {
+          win.webContents.send('recents:update', recentsList || []);
+        } catch { }
+      }
+    });
+  } catch { }
 
   const broadcastAdminKeyAvailable = (adminKey) => {
     const payload = { hasKey: Boolean(adminKey) };
@@ -48,6 +61,118 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   ipcMain.handle('set-dark-mode', (_event, _isDark) => {
     try { updateDarkModeMenu(); } catch { }
     return true;
+  });
+
+  ipcMain.handle('app:get-version', () => {
+    try {
+      return { success: true, version: app.getVersion() };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('window:minimize', () => {
+    const win = getMainWindow?.();
+    if (win && !win.isDestroyed()) {
+      try { win.minimize(); return { success: true }; } catch (error) { return { success: false, error: error.message }; }
+    }
+    return { success: false, error: 'No window' };
+  });
+
+  ipcMain.handle('window:toggle-maximize', () => {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
+    try {
+      if (win.isMaximized()) {
+        win.unmaximize();
+      } else {
+        win.maximize();
+      }
+      const payload = {
+        isMaximized: win.isMaximized(),
+        isFullScreen: win.isFullScreen(),
+        isFocused: win.isFocused()
+      };
+      try { win.webContents.send('window-state', payload); } catch { }
+      return { success: true, ...payload };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('window:close', () => {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
+    try { win.close(); return { success: true }; }
+    catch (error) { return { success: false, error: error.message }; }
+  });
+
+  ipcMain.handle('window:toggle-fullscreen', () => {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
+    try {
+      const next = !win.isFullScreen();
+      win.setFullScreen(next);
+      return { success: true, isFullScreen: next };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('window:reload', () => {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
+    try { win.reload(); return { success: true }; }
+    catch (error) { return { success: false, error: error.message }; }
+  });
+
+  ipcMain.handle('window:devtools', () => {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
+    try {
+      if (win.webContents.isDevToolsOpened()) {
+        win.webContents.closeDevTools();
+      } else {
+        win.webContents.openDevTools({ mode: 'detach' });
+      }
+      return { success: true, isOpen: win.webContents.isDevToolsOpened() };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('window:zoom', (_event, direction) => {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
+    try {
+      const wc = win.webContents;
+      const current = wc.getZoomFactor();
+      let next = current;
+      if (direction === 'in') next = Math.min(current + 0.1, 3);
+      else if (direction === 'out') next = Math.max(current - 0.1, 0.3);
+      else if (direction === 'reset') next = 1;
+      wc.setZoomFactor(next);
+      return { success: true, zoomFactor: next };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('window:get-state', () => {
+    const win = getMainWindow?.();
+    if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
+    try {
+      return {
+        success: true,
+        state: {
+          isMaximized: win.isMaximized(),
+          isFullScreen: win.isFullScreen(),
+          isFocused: win.isFocused()
+        }
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   });
 
   // File operations
@@ -140,6 +265,37 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   ipcMain.handle('add-recent-file', async (_event, filePath) => {
     try { await addRecent(filePath); return { success: true }; }
     catch (e) { return { success: false, error: e?.message || String(e) }; }
+  });
+
+  ipcMain.handle('recents:list', async () => {
+    try {
+      const recents = await getRecents();
+      return { success: true, recents };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('recents:clear', async () => {
+    try {
+      await clearRecents();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('recents:open', async (_event, filePath) => {
+    try {
+      const win = getMainWindow?.();
+      if (!win || win.isDestroyed()) {
+        return { success: false, error: 'No window available' };
+      }
+      await handleFileOpen(filePath, win);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   });
 
   ipcMain.handle('get-admin-key', async () => {
@@ -565,6 +721,27 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   ipcMain.handle('updater:install', async () => {
     try { autoUpdater.quitAndInstall(); return { success: true }; }
     catch (e) { return { success: false, error: e?.message || String(e) }; }
+  });
+
+  ipcMain.handle('display:open-settings-modal', async () => {
+    try {
+      if (typeof requestRendererModal !== 'function') {
+        return { success: false, error: 'Modal bridge unavailable' };
+      }
+      const { showDisplayDetectionModal } = await import('./displayDetection.js');
+      const displays = displayManager.getAllDisplays();
+      const externalDisplays = displays.filter(d => !d.primary);
+
+      if (!externalDisplays || externalDisplays.length === 0) {
+        return { success: false, error: 'No external displays connected' };
+      }
+
+      await showDisplayDetectionModal(externalDisplays, false, requestRendererModal);
+      return { success: true };
+    } catch (error) {
+      console.error('Error opening display settings modal:', error);
+      return { success: false, error: error.message };
+    }
   });
 
   ipcMain.handle('display:get-all', async () => {

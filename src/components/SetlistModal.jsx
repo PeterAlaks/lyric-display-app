@@ -424,8 +424,14 @@ const SetlistModal = () => {
 
   if (!visible) return null;
 
+  const topMenuHeight = typeof document !== 'undefined'
+    ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
+    : '0px';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ top: topMenuHeight }}>
       {/* Backdrop */}
       <div
         className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${exiting || entering ? 'opacity-0' : 'opacity-100'}`}
