@@ -9,6 +9,7 @@ const DEFAULT_MENU_CONFIG = {
 };
 
 const PINNED_REASONS = new Set(['click', 'keyboard']);
+const CLOSE_DELAY_MS = 200;
 
 const useTopMenuState = ({
   barRef,
@@ -43,21 +44,24 @@ const useTopMenuState = ({
     clearCloseTimer();
     closeTimerRef.current = setTimeout(() => {
       setOpenMenu((prev) => {
-        if (!prev) return prev;
-        if (id && !(prev === id || prev.startsWith(id))) return prev;
+        if (!prev || (id && !(prev === id || prev.startsWith(id)))) return prev;
         setActiveIndex(-1);
         setOpenReason(null);
         return toMenu;
       });
-    }, 200);
+    }, CLOSE_DELAY_MS);
   }, [clearCloseTimer, isPinnedOpen]);
+
+  const resetMenuState = useCallback(() => {
+    setActiveIndex(-1);
+    setOpenReason(null);
+  }, []);
 
   const closeMenu = useCallback(() => {
     clearCloseTimer();
     setOpenMenu(null);
-    setActiveIndex(-1);
-    setOpenReason(null);
-  }, [clearCloseTimer]);
+    resetMenuState();
+  }, [clearCloseTimer, resetMenuState]);
 
   const openMenuAndFocus = useCallback((id, reason = 'hover') => {
     clearCloseTimer();
@@ -69,21 +73,22 @@ const useTopMenuState = ({
   const toggleMenu = useCallback((id) => {
     clearCloseTimer();
     setOpenMenu((prev) => {
-      const next = prev === id ? null : id;
+      const isClosing = prev === id;
       setActiveIndex(-1);
-      setOpenReason(next ? 'click' : null);
-      return next;
+      setOpenReason(isClosing ? null : 'click');
+      return isClosing ? null : id;
     });
   }, [clearCloseTimer]);
 
   const registerItemRef = useCallback((menuId, index, el) => {
-    if (!menuRefs.current[menuId]) menuRefs.current[menuId] = [];
+    if (!menuRefs.current[menuId]) {
+      menuRefs.current[menuId] = [];
+    }
     menuRefs.current[menuId][index] = el;
   }, []);
 
   const focusIndex = useCallback((menuId, index) => {
-    const ref = menuRefs.current?.[menuId]?.[index];
-    ref?.focus?.();
+    menuRefs.current?.[menuId]?.[index]?.focus?.();
   }, []);
 
   const ensureReason = useCallback((reason) => {
@@ -97,79 +102,94 @@ const useTopMenuState = ({
     openSubmenu,
   }) => (event) => {
     if (!itemCount || itemCount <= 0) return false;
+
     const currentIndex = activeIndexRef.current;
+    const { key } = event;
     let handled = false;
-    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-      let nextIndex = currentIndex;
-      if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1 + itemCount) % itemCount;
-      if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + itemCount) % itemCount;
-      if (event.key === 'Home') nextIndex = 0;
-      if (event.key === 'End') nextIndex = itemCount - 1;
+
+    // Vertical navigation
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key)) {
+      let nextIndex;
+
       if (currentIndex === -1) {
-        nextIndex = event.key === 'ArrowUp' ? itemCount - 1 : 0;
+        nextIndex = key === 'ArrowUp' ? itemCount - 1 : 0;
+      } else {
+        switch (key) {
+          case 'ArrowDown':
+            nextIndex = (currentIndex + 1) % itemCount;
+            break;
+          case 'ArrowUp':
+            nextIndex = (currentIndex - 1 + itemCount) % itemCount;
+            break;
+          case 'Home':
+            nextIndex = 0;
+            break;
+          case 'End':
+            nextIndex = itemCount - 1;
+            break;
+        }
       }
+
       setActiveIndex(nextIndex);
       focusIndex(menuId, nextIndex);
       ensureReason('keyboard');
       handled = true;
-    } else if (event.key === 'Enter') {
+    }
+    else if (key === 'Enter') {
       const targetIndex = currentIndex >= 0 ? currentIndex : 0;
-      if (submenuIndexes?.includes(targetIndex) && typeof openSubmenu === 'function') {
+
+      if (submenuIndexes?.includes(targetIndex) && openSubmenu) {
         ensureReason('keyboard');
         openSubmenu();
       } else {
-        const ref = menuRefs.current?.[menuId]?.[targetIndex];
-        ref?.click?.();
+        menuRefs.current?.[menuId]?.[targetIndex]?.click?.();
       }
       handled = true;
-    } else if (event.key === 'Escape') {
+    }
+    else if (key === 'Escape') {
       closeMenu();
       handled = true;
-    } else if (event.key === 'ArrowLeft') {
-      const currentIdx = topMenuOrder.indexOf(menuId);
-      const prevId = topMenuOrder[(currentIdx - 1 + topMenuOrder.length) % topMenuOrder.length];
-      openMenuAndFocus(prevId, 'keyboard');
-      setActiveIndex(-1);
-      handled = true;
-    } else if (event.key === 'ArrowRight') {
-      if (submenuIndexes?.includes(currentIndex) && typeof openSubmenu === 'function') {
+    }
+    else if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      if (key === 'ArrowRight' && submenuIndexes?.includes(currentIndex) && openSubmenu) {
         ensureReason('keyboard');
         openSubmenu();
       } else {
         const currentIdx = topMenuOrder.indexOf(menuId);
-        const nextId = topMenuOrder[(currentIdx + 1) % topMenuOrder.length];
+        const offset = key === 'ArrowLeft' ? -1 : 1;
+        const nextId = topMenuOrder[(currentIdx + offset + topMenuOrder.length) % topMenuOrder.length];
         openMenuAndFocus(nextId, 'keyboard');
         setActiveIndex(-1);
       }
       handled = true;
     }
+
     return handled;
   }, [closeMenu, ensureReason, focusIndex, openMenuAndFocus, topMenuOrder]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!barRef?.current) return;
-      if (!barRef.current.contains(event.target)) {
+      if (barRef?.current && !barRef.current.contains(event.target)) {
         closeMenu();
       }
     };
-    const stopNavKeys = (event) => {
+
+    const handleKeyDown = (event) => {
       if (!openMenu) return;
-      const handler = typeof keyHandlerLookup === 'function'
-        ? keyHandlerLookup(openMenu)
-        : null;
-      if (!handler) return;
-      const handled = handler(event);
-      if (handled) {
+
+      const handler = keyHandlerLookup?.(openMenu);
+      if (handler && handler(event)) {
         event.preventDefault();
         event.stopPropagation();
       }
     };
+
     window.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('keydown', stopNavKeys, true);
+    window.addEventListener('keydown', handleKeyDown, true);
+
     return () => {
       window.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('keydown', stopNavKeys, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [barRef, closeMenu, keyHandlerLookup, openMenu]);
 

@@ -24,18 +24,20 @@ const useSubmenuListNavigation = ({
   }, []);
 
   const registerSubmenuItemRef = useCallback((index) => (el) => {
-    if (!submenuRefs.current) submenuRefs.current = [];
+    if (!submenuRefs.current) {
+      submenuRefs.current = [];
+    }
     submenuRefs.current[index] = el;
   }, []);
 
-  const getFocusableItems = useCallback(() => (
-    (submenuRefs.current || []).filter((el) => el && !el.disabled)
-  ), []);
+  const getFocusableItems = useCallback(() =>
+    submenuRefs.current.filter((el) => el && !el.disabled)
+    , []);
 
   const syncIndexFromFocus = useCallback(() => {
     const focusable = getFocusableItems();
-    const active = document.activeElement;
-    const idx = focusable.findIndex((el) => el === active);
+    const idx = focusable.findIndex((el) => el === document.activeElement);
+
     if (idx >= 0) {
       submenuIndexRef.current = idx;
       setSubmenuIndex(idx);
@@ -45,37 +47,44 @@ const useSubmenuListNavigation = ({
 
   const focusSubmenuIndex = useCallback((index = 0) => {
     const focusable = getFocusableItems();
+
     if (!focusable.length) {
-      setSubmenuIndex(-1);
       submenuIndexRef.current = -1;
+      setSubmenuIndex(-1);
       return;
     }
+
     const bounded = ((index % focusable.length) + focusable.length) % focusable.length;
     submenuIndexRef.current = bounded;
     setSubmenuIndex(bounded);
+
     requestAnimationFrame(() => {
       focusable[bounded]?.focus?.();
     });
   }, [getFocusableItems]);
 
+  const resetSubmenuIndex = useCallback(() => {
+    submenuIndexRef.current = -1;
+    setSubmenuIndex(-1);
+  }, []);
+
   const closeSubmenuToParent = useCallback(() => {
     setOpenMenu(parentMenuId);
     setShouldFocusSubmenu(false);
-    submenuIndexRef.current = -1;
-    setSubmenuIndex(-1);
-  }, [parentMenuId, setOpenMenu]);
+    resetSubmenuIndex();
+  }, [parentMenuId, setOpenMenu, resetSubmenuIndex]);
 
   const openSubmenu = useCallback((focusFirst = false, reason) => {
     setOpenMenu(submenuId);
-    if (reason) setOpenReason?.(reason);
+    setOpenReason?.(reason);
     setShouldFocusSubmenu(focusFirst);
+
     if (focusFirst) {
       focusSubmenuIndex(0);
     } else {
-      submenuIndexRef.current = -1;
-      setSubmenuIndex(-1);
+      resetSubmenuIndex();
     }
-  }, [focusSubmenuIndex, setOpenMenu, setOpenReason, submenuId]);
+  }, [focusSubmenuIndex, setOpenMenu, setOpenReason, submenuId, resetSubmenuIndex]);
 
   useEffect(() => {
     if (openMenu === submenuId) {
@@ -84,69 +93,89 @@ const useSubmenuListNavigation = ({
       }
     } else {
       setShouldFocusSubmenu(false);
-      setSubmenuIndex(-1);
-      submenuIndexRef.current = -1;
+      resetSubmenuIndex();
       resetSubmenuRefs();
     }
-  }, [focusSubmenuIndex, openMenu, resetSubmenuRefs, shouldFocusSubmenu, submenuId]);
+  }, [focusSubmenuIndex, openMenu, resetSubmenuRefs, resetSubmenuIndex, shouldFocusSubmenu, submenuId]);
 
   const handleSubmenuKeyDown = useCallback((event) => {
     const focusable = getFocusableItems();
+    const { key } = event;
+
     if (submenuIndexRef.current === -1) {
       syncIndexFromFocus();
     }
+
     const currentIndex = submenuIndexRef.current;
     const count = focusable.length;
     let handled = false;
 
+    // Handle empty submenu
     if (count === 0) {
-      setSubmenuIndex(-1);
-      if (['Escape', 'ArrowRight', 'ArrowLeft'].includes(event.key)) {
+      resetSubmenuIndex();
+
+      if (['Escape', 'ArrowRight', 'ArrowLeft'].includes(key)) {
         closeSubmenuToParent();
-        if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+
+        if (key === 'ArrowLeft' || key === 'Escape') {
           focusParentItem?.();
-        } else if (event.key === 'ArrowRight') {
-          const nextId = topMenuOrder[(topMenuOrder.indexOf(parentMenuId) + 1) % topMenuOrder.length];
+        } else if (key === 'ArrowRight') {
+          const parentIdx = topMenuOrder.indexOf(parentMenuId);
+          const nextId = topMenuOrder[(parentIdx + 1) % topMenuOrder.length];
           setOpenMenu(nextId);
         }
         handled = true;
-      } else if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter'].includes(event.key)) {
-        // No submenu items: swallow navigation to avoid leaking to app shortcuts.
+      } else if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter'].includes(key)) {
         handled = true;
       }
       return handled;
     }
 
-    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-      let next = currentIndex;
-      if (event.key === 'ArrowDown') next = (currentIndex + 1 + count) % count;
-      if (event.key === 'ArrowUp') next = (currentIndex - 1 + count) % count;
-      if (event.key === 'Home') next = 0;
-      if (event.key === 'End') next = count - 1;
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key)) {
+      let next;
+
       if (currentIndex === -1) {
-        next = event.key === 'ArrowUp' ? count - 1 : 0;
+        next = key === 'ArrowUp' ? count - 1 : 0;
+      } else {
+        switch (key) {
+          case 'ArrowDown':
+            next = (currentIndex + 1) % count;
+            break;
+          case 'ArrowUp':
+            next = (currentIndex - 1 + count) % count;
+            break;
+          case 'Home':
+            next = 0;
+            break;
+          case 'End':
+            next = count - 1;
+            break;
+        }
       }
+
       focusSubmenuIndex(next);
       handled = true;
-    } else if (event.key === 'Enter') {
+    }
+    else if (key === 'Enter') {
       const targetIdx = currentIndex >= 0 ? currentIndex : 0;
       focusable[targetIdx]?.click?.();
       handled = true;
-    } else if (['Escape', 'ArrowRight', 'ArrowLeft'].includes(event.key)) {
-      if (event.key === 'ArrowLeft') {
-        closeSubmenuToParent();
+    }
+    else if (['Escape', 'ArrowRight', 'ArrowLeft'].includes(key)) {
+      closeSubmenuToParent();
+
+      if (key === 'ArrowLeft' || key === 'Escape') {
         focusParentItem?.();
-      } else if (event.key === 'ArrowRight') {
-        const nextId = topMenuOrder[(topMenuOrder.indexOf(parentMenuId) + 1) % topMenuOrder.length];
+      } else if (key === 'ArrowRight') {
+        const parentIdx = topMenuOrder.indexOf(parentMenuId);
+        const nextId = topMenuOrder[(parentIdx + 1) % topMenuOrder.length];
         setOpenMenu(nextId);
-      } else {
-        closeSubmenuToParent();
-        focusParentItem?.();
       }
       handled = true;
     }
+
     return handled;
-  }, [closeSubmenuToParent, focusParentItem, focusSubmenuIndex, getFocusableItems, parentMenuId, setOpenMenu, syncIndexFromFocus, topMenuOrder]);
+  }, [closeSubmenuToParent, focusParentItem, focusSubmenuIndex, getFocusableItems, parentMenuId, resetSubmenuIndex, setOpenMenu, syncIndexFromFocus, topMenuOrder]);
 
   return {
     submenuIndex,

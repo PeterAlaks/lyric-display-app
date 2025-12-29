@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Minus, Square, Copy, X } from 'lucide-react';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
-import useModal from '@/hooks/useModal';
-import useToast from '@/hooks/useToast';
 import useTopMenuState from '@/hooks/WindowChrome/useTopMenuState';
 import useSubmenuListNavigation from '@/hooks/WindowChrome/useSubmenuListNavigation';
+import useMenuHandlers from '@/hooks/WindowChrome/useMenuHandlers';
 
 const dragRegion = { WebkitAppRegion: 'drag' };
 const noDrag = { WebkitAppRegion: 'no-drag' };
@@ -42,10 +40,7 @@ const MenuSectionTitle = ({ children }) => (
 const Separator = () => <div className="my-1 border-t border-gray-200/70 dark:border-slate-800/40" />;
 
 const TopMenuBar = () => {
-  const { darkMode, setDarkMode } = useDarkModeState();
-  const navigate = useNavigate();
-  const { showModal } = useModal();
-  const { showToast } = useToast();
+  const { darkMode } = useDarkModeState();
 
   const [recents, setRecents] = useState([]);
   const [windowState, setWindowState] = useState({ isMaximized: false, isFullScreen: false });
@@ -91,7 +86,6 @@ const TopMenuBar = () => {
     submenuIndex: recentsIndex,
     resetSubmenuRefs: resetRecentsRefs,
     registerSubmenuItemRef: registerRecentItemRef,
-    focusSubmenuIndex: focusRecentsIndex,
     openSubmenu: openRecentsSubmenu,
     closeSubmenuToParent: closeRecentsSubmenu,
     handleSubmenuKeyDown: handleRecentsKeyDown,
@@ -105,6 +99,8 @@ const TopMenuBar = () => {
     setOpenReason: ensureReason,
   });
 
+  const menuHandlers = useMenuHandlers(closeMenu);
+
   const menuBg = darkMode ? 'bg-slate-900/95 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900';
   const menuPanelExtra = 'backdrop-blur-md';
 
@@ -117,331 +113,111 @@ const TopMenuBar = () => {
 
   const closeRecentsAfterDelay = useCallback(() => {
     clearRecentsCloseTimer();
-    recentsCloseTimerRef.current = setTimeout(() => {
-      closeRecentsSubmenu();
-    }, 180);
+    recentsCloseTimerRef.current = setTimeout(closeRecentsSubmenu, 180);
   }, [clearRecentsCloseTimer, closeRecentsSubmenu]);
 
-  useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
-  useEffect(() => () => clearRecentsCloseTimer(), [clearRecentsCloseTimer]);
+  useEffect(() => {
+    return () => {
+      clearCloseTimer();
+      clearRecentsCloseTimer();
+    };
+  }, [clearCloseTimer, clearRecentsCloseTimer]);
 
   useEffect(() => {
     if (!openMenu) return;
+
     const ref = menuContainerRefs.current[openMenu];
-    if (ref && typeof ref.focus === 'function') {
+    if (ref?.focus) {
       setTimeout(() => {
-        try { ref.focus(); } catch { }
+        try {
+          ref.focus();
+        } catch (error) {
+          console.warn('Failed to focus menu:', error);
+        }
       }, 0);
     }
   }, [openMenu]);
 
   useEffect(() => {
-    let unsubscribe;
     const loadRecents = async () => {
       try {
         const result = await window.electronAPI?.recents?.list?.();
         if (result?.success) {
           setRecents(result.recents || []);
         }
-      } catch { }
+      } catch (error) {
+        console.warn('Failed to load recents:', error);
+      }
     };
 
     loadRecents();
-    try {
-      unsubscribe = window.electronAPI?.recents?.onChange?.((list) => {
-        setRecents(list || []);
-      });
-    } catch { }
 
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    const off = window.electronAPI?.onWindowState?.((state) => {
-      if (state) setWindowState((prev) => ({ ...prev, ...state }));
+    const unsubscribe = window.electronAPI?.recents?.onChange?.((list) => {
+      setRecents(list || []);
     });
 
-    window.electronAPI?.windowControls?.getState?.().then((res) => {
-      if (res?.success && res.state) {
-        setWindowState(res.state);
-      }
-    }).catch(() => { });
-
-    return () => {
-      if (typeof off === 'function') off();
-    };
+    return () => unsubscribe?.();
   }, []);
 
   useEffect(() => {
-    let active = true;
-    window.electronAPI?.getAppVersion?.().then((res) => {
-      if (!active) return;
-      if (res?.success && res.version) {
-        setAppVersion(res.version);
+    const unsubscribe = window.electronAPI?.onWindowState?.((state) => {
+      if (state) {
+        setWindowState((prev) => ({ ...prev, ...state }));
       }
-    }).catch(() => { });
-    return () => { active = false; };
+    });
+
+    window.electronAPI?.windowControls?.getState?.()
+      .then((res) => {
+        if (res?.success && res.state) {
+          setWindowState(res.state);
+        }
+      })
+      .catch((error) => console.warn('Failed to get window state:', error));
+
+    return () => unsubscribe?.();
   }, []);
 
-  const handleNewLyrics = () => {
-    closeMenu();
-    navigate('/new-song?mode=new');
-    window.dispatchEvent(new Event('navigate-to-new-song'));
-  };
+  useEffect(() => {
+    let isMounted = true;
 
-  const handleOpenLyrics = () => {
-    closeMenu();
-    window.dispatchEvent(new Event('trigger-file-load'));
-  };
+    window.electronAPI?.getAppVersion?.()
+      .then((res) => {
+        if (isMounted && res?.success && res.version) {
+          setAppVersion(res.version);
+        }
+      })
+      .catch((error) => console.warn('Failed to get app version:', error));
 
-  const handleOpenRecent = async (filePath) => {
-    closeMenu();
-    if (!filePath) return;
-    try {
-      const result = await window.electronAPI?.recents?.open?.(filePath);
-      if (result && result.success === false) {
-        showToast({
-          title: 'Could not open recent file',
-          message: result.error || 'File may have been moved or deleted.',
-          variant: 'error'
-        });
-      }
-    } catch (error) {
-      showToast({
-        title: 'Could not open recent file',
-        message: error?.message || 'Unknown error',
-        variant: 'error'
-      });
-    }
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleClearRecents = async () => {
-    closeMenu();
-    try {
-      await window.electronAPI?.recents?.clear?.();
-      setRecents([]);
-    } catch { }
-  };
-
-  const handleConnectMobile = () => {
-    closeMenu();
-    window.dispatchEvent(new Event('open-qr-dialog'));
-  };
-
-  const handleEasyWorship = () => {
-    closeMenu();
-    window.dispatchEvent(new Event('open-easyworship-import'));
-  };
-
-  const handlePreviewOutputs = () => {
-    closeMenu();
-    showModal({
-      title: 'Preview Outputs',
-      headerDescription: 'Live preview of both output displays side-by-side',
-      component: 'PreviewOutputs',
-      variant: 'info',
-      size: 'large',
-      dismissLabel: 'Close',
-      className: 'max-w-4xl'
-    });
-  };
-
-  const handleQuit = () => {
-    closeMenu();
-    window.electronAPI?.windowControls?.close?.();
-  };
-
-  const handleUndo = () => {
-    closeMenu();
-    window.dispatchEvent(new Event('menu-undo'));
-  };
-
-  const handleRedo = () => {
-    closeMenu();
-    window.dispatchEvent(new Event('menu-redo'));
-  };
-
-  const handleClipboardAction = (command) => {
-    closeMenu();
-    try { document.execCommand(command); } catch { }
-  };
-
-  const handleToggleDarkMode = () => {
-    closeMenu();
-    const next = !darkMode;
-    setDarkMode(next);
-    window.electronAPI?.setDarkMode?.(next);
-    window.electronAPI?.syncNativeDarkMode?.(next);
-  };
-
-  const handleZoom = (direction) => {
-    closeMenu();
-    if (window.electronAPI?.windowControls?.setZoom) {
-      window.electronAPI.windowControls.setZoom(direction);
-    } else {
-      if (direction === 'reset') window.location.reload();
-    }
-  };
-
-  const handleReload = () => {
-    closeMenu();
-    if (window.electronAPI?.windowControls?.reload) {
-      window.electronAPI.windowControls.reload();
-    } else {
-      window.location.reload();
-    }
-  };
-
-  const handleToggleDevTools = () => {
-    closeMenu();
-    window.electronAPI?.windowControls?.toggleDevTools?.();
-  };
-
-  const handleFullscreen = () => {
-    closeMenu();
-    window.electronAPI?.windowControls?.toggleFullscreen?.();
-  };
-
-  const handleMinimize = () => {
-    closeMenu();
-    window.electronAPI?.windowControls?.minimize?.();
+    await menuHandlers.handleClearRecents();
+    setRecents([]);
   };
 
   const handleBarDoubleClick = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    handleMinimize();
+    menuHandlers.handleMinimize();
   };
 
-  const handleMaximizeToggle = async () => {
-    closeMenu();
-    try {
-      const result = await window.electronAPI?.windowControls?.toggleMaximize?.();
-      if (result?.success && typeof result.isMaximized === 'boolean') {
-        setWindowState((prev) => ({ ...prev, isMaximized: result.isMaximized }));
-      }
-    } catch { }
-  };
-
-  const handleShortcuts = () => {
-    closeMenu();
-    window.dispatchEvent(new Event('show-keyboard-shortcuts'));
-  };
-
-  const handleDisplaySettings = async () => {
-    closeMenu();
-    try {
-      const result = await window.electronAPI?.displaySettings?.openModal?.();
-      if (result?.success === false) {
-        showToast({
-          title: 'No external displays',
-          message: result.error || 'Connect an external display to configure projection.',
-          variant: 'info'
-        });
-      }
-    } catch (error) {
-      showToast({
-        title: 'Could not open display settings',
-        message: error?.message || 'Unknown error',
-        variant: 'error'
-      });
-    }
-  };
-
-  const handleDocs = () => {
-    closeMenu();
-    const url = 'https://github.com/PeterAlaks/lyric-display-app#readme';
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleRepo = () => {
-    closeMenu();
-    const url = 'https://github.com/PeterAlaks/lyric-display-app';
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleConnectionDiagnostics = () => {
-    closeMenu();
-    showModal({
-      title: 'Connection Diagnostics',
-      component: 'ConnectionDiagnostics',
-      variant: 'info',
-      size: 'large',
-      dismissLabel: 'Close'
-    });
-  };
-
-  const handleIntegrationGuide = () => {
-    closeMenu();
-    showModal({
-      title: 'Streaming Software Integration',
-      headerDescription: 'Connect LyricDisplay to OBS, vMix, or Wirecast',
-      component: 'IntegrationInstructions',
-      variant: 'info',
-      size: 'lg',
-      dismissLabel: 'Close'
-    });
+  const handleMaximizeToggle = () => {
+    menuHandlers.handleMaximizeToggle(setWindowState);
   };
 
   const handleAbout = () => {
-    closeMenu();
-    showModal({
-      title: 'About LyricDisplay',
-      component: 'AboutApp',
-      variant: 'info',
-      size: 'md',
-      version: appVersion,
-      actions: [
-        { label: 'Close', value: { action: 'close' }, variant: 'outline' },
-        { label: 'Check for Updates', value: { action: 'checkUpdates' } }
-      ]
-    });
-  };
-
-  const handleSupportDev = () => {
-    closeMenu();
-    window.dispatchEvent(new Event('open-support-dev-modal'));
-  };
-
-  const handleCheckUpdates = () => {
-    closeMenu();
-    window.electronAPI?.checkForUpdates?.(true);
+    menuHandlers.handleAbout(appVersion);
   };
 
   const isMaxOrFull = windowState.isMaximized || windowState.isFullScreen;
 
-  useEffect(() => {
-    const buildHandler = (menuId) => {
-      const cfg = menuConfig?.[menuId];
-      if (!cfg) return null;
-      return createMenuKeyHandler({
-        menuId,
-        itemCount: cfg.count,
-        submenuIndexes: cfg.sub,
-        openSubmenu: menuId === 'file'
-          ? () => openRecentsSubmenu(true, 'keyboard')
-          : undefined,
-      });
-    };
-
-    keyHandlersRef.current = {
-      file: buildHandler('file'),
-      edit: buildHandler('edit'),
-      view: buildHandler('view'),
-      window: buildHandler('window'),
-      help: buildHandler('help'),
-      'file:recent': (event) => {
-        ensureReason('keyboard');
-        return handleRecentsKeyDown(event);
-      },
-    };
-  }, [createMenuKeyHandler, ensureReason, handleRecentsKeyDown, menuConfig, openRecentsSubmenu]);
-
-  const getMenuKeyDown = useCallback((menuId) => {
+  const buildMenuHandler = useCallback((menuId) => {
     const cfg = menuConfig?.[menuId];
-    if (!cfg) return undefined;
+    if (!cfg) return null;
+
     return createMenuKeyHandler({
       menuId,
       itemCount: cfg.count,
@@ -451,6 +227,25 @@ const TopMenuBar = () => {
         : undefined,
     });
   }, [createMenuKeyHandler, menuConfig, openRecentsSubmenu]);
+
+  useEffect(() => {
+    keyHandlersRef.current = {
+      file: buildMenuHandler('file'),
+      edit: buildMenuHandler('edit'),
+      view: buildMenuHandler('view'),
+      window: buildMenuHandler('window'),
+      help: buildMenuHandler('help'),
+      'file:recent': (event) => {
+        ensureReason('keyboard');
+        return handleRecentsKeyDown(event);
+      },
+    };
+  }, [buildMenuHandler, ensureReason, handleRecentsKeyDown]);
+
+  const getMenuKeyDown = useCallback((menuId) => {
+    const cfg = menuConfig?.[menuId];
+    return cfg ? buildMenuHandler(menuId) : undefined;
+  }, [buildMenuHandler, menuConfig]);
 
   return (
     <div
@@ -495,8 +290,8 @@ const TopMenuBar = () => {
                 onMouseEnter={clearCloseTimer}
                 onMouseLeave={() => scheduleCloseMenu('file')}
               >
-                <MenuItem ref={(el) => registerItemRef('file', 0, el)} label="New Lyrics" shortcut="Ctrl/Cmd + N" onClick={handleNewLyrics} active={openMenu?.startsWith('file') && activeIndex === 0} />
-                <MenuItem ref={(el) => registerItemRef('file', 1, el)} label="Load Lyrics File" shortcut="Ctrl/Cmd + O" onClick={handleOpenLyrics} active={openMenu?.startsWith('file') && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('file', 0, el)} label="New Lyrics" shortcut="Ctrl/Cmd + N" onClick={menuHandlers.handleNewLyrics} active={openMenu?.startsWith('file') && activeIndex === 0} />
+                <MenuItem ref={(el) => registerItemRef('file', 1, el)} label="Load Lyrics File" shortcut="Ctrl/Cmd + O" onClick={menuHandlers.handleOpenLyrics} active={openMenu?.startsWith('file') && activeIndex === 1} />
                 <div
                   className="relative"
                   onMouseEnter={clearRecentsCloseTimer}
@@ -530,7 +325,7 @@ const TopMenuBar = () => {
                             ref={registerRecentItemRef(idx)}
                             label={r.split(/[\\/]/).pop()}
                             active={openMenu === 'file:recent' && recentsIndex === idx}
-                            onClick={() => handleOpenRecent(r)}
+                            onClick={() => menuHandlers.handleOpenRecent(r)}
                           />
                         ))
                       ) : (
@@ -548,11 +343,11 @@ const TopMenuBar = () => {
                   )}
                 </div>
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="Connect Mobile Controller" onClick={handleConnectMobile} active={openMenu?.startsWith('file') && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Import Songs from EasyWorship" onClick={handleEasyWorship} active={openMenu?.startsWith('file') && activeIndex === 4} />
-                <MenuItem ref={(el) => registerItemRef('file', 5, el)} label="Preview Outputs" onClick={handlePreviewOutputs} active={openMenu?.startsWith('file') && activeIndex === 5} />
+                <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} active={openMenu?.startsWith('file') && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Import Songs from EasyWorship" onClick={menuHandlers.handleEasyWorship} active={openMenu?.startsWith('file') && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('file', 5, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} active={openMenu?.startsWith('file') && activeIndex === 5} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('file', 6, el)} label="Quit" shortcut="Alt + F4" onClick={handleQuit} active={openMenu?.startsWith('file') && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('file', 6, el)} label="Quit" shortcut="Alt + F4" onClick={menuHandlers.handleQuit} active={openMenu?.startsWith('file') && activeIndex === 6} />
               </div>
             )}
           </div>
@@ -579,14 +374,14 @@ const TopMenuBar = () => {
                 onMouseEnter={clearCloseTimer}
                 onMouseLeave={() => scheduleCloseMenu('edit')}
               >
-                <MenuItem ref={(el) => registerItemRef('edit', 0, el)} label="Undo" shortcut="Ctrl/Cmd + Z" onClick={handleUndo} active={openMenu === 'edit' && activeIndex === 0} />
-                <MenuItem ref={(el) => registerItemRef('edit', 1, el)} label="Redo" shortcut="Ctrl/Cmd + Shift + Z" onClick={handleRedo} active={openMenu === 'edit' && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('edit', 0, el)} label="Undo" shortcut="Ctrl/Cmd + Z" onClick={menuHandlers.handleUndo} active={openMenu === 'edit' && activeIndex === 0} />
+                <MenuItem ref={(el) => registerItemRef('edit', 1, el)} label="Redo" shortcut="Ctrl/Cmd + Shift + Z" onClick={menuHandlers.handleRedo} active={openMenu === 'edit' && activeIndex === 1} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('edit', 2, el)} label="Cut" shortcut="Ctrl/Cmd + X" onClick={() => handleClipboardAction('cut')} active={openMenu === 'edit' && activeIndex === 2} />
-                <MenuItem ref={(el) => registerItemRef('edit', 3, el)} label="Copy" shortcut="Ctrl/Cmd + C" onClick={() => handleClipboardAction('copy')} active={openMenu === 'edit' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('edit', 4, el)} label="Paste" shortcut="Ctrl/Cmd + V" onClick={() => handleClipboardAction('paste')} active={openMenu === 'edit' && activeIndex === 4} />
-                <MenuItem ref={(el) => registerItemRef('edit', 5, el)} label="Delete" shortcut="Del" onClick={() => handleClipboardAction('delete')} active={openMenu === 'edit' && activeIndex === 5} />
-                <MenuItem ref={(el) => registerItemRef('edit', 6, el)} label="Select All" shortcut="Ctrl/Cmd + A" onClick={() => handleClipboardAction('selectAll')} active={openMenu === 'edit' && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('edit', 2, el)} label="Cut" shortcut="Ctrl/Cmd + X" onClick={() => menuHandlers.handleClipboardAction('cut')} active={openMenu === 'edit' && activeIndex === 2} />
+                <MenuItem ref={(el) => registerItemRef('edit', 3, el)} label="Copy" shortcut="Ctrl/Cmd + C" onClick={() => menuHandlers.handleClipboardAction('copy')} active={openMenu === 'edit' && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('edit', 4, el)} label="Paste" shortcut="Ctrl/Cmd + V" onClick={() => menuHandlers.handleClipboardAction('paste')} active={openMenu === 'edit' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('edit', 5, el)} label="Delete" shortcut="Del" onClick={() => menuHandlers.handleClipboardAction('delete')} active={openMenu === 'edit' && activeIndex === 5} />
+                <MenuItem ref={(el) => registerItemRef('edit', 6, el)} label="Select All" shortcut="Ctrl/Cmd + A" onClick={() => menuHandlers.handleClipboardAction('selectAll')} active={openMenu === 'edit' && activeIndex === 6} />
               </div>
             )}
           </div>
@@ -613,15 +408,15 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('view')}
                 onKeyDown={getMenuKeyDown('view')}
               >
-                <MenuItem ref={(el) => registerItemRef('view', 0, el)} label={darkMode ? 'Light Mode' : 'Dark Mode'} onClick={handleToggleDarkMode} active={openMenu === 'view' && activeIndex === 0} />
-                <MenuItem ref={(el) => registerItemRef('view', 1, el)} label="Reload" shortcut="Ctrl/Cmd + R" onClick={handleReload} active={openMenu === 'view' && activeIndex === 1} />
-                <MenuItem ref={(el) => registerItemRef('view', 2, el)} label="Toggle Developer Tools" shortcut="Ctrl/Cmd + Shift + I" onClick={handleToggleDevTools} active={openMenu === 'view' && activeIndex === 2} />
+                <MenuItem ref={(el) => registerItemRef('view', 0, el)} label={darkMode ? 'Light Mode' : 'Dark Mode'} onClick={menuHandlers.handleToggleDarkMode} active={openMenu === 'view' && activeIndex === 0} />
+                <MenuItem ref={(el) => registerItemRef('view', 1, el)} label="Reload" shortcut="Ctrl/Cmd + R" onClick={menuHandlers.handleReload} active={openMenu === 'view' && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('view', 2, el)} label="Toggle Developer Tools" shortcut="Ctrl/Cmd + Shift + I" onClick={menuHandlers.handleToggleDevTools} active={openMenu === 'view' && activeIndex === 2} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('view', 3, el)} label="Zoom In" shortcut="Ctrl/Cmd +" onClick={() => handleZoom('in')} active={openMenu === 'view' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('view', 4, el)} label="Zoom Out" shortcut="Ctrl/Cmd -" onClick={() => handleZoom('out')} active={openMenu === 'view' && activeIndex === 4} />
-                <MenuItem ref={(el) => registerItemRef('view', 5, el)} label="Reset Zoom" shortcut="Ctrl/Cmd 0" onClick={() => handleZoom('reset')} active={openMenu === 'view' && activeIndex === 5} />
+                <MenuItem ref={(el) => registerItemRef('view', 3, el)} label="Zoom In" shortcut="Ctrl/Cmd +" onClick={() => menuHandlers.handleZoom('in')} active={openMenu === 'view' && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('view', 4, el)} label="Zoom Out" shortcut="Ctrl/Cmd -" onClick={() => menuHandlers.handleZoom('out')} active={openMenu === 'view' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('view', 5, el)} label="Reset Zoom" shortcut="Ctrl/Cmd 0" onClick={() => menuHandlers.handleZoom('reset')} active={openMenu === 'view' && activeIndex === 5} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('view', 6, el)} label="Toggle Fullscreen" shortcut="F11" onClick={handleFullscreen} active={openMenu === 'view' && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('view', 6, el)} label="Toggle Fullscreen" shortcut="F11" onClick={menuHandlers.handleFullscreen} active={openMenu === 'view' && activeIndex === 6} />
               </div>
             )}
           </div>
@@ -648,12 +443,12 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('window')}
                 onKeyDown={getMenuKeyDown('window')}
               >
-                <MenuItem ref={(el) => registerItemRef('window', 0, el)} label="Minimize" onClick={handleMinimize} active={openMenu === 'window' && activeIndex === 0} />
+                <MenuItem ref={(el) => registerItemRef('window', 0, el)} label="Minimize" onClick={menuHandlers.handleMinimize} active={openMenu === 'window' && activeIndex === 0} />
                 <MenuItem ref={(el) => registerItemRef('window', 1, el)} label={isMaxOrFull ? 'Restore' : 'Maximize'} onClick={handleMaximizeToggle} active={openMenu === 'window' && activeIndex === 1} />
-                <MenuItem ref={(el) => registerItemRef('window', 2, el)} label="Close" onClick={handleQuit} active={openMenu === 'window' && activeIndex === 2} />
+                <MenuItem ref={(el) => registerItemRef('window', 2, el)} label="Close" onClick={menuHandlers.handleQuit} active={openMenu === 'window' && activeIndex === 2} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('window', 3, el)} label="Keyboard Shortcuts" onClick={handleShortcuts} active={openMenu === 'window' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('window', 4, el)} label="Display Settings" onClick={handleDisplaySettings} active={openMenu === 'window' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('window', 3, el)} label="Keyboard Shortcuts" onClick={menuHandlers.handleShortcuts} active={openMenu === 'window' && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('window', 4, el)} label="Display Settings" onClick={menuHandlers.handleDisplaySettings} active={openMenu === 'window' && activeIndex === 4} />
               </div>
             )}
           </div>
@@ -680,15 +475,15 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('help')}
                 onKeyDown={getMenuKeyDown('help')}
               >
-                <MenuItem ref={(el) => registerItemRef('help', 0, el)} label="Documentation" onClick={handleDocs} active={openMenu === 'help' && activeIndex === 0} />
-                <MenuItem ref={(el) => registerItemRef('help', 1, el)} label="GitHub Repository" onClick={handleRepo} active={openMenu === 'help' && activeIndex === 1} />
-                <MenuItem ref={(el) => registerItemRef('help', 2, el)} label="Connection Diagnostics" onClick={handleConnectionDiagnostics} active={openMenu === 'help' && activeIndex === 2} />
-                <MenuItem ref={(el) => registerItemRef('help', 3, el)} label="Integration Guide" onClick={handleIntegrationGuide} active={openMenu === 'help' && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('help', 0, el)} label="Documentation" onClick={menuHandlers.handleDocs} active={openMenu === 'help' && activeIndex === 0} />
+                <MenuItem ref={(el) => registerItemRef('help', 1, el)} label="GitHub Repository" onClick={menuHandlers.handleRepo} active={openMenu === 'help' && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('help', 2, el)} label="Connection Diagnostics" onClick={menuHandlers.handleConnectionDiagnostics} active={openMenu === 'help' && activeIndex === 2} />
+                <MenuItem ref={(el) => registerItemRef('help', 3, el)} label="Integration Guide" onClick={menuHandlers.handleIntegrationGuide} active={openMenu === 'help' && activeIndex === 3} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('help', 4, el)} label="More About Author" onClick={() => window.open('https://linktr.ee/peteralaks', '_blank', 'noopener,noreferrer')} active={openMenu === 'help' && activeIndex === 4} />
                 <MenuItem ref={(el) => registerItemRef('help', 5, el)} label="About LyricDisplay" onClick={handleAbout} active={openMenu === 'help' && activeIndex === 5} />
-                <MenuItem ref={(el) => registerItemRef('help', 6, el)} label="Support Development" onClick={handleSupportDev} active={openMenu === 'help' && activeIndex === 6} />
-                <MenuItem ref={(el) => registerItemRef('help', 7, el)} label="Check for Updates" onClick={handleCheckUpdates} active={openMenu === 'help' && activeIndex === 7} />
+                <MenuItem ref={(el) => registerItemRef('help', 6, el)} label="Support Development" onClick={menuHandlers.handleSupportDev} active={openMenu === 'help' && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('help', 7, el)} label="Check for Updates" onClick={menuHandlers.handleCheckUpdates} active={openMenu === 'help' && activeIndex === 7} />
               </div>
             )}
           </div>
@@ -698,7 +493,7 @@ const TopMenuBar = () => {
       <div className="flex items-stretch ml-auto" style={noDrag}>
         <button
           type="button"
-          onClick={handleMinimize}
+          onClick={menuHandlers.handleMinimize}
           title="Minimize window"
           className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-200'}`}
           aria-label="Minimize window"
@@ -716,7 +511,7 @@ const TopMenuBar = () => {
         </button>
         <button
           type="button"
-          onClick={handleQuit}
+          onClick={menuHandlers.handleQuit}
           title="Close window"
           className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-red-600 hover:text-white' : 'hover:bg-red-600 hover:text-white'
             }`}

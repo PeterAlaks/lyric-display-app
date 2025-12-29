@@ -14,19 +14,25 @@ export function makeMenuAPI({ getMainWindow }) {
     const win = getMainWindow?.();
     if (!win || win.isDestroyed()) return;
 
-    try {
-      win.webContents.executeJavaScript(`window.electronStore?.getDarkMode?.() || false`)
-        .then((isDark) => { nativeTheme.themeSource = isDark ? 'dark' : 'light'; })
-        .catch(() => { });
-    } catch {
-    }
+    win.webContents
+      .executeJavaScript(`window.electronStore?.getDarkMode?.() || false`)
+      .then((isDark) => {
+        nativeTheme.themeSource = isDark ? 'dark' : 'light';
+      })
+      .catch((error) => {
+        console.warn('Failed to update dark mode:', error);
+      });
   };
 
   const toggleDarkMode = () => {
     const win = getMainWindow?.();
-    if (win && !win.isDestroyed()) {
-      try { win.webContents.send('toggle-dark-mode'); } catch { }
-      setTimeout(() => { updateDarkModeMenu(); }, 100);
+    if (!win || win.isDestroyed()) return;
+
+    try {
+      win.webContents.send('toggle-dark-mode');
+      setTimeout(updateDarkModeMenu, 100);
+    } catch (error) {
+      console.warn('Failed to toggle dark mode:', error);
     }
   };
 
