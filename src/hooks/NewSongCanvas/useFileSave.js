@@ -22,6 +22,7 @@ const useFileSave = ({
   songMetadata,
   setSongMetadata,
   setPendingSavedVersion,
+  setSaveVersion,
   editMode = false
 }) => {
   const navigate = useNavigate();
@@ -138,9 +139,17 @@ const useFileSave = ({
   }, []);
 
   const markSaved = useCallback(({ payload, baseName, extension, filePath, notifyPendingReload }) => {
+    baseContentRef.current = payload;
+    baseTitleRef.current = baseName;
+
     setFileName(baseName);
     setTitle(baseName);
-    if (setRawLyricsContent) {
+
+    if (setSaveVersion) {
+      setSaveVersion(prev => prev + 1);
+    }
+
+    if (setRawLyricsContent && editMode) {
       setRawLyricsContent(payload);
     }
 
@@ -153,9 +162,6 @@ const useFileSave = ({
         filePath: filePath || '',
       });
     }
-
-    baseContentRef.current = payload;
-    baseTitleRef.current = baseName;
 
     if (typeof setPendingSavedVersion === 'function') {
       if (notifyPendingReload) {
@@ -170,7 +176,7 @@ const useFileSave = ({
         setPendingSavedVersion(null);
       }
     }
-  }, [baseContentRef, baseTitleRef, setFileName, setPendingSavedVersion, setRawLyricsContent, setSongMetadata, setTitle, songMetadata]);
+  }, [baseContentRef, baseTitleRef, editMode, setFileName, setPendingSavedVersion, setRawLyricsContent, setSaveVersion, setSongMetadata, setTitle, songMetadata]);
 
   const saveWithDialog = useCallback(async ({ payload, extension, baseName, defaultDir, notifyPendingReload, alsoLoad }) => {
     if (!window.electronAPI?.showSaveDialog) return null;
@@ -371,7 +377,7 @@ const useFileSave = ({
             baseName: savedBaseName,
             extension,
             filePath: result.filePath,
-            notifyPendingReload: true
+            notifyPendingReload: editMode
           });
 
           try {
@@ -414,7 +420,7 @@ const useFileSave = ({
         baseName,
         extension,
         filePath: null,
-        notifyPendingReload: true
+        notifyPendingReload: editMode
       });
 
       showToast({

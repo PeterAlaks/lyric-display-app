@@ -65,6 +65,7 @@ const NewSongCanvas = () => {
   const { content, setContent, undo, redo, canUndo, canRedo, resetHistory } = useEditorHistory('');
   const [fileName, setFileName] = useState('');
   const [title, setTitle] = useState('');
+  const [saveVersion, setSaveVersion] = useState(0);
   const editorContainerRef = useRef(null);
   const measurementRefs = useRef([]);
   const contextMenuRef = useRef(null);
@@ -91,7 +92,7 @@ const NewSongCanvas = () => {
   const isTitleEmpty = !title.trim();
   const hasUnsavedChanges = React.useMemo(() => {
     return (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
-  }, [content, title]);
+  }, [content, title, saveVersion]);
 
   const { contextMenuPosition, menuWidth } = useContextMenuPosition({
     contextMenuState,
@@ -307,6 +308,7 @@ const NewSongCanvas = () => {
     songMetadata,
     setSongMetadata,
     setPendingSavedVersion,
+    setSaveVersion,
     editMode
   });
 
