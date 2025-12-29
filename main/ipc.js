@@ -736,7 +736,7 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
         return { success: false, error: 'No external displays connected' };
       }
 
-      await showDisplayDetectionModal(externalDisplays, false, requestRendererModal);
+      await showDisplayDetectionModal(externalDisplays, false, requestRendererModal, true);
       return { success: true };
     } catch (error) {
       console.error('Error opening display settings modal:', error);

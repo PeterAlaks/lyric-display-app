@@ -3,8 +3,9 @@
  * @param {Object|Array} displayOrDisplays - Single display object or array of display objects
  * @param {boolean} isStartupCheck - Whether this is a startup check
  * @param {Function} requestRendererModal - Modal request function
+ * @param {boolean} isManualOpen - Whether this is manually opened from menu
  */
-export async function showDisplayDetectionModal(displayOrDisplays, isStartupCheck, requestRendererModal) {
+export async function showDisplayDetectionModal(displayOrDisplays, isStartupCheck, requestRendererModal, isManualOpen = false) {
 
   const displaysArray = Array.isArray(displayOrDisplays) ? displayOrDisplays : [displayOrDisplays];
 
@@ -77,7 +78,8 @@ export async function showDisplayDetectionModal(displayOrDisplays, isStartupChec
         dismissible: true,
         actions: [],
         displays: displaysInfo,
-        displayInfo: displaysInfo[0]
+        displayInfo: displaysInfo[0],
+        isManualOpen: isManualOpen
       },
       {
         timeout: 60000,
