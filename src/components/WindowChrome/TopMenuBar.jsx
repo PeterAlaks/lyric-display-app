@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useTopMenuState from '@/hooks/WindowChrome/useTopMenuState';
-import useSubmenuListNavigation from '@/hooks/WindowChrome/useSubmenuListNavigation';
+import useSubMenuListNav from '@/hooks/WindowChrome/useSubmenuListNav';
 import useMenuHandlers from '@/hooks/WindowChrome/useMenuHandlers';
 
 const dragRegion = { WebkitAppRegion: 'drag' };
@@ -37,10 +38,12 @@ const MenuSectionTitle = ({ children }) => (
   </div>
 );
 
-const Separator = () => <div className="my-1 border-t border-gray-200/70 dark:border-slate-800/40" />;
+const Separator = () => <div className="my-1 border-t border-gray-200/70 dark:border-slate-800" />;
 
 const TopMenuBar = () => {
   const { darkMode } = useDarkModeState();
+  const location = useLocation();
+  const isNewSongCanvas = location.pathname === '/new-song';
 
   const [recents, setRecents] = useState([]);
   const [windowState, setWindowState] = useState({ isMaximized: false, isFullScreen: false });
@@ -89,7 +92,7 @@ const TopMenuBar = () => {
     openSubmenu: openRecentsSubmenu,
     closeSubmenuToParent: closeRecentsSubmenu,
     handleSubmenuKeyDown: handleRecentsKeyDown,
-  } = useSubmenuListNavigation({
+  } = useSubMenuListNav({
     submenuId: 'file:recent',
     parentMenuId: 'file',
     openMenu,
@@ -343,9 +346,9 @@ const TopMenuBar = () => {
                   )}
                 </div>
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} active={openMenu?.startsWith('file') && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Import Songs from EasyWorship" onClick={menuHandlers.handleEasyWorship} active={openMenu?.startsWith('file') && activeIndex === 4} />
-                <MenuItem ref={(el) => registerItemRef('file', 5, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} active={openMenu?.startsWith('file') && activeIndex === 5} />
+                <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 3} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Import Songs from EasyWorship" onClick={menuHandlers.handleEasyWorship} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 4} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('file', 5, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 5} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('file', 6, el)} label="Quit" shortcut="Alt + F4" onClick={menuHandlers.handleQuit} active={openMenu?.startsWith('file') && activeIndex === 6} />
               </div>
@@ -448,7 +451,7 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('window', 2, el)} label="Close" onClick={menuHandlers.handleQuit} active={openMenu === 'window' && activeIndex === 2} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('window', 3, el)} label="Keyboard Shortcuts" onClick={menuHandlers.handleShortcuts} active={openMenu === 'window' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('window', 4, el)} label="Display Settings" onClick={menuHandlers.handleDisplaySettings} active={openMenu === 'window' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('window', 4, el)} label="External Display Settings" onClick={menuHandlers.handleDisplaySettings} active={openMenu === 'window' && activeIndex === 4} />
               </div>
             )}
           </div>

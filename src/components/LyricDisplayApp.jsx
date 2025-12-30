@@ -212,6 +212,15 @@ const LyricDisplayApp = () => {
     emitSetlistClear
   });
 
+  React.useEffect(() => {
+    if (window.__pendingLyricsLoad) {
+      const pendingData = window.__pendingLyricsLoad;
+      delete window.__pendingLyricsLoad;
+
+      processLoadedLyrics(pendingData);
+    }
+  }, [processLoadedLyrics]);
+
   const handledSavedVersionRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -250,12 +259,12 @@ const LyricDisplayApp = () => {
     };
 
     showToast({
-      title: 'Lyrics updated',
-      message: 'The control panel may have older lyrics. Load the last saved version?',
+      title: 'Load saved lyrics',
+      message: 'You recently saved a lyrics file. Do you want to load that into the control panel?',
       variant: 'info',
       duration: 7000,
       actions: [
-        { label: 'Load saved lyrics', onClick: loadSavedVersion }
+        { label: 'Load lyrics', onClick: loadSavedVersion }
       ]
     });
 
@@ -379,7 +388,10 @@ const LyricDisplayApp = () => {
     totalMatches,
     highlightedLineIndex,
     handleOpenSetlist,
-    handleOpenOnlineLyricsSearch
+    handleOpenOnlineLyricsSearch,
+    handleOpenFileDialog: openFileDialog,
+    handleCreateNewSong,
+    handleEditLyrics
   });
 
   const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);

@@ -33,7 +33,6 @@ export function createLoadingWindow() {
     skipTaskbar: true,
     frame: false,
     transparent: true,
-    alwaysOnTop: true,
     center: true,
     show: false,
     webPreferences: {

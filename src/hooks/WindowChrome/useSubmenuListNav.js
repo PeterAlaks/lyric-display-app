@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const useSubmenuListNavigation = ({
+const useSubMenuListNav = ({
   submenuId,
   parentMenuId,
   openMenu,
@@ -192,4 +192,4 @@ const useSubmenuListNavigation = ({
   };
 };
 
-export default useSubmenuListNavigation;
+export default useSubMenuListNav;

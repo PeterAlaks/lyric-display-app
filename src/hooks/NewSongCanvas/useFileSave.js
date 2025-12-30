@@ -149,20 +149,6 @@ const useFileSave = ({
       setSaveVersion(prev => prev + 1);
     }
 
-    if (setRawLyricsContent && editMode) {
-      setRawLyricsContent(payload);
-    }
-
-    if (typeof setSongMetadata === 'function') {
-      const nextOrigin = extension === 'lrc' ? 'Local (.lrc)' : 'Local (.txt)';
-      setSongMetadata({
-        ...(songMetadata || {}),
-        title: (songMetadata?.title && songMetadata.title.trim()) ? songMetadata.title : baseName,
-        origin: nextOrigin,
-        filePath: filePath || '',
-      });
-    }
-
     if (typeof setPendingSavedVersion === 'function') {
       if (notifyPendingReload) {
         setPendingSavedVersion({
@@ -176,7 +162,7 @@ const useFileSave = ({
         setPendingSavedVersion(null);
       }
     }
-  }, [baseContentRef, baseTitleRef, editMode, setFileName, setPendingSavedVersion, setRawLyricsContent, setSaveVersion, setSongMetadata, setTitle, songMetadata]);
+  }, [baseContentRef, baseTitleRef, setFileName, setPendingSavedVersion, setSaveVersion, setTitle]);
 
   const saveWithDialog = useCallback(async ({ payload, extension, baseName, defaultDir, notifyPendingReload, alsoLoad }) => {
     if (!window.electronAPI?.showSaveDialog) return null;

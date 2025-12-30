@@ -221,6 +221,9 @@ lyric-display-app/
 |   |   ├── toast/
 |   |   |   └── ToastProvider.jsx           # Toast notifications component
 |   |   ├── ui/                             # Reusable UI components
+|   |   ├── WindowChrome/
+|   |   |   ├── DesktopShell.jsx            # Desktop app wrapper component
+|   |   |   └── TopMenuBar.jsx              # Custom renderer-based native top menu bar
 |   |   ├── AboutAppModal.jsx               # About the app modal
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
 |   |   ├── AutoplaySettings.jsx            # Autoplay settings modal
@@ -234,7 +237,7 @@ lyric-display-app/
 |   |   ├── HelpContent.jsx                 # Help and operation tips modal
 |   |   ├── IntegrationInstructions.jsx     # Integration help modal for OBS, VMix and Wirecast
 |   |   ├── IntelligentAutoplayInfo.jsx     # Intelligent Autoplay info modal
-|   |   ├── JoinCodePromptBridge.jsx        # Bridge component for join code user flow
+|   |   ├── JoinCodePromptBridge.jsx        # Bridge and component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
@@ -253,10 +256,15 @@ lyric-display-app/
 |   |   ├── SongInfoModal.jsx               # Info modal for loaded lyrics
 |   |   ├── StageSettingsPanel.jsx          # Stage settings interface
 |   |   ├── StageTemplatesModal.jsx         # Stage settings templates modal
+|   |   ├── SupportDevelopmentBridge.jsx    # Support development modal bridge
 |   |   ├── SupportDevelopmentModal.jsx     # Support development modal
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
 │   ├── constants/
-|   |   └── fonts.js                        # Featured fonts dropdown store
+|   |   ├── easyWorship.js                  # Some EasyWorship constants
+|   |   ├── fonts.js                        # Featured fonts dropdown store
+|   |   ├── lyricsFormat.js                 # Constants used in lyrics formatting/cleanup utility
+|   |   ├── shortcuts.js                    # Keyboard shortcut definitions used for shortcuts help modal
+|   |   └── songCanvas.js                   # Some constants used in canvas editor
 │   ├── context/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
 |   |   └── LyricsStore.js                  # Zustand store definitions
@@ -296,6 +304,10 @@ lyric-display-app/
 |   |   |   └── useTypographyAndBands.js    # Background band and related logic hook
 |   |   ├── SetlistModal/
 |   |   |   └── useSetlistLoader.js         # Hook for setlist file loading functionality
+|   |   ├── WindowChrome/
+|   |   |   ├── useMenuHandlers.js          # Menu operations hook for top menu bar
+|   |   |   ├── useSubMenuListNav.js        # Hook for handling top menu bar sub-menu navigation
+|   |   |   └── useTopMenuState.js          # Top menu bar state definitions
 |   |   ├── useAuth.js                      # Authenticator hook for socket connections
 |   |   ├── useAutoplayManager.js           # Autoplay engine and logic
 |   |   ├── useContextMenuPosition.js       # Hook for space-aware context menu positioning

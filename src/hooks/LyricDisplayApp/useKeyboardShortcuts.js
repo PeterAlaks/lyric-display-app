@@ -17,8 +17,60 @@ export const useKeyboardShortcuts = ({
   totalMatches,
   highlightedLineIndex,
   handleOpenSetlist,
-  handleOpenOnlineLyricsSearch
+  handleOpenOnlineLyricsSearch,
+  handleOpenFileDialog,
+  handleCreateNewSong,
+  handleEditLyrics
 }) => {
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (event) => {
+      const activeElement = document.activeElement;
+      const isTyping = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.isContentEditable
+      );
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'o' || event.key === 'O')) {
+        if (isTyping) return;
+        event.preventDefault();
+        handleOpenFileDialog?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'n' || event.key === 'N')) {
+        if (isTyping) return;
+        event.preventDefault();
+        handleCreateNewSong?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'e' || event.key === 'E')) {
+        if (isTyping) return;
+        if (!hasLyrics) return;
+        event.preventDefault();
+        handleEditLyrics?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 's' || event.key === 'S')) {
+        event.preventDefault();
+        handleOpenSetlist?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'o' || event.key === 'O')) {
+        event.preventDefault();
+        handleOpenOnlineLyricsSearch?.();
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleOpenSetlist, handleOpenOnlineLyricsSearch, handleOpenFileDialog, handleCreateNewSong, handleEditLyrics, hasLyrics]);
+
   useEffect(() => {
     if (!hasLyrics) return;
 
@@ -29,18 +81,6 @@ export const useKeyboardShortcuts = ({
         activeElement.tagName === 'TEXTAREA' ||
         activeElement.isContentEditable
       );
-
-      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 's' || event.key === 'S')) {
-        event.preventDefault();
-        handleOpenSetlist();
-        return;
-      }
-
-      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'o' || event.key === 'O')) {
-        event.preventDefault();
-        handleOpenOnlineLyricsSearch();
-        return;
-      }
 
       if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
         event.preventDefault();

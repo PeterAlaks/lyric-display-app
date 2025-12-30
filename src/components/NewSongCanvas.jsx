@@ -26,22 +26,7 @@ import useLineMeasurements from '../hooks/NewSongCanvas/useLineMeasurements';
 import useContextMenuPosition from '../hooks/useContextMenuPosition';
 import useCanvasSearch from '../hooks/NewSongCanvas/useCanvasSearch';
 import useElectronListeners from '../hooks/NewSongCanvas/useElectronListeners';
-
-const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
-const METADATA_OPTIONS = [
-  { key: 'ti', label: 'Title [ti:]' },
-  { key: 'ar', label: 'Artist [ar:]' },
-  { key: 'al', label: 'Album [al:]' },
-  { key: 'au', label: 'Author [au:]' },
-  { key: 'lr', label: 'Lyricist [lr:]' },
-  { key: 'length', label: 'Length [length:]' },
-  { key: 'by', label: 'LRC Author [by:]' },
-  { key: 'offset', label: 'Offset [offset:]' },
-  { key: 're', label: 'Player/Editor [re:]' },
-  { key: 'tool', label: 'Tool [tool:]' },
-  { key: 've', label: 'Version [ve:]' },
-  { key: '#', label: 'Comment [#]' },
-];
+import { STANDARD_LRC_START_REGEX, METADATA_OPTIONS } from '../constants/songCanvas';
 
 const NewSongCanvas = () => {
   const navigate = useNavigate();
@@ -66,6 +51,7 @@ const NewSongCanvas = () => {
   const [fileName, setFileName] = useState('');
   const [title, setTitle] = useState('');
   const [saveVersion, setSaveVersion] = useState(0);
+  const [currentFilePath, setCurrentFilePath] = useState('');
   const editorContainerRef = useRef(null);
   const measurementRefs = useRef([]);
   const contextMenuRef = useRef(null);
@@ -205,7 +191,39 @@ const NewSongCanvas = () => {
         window.electronAPI.removeAllListeners('navigate-to-new-song');
       };
     }
-  }, [editMode, navigate, resetHistory, setRawLyricsContent]);
+  }, [editMode, navigate, resetHistory]);
+
+  React.useEffect(() => {
+    const handleLoadIntoCanvas = (event) => {
+      const { content, fileName, filePath } = event.detail || {};
+
+      if (!content) return;
+
+      const baseName = fileName ? fileName.replace(/\.(txt|lrc)$/i, '') : 'Untitled';
+      const fileExtension = fileName ? (fileName.toLowerCase().endsWith('.lrc') ? 'lrc' : 'txt') : 'txt';
+
+      resetHistory(content);
+      setTitle(baseName);
+      setFileName(baseName);
+      setCurrentFilePath(filePath || '');
+      baseContentRef.current = content;
+      baseTitleRef.current = baseName;
+
+      loadSignatureRef.current = `${baseName}::${content}`;
+
+      showToast({
+        title: 'File loaded',
+        message: `"${fileName || 'File'}" loaded into canvas editor`,
+        variant: 'success'
+      });
+    };
+
+    window.addEventListener('load-into-canvas', handleLoadIntoCanvas);
+
+    return () => {
+      window.removeEventListener('load-into-canvas', handleLoadIntoCanvas);
+    };
+  }, [resetHistory, setFileName, setTitle, showToast]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -227,11 +245,12 @@ const NewSongCanvas = () => {
       resetHistory(nextContent);
       setFileName(nextTitle);
       setTitle(nextTitle);
+      setCurrentFilePath(songMetadata?.filePath || '');
       baseContentRef.current = nextContent || '';
       baseTitleRef.current = nextTitle || '';
       loadSignatureRef.current = loadSignature;
     }
-  }, [editMode, lyrics, lyricsFileName, rawLyricsContent, resetHistory]);
+  }, [editMode, lyrics, lyricsFileName, rawLyricsContent, resetHistory, songMetadata]);
 
   useEffect(() => {
     if (editMode) return;
@@ -304,7 +323,7 @@ const NewSongCanvas = () => {
     lrcEligibility,
     baseContentRef,
     baseTitleRef,
-    existingFilePath: songMetadata?.filePath,
+    existingFilePath: currentFilePath || songMetadata?.filePath,
     songMetadata,
     setSongMetadata,
     setPendingSavedVersion,
@@ -1080,6 +1099,59 @@ const NewSongCanvas = () => {
     ? 'text-gray-200 hover:text-white hover:bg-gray-700/70 active:bg-gray-700/80 focus-visible:ring-1 focus-visible:ring-blue-500/60'
     : '';
 
+  const handleOpenLyrics = useCallback(async () => {
+    try {
+      if (window?.electronAPI?.loadLyricsFile) {
+        const result = await window.electronAPI.loadLyricsFile();
+        if (result?.success && result.content) {
+          showModal({
+            title: 'Load Lyrics File',
+            description: `You've selected "${result.fileName || 'a lyrics file'}". Choose where to load it:`,
+            body: 'Load into the Canvas Editor to edit the lyrics, or load into the Control Panel to display them on your outputs.',
+            variant: 'info',
+            size: 'sm',
+            actions: [
+              {
+                label: 'Load into Canvas Editor',
+                variant: 'default',
+                value: 'canvas',
+                onSelect: () => {
+                  window.dispatchEvent(new CustomEvent('load-into-canvas', {
+                    detail: {
+                      content: result.content,
+                      fileName: result.fileName,
+                      filePath: result.filePath
+                    }
+                  }));
+                }
+              },
+              {
+                label: 'Load into Control Panel',
+                variant: 'outline',
+                value: 'control',
+                onSelect: () => {
+                  // Store the file data before navigation
+                  window.__pendingLyricsLoad = {
+                    content: result.content,
+                    fileName: result.fileName,
+                    filePath: result.filePath
+                  };
+                  navigate('/');
+                }
+              }
+            ]
+          });
+        }
+      }
+    } catch (error) {
+      showToast({
+        title: 'Load failed',
+        message: error?.message || 'Could not load file',
+        variant: 'error'
+      });
+    }
+  }, [showModal, showToast, navigate]);
+
   useKeyboardShortcuts({
     handleBack,
     handleSave,
@@ -1088,6 +1160,7 @@ const NewSongCanvas = () => {
     handleStartNewSong,
     handleOpenSearchBar: openSearchBar,
     handleOpenReplaceBar: openReplaceBar,
+    handleOpenLyrics,
     isContentEmpty,
     isTitleEmpty,
     composeMode,
@@ -1274,7 +1347,7 @@ const NewSongCanvas = () => {
             <Tooltip content="Return to control panel" side="right">
               <button
                 onClick={handleBack}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
+                className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-md font-medium transition-colors w-[120px] ${darkMode
                   ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
@@ -1311,22 +1384,22 @@ const NewSongCanvas = () => {
                 </svg>
               </button>
             </div>
-            <div className="flex items-center justify-end min-w-[96px]">
-              {editMode && (
-                <Tooltip content="Start a new song canvas" side="left">
-                  <button
-                    onClick={handleStartNewSong}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
-                  >
-                    <FilePlusCorner className="w-4 h-4" />
-                    New
-                  </button>
-                </Tooltip>
-              )}
-            </div>
+            {editMode ? (
+              <Tooltip content="Start a new song canvas" side="left">
+                <button
+                  onClick={handleStartNewSong}
+                  className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-md font-medium transition-colors w-[120px] ${darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                >
+                  <FilePlusCorner className="w-4 h-4" />
+                  New
+                </button>
+              </Tooltip>
+            ) : (
+              <div className="w-[120px]"></div>
+            )}
           </div>
           {/* Desktop Toolbar */}
           <div className="flex flex-wrap items-center justify-start gap-2">

@@ -7,6 +7,7 @@ import Stage from './pages/Stage';
 import NewSongCanvas from './components/NewSongCanvas';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import JoinCodePromptBridge from './components/JoinCodePromptBridge';
+import SupportDevelopmentBridge from './components/SupportDevelopmentBridge';
 import { useDarkModeState } from './hooks/useStoreSelectors';
 import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
@@ -33,6 +34,7 @@ export default function App() {
           <UpdaterBridge />
           <QRCodeDialogBridge />
           <ShortcutsHelpBridge />
+          <SupportDevelopmentBridge />
           <Router>
             <Routes>
               <Route path="/" element={

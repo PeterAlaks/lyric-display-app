@@ -1,13 +1,6 @@
 import { preprocessText, splitLongLine } from '../../shared/lineSplitting.js';
 import { NORMAL_GROUP_CONFIG, STRUCTURE_TAGS_CONFIG, STRUCTURE_TAG_PATTERNS, BRACKET_PAIRS } from '../../shared/lyricsParsing.js';
-
-const RELIGIOUS_WORDS = ['jesus', 'jehovah', 'god', 'yahweh', 'lord', 'christ', 'holy ghost',
-  'holy spirit', 'bible', 'amen', 'hallelujah', 'hosanna', 'savior', 'saviour', 'redeemer', 'messiah'];
-
-const LATIN_LETTER_REGEX = /[A-Za-z]/;
-const ENGLISH_HINT_WORDS = [...RELIGIOUS_WORDS, 'the', 'and', 'for', 'with', 'praise', 'glory', 'grace', 'mercy', 'love', 'king', 'queen', 'strength', 'light', 'power', 'redeemer', 'savior', 'saviour', 'spirit', 'amen', 'hallelujah', 'we', 'you', 'your', 'our', 'their', 'his', 'her', 'who', 'what', 'where', 'when', 'why', 'how', 'this', 'that', 'these', 'those', 'shall', 'will', 'hope', 'faith', 'joy', 'peace', 'deliver', 'deliverer', 'rescue', 'comfort', 'comforter', 'guide', 'helper'];
-
-const ENGLISH_HINT_REGEXES = ENGLISH_HINT_WORDS.map((word) => new RegExp(`\\b${word}\\b`, 'i'));
+import { RELIGIOUS_WORDS, LATIN_LETTER_REGEX, ENGLISH_HINT_REGEXES } from '../constants/lyricsFormat.js';
 
 const normalizePunctuation = (line) => {
   if (!line) return '';

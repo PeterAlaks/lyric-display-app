@@ -8,6 +8,7 @@ export const useKeyboardShortcuts = ({
   handleStartNewSong,
   handleOpenSearchBar,
   handleOpenReplaceBar,
+  handleOpenLyrics,
   isContentEmpty,
   isTitleEmpty,
   composeMode,
@@ -73,9 +74,17 @@ export const useKeyboardShortcuts = ({
         }
         return;
       }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'o' || event.key === 'O')) {
+        if (handleOpenLyrics) {
+          event.preventDefault();
+          handleOpenLyrics();
+        }
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [composeMode, editMode, handleBack, handleCleanup, handleOpenReplaceBar, handleOpenSearchBar, handleSave, handleSaveAndLoad, handleStartNewSong, hasUnsavedChanges, isContentEmpty, isTitleEmpty]);
+  }, [composeMode, editMode, handleBack, handleCleanup, handleOpenLyrics, handleOpenReplaceBar, handleOpenSearchBar, handleSave, handleSaveAndLoad, handleStartNewSong, hasUnsavedChanges, isContentEmpty, isTitleEmpty]);
 };

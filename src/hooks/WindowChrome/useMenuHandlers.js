@@ -1,14 +1,16 @@
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useModal from '@/hooks/useModal';
 import useToast from '@/hooks/useToast';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 
 const useMenuHandlers = (closeMenu) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showModal } = useModal();
   const { showToast } = useToast();
   const { darkMode, setDarkMode } = useDarkModeState();
+  const isNewSongCanvas = location.pathname === '/new-song';
 
   const handleNewLyrics = useCallback(() => {
     closeMenu();
@@ -16,32 +18,167 @@ const useMenuHandlers = (closeMenu) => {
     window.dispatchEvent(new Event('navigate-to-new-song'));
   }, [closeMenu, navigate]);
 
-  const handleOpenLyrics = useCallback(() => {
+  const handleOpenLyrics = useCallback(async () => {
     closeMenu();
-    window.dispatchEvent(new Event('trigger-file-load'));
-  }, [closeMenu]);
+    
+    if (isNewSongCanvas) {
+      try {
+        if (window?.electronAPI?.loadLyricsFile) {
+          const result = await window.electronAPI.loadLyricsFile();
+          if (result?.success && result.content) {
+            showModal({
+              title: 'Load Lyrics File',
+              description: `You've selected "${result.fileName || 'a lyrics file'}". Choose where to load it:`,
+              body: 'Load into the Canvas Editor to edit the lyrics, or load into the Control Panel to display them on your outputs.',
+              variant: 'info',
+              size: 'sm',
+              actions: [
+                {
+                  label: 'Load into Canvas Editor',
+                  variant: 'default',
+                  value: 'canvas',
+                  onSelect: () => {
+                    window.dispatchEvent(new CustomEvent('load-into-canvas', {
+                      detail: {
+                        content: result.content,
+                        fileName: result.fileName,
+                        filePath: result.filePath
+                      }
+                    }));
+                  }
+                },
+                {
+                  label: 'Load into Control Panel',
+                  variant: 'outline',
+                  value: 'control',
+                  onSelect: () => {
+                    // Store the file data before navigation
+                    window.__pendingLyricsLoad = {
+                      content: result.content,
+                      fileName: result.fileName,
+                      filePath: result.filePath
+                    };
+                    navigate('/');
+                  }
+                }
+              ]
+            });
+          }
+        }
+      } catch (error) {
+        showToast({
+          title: 'Load failed',
+          message: error?.message || 'Could not load file',
+          variant: 'error'
+        });
+      }
+    } else {
+      window.dispatchEvent(new Event('trigger-file-load'));
+    }
+  }, [closeMenu, isNewSongCanvas, showModal, showToast, navigate]);
 
   const handleOpenRecent = useCallback(async (filePath) => {
     closeMenu();
     if (!filePath) return;
 
-    try {
-      const result = await window.electronAPI?.recents?.open?.(filePath);
-      if (result?.success === false) {
+    if (isNewSongCanvas) {
+      const fileName = filePath.split(/[\\/]/).pop();
+      showModal({
+        title: 'Load Recent File',
+        description: `You've selected "${fileName}". Choose where to load it:`,
+        body: 'Load into the Canvas Editor to edit the lyrics, or load into the Control Panel to display them on your outputs.',
+        variant: 'info',
+        size: 'sm',
+        actions: [
+          {
+            label: 'Load into Canvas Editor',
+            variant: 'default',
+            value: 'canvas',
+            onSelect: async () => {
+              try {
+                const fs = await import('fs/promises');
+                const content = await fs.readFile(filePath, 'utf8');
+                
+                window.dispatchEvent(new CustomEvent('load-into-canvas', {
+                  detail: {
+                    content,
+                    fileName,
+                    filePath
+                  }
+                }));
+              } catch (error) {
+                if (window?.electronAPI?.parseLyricsFile) {
+                  try {
+                    const result = await window.electronAPI.parseLyricsFile({ path: filePath });
+                    if (result?.success && result.payload?.rawText) {
+                      window.dispatchEvent(new CustomEvent('load-into-canvas', {
+                        detail: {
+                          content: result.payload.rawText,
+                          fileName,
+                          filePath
+                        }
+                      }));
+                      return;
+                    }
+                  } catch (parseError) {
+                    console.error('Parse error:', parseError);
+                  }
+                }
+                
+                showToast({
+                  title: 'Could not open recent file',
+                  message: 'File may have been moved or deleted.',
+                  variant: 'error'
+                });
+              }
+            }
+          },
+          {
+            label: 'Load into Control Panel',
+            variant: 'outline',
+            value: 'control',
+            onSelect: async () => {
+              try {
+                const result = await window.electronAPI?.recents?.open?.(filePath);
+                if (result?.success === false) {
+                  showToast({
+                    title: 'Could not open recent file',
+                    message: result.error || 'File may have been moved or deleted.',
+                    variant: 'error'
+                  });
+                } else {
+                  navigate('/');
+                }
+              } catch (error) {
+                showToast({
+                  title: 'Could not open recent file',
+                  message: error?.message || 'Unknown error',
+                  variant: 'error'
+                });
+              }
+            }
+          }
+        ]
+      });
+    } else {
+      try {
+        const result = await window.electronAPI?.recents?.open?.(filePath);
+        if (result?.success === false) {
+          showToast({
+            title: 'Could not open recent file',
+            message: result.error || 'File may have been moved or deleted.',
+            variant: 'error'
+          });
+        }
+      } catch (error) {
         showToast({
           title: 'Could not open recent file',
-          message: result.error || 'File may have been moved or deleted.',
+          message: error?.message || 'Unknown error',
           variant: 'error'
         });
       }
-    } catch (error) {
-      showToast({
-        title: 'Could not open recent file',
-        message: error?.message || 'Unknown error',
-        variant: 'error'
-      });
     }
-  }, [closeMenu, showToast]);
+  }, [closeMenu, showToast, isNewSongCanvas, showModal, navigate]);
 
   const handleClearRecents = useCallback(async () => {
     closeMenu();
