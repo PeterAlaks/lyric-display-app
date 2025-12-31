@@ -6,7 +6,6 @@ export const useElectronListeners = ({
   processLoadedLyrics,
   showToast,
   setEasyWorshipModalOpen,
-  openSupportDevModal,
   setlistFiles,
   setSetlistFiles,
   emitSetlistAdd,
@@ -62,26 +61,6 @@ export const useElectronListeners = ({
       window.removeEventListener('open-easyworship-import', handler);
     };
   }, [setEasyWorshipModalOpen]);
-
-  useEffect(() => {
-    const handler = () => openSupportDevModal?.();
-    let off;
-
-    try {
-      if (window?.electronAPI?.onOpenSupportDevModal) {
-        off = window.electronAPI.onOpenSupportDevModal(handler);
-      }
-    } catch { }
-
-    window.addEventListener('open-support-dev-modal', handler);
-
-    return () => {
-      try {
-        if (typeof off === 'function') off();
-      } catch { }
-      window.removeEventListener('open-support-dev-modal', handler);
-    };
-  }, [openSupportDevModal]);
 
   useEffect(() => {
     if (!window?.electronAPI?.onOpenSetlistFromPath) return;

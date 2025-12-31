@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Volume2, VolumeX, Moon, Sun, Settings } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -33,8 +33,6 @@ import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
 import { useKeyboardShortcuts } from '../hooks/LyricDisplayApp/useKeyboardShortcuts';
 import { useElectronListeners } from '../hooks/LyricDisplayApp/useElectronListeners';
 import { useResponsiveWidth } from '../hooks/LyricDisplayApp/useResponsiveWidth';
-import { useSupportDevModal } from '../hooks/LyricDisplayApp/useSupportDevModal';
-import SupportDevelopmentModal from './SupportDevelopmentModal';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -83,9 +81,9 @@ const LyricDisplayApp = () => {
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
   const headerContainerRef = useRef(null);
 
-  const { isOpen: supportDevModalOpen, openModal: openSupportDevModal, closeModal: closeSupportDevModal, trackAction } = useSupportDevModal();
-
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch: baseHandleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
+
+  const trackAction = React.useCallback(() => { }, []);
 
   React.useEffect(() => {
     const handleResetScroll = () => {
@@ -205,7 +203,6 @@ const LyricDisplayApp = () => {
     processLoadedLyrics,
     showToast,
     setEasyWorshipModalOpen,
-    openSupportDevModal,
     setlistFiles,
     setSetlistFiles,
     emitSetlistAdd,
@@ -419,7 +416,7 @@ const LyricDisplayApp = () => {
           <div className={`flex-shrink-0 p-6 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-2">
                 {/* Online Lyrics Search Button */}
                 <Tooltip content={<span>Search and import lyrics from online providers - <strong>Ctrl+Shift+O</strong></span>} side="bottom">
                   <button
@@ -458,6 +455,37 @@ const LyricDisplayApp = () => {
                     onClick={toggleMute}
                   >
                     {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </button>
+                </Tooltip>
+
+                {/* Dark Mode Toggle Button */}
+                <Tooltip content={darkMode ? "Switch to light mode" : "Switch to dark mode"} side="bottom">
+                  <button
+                    className={iconButtonClass(false)}
+                    onClick={() => {
+                      const next = !darkMode;
+                      setDarkMode(next);
+                      window.electronAPI?.setDarkMode?.(next);
+                      window.electronAPI?.syncNativeDarkMode?.(next);
+                    }}
+                  >
+                    {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  </button>
+                </Tooltip>
+
+                {/* User Preferences Button */}
+                <Tooltip content="User preferences" side="bottom">
+                  <button
+                    className={iconButtonClass(false)}
+                    onClick={() => {
+                      showToast({
+                        title: 'User Preferences',
+                        message: 'User preferences panel coming soon!',
+                        variant: 'info'
+                      });
+                    }}
+                  >
+                    <Settings className="w-4 h-4" />
                   </button>
                 </Tooltip>
 
@@ -887,13 +915,6 @@ const LyricDisplayApp = () => {
           isOpen={easyWorshipModalOpen}
           onClose={() => setEasyWorshipModalOpen(false)}
           darkMode={darkMode}
-        />
-
-        {/* Support Development Modal */}
-        <SupportDevelopmentModal
-          isOpen={supportDevModalOpen}
-          onClose={closeSupportDevModal}
-          isDark={darkMode}
         />
       </div>
     </>

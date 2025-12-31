@@ -2,6 +2,8 @@
 
 Thank you for helping build LyricDisplay. This guide captures the conventions the codebase already follows and how to work productively across the Electron shell, Express/socket backend, and React control/output UIs.
 
+**IMPORTANT NOTE:** A significant portion of this project was developed with the assistance of AI coding tools and large language models. Contributions that refactor, improve maintainability, and align the codebase with established best practices and development standards are highly encouraged and welcome.
+
 ## Getting Started
 - Use Node 18+ and npm. Install deps with `npm install`.
 - Development: `npm run electron-dev` (spins up Vite + Electron + backend). Frontend only: `npm run dev`. Backend only: `npm run server`.
