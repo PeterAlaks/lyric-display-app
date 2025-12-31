@@ -7,7 +7,7 @@ import { ArrowRight, Copy, Link2, Redo, Undo, Ungroup, X } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import useContextMenuPosition from '../hooks/useContextMenuPosition';
-import { STRUCTURE_TAG_PATTERNS, isNormalGroupCandidate } from '../../shared/lyricsParsing.js';
+import { STRUCTURE_TAG_PATTERNS, isNormalGroupCandidate, getCleanSectionLabel } from '../../shared/lyricsParsing.js';
 import useElectronListeners from '../hooks/LyricsList/useElectronListeners';
 
 const DEFAULT_ROW_HEIGHT = 48;
@@ -947,7 +947,7 @@ export default function LyricsList({
                 : 'bg-gray-100 text-gray-700 border-gray-300 hover:border-gray-400'
               }`}
           >
-            {(section.label || 'Section').toUpperCase()}
+            {getCleanSectionLabel(section.label).toUpperCase()}
           </button>
         );
       })}
