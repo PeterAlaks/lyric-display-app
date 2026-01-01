@@ -8,6 +8,7 @@ export function useKeyboardShortcuts({
   fullResults,
   onSelectResult,
   onPerformFullSearch,
+  onGoogleSearch,
 }) {
   const [selectionIndex, setSelectionIndex] = useState(-1);
   const suggestionListRef = useRef(null);
@@ -56,6 +57,15 @@ export function useKeyboardShortcuts({
       const isArrowUp = event.key === 'ArrowUp';
       const isEnter = event.key === 'Enter';
 
+      if (activeTab === 'google') {
+        if (isEnter) {
+          event.preventDefault();
+          event.stopPropagation();
+          onGoogleSearch?.();
+        }
+        return;
+      }
+
       if (activeTab !== 'libraries') {
         if (isArrowDown || isArrowUp || isEnter) {
           event.stopPropagation();
@@ -102,7 +112,7 @@ export function useKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, activeTab, getActiveResults, selectionIndex, onSelectResult, onPerformFullSearch]);
+  }, [isOpen, activeTab, getActiveResults, selectionIndex, onSelectResult, onPerformFullSearch, onGoogleSearch]);
 
   const activeResults = useMemo(() => getActiveResults(), [getActiveResults]);
 

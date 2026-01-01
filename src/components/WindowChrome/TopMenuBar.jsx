@@ -46,9 +46,15 @@ const TopMenuBar = () => {
   const isNewSongCanvas = location.pathname === '/new-song';
 
   const [recents, setRecents] = useState([]);
-  const [windowState, setWindowState] = useState({ isMaximized: false, isFullScreen: false });
+  const [windowState, setWindowState] = useState({ isMaximized: false, isFullScreen: false, isFocused: true });
   const [appVersion, setAppVersion] = useState('');
   const [showFallbackIcon, setShowFallbackIcon] = useState(true);
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    const platform = window.electronAPI?.getPlatform?.();
+    setIsMac(platform === 'darwin');
+  }, []);
 
   const barRef = useRef(null);
   const keyHandlersRef = useRef({});
@@ -253,7 +259,7 @@ const TopMenuBar = () => {
   return (
     <div
       ref={barRef}
-      className={`relative z-[1500] h-9 flex items-center justify-between pl-2.5 pr-0 border-b text-[12px] ${darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-100' : 'bg-slate-50/95 border-slate-200 text-slate-900'}`}
+      className={`relative z-[1500] h-9 flex items-center justify-between ${isMac ? 'pl-[78px]' : 'pl-2.5'} pr-0 border-b text-[12px] ${darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-100' : 'bg-slate-50/95 border-slate-200 text-slate-900'}`}
       onDoubleClickCapture={handleBarDoubleClick}
       style={dragRegion}
     >
@@ -493,36 +499,38 @@ const TopMenuBar = () => {
         </div>
       </div>
 
-      <div className="flex items-stretch ml-auto" style={noDrag}>
-        <button
-          type="button"
-          onClick={menuHandlers.handleMinimize}
-          title="Minimize window"
-          className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-200'}`}
-          aria-label="Minimize window"
-        >
-          <Minus className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleMaximizeToggle}
-          title={windowState.isMaximized ? 'Restore window' : 'Maximize window'}
-          className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-200'}`}
-          aria-label={windowState.isMaximized ? 'Restore window' : 'Maximize window'}
-        >
-          {isMaxOrFull ? <Copy className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-        </button>
-        <button
-          type="button"
-          onClick={menuHandlers.handleQuit}
-          title="Close window"
-          className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-red-600 hover:text-white' : 'hover:bg-red-600 hover:text-white'
-            }`}
-          aria-label="Close window"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+      {!isMac && (
+        <div className="flex items-stretch ml-auto" style={noDrag}>
+          <button
+            type="button"
+            onClick={menuHandlers.handleMinimize}
+            title="Minimize window"
+            className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-200'} ${!windowState.isFocused ? 'opacity-50' : ''}`}
+            aria-label="Minimize window"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleMaximizeToggle}
+            title={windowState.isMaximized ? 'Restore window' : 'Maximize window'}
+            className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-200'} ${!windowState.isFocused ? 'opacity-50' : ''}`}
+            aria-label={windowState.isMaximized ? 'Restore window' : 'Maximize window'}
+          >
+            {isMaxOrFull ? <Copy className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={menuHandlers.handleQuit}
+            title="Close window"
+            className={`h-9 w-12 flex items-center justify-center transition ${darkMode ? 'hover:bg-red-600 hover:text-white' : 'hover:bg-red-600 hover:text-white'
+              } ${!windowState.isFocused ? 'opacity-50' : ''}`}
+            aria-label="Close window"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

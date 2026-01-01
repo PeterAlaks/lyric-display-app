@@ -464,14 +464,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     fullResults: combinedFullResults,
     onSelectResult: handleSelectResult,
     onPerformFullSearch: performFullSearch,
+    onGoogleSearch: handleGoogleSearch,
   });
-
-  const handleGoogleInputKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      handleGoogleSearch();
-    }
-  };
 
   const renderSuggestionList = (items) => {
     if (!isSearchFocused) return null;
@@ -726,7 +720,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     type="text"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    onKeyDown={handleGoogleInputKeyDown}
                     autoFocus={activeTab === 'google'}
                     placeholder="Enter song title and artist"
                     className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10 h-10' : 'pr-10 h-10'}
