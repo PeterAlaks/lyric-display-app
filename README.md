@@ -2,7 +2,7 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 5.10.8
+**Version:** 6.0.0
 **Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
