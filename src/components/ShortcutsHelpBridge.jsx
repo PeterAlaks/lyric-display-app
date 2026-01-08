@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect } from 'react';
 import { Keyboard } from 'lucide-react';
-import { useModalContext } from './modal/ModalProvider';
+import useModal from '../hooks/useModal';
 import { useDarkModeState } from '../hooks/useStoreSelectors';
 import { SHORTCUTS } from '../constants/shortcuts';
 
 export default function ShortcutsHelpBridge() {
-  const { showModal } = useModalContext();
+  const { showModal } = useModal();
   const { darkMode } = useDarkModeState();
 
   const openShortcutsModal = useCallback(() => {

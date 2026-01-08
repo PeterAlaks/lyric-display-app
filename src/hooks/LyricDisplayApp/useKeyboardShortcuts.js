@@ -20,7 +20,10 @@ export const useKeyboardShortcuts = ({
   handleOpenOnlineLyricsSearch,
   handleOpenFileDialog,
   handleCreateNewSong,
-  handleEditLyrics
+  handleEditLyrics,
+  handleAddToSetlist,
+  handleNavigateSetlistPrevious,
+  handleNavigateSetlistNext
 }) => {
 
   useEffect(() => {
@@ -65,11 +68,30 @@ export const useKeyboardShortcuts = ({
         handleOpenOnlineLyricsSearch?.();
         return;
       }
+
+      if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && (event.key === 's' || event.key === 'S')) {
+        if (isTyping) return;
+        event.preventDefault();
+        handleAddToSetlist?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'ArrowLeft') {
+        event.preventDefault();
+        handleNavigateSetlistPrevious?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'ArrowRight') {
+        event.preventDefault();
+        handleNavigateSetlistNext?.();
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleOpenSetlist, handleOpenOnlineLyricsSearch, handleOpenFileDialog, handleCreateNewSong, handleEditLyrics, hasLyrics]);
+  }, [handleOpenSetlist, handleOpenOnlineLyricsSearch, handleOpenFileDialog, handleCreateNewSong, handleEditLyrics, hasLyrics, handleAddToSetlist, handleNavigateSetlistPrevious, handleNavigateSetlistNext]);
 
   useEffect(() => {
     if (!hasLyrics) return;

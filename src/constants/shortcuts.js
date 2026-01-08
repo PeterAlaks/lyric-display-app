@@ -7,6 +7,7 @@ export const SHORTCUTS = [
       { label: 'Edit Lyrics', combo: 'Ctrl/Cmd + E' },
       { label: 'Open Setlist Modal', combo: 'Ctrl/Cmd + Shift + S' },
       { label: 'Open Online Lyrics Search', combo: 'Ctrl/Cmd + Shift + O' },
+      { label: 'Add Current Song to Setlist', combo: 'Ctrl/Cmd + Alt + S' },
     ]
   },
   {
@@ -17,6 +18,8 @@ export const SHORTCUTS = [
       { label: 'Jump to First Match', combo: 'Enter' },
       { label: 'Navigate Previous Search Results', combo: 'Shift + ↑' },
       { label: 'Navigate Next Search Results', combo: 'Shift + ↓' },
+      { label: 'Navigate to Previous Setlist Song', combo: 'Ctrl/Cmd + Shift + ←' },
+      { label: 'Navigate to Next Setlist Song', combo: 'Ctrl/Cmd + Shift + →' },
     ]
   },
   {

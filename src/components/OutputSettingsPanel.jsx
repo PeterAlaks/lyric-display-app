@@ -15,10 +15,10 @@ import useFullscreenBackground from '../hooks/OutputSettingsPanel/useFullscreenB
 import useAdvancedSectionPersistence from '../hooks/OutputSettingsPanel/useAdvancedSectionPersistence';
 import useTypographyAndBands from '../hooks/OutputSettingsPanel/useTypographyAndBands';
 import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenModeState';
-import { Type, Paintbrush, Contrast, TextCursorInput, TextQuote, Square, Frame, Move, Italic, Underline, Bold, CaseUpper, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Wand2, Palette, Power } from 'lucide-react';
+import { Type, PaintBucket, Contrast, TextCursorInput, Square, Frame, Move, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Palette, Power, TextAlignJustify, SquareMenu, ArrowRightLeft } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
-import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow } from './OutputSettingsShared';
+import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true, darkMode }) => (
@@ -95,7 +95,7 @@ const FontColorSection = ({
   setFontColorAdvancedExpanded
 }) => (
   <SettingRow
-    icon={Paintbrush}
+    icon={PaintBucket}
     label="Font Colour"
     tooltip="Choose the color of your lyrics text"
     rightClassName="flex items-center gap-2 justify-end w-full"
@@ -288,7 +288,7 @@ const TransitionSection = ({
   setTransitionAdvancedExpanded
 }) => (
   <SettingRow
-    icon={Wand2}
+    icon={ArrowRightLeft}
     label="Transition Style"
     tooltip="Choose animation style when lyrics change on display"
     rightClassName="flex items-center gap-2 justify-end w-full"
@@ -661,7 +661,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
       {/* Bold / Italic / Underline / All Caps */}
       <EmphasisRow
         darkMode={darkMode}
-        icon={TextQuote}
+        icon={SquareMenu}
         boldValue={settings.bold}
         italicValue={settings.italic}
         underlineValue={settings.underline}
@@ -670,6 +670,15 @@ const OutputSettingsPanel = ({ outputKey }) => {
         onItalicChange={(val) => update('italic', val)}
         onUnderlineChange={(val) => update('underline', val)}
         onAllCapsChange={(val) => update('allCaps', val)}
+      />
+
+      {/* Text Alignment */}
+      <AlignmentRow
+        darkMode={darkMode}
+        icon={TextAlignJustify}
+        value={settings.textAlign}
+        onChange={(val) => update('textAlign', val)}
+        tooltip="Text alignment for lyrics display"
       />
 
       {/* Font Size */}
@@ -1366,7 +1375,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
         <div className="flex items-center justify-between w-full pt-3">
           <Tooltip content="Show fullscreen background even when the output is toggled off" side="right">
-            <LabelWithIcon icon={ScreenShare} text="Always Show Background" darkMode={darkMode} />
+            <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Always Show Background</label>
           </Tooltip>
           <Switch
             checked={Boolean(settings.alwaysShowBackground)}

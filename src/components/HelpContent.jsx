@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, Paintbrush, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, Italic, Underline, CaseUpper, ScreenShare, Search, Timer, Hand } from 'lucide-react';
+import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -94,7 +94,7 @@ export const OutputSettingsHelp = ({ darkMode }) => (
         />
 
         <HelpSection
-            icon={Paintbrush}
+            icon={PaintBucket}
             title="Font & Shadow Colors"
             description="Choose any color for your lyrics text. Add drop shadows (0-10 opacity) for depth and improved readability over backgrounds. Shadows are especially useful for video overlays."
             darkMode={darkMode}
@@ -108,7 +108,7 @@ export const OutputSettingsHelp = ({ darkMode }) => (
         />
 
         <HelpSection
-            icon={Paintbrush}
+            icon={PaintBucket}
             title="Background Band"
             description="Add a semi-transparent colored band behind lyrics (0-10 opacity). Disabled automatically in Full Screen Mode. Useful for traditional worship presentations and ensuring text contrast."
             darkMode={darkMode}
@@ -233,7 +233,7 @@ export const StageDisplayHelp = ({ darkMode }) => (
         />
 
         <HelpSection
-            icon={Paintbrush}
+            icon={PaintBucket}
             title="Arrow Indicator"
             description="Enable an optional arrow before the upcoming line to draw attention. Customize the arrow color to match your stage lighting or branding. Perfect for helping performers quickly identify what's coming next."
             darkMode={darkMode}

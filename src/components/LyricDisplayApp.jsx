@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
+import useMultipleFileUpload from '../hooks/useMultipleFileUpload';
 import useSetlistLoader from '../hooks/SetlistModal/useSetlistLoader';
 import AuthStatusIndicator from './AuthStatusIndicator';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
@@ -33,6 +34,7 @@ import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
 import { useKeyboardShortcuts } from '../hooks/LyricDisplayApp/useKeyboardShortcuts';
 import { useElectronListeners } from '../hooks/LyricDisplayApp/useElectronListeners';
 import { useResponsiveWidth } from '../hooks/LyricDisplayApp/useResponsiveWidth';
+import { useDragAndDrop } from '../hooks/LyricDisplayApp/useDragAndDrop';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -54,9 +56,10 @@ const LyricDisplayApp = () => {
   const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
+  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
+  const handleMultipleFileUpload = useMultipleFileUpload();
   const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
 
   const { activeTab, setActiveTab } = useOutputSettings({
@@ -106,6 +109,15 @@ const LyricDisplayApp = () => {
   const hasLyrics = lyrics && lyrics.length > 0;
   const { showToast, muted, toggleMute } = useToast();
   const { showModal } = useModal();
+
+  const { isDragging, dragFileCount, handleDragEnter, handleDragLeave, handleDragOver, handleDrop } = useDragAndDrop({
+    handleFileUpload,
+    handleMultipleFileUpload,
+    loadSetlist,
+    clearSearch,
+    trackAction,
+    showToast
+  });
 
   const { useIconOnlyButtons } = useResponsiveWidth(headerContainerRef, hasLyrics);
 
@@ -312,8 +324,10 @@ const LyricDisplayApp = () => {
     setOnlineLyricsModalOpen(false);
   };
 
-  const handleFileDrop = React.useCallback(async (file) => {
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
+
     const fileName = file.name.toLowerCase();
     if (fileName.endsWith('.ldset')) {
       await loadSetlist(file);
@@ -325,12 +339,6 @@ const LyricDisplayApp = () => {
       clearSearch();
       trackAction('song_loaded');
     }
-  }, [handleFileUpload, loadSetlist, clearSearch, trackAction]);
-
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    await handleFileDrop(file);
   };
 
   const handleLineSelect = (index) => {
@@ -369,6 +377,64 @@ const LyricDisplayApp = () => {
     }
   }, [setActiveTab]);
 
+  const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
+
+  const handleNavigateSetlistPrevious = React.useCallback(() => {
+    if (!hasLyrics || setlistFiles.length === 0) {
+      showToast({
+        title: 'No setlist',
+        message: 'Add songs to your setlist to navigate between them',
+        variant: 'info'
+      });
+      return;
+    }
+
+    const currentIndex = setlistFiles.findIndex(file => file.displayName === lyricsFileName);
+    if (currentIndex === -1) {
+      showToast({
+        title: 'Not in setlist',
+        message: 'Current song is not in the setlist',
+        variant: 'info'
+      });
+      return;
+    }
+
+    const previousIndex = currentIndex > 0 ? currentIndex - 1 : setlistFiles.length - 1;
+    const previousFile = setlistFiles[previousIndex];
+
+    if (previousFile) {
+      emitSetlistLoad(previousFile.id);
+    }
+  }, [hasLyrics, setlistFiles, lyricsFileName, emitSetlistLoad, showToast]);
+
+  const handleNavigateSetlistNext = React.useCallback(() => {
+    if (!hasLyrics || setlistFiles.length === 0) {
+      showToast({
+        title: 'No setlist',
+        message: 'Add songs to your setlist to navigate between them',
+        variant: 'info'
+      });
+      return;
+    }
+
+    const currentIndex = setlistFiles.findIndex(file => file.displayName === lyricsFileName);
+    if (currentIndex === -1) {
+      showToast({
+        title: 'Not in setlist',
+        message: 'Current song is not in the setlist',
+        variant: 'info'
+      });
+      return;
+    }
+
+    const nextIndex = currentIndex < setlistFiles.length - 1 ? currentIndex + 1 : 0;
+    const nextFile = setlistFiles[nextIndex];
+
+    if (nextFile) {
+      emitSetlistLoad(nextFile.id);
+    }
+  }, [hasLyrics, setlistFiles, lyricsFileName, emitSetlistLoad, showToast]);
+
   useKeyboardShortcuts({
     hasLyrics,
     lyrics,
@@ -388,10 +454,11 @@ const LyricDisplayApp = () => {
     handleOpenOnlineLyricsSearch,
     handleOpenFileDialog: openFileDialog,
     handleCreateNewSong,
-    handleEditLyrics
+    handleEditLyrics,
+    handleAddToSetlist,
+    handleNavigateSetlistPrevious,
+    handleNavigateSetlistNext
   });
-
-  const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
   const iconButtonClass = (disabled = false) => {
     const base = 'p-2.5 rounded-lg font-medium transition-colors';
@@ -839,26 +906,16 @@ const LyricDisplayApp = () => {
           </div>
 
           {/* Scrollable Content Area */}
-          <div className={`rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
+          <div className={`rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
             }`}>
             {hasLyrics ? (
               <div
                 ref={lyricsContainerRef}
                 className="flex-1 overflow-y-auto"
-                onDrop={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                  await handleFileDrop(file);
-                }}
-                onDragOver={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDragEnter={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
               >
                 <LyricsList
                   searchQuery={searchQuery}
@@ -870,20 +927,10 @@ const LyricDisplayApp = () => {
               /* Empty State - Drag and Drop */
               <div
                 className="flex-1 flex items-center justify-center p-4"
-                onDrop={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                  await handleFileDrop(file);
-                }}
-                onDragOver={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDragEnter={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
               >
                 <div className="text-center">
                   <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-gray-200'
@@ -892,6 +939,40 @@ const LyricDisplayApp = () => {
                   </div>
                   <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Drag and drop lyric files (.txt, .lrc) or setlists (.ldset) here
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Drag Overlay */}
+            {isDragging && (
+              <div
+                className={`absolute inset-0 flex items-center justify-center z-50 pointer-events-none ${darkMode ? 'bg-gray-900/90' : 'bg-gray-900/80'
+                  }`}
+              >
+                <div className="text-center px-8 py-10 rounded-2xl border-2 border-dashed max-w-md mx-auto"
+                  style={{
+                    borderColor: darkMode ? '#60a5fa' : '#3b82f6',
+                    backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)'
+                  }}
+                >
+                  <div className={`w-20 h-20 mx-auto mb-5 rounded-full flex items-center justify-center ${darkMode ? 'bg-blue-500/20' : 'bg-blue-100'
+                    }`}>
+                    {dragFileCount === 1 ? (
+                      <FileText className={`w-10 h-10 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                    ) : (
+                      <ListMusic className={`w-10 h-10 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                    )}
+                  </div>
+                  <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {dragFileCount === 1 ? 'Drop to load file' : `Drop ${dragFileCount} files`}
+                  </h3>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {dragFileCount === 1
+                      ? 'This file will be loaded into the app'
+                      : hasLyrics
+                        ? `These files will be added to your ${setlistFiles.length > 0 ? 'current' : ''} setlist`
+                        : 'These files will be added to your setlist'}
                   </p>
                 </div>
               </div>

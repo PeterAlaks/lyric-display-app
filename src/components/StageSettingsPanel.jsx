@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
-import { Type, Paintbrush, TextCursorInput, TextQuote, Square, AlignVerticalSpaceAround, ScreenShare, ListMusic, ChevronRight, Languages, Wand2, Palette, Power } from 'lucide-react';
+import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge } from 'lucide-react';
 import FontSelect from './FontSelect';
 import { blurInputOnEnter, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
 import useToast from '../hooks/useToast';
@@ -136,7 +136,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               className={switchBaseClasses}
               thumbClassName={switchThumbClass}
             />
-            <Paintbrush className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <PaintBucket className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <ColorPicker
               value={settings.nextArrowColor}
               onChange={(val) => update('nextArrowColor', val)}
@@ -179,7 +179,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       <EmphasisRow
         darkMode={darkMode}
         LabelWithIcon={LabelWithIcon}
-        icon={TextQuote}
+        icon={SquareMenu}
         boldValue={settings[section.boldKey]}
         italicValue={settings[section.italicKey]}
         underlineValue={settings[section.underlineKey]}
@@ -193,7 +193,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       <AlignmentRow
         darkMode={darkMode}
         LabelWithIcon={LabelWithIcon}
-        icon={AlignVerticalSpaceAround}
+        icon={TextAlignJustify}
         value={settings[section.alignKey]}
         onChange={(val) => update(section.alignKey, val)}
         tooltip={section.alignTooltip || 'Text alignment'}
@@ -454,7 +454,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       {/* Timer Controls */}
       <div className="flex items-center justify-between gap-4">
         <Tooltip content="Set countdown timer duration in minutes" side="right">
-          <LabelWithIcon icon={ScreenShare} text="Countdown Timer" darkMode={darkMode} />
+          <LabelWithIcon icon={Timer} text="Countdown Timer" darkMode={darkMode} />
         </Tooltip>
         <div className="flex items-center gap-2 justify-end">
           <Tooltip content={(timerAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
@@ -568,7 +568,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
 
       <div className="flex items-center justify-between gap-4 mt-4">
         <Tooltip content="Time between message transitions (1000-10000ms)" side="right">
-          <LabelWithIcon icon={Wand2} text="Scroll Speed (ms)" darkMode={darkMode} />
+          <LabelWithIcon icon={GalleryVerticalEnd} text="Scroll Speed (ms)" darkMode={darkMode} />
         </Tooltip>
         <div className="flex items-center gap-2 justify-end">
           <Tooltip content={(customMessagesAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
@@ -657,11 +657,11 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
       {/* Transition Settings */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Transition Animation</h4>
+      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Transition Style</h4>
 
       <div className="flex items-center justify-between gap-4 mt-4">
         <Tooltip content="Choose animation style when lyrics change" side="right">
-          <LabelWithIcon icon={Wand2} text="Animation Style" darkMode={darkMode} />
+          <LabelWithIcon icon={ArrowRightLeft} text="Animation" darkMode={darkMode} />
         </Tooltip>
         <Select value={settings.transitionAnimation} onValueChange={(val) => update('transitionAnimation', val)}>
           <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
@@ -678,7 +678,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       {settings.transitionAnimation !== 'none' && (
         <div className="flex items-center justify-between gap-4">
           <Tooltip content="Animation duration (100-1000ms)" side="right">
-            <LabelWithIcon icon={Wand2} text="Speed (ms)" darkMode={darkMode} />
+            <LabelWithIcon icon={Gauge} text="Speed (ms)" darkMode={darkMode} />
           </Tooltip>
           <Input
             type="number"

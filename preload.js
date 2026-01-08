@@ -227,7 +227,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     load: () => ipcRenderer.invoke('setlist:load'),
     loadFromPath: (filePath) => ipcRenderer.invoke('setlist:load-from-path', { filePath }),
     getUserHome: () => ipcRenderer.invoke('setlist:get-user-home'),
-    browseFiles: () => ipcRenderer.invoke('setlist:browse-files')
+    browseFiles: () => ipcRenderer.invoke('setlist:browse-files'),
+    export: (setlistData, options) => ipcRenderer.invoke('setlist:export', { setlistData, options })
   }
 });
 

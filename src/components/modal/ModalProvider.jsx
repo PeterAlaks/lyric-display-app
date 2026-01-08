@@ -13,6 +13,7 @@ import IntelligentAutoplayInfo from '../IntelligentAutoplayInfo';
 import OutputTemplatesModal from '../OutputTemplatesModal';
 import StageTemplatesModal from '../StageTemplatesModal';
 import AboutAppModal from '../AboutAppModal';
+import SetlistExportModal from '../SetlistExportModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -449,6 +450,14 @@ export function ModalProvider({ children, isDark = false }) {
                           onClose={(result) => closeModal(modal.id, result)}
                         />
                       )}
+                      {modal.component === 'SetlistExport' && (
+                        <SetlistExportModal
+                          darkMode={isDark}
+                          onExport={modal.onExport}
+                          defaultTitle={modal.defaultTitle || 'Setlist'}
+                          setExportState={modal.setExportState}
+                        />
+                      )}
 
                       {/* Render standard description/body modals */}
                       {!modal.component && modal.description && (
@@ -535,12 +544,4 @@ export function ModalProvider({ children, isDark = false }) {
       {typeof document !== 'undefined' ? createPortal(content, document.body) : null}
     </ModalContext.Provider>
   );
-}
-
-export function useModalContext() {
-  const ctx = useContext(ModalContext);
-  if (!ctx) {
-    throw new Error('useModalContext must be used within a ModalProvider');
-  }
-  return ctx;
 }

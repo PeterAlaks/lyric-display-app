@@ -4,14 +4,13 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities';
 import useToast from '../hooks/useToast';
 import useSetlistLoader from '../hooks/SetlistModal/useSetlistLoader';
-import { X, Plus, Search, Trash2, Clock, GripVertical, Save, FolderOpen, Trash } from 'lucide-react';
+import { X, Plus, Search, Trash2, Clock, GripVertical, Save, FolderOpen, Trash, FileDown, FileText, Download } from 'lucide-react';
 import { useSetlistState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
-
 const SetlistModal = () => {
   const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull, getAvailableSetlistSlots, setSetlistFiles } = useSetlistState();
 
@@ -323,6 +322,60 @@ const SetlistModal = () => {
     }
   }, [isDesktopApp, loadSetlist, showToast]);
 
+  const handleExportSetlist = useCallback(async ({ title, includeLyrics, format }) => {
+    if (!isDesktopApp || !window?.electronAPI?.setlist) {
+      console.warn('Setlist export only available on desktop app');
+      return;
+    }
+
+    if (list.length === 0) {
+      return;
+    }
+
+    try {
+      const setlistData = {
+        version: '1.0',
+        savedAt: new Date().toISOString(),
+        itemCount: list.length,
+        items: list.map(file => ({
+          displayName: file.displayName,
+          originalName: file.originalName,
+          content: file.content,
+          lastModified: file.lastModified,
+          fileType: file.fileType,
+          metadata: file.metadata || null
+        }))
+      };
+
+      const result = await window.electronAPI.setlist.export(setlistData, {
+        title,
+        includeLyrics,
+        format
+      });
+
+      if (result.success) {
+        showToast({
+          title: 'Export successful',
+          message: `Exported setlist as ${format.toUpperCase()}`,
+          variant: 'success',
+        });
+      } else if (!result.canceled) {
+        showToast({
+          title: 'Export failed',
+          message: result.error || 'Could not export setlist',
+          variant: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('Error exporting setlist:', error);
+      showToast({
+        title: 'Export failed',
+        message: error.message || 'An error occurred',
+        variant: 'error',
+      });
+    }
+  }, [isDesktopApp, list, showToast]);
+
   const clearSearch = () => {
     setSearchQuery('');
   };
@@ -455,7 +508,7 @@ const SetlistModal = () => {
         `}>
           <div>
             <h2 className="text-xl font-bold">Setlist Songs</h2>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               Add up to 50 lyric files to setlist ({setlistFiles.length}/50)
             </p>
           </div>
@@ -509,6 +562,89 @@ const SetlistModal = () => {
                   className={`w-10 h-10 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                 >
                   <FolderOpen className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Export Setlist Button */}
+            {isDesktopApp && (
+              <Tooltip content={list.length === 0 ? 'Setlist is empty' : 'Export setlist to PDF or TXT'}>
+                <Button
+                  onClick={() => {
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    });
+                    const defaultTitle = `My Setlist ${dateStr}`;
+
+                    const exportState = { title: defaultTitle, includeLyrics: false };
+
+                    showModal({
+                      component: 'SetlistExport',
+                      title: 'Export Setlist',
+                      size: 'sm',
+                      onExport: handleExportSetlist,
+                      defaultTitle: defaultTitle,
+                      icon: <FileDown className="w-6 h-6" />,
+                      setExportState: (state) => {
+                        exportState.title = state.title;
+                        exportState.includeLyrics = state.includeLyrics;
+                      },
+                      actions: [
+                        {
+                          label: (
+                            <>
+                              <FileText className="w-4 h-4 mr-2" />
+                              Export TXT
+                            </>
+                          ),
+                          value: 'txt',
+                          variant: 'outline',
+                          onSelect: async () => {
+                            if (!exportState.title.trim()) return;
+                            await handleExportSetlist({
+                              title: exportState.title.trim(),
+                              includeLyrics: exportState.includeLyrics,
+                              format: 'txt'
+                            });
+                            return 'txt';
+                          }
+                        },
+                        {
+                          label: (
+                            <>
+                              <Download className="w-4 h-4 mr-2" />
+                              Export PDF
+                            </>
+                          ),
+                          value: 'pdf',
+                          variant: 'default',
+                          onSelect: async () => {
+                            if (!exportState.title.trim()) return;
+                            await handleExportSetlist({
+                              title: exportState.title.trim(),
+                              includeLyrics: exportState.includeLyrics,
+                              format: 'pdf'
+                            });
+                            return 'pdf';
+                          },
+                          autoFocus: true
+                        }
+                      ]
+                    });
+                  }}
+                  disabled={list.length === 0}
+                  variant="ghost"
+                  size="icon"
+                  className={`
+                  w-10 h-10
+                  ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
+                `}
+                >
+                  <FileDown className="w-4 h-4" />
                 </Button>
               </Tooltip>
             )}
@@ -662,7 +798,6 @@ const SetlistModal = () => {
           )}
         </div>
       </div>
-
     </div>
   );
 };

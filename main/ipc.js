@@ -13,6 +13,7 @@ import * as displayManager from './displayManager.js';
 import { loadSystemFonts } from './systemFonts.js';
 import { saveDarkModePreference } from './themePreferences.js';
 import { handleFileOpen } from './fileHandler.js';
+import { exportSetlistToPDF, exportSetlistToTXT } from './setlistExport.js';
 
 const { autoUpdater } = updaterPkg;
 
@@ -910,6 +911,59 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       return { success: false, error: 'Window not found' };
     } catch (error) {
       console.error('Error closing output window:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Setlist export handlers
+  ipcMain.handle('setlist:export', async (_event, { setlistData, options }) => {
+    try {
+      const win = getMainWindow?.();
+      const os = await import('os');
+      const path = await import('path');
+
+      const { title = 'Setlist', includeLyrics = false, format = 'pdf' } = options || {};
+
+      const userHome = os.homedir();
+      const platform = process.platform;
+      const separator = platform === 'win32' ? '\\' : '/';
+      const defaultPath = `${userHome}${separator}Documents${separator}LyricDisplay${separator}Setlists`;
+
+      try {
+        const fs = await import('fs/promises');
+        await fs.mkdir(defaultPath, { recursive: true });
+      } catch (err) {
+        console.warn('Could not create setlist directory:', err);
+      }
+
+      const extension = format === 'pdf' ? 'pdf' : 'txt';
+      const filterName = format === 'pdf' ? 'PDF Document' : 'Text File';
+      const defaultFileName = `${title}.${extension}`;
+
+      const result = await dialog.showSaveDialog(win || undefined, {
+        title: `Export Setlist as ${format.toUpperCase()}`,
+        defaultPath: path.join(defaultPath, defaultFileName),
+        filters: [
+          { name: filterName, extensions: [extension] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true };
+      }
+
+      let exportResult;
+      if (format === 'pdf') {
+        exportResult = await exportSetlistToPDF(result.filePath, setlistData, { title, includeLyrics });
+      } else {
+        exportResult = await exportSetlistToTXT(result.filePath, setlistData, { title, includeLyrics });
+      }
+
+      console.log('[Setlist] Exported setlist to:', result.filePath);
+      return exportResult;
+    } catch (error) {
+      console.error('[Setlist] Error exporting setlist:', error);
       return { success: false, error: error.message };
     }
   });

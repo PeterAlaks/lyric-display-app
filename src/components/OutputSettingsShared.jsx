@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, TextCursorInput, Paintbrush, Bold, Italic, Underline, CaseUpper, AlignVerticalSpaceAround } from 'lucide-react';
+import { ChevronDown, ChevronUp, TextCursorInput, PaintBucket, Bold, Italic, Underline, CaseUpper, AlignVerticalSpaceAround, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -76,7 +76,7 @@ export const FontSettingsRow = ({
         max={maxSize}
         className={`w-20 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
       />
-      <Paintbrush className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+      <PaintBucket className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
       <ColorPicker
         value={colorValue}
         onChange={onColorChange}
@@ -187,20 +187,70 @@ export const AlignmentRow = ({
   onChange,
   label = "Alignment",
   tooltip = "Text alignment"
-}) => (
-  <div className="flex items-center justify-between gap-4">
-    <Tooltip content={tooltip} side="right">
-      <LabelWithIcon icon={icon} text={label} darkMode={darkMode} />
-    </Tooltip>
-    <Select value={value || 'center'} onValueChange={onChange}>
-      <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
-        <SelectItem value="left">Left</SelectItem>
-        <SelectItem value="center">Centre</SelectItem>
-        <SelectItem value="right">Right</SelectItem>
-      </SelectContent>
-    </Select>
-  </div>
-);
+}) => {
+  const currentValue = value || 'center';
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <Tooltip content={tooltip} side="right">
+        <LabelWithIcon icon={icon} text={label} darkMode={darkMode} />
+      </Tooltip>
+      <div className="flex gap-2 flex-wrap">
+        <Tooltip content="Align text to the left" side="top">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => onChange('left')}
+            className={
+              currentValue === 'left'
+                ? darkMode
+                  ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                  : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                : darkMode
+                  ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                  : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+            }
+          >
+            <AlignLeft className="w-4 h-4" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Align text to the center" side="top">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => onChange('center')}
+            className={
+              currentValue === 'center'
+                ? darkMode
+                  ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                  : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                : darkMode
+                  ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                  : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+            }
+          >
+            <AlignCenter className="w-4 h-4" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Align text to the right" side="top">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => onChange('right')}
+            className={
+              currentValue === 'right'
+                ? darkMode
+                  ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
+                  : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                : darkMode
+                  ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
+                  : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+            }
+          >
+            <AlignRight className="w-4 h-4" />
+          </Button>
+        </Tooltip>
+      </div>
+    </div>
+  );
+};
