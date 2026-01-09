@@ -189,6 +189,7 @@ lyric-display-app/
 |   ├── providerCredentials.js              # secure storage utility for online lyrics provider credentials
 |   ├── recents.js                          # Module for token storage
 |   ├── secureTokenStore.js                 # Main token storage for desktop 
+|   ├── setlistExport.js                    # Backend process for setlist export operations
 |   ├── singleInstance.js                   # Single app instance lock process
 |   ├── startup.js                          # Main app startup processes
 |   ├── systemFonts.js                      # Helper module for loading system installed fonts
@@ -251,7 +252,8 @@ lyric-display-app/
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
 |   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
-|   |   ├── SetlistModal.jsx                # Setlist Modal
+|   |   ├── SetlistExportModal.jsx          # Setlist export modal
+|   |   ├── SetlistModal.jsx                # Setlist modal
 |   |   ├── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
 |   |   ├── SongInfoModal.jsx               # Info modal for loaded lyrics
 |   |   ├── StageSettingsPanel.jsx          # Stage settings interface
@@ -270,6 +272,7 @@ lyric-display-app/
 |   |   └── LyricsStore.js                  # Zustand store definitions
 │   ├── hooks/
 |   |   ├── LyricDisplayApp/
+|   |   |   ├── useDragAndDrop.js           # Drag and drop operations for control panel
 |   |   |   ├── useElectronListeners.js     # Hook for listening to main process events and broadcasts for control panel
 |   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for control panel
 |   |   |   ├── useLyricsLoader.js          # Multi-source lyrics load processor for control panel 
@@ -315,6 +318,7 @@ lyric-display-app/
 |   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
 |   |   ├── useModal.js                     # Global modal hook
+|   |   ├── useMultipleFileUpload.js        # Multiple file upload handler
 |   |   ├── useSearch.js                    # Hook for search bar functionality
 |   |   ├── useSocket.js                    # Main React hook for Socket.IO client
 |   |   ├── useSocketEvents.js              # Socket events hook
