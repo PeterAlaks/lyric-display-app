@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen, Undo, Redo, ChevronRight, Search, ChevronDown, ChevronUp, X, FilePlusCorner } from 'lucide-react';
+import { ArrowLeft, Scissors, Copy, ClipboardPaste, Wand2, Save, FolderOpen, Undo, Redo, ChevronRight, Search, ChevronDown, ChevronUp, X, FilePlusCorner, ListOrdered } from 'lucide-react';
 import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
@@ -26,7 +26,7 @@ import useLineMeasurements from '../hooks/NewSongCanvas/useLineMeasurements';
 import useContextMenuPosition from '../hooks/useContextMenuPosition';
 import useCanvasSearch from '../hooks/NewSongCanvas/useCanvasSearch';
 import useElectronListeners from '../hooks/NewSongCanvas/useElectronListeners';
-import { STANDARD_LRC_START_REGEX, METADATA_OPTIONS } from '../constants/songCanvas';
+import { STANDARD_LRC_START_REGEX, METADATA_OPTIONS, SONG_SECTIONS } from '../constants/songCanvas';
 
 const NewSongCanvas = () => {
   const navigate = useNavigate();
@@ -57,6 +57,7 @@ const NewSongCanvas = () => {
   const contextMenuRef = useRef(null);
   const timestampSubmenuRef = useRef(null);
   const metadataSubmenuRef = useRef(null);
+  const sectionSubmenuRef = useRef(null);
   const touchLongPressTimeoutRef = useRef(null);
   const touchStartPositionRef = useRef(null);
   const touchMovedRef = useRef(false);
@@ -72,6 +73,8 @@ const NewSongCanvas = () => {
   const [contextMenuDimensions, setContextMenuDimensions] = useState({ width: 0, height: 0 });
   const [pendingFocus, setPendingFocus] = useState(null);
   const [searchHighlightRect, setSearchHighlightRect] = useState(null);
+  const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false);
+  const sectionDropdownRef = useRef(null);
 
   const lines = useMemo(() => content.split('\n'), [content]);
   const isContentEmpty = !content.trim();
@@ -105,7 +108,7 @@ const NewSongCanvas = () => {
     contextMenuPosition,
     menuWidth,
     triggerContainerRef: editorContainerRef,
-    submenuRefs: { timestamp: timestampSubmenuRef, metadata: metadataSubmenuRef },
+    submenuRefs: { timestamp: timestampSubmenuRef, metadata: metadataSubmenuRef, section: sectionSubmenuRef },
     contextMenuVisible: contextMenuState.visible
   });
 
@@ -637,10 +640,17 @@ const NewSongCanvas = () => {
       ) {
         closeContextMenu();
       }
+
+      if (sectionDropdownOpen && sectionDropdownRef.current && !sectionDropdownRef.current.contains(event.target)) {
+        const button = sectionDropdownRef.current.previousElementSibling;
+        if (!button || !button.contains(event.target)) {
+          setSectionDropdownOpen(false);
+        }
+      }
     };
     document.addEventListener('mousedown', handleMouseDown);
     return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [closeContextMenu, contextMenuState.visible]);
+  }, [closeContextMenu, contextMenuState.visible, sectionDropdownOpen]);
 
   useEffect(() => {
     if (!pendingFocus || !textareaRef.current) return;
@@ -1053,6 +1063,88 @@ const NewSongCanvas = () => {
     handleCleanup();
     closeContextMenu();
   }, [closeContextMenu, handleCleanup]);
+
+  const isCursorAtEligiblePosition = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return false;
+
+    const cursorPos = textarea.selectionStart;
+    const lineIndex = getLineIndexFromOffset(cursorPos);
+    const lineText = lines[lineIndex] ?? '';
+    const lineOffset = lineOffsets[lineIndex];
+
+    if (!lineOffset) return false;
+
+    if (lineText.trim().length === 0) return true;
+
+    if (cursorPos === lineOffset.start) return true;
+
+    if (cursorPos === lineOffset.end) return true;
+
+    return false;
+  }, [getLineIndexFromOffset, lineOffsets, lines]);
+
+  const insertSectionAtCursor = useCallback((sectionName) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart;
+    const lineIndex = getLineIndexFromOffset(cursorPos);
+    const lineText = lines[lineIndex] ?? '';
+    const lineOffset = lineOffsets[lineIndex];
+
+    if (!lineOffset) return;
+
+    const sectionTag = `[${sectionName}]`;
+    const currentScroll = textarea.scrollTop;
+
+    let newContent;
+    let newCursorPos;
+
+    if (lineText.trim().length === 0) {
+      const beforeLine = content.substring(0, lineOffset.start);
+      const afterLine = content.substring(lineOffset.end);
+      newContent = beforeLine + sectionTag + '\n' + afterLine;
+      newCursorPos = lineOffset.start + sectionTag.length + 1;
+    }
+
+    else if (cursorPos === lineOffset.start) {
+      const beforeLine = content.substring(0, lineOffset.start);
+      const afterLine = content.substring(lineOffset.start);
+      newContent = beforeLine + sectionTag + '\n\n' + afterLine;
+      newCursorPos = lineOffset.start + sectionTag.length + 1;
+    }
+
+    else if (cursorPos === lineOffset.end) {
+      const beforeLine = content.substring(0, lineOffset.end);
+      const afterLine = content.substring(lineOffset.end);
+      newContent = beforeLine + '\n' + sectionTag + '\n' + afterLine;
+      newCursorPos = lineOffset.end + 1 + sectionTag.length + 1;
+    }
+    else {
+      return;
+    }
+
+    setContent(newContent, {
+      selectionStart: newCursorPos,
+      selectionEnd: newCursorPos,
+      scrollTop: currentScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'section'
+    });
+
+    lastKnownScrollRef.current = currentScroll;
+
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus({ preventScroll: true });
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current.scrollTop = currentScroll;
+      }
+    });
+
+    closeContextMenu();
+  }, [closeContextMenu, content, getLineIndexFromOffset, lineOffsets, lines, setContent]);
 
   const handleSearchButtonClick = useCallback(() => {
     if (searchBarVisible) {
@@ -1486,6 +1578,52 @@ const NewSongCanvas = () => {
 
             <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
 
+            <div className="relative">
+              <Tooltip content="Add song section" side="bottom">
+                <Button
+                  onClick={() => {
+                    if (isCursorAtEligiblePosition()) {
+                      setSectionDropdownOpen(!sectionDropdownOpen);
+                    } else {
+                      showToast({
+                        title: 'Invalid cursor position',
+                        message: 'Move cursor to beginning/end of line or blank line to add section',
+                        variant: 'warn'
+                      });
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className={`${toolbarGhostClass} text-sm relative`}
+                >
+                  <ListOrdered className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+              {sectionDropdownOpen && (
+                <div
+                  ref={sectionDropdownRef}
+                  className={`absolute top-full left-0 mt-1 w-40 rounded-md border shadow-lg z-50 max-h-80 overflow-y-auto ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                    }`}
+                >
+                  {SONG_SECTIONS.map((section) => (
+                    <button
+                      key={section.key}
+                      onClick={() => {
+                        insertSectionAtCursor(section.key);
+                        setSectionDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${darkMode
+                        ? 'hover:bg-gray-700 text-gray-200'
+                        : 'hover:bg-gray-100 text-gray-900'
+                        }`}
+                    >
+                      {section.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Title Input */}
             <Input
               type="text"
@@ -1879,12 +2017,13 @@ const NewSongCanvas = () => {
                         </ContextMenuItem>
                       </ContextMenuSubmenu>
                     </div>
-                    {contextMenuState.lineIndex !== null && canAddTranslationInContextMenu && (
+                    {contextMenuState.lineIndex !== null && (
                       <ContextMenuItem
+                        disabled={!canAddTranslationInContextMenu}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          if (contextMenuState.lineIndex !== null) {
+                          if (contextMenuState.lineIndex !== null && canAddTranslationInContextMenu) {
                             handleAddTranslation(contextMenuState.lineIndex);
                           }
                         }}
@@ -1920,6 +2059,61 @@ const NewSongCanvas = () => {
                     >
                       Duplicate Line
                     </ContextMenuItem>
+                    <div
+                      className="relative"
+                      onMouseEnter={() => {
+                        if (isCursorAtEligiblePosition()) {
+                          handleSubmenuTriggerEnter('section');
+                        }
+                      }}
+                      onFocus={() => {
+                        if (isCursorAtEligiblePosition()) {
+                          handleSubmenuTriggerEnter('section');
+                        }
+                      }}
+                      onMouseLeave={handleSubmenuTriggerLeave}
+                    >
+                      <ContextMenuItem
+                        className="justify-between"
+                        disabled={!isCursorAtEligiblePosition()}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (isCursorAtEligiblePosition()) {
+                            setActiveSubmenu('section');
+                          }
+                        }}
+                        darkMode={darkMode}
+                      >
+                        <span>Add Section</span>
+                        <ChevronRight className={`h-4 w-4 ${submenuHorizontal === 'left' ? 'transform rotate-180' : ''}`} />
+                      </ContextMenuItem>
+                      <ContextMenuSubmenu
+                        ref={sectionSubmenuRef}
+                        open={activeSubmenu === 'section'}
+                        direction={submenuHorizontal}
+                        offsetTop={submenuOffsets.section ?? 0}
+                        maxHeight={submenuMaxHeight}
+                        darkMode={darkMode}
+                        className="w-40"
+                        onMouseEnter={handleSubmenuPanelEnter}
+                        onMouseLeave={handleSubmenuPanelLeave}
+                      >
+                        {SONG_SECTIONS.map((section) => (
+                          <ContextMenuItem
+                            key={section.key}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              insertSectionAtCursor(section.key);
+                            }}
+                            darkMode={darkMode}
+                          >
+                            {section.label}
+                          </ContextMenuItem>
+                        ))}
+                      </ContextMenuSubmenu>
+                    </div>
                     <div
                       className="relative"
                       onMouseEnter={() => handleSubmenuTriggerEnter('metadata')}

@@ -382,8 +382,8 @@ const LyricDisplayApp = () => {
   const handleNavigateSetlistPrevious = React.useCallback(() => {
     if (!hasLyrics || setlistFiles.length === 0) {
       showToast({
-        title: 'No setlist',
-        message: 'Add songs to your setlist to navigate between them',
+        title: 'No files in setlist',
+        message: 'Add songs to your setlist to use navigation',
         variant: 'info'
       });
       return;
@@ -410,8 +410,8 @@ const LyricDisplayApp = () => {
   const handleNavigateSetlistNext = React.useCallback(() => {
     if (!hasLyrics || setlistFiles.length === 0) {
       showToast({
-        title: 'No setlist',
-        message: 'Add songs to your setlist to navigate between them',
+        title: 'No files in setlist',
+        message: 'Add songs to your setlist to use navigation',
         variant: 'info'
       });
       return;

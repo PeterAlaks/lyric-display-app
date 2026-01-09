@@ -6,11 +6,13 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
     const [visible, setVisible] = useState(false);
     const [entering, setEntering] = useState(false);
     const [exiting, setExiting] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setVisible(true);
             setEntering(true);
+            setScrolled(false);
             const timer = setTimeout(() => setEntering(false), 50);
             return () => clearTimeout(timer);
         }
@@ -25,6 +27,11 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
         }
     }, [isOpen, visible]);
 
+    const handleScroll = (e) => {
+        const scrollTop = e.target.scrollTop;
+        setScrolled(scrollTop > 20);
+    };
+
     const handleClose = () => {
         onClose?.();
     };
@@ -38,7 +45,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
     const overlayClasses = `fixed inset-x-0 bottom-0 z-[2000] flex items-center justify-center p-4 transition-all duration-300 ${entering || exiting ? 'opacity-0' : 'opacity-100'
         }`;
 
-    const contentClasses = `relative w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl transform transition-all duration-300 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
+    const contentClasses = `relative w-full max-w-4xl h-[85vh] rounded-2xl shadow-2xl transform transition-all duration-300 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
         } ${entering || exiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`;
 
     const providers = [
@@ -117,20 +124,39 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
 
             {/* Content Card */}
             <div className={contentClasses}>
-                {/* Close Button */}
-                <button
-                    onClick={handleClose}
-                    className={`absolute top-4 right-4 p-2 rounded-full transition-colors z-10 ${darkMode
-                        ? 'bg-black bg-opacity-30 text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                        : 'bg-black bg-opacity-30 text-gray-100 hover:text-gray-100 hover:bg-black hover:bg-opacity-50'
-                        }`}
-                    aria-label="Close welcome screen"
+                {/* Collapsed Header (shown when scrolled) */}
+                <div
+                    className={`absolute top-0 left-0 right-0 z-20 px-6 py-3 flex items-center justify-between border-b transition-opacity duration-500 ease-out ${darkMode ? 'bg-gray-900/98 border-gray-700 backdrop-blur-md' : 'bg-white/98 border-gray-200 backdrop-blur-md'
+                        } ${scrolled ? 'opacity-100 shadow-lg' : 'opacity-0 pointer-events-none'}`}
+                    style={{ borderTopLeftRadius: '1rem', borderTopRightRadius: '1rem' }}
                 >
-                    <X className="w-5 h-5" />
-                </button>
+                    <div className="flex items-center gap-3">
+                        <div
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-500 ${darkMode ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20' : 'bg-gradient-to-br from-blue-100 to-purple-100'
+                                }`}
+                        >
+                            <Search className={`w-4 h-4 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                        </div>
+                        <div>
+                            <h1 className={`text-base font-semibold transition-all duration-500 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Online Lyrics Search
+                            </h1>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleClose}
+                        className={`p-2 rounded-full transition-all duration-300 ${darkMode
+                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                            }`}
+                        aria-label="Close welcome screen"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
 
                 {/* Scrollable Content */}
-                <div className="overflow-y-auto max-h-[90vh] custom-scrollbar">
+                <div className="overflow-y-auto custom-scrollbar h-full pb-24" onScroll={handleScroll}>
                     {/* Header Section */}
                     <div className={`px-8 pt-8 pb-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                         <div className="flex items-center justify-center mb-4">
@@ -283,14 +309,16 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                             </p>
                         </div>
                     </div>
+                </div>
 
-                    {/* Footer */}
-                    <div className={`px-8 py-6 border-t ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                        <div className="flex justify-end">
-                            <Button onClick={handleClose} className="px-8">
-                                Get Started
-                            </Button>
-                        </div>
+                {/* Fixed Footer */}
+                <div className={`absolute bottom-0 left-0 right-0 px-8 py-6 border-t ${darkMode ? 'border-gray-700 bg-gray-900/98' : 'border-gray-200 bg-white/98'} backdrop-blur-md shadow-2xl`}
+                    style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}
+                >
+                    <div className="flex justify-end">
+                        <Button onClick={handleClose} className="px-8">
+                            Get Started
+                        </Button>
                     </div>
                 </div>
             </div>

@@ -158,8 +158,9 @@ export async function exportSetlistToPDF(filePath, setlistData, options = {}) {
 
         doc.link(50, footerY, logoWidth, logoHeight, 'https://lyricdisplay.app');
 
-        const textY = footerY + (logoHeight / 2) - 4;
-        doc.fontSize(9)
+        const fontSize = 9;
+        const textY = footerY + (logoHeight / 2) - (fontSize / 2);
+        doc.fontSize(fontSize)
           .font('Helvetica')
           .fillColor('#6B7280')
           .text('Prepared by the LyricDisplay App', 180, textY, {
