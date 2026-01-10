@@ -666,7 +666,8 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
           return {
             name: fileName,
             content,
-            lastModified: stats.mtimeMs
+            lastModified: stats.mtimeMs,
+            filePath
           };
         })
       );

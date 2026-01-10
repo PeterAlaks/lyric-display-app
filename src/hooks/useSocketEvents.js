@@ -263,7 +263,7 @@ const useSocketEvents = (role) => {
           year: null,
           lyricLines: linesCount,
           origin: computedOrigin,
-          filePath: null,
+          filePath: savedMetadata?.filePath || null,
           draftId: draftId || null
         };
       }

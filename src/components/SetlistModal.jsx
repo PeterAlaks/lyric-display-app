@@ -135,7 +135,14 @@ const SetlistModal = () => {
         };
       });
 
-      const emitted = emitSetlistAdd(files);
+      const filesWithMetadata = files.map((file) => ({
+        name: file.name,
+        content: file.content,
+        lastModified: file.lastModified,
+        metadata: file.filePath ? { filePath: file.filePath } : null
+      }));
+
+      const emitted = emitSetlistAdd(filesWithMetadata);
       if (!emitted) {
         pendingAddRef.current = [];
         setIsLoading(false);
