@@ -194,6 +194,7 @@ lyric-display-app/
 |   ├── startup.js                          # Main app startup processes
 |   ├── systemFonts.js                      # Helper module for loading system installed fonts
 |   ├── themePreferences.js                 # Theme manager for main process dark mode sync
+|   ├── userTemplates.js                    # Backend manager for user-stored output settings template system
 |   ├── updater.js                          # Module to manage app updates
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
@@ -251,6 +252,7 @@ lyric-display-app/
 |   |   ├── PreviewOutputsModal.jsx         # Display outputs preview modal
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
 |   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
+|   |   ├── SaveTemplateModal.jsx           # Save settings combo as template modal
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
 |   |   ├── SetlistExportModal.jsx          # Setlist export modal
 |   |   ├── SetlistModal.jsx                # Setlist modal

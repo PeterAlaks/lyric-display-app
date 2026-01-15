@@ -54,12 +54,12 @@ const PreviewOutputsModal = ({ darkMode }) => {
         const isDev = window.location.port === '5173';
 
         if (isDev) {
-            setOutput1Url('http://localhost:5173/output1');
-            setOutput2Url('http://localhost:5173/output2');
+            setOutput1Url('http://localhost:5173/output1?preview=true');
+            setOutput2Url('http://localhost:5173/output2?preview=true');
         } else {
             const baseUrl = window.location.origin;
-            setOutput1Url(`${baseUrl}/#/output1`);
-            setOutput2Url(`${baseUrl}/#/output2`);
+            setOutput1Url(`${baseUrl}/#/output1?preview=true`);
+            setOutput2Url(`${baseUrl}/#/output2?preview=true`);
         }
 
         const timer = setTimeout(() => setLoading(false), 1000);

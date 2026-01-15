@@ -52,9 +52,10 @@ const useSocketEvents = (role) => {
         if (state.lyricsFileName) {
           setLyricsFileName(state.lyricsFileName);
         }
-        if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
-          selectLine(state.selectedLine);
-        }
+      }
+
+      if (state.selectedLine === null || (typeof state.selectedLine === 'number' && state.selectedLine >= 0)) {
+        selectLine(state.selectedLine);
       }
 
       if (state.output1Settings) {
@@ -387,7 +388,9 @@ const useSocketEvents = (role) => {
       }
       applySections(state.lyricsSections || state.sections, state.lineToSection, state.lyrics);
 
-      if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
+      if (state.selectedLine === null) {
+        selectLine(null);
+      } else if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
         const currentLyrics = useLyricsStore.getState().lyrics;
         if (state.selectedLine < currentLyrics.length) {
           selectLine(state.selectedLine);
@@ -497,9 +500,7 @@ const useSocketEvents = (role) => {
             if (currentState.lyricsFileName) {
               socket.emit('fileNameUpdate', currentState.lyricsFileName);
             }
-            if (typeof currentState.selectedLine === 'number') {
-              socket.emit('lineUpdate', { index: currentState.selectedLine });
-            }
+            socket.emit('lineUpdate', { index: currentState.selectedLine });
             socket.emit('outputToggle', currentState.isOutputOn);
 
             if (typeof currentState.output1Enabled === 'boolean') {

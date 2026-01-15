@@ -15,7 +15,7 @@ import useFullscreenBackground from '../hooks/OutputSettingsPanel/useFullscreenB
 import useAdvancedSectionPersistence from '../hooks/OutputSettingsPanel/useAdvancedSectionPersistence';
 import useTypographyAndBands from '../hooks/OutputSettingsPanel/useTypographyAndBands';
 import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenModeState';
-import { Type, PaintBucket, Contrast, TextCursorInput, Square, Frame, Move, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Palette, Power, TextAlignJustify, SquareMenu, ArrowRightLeft } from 'lucide-react';
+import { Type, PaintBucket, Contrast, TextCursorInput, Square, Frame, Move, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Palette, Power, TextAlignJustify, SquareMenu, ArrowRightLeft, Save } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
 import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
@@ -583,6 +583,37 @@ const OutputSettingsPanel = ({ outputKey }) => {
             </button>
           </Tooltip>
 
+          {/* Save as Template button */}
+          <Tooltip content="Save current settings as a reusable template" side="bottom">
+            <button
+              onClick={() => {
+                showModal({
+                  title: 'Save as Template',
+                  headerDescription: 'Save your current output settings as a reusable template',
+                  component: 'SaveTemplate',
+                  variant: 'info',
+                  size: 'sm',
+                  actions: [],
+                  templateType: 'output',
+                  settings: settings,
+                  onSave: (template) => {
+                    showToast({
+                      title: 'Template Saved',
+                      message: `"${template.name}" has been saved successfully`,
+                      variant: 'success',
+                    });
+                  }
+                });
+              }}
+              className={`p-1.5 rounded-lg transition-colors ${darkMode
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              <Save className="w-4 h-4" />
+            </button>
+          </Tooltip>
+
           {/* Templates trigger button */}
           <Tooltip content="Choose from professionally designed output templates" side="bottom">
             <button
@@ -593,6 +624,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
                   component: 'OutputTemplates',
                   variant: 'info',
                   size: 'large',
+                  scrollBehavior: 'scroll',
                   dismissLabel: 'Close',
                   outputKey: outputKey,
                   onApplyTemplate: (template) => {

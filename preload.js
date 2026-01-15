@@ -229,6 +229,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getUserHome: () => ipcRenderer.invoke('setlist:get-user-home'),
     browseFiles: () => ipcRenderer.invoke('setlist:browse-files'),
     export: (setlistData, options) => ipcRenderer.invoke('setlist:export', { setlistData, options })
+  },
+  templates: {
+    load: (type) => ipcRenderer.invoke('templates:load', { type }),
+    save: (type, template) => ipcRenderer.invoke('templates:save', { type, template }),
+    delete: (type, templateId) => ipcRenderer.invoke('templates:delete', { type, templateId }),
+    update: (type, templateId, updates) => ipcRenderer.invoke('templates:update', { type, templateId, updates }),
+    nameExists: (type, name, excludeId) => ipcRenderer.invoke('templates:name-exists', { type, name, excludeId })
   }
 });
 

@@ -12,6 +12,7 @@ import AutoplaySettings from '../AutoplaySettings';
 import IntelligentAutoplayInfo from '../IntelligentAutoplayInfo';
 import OutputTemplatesModal from '../OutputTemplatesModal';
 import StageTemplatesModal from '../StageTemplatesModal';
+import SaveTemplateModal from '../SaveTemplateModal';
 import AboutAppModal from '../AboutAppModal';
 import SetlistExportModal from '../SetlistExportModal';
 import { Button } from '@/components/ui/button';
@@ -104,8 +105,9 @@ export function ModalProvider({ children, isDark = false }) {
       className: config.className,
       size: config.size || 'md',
       icon: config.icon || null,
+      scrollBehavior: config.scrollBehavior || 'auto',
       ...Object.keys(config).reduce((acc, key) => {
-        if (!['variant', 'title', 'description', 'message', 'headerDescription', 'body', 'component', 'dismissible', 'actions', 'allowBackdropClose', 'onClose', 'className', 'size', 'icon', 'dismissLabel'].includes(key)) {
+        if (!['variant', 'title', 'description', 'message', 'headerDescription', 'body', 'component', 'dismissible', 'actions', 'allowBackdropClose', 'onClose', 'className', 'size', 'icon', 'dismissLabel', 'scrollBehavior'].includes(key)) {
           acc[key] = config[key];
         }
         return acc;
@@ -317,7 +319,10 @@ export function ModalProvider({ children, isDark = false }) {
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="overflow-y-auto flex-1 px-6 py-5">
+                <div className={cn(
+                  'flex-1 px-6 py-5',
+                  modal.scrollBehavior === 'scroll' ? 'overflow-y-scroll' : 'overflow-y-auto'
+                )}>
                   {(modal.description || modal.body || modal.component) && (
                     <div
                       id={`modal-${modal.id}-description`}
@@ -441,6 +446,15 @@ export function ModalProvider({ children, isDark = false }) {
                             closeModal(modal.id, { action: 'applied', template });
                           }}
                           onClose={() => closeModal(modal.id, { dismissed: true })}
+                        />
+                      )}
+                      {modal.component === 'SaveTemplate' && (
+                        <SaveTemplateModal
+                          darkMode={isDark}
+                          templateType={modal.templateType}
+                          settings={modal.settings}
+                          onSave={modal.onSave}
+                          close={(value) => closeModal(modal.id, value)}
                         />
                       )}
                       {modal.component === 'AboutApp' && (

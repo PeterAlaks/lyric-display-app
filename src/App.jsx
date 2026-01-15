@@ -8,7 +8,7 @@ import NewSongCanvas from './components/NewSongCanvas';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import JoinCodePromptBridge from './components/JoinCodePromptBridge';
 import SupportDevelopmentBridge from './components/SupportDevelopmentBridge';
-import { useDarkModeState } from './hooks/useStoreSelectors';
+import { useDarkModeState, useIsDesktopApp } from './hooks/useStoreSelectors';
 import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
 import { ModalProvider } from '@/components/modal/ModalProvider';
@@ -21,6 +21,16 @@ import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from './u
 import DesktopShell from './components/WindowChrome/DesktopShell';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
+
+function ConditionalDesktopShell({ children }) {
+  const isDesktopApp = useIsDesktopApp();
+
+  if (isDesktopApp) {
+    return <DesktopShell>{children}</DesktopShell>;
+  }
+
+  return <>{children}</>;
+}
 
 export default function App() {
   const { darkMode } = useDarkModeState();
@@ -38,21 +48,21 @@ export default function App() {
           <Router>
             <Routes>
               <Route path="/" element={
-                <DesktopShell>
+                <ConditionalDesktopShell>
                   <ControlSocketProvider>
                     <ControlPanel />
                   </ControlSocketProvider>
-                </DesktopShell>
+                </ConditionalDesktopShell>
               } />
               <Route path="/output1" element={<Output1 />} />
               <Route path="/output2" element={<Output2 />} />
               <Route path="/stage" element={<Stage />} />
               <Route path="/new-song" element={
-                <DesktopShell>
+                <ConditionalDesktopShell>
                   <ControlSocketProvider>
                     <NewSongCanvas />
                   </ControlSocketProvider>
-                </DesktopShell>
+                </ConditionalDesktopShell>
               } />
             </Routes>
           </Router>

@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
-import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge } from 'lucide-react';
+import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge, Save } from 'lucide-react';
 import FontSelect from './FontSelect';
 import { blurInputOnEnter, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
 import useToast from '../hooks/useToast';
@@ -229,6 +229,37 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             </button>
           </Tooltip>
 
+          {/* Save as Template button */}
+          <Tooltip content="Save current settings as a reusable template" side="bottom">
+            <button
+              onClick={() => {
+                showModal({
+                  title: 'Save as Template',
+                  headerDescription: 'Save your current stage display settings as a reusable template',
+                  component: 'SaveTemplate',
+                  variant: 'info',
+                  size: 'sm',
+                  actions: [],
+                  templateType: 'stage',
+                  settings: settings,
+                  onSave: (template) => {
+                    showToast({
+                      title: 'Template Saved',
+                      message: `"${template.name}" has been saved successfully`,
+                      variant: 'success',
+                    });
+                  }
+                });
+              }}
+              className={`p-1.5 rounded-lg transition-colors ${darkMode
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              <Save className="w-4 h-4" />
+            </button>
+          </Tooltip>
+
           {/* Templates trigger button */}
           <Tooltip content="Choose from professionally designed stage display templates" side="bottom">
             <button
@@ -239,6 +270,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                   component: 'StageTemplates',
                   variant: 'info',
                   size: 'large',
+                  scrollBehavior: 'scroll',
                   dismissLabel: 'Close',
                   onApplyTemplate: (template) => {
                     applySettings(template.settings);

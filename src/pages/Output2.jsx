@@ -14,6 +14,8 @@ const Output2 = () => {
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { output2Enabled } = useIndividualOutputState();
 
+  const isPreviewMode = new URLSearchParams(window.location.search).get('preview') === 'true';
+
   const stateRequestTimeoutRef = useRef(null);
   const pendingStateRequestRef = useRef(false);
 
@@ -299,7 +301,8 @@ const Output2 = () => {
   };
   const effectiveLyricsPosition = positionJustifyMap[lyricsPosition] ? lyricsPosition : 'lower';
   const justifyContent = positionJustifyMap[effectiveLyricsPosition] || 'flex-end';
-  const isOutputActive = Boolean(isOutputOn && output2Enabled);
+
+  const isOutputActive = isPreviewMode || Boolean(isOutputOn && output2Enabled);
   const isVisible = Boolean(isOutputActive && line);
   const shouldShowFullScreenBackground = fullScreenMode && (alwaysShowBackground || isOutputActive);
 
