@@ -1,36 +1,48 @@
 [
   {
-    "id": "openhymnal:abide-o-dearest-jesus",
-    "title": "Abide, O Dearest Jesus",
-    "author": "Joshua Stegmann",
-    "year": 1628,
+    "id": "openhymnal:take-up-thy-cross-the-savior-said",
+    "title": "'Take Up Thy Cross', the Savior Said",
+    "author": "Charles W Everest",
+    "year": 1833,
     "meter": "Unknown",
     "topics": [],
     "lyrics": [
-      "Abide, O dearest Jesus, Among us with Thy grace, That Satan may not harm us, Nor we to sin give place.",
-      "Abide, O dear Redeemer, Among us with Thy Word, And thus now and hereafter True peace and joy afford.",
-      "Abide with heav'nly brightness Among us, precious Light; Thy truth direct, and keep us From error's gloomy night.",
-      "Abide with richest blessings Among us, bounteous Lord; Let us in grace and wisdom Grow daily through Thy Word.",
-      "Abide with Thy protection Among us, Lord, our Strength, Lest world and Satan fell us And overcome at length.",
-      "Abide, O faithful Savior, Among us with Thy love; Grant steadfastness, and help us To reach our home above."
+      "\"Take up thy cross,\" the Savior said, \"If thou wouldst My disciple be; Deny thyself, the world forsake, And humbly follow after Me.\"",
+      "Take up thy cross, let not its weight Fill thy weak spirit with alarm; His strength shall bear thy spirit up, And brace thy heart and nerve thine arm.",
+      "Take up thy cross, nor heed the shame, Nor let thy foolish pride rebel; Thy Lord for thee the cross endured, And saved thy soul from death and hell.",
+      "Take up thy cross then in His strength, And calmly sin's wild deluge brave, 'Twill guide thee to a better home, It points to glory o'er the grave.",
+      "Take up thy cross and follow Christ, Nor think til death to lay it down; For only those who bear the cross May hope to wear the glorious crown.",
+      "To Thee, great Lord, the One in Three, All praise forevermore ascend: O grant us in our home to see The heavenly life that knows no end."
     ]
   },
   {
-    "id": "openhymnal:abide-with-me",
-    "title": "Abide With Me",
-    "author": "Henry F Lyte",
-    "year": 1847,
+    "id": "openhymnal:tis-midnight-and-on-olives-brow",
+    "title": "'Tis Midnight and On Olive's Brow",
+    "author": "William Bingham Tappan",
+    "year": 1822,
     "meter": "Unknown",
     "topics": [],
     "lyrics": [
-      "Abide with me; fast falls the eventide; The darkness deepens; Lord with me abide. When other helpers fail and comforts flee, Help of the helpless, O abide with me.",
-      "Swift to its close ebbs out life's little day; Earth's joys grow dim; its glories pass away; Change and decay in all around I see; O Thou who changest not, abide with me.",
-      "Not a brief glance I beg, a passing word; But as Thou dwell'st with Thy disciples, Lord, Familiar, condescending, patient, free. Come not to sojourn, but abide with me.",
-      "Come not in terrors, as the King of kings, But kind and good, with healing in Thy wings, Tears for all woes, a heart for every plea? Come, Friend of sinners, and thus bide with me.",
-      "Thou on my head in early youth didst smile; And, though rebellious and perverse meanwhile, Thou hast not left me, oft as I left Thee, On to the close, O Lord, abide with me.",
-      "I need Thy presence every passing hour. What but Thy grace can foil the tempter's power? Who, like Thyself, my guide and stay can be? Through cloud and sunshine, Lord, abide with me.",
-      "I fear no foe, with Thee at hand to bless; Ills have no weight, and tears no bitterness. Where is death's sting? Where, grave, thy victory? I triumph still, if Thou abide with me.",
-      "Hold Thou Thy cross before my closing eyes; Shine through the gloom and point me to the skies. Heaven's morning breaks, and earth's vain shadows flee; In life, in death, O Lord, abide with me."
+      "'Tis midnight, and on Olive's brow The star is dimmed that lately shone; 'Tis midnight, in the garden now The suff'ring Savior prays alone.",
+      "'Tis midnight, and from all removed Immanuel wrestles, lone, with fears; E'en the disciple whom He loved Heeds not his Master's grief and tears.",
+      "'Tis midnight, from the heav'nly plains Are borne the songs that angels know; Unheard by mortals are the strains That sweetly soothe the Savior's woe."
+    ]
+  },
+  {
+    "id": "openhymnal:twas-on-that-dark-that-doleful-night",
+    "title": "'Twas On That Dark, That Doleful Night",
+    "author": "Isaac Watts",
+    "year": 1709,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "'Twas on that dark, that doleful night When pow'rs of earth and hell arose Against the Son of God's delight, And friends betrayed Him to His foes:",
+      "Before the mournful scene began, He took the bread, and blessed, and brake: What love through all His actions ran! What wondrous words of grace He spake!",
+      "\"This is My body, broke for sin; Receive and eat the living food:\" Then took the cup, and blessed the wine; \"'Tis the new cov'nant in My blood.\"",
+      "For us His flesh with nails was torn, He bore the scourge, He felt the thorn; And justice poured upon His head Its heavy vengeance in our stead.",
+      "For us His vital blood was spilt, To buy the pardon of our guilt, When, for black crimes of biggest size, He gave His soul a sacrifice.",
+      "\"Do this,\" He cried, \"till time shall end, In memory of your dying friend; Meet at My table, and record The love of your departed Lord.\"",
+      "Jesus, Thy feast we celebrate, We show Thy death, we sing Thy name, Till Thou return, and we shall eat The marriage supper of the Lamb."
     ]
   },
   {
@@ -83,6 +95,68 @@
     ]
   },
   {
+    "id": "openhymnal:a-mighty-fortress-is-our-god",
+    "title": "A Mighty Fortress Is Our God",
+    "author": "Martin Luther",
+    "year": 1529,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "A mighty fortress is our God, a bulwark never failing; Our helper He, amid the flood of mortal ills prevailing: For still our ancient foe doth seek to work us woe; His craft and pow'r are great, and, armed with cruel hate, On earth is not his equal.",
+      "Did we in our own strength confide, our striving would be losing; Were not the right Man on our side, the Man of God's own choosing: Dost ask who that may be? Christ Jesus, it is He; Lord Sabaoth, His name, from age to age the same, And He must win the battle.",
+      "And though this world, with devils filled, should threaten to undo us, We will not fear, for God hath willed His truth to triumph through us: The Prince of Darkness grim, we tremble not for him; His rage we can endure, for lo, his doom is sure, One little word shall fell him.",
+      "That word above all earthly pow'rs, no thanks to them, abideth; The Spirit and the gifts are ours through Him who with us sideth: Let goods and kindred go, this mortal life also; The body they may kill: God's truth abideth still, His kingdom is forever."
+    ]
+  },
+  {
+    "id": "openhymnal:a-mighty-fortress-is-our-god",
+    "title": "A Mighty Fortress Is Our God",
+    "author": "Martin Luther",
+    "year": 1529,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "A mighty Fortress is our God, A trusty Shield and Weapon; He helps us free from every need That hath us now o'ertaken. The old evil Foe Now means deadly woe; Deep guile and great might Are his dread arms in fight; On Earth is not his equal.",
+      "With might of ours can naught be done, Soon were our loss effected; But for us fights the Valiant One, Whom God Himself elected. Ask ye, Who is this? Jesus Christ it is. Of Sabaoth Lord, And there's none other God; He holds the field forever.",
+      "Though devils all the world should fill, All eager to devour us. We tremble not, we fear no ill, They shall not overpower us. This world's prince may still Scowl fierce as he will, He can harm us none, He's judged; the deed is done; One little word can fell him.",
+      "The Word they still shall let remain Nor any thanks have for it; He's by our side upon the plain With His good gifts and Spirit. And take they our life, Goods, fame, child and wife, Let these all be gone, They yet have nothing won; The Kingdom ours remaineth."
+    ]
+  },
+  {
+    "id": "openhymnal:abide-with-me",
+    "title": "Abide With Me",
+    "author": "Henry F Lyte",
+    "year": 1847,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Abide with me; fast falls the eventide; The darkness deepens; Lord with me abide. When other helpers fail and comforts flee, Help of the helpless, O abide with me.",
+      "Swift to its close ebbs out life's little day; Earth's joys grow dim; its glories pass away; Change and decay in all around I see; O Thou who changest not, abide with me.",
+      "Not a brief glance I beg, a passing word; But as Thou dwell'st with Thy disciples, Lord, Familiar, condescending, patient, free. Come not to sojourn, but abide with me.",
+      "Come not in terrors, as the King of kings, But kind and good, with healing in Thy wings, Tears for all woes, a heart for every plea? Come, Friend of sinners, and thus bide with me.",
+      "Thou on my head in early youth didst smile; And, though rebellious and perverse meanwhile, Thou hast not left me, oft as I left Thee, On to the close, O Lord, abide with me.",
+      "I need Thy presence every passing hour. What but Thy grace can foil the tempter's power? Who, like Thyself, my guide and stay can be? Through cloud and sunshine, Lord, abide with me.",
+      "I fear no foe, with Thee at hand to bless; Ills have no weight, and tears no bitterness. Where is death's sting? Where, grave, thy victory? I triumph still, if Thou abide with me.",
+      "Hold Thou Thy cross before my closing eyes; Shine through the gloom and point me to the skies. Heaven's morning breaks, and earth's vain shadows flee; In life, in death, O Lord, abide with me."
+    ]
+  },
+  {
+    "id": "openhymnal:abide-o-dearest-jesus",
+    "title": "Abide, O Dearest Jesus",
+    "author": "Joshua Stegmann",
+    "year": 1628,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Abide, O dearest Jesus, Among us with Thy grace, That Satan may not harm us, Nor we to sin give place.",
+      "Abide, O dear Redeemer, Among us with Thy Word, And thus now and hereafter True peace and joy afford.",
+      "Abide with heav'nly brightness Among us, precious Light; Thy truth direct, and keep us From error's gloomy night.",
+      "Abide with richest blessings Among us, bounteous Lord; Let us in grace and wisdom Grow daily through Thy Word.",
+      "Abide with Thy protection Among us, Lord, our Strength, Lest world and Satan fell us And overcome at length.",
+      "Abide, O faithful Savior, Among us with Thy love; Grant steadfastness, and help us To reach our home above."
+    ]
+  },
+  {
     "id": "openhymnal:all-creatures-of-our-god-and-king",
     "title": "All Creatures of Our God and King",
     "author": "Francis of Assisi circa",
@@ -113,35 +187,6 @@
       "When with sorrow I am stricken, Hope my heart anew will quicken, All my longing shall be stilled. To His loving-- kindness tender Soul and body I surrender; For in Him alone I build.",
       "Well He knows what best to grant me; All the longing hopes that haunt me, Joy and sorrow, have their day. I shall doubt His wisdom never, As God wills, so be it ever, I to Him commit my way.",
       "If on earth my days He lengthen, He my weary soul will strengthen; All my trust in Him I place. Earthly wealth is not abiding, Like a stream away is gliding; Safe I anchor in His grace."
-    ]
-  },
-  {
-    "id": "openhymnal:alleluia-alleluia-hearts-to-heaven-and-voices-raise",
-    "title": "Alleluia, Alleluia! Hearts to Heaven and Voices Raise",
-    "author": "Christopher Wordsworth",
-    "year": 1865,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Alleluia, alleluia! Hearts to Heav'n and voices raise: Sing to God a hymn of gladness, sing to God a hymn of praise. He, who on the cross a Victim, for the world's salvation bled, Jesus Christ, the King of glory, now is risen from the dead.",
-      "Now the iron bars are broken, Christ from death to life is born, Glorious life, and life immortal, on the holy Easter morn. Christ has triumphed, and we conquer by His mighty enterprise: We with Him to life eternal by His resurrection rise.",
-      "Christ is risen, Christ, the first fruits of the holy harvest field, Which will all its full abundance at His second coming yield: Then the golden ears of harvest will their heads before Him wave, Ripened by His glorious sunshine from the furrows of the grave.",
-      "Christ is risen, we are risen! Shed upon us heav'nly grace, Rain and dew and gleams of glory from the brightness of Thy face; That we, with our hearts in Heaven, here on earth may fruitful be, And by angel hands be gathered, and be ever, Lord, with Thee.",
-      "Alleluia, alleluia! Glory be to God on high; Alleluia! to the Savior who has gained the victory; Alleluia! to the Spirit, fount of love and sanctity: Alleluia, alleluia! to the Triune Majesty."
-    ]
-  },
-  {
-    "id": "openhymnal:alleluia-sing-to-jesus",
-    "title": "Alleluia, Sing To Jesus!",
-    "author": "William Chatterton Dix",
-    "year": 1867,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Alleluia! sing to Jesus! His the scepter, His the throne. Alleluia! His the triumph, His the victory alone. Hark! the songs of peaceful Zion thunder like a mighty flood. Jesus out of every nation has redeemed us by His blood.",
-      "Alleluia! not as orphans are we left in sorrow now; Alleluia! He is near us, faith believes, nor questions how; Though the cloud from sight received Him when the forty days were o'er Shall our hearts forget His promise, \"I am with you evermore\"?",
-      "Alleluia! bread of angels, Thou on earth our food, our stay; Alleluia! here the sinful flee to Thee from day to day: Intercessor, Friend of sinners, Earth's Redeemer, plead for me, Where the songs of all the sinless sweep across the crystal sea.",
-      "Alleluia! King eternal, Thee the Lord of lords we own; Alleluia! born of Mary, Earth Thy footstool, Heaven Thy throne: Thou within the veil hast entered, robed in flesh our great High Priest; Thou on earth both priest and victim in the Eucharistic feast."
     ]
   },
   {
@@ -249,6 +294,35 @@
     ]
   },
   {
+    "id": "openhymnal:alleluia-alleluia-hearts-to-heaven-and-voices-raise",
+    "title": "Alleluia, Alleluia! Hearts to Heaven and Voices Raise",
+    "author": "Christopher Wordsworth",
+    "year": 1865,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Alleluia, alleluia! Hearts to Heav'n and voices raise: Sing to God a hymn of gladness, sing to God a hymn of praise. He, who on the cross a Victim, for the world's salvation bled, Jesus Christ, the King of glory, now is risen from the dead.",
+      "Now the iron bars are broken, Christ from death to life is born, Glorious life, and life immortal, on the holy Easter morn. Christ has triumphed, and we conquer by His mighty enterprise: We with Him to life eternal by His resurrection rise.",
+      "Christ is risen, Christ, the first fruits of the holy harvest field, Which will all its full abundance at His second coming yield: Then the golden ears of harvest will their heads before Him wave, Ripened by His glorious sunshine from the furrows of the grave.",
+      "Christ is risen, we are risen! Shed upon us heav'nly grace, Rain and dew and gleams of glory from the brightness of Thy face; That we, with our hearts in Heaven, here on earth may fruitful be, And by angel hands be gathered, and be ever, Lord, with Thee.",
+      "Alleluia, alleluia! Glory be to God on high; Alleluia! to the Savior who has gained the victory; Alleluia! to the Spirit, fount of love and sanctity: Alleluia, alleluia! to the Triune Majesty."
+    ]
+  },
+  {
+    "id": "openhymnal:alleluia-sing-to-jesus",
+    "title": "Alleluia, Sing To Jesus!",
+    "author": "William Chatterton Dix",
+    "year": 1867,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Alleluia! sing to Jesus! His the scepter, His the throne. Alleluia! His the triumph, His the victory alone. Hark! the songs of peaceful Zion thunder like a mighty flood. Jesus out of every nation has redeemed us by His blood.",
+      "Alleluia! not as orphans are we left in sorrow now; Alleluia! He is near us, faith believes, nor questions how; Though the cloud from sight received Him when the forty days were o'er Shall our hearts forget His promise, \"I am with you evermore\"?",
+      "Alleluia! bread of angels, Thou on earth our food, our stay; Alleluia! here the sinful flee to Thee from day to day: Intercessor, Friend of sinners, Earth's Redeemer, plead for me, Where the songs of all the sinless sweep across the crystal sea.",
+      "Alleluia! King eternal, Thee the Lord of lords we own; Alleluia! born of Mary, Earth Thy footstool, Heaven Thy throne: Thou within the veil hast entered, robed in flesh our great High Priest; Thou on earth both priest and victim in the Eucharistic feast."
+    ]
+  },
+  {
     "id": "openhymnal:almighty-god-your-word-is-cast",
     "title": "Almighty God Your Word Is Cast",
     "author": "John Cawood",
@@ -282,34 +356,6 @@
     ]
   },
   {
-    "id": "openhymnal:a-mighty-fortress-is-our-god",
-    "title": "A Mighty Fortress Is Our God",
-    "author": "Martin Luther",
-    "year": 1529,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "A mighty fortress is our God, a bulwark never failing; Our helper He, amid the flood of mortal ills prevailing: For still our ancient foe doth seek to work us woe; His craft and pow'r are great, and, armed with cruel hate, On earth is not his equal.",
-      "Did we in our own strength confide, our striving would be losing; Were not the right Man on our side, the Man of God's own choosing: Dost ask who that may be? Christ Jesus, it is He; Lord Sabaoth, His name, from age to age the same, And He must win the battle.",
-      "And though this world, with devils filled, should threaten to undo us, We will not fear, for God hath willed His truth to triumph through us: The Prince of Darkness grim, we tremble not for him; His rage we can endure, for lo, his doom is sure, One little word shall fell him.",
-      "That word above all earthly pow'rs, no thanks to them, abideth; The Spirit and the gifts are ours through Him who with us sideth: Let goods and kindred go, this mortal life also; The body they may kill: God's truth abideth still, His kingdom is forever."
-    ]
-  },
-  {
-    "id": "openhymnal:a-mighty-fortress-is-our-god",
-    "title": "A Mighty Fortress Is Our God",
-    "author": "Martin Luther",
-    "year": 1529,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "A mighty Fortress is our God, A trusty Shield and Weapon; He helps us free from every need That hath us now o'ertaken. The old evil Foe Now means deadly woe; Deep guile and great might Are his dread arms in fight; On Earth is not his equal.",
-      "With might of ours can naught be done, Soon were our loss effected; But for us fights the Valiant One, Whom God Himself elected. Ask ye, Who is this? Jesus Christ it is. Of Sabaoth Lord, And there's none other God; He holds the field forever.",
-      "Though devils all the world should fill, All eager to devour us. We tremble not, we fear no ill, They shall not overpower us. This world's prince may still Scowl fierce as he will, He can harm us none, He's judged; the deed is done; One little word can fell him.",
-      "The Word they still shall let remain Nor any thanks have for it; He's by our side upon the plain With His good gifts and Spirit. And take they our life, Goods, fame, child and wife, Let these all be gone, They yet have nothing won; The Kingdom ours remaineth."
-    ]
-  },
-  {
     "id": "openhymnal:and-can-it-be",
     "title": "And Can It Be",
     "author": "Charles Wesley",
@@ -323,6 +369,21 @@
       "Long my imprisoned spirit lay, Fast bound in sin and nature's night; Thine eye diffused a quick'ning ray? I woke, the dungeon flamed with light; My chains fell off, my heart was free, I rose, went forth, and followed Thee.",
       "Still the small inward voice I hear, That whispers all my sins forgiv'n; Still the atoning blood is near, That quenched the wrath of hostile Heav'n. I feel the life His wounds impart; I feel the Savior in my heart.",
       "No condemnation now I dread; Jesus, and all in Him, is mine; Alive in Him, my living Head, And clothed in righteousness divine, Bold I approach th'eternal throne, And claim the crown, through Christ my own."
+    ]
+  },
+  {
+    "id": "openhymnal:angel-voices-ever-singing",
+    "title": "Angel Voices, Ever Singing",
+    "author": "Francis Pott",
+    "year": 1861,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Angel voices, ever singing, round Thy throne of light, Angel harps, forever ringing, rest not day or night; Thousands only live to bless Thee, and confess Thee Lord of might.",
+      "Thou Who art beyond the farthest mortal eye can scan, Can it be that Thou regardest songs of sinful man? Can we feel that Thou art near us and wilt hear us? Yea, we can.",
+      "Lord, we know Thy love rejoices o'er each work of Thine; Thou didst ears and hands and voices for Thy praise combine; Craftsman's art and music's measure for Thy pleasure didst design.",
+      "Here, great God, today we offer of Thine own to Thee; And for Thine acceptance proffer, all unworthily, Hearts and minds, and hands and voices, in our choicest melody.",
+      "Honor, glory, might and merit, Thine shall ever be, Father, Son, and Holy Spirit, blessed Trinity; Of the best that Thou hast given Earth and Heaven render Thee."
     ]
   },
   {
@@ -357,18 +418,18 @@
     ]
   },
   {
-    "id": "openhymnal:angel-voices-ever-singing",
-    "title": "Angel Voices, Ever Singing",
-    "author": "Francis Pott",
-    "year": 1861,
+    "id": "openhymnal:as-with-gladness-men-of-old",
+    "title": "As With Gladness Men of Old",
+    "author": "William Chatterton Dix",
+    "year": 1860,
     "meter": "Unknown",
     "topics": [],
     "lyrics": [
-      "Angel voices, ever singing, round Thy throne of light, Angel harps, forever ringing, rest not day or night; Thousands only live to bless Thee, and confess Thee Lord of might.",
-      "Thou Who art beyond the farthest mortal eye can scan, Can it be that Thou regardest songs of sinful man? Can we feel that Thou art near us and wilt hear us? Yea, we can.",
-      "Lord, we know Thy love rejoices o'er each work of Thine; Thou didst ears and hands and voices for Thy praise combine; Craftsman's art and music's measure for Thy pleasure didst design.",
-      "Here, great God, today we offer of Thine own to Thee; And for Thine acceptance proffer, all unworthily, Hearts and minds, and hands and voices, in our choicest melody.",
-      "Honor, glory, might and merit, Thine shall ever be, Father, Son, and Holy Spirit, blessed Trinity; Of the best that Thou hast given Earth and Heaven render Thee."
+      "As with gladness, men of old Did the guiding star behold As with joy they hailed its light Leading onward, beaming bright So, most glorious Lord, may we Evermore be led to Thee.",
+      "As with joyful steps they sped To that lowly manger bed There to bend the knee before Him whom Heav'n and earth adore; So may we with willing feet Ever seek Thy mercy seat.",
+      "As they offered gifts most rare At that manger rude and bare; So may we with holy joy, Pure and free from sin's alloy, All our costliest treasures bring, Christ, to Thee, our heav'nly King.",
+      "Holy Jesus, ev'ry day Keep us in the narrow way; And, when earthly things are past, Bring our ransomed souls at last Where they need no star to guide, Where no clouds Thy glory hide.",
+      "In the heav'nly country bright, Need they no created light; Thou its Light, its Joy, its Crown, Thou its Sun which goes not down; There forever may we sing Alleluias to our King!"
     ]
   },
   {
@@ -384,21 +445,6 @@
       "His voice like a mighty flash, Shakes the desert of Kadesh, It makes bare the thick forest No other voice is its match.",
       "The Lord sits upon His throne, That's set upon the flood. He gives strength to His people, Who put their trust in His word.",
       "Ascribe to the Lord, honor, And glory due His Name, Worship Him in holiness Worthy is His might and fame."
-    ]
-  },
-  {
-    "id": "openhymnal:as-with-gladness-men-of-old",
-    "title": "As With Gladness Men of Old",
-    "author": "William Chatterton Dix",
-    "year": 1860,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "As with gladness, men of old Did the guiding star behold As with joy they hailed its light Leading onward, beaming bright So, most glorious Lord, may we Evermore be led to Thee.",
-      "As with joyful steps they sped To that lowly manger bed There to bend the knee before Him whom Heav'n and earth adore; So may we with willing feet Ever seek Thy mercy seat.",
-      "As they offered gifts most rare At that manger rude and bare; So may we with holy joy, Pure and free from sin's alloy, All our costliest treasures bring, Christ, to Thee, our heav'nly King.",
-      "Holy Jesus, ev'ry day Keep us in the narrow way; And, when earthly things are past, Bring our ransomed souls at last Where they need no star to guide, Where no clouds Thy glory hide.",
-      "In the heav'nly country bright, Need they no created light; Thou its Light, its Joy, its Crown, Thou its Sun which goes not down; There forever may we sing Alleluias to our King!"
     ]
   },
   {
@@ -430,6 +476,20 @@
       "Author of all Life, our Father, breathe into our hearts again. Stir our deadness, heal our weakness, crush our evil thoughts so vain. Life Creator, life Redeemer, life Imparter, Source of Truth, Teach us now to love each other, Teach us Lord to love like You.",
       "Hearts so hard, we hate each other, those in need we treat with scorn... Old, unwise, or not my color, Palsied limbs, or not yet born. Life Creator, life Redeemer, life Imparter, Three in One, Teach us Lord to see Your Image, Teach us now to see the Son.",
       "Christ now grants us life eternal, to know You the one true God, He the Way to see the Father, He the One who felt the rod. Life Creator, life Redeemer, life Imparter, Life conferred! Let us sing of Your atonement, Let all people hear Your Word!"
+    ]
+  },
+  {
+    "id": "openhymnal:awake-my-soul-an-offering-bring",
+    "title": "Awake My Soul, An Offering Bring",
+    "author": "Brian L Penney",
+    "year": 2009,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Awake my soul, an off'ring bring to Jesus our exalted King; Sing to Him Who reigns above incarnate fount of grace and love; Sing to Him Who reigns above incarnate fount of grace and love.",
+      "In awe we stand upon this ground, His wisdom and His pow'r astound; All His wonders we behold, in heav'n and earth His story's told; All His wonders we behold, in heav'n and earth His story's told.",
+      "Then to this world, behold what grace! He comes to rescue Adam's race; Our Redeemer, our High Priest, from sin and death He brings release; Our Redeemer, our High Priest, from sin and death He brings release.",
+      "Awake my soul, arise and sing, eternal praise to Christ our King; In His Church, His Name confessed, we worship Him among the blessed; In His Church, His Name confessed, we worship Him among the blessed."
     ]
   },
   {
@@ -473,20 +533,6 @@
     ]
   },
   {
-    "id": "openhymnal:awake-my-soul-an-offering-bring",
-    "title": "Awake My Soul, An Offering Bring",
-    "author": "Brian L Penney",
-    "year": 2009,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Awake my soul, an off'ring bring to Jesus our exalted King; Sing to Him Who reigns above incarnate fount of grace and love; Sing to Him Who reigns above incarnate fount of grace and love.",
-      "In awe we stand upon this ground, His wisdom and His pow'r astound; All His wonders we behold, in heav'n and earth His story's told; All His wonders we behold, in heav'n and earth His story's told.",
-      "Then to this world, behold what grace! He comes to rescue Adam's race; Our Redeemer, our High Priest, from sin and death He brings release; Our Redeemer, our High Priest, from sin and death He brings release.",
-      "Awake my soul, arise and sing, eternal praise to Christ our King; In His Church, His Name confessed, we worship Him among the blessed; In His Church, His Name confessed, we worship Him among the blessed."
-    ]
-  },
-  {
     "id": "openhymnal:away-in-a-manger",
     "title": "Away In A Manger",
     "author": "stanzas",
@@ -514,6 +560,36 @@
       "Yes, all I am and love most dearly, To Thee I offer now the whole; O let me make my vows sincerely, Take full possession of my soul! Let naught within me, naught I own, Serve any will save Thine alone.",
       "Hence, Prince of darkness, hence forever, For I belong now to my God! 'Tis true, I sinned; but my dear Savior Hath cleansed me with His holy blood. Away, vain world, sin, leave me now, I turn from you; God hears my vow.",
       "And never let my purpose falter, O Father, Son, and Holy Ghost, But keep me faithful to Thine altar, Till Thou shalt call me from my post; So unto Thee I live and die, And praise Thee evermore on high."
+    ]
+  },
+  {
+    "id": "openhymnal:be-still-my-soul",
+    "title": "Be Still My Soul",
+    "author": "Katharina A von Schlegel",
+    "year": 1752,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Be still, my soul: the Lord is on thy side. Bear patiently the cross of grief or pain. Leave to thy God to order and provide; In every change, He faithful will remain. Be still, my soul: thy best, thy heav'nly Friend Through thorny ways leads to a joyful end.",
+      "Be still, my soul: thy God doth undertake To guide the future, as He has the past. Thy hope, thy confidence let nothing shake; All now mysterious shall be bright at last. Be still, my soul: the waves and winds still know His voice Who ruled them while He dwelt below.",
+      "Be still, my soul: when dearest friends depart, And all is darkened in the vale of tears, Then shalt thou better know His love, His heart, Who comes to soothe thy sorrow and thy fears. Be still, my soul: thy Jesus can repay From His own fullness all He takes away.",
+      "Be still, my soul: the hour is hast'ning on When we shall be forever with the Lord. When disappointment, grief and fear are gone, Sorrow forgot, love's purest joys restored. Be still, my soul: when change and tears are past All safe and blessèd we shall meet at last.",
+      "Be still, my soul: begin the song of praise On earth, believing, to Thy Lord on high; Acknowledge Him in all thy words and ways, So shall He view thee with a well pleased eye. Be still, my soul: the Sun of life divine Through passing clouds shall but more brightly shine."
+    ]
+  },
+  {
+    "id": "openhymnal:be-thou-my-vision",
+    "title": "Be Thou My Vision",
+    "author": "Attr Dallan Forgaill",
+    "year": 1905,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Be Thou my Vision, O Lord of my heart; Naught be all else to me, save that Thou art. Thou my best Thought, by day or by night, Waking or sleeping, Thy presence my light.",
+      "Be Thou my Wisdom, and Thou my true Word; I ever with Thee and Thou with me, Lord; Thou my great Father, and I Thy true son; Thou in me dwelling, and I with Thee one.",
+      "Be Thou my battle Shield, Sword for the fight; Be Thou my Dignity, Thou my Delight; Thou my soul's Shelter, Thou my high Tower: Raise Thou me heav'nward, O Pow'r of my pow'r.",
+      "Riches I heed not, nor man's empty praise, Thou mine Inheritance, now and always: Thou and Thou only, be first in my heart, High King of Heaven, my Treasure Thou art.",
+      "High King of Heaven, my victory won, May I reach Heav'ns joys, O bright Heaven's Sun! Heart of my own heart, whatever befall, Still be my Vision, O Ruler of all."
     ]
   },
   {
@@ -556,36 +632,6 @@
       "There lies beneath its shadow but on the further side The darkness of an awful grave that gapes both deep and wide And there between us stands the cross two arms outstretched to save A watchman set to guard the way from that eternal grave.",
       "Upon that cross of Jesus mine eye at times can see The very dying form of One Who suffered there for me; And from my stricken heart with tears two wonders I confess; The wonders of redeeming love and my unworthiness.",
       "I take, O cross, thy shadow for my abiding place; I ask no other sunshine than the sunshine of His face; Content to let the world go by to know no gain or loss, My sinful self my only shame, my glory all the cross."
-    ]
-  },
-  {
-    "id": "openhymnal:be-still-my-soul",
-    "title": "Be Still My Soul",
-    "author": "Katharina A von Schlegel",
-    "year": 1752,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Be still, my soul: the Lord is on thy side. Bear patiently the cross of grief or pain. Leave to thy God to order and provide; In every change, He faithful will remain. Be still, my soul: thy best, thy heav'nly Friend Through thorny ways leads to a joyful end.",
-      "Be still, my soul: thy God doth undertake To guide the future, as He has the past. Thy hope, thy confidence let nothing shake; All now mysterious shall be bright at last. Be still, my soul: the waves and winds still know His voice Who ruled them while He dwelt below.",
-      "Be still, my soul: when dearest friends depart, And all is darkened in the vale of tears, Then shalt thou better know His love, His heart, Who comes to soothe thy sorrow and thy fears. Be still, my soul: thy Jesus can repay From His own fullness all He takes away.",
-      "Be still, my soul: the hour is hast'ning on When we shall be forever with the Lord. When disappointment, grief and fear are gone, Sorrow forgot, love's purest joys restored. Be still, my soul: when change and tears are past All safe and blessèd we shall meet at last.",
-      "Be still, my soul: begin the song of praise On earth, believing, to Thy Lord on high; Acknowledge Him in all thy words and ways, So shall He view thee with a well pleased eye. Be still, my soul: the Sun of life divine Through passing clouds shall but more brightly shine."
-    ]
-  },
-  {
-    "id": "openhymnal:be-thou-my-vision",
-    "title": "Be Thou My Vision",
-    "author": "Attr Dallan Forgaill",
-    "year": 1905,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Be Thou my Vision, O Lord of my heart; Naught be all else to me, save that Thou art. Thou my best Thought, by day or by night, Waking or sleeping, Thy presence my light.",
-      "Be Thou my Wisdom, and Thou my true Word; I ever with Thee and Thou with me, Lord; Thou my great Father, and I Thy true son; Thou in me dwelling, and I with Thee one.",
-      "Be Thou my battle Shield, Sword for the fight; Be Thou my Dignity, Thou my Delight; Thou my soul's Shelter, Thou my high Tower: Raise Thou me heav'nward, O Pow'r of my pow'r.",
-      "Riches I heed not, nor man's empty praise, Thou mine Inheritance, now and always: Thou and Thou only, be first in my heart, High King of Heaven, my Treasure Thou art.",
-      "High King of Heaven, my victory won, May I reach Heav'ns joys, O bright Heaven's Sun! Heart of my own heart, whatever befall, Still be my Vision, O Ruler of all."
     ]
   },
   {
@@ -824,23 +870,6 @@
     ]
   },
   {
-    "id": "openhymnal:come-god-creator-holy-ghost",
-    "title": "Come, God Creator, Holy Ghost",
-    "author": "variously ascribed to Ambrose",
-    "year": 1524,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Come, God Creator, Holy Ghost, And visit Thou these souls of men; Fill them with graces, as Thou dost, Thy creatures make pure a gain.",
-      "For Comforter Thy name we call. Sweet gift of God most high above, A holy unction to us all O Fount of life, Fire of love.",
-      "Our minds illumine and refresh, Deep in our hearts let love burn bright; Thou know'st the weakness of our flesh; And strengthen us with Thy might.",
-      "Thou with Thy wondrous sev'nfold gifts The finger art of God's right hand; The Father's Word Thou sendest swift On tongues of fire to each land.",
-      "Drive far from us our wily foe; Grant us Thy blesséd peace within, That in Thy footsteps we may go, And shun the dark ways of sin.",
-      "Teach us the Father well to know, Likewise His only Son our Lord, Thyself to us believing show, Spirit of both, aye adored",
-      "Praise to the Father, and the Son Who from the dead is risen again; Praise to the Comforter be done Both now and ever. Amen."
-    ]
-  },
-  {
     "id": "openhymnal:come-holy-spirit-lord-our-god",
     "title": "Come Holy Spirit, Lord Our God",
     "author": "v",
@@ -866,6 +895,23 @@
       "Jesus sought me when a stranger, Wand'ring from the fold of God; He, to rescue me from danger, Interposed His precious blood; How His kindness yet pursues me Mortal tongue can never tell, Clothed in flesh, till death shall loose me I cannot proclaim it well.",
       "O to grace how great a debtor Daily I'm constrained to be! Let Thy goodness, like a fetter, Bind my wand'ring heart to Thee. Prone to wander, Lord, I feel it, Prone to leave the God I love; Here's my heart, O take and seal it, Seal it for Thy courts above.",
       "O that day when freed from sinning, I shall see Thy lovely face; Clothèd then in blood washed linen How I'll sing Thy sovereign grace; Come, my Lord, no longer tarry, Take my ransomed soul away; Send thine angels now to carry Me to realms of endless day."
+    ]
+  },
+  {
+    "id": "openhymnal:come-god-creator-holy-ghost",
+    "title": "Come, God Creator, Holy Ghost",
+    "author": "variously ascribed to Ambrose",
+    "year": 1524,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Come, God Creator, Holy Ghost, And visit Thou these souls of men; Fill them with graces, as Thou dost, Thy creatures make pure a gain.",
+      "For Comforter Thy name we call. Sweet gift of God most high above, A holy unction to us all O Fount of life, Fire of love.",
+      "Our minds illumine and refresh, Deep in our hearts let love burn bright; Thou know'st the weakness of our flesh; And strengthen us with Thy might.",
+      "Thou with Thy wondrous sev'nfold gifts The finger art of God's right hand; The Father's Word Thou sendest swift On tongues of fire to each land.",
+      "Drive far from us our wily foe; Grant us Thy blesséd peace within, That in Thy footsteps we may go, And shun the dark ways of sin.",
+      "Teach us the Father well to know, Likewise His only Son our Lord, Thyself to us believing show, Spirit of both, aye adored",
+      "Praise to the Father, and the Son Who from the dead is risen again; Praise to the Comforter be done Both now and ever. Amen."
     ]
   },
   {
@@ -1222,6 +1268,20 @@
     ]
   },
   {
+    "id": "openhymnal:go-to-dark-gethsemane",
+    "title": "Go To Dark Gethsemane",
+    "author": "James Montgomery",
+    "year": 1820,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Go to dark Gethsemane, ye that feel the tempter's pow'r; Your Redeemer's conflict see, watch with Him one bitter hour, Turn not from His griefs away; learn from Jesus Christ to pray.",
+      "Follow to the judgment hall, view the Lord of Life arraigned; O the wormwood and the gall! O the pangs His soul sustained! Shun not suff'ring, shame, or loss; learn from Christ to bear the cross.",
+      "Calv'ry's mournful mountain climb; there, adoring at His feet, Mark that miracle of time, God's own sacrifice complete. \"It is finished!\" hear Him cry; learn from Jesus Christ to die.",
+      "Early hasten to the tomb where they laid His breathless clay; All is solitude and gloom. Who has taken Him away? Christ is ris'n! He meets our eyes; Savior, teach us so to rise."
+    ]
+  },
+  {
     "id": "openhymnal:god-himself-is-present",
     "title": "God Himself is Present",
     "author": "Gerhard Tersteegen",
@@ -1253,19 +1313,6 @@
     ]
   },
   {
-    "id": "openhymnal:god-that-madest-earth-and-heaven",
-    "title": "God, That Madest Earth and Heaven",
-    "author": "verse",
-    "year": 1827,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "God, that madest earth and Heaven, darkness and light; Who the day for toil hast given, for rest the night; May Thine angel guards defend us, Slumber sweet Thy mercy send us; Holy dreams and hopes attend us, all through the night.",
-      "And when morn again shall call us, to run life's way, May we still, whate'er befall us, Thy will obey. From the pow'r of evil hide us, In the narrow pathway guide us, Nor Thy smile be e'er denied us all through the day.",
-      "Guard us waking, guard us sleeping, and when we die, May we in Thy mighty keeping all peaceful lie; When the last dread call shall wake us, Do not Thou, our God, forsake us, But to reign in glory take us with Thee on high."
-    ]
-  },
-  {
     "id": "openhymnal:god-the-father-be-our-stay",
     "title": "God the Father Be Our Stay",
     "author": "",
@@ -1280,20 +1327,6 @@
     ]
   },
   {
-    "id": "openhymnal:god-whose-almighty-word",
-    "title": "God, Whose Almighty Word",
-    "author": "John Marriott",
-    "year": 1813,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "God, whose almighty word Chaos and darkness heard And took their flight: Hear us, we humble pray, And where the Gospel day Sheds not its glorious ray, Let there be light!",
-      "Lord, who once came to bring, On your redeeming wing, Healing and sight, Health to the sick in mind, Sight to the inly blind: Oh, now to humankind Let there be light!",
-      "Spirit of truth and love, Life giving, holy dove, Speed forth your flight; Move on the water's face, Bearing the lamp of grace, And in earth's darkest place Let there be light!",
-      "Holy and blessed three, Glorious Trinity, Wisdom, love, might! Boundless as ocean's tide, Rolling in fullest pride, Through the earth, far and wide, Let there be light!"
-    ]
-  },
-  {
     "id": "openhymnal:god-will-take-care-of-you",
     "title": "God Will Take Care of You",
     "author": "Civilla Durfee Martin",
@@ -1305,6 +1338,33 @@
       "Through days of toil when heart doth fail, God will take care of you; When dangers fierce your path assail, God will take care of you. God will take care of you, through ev'ry day, o'er all the way; He will take care of you, God will take care of you.",
       "All you may need He will provide, God will take care of you; Nothing you ask will be denied, God will take care of you. God will take care of you, through ev'ry day, o'er all the way; He will take care of you, God will take care of you.",
       "No matter what may be the test, God will take care of you; Lean, weary one, upon His breast, God will take care of you. God will take care of you, through ev'ry day, o'er all the way; He will take care of you, God will take care of you."
+    ]
+  },
+  {
+    "id": "openhymnal:god-that-madest-earth-and-heaven",
+    "title": "God, That Madest Earth and Heaven",
+    "author": "verse",
+    "year": 1827,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "God, that madest earth and Heaven, darkness and light; Who the day for toil hast given, for rest the night; May Thine angel guards defend us, Slumber sweet Thy mercy send us; Holy dreams and hopes attend us, all through the night.",
+      "And when morn again shall call us, to run life's way, May we still, whate'er befall us, Thy will obey. From the pow'r of evil hide us, In the narrow pathway guide us, Nor Thy smile be e'er denied us all through the day.",
+      "Guard us waking, guard us sleeping, and when we die, May we in Thy mighty keeping all peaceful lie; When the last dread call shall wake us, Do not Thou, our God, forsake us, But to reign in glory take us with Thee on high."
+    ]
+  },
+  {
+    "id": "openhymnal:god-whose-almighty-word",
+    "title": "God, Whose Almighty Word",
+    "author": "John Marriott",
+    "year": 1813,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "God, whose almighty word Chaos and darkness heard And took their flight: Hear us, we humble pray, And where the Gospel day Sheds not its glorious ray, Let there be light!",
+      "Lord, who once came to bring, On your redeeming wing, Healing and sight, Health to the sick in mind, Sight to the inly blind: Oh, now to humankind Let there be light!",
+      "Spirit of truth and love, Life giving, holy dove, Speed forth your flight; Move on the water's face, Bearing the lamp of grace, And in earth's darkest place Let there be light!",
+      "Holy and blessed three, Glorious Trinity, Wisdom, love, might! Boundless as ocean's tide, Rolling in fullest pride, Through the earth, far and wide, Let there be light!"
     ]
   },
   {
@@ -1323,18 +1383,21 @@
     ]
   },
   {
-    "id": "openhymnal:go-to-dark-gethsemane",
-    "title": "Go To Dark Gethsemane",
-    "author": "James Montgomery",
-    "year": 1820,
-    "meter": "Unknown",
-    "topics": [],
+    "id": "openhymnal:great-is-thy-faithfulness",
+    "title": "Great Is Thy Faithfulness",
+    "author": "Thomas O. Chisholm",
+    "year": 1923,
+    "meter": "11.10.11.10 with Refrain",
+    "topics": [
+      "Faithfulness",
+      "Providence"
+    ],
     "lyrics": [
-      "Go to dark Gethsemane, ye that feel the tempter's pow'r; Your Redeemer's conflict see, watch with Him one bitter hour, Turn not from His griefs away; learn from Jesus Christ to pray.",
-      "Follow to the judgment hall, view the Lord of Life arraigned; O the wormwood and the gall! O the pangs His soul sustained! Shun not suff'ring, shame, or loss; learn from Christ to bear the cross.",
-      "Calv'ry's mournful mountain climb; there, adoring at His feet, Mark that miracle of time, God's own sacrifice complete. \"It is finished!\" hear Him cry; learn from Jesus Christ to die.",
-      "Early hasten to the tomb where they laid His breathless clay; All is solitude and gloom. Who has taken Him away? Christ is ris'n! He meets our eyes; Savior, teach us so to rise."
-    ]
+      "Great is thy faithfulness, O God my Father; there is no shadow of turning with thee; thou changest not, thy compassions, they fail not; as thou hast been, thou forever wilt be.",
+      "Summer and winter and springtime and harvest, sun, moon, and stars in their courses above join with all nature in manifold witness to thy great faithfulness, mercy, and love.",
+      "Pardon for sin and a peace that endureth, thine own dear presence to cheer and to guide; strength for today and bright hope for tomorrow, blessings all mine, with ten thousand beside!"
+    ],
+    "refrain": "Great is thy faithfulness! Great is thy faithfulness! Morning by morning new mercies I see; all I have needed thy hand hath provided; great is thy faithfulness, Lord, unto me!"
   },
   {
     "id": "openhymnal:guide-me-o-thou-great-jehovah",
@@ -1397,19 +1460,6 @@
     ]
   },
   {
-    "id": "openhymnal:hark-hark-my-soul",
-    "title": "Hark, Hark, My Soul!",
-    "author": "Frederick W Faber",
-    "year": 1854,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Hark! hark, my soul! angelic songs are swelling O'er earth's green fields and ocean's wave-- beat shore: How sweet the truth those blessèd strains are telling Of that new life when sin shall be no more! Onward we go, for still we hear them sing, \"Come, weary souls, for Jesus bids you come\";",
-      "And through the dark, its echoes sweetly ringing, The music of the Gospel leads us home. Far, far away, like bells at ev'ning pealing, The voice of Jesus sounds o'er land and sea, And laden souls, by thousands meekly stealing, Kind Shepherd, turn their weary steps to Thee.",
-      "Faith's journeys end in welcome to the weary, And Heav'n, the heart's true home will come at last. Angels, sing on, your faithful watches keeping, Sing us sweet fragments of the songs above; Till morning's joy shall end the night of weeping, And life's long shadows break in cloudless love."
-    ]
-  },
-  {
     "id": "openhymnal:hark-the-glad-sound",
     "title": "Hark the Glad Sound",
     "author": "Philip Doddridge",
@@ -1427,18 +1477,16 @@
     ]
   },
   {
-    "id": "openhymnal:hark-the-herald-angels-sing",
-    "title": "Hark! The Herald Angels Sing",
-    "author": "Charles Wesley",
-    "year": 1739,
+    "id": "openhymnal:hark-hark-my-soul",
+    "title": "Hark, Hark, My Soul!",
+    "author": "Frederick W Faber",
+    "year": 1854,
     "meter": "Unknown",
     "topics": [],
     "lyrics": [
-      "Hark! The herald angels sing, \"Glory to the newborn King; Peace on earth, and mercy mild, God and sinners reconciled!\" Joyful, all ye nations rise, Join the triumph of the skies; With th'angelic host proclaim, \"Christ is born in Bethlehem!\" Hark! the herald angels sing, \"Glory to the newborn King!\"",
-      "Christ, by highest Heav'n adored; Christ the everlasting Lord; Late in time, behold Him come, Offspring of a virgin's womb. Veiled in flesh the Godhead see; Hail th'incarnate Deity, Pleased with us in flesh to dwell, Jesus our Emmanuel. Hark! the herald angels sing, \"Glory to the newborn King!\"",
-      "Hail the heav'nly Prince of Peace! Hail the Sun of Righteousness! Light and life to all He brings, Ris'n with healing in His wings. Mild He lays His glory by, Born that man no more may die. Born to raise the sons of earth, Born to give them second birth. Hark! the herald angels sing, \"Glory to the newborn King!\"",
-      "Come, Desire of nations, come, Fix in us Thy humble home; Rise, the woman's conqu'ring Seed, Bruise in us the serpent's head. Now display Thy saving power, Ruined nature now restore; Now in mystic union join Thine to ours, and ours to Thine. Hark! the herald angels sing, \"Glory to the newborn King!\"",
-      "Adam's likeness, Lord, efface, Stamp Thine image in its place: Second Adam from above, Reinstate us in Thy love. Let us Thee, though lost, regain, Thee, the Life, the inner man: O, to all Thyself impart, Formed in each believing heart. Hark! the herald angels sing, \"Glory to the newborn King!\""
+      "Hark! hark, my soul! angelic songs are swelling O'er earth's green fields and ocean's wave-- beat shore: How sweet the truth those blessèd strains are telling Of that new life when sin shall be no more! Onward we go, for still we hear them sing, \"Come, weary souls, for Jesus bids you come\";",
+      "And through the dark, its echoes sweetly ringing, The music of the Gospel leads us home. Far, far away, like bells at ev'ning pealing, The voice of Jesus sounds o'er land and sea, And laden souls, by thousands meekly stealing, Kind Shepherd, turn their weary steps to Thee.",
+      "Faith's journeys end in welcome to the weary, And Heav'n, the heart's true home will come at last. Angels, sing on, your faithful watches keeping, Sing us sweet fragments of the songs above; Till morning's joy shall end the night of weeping, And life's long shadows break in cloudless love."
     ]
   },
   {
@@ -1455,6 +1503,21 @@
       "If you cannot be the watchman, Standing high on Zion's wall, Pointing out the path to heaven, Off'ring life and peace to all, With your prayers and with your bounties You can do what heav'n demands; You can be like faithful Aaron, Holding up the prophet's hands.",
       "If among the older people, You may not be apt to teach, \"Feed My lambs,\" said Christ, our Shepherd, \"Place the food within their reach.\" And it may be that the children You have led with trembling hand, Will be found among your jewels, When you reach the better land.",
       "Let none hear you idly saying, \"There is nothing I can do.\" While the lost of earth are dying, And the Master calls for you; Take the task He gives you gladly; Let His work your pleasure be; Answer quickly when He calls you, \"Here am I, send me, send me.\""
+    ]
+  },
+  {
+    "id": "openhymnal:hark-the-herald-angels-sing",
+    "title": "Hark! The Herald Angels Sing",
+    "author": "Charles Wesley",
+    "year": 1739,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Hark! The herald angels sing, \"Glory to the newborn King; Peace on earth, and mercy mild, God and sinners reconciled!\" Joyful, all ye nations rise, Join the triumph of the skies; With th'angelic host proclaim, \"Christ is born in Bethlehem!\" Hark! the herald angels sing, \"Glory to the newborn King!\"",
+      "Christ, by highest Heav'n adored; Christ the everlasting Lord; Late in time, behold Him come, Offspring of a virgin's womb. Veiled in flesh the Godhead see; Hail th'incarnate Deity, Pleased with us in flesh to dwell, Jesus our Emmanuel. Hark! the herald angels sing, \"Glory to the newborn King!\"",
+      "Hail the heav'nly Prince of Peace! Hail the Sun of Righteousness! Light and life to all He brings, Ris'n with healing in His wings. Mild He lays His glory by, Born that man no more may die. Born to raise the sons of earth, Born to give them second birth. Hark! the herald angels sing, \"Glory to the newborn King!\"",
+      "Come, Desire of nations, come, Fix in us Thy humble home; Rise, the woman's conqu'ring Seed, Bruise in us the serpent's head. Now display Thy saving power, Ruined nature now restore; Now in mystic union join Thine to ours, and ours to Thine. Hark! the herald angels sing, \"Glory to the newborn King!\"",
+      "Adam's likeness, Lord, efface, Stamp Thine image in its place: Second Adam from above, Reinstate us in Thy love. Let us Thee, though lost, regain, Thee, the Life, the inner man: O, to all Thyself impart, Formed in each believing heart. Hark! the herald angels sing, \"Glory to the newborn King!\""
     ]
   },
   {
@@ -1583,6 +1646,19 @@
     ]
   },
   {
+    "id": "openhymnal:holy-spirit-ever-dwelling",
+    "title": "Holy Spirit, Ever Dwelling",
+    "author": "Timothy Rees",
+    "year": 1922,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Holy Spirit, ever dwelling in the holiest realms of light Holy Spirit, ever brooding o'er a world of gloom and blight Holy Spirit, ever raising earthbound souls to glory high Living, life-- imparting Spirit you we praise and magnify.",
+      "Holy Spirit, ever breathing on the church the breath of life Holy Spirit, ever striving through your people's ceaseless strife Holy Spirit, ever forming in the church the mind of Christ In our worship we will praise you for your fruit and gifts unpriced.",
+      "Holy Spirit, ever working through the church's ministry Quick'ning, strength'ning, and absolving setting captive sinners free Holy Spirit, ever binding age to age and soul to soul In community unending you we worship and extol."
+    ]
+  },
+  {
     "id": "openhymnal:holy-holy-holy",
     "title": "Holy, Holy, Holy",
     "author": "Reginald Heber",
@@ -1594,19 +1670,6 @@
       "Holy, holy, holy! All the saints adore Thee, Casting down their golden crowns around the glassy sea; Cherubim and seraphim falling down before Thee, Who was, and is, and evermore shall be.",
       "Holy, holy, holy! though the darkness hide Thee, Though the eye of sinful man Thy glory may not see; Only Thou art holy; there is none beside Thee, Perfect in pow'r, in love, and purity.",
       "Holy, holy, holy! Lord God Almighty! All Thy works shall praise Thy Name, in earth, and sky, and sea; Holy, holy, holy; merciful and mighty! God in three Persons, blessed Trinity!"
-    ]
-  },
-  {
-    "id": "openhymnal:holy-spirit-ever-dwelling",
-    "title": "Holy Spirit, Ever Dwelling",
-    "author": "Timothy Rees",
-    "year": 1922,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Holy Spirit, ever dwelling in the holiest realms of light Holy Spirit, ever brooding o'er a world of gloom and blight Holy Spirit, ever raising earthbound souls to glory high Living, life-- imparting Spirit you we praise and magnify.",
-      "Holy Spirit, ever breathing on the church the breath of life Holy Spirit, ever striving through your people's ceaseless strife Holy Spirit, ever forming in the church the mind of Christ In our worship we will praise you for your fruit and gifts unpriced.",
-      "Holy Spirit, ever working through the church's ministry Quick'ning, strength'ning, and absolving setting captive sinners free Holy Spirit, ever binding age to age and soul to soul In community unending you we worship and extol."
     ]
   },
   {
@@ -1638,6 +1701,24 @@
       "Even down to old age all My people shall prove My sovereign, eternal, unchangeable love; And when hoary hairs shall their temples adorn, Like lambs they shall still in My bosom be borne.",
       "The soul that on Jesus has leaned for repose, I will not, I will not desert to its foes; That soul, though all hell should endeavor to shake, I'll never, no never, no never forsake."
     ]
+  },
+  {
+    "id": "openhymnal:how-great-thou-art",
+    "title": "How Great Thou Art",
+    "author": "Stuart K. Hine",
+    "year": 1949,
+    "meter": "11.10.11.10 with Refrain",
+    "topics": [
+      "Creation",
+      "Praise"
+    ],
+    "lyrics": [
+      "O Lord my God! when I in awesome wonder consider all the worlds thy hands have made, I see the stars, I hear the rolling thunder, thy pow'r throughout the universe displayed;",
+      "When through the woods and forest glades I wander and hear the birds sing sweetly in the trees; when I look down from lofty mountain grandeur and hear the brook and feel the gentle breeze;",
+      "And when I think that God, his Son not sparing, sent him to die, I scarce can take it in; that on the cross, my burden gladly bearing, he bled and died to take away my sin;",
+      "When Christ shall come with shout of acclamation and take me home, what joy shall fill my heart! Then I shall bow in humble adoration, and there proclaim, my God, how great thou art!"
+    ],
+    "refrain": "Then sings my soul, my Savior God, to thee; how great thou art, how great thou art! Then sings my soul, my Savior God, to thee; how great thou art, how great thou art!"
   },
   {
     "id": "openhymnal:how-shall-we-answer-terrors-cry",
@@ -1711,6 +1792,111 @@
     ]
   },
   {
+    "id": "openhymnal:i-heard-the-bells-on-christmas-day",
+    "title": "I Heard The Bells On Christmas Day",
+    "author": "Henry Wadsworth Longfellow",
+    "year": 1864,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "I heard the bells on Christmas day Their old familiar carols play, And wild and sweet the words repeat Of peace on earth, good will to men.",
+      "And thought how, as the day had come, The belfries of all Christendom Had rolled along th'unbroken song Of peace on earth, good will to men.",
+      "Till ringing, singing on its way The world revolved from night to day, A voice, a chime, a chant sublime Of peace on earth, good will to men.",
+      "And in despair I bowed my head \"There is no peace on earth,\" I said, \"For hate is strong and mocks the song Of peace on earth, good will to men.\"",
+      "Then pealed the bells more loud and deep: \"God is not dead, nor doth He sleep; The wrong shall fail, the right prevail With peace on earth, good will to men.\""
+    ]
+  },
+  {
+    "id": "openhymnal:i-know-that-my-redeemer-lives",
+    "title": "I Know That My Redeemer Lives",
+    "author": "Samuel Medley",
+    "year": 1775,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "I know that my Redeemer lives; What comfort this sweet sentence gives! He lives, He lives, who once was dead; He lives, my ever living Head.",
+      "He lives to bless me with His love, He lives to plead for me above. He lives my hungry soul to feed, He lives to help in time of need.",
+      "He lives triumphant from the grave, He lives eternally to save, He lives all glorious in the sky, He lives exalted there on high.",
+      "He lives to grant me rich supply, He lives to guide me with His eye, He lives to comfort me when faint, He lives to hear my soul's complaint.",
+      "He lives to silence all my fears, He lives to wipe away my tears He lives to calm my troubled heart, He lives all blessings to impart.",
+      "He lives, my kind, wise, heavenly Friend, He lives and loves me to the end; He lives, and while He lives, Ill sing; He lives, my Prophet, Priest, and King.",
+      "He lives and grants me daily breath; He lives, and I shall conquer death: He lives my mansion to prepare; He lives to bring me safely there.",
+      "He lives, all glory to His Name! He lives, my Jesus, still the same. Oh, the sweet joy this sentence gives, I know that my Redeemer lives!"
+    ]
+  },
+  {
+    "id": "openhymnal:i-know-whom-i-have-believed",
+    "title": "I Know Whom I Have Believed",
+    "author": "Daniel Webster Whittle",
+    "year": 1883,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "I know not why God's wondrous grace To me He hath made known, Nor why, unworthy, Christ in love Redeemed me for His own. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
+      "I know not how this saving faith To me He did impart, Nor how believing in His Word Wrought peace within my heart. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
+      "I know not how the Spirit moves, Convincing us of sin, Revealing Jesus through the Word, Creating faith in Him. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
+      "I know not what of good or ill May be reserved for me, Of weary ways or golden days, Before His face I see. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
+      "I know not when my Lord may come, At night or noonday fair, Nor if I walk the vale with Him, Or meet Him in the air. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day."
+    ]
+  },
+  {
+    "id": "openhymnal:i-need-thee-every-hour",
+    "title": "I Need Thee Every Hour",
+    "author": "Annie Sherwood Hawks",
+    "year": 1872,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "I need Thee ev'ry hour, Most gracious Lord; No tender voice like Thine Can peace afford. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
+      "I need Thee ev'ry hour, Stay Thou near by; Temptations lose their pow'r When Thou art nigh. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
+      "I need Thee ev'ry hour, In joy or pain; Come quickly and abide, Or life is vain. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
+      "I need Thee ev'ry hour, Teach me Thy will; And Thy rich promises In me fulfill. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
+      "I need Thee ev'ry hour, Most Holy One; O make me Thine indeed, Thou blessed Son! I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!"
+    ]
+  },
+  {
+    "id": "openhymnal:i-place-my-trust-in-god",
+    "title": "I Place My Trust In God",
+    "author": "verses by Dorothy Amstutz",
+    "year": 2007,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "I placed my trust in God today, For it is He who knows the way, And when uncertainties arise, I trust His judgment, true and wise. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
+      "I placed my trust in God today, Alone I could not find my way. Led by His guidance, safe and sure, I then can rest in peace, secure. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
+      "I place my trust in God each day, Committed, yielded to His way. Naught can o'erthrow me when I'm there Beneath His everlasting care. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
+      "I'll place my trust in God each day, And while I walk the narrow way, Each burden God will help me bear; He hears my cry, my ev'ry prayer. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
+      "I'll place my trust in God each day, Yes, even though the skies are gray. Led by His hand, I will not fear; I know that God is always near. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land."
+    ]
+  },
+  {
+    "id": "openhymnal:i-sing-the-mighty-power-of-god",
+    "title": "I Sing the Mighty Power of God",
+    "author": "Isaac Watts",
+    "year": 1709,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "I sing the mighty pow'r of God, That made the mountains rise; That spread the flowing seas abroad, And built the lofty skies. I sing the wisdom that ordained The sun to rule the day: The moon shines full at His command, And all the stars obey.",
+      "I sing the goodness of the Lord, That filled the earth with food: He formed the creatures with His word, And then pronounced them good. Lord, how Thy wonders are displayed, Where'er I turn my eye; If I survey the ground I tread, Or gaze upon the sky.",
+      "There's not a plant or flow'r below, But makes Thy glories known; And clouds arise and tempests blow, By order from Thy throne. Creatures that borrow life from Thee Are subject to Thy care: There's not a place where we can flee, But God is present there."
+    ]
+  },
+  {
+    "id": "openhymnal:im-but-a-stranger-here",
+    "title": "I'm But A Stranger Here",
+    "author": "Thomas Rawson Taylor",
+    "year": 1836,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "I'm but a stranger here, Heav'n is my home; Earth is a desert drear, Heav'n is my home. Danger and sorrow stand round me on every hand; Heav'n is my fatherland, Heav'n is my home.",
+      "What though the tempest rage, Heav'n is my home; Short is my pilgrimage, Heav'n is my home; Time's wild and wintry blast soon shall be over past; I shall reach home at last, Heav'n is my home.",
+      "There at my Savior's side Heav'n is my home; I shall be glorified, Heav'n is my home. There are the good and blest, those I loved most and best; There, too, I soon shall rest, Heav'n is my home.",
+      "Therefore I murmur not, Heav'n is my home; Whate'er my earthly lot, Heav'n is my home; And I shall surely stand there at my Lord's right hand. Heav'n is my fatherland, Heav'n is my home."
+    ]
+  },
+  {
     "id": "openhymnal:if-god-had-not-been-on-our-side",
     "title": "If God Had Not Been on Our Side",
     "author": "Martin Luther",
@@ -1762,68 +1948,6 @@
     ]
   },
   {
-    "id": "openhymnal:i-heard-the-bells-on-christmas-day",
-    "title": "I Heard The Bells On Christmas Day",
-    "author": "Henry Wadsworth Longfellow",
-    "year": 1864,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "I heard the bells on Christmas day Their old familiar carols play, And wild and sweet the words repeat Of peace on earth, good will to men.",
-      "And thought how, as the day had come, The belfries of all Christendom Had rolled along th'unbroken song Of peace on earth, good will to men.",
-      "Till ringing, singing on its way The world revolved from night to day, A voice, a chime, a chant sublime Of peace on earth, good will to men.",
-      "And in despair I bowed my head \"There is no peace on earth,\" I said, \"For hate is strong and mocks the song Of peace on earth, good will to men.\"",
-      "Then pealed the bells more loud and deep: \"God is not dead, nor doth He sleep; The wrong shall fail, the right prevail With peace on earth, good will to men.\""
-    ]
-  },
-  {
-    "id": "openhymnal:i-know-that-my-redeemer-lives",
-    "title": "I Know That My Redeemer Lives",
-    "author": "Samuel Medley",
-    "year": 1775,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "I know that my Redeemer lives; What comfort this sweet sentence gives! He lives, He lives, who once was dead; He lives, my ever living Head.",
-      "He lives to bless me with His love, He lives to plead for me above. He lives my hungry soul to feed, He lives to help in time of need.",
-      "He lives triumphant from the grave, He lives eternally to save, He lives all glorious in the sky, He lives exalted there on high.",
-      "He lives to grant me rich supply, He lives to guide me with His eye, He lives to comfort me when faint, He lives to hear my soul's complaint.",
-      "He lives to silence all my fears, He lives to wipe away my tears He lives to calm my troubled heart, He lives all blessings to impart.",
-      "He lives, my kind, wise, heavenly Friend, He lives and loves me to the end; He lives, and while He lives, Ill sing; He lives, my Prophet, Priest, and King.",
-      "He lives and grants me daily breath; He lives, and I shall conquer death: He lives my mansion to prepare; He lives to bring me safely there.",
-      "He lives, all glory to His Name! He lives, my Jesus, still the same. Oh, the sweet joy this sentence gives, I know that my Redeemer lives!"
-    ]
-  },
-  {
-    "id": "openhymnal:i-know-whom-i-have-believed",
-    "title": "I Know Whom I Have Believed",
-    "author": "Daniel Webster Whittle",
-    "year": 1883,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "I know not why God's wondrous grace To me He hath made known, Nor why, unworthy, Christ in love Redeemed me for His own. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
-      "I know not how this saving faith To me He did impart, Nor how believing in His Word Wrought peace within my heart. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
-      "I know not how the Spirit moves, Convincing us of sin, Revealing Jesus through the Word, Creating faith in Him. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
-      "I know not what of good or ill May be reserved for me, Of weary ways or golden days, Before His face I see. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day.",
-      "I know not when my Lord may come, At night or noonday fair, Nor if I walk the vale with Him, Or meet Him in the air. But I know Whom I have believèd, And am persuaded that He is able To keep that which I've committed Unto Him against that day."
-    ]
-  },
-  {
-    "id": "openhymnal:im-but-a-stranger-here",
-    "title": "I'm But A Stranger Here",
-    "author": "Thomas Rawson Taylor",
-    "year": 1836,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "I'm but a stranger here, Heav'n is my home; Earth is a desert drear, Heav'n is my home. Danger and sorrow stand round me on every hand; Heav'n is my fatherland, Heav'n is my home.",
-      "What though the tempest rage, Heav'n is my home; Short is my pilgrimage, Heav'n is my home; Time's wild and wintry blast soon shall be over past; I shall reach home at last, Heav'n is my home.",
-      "There at my Savior's side Heav'n is my home; I shall be glorified, Heav'n is my home. There are the good and blest, those I loved most and best; There, too, I soon shall rest, Heav'n is my home.",
-      "Therefore I murmur not, Heav'n is my home; Whate'er my earthly lot, Heav'n is my home; And I shall surely stand there at my Lord's right hand. Heav'n is my fatherland, Heav'n is my home."
-    ]
-  },
-  {
     "id": "openhymnal:immortal-invisible-god-only-wise",
     "title": "Immortal, Invisible, God Only Wise",
     "author": "Walter Chalmers Smith",
@@ -1836,21 +1960,6 @@
       "To all, life Thou givest, to both great and small; In all life Thou livest, the true life of all; We blossom and flourish as leaves on the tree, And wither and perish but naught changeth Thee.",
       "Great Father of glory, pure Father of light, Thine angels adore Thee, all veiling their sight; But of Thy rich graces this grace, Lord, impart Take the veil from our face, the vile from our heart.",
       "All laud we would render; O help us to see 'Tis only the splendor of light hideth Thee, And so let Thy glory, almighty, impart, Through Christ in His story, Thy Christ to the heart."
-    ]
-  },
-  {
-    "id": "openhymnal:i-need-thee-every-hour",
-    "title": "I Need Thee Every Hour",
-    "author": "Annie Sherwood Hawks",
-    "year": 1872,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "I need Thee ev'ry hour, Most gracious Lord; No tender voice like Thine Can peace afford. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
-      "I need Thee ev'ry hour, Stay Thou near by; Temptations lose their pow'r When Thou art nigh. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
-      "I need Thee ev'ry hour, In joy or pain; Come quickly and abide, Or life is vain. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
-      "I need Thee ev'ry hour, Teach me Thy will; And Thy rich promises In me fulfill. I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!",
-      "I need Thee ev'ry hour, Most Holy One; O make me Thine indeed, Thou blessed Son! I need Thee, O I need Thee; Ev'ry hour I need Thee; O bless me now, my Savior, I come to Thee!"
     ]
   },
   {
@@ -1909,21 +2018,6 @@
     ]
   },
   {
-    "id": "openhymnal:i-place-my-trust-in-god",
-    "title": "I Place My Trust In God",
-    "author": "verses by Dorothy Amstutz",
-    "year": 2007,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "I placed my trust in God today, For it is He who knows the way, And when uncertainties arise, I trust His judgment, true and wise. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
-      "I placed my trust in God today, Alone I could not find my way. Led by His guidance, safe and sure, I then can rest in peace, secure. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
-      "I place my trust in God each day, Committed, yielded to His way. Naught can o'erthrow me when I'm there Beneath His everlasting care. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
-      "I'll place my trust in God each day, And while I walk the narrow way, Each burden God will help me bear; He hears my cry, my ev'ry prayer. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land.",
-      "I'll place my trust in God each day, Yes, even though the skies are gray. Led by His hand, I will not fear; I know that God is always near. I'll place my trust in God today, Even when I cannot see the way, He'll lead me on with His strong hand, Until I reach the promised land."
-    ]
-  },
-  {
     "id": "openhymnal:isaiah-mighty-seer-in-days-of-old",
     "title": "Isaiah, Mighty Seer, In Days of Old",
     "author": "Martin Luther",
@@ -1932,19 +2026,6 @@
     "topics": [],
     "lyrics": [
       "Isaiah, mighty seer, in days of old The Lord of all in Spirit did behold High on a lofty throne, in splendor bright, With flowing train that filled the Temple quite. Above the throne were stately seraphim, Six wings had they, these messengers of Him. With twain they veiled their faces, as was meet, With twain in reverent awe they hid their feet, And with the other twain aloft they soared, One to the other called and praised the Lord: \"Holy is God, the Lord of Sabaoth! Holy is God, the Lord of Sabaoth! Holy is God, the Lord of Sabaoth! Behold, His glory filleth all the earth!\" The beams and lintels trembled at the cry, And clouds of smoke enwrapped the throne on high."
-    ]
-  },
-  {
-    "id": "openhymnal:i-sing-the-mighty-power-of-god",
-    "title": "I Sing the Mighty Power of God",
-    "author": "Isaac Watts",
-    "year": 1709,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "I sing the mighty pow'r of God, That made the mountains rise; That spread the flowing seas abroad, And built the lofty skies. I sing the wisdom that ordained The sun to rule the day: The moon shines full at His command, And all the stars obey.",
-      "I sing the goodness of the Lord, That filled the earth with food: He formed the creatures with His word, And then pronounced them good. Lord, how Thy wonders are displayed, Where'er I turn my eye; If I survey the ground I tread, Or gaze upon the sky.",
-      "There's not a plant or flow'r below, But makes Thy glories known; And clouds arise and tempests blow, By order from Thy throne. Creatures that borrow life from Thee Are subject to Thy care: There's not a place where we can flee, But God is present there."
     ]
   },
   {
@@ -2033,46 +2114,6 @@
     ]
   },
   {
-    "id": "openhymnal:jesus-christ-our-blessed-savior",
-    "title": "Jesus Christ, Our Blessed Savior",
-    "author": "John Hus",
-    "year": 1369,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Jesus Christ, our Blessed Savior, Turned away God's wrath forever; Suff'ring pains no tongue can tell, He saved us from the pains of hell.",
-      "To remind us that, to save us He hath died, His flesh He gave us With this bread, a quick'ning food, And with this wine, His precious blood.",
-      "Whoso to this board repaireth, Take good heed how He prepareth; Death instead of life shall He Receive who comes unworthily.",
-      "Praise the Father, God in heaven, Who such dainty food hath given, And for misdeeds thou hast done Gave to die His beloved Son.",
-      "Thou shalt hold with faith unshaken, That this food is to be taken By the sick who are distressed, By those whose heart is sin-- oppressed.",
-      "To such grace and mercy turneth Every soul that truly mourneth; Art thou well? Avoid this board, Else thou reapest an ill reward.",
-      "Christ says: \"Come ye heavy-laden, I your weary hearts will gladden; They that are yet strong and well, Despise the best physician's skill.",
-      "Couldst thou earn thine own salvation, Useless were my death and passion; This feast is not spread for thee, If thine own helper thou wilt be.",
-      "If thou this believest truly, And confession makest duly, Thou a welcome guest art here, This heavenly food thy soul shall cheer.",
-      "But the fruits must not be missing, Love thy neighbor without ceasing, That true love let him receive, Which here to thee thy God doth give."
-    ]
-  },
-  {
-    "id": "openhymnal:jesus-christ-our-blessed-savior",
-    "title": "Jesus Christ, Our Blessed Savior",
-    "author": "John Hus",
-    "year": 1369,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Jesus Christ, our Blessed Savior, Turned away God's wrath forever; Suff'ring pains no tongue can tell, He saved us from the pains of hell.",
-      "To remind us that, to save us He hath died, His flesh He gave us With this bread, a quick'ning food, And with this wine, His precious blood.",
-      "Whoso to this board repaireth, Take good heed how He prepareth; Death instead of life shall He Receive who comes unworthily.",
-      "Praise the Father, God in heaven, Who such dainty food hath given, And for misdeeds thou hast done Gave to die His beloved Son.",
-      "Thou shalt hold with faith unshaken, That this food is to be taken By the sick who are distressed, By those whose heart is sin-- oppressed.",
-      "To such grace and mercy turneth Every soul that truly mourneth; Art thou well? Avoid this board, Else thou reapest an ill reward.",
-      "Christ says: \"Come ye heavy-laden, I your weary hearts will gladden; They that are yet strong and well, Despise the best physician's skill.",
-      "Couldst thou earn thine own salvation, Useless were my death and passion; This feast is not spread for thee, If thine own helper thou wilt be.",
-      "If thou this believest truly, And confession makest duly, Thou a welcome guest art here, This heavenly food thy soul shall cheer.",
-      "But the fruits must not be missing, Love thy neighbor without ceasing, That true love let him receive, Which here to thee thy God doth give."
-    ]
-  },
-  {
     "id": "openhymnal:jesus-christ-who-came-to-save",
     "title": "Jesus Christ Who Came to Save",
     "author": "Martin Luther",
@@ -2083,6 +2124,46 @@
       "Jesus Christ, who came to save, And overcame the grave, Is now arisen, And sin hath bound in prison. Kyri' eleison.",
       "Who withouten sin was found, Bore our transgression's wound. He is our Savior, And brings us to God's favor. Kyri' eleison.",
       "Life and mercy, sin and death, All in His hands He hath; Them He'll deliver, Who trust in Him forever. Kyri' eleison."
+    ]
+  },
+  {
+    "id": "openhymnal:jesus-christ-our-blessed-savior",
+    "title": "Jesus Christ, Our Blessed Savior",
+    "author": "John Hus",
+    "year": 1369,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Jesus Christ, our Blessed Savior, Turned away God's wrath forever; Suff'ring pains no tongue can tell, He saved us from the pains of hell.",
+      "To remind us that, to save us He hath died, His flesh He gave us With this bread, a quick'ning food, And with this wine, His precious blood.",
+      "Whoso to this board repaireth, Take good heed how He prepareth; Death instead of life shall He Receive who comes unworthily.",
+      "Praise the Father, God in heaven, Who such dainty food hath given, And for misdeeds thou hast done Gave to die His beloved Son.",
+      "Thou shalt hold with faith unshaken, That this food is to be taken By the sick who are distressed, By those whose heart is sin-- oppressed.",
+      "To such grace and mercy turneth Every soul that truly mourneth; Art thou well? Avoid this board, Else thou reapest an ill reward.",
+      "Christ says: \"Come ye heavy-laden, I your weary hearts will gladden; They that are yet strong and well, Despise the best physician's skill.",
+      "Couldst thou earn thine own salvation, Useless were my death and passion; This feast is not spread for thee, If thine own helper thou wilt be.",
+      "If thou this believest truly, And confession makest duly, Thou a welcome guest art here, This heavenly food thy soul shall cheer.",
+      "But the fruits must not be missing, Love thy neighbor without ceasing, That true love let him receive, Which here to thee thy God doth give."
+    ]
+  },
+  {
+    "id": "openhymnal:jesus-christ-our-blessed-savior",
+    "title": "Jesus Christ, Our Blessed Savior",
+    "author": "John Hus",
+    "year": 1369,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Jesus Christ, our Blessed Savior, Turned away God's wrath forever; Suff'ring pains no tongue can tell, He saved us from the pains of hell.",
+      "To remind us that, to save us He hath died, His flesh He gave us With this bread, a quick'ning food, And with this wine, His precious blood.",
+      "Whoso to this board repaireth, Take good heed how He prepareth; Death instead of life shall He Receive who comes unworthily.",
+      "Praise the Father, God in heaven, Who such dainty food hath given, And for misdeeds thou hast done Gave to die His beloved Son.",
+      "Thou shalt hold with faith unshaken, That this food is to be taken By the sick who are distressed, By those whose heart is sin-- oppressed.",
+      "To such grace and mercy turneth Every soul that truly mourneth; Art thou well? Avoid this board, Else thou reapest an ill reward.",
+      "Christ says: \"Come ye heavy-laden, I your weary hearts will gladden; They that are yet strong and well, Despise the best physician's skill.",
+      "Couldst thou earn thine own salvation, Useless were my death and passion; This feast is not spread for thee, If thine own helper thou wilt be.",
+      "If thou this believest truly, And confession makest duly, Thou a welcome guest art here, This heavenly food thy soul shall cheer.",
+      "But the fruits must not be missing, Love thy neighbor without ceasing, That true love let him receive, Which here to thee thy God doth give."
     ]
   },
   {
@@ -2102,37 +2183,6 @@
     ]
   },
   {
-    "id": "openhymnal:jesus-in-thy-dying-woes",
-    "title": "Jesus, In Thy Dying Woes",
-    "author": "Thomas B Pollock",
-    "year": 1870,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Jesus, in Thy dying woes, Even while Thy lifeblood flows, Craving pardon for Thy foes; Hear us, holy Jesus.",
-      "Savior, for our pardon sue, When our sins Thy pangs renew, For we know not what we do: Hear us, holy Jesus.",
-      "O may we, who mercy need, Be like Thee in heart and deed, When with wrong our spirits bleed: Hear us, holy Jesus.",
-      "Jesus, pitying the sighs Of the thief, who near Thee dies, Promising him paradise; Hear us, holy Jesus.",
-      "May we, in our guilt and shame, Still Thy love and mercy claim, Calling humbly on Thy Name: Hear us, holy Jesus.",
-      "O remember us who pine, Looking from our cross to Thine; Cheer our souls with hope divine: Hear us, holy Jesus.",
-      "Jesus, loving to the end Her whose heart Thy sorrows rend, And Thy dearest human friend: Hear us, holy Jesus.",
-      "May we in Thy sorrows share, And for Thee all peril dare, And enjoy Thy tender care: Hear us, holy Jesus.",
-      "May we all Thy loved ones be, All one holy family, Loving for the love of Thee, Hear us, holy Jesus.",
-      "Jesus, whelmed in fears unknown, With our evil left alone, While no light from Heav'n is shown: Hear us, holy Jesus.",
-      "When we vainly seem to pray, and our hope seems far away, In the darkness be our stay. Hear us, holy Jesus.",
-      "Though no Father seem to hear, Though no light our spirits cheer, Tell our faith that God is near: Hear us, holy Jesus.",
-      "Jesus, in Thy thirst and pain, While Thy wounds Thy lifeblood drain, Thirsting more our love to gain: Hear us, holy Jesus.",
-      "Thirst for us in mercy still; All Thy holy work fulfill; Satisfy Thy loving will: Hear us, holy Jesus.",
-      "May we thirst Thy love to know; Lead us in our sin and woe Where the healing waters flow: Hear us, holy Jesus.",
-      "Jesus, all our ransom paid, All Thy Father's will obeyed, All Thy suff'rings perfect made: Hear us, holy Jesus.",
-      "Save us in our soul's distress, Be our help to cheer and bless, While we grow in holiness: Hear us, holy Jesus.",
-      "Brighten all our heavenward way, With an ever holier ray, Till we pass to perfect day: Hear us, holy Jesus.",
-      "Jesus, all Thy labor vast, All Thy woe and conflict past, Yielding up Thy soul at last: Hear us, holy Jesus.",
-      "When the death shades round us lower, Guard us from the temper's power, Keep us in that trial hour: Hear us, holy Jesus.",
-      "May Thy life and death supply Grace to live and grace to die, Grace to reach the home on high: Hear us, holy Jesus."
-    ]
-  },
-  {
     "id": "openhymnal:jesus-is-all-the-world-to-me",
     "title": "Jesus Is All the World To Me",
     "author": "Will L Thompson",
@@ -2144,22 +2194,6 @@
       "Jesus is all the world to me, my friend in trials sore; I go to Him for blessings and He gives them ov'r and o'er. He sends the sunshine and the rain, He sends the harvest's golden grain; Sunshine and rain, harvest of grain, He's my friend.",
       "Jesus is all the world to me, and true to Him I'll be; O how could I this friend deny, when He's so true to me? Following Him I know I'm right, He watches o'er me day and night; Following Him, by day and night, He's my friend.",
       "Jesus is all the world to me, I want no better friend; I trust Him now, I'll trust Him when Life's fleeting days shall end. Beautiful life with such a friend; beautiful life that has no end; Eternal life, eternal joy, He's my friend."
-    ]
-  },
-  {
-    "id": "openhymnal:jesus-king-of-glory",
-    "title": "Jesus, King of Glory",
-    "author": "W Hope Davison",
-    "year": 1880,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry. Pardon our transgressions, cleanse us from our sin, By Thy Spirit help us heav'nly life to win. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
-      "On this day of gladness, Bending low the knee In thine earthly temple, Lord, we worship thee; Celebrate thy goodness, Mercy, grace, and truth, All thy loving guidance Of our heedless youth. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
-      "For the little children Who have come to thee; For the glad, bright spirits Who thy glory see; For the loved ones resting In thy dear embrace; For the pure and holy Who behold thy face, Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
-      "Help us ever steadfast in the faith to be: In Thy Church's conflicts fighting valiantly. Loving Savior, strengthen these weak hearts of ours, Through Thy cross to conquer crafty evil powers. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
-      "When the shadows lengthen, show us, Lord, Thy way; Through the darkness lead us to the heav'nly day; When our course is finished, ended all the strife, Grant us, with the faithful, palms and crowns of life. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
-      "For thy faithful servants Who have entered in; For thy fearless soldiers Who have conquered sin; For the countless legions Who have followed thee, Heedless of the danger, On to victory,"
     ]
   },
   {
@@ -2210,6 +2244,70 @@
     ]
   },
   {
+    "id": "openhymnal:jesus-wants-all-of-his-children",
+    "title": "Jesus Wants All Of His Children",
+    "author": "verses",
+    "year": 1909,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Jesus wants all of His children to be good and true; He will help if we but ask Him, help us gladly too.",
+      "Jesus was so meek and lowly, As a little child. We will try to be like Jesus, gentle, patient, mild.",
+      "Jesus wants us to be loving, helping when we may. We will try to be kindhearted, merciful each day.",
+      "\"Blessed are the pure in heart,\" thus the Savior taught. Clean in mind, in soul, in body, pure in every thought.",
+      "When we find our friends are angry, we will to them say, \"Jesus wants you to be loving, each and every day.\"",
+      "When I know that I have done wrong, to Jesus I flee. He has paid for all transgressions, He has paid for me!",
+      "Jesus knew that we would fail Him so He came to be Life to all the poor and lost ones, life eternally!"
+    ]
+  },
+  {
+    "id": "openhymnal:jesus-in-thy-dying-woes",
+    "title": "Jesus, In Thy Dying Woes",
+    "author": "Thomas B Pollock",
+    "year": 1870,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Jesus, in Thy dying woes, Even while Thy lifeblood flows, Craving pardon for Thy foes; Hear us, holy Jesus.",
+      "Savior, for our pardon sue, When our sins Thy pangs renew, For we know not what we do: Hear us, holy Jesus.",
+      "O may we, who mercy need, Be like Thee in heart and deed, When with wrong our spirits bleed: Hear us, holy Jesus.",
+      "Jesus, pitying the sighs Of the thief, who near Thee dies, Promising him paradise; Hear us, holy Jesus.",
+      "May we, in our guilt and shame, Still Thy love and mercy claim, Calling humbly on Thy Name: Hear us, holy Jesus.",
+      "O remember us who pine, Looking from our cross to Thine; Cheer our souls with hope divine: Hear us, holy Jesus.",
+      "Jesus, loving to the end Her whose heart Thy sorrows rend, And Thy dearest human friend: Hear us, holy Jesus.",
+      "May we in Thy sorrows share, And for Thee all peril dare, And enjoy Thy tender care: Hear us, holy Jesus.",
+      "May we all Thy loved ones be, All one holy family, Loving for the love of Thee, Hear us, holy Jesus.",
+      "Jesus, whelmed in fears unknown, With our evil left alone, While no light from Heav'n is shown: Hear us, holy Jesus.",
+      "When we vainly seem to pray, and our hope seems far away, In the darkness be our stay. Hear us, holy Jesus.",
+      "Though no Father seem to hear, Though no light our spirits cheer, Tell our faith that God is near: Hear us, holy Jesus.",
+      "Jesus, in Thy thirst and pain, While Thy wounds Thy lifeblood drain, Thirsting more our love to gain: Hear us, holy Jesus.",
+      "Thirst for us in mercy still; All Thy holy work fulfill; Satisfy Thy loving will: Hear us, holy Jesus.",
+      "May we thirst Thy love to know; Lead us in our sin and woe Where the healing waters flow: Hear us, holy Jesus.",
+      "Jesus, all our ransom paid, All Thy Father's will obeyed, All Thy suff'rings perfect made: Hear us, holy Jesus.",
+      "Save us in our soul's distress, Be our help to cheer and bless, While we grow in holiness: Hear us, holy Jesus.",
+      "Brighten all our heavenward way, With an ever holier ray, Till we pass to perfect day: Hear us, holy Jesus.",
+      "Jesus, all Thy labor vast, All Thy woe and conflict past, Yielding up Thy soul at last: Hear us, holy Jesus.",
+      "When the death shades round us lower, Guard us from the temper's power, Keep us in that trial hour: Hear us, holy Jesus.",
+      "May Thy life and death supply Grace to live and grace to die, Grace to reach the home on high: Hear us, holy Jesus."
+    ]
+  },
+  {
+    "id": "openhymnal:jesus-king-of-glory",
+    "title": "Jesus, King of Glory",
+    "author": "W Hope Davison",
+    "year": 1880,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry. Pardon our transgressions, cleanse us from our sin, By Thy Spirit help us heav'nly life to win. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
+      "On this day of gladness, Bending low the knee In thine earthly temple, Lord, we worship thee; Celebrate thy goodness, Mercy, grace, and truth, All thy loving guidance Of our heedless youth. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
+      "For the little children Who have come to thee; For the glad, bright spirits Who thy glory see; For the loved ones resting In thy dear embrace; For the pure and holy Who behold thy face, Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
+      "Help us ever steadfast in the faith to be: In Thy Church's conflicts fighting valiantly. Loving Savior, strengthen these weak hearts of ours, Through Thy cross to conquer crafty evil powers. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
+      "When the shadows lengthen, show us, Lord, Thy way; Through the darkness lead us to the heav'nly day; When our course is finished, ended all the strife, Grant us, with the faithful, palms and crowns of life. Jesus, King of glory, throned above the sky, Jesus, tender Savior, hear Thy children cry.",
+      "For thy faithful servants Who have entered in; For thy fearless soldiers Who have conquered sin; For the countless legions Who have followed thee, Heedless of the danger, On to victory,"
+    ]
+  },
+  {
     "id": "openhymnal:jesus-tender-shepherd-hear-me",
     "title": "Jesus, Tender Shepherd, Hear Me",
     "author": "Mary L Duncan",
@@ -2242,20 +2340,17 @@
     ]
   },
   {
-    "id": "openhymnal:jesus-wants-all-of-his-children",
-    "title": "Jesus Wants All Of His Children",
-    "author": "verses",
-    "year": 1909,
+    "id": "openhymnal:joy-to-the-world",
+    "title": "Joy to the World",
+    "author": "Isaac Watts",
+    "year": 1719,
     "meter": "Unknown",
     "topics": [],
     "lyrics": [
-      "Jesus wants all of His children to be good and true; He will help if we but ask Him, help us gladly too.",
-      "Jesus was so meek and lowly, As a little child. We will try to be like Jesus, gentle, patient, mild.",
-      "Jesus wants us to be loving, helping when we may. We will try to be kindhearted, merciful each day.",
-      "\"Blessed are the pure in heart,\" thus the Savior taught. Clean in mind, in soul, in body, pure in every thought.",
-      "When we find our friends are angry, we will to them say, \"Jesus wants you to be loving, each and every day.\"",
-      "When I know that I have done wrong, to Jesus I flee. He has paid for all transgressions, He has paid for me!",
-      "Jesus knew that we would fail Him so He came to be Life to all the poor and lost ones, life eternally!"
+      "Joy to the world, the Lord is come! Let earth receive her King; Let ev'ry heart prepare Him room, And Heav'n and nature sing, And Heav'n and nature sing, And Heav'n, and Heav'n, and nature sing.",
+      "Joy to the earth, the Savior reigns! Let men their songs employ; While fields and floods, rocks, hills and plains Repeat the sounding joy, Repeat the sounding joy, Repeat, repeat, the sounding joy.",
+      "No more let sins and sorrows grow, Nor thorns infest the ground; He comes to make His blessings flow Far as the curse is found, Far as the curse is found, Far as, far as, the curse is found.",
+      "He rules the world with truth and grace, And makes the nations prove The glories of His righteousness, And wonders of His love, And wonders of His love, And wonders, wonders, of His love."
     ]
   },
   {
@@ -2270,20 +2365,6 @@
       "All Thy works with joy surround Thee, earth and heaven reflect Thy rays, Stars and angels sing around Thee, center of unbroken praise. Field and forest, vale and mountain, flowery meadow, flashing sea, Singing bird and flowing fountain call us to rejoice in Thee.",
       "Thou art giving and forgiving, ever blessing, ever blessed, Wellspring of the joy of living, ocean depth of happy rest! Thou our Father, Christ our Brother, all who live in love are Thine; Teach us how to love each other, lift us to the joy divine.",
       "Mortals, join the happy chorus, which the morning stars began; Father love is reigning o'er us, brother love binds man to man. Ever singing, march we onward, victors in the midst of strife, Joyful music leads us Sunward in the triumph song of life."
-    ]
-  },
-  {
-    "id": "openhymnal:joy-to-the-world",
-    "title": "Joy to the World",
-    "author": "Isaac Watts",
-    "year": 1719,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Joy to the world, the Lord is come! Let earth receive her King; Let ev'ry heart prepare Him room, And Heav'n and nature sing, And Heav'n and nature sing, And Heav'n, and Heav'n, and nature sing.",
-      "Joy to the earth, the Savior reigns! Let men their songs employ; While fields and floods, rocks, hills and plains Repeat the sounding joy, Repeat the sounding joy, Repeat, repeat, the sounding joy.",
-      "No more let sins and sorrows grow, Nor thorns infest the ground; He comes to make His blessings flow Far as the curse is found, Far as the curse is found, Far as, far as, the curse is found.",
-      "He rules the world with truth and grace, And makes the nations prove The glories of His righteousness, And wonders of His love, And wonders of His love, And wonders, wonders, of His love."
     ]
   },
   {
@@ -2408,6 +2489,21 @@
     ]
   },
   {
+    "id": "openhymnal:lo-how-a-rose-eer-blooming",
+    "title": "Lo, How A Rose E'er Blooming",
+    "author": "verses",
+    "year": 1894,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Lo, how a Rose e'er blooming from tender stem hath sprung! Of Jesse's lineage coming, as men of old have sung. It came, a flow'ret bright, amid the cold of winter, When half spent was the night.",
+      "Isaiah 'twas foretold it, the Rose I have in mind; With Mary we behold it, the virgin mother kind. To show God's love aright, she bore to men a Savior, When half spent was the night.",
+      "The shepherds heard the story proclaimed by angels bright, How Christ, the Lord of glory was born on earth this night. To Bethlehem they sped and in the manger found Him, As angel heralds said.",
+      "This Flow'r, whose fragrance tender with sweetness fills the air, Dispels with glorious splendor the darkness everywhere; True Man, yet very God, from sin and death He saves us, And lightens ev'ry load.",
+      "O Savior, Child of Mary, who felt our human woe, O Savior, King of glory, who dost our weakness know; Bring us at length we pray, to the bright courts of Heaven, And to the endless day!"
+    ]
+  },
+  {
     "id": "openhymnal:lo-he-comes-with-clouds-descending",
     "title": "Lo! He Comes With Clouds Descending",
     "author": "John Cennick",
@@ -2425,21 +2521,6 @@
     ]
   },
   {
-    "id": "openhymnal:lo-how-a-rose-eer-blooming",
-    "title": "Lo, How A Rose E'er Blooming",
-    "author": "verses",
-    "year": 1894,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Lo, how a Rose e'er blooming from tender stem hath sprung! Of Jesse's lineage coming, as men of old have sung. It came, a flow'ret bright, amid the cold of winter, When half spent was the night.",
-      "Isaiah 'twas foretold it, the Rose I have in mind; With Mary we behold it, the virgin mother kind. To show God's love aright, she bore to men a Savior, When half spent was the night.",
-      "The shepherds heard the story proclaimed by angels bright, How Christ, the Lord of glory was born on earth this night. To Bethlehem they sped and in the manger found Him, As angel heralds said.",
-      "This Flow'r, whose fragrance tender with sweetness fills the air, Dispels with glorious splendor the darkness everywhere; True Man, yet very God, from sin and death He saves us, And lightens ev'ry load.",
-      "O Savior, Child of Mary, who felt our human woe, O Savior, King of glory, who dost our weakness know; Bring us at length we pray, to the bright courts of Heaven, And to the endless day!"
-    ]
-  },
-  {
     "id": "openhymnal:look-down-o-lord-from-heaven-behold",
     "title": "Look Down, O Lord, From Heaven Behold",
     "author": "Martin Luther",
@@ -2469,35 +2550,6 @@
       "For this, saith God, I will arise, These wolves my flock are rending; I've heard my people's bitter sighs To heav'n my throne ascending: Now will I up, and set at rest Each weary soul by fraud opprest, The poor with might defending.",
       "The silver sev'n times tried is pure From all adulteration; So, through God's word, shall men endure Each trial and temptation: Its worth gleams brighter through the cross, And, purified from human dross, It shines through every nation.",
       "Thy truth thou wilt preserve, O Lord, From this vile generation; Make us to lean upon thy word, With calm anticipation. The wicked walk on every side When, 'mid thy flock, the vile abide In pow'r and exaltation."
-    ]
-  },
-  {
-    "id": "openhymnal:lord-dismiss-us-with-thy-blessing",
-    "title": "Lord, Dismiss Us With Thy Blessing",
-    "author": "John Fawcett",
-    "year": 1773,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Lord, dismiss us with Thy blessing; Fill our hearts with joy and peace; Let us each Thy love possessing, Triumph in redeeming grace. O refresh us, O refresh us, Trav'ling through this wilderness.",
-      "Thanks we give and adoration For Thy Gospel's joyful sound; May the fruits of Thy salvation In our hearts and lives abound. Ever faithful, ever faithful, To the truth may we be found.",
-      "So that when Thy love shall call us, Savior, from the world away, Fear of death shall not appall us, Glad Thy summons to obey. May we ever, may we ever, Reign with Thee in endless day."
-    ]
-  },
-  {
-    "id": "openhymnal:lord-enthroned-in-heavenly-splendor",
-    "title": "Lord, Enthroned in Heavenly Splendor",
-    "author": "George H Bourne",
-    "year": 1874,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Lord, enthroned in heav'nly splendor, First begotten from the dead, You alone, our strong Defender, Now lift up Your people's head. Alleluia! Alleluia! Alleluia! Jesus, true and living Bread! Jesus, true and living Bread!",
-      "Here our humblest homage pay we, Here in loving reference bow; Here for faith's discernment pray we, Lest we fail to know You now. Alleluia! Alleluia! Alleluia! Thou art here, we ask not how. Thou art here, we ask not how.",
-      "Though the lowliest form doth veil Thee As of old in Bethlehem, Here as there Thine angels hail Thee, Branch and Flow'r of Jesse's stem. Alleluia! Alleluia! Alleluia! We in worship join with them. We in worship join with them.",
-      "Paschal Lamb, Your offering finished Once for all when You were slain, In its fullness undiminished Shall forevermore remain. Alleluia! Alleluia! Alleluia! Cleansing souls from every stain. Cleansing souls from every stain.",
-      "Great High Priest of our profession, Through the veil Thou wentest in, By Thy mighty intercession, Grace and peace for us to win. Alleluia! Alleluia! Alleluia! Jesus, true and living Bread! Jesus, true and living Bread!",
-      "Life imparting heavenly Manna, Smitten Rock with streaming side, Heaven and earth with loud hosanna Worship You, the Lamb Who died. Alleluia! Alleluia! Alleluia! Risen, Ascended, Glorified!"
     ]
   },
   {
@@ -2526,19 +2578,6 @@
       "Lord Jesus, think on me When floods the tempest high; When on doth rush the enemy, O Savior, be Thou nigh!",
       "Lord Jesus, think on me That, when the flood is past, I may th'eternal brightness see And share Thy joy at last.",
       "Lord Jesus, think on me That I may sing above To Father, Spirit, and to Thee The strains of praise and love."
-    ]
-  },
-  {
-    "id": "openhymnal:lord-keep-us-steadfast-in-thy-word",
-    "title": "Lord, Keep Us Steadfast in Thy Word",
-    "author": "Martin Luther",
-    "year": 1541,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Lord, keep us steadfast in Thy Word; Curb those who fain by craft and sword Would wrest the kingdom from Thy Son And set at naught all He hath done.",
-      "Lord Jesus Christ, Thy pow'r make known, For Thou art Lord of lords alone; Defend Thy Christendom that we May evermore sing praise to Thee.",
-      "O Comforter of priceless worth, Send peace and unity on earth. Support us in our final strife And lead us out of death to life."
     ]
   },
   {
@@ -2584,6 +2623,63 @@
     ]
   },
   {
+    "id": "openhymnal:lord-who-throughout-these-forty-days",
+    "title": "Lord Who Throughout These Forty Days",
+    "author": "Claudia F Hernaman",
+    "year": 1873,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Lord, who throughout these forty days For us didst fast and pray, Teach us with Thee to mourn our sins And close by Thee to stay.",
+      "As Thou with Satan didst contend, And didst the vict'ry win, O give us strength in Thee to fight, In Thee to conquer sin.",
+      "As Thou didst hunger bear, and thirst, So teach us, gracious Lord, To die to self, and chiefly live By Thy most holy Word.",
+      "And through these days of penitence, And through Thy passiontide, Yea, evermore in life and death, Jesus, with us abide.",
+      "Abide with us, that so, this life Of suff'ring over past, An Easter of unending joy We may attain at last."
+    ]
+  },
+  {
+    "id": "openhymnal:lord-dismiss-us-with-thy-blessing",
+    "title": "Lord, Dismiss Us With Thy Blessing",
+    "author": "John Fawcett",
+    "year": 1773,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Lord, dismiss us with Thy blessing; Fill our hearts with joy and peace; Let us each Thy love possessing, Triumph in redeeming grace. O refresh us, O refresh us, Trav'ling through this wilderness.",
+      "Thanks we give and adoration For Thy Gospel's joyful sound; May the fruits of Thy salvation In our hearts and lives abound. Ever faithful, ever faithful, To the truth may we be found.",
+      "So that when Thy love shall call us, Savior, from the world away, Fear of death shall not appall us, Glad Thy summons to obey. May we ever, may we ever, Reign with Thee in endless day."
+    ]
+  },
+  {
+    "id": "openhymnal:lord-enthroned-in-heavenly-splendor",
+    "title": "Lord, Enthroned in Heavenly Splendor",
+    "author": "George H Bourne",
+    "year": 1874,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Lord, enthroned in heav'nly splendor, First begotten from the dead, You alone, our strong Defender, Now lift up Your people's head. Alleluia! Alleluia! Alleluia! Jesus, true and living Bread! Jesus, true and living Bread!",
+      "Here our humblest homage pay we, Here in loving reference bow; Here for faith's discernment pray we, Lest we fail to know You now. Alleluia! Alleluia! Alleluia! Thou art here, we ask not how. Thou art here, we ask not how.",
+      "Though the lowliest form doth veil Thee As of old in Bethlehem, Here as there Thine angels hail Thee, Branch and Flow'r of Jesse's stem. Alleluia! Alleluia! Alleluia! We in worship join with them. We in worship join with them.",
+      "Paschal Lamb, Your offering finished Once for all when You were slain, In its fullness undiminished Shall forevermore remain. Alleluia! Alleluia! Alleluia! Cleansing souls from every stain. Cleansing souls from every stain.",
+      "Great High Priest of our profession, Through the veil Thou wentest in, By Thy mighty intercession, Grace and peace for us to win. Alleluia! Alleluia! Alleluia! Jesus, true and living Bread! Jesus, true and living Bread!",
+      "Life imparting heavenly Manna, Smitten Rock with streaming side, Heaven and earth with loud hosanna Worship You, the Lamb Who died. Alleluia! Alleluia! Alleluia! Risen, Ascended, Glorified!"
+    ]
+  },
+  {
+    "id": "openhymnal:lord-keep-us-steadfast-in-thy-word",
+    "title": "Lord, Keep Us Steadfast in Thy Word",
+    "author": "Martin Luther",
+    "year": 1541,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Lord, keep us steadfast in Thy Word; Curb those who fain by craft and sword Would wrest the kingdom from Thy Son And set at naught all He hath done.",
+      "Lord Jesus Christ, Thy pow'r make known, For Thou art Lord of lords alone; Defend Thy Christendom that we May evermore sing praise to Thee.",
+      "O Comforter of priceless worth, Send peace and unity on earth. Support us in our final strife And lead us out of death to life."
+    ]
+  },
+  {
     "id": "openhymnal:lord-thee-i-love-with-all-my-heart",
     "title": "Lord, Thee I Love with All My Heart",
     "author": "Martin Schalling",
@@ -2607,21 +2703,6 @@
       "Lord, who at Cana's wedding feast Didst as a Guest appear, Thou dearer far than earthly guest, Vouchsafe Thy presence here. For holy Thou indeed dost prove The marriage vow to be, Proclaiming it a type of love Between the Church and Thee.",
       "The holiest vow that man can make, The golden thread in life, The bond that none may dare to break, That bindeth man and wife, Which, blest by Thee, whate'er betide, No evil shall destroy, Through careworn days each care divides And doubles every joy.",
       "On those who at Thine altar kneel, O Lord, Thy blessing pour, That each may wake the other's zeal To love Thee more and more. Oh, grant them here in peace to live, In purity and love, And, this world leaving, to receive A crown of life above."
-    ]
-  },
-  {
-    "id": "openhymnal:lord-who-throughout-these-forty-days",
-    "title": "Lord Who Throughout These Forty Days",
-    "author": "Claudia F Hernaman",
-    "year": 1873,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Lord, who throughout these forty days For us didst fast and pray, Teach us with Thee to mourn our sins And close by Thee to stay.",
-      "As Thou with Satan didst contend, And didst the vict'ry win, O give us strength in Thee to fight, In Thee to conquer sin.",
-      "As Thou didst hunger bear, and thirst, So teach us, gracious Lord, To die to self, and chiefly live By Thy most holy Word.",
-      "And through these days of penitence, And through Thy passiontide, Yea, evermore in life and death, Jesus, with us abide.",
-      "Abide with us, that so, this life Of suff'ring over past, An Easter of unending joy We may attain at last."
     ]
   },
   {
@@ -2754,6 +2835,19 @@
     ]
   },
   {
+    "id": "openhymnal:my-song-shall-be-of-jesus",
+    "title": "My Song Shall Be Of Jesus",
+    "author": "Fanny J Crosby",
+    "year": 1875,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "My song shall be of Jesus, His Mercy crowns my days He fills my cup with blessings and tunes my heart to praise My song shall be of Jesus the precious Lamb of God Who gave Himself my ransom and bought me with His blood",
+      "My song shall be of Jesus, while sitting at His feet He calls to mind His goodness, and makes my joy complete; My song shall be of Jesus, whatever ills befall, I'll sing the grace that saves me, and triumphs over all.",
+      "My song shall be of Jesus, when pressing on my way To where my home shines glorious in pure and perfect day. And when my soul shall enter the many mansions fair, A song of praise to Jesus I'll sing forever there."
+    ]
+  },
+  {
     "id": "openhymnal:my-song-shall-be-of-jesuschoral-version",
     "title": "My Song Shall Be Of Jesus(Choral Version)",
     "author": "Fanny J Crosby",
@@ -2765,19 +2859,6 @@
       "My song shall be of Jesus, while sitting at His feet He calls to mind His goodness, and makes my joy complete; My song shall be of Jesus, whatever ills befall, I'll sing the grace that saves me, and triumphs over all. And when my soul shall enter the many mansions fair, A song of praise to Jesus I'll sing forever there.",
       "My song shall be of Jesus, when pressing on my way To where my home shines glorious in pure and perfect day. And when my soul shall enter the many mansions fair, A song of praise to Jesus I'll sing forever there. And when my soul shall enter the many mansions fair, A song of praise to Jesus I'll sing forever there.",
       "A song of praise to Jesus I'll sing forever. My song shall be of Jesus. I'll sing forever. My song shall be of Jesus."
-    ]
-  },
-  {
-    "id": "openhymnal:my-song-shall-be-of-jesus",
-    "title": "My Song Shall Be Of Jesus",
-    "author": "Fanny J Crosby",
-    "year": 1875,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "My song shall be of Jesus, His Mercy crowns my days He fills my cup with blessings and tunes my heart to praise My song shall be of Jesus the precious Lamb of God Who gave Himself my ransom and bought me with His blood",
-      "My song shall be of Jesus, while sitting at His feet He calls to mind His goodness, and makes my joy complete; My song shall be of Jesus, whatever ills befall, I'll sing the grace that saves me, and triumphs over all.",
-      "My song shall be of Jesus, when pressing on my way To where my home shines glorious in pure and perfect day. And when my soul shall enter the many mansions fair, A song of praise to Jesus I'll sing forever there."
     ]
   },
   {
@@ -2811,19 +2892,6 @@
     ]
   },
   {
-    "id": "openhymnal:none-other-lamb",
-    "title": "None Other Lamb",
-    "author": "Christina Rossetti",
-    "year": 1892,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "None other Lamb, none other name, None other hope in Heav'n or earth or sea, None other hiding place from guilt and shame, None beside Thee!",
-      "My faith burns low, my hope burns low; Only my heart's desire cries out in me By the deep thunder of its want and woe, Cries out to Thee.",
-      "Lord, Thou art life, though I be dead; Love's fire Thou art, however cold I be: Nor Heav'n have I, nor place to lay my head, Nor home, but Thee."
-    ]
-  },
-  {
     "id": "openhymnal:no-not-one",
     "title": "No, Not One!",
     "author": "Johnson Oatman",
@@ -2836,6 +2904,19 @@
       "There's not an hour that He is not near us, No, not one! no, not one! No night so dark but His love can cheer us, No, not one! no, not one! Jesus knows all about our struggles, He will guide till the day is done; There's not a friend like the lowly Jesus, No, not one! no, not one!",
       "Did ever saint find this friend forsake him? No, not one! no, not one! Or sinner find that He would not take him? No, not one! no, not one! Jesus knows all about our struggles, He will guide till the day is done; There's not a friend like the lowly Jesus, No, not one! no, not one!",
       "Was e'er a gift like the Savior given? No, not one! no, not one! Will He refuse us a home in heaven? No, not one! no, not one! Jesus knows all about our struggles, He will guide till the day is done; There's not a friend like the lowly Jesus, No, not one! no, not one!"
+    ]
+  },
+  {
+    "id": "openhymnal:none-other-lamb",
+    "title": "None Other Lamb",
+    "author": "Christina Rossetti",
+    "year": 1892,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "None other Lamb, none other name, None other hope in Heav'n or earth or sea, None other hiding place from guilt and shame, None beside Thee!",
+      "My faith burns low, my hope burns low; Only my heart's desire cries out in me By the deep thunder of its want and woe, Cries out to Thee.",
+      "Lord, Thou art life, though I be dead; Love's fire Thou art, however cold I be: Nor Heav'n have I, nor place to lay my head, Nor home, but Thee."
     ]
   },
   {
@@ -2946,6 +3027,21 @@
     ]
   },
   {
+    "id": "openhymnal:o-come-o-come-emmanuel",
+    "title": "O Come O Come Emmanuel",
+    "author": "various",
+    "year": 1851,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "O come, O come, Emmanuel, And ransom captive Israel, That mourns in lonely exile here Until the Son of God appear. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
+      "O come, Thou Wisdom from on high, Who orderest all things mightily; To us the path of knowledge show, And teach us in her ways to go. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
+      "O come, Thou Rod of Jesse, free Thine own from Satan's tyranny; From depths of hell Thy people save, And give them vict'ry ov'r the grave. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
+      "O come, Thou Dayspring, come and cheer Our spirits by Thine advent here; Disperse the gloomy clouds of night, And death's dark shadows put to flight. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
+      "O come, Thou Key of David, come, And open wide our heav'nly home; Make safe the way that leads on high, And close the path to misery. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel."
+    ]
+  },
+  {
     "id": "openhymnal:o-come-all-ye-faithful",
     "title": "O Come, All Ye Faithful",
     "author": "John F Wade",
@@ -2961,21 +3057,6 @@
       "Child, for us sinners poor and in the manger, We would embrace Thee, with love and awe; Who would not love Thee, loving us so dearly?",
       "Yea, Lord, we greet Thee, born this happy morning; Jesus, to Thee be glory given; Word of the Father, now in flesh appearing.",
       "Adeste, fideles, laeti triumphantes; Venite, venite in Bethlehem. Natum videte Regem angelorum. Venite adoremus, venite adoremus, Venite adoremus, Dominum."
-    ]
-  },
-  {
-    "id": "openhymnal:o-come-o-come-emmanuel",
-    "title": "O Come O Come Emmanuel",
-    "author": "various",
-    "year": 1851,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "O come, O come, Emmanuel, And ransom captive Israel, That mourns in lonely exile here Until the Son of God appear. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
-      "O come, Thou Wisdom from on high, Who orderest all things mightily; To us the path of knowledge show, And teach us in her ways to go. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
-      "O come, Thou Rod of Jesse, free Thine own from Satan's tyranny; From depths of hell Thy people save, And give them vict'ry ov'r the grave. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
-      "O come, Thou Dayspring, come and cheer Our spirits by Thine advent here; Disperse the gloomy clouds of night, And death's dark shadows put to flight. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel.",
-      "O come, Thou Key of David, come, And open wide our heav'nly home; Make safe the way that leads on high, And close the path to misery. Rejoice! Rejoice! Emmanuel shall come to thee, O Israel."
     ]
   },
   {
@@ -3038,56 +3119,6 @@
     ]
   },
   {
-    "id": "openhymnal:of-the-fathers-love-begotten",
-    "title": "Of The Father's Love Begotten",
-    "author": "Aurelius Prudentius Clemens",
-    "year": 1854,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Of the Father's love begotten Ere the worlds began to be, He is Alpha and Omega, He the source, the ending He, Of the things that are, that have been, And that future years shall see, Evermore and evermore!",
-      "At His Word they were created; He commanded; it was done: Heav'n and earth and depths of ocean In their threefold order one; All that grows beneath the shining Of the moon and burning sun, Evermore and evermore!",
-      "He is found in human fashion, Death and sorrow here to know, That the race of Adam's children, Doomed by law to endless woe, May not henceforth die and perish In the dreadful gulf below, Evermore and evermore!",
-      "Oh that birth forever blessèd! When the virgin, full of grace, By the Holy Ghost conceiving, Bare the Savior of our race; And the Babe, the world's Redeemer, First revealed His sacred face, Evermore and evermore!",
-      "O ye heights of heav'n adore Him; Angel hosts, His praises sing; Pow'rs, dominions, bow before Him, and extol our God and King: Let no tongue on earth be silent, Every voice in concert ring, Evermore and evermore!",
-      "He is here, Whom seers in old time Chanted of, while ages ran; Whom the writings of the prophets Promised since the world began: Then foretold, now manifested, to receive the praise of man, Evermore and evermore!",
-      "Righteous Judge of souls departed, Righteous King of them that live, On the Father's throne exalted None in might with Thee may strive; Who at last in vengeance coming Sinners from Thy face shalt drive, Evermore and evermore!",
-      "Thee let old men, Thee let young men, Thee let choirs of infants sing; Thee the matrons and the virgins, And the children answering: Let their guileless songs re-echo, And the heart its music bring, Evermore and evermore!",
-      "Christ, to Thee with God the Father, And, O Holy Ghost, to Thee, Hymn and chant with high thanksgiving, And unwearied praises be: Honor, glory, and dominion, And eternal victory, Evermore and evermore!"
-    ]
-  },
-  {
-    "id": "openhymnal:oh-blest-the-house",
-    "title": "Oh, Blest the House",
-    "author": "Christoph C L von Pfeil",
-    "year": 1735,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Oh blest the house, whate'er befall, Where Jesus Christ is All in All; Yea, if He were not dwelling there, How poor and dark and void it were!",
-      "Oh blest that house where faith ye find, And all within have set their mind To trust their God and serve Him still, And do in all His holy will.",
-      "Blest, where their prayers shall daily rise As fragrant incense to the skies, While in their lives the world is taught That forms without the heart are naught.",
-      "Blest, where the busy hands fulfil Their proper task with ready skill, While through their different works ye see One spirit run of unity.",
-      "Blest such a house, it prospers well, In peace and joy the parents dwell, And in their children's lot is shown How richly God can bless His own.",
-      "Then here will I and mine to-day A solemn covenant make, and say,-- Though all the world forsake Thy Word, I and my house will serve the Lord."
-    ]
-  },
-  {
-    "id": "openhymnal:o-holy-blessed-trinity",
-    "title": "O Holy, Blessed Trinity",
-    "author": "Martin Behm",
-    "year": 1608,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "O Holy, Blessed Trinity, Divine, Essential Unity, God Father, Son, and Holy Ghost, Be Thou this day my Guide and Host.",
-      "My soul and body keep from harm, O'er all I have extend Thine arm, That Satan may not cause distress Nor bring me shame or wretchedness.",
-      "The Father's might shield me this day, The Son's pure wisdom cheer my way, The Holy Spirit's light divine Illume my heart's benighted shrine.",
-      "My Maker, strengthen Thou my heart, O my Redeemer, help impart, Blest Comforter, keep at my side That faith and love in me abide.",
-      "Lord, bless and keep Thou me as Thine; Lord, make Thy face upon me shine; Lord, lift Thy countenance on me And give me peace-- sweet peace, from Thee."
-    ]
-  },
-  {
     "id": "openhymnal:o-holy-spirit-enter-in",
     "title": "O Holy Spirit, Enter In",
     "author": "Michael Schirmer",
@@ -3106,6 +3137,21 @@
     ]
   },
   {
+    "id": "openhymnal:o-holy-blessed-trinity",
+    "title": "O Holy, Blessed Trinity",
+    "author": "Martin Behm",
+    "year": 1608,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "O Holy, Blessed Trinity, Divine, Essential Unity, God Father, Son, and Holy Ghost, Be Thou this day my Guide and Host.",
+      "My soul and body keep from harm, O'er all I have extend Thine arm, That Satan may not cause distress Nor bring me shame or wretchedness.",
+      "The Father's might shield me this day, The Son's pure wisdom cheer my way, The Holy Spirit's light divine Illume my heart's benighted shrine.",
+      "My Maker, strengthen Thou my heart, O my Redeemer, help impart, Blest Comforter, keep at my side That faith and love in me abide.",
+      "Lord, bless and keep Thou me as Thine; Lord, make Thy face upon me shine; Lord, lift Thy countenance on me And give me peace-- sweet peace, from Thee."
+    ]
+  },
+  {
     "id": "openhymnal:o-little-town-of-bethlehem",
     "title": "O Little Town of Bethlehem",
     "author": "Phillips Brooks",
@@ -3118,6 +3164,52 @@
       "How silently, how silently, the wondrous Gift is giv'n; So God imparts to human hearts the blessings of His Heav'n. No ear may hear His coming, but in this world of sin, Where meek souls will receive Him still, the dear Christ enters in.",
       "Where children pure and happy pray to the blessèd Child, Where misery cries out to Thee, Son of the mother mild; Where charity stands watching and faith holds wide the door, The dark night wakes, the glory breaks, and Christmas comes once more.",
       "O holy Child of Bethlehem, descend to us, we pray; Cast out our sin, and enter in, be born in us today. We hear the Christmas angels the great glad tidings tell; O come to us, abide with us, our Lord Emmanuel!"
+    ]
+  },
+  {
+    "id": "openhymnal:o-lord-my-soul-convicted",
+    "title": "O Lord My Soul Convicted",
+    "author": "James Maxwell",
+    "year": 1759,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "O Lord, my soul convicted stands Of breaking all Thy ten commands: And on me justly might'st Thou pour Thy wrath in one eternal show'r.",
+      "But thanks to God, its loud alarms Have warn'd me of approaching harms; And now, O Lord, my wants I see, Lost and undone, I come to Thee.",
+      "I know my fig leaf righteousness Can ne'er Thy broken law redress; Yet in the gospel plan I see, There's hope of pardon e'en for me.",
+      "There, I behold with wonder, Lord! That Christ hath to Thy law restor'd Those honors on th'atoning day, Which guilty sinners took away.",
+      "Amazing wisdom, pow'r and love, Display'd to rebels from above! Do Thou, O Lord, my faith increase To love and trust Thy plan of grace."
+    ]
+  },
+  {
+    "id": "openhymnal:o-lord-of-heavn-and-earth-and-sea",
+    "title": "O Lord of Heav'n and Earth and Sea",
+    "author": "Christopher Wordsworth",
+    "year": 1863,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "O Lord of Heav'n and earth and sea, To Thee all praise and glory be; How shall we show our love to Thee, Who givest all?",
+      "The golden sunshine, vernal air, Sweet flow'rs and fruits, Thy love declare; Where harvests ripen, Thou art there, Who givest all.",
+      "For peaceful homes and healthful days, For all the blessings earth displays, We owe Thee thankfulness and praise, Who givest all.",
+      "Thou didst not spare Thine only Son, But gav'st Him for a world undone, And freely, with that blessèd One, Thou givest all.",
+      "Thou giv'st the Spirit's blessèd dow'r, Spirit of life and love and pow'r, And dost His sev'nfold graces show'r Upon us all.",
+      "For souls redeemed, for sins forgiv'n, For means of grace and hopes of Heav'n, Father, all praise to Thee be giv'n, Who givest all.",
+      "We lose what on ourselves we spend, We have as treasure without end Whatever, Lord, to Thee we lend, Who givest all.",
+      "To Thee, from Whom we all derive Our life, our gifts, our power to give: O may we ever with Thee live, Who givest all."
+    ]
+  },
+  {
+    "id": "openhymnal:o-lord-we-praise-thee",
+    "title": "O Lord We Praise Thee",
+    "author": "Martin Luther",
+    "year": 1524,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "O Lord, we praise Thee, bless Thee, and adore Thee, In thanksgiving bow before Thee Thou with Thy body and Thy blood didst nourish Our weak souls that they may flourish: O Lord, have mercy! May Thy body, Lord, born of Mary, That our sins and sorrows did carry, And Thy blood for us plead In all trial, fear, and need: O Lord, have mercy!",
+      "Thy holy body into death was given, Life to win for us in heaven. No greater love than this to Thee could bind us; May this feast thereof remind us! O Lord, have mercy! Lord, Thy kindness did so constrain Thee That Thy blood should bless and sustain me. All our debt Thou hast paid; Peace with God once more is made: O Lord, have mercy.",
+      "May God bestow on us His grace and favor To please Him with our behavior And live as brethren here in love and union Nor repent this blest Communion! O Lord, have mercy! Let not Thy good Spirit forsake us; Grant that heav'nly-- minded He make us; Give Thy Church, Lord, to see Days of peace and unity: O Lord, have mercy!"
     ]
   },
   {
@@ -3170,52 +3262,6 @@
     ]
   },
   {
-    "id": "openhymnal:o-lord-my-soul-convicted",
-    "title": "O Lord My Soul Convicted",
-    "author": "James Maxwell",
-    "year": 1759,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "O Lord, my soul convicted stands Of breaking all Thy ten commands: And on me justly might'st Thou pour Thy wrath in one eternal show'r.",
-      "But thanks to God, its loud alarms Have warn'd me of approaching harms; And now, O Lord, my wants I see, Lost and undone, I come to Thee.",
-      "I know my fig leaf righteousness Can ne'er Thy broken law redress; Yet in the gospel plan I see, There's hope of pardon e'en for me.",
-      "There, I behold with wonder, Lord! That Christ hath to Thy law restor'd Those honors on th'atoning day, Which guilty sinners took away.",
-      "Amazing wisdom, pow'r and love, Display'd to rebels from above! Do Thou, O Lord, my faith increase To love and trust Thy plan of grace."
-    ]
-  },
-  {
-    "id": "openhymnal:o-lord-of-heavn-and-earth-and-sea",
-    "title": "O Lord of Heav'n and Earth and Sea",
-    "author": "Christopher Wordsworth",
-    "year": 1863,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "O Lord of Heav'n and earth and sea, To Thee all praise and glory be; How shall we show our love to Thee, Who givest all?",
-      "The golden sunshine, vernal air, Sweet flow'rs and fruits, Thy love declare; Where harvests ripen, Thou art there, Who givest all.",
-      "For peaceful homes and healthful days, For all the blessings earth displays, We owe Thee thankfulness and praise, Who givest all.",
-      "Thou didst not spare Thine only Son, But gav'st Him for a world undone, And freely, with that blessèd One, Thou givest all.",
-      "Thou giv'st the Spirit's blessèd dow'r, Spirit of life and love and pow'r, And dost His sev'nfold graces show'r Upon us all.",
-      "For souls redeemed, for sins forgiv'n, For means of grace and hopes of Heav'n, Father, all praise to Thee be giv'n, Who givest all.",
-      "We lose what on ourselves we spend, We have as treasure without end Whatever, Lord, to Thee we lend, Who givest all.",
-      "To Thee, from Whom we all derive Our life, our gifts, our power to give: O may we ever with Thee live, Who givest all."
-    ]
-  },
-  {
-    "id": "openhymnal:o-lord-we-praise-thee",
-    "title": "O Lord We Praise Thee",
-    "author": "Martin Luther",
-    "year": 1524,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "O Lord, we praise Thee, bless Thee, and adore Thee, In thanksgiving bow before Thee Thou with Thy body and Thy blood didst nourish Our weak souls that they may flourish: O Lord, have mercy! May Thy body, Lord, born of Mary, That our sins and sorrows did carry, And Thy blood for us plead In all trial, fear, and need: O Lord, have mercy!",
-      "Thy holy body into death was given, Life to win for us in heaven. No greater love than this to Thee could bind us; May this feast thereof remind us! O Lord, have mercy! Lord, Thy kindness did so constrain Thee That Thy blood should bless and sustain me. All our debt Thou hast paid; Peace with God once more is made: O Lord, have mercy.",
-      "May God bestow on us His grace and favor To please Him with our behavior And live as brethren here in love and union Nor repent this blest Communion! O Lord, have mercy! Let not Thy good Spirit forsake us; Grant that heav'nly-- minded He make us; Give Thy Church, Lord, to see Days of peace and unity: O Lord, have mercy!"
-    ]
-  },
-  {
     "id": "openhymnal:o-love-how-deep-how-broad-how-high",
     "title": "O Love, How Deep, How Broad, How High",
     "author": "Unknown",
@@ -3231,69 +3277,6 @@
       "For us to wicked men betrayed, Scourged, mocked, in crown of thorns arrayed, For us He bore the cross's death, For us at length gave up His breath.",
       "For us He rose from death again; For us He went on high to reign; For us He sent His Spirit here, To guide, to strengthen, and to cheer.",
       "All honor, laud, and glory be, O Jesus, virgin-born to Thee! All glory, as is ever meet To Father and to Paraclete."
-    ]
-  },
-  {
-    "id": "openhymnal:one-things-needful",
-    "title": "One Thing's Needful",
-    "author": "Johann H Schröder",
-    "year": 1697,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "One thing's needful: then, Lord Jesus, Keep this one thing in my mind; All beside, though first it please us, Soon a grievous yoke we find: Beneath it the heart is still fretting and striving, No true, lasting happiness ever deriving. The gain of this one thing all loss can requite And teach me in all things to find true delight.",
-      "Soul, wilt thou this one thing find thee? Seek not midst created things; What is earthly, leave behind thee, over nature stretch thy wings; For where God and man both in One are united, With God's perfect fullness the heart is delighted; There, there is the worthiest lot and the best, My One and my All, and my Joy, and my Rest.",
-      "How were Mary's thoughts devoted, Her eternal joy to find, As intent each word she noted, At her Savior's feet reclined: How kindled her heart, how devout was its feeling, While hearing the lessons that Christ was revealing; For Jesus all earthly concerns she forgot, And all was repaid in that one happy lot.",
-      "Thus my longings, heav'nward tending, Jesus, rest alone on Thee; Help me, thus on Thee depending, Savior! come and dwell in me: Although all the world should forsake and forget Thee, In love I will follow Thee, ne'er will I quit Thee; For Jesus, both Spirit and life is Thy Word, And is there a joy which Thou dost not afford?",
-      "Wisdom's highest noblest treasure, Jesus, lies conceal'd in Thee; Grant that this may still the measure Of my will and actions be: Humility there and simplicity reigning, My steps shall in wisdom for ever be training; Oh! if I of Christ have this knowledge divine, The fullness of heavenly wisdom is mine.",
-      "Christ, Thou art the sole oblation That I'll bring before my God; In his sight I've acceptation Only through Thy streaming blood: Immaculate righteousness now I've acquired, Since Thou on the tree of the cross hast expired; The robe of salvation for ever is mine, In this shall my faith through eternity shine.",
-      "Let my soul, in full exemption, Wake up in Thy likeness now; Thou art made to me redemption, My sanctification Thou. Whatever I need for my Journey to Heaven In Thee, I my Savior, is unto me given. Oh! let me all perishing pleasures forgo, And Thy life, O Jesus! alone let me know.",
-      "Where should else my hopes be centered? Grace o'erwhelms me with its flood; Thou, my Savior, once hast enter'd Holiest heaven through Thy blood: Eternal redemption for sinners there finding, From hell's dark dominion my spirit unbinding, To me perfect freedom Thy entrance has brought, And childlike to cry, \"Abba, Father,\" I'm taught.",
-      "Christ Himself, my Shepherd, feeds me, Peace and joy my spirit fill; In a pasture green He leads me Forth beside the waters still: Oh! naught to my soul is so sweet and reviving, As thus unto Jesus alone to be living; True happiness this, and this only supplies, Through faith on my Savior to fasten my eyes.",
-      "Therefore, Jesus, my Salvation, Thou my One, my All shalt be; Prove my fix'd determination, Root out all hypocrisy: Look well if on sin's slippery paths I am hasting, And lead me, O Lord, in the way everlasting; This one thing is needful, all others are vain, I count all but loss that I Christ may obtain."
-    ]
-  },
-  {
-    "id": "openhymnal:on-jordans-bank-the-baptists-cry",
-    "title": "On Jordan's Bank the Baptist's Cry",
-    "author": "Charles Coffin",
-    "year": 1736,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "On Jordan's bank the Baptist's cry Announces that the Lord is nigh; Come, then, and hearken, for he brings Glad tidings from the King of kings!",
-      "Then cleansed be every breast from sin; Make straight the way for God within; Prepare we in our hearts a home, Where such a mighty Guest may come.",
-      "For Thou art our Salvation, Lord, Our Refuge, and our great Reward. Without Thy grace our souls must fade And wither like a flow'r decayed.",
-      "Stretch forth Thine hand, to heal our sore, And make us rise and fall no more; Once more upon Thy people shine, And fill the world with love divine.",
-      "To Him Who left the throne of Heav'n To save mankind, all praise be giv'n; Like praise be to the Father done, And Holy Spirit, Three in One."
-    ]
-  },
-  {
-    "id": "openhymnal:on-what-has-now-been-sown",
-    "title": "On What Has Now Been Sown",
-    "author": "John Newton",
-    "year": 1779,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "On what has now been sown Thy blessing, Lord, bestow; The pow'r is Thine alone To make it spring and grow. Do Thou in grace the harvest raise, And Thou alone shalt have the praise.",
-      "To Thee our wants are known, From Thee are all our pow'rs; Accept what is Thine own And pardon what is ours. Our praises, Lord, and prayers receive And to Thy Word a blessing give.",
-      "Oh, grant that each of us Now met before Thee here May meet together thus When Thou and Thine appear And follow Thee to Heav'n, our home. E'en so, Amen, Lord Jesus, come!"
-    ]
-  },
-  {
-    "id": "openhymnal:open-now-thy-gates-of-beauty",
-    "title": "Open Now Thy Gates of Beauty",
-    "author": "Benjamin Schmolck",
-    "year": 1730,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Open now thy gates of beauty, Zion, let me enter there, Where my soul in joyful duty Waits for Him Who answers prayer. Oh, how blessèd is this place, Filled with solace, light and grace!",
-      "Lord, my God, I come before Thee, Come Thou also unto me; Where we find Thee and adore Thee, There a heav'n on earth must be. To my heart, oh, enter Thou, Let it be Thy temple now!",
-      "Here Thy praise is gladly chanted, Here Thy seed is duly sown; Let my soul, where it is planted, Bring forth precious sheaves alone, So that all I hear may be Fruitful unto life in me.",
-      "Thou my faith increase and quicken, Let me keep Thy gift divine, Howsoe'er temptations thicken; May Thy Word still o'er me shine As my guiding star through life, As my comfort in my strife.",
-      "Speak, O God, and I will hear Thee, Let Thy will be done indeed; May I undisturbed draw near Thee While Thou dost Thy people feed. Here of life the fountain flows, Here is balm for all our woes."
     ]
   },
   {
@@ -3357,6 +3340,120 @@
       "O Trinity of blessèd light, O Unity of princely might, The fiery sun now goes his way; Shed Thou within our hearts a ray.",
       "To Thee our morning song of praise, To Thee our evening prayer we raise; O grant us with Thy saints on high To praise Thee through eternity.",
       "All laud to God the Father be, All praise, eternal Son, to Thee, All glory, as is ever meet, To God the holy Paraclete."
+    ]
+  },
+  {
+    "id": "openhymnal:o-wondrous-type-o-vision-fair",
+    "title": "O Wondrous Type, O Vision Fair",
+    "author": "From the \"Sarum Breviary\"",
+    "year": 1495,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "O wondrous type! O vision fair Of glory that the Church may share, Which Christ upon the mountain shows, where brighter than the sun He glows!",
+      "From age to age the tale declare, How with the three disciples there, Where Moses and Elijah meet, The Lord holds converse high and sweet.",
+      "The law and prophets there have place, Two chosen witnesses of grace; The Father's voice from out the cloud proclaims His only Son aloud.",
+      "With shining face and bright array, Christ deigns to manifest today What glory shall be theirs above who joy in God with perfect love.",
+      "And faithful hearts are raised on high by this great vision's mystery; For which in joyful strains we raise the voice of prayer, the hymn of praise.",
+      "O Father, with th'Eternal Son, and Holy Spirit, ever One, Vouchsafe to bring us by Thy grace to see Thy glory face to face."
+    ]
+  },
+  {
+    "id": "openhymnal:of-the-fathers-love-begotten",
+    "title": "Of The Father's Love Begotten",
+    "author": "Aurelius Prudentius Clemens",
+    "year": 1854,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Of the Father's love begotten Ere the worlds began to be, He is Alpha and Omega, He the source, the ending He, Of the things that are, that have been, And that future years shall see, Evermore and evermore!",
+      "At His Word they were created; He commanded; it was done: Heav'n and earth and depths of ocean In their threefold order one; All that grows beneath the shining Of the moon and burning sun, Evermore and evermore!",
+      "He is found in human fashion, Death and sorrow here to know, That the race of Adam's children, Doomed by law to endless woe, May not henceforth die and perish In the dreadful gulf below, Evermore and evermore!",
+      "Oh that birth forever blessèd! When the virgin, full of grace, By the Holy Ghost conceiving, Bare the Savior of our race; And the Babe, the world's Redeemer, First revealed His sacred face, Evermore and evermore!",
+      "O ye heights of heav'n adore Him; Angel hosts, His praises sing; Pow'rs, dominions, bow before Him, and extol our God and King: Let no tongue on earth be silent, Every voice in concert ring, Evermore and evermore!",
+      "He is here, Whom seers in old time Chanted of, while ages ran; Whom the writings of the prophets Promised since the world began: Then foretold, now manifested, to receive the praise of man, Evermore and evermore!",
+      "Righteous Judge of souls departed, Righteous King of them that live, On the Father's throne exalted None in might with Thee may strive; Who at last in vengeance coming Sinners from Thy face shalt drive, Evermore and evermore!",
+      "Thee let old men, Thee let young men, Thee let choirs of infants sing; Thee the matrons and the virgins, And the children answering: Let their guileless songs re-echo, And the heart its music bring, Evermore and evermore!",
+      "Christ, to Thee with God the Father, And, O Holy Ghost, to Thee, Hymn and chant with high thanksgiving, And unwearied praises be: Honor, glory, and dominion, And eternal victory, Evermore and evermore!"
+    ]
+  },
+  {
+    "id": "openhymnal:oh-blest-the-house",
+    "title": "Oh, Blest the House",
+    "author": "Christoph C L von Pfeil",
+    "year": 1735,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Oh blest the house, whate'er befall, Where Jesus Christ is All in All; Yea, if He were not dwelling there, How poor and dark and void it were!",
+      "Oh blest that house where faith ye find, And all within have set their mind To trust their God and serve Him still, And do in all His holy will.",
+      "Blest, where their prayers shall daily rise As fragrant incense to the skies, While in their lives the world is taught That forms without the heart are naught.",
+      "Blest, where the busy hands fulfil Their proper task with ready skill, While through their different works ye see One spirit run of unity.",
+      "Blest such a house, it prospers well, In peace and joy the parents dwell, And in their children's lot is shown How richly God can bless His own.",
+      "Then here will I and mine to-day A solemn covenant make, and say,-- Though all the world forsake Thy Word, I and my house will serve the Lord."
+    ]
+  },
+  {
+    "id": "openhymnal:on-jordans-bank-the-baptists-cry",
+    "title": "On Jordan's Bank the Baptist's Cry",
+    "author": "Charles Coffin",
+    "year": 1736,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "On Jordan's bank the Baptist's cry Announces that the Lord is nigh; Come, then, and hearken, for he brings Glad tidings from the King of kings!",
+      "Then cleansed be every breast from sin; Make straight the way for God within; Prepare we in our hearts a home, Where such a mighty Guest may come.",
+      "For Thou art our Salvation, Lord, Our Refuge, and our great Reward. Without Thy grace our souls must fade And wither like a flow'r decayed.",
+      "Stretch forth Thine hand, to heal our sore, And make us rise and fall no more; Once more upon Thy people shine, And fill the world with love divine.",
+      "To Him Who left the throne of Heav'n To save mankind, all praise be giv'n; Like praise be to the Father done, And Holy Spirit, Three in One."
+    ]
+  },
+  {
+    "id": "openhymnal:on-what-has-now-been-sown",
+    "title": "On What Has Now Been Sown",
+    "author": "John Newton",
+    "year": 1779,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "On what has now been sown Thy blessing, Lord, bestow; The pow'r is Thine alone To make it spring and grow. Do Thou in grace the harvest raise, And Thou alone shalt have the praise.",
+      "To Thee our wants are known, From Thee are all our pow'rs; Accept what is Thine own And pardon what is ours. Our praises, Lord, and prayers receive And to Thy Word a blessing give.",
+      "Oh, grant that each of us Now met before Thee here May meet together thus When Thou and Thine appear And follow Thee to Heav'n, our home. E'en so, Amen, Lord Jesus, come!"
+    ]
+  },
+  {
+    "id": "openhymnal:one-things-needful",
+    "title": "One Thing's Needful",
+    "author": "Johann H Schröder",
+    "year": 1697,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "One thing's needful: then, Lord Jesus, Keep this one thing in my mind; All beside, though first it please us, Soon a grievous yoke we find: Beneath it the heart is still fretting and striving, No true, lasting happiness ever deriving. The gain of this one thing all loss can requite And teach me in all things to find true delight.",
+      "Soul, wilt thou this one thing find thee? Seek not midst created things; What is earthly, leave behind thee, over nature stretch thy wings; For where God and man both in One are united, With God's perfect fullness the heart is delighted; There, there is the worthiest lot and the best, My One and my All, and my Joy, and my Rest.",
+      "How were Mary's thoughts devoted, Her eternal joy to find, As intent each word she noted, At her Savior's feet reclined: How kindled her heart, how devout was its feeling, While hearing the lessons that Christ was revealing; For Jesus all earthly concerns she forgot, And all was repaid in that one happy lot.",
+      "Thus my longings, heav'nward tending, Jesus, rest alone on Thee; Help me, thus on Thee depending, Savior! come and dwell in me: Although all the world should forsake and forget Thee, In love I will follow Thee, ne'er will I quit Thee; For Jesus, both Spirit and life is Thy Word, And is there a joy which Thou dost not afford?",
+      "Wisdom's highest noblest treasure, Jesus, lies conceal'd in Thee; Grant that this may still the measure Of my will and actions be: Humility there and simplicity reigning, My steps shall in wisdom for ever be training; Oh! if I of Christ have this knowledge divine, The fullness of heavenly wisdom is mine.",
+      "Christ, Thou art the sole oblation That I'll bring before my God; In his sight I've acceptation Only through Thy streaming blood: Immaculate righteousness now I've acquired, Since Thou on the tree of the cross hast expired; The robe of salvation for ever is mine, In this shall my faith through eternity shine.",
+      "Let my soul, in full exemption, Wake up in Thy likeness now; Thou art made to me redemption, My sanctification Thou. Whatever I need for my Journey to Heaven In Thee, I my Savior, is unto me given. Oh! let me all perishing pleasures forgo, And Thy life, O Jesus! alone let me know.",
+      "Where should else my hopes be centered? Grace o'erwhelms me with its flood; Thou, my Savior, once hast enter'd Holiest heaven through Thy blood: Eternal redemption for sinners there finding, From hell's dark dominion my spirit unbinding, To me perfect freedom Thy entrance has brought, And childlike to cry, \"Abba, Father,\" I'm taught.",
+      "Christ Himself, my Shepherd, feeds me, Peace and joy my spirit fill; In a pasture green He leads me Forth beside the waters still: Oh! naught to my soul is so sweet and reviving, As thus unto Jesus alone to be living; True happiness this, and this only supplies, Through faith on my Savior to fasten my eyes.",
+      "Therefore, Jesus, my Salvation, Thou my One, my All shalt be; Prove my fix'd determination, Root out all hypocrisy: Look well if on sin's slippery paths I am hasting, And lead me, O Lord, in the way everlasting; This one thing is needful, all others are vain, I count all but loss that I Christ may obtain."
+    ]
+  },
+  {
+    "id": "openhymnal:open-now-thy-gates-of-beauty",
+    "title": "Open Now Thy Gates of Beauty",
+    "author": "Benjamin Schmolck",
+    "year": 1730,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Open now thy gates of beauty, Zion, let me enter there, Where my soul in joyful duty Waits for Him Who answers prayer. Oh, how blessèd is this place, Filled with solace, light and grace!",
+      "Lord, my God, I come before Thee, Come Thou also unto me; Where we find Thee and adore Thee, There a heav'n on earth must be. To my heart, oh, enter Thou, Let it be Thy temple now!",
+      "Here Thy praise is gladly chanted, Here Thy seed is duly sown; Let my soul, where it is planted, Bring forth precious sheaves alone, So that all I hear may be Fruitful unto life in me.",
+      "Thou my faith increase and quicken, Let me keep Thy gift divine, Howsoe'er temptations thicken; May Thy Word still o'er me shine As my guiding star through life, As my comfort in my strife.",
+      "Speak, O God, and I will hear Thee, Let Thy will be done indeed; May I undisturbed draw near Thee While Thou dost Thy people feed. Here of life the fountain flows, Here is balm for all our woes."
     ]
   },
   {
@@ -3441,22 +3538,6 @@
       "See how, in that hour of darkness, Battling with the evil pow'r, Agonies untold assail Him, On His soul the arrows show'r; All the garden flow'rs are wet With the drops of bloody sweat, From His anguished frame distilling-- World's redemption thus fulfilling!",
       "But, O flow'rs, so sadly watered By this pure and precious dew, In some blessed hour your blossoms 'Neath the olive shadows grew! Eden's garden did not bear Aught that can with you compare, For the blood, thus freely given, Makes my soul the heir of heaven.",
       "When as flow'rs themselves I wither, When I droop and fade like grass, When the life-streams through my pulses Dull and ever duller pass, When at last they cease to roll, Then, to cheer my sinking soul, Grace of Jesus, be Thou given- Source of triumph! pledge of heaven!"
-    ]
-  },
-  {
-    "id": "openhymnal:o-wondrous-type-o-vision-fair",
-    "title": "O Wondrous Type, O Vision Fair",
-    "author": "From the \"Sarum Breviary\"",
-    "year": 1495,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "O wondrous type! O vision fair Of glory that the Church may share, Which Christ upon the mountain shows, where brighter than the sun He glows!",
-      "From age to age the tale declare, How with the three disciples there, Where Moses and Elijah meet, The Lord holds converse high and sweet.",
-      "The law and prophets there have place, Two chosen witnesses of grace; The Father's voice from out the cloud proclaims His only Son aloud.",
-      "With shining face and bright array, Christ deigns to manifest today What glory shall be theirs above who joy in God with perfect love.",
-      "And faithful hearts are raised on high by this great vision's mystery; For which in joyful strains we raise the voice of prayer, the hymn of praise.",
-      "O Father, with th'Eternal Son, and Holy Spirit, ever One, Vouchsafe to bring us by Thy grace to see Thy glory face to face."
     ]
   },
   {
@@ -3624,20 +3705,6 @@
     ]
   },
   {
-    "id": "openhymnal:savior-like-a-shepherd-lead-us",
-    "title": "Savior, Like A Shepherd Lead Us",
-    "author": "attr Dorothy Ann Thrupp",
-    "year": 1836,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Savior, like a shepherd lead us, much we need Thy tender care; In Thy pleasant pastures feed us, for our use Thy folds prepare. Blessèd Jesus, blessèd Jesus! Thou hast bought us, Thine we are. Blessèd Jesus, blessèd Jesus! Thou hast bought us, Thine we are.",
-      "We are Thine, Thou dost befriend us, be the guardian of our way; Keep Thy flock, from sin defend us, seek us when we go astray. Blessèd Jesus, blessèd Jesus! Hear, O hear us when we pray. Blessèd Jesus, blessèd Jesus! Hear, O hear us when we pray.",
-      "Thou hast promised to receive us, poor and sinful though we be; Thou hast mercy to relieve us, grace to cleanse and pow'r to free. Blessèd Jesus, blessèd Jesus! We will early turn to Thee. Blessèd Jesus, blessèd Jesus! We will early turn to Thee.",
-      "Early let us seek Thy favor, early let us do Thy will; Blessèd Lord and only Savior, with Thy love our bosoms fill. Blessèd Jesus, blessèd Jesus! Thou hast loved us, love us still. Blessèd Jesus, blessèd Jesus! Thou hast loved us, love us still."
-    ]
-  },
-  {
     "id": "openhymnal:savior-of-the-nations-come",
     "title": "Savior Of The Nations Come",
     "author": "Ambrose of Milan",
@@ -3667,6 +3734,20 @@
       "By the sacred griefs that wept O'er the grave where Laz'rus slept, By the boding tears that flowed Over Salem's loved abode, By the anguished sigh that told Treachery lurked within Thy fold, From Thy seat above the sky, Hear our penitential cry!",
       "By Thine hour of dire despair, By Thine agony of prayer, By the cross, the nail, the thorn, Piercing spear, and torturing scorn, By the gloom that veiled the skies O'er the dreadful sacrifice, Listen to our humble cry, Hear our penitential cry!",
       "By Thy deep expiring groan, By the sad sepulchral stone, By the vault whose dark abode Held in vain the rising God, O from earth to heaven restored, Mighty, reascended Lord, Listen, listen to the sigh Of our penitential cry!"
+    ]
+  },
+  {
+    "id": "openhymnal:savior-like-a-shepherd-lead-us",
+    "title": "Savior, Like A Shepherd Lead Us",
+    "author": "attr Dorothy Ann Thrupp",
+    "year": 1836,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Savior, like a shepherd lead us, much we need Thy tender care; In Thy pleasant pastures feed us, for our use Thy folds prepare. Blessèd Jesus, blessèd Jesus! Thou hast bought us, Thine we are. Blessèd Jesus, blessèd Jesus! Thou hast bought us, Thine we are.",
+      "We are Thine, Thou dost befriend us, be the guardian of our way; Keep Thy flock, from sin defend us, seek us when we go astray. Blessèd Jesus, blessèd Jesus! Hear, O hear us when we pray. Blessèd Jesus, blessèd Jesus! Hear, O hear us when we pray.",
+      "Thou hast promised to receive us, poor and sinful though we be; Thou hast mercy to relieve us, grace to cleanse and pow'r to free. Blessèd Jesus, blessèd Jesus! We will early turn to Thee. Blessèd Jesus, blessèd Jesus! We will early turn to Thee.",
+      "Early let us seek Thy favor, early let us do Thy will; Blessèd Lord and only Savior, with Thy love our bosoms fill. Blessèd Jesus, blessèd Jesus! Thou hast loved us, love us still. Blessèd Jesus, blessèd Jesus! Thou hast loved us, love us still."
     ]
   },
   {
@@ -3825,22 +3906,6 @@
       "Take Thou my hand, and lead me o'er life's rough way, with Heav'nly Manna feed me from day to day. Alone my footsteps falter and straggle wide, Lord who my life canst alter be Thou my guide.",
       "Take Thou my heart and hide it in folds of grace Though pain or woe betide it to know Thy face Draw, Lord, of Thy good pleasure Thy child to Thee, And grant me faith's full measure though naught I see.",
       "Though oft I think Thou hidest Thy wondrous might, Still to my goal Thou guidest me through dark night, Take, then, my hands and lead me till life is o'er, With heav'nly manna feed me forevermore."
-    ]
-  },
-  {
-    "id": "openhymnal:take-up-thy-cross-the-savior-said",
-    "title": "'Take Up Thy Cross', the Savior Said",
-    "author": "Charles W Everest",
-    "year": 1833,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "\"Take up thy cross,\" the Savior said, \"If thou wouldst My disciple be; Deny thyself, the world forsake, And humbly follow after Me.\"",
-      "Take up thy cross, let not its weight Fill thy weak spirit with alarm; His strength shall bear thy spirit up, And brace thy heart and nerve thine arm.",
-      "Take up thy cross, nor heed the shame, Nor let thy foolish pride rebel; Thy Lord for thee the cross endured, And saved thy soul from death and hell.",
-      "Take up thy cross then in His strength, And calmly sin's wild deluge brave, 'Twill guide thee to a better home, It points to glory o'er the grave.",
-      "Take up thy cross and follow Christ, Nor think til death to lay it down; For only those who bear the cross May hope to wear the glorious crown.",
-      "To Thee, great Lord, the One in Three, All praise forevermore ascend: O grant us in our home to see The heavenly life that knows no end."
     ]
   },
   {
@@ -4185,19 +4250,6 @@
     ]
   },
   {
-    "id": "openhymnal:theres-a-great-day-coming",
-    "title": "There's a Great Day Coming",
-    "author": "Will L Thompson",
-    "year": 1886,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "There's a great day coming, A great day coming, There's a great day coming by and by; When the saints and the sinners shall be parted right and left, Are you ready for that day to come? Are you ready? Are you ready? Are you ready for the judgment day? Are you ready? Are you ready? For the judgment day?",
-      "There's a bright day coming, A bright day coming, There's a bright day coming by and by; But its brightness shall only come to them that love the Lord, Are you ready for that day to come? Are you ready? Are you ready? Are you ready for the judgment day? Are you ready? Are you ready? For the judgment day?",
-      "There's a sad day coming, A sad day coming, There's a sad day coming by and by; When the sinner shall hear his doom, \"Depart, I know ye not,\" Are you ready for that day to come? Are you ready? Are you ready? Are you ready for the judgment day? Are you ready? Are you ready? For the judgment day?"
-    ]
-  },
-  {
     "id": "openhymnal:the-star-proclaims-the-king-is-here",
     "title": "The Star Proclaims the King is Here",
     "author": "Coelius Sedulius",
@@ -4247,6 +4299,19 @@
     ]
   },
   {
+    "id": "openhymnal:theres-a-great-day-coming",
+    "title": "There's a Great Day Coming",
+    "author": "Will L Thompson",
+    "year": 1886,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "There's a great day coming, A great day coming, There's a great day coming by and by; When the saints and the sinners shall be parted right and left, Are you ready for that day to come? Are you ready? Are you ready? Are you ready for the judgment day? Are you ready? Are you ready? For the judgment day?",
+      "There's a bright day coming, A bright day coming, There's a bright day coming by and by; But its brightness shall only come to them that love the Lord, Are you ready for that day to come? Are you ready? Are you ready? Are you ready for the judgment day? Are you ready? Are you ready? For the judgment day?",
+      "There's a sad day coming, A sad day coming, There's a sad day coming by and by; When the sinner shall hear his doom, \"Depart, I know ye not,\" Are you ready for that day to come? Are you ready? Are you ready? Are you ready for the judgment day? Are you ready? Are you ready? For the judgment day?"
+    ]
+  },
+  {
     "id": "openhymnal:thine-arm-o-lord-in-days-of-old",
     "title": "Thine Arm, O Lord, in Days of Old",
     "author": "Unknown",
@@ -4257,19 +4322,6 @@
       "Thine arm, O Lord, in days of old, was strong to heal and save; It triumphed o'er disease and death, o'er darkness and the grave. To Thee they went, the blind, the dumb, the palsied and the lame, The leper with his tainted life, the sick with fevered frame.",
       "And lo! Thy touch brought life and health, gave speech, and strength and sight; And youth renewed and fear relieved owned Thee, the Lord of light; And now, O Lord, be near to bless, Almighty as of yore, In crowded street, by restless couch, as by Gennesaret's shore.",
       "Be Thou our great Deliverer still, Thou Lord of life and death; Restore and quicken, soothe and bless, with Thine almighty breath. To hands that work and eyes that see, give wisdom's heavenly lore, That whole and sick, and weak and strong, may praise Thee evermore."
-    ]
-  },
-  {
-    "id": "openhymnal:though-in-the-midst-of-life-we-be",
-    "title": "Though in the Midst of Life We Be",
-    "author": "v",
-    "year": 1524,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Though in midst of life we be, Snares of death surround us; Where shall we for succor flee, Lest our foes confound us? To Thee alone, our Savior. We mourn our grievous sin which hath Stirr'd the fire of Thy fierce wrath. Holy and gracious God! Holy and mighty God! Holy and all-- merciful Savior! Thou eternal God! Save us, Lord, from sinking In the deep and bitter flood. Kyrie eleison.",
-      "Whilst in midst of death we be, Hell's grim jaws o'ertake us; Who from such distress will free. Who secure will make us? Thou only, Lord, canst do it! It moves Thy tender heart to see Our great sin and misery. Holy and gracious God! Holy and mighty God! Holy and all-- merciful Savior! Thou eternal God! Let not hell dismay us With its deep and burning flood. Kyrie eleison.",
-      "Into hell's fierce agony Sin doth headlong drive us: Where shall we for succor flee, Who, O, who will hide us? Thou only, blessed Saviour. Thy precious blood was shed to win Peace and pardon for our sin. Holy and gracious God! Holy and mighty God! Holy and all-- merciful Savior! Let us not, we pray, From the true faith's comfort Fall in our last need away. Kyrie eleison."
     ]
   },
   {
@@ -4284,6 +4336,19 @@
       "For all Thy Church, O Lord, we intercede; Make Thou our sad divisions soon to cease; Draw us the nearer each to each, we plead, By drawing all to Thee, O Prince of Peace; Thus may we all one bread, one body be, Through this blest sacrament of unity.",
       "We pray Thee too for wand'rers from Thy fold; O bring them back, good Shepherd of the sheep, Back to the faith which saints believed of old, Back to the Church which still that faith doth keep; Soon may we all one bread, one body be, Through this blest sacrament of unity.",
       "So, Lord, at length when sacraments shall cease, May we be one with all Thy Church above, One with Thy saints in one unbroken peace, One with Thy saints in one unbounded love; More blessèd still, in peace and love to be One with the Trinity in unity."
+    ]
+  },
+  {
+    "id": "openhymnal:though-in-the-midst-of-life-we-be",
+    "title": "Though in the Midst of Life We Be",
+    "author": "v",
+    "year": 1524,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Though in midst of life we be, Snares of death surround us; Where shall we for succor flee, Lest our foes confound us? To Thee alone, our Savior. We mourn our grievous sin which hath Stirr'd the fire of Thy fierce wrath. Holy and gracious God! Holy and mighty God! Holy and all-- merciful Savior! Thou eternal God! Save us, Lord, from sinking In the deep and bitter flood. Kyrie eleison.",
+      "Whilst in midst of death we be, Hell's grim jaws o'ertake us; Who from such distress will free. Who secure will make us? Thou only, Lord, canst do it! It moves Thy tender heart to see Our great sin and misery. Holy and gracious God! Holy and mighty God! Holy and all-- merciful Savior! Thou eternal God! Let not hell dismay us With its deep and burning flood. Kyrie eleison.",
+      "Into hell's fierce agony Sin doth headlong drive us: Where shall we for succor flee, Who, O, who will hide us? Thou only, blessed Saviour. Thy precious blood was shed to win Peace and pardon for our sin. Holy and gracious God! Holy and mighty God! Holy and all-- merciful Savior! Let us not, we pray, From the true faith's comfort Fall in our last need away. Kyrie eleison."
     ]
   },
   {
@@ -4316,19 +4381,6 @@
     ]
   },
   {
-    "id": "openhymnal:tis-midnight-and-on-olives-brow",
-    "title": "'Tis Midnight and On Olive's Brow",
-    "author": "William Bingham Tappan",
-    "year": 1822,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "'Tis midnight, and on Olive's brow The star is dimmed that lately shone; 'Tis midnight, in the garden now The suff'ring Savior prays alone.",
-      "'Tis midnight, and from all removed Immanuel wrestles, lone, with fears; E'en the disciple whom He loved Heeds not his Master's grief and tears.",
-      "'Tis midnight, from the heav'nly plains Are borne the songs that angels know; Unheard by mortals are the strains That sweetly soothe the Savior's woe."
-    ]
-  },
-  {
     "id": "openhymnal:to-avert-from-men-gods-wrath",
     "title": "To Avert From Men God's Wrath",
     "author": "Latin c",
@@ -4342,20 +4394,6 @@
       "He who in self-- righteousness Fixes any hope or stay, Has not on a wedding dress, And with shame is sent away; To the hungry, weary heart, He will food and rest impart.",
       "But examine first your case, Whether you be in the faith; Do you long for pard'ning grace? Is your only hope His death? Then, howe'er your soul's oppressed, Come, you are a worthy guest.",
       "He who Jesus' mercy knows, Is from wrath and envy freed; Love unto our neighbor shows That we are His flock indeed; Thus we may in all our ways Show forth our Redeemer's praise."
-    ]
-  },
-  {
-    "id": "openhymnal:today-thy-mercy-calls-me",
-    "title": "Today Thy Mercy Calls Me",
-    "author": "Oswald Allen",
-    "year": 1861,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "Today Thy mercy calls me to wash away my sin; However great my trespass, whate'er I may have been; However long from mercy I may have turned away, Thy blood, O Christ, can wash me, and make me clean today.",
-      "Today Thy gate is open, and all who enter in Shall find a Father's welcome, and pardon for their sin; The past shall be forgotten, a present joy be given; A future grace be promised, a glorious crown in Heav'n.",
-      "Today the Father calls me, the Holy Spirit waits, The blessèd angels gather around the heav'nly gates; No question will be asked me, how often I have come; Although I oft have wandered, it is my Father's home.",
-      "O all embracing mercy, thou ever open door, What shall I do without thee when heart and eyes run o'er? When all things seem against me, to drive me to despair, I know one gate is open, one ear will hear my prayer."
     ]
   },
   {
@@ -4405,6 +4443,20 @@
     ]
   },
   {
+    "id": "openhymnal:today-thy-mercy-calls-me",
+    "title": "Today Thy Mercy Calls Me",
+    "author": "Oswald Allen",
+    "year": 1861,
+    "meter": "Unknown",
+    "topics": [],
+    "lyrics": [
+      "Today Thy mercy calls me to wash away my sin; However great my trespass, whate'er I may have been; However long from mercy I may have turned away, Thy blood, O Christ, can wash me, and make me clean today.",
+      "Today Thy gate is open, and all who enter in Shall find a Father's welcome, and pardon for their sin; The past shall be forgotten, a present joy be given; A future grace be promised, a glorious crown in Heav'n.",
+      "Today the Father calls me, the Holy Spirit waits, The blessèd angels gather around the heav'nly gates; No question will be asked me, how often I have come; Although I oft have wandered, it is my Father's home.",
+      "O all embracing mercy, thou ever open door, What shall I do without thee when heart and eyes run o'er? When all things seem against me, to drive me to despair, I know one gate is open, one ear will hear my prayer."
+    ]
+  },
+  {
     "id": "openhymnal:twas-in-the-moon-of-wintertime",
     "title": "Twas In The Moon of Wintertime",
     "author": "Jean de Brébeuf",
@@ -4417,23 +4469,6 @@
       "The earliest moon of wintertime Is not so round and fair As was the ring of glory on The helpless Infant there. The chiefs from far before Him knelt With gifts of fox and beaver pelt. Jesus your King is born, Jesus is born, In excelsis gloria.",
       "Oh children of the forest free, Oh sons of Manitou, The holy Child of earth and Heav'n Is born today for you. Come kneel before the radiant Boy, Who brings you beauty, peace and joy. Jesus your King is born, Jesus is born, In excelsis gloria.",
       "This hymn was written by Fr. Jean de Brébeuf, a French missionary to the Huron (first nations / native American) people. He was eventually martyred for the faith by Iroquois during the Iroquois-Huron wars. \"When the Japanese have a Christmas devotional booklet, Mary is a Japanese woman, and her Child is a Japanese boy. With that, they are confessing that He was born for them too. For that was the message of the angel, that He was born to be the Savior for all people, and all people means one of us ... and so whether it is in Papau New Guinea or Japan or among the Eskimos, when they think of the birth of the Savior they see Him as born one of them.\" - Dr. Norman Nagel, 22 Dec 2005"
-    ]
-  },
-  {
-    "id": "openhymnal:twas-on-that-dark-that-doleful-night",
-    "title": "'Twas On That Dark, That Doleful Night",
-    "author": "Isaac Watts",
-    "year": 1709,
-    "meter": "Unknown",
-    "topics": [],
-    "lyrics": [
-      "'Twas on that dark, that doleful night When pow'rs of earth and hell arose Against the Son of God's delight, And friends betrayed Him to His foes:",
-      "Before the mournful scene began, He took the bread, and blessed, and brake: What love through all His actions ran! What wondrous words of grace He spake!",
-      "\"This is My body, broke for sin; Receive and eat the living food:\" Then took the cup, and blessed the wine; \"'Tis the new cov'nant in My blood.\"",
-      "For us His flesh with nails was torn, He bore the scourge, He felt the thorn; And justice poured upon His head Its heavy vengeance in our stead.",
-      "For us His vital blood was spilt, To buy the pardon of our guilt, When, for black crimes of biggest size, He gave His soul a sacrifice.",
-      "\"Do this,\" He cried, \"till time shall end, In memory of your dying friend; Meet at My table, and record The love of your departed Lord.\"",
-      "Jesus, Thy feast we celebrate, We show Thy death, we sing Thy name, Till Thou return, and we shall eat The marriage supper of the Lamb."
     ]
   },
   {

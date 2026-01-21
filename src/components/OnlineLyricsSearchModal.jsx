@@ -496,6 +496,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
             <button
               data-result-row
               key={item.id}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelectResult(item)}
               disabled={isLoading}
               className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${darkMode
