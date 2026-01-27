@@ -198,6 +198,7 @@ export async function getLyrics({ payload }) {
     provider: definition.id,
     title: target.title || 'Untitled Hymn',
     artist: target.author || 'Traditional',
+    year: target.year || null,
     content,
     sourceUrl: 'https://openhymnal.org/',
     metadata: {

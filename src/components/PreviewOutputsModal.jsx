@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Monitor, RefreshCw, ExternalLink } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const RESOLUTION_OPTIONS = [
     { label: '1920×1080 (Full HD)', width: 1920, height: 1080 },
@@ -159,20 +160,24 @@ const PreviewOutputsModal = ({ darkMode }) => {
                             <label className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                 Resolution:
                             </label>
-                            <select
-                                value={RESOLUTION_OPTIONS.findIndex(r => r.width === output1Resolution.width && r.height === output1Resolution.height)}
-                                onChange={(e) => setOutput1Resolution(RESOLUTION_OPTIONS[parseInt(e.target.value)])}
-                                className={`text-xs px-2 py-1 rounded border flex-1 ${darkMode
+                            <Select
+                                value={String(RESOLUTION_OPTIONS.findIndex(r => r.width === output1Resolution.width && r.height === output1Resolution.height))}
+                                onValueChange={(value) => setOutput1Resolution(RESOLUTION_OPTIONS[parseInt(value)])}
+                            >
+                                <SelectTrigger className={`text-xs px-2 py-1 rounded border flex-1 h-6 ${darkMode
                                     ? 'bg-gray-700 border-gray-600 text-gray-200'
                                     : 'bg-white border-gray-300 text-gray-800'
-                                    }`}
-                            >
-                                {RESOLUTION_OPTIONS.map((res, idx) => (
-                                    <option key={idx} value={idx}>
-                                        {res.label}
-                                    </option>
-                                ))}
-                            </select>
+                                    }`}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
+                                    {RESOLUTION_OPTIONS.map((res, idx) => (
+                                        <SelectItem key={idx} value={String(idx)}>
+                                            {res.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="flex items-center gap-2">
                             <input
@@ -267,20 +272,24 @@ const PreviewOutputsModal = ({ darkMode }) => {
                             <label className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                 Resolution:
                             </label>
-                            <select
-                                value={RESOLUTION_OPTIONS.findIndex(r => r.width === output2Resolution.width && r.height === output2Resolution.height)}
-                                onChange={(e) => setOutput2Resolution(RESOLUTION_OPTIONS[parseInt(e.target.value)])}
-                                className={`text-xs px-2 py-1 rounded border flex-1 ${darkMode
+                            <Select
+                                value={String(RESOLUTION_OPTIONS.findIndex(r => r.width === output2Resolution.width && r.height === output2Resolution.height))}
+                                onValueChange={(value) => setOutput2Resolution(RESOLUTION_OPTIONS[parseInt(value)])}
+                            >
+                                <SelectTrigger className={`text-xs px-2 py-1 rounded border flex-1 h-6 ${darkMode
                                     ? 'bg-gray-700 border-gray-600 text-gray-200'
                                     : 'bg-white border-gray-300 text-gray-800'
-                                    }`}
-                            >
-                                {RESOLUTION_OPTIONS.map((res, idx) => (
-                                    <option key={idx} value={idx}>
-                                        {res.label}
-                                    </option>
-                                ))}
-                            </select>
+                                    }`}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
+                                    {RESOLUTION_OPTIONS.map((res, idx) => (
+                                        <SelectItem key={idx} value={String(idx)}>
+                                            {res.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="flex items-center gap-2">
                             <input

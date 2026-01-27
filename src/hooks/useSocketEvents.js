@@ -454,7 +454,7 @@ const useSocketEvents = (role) => {
 
       const shouldSyncOutputSettings = role !== 'output' && role !== 'output1' && role !== 'output2' && role !== 'stage';
 
-      if (shouldSyncOutputSettings) {
+      if (shouldSyncOutputSettings && clientType === 'desktop') {
         const syncOutputSettingsFromStore = () => {
           try {
             const { output1Settings, output2Settings, stageSettings } = useLyricsStore.getState();

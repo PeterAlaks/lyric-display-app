@@ -145,7 +145,7 @@ export const useLyricsLoader = ({
         title: lyric.title || 'Untitled Song',
         artists: lyric.artist ? [lyric.artist] : [],
         album: album,
-        year: lyric.year || null,
+        year: lyric.year || lyric.metadata?.year || null,
         lyricLines: lyrics.length,
         origin: providerName || providerId,
         filePath: null

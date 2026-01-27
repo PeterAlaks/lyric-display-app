@@ -20,7 +20,7 @@ const useMenuHandlers = (closeMenu) => {
 
   const handleOpenLyrics = useCallback(async () => {
     closeMenu();
-    
+
     if (isNewSongCanvas) {
       try {
         if (window?.electronAPI?.loadLyricsFile) {
@@ -98,7 +98,7 @@ const useMenuHandlers = (closeMenu) => {
               try {
                 const fs = await import('fs/promises');
                 const content = await fs.readFile(filePath, 'utf8');
-                
+
                 window.dispatchEvent(new CustomEvent('load-into-canvas', {
                   detail: {
                     content,
@@ -124,7 +124,7 @@ const useMenuHandlers = (closeMenu) => {
                     console.error('Parse error:', parseError);
                   }
                 }
-                
+
                 showToast({
                   title: 'Could not open recent file',
                   message: 'File may have been moved or deleted.',
@@ -344,9 +344,19 @@ const useMenuHandlers = (closeMenu) => {
     });
   }, [closeMenu, showModal]);
 
-  const handleAbout = useCallback((appVersion) => {
+  const handleSupportDev = useCallback(() => {
     closeMenu();
-    showModal({
+    window.dispatchEvent(new Event('open-support-dev-modal'));
+  }, [closeMenu]);
+
+  const handleCheckUpdates = useCallback(() => {
+    closeMenu();
+    window.electronAPI?.checkForUpdates?.(true);
+  }, [closeMenu]);
+
+  const handleAbout = useCallback(async (appVersion) => {
+    closeMenu();
+    const result = await showModal({
       title: 'About LyricDisplay',
       component: 'AboutApp',
       variant: 'info',
@@ -357,17 +367,11 @@ const useMenuHandlers = (closeMenu) => {
         { label: 'Check for Updates', value: { action: 'checkUpdates' } }
       ]
     });
-  }, [closeMenu, showModal]);
 
-  const handleSupportDev = useCallback(() => {
-    closeMenu();
-    window.dispatchEvent(new Event('open-support-dev-modal'));
-  }, [closeMenu]);
-
-  const handleCheckUpdates = useCallback(() => {
-    closeMenu();
-    window.electronAPI?.checkForUpdates?.(true);
-  }, [closeMenu]);
+    if (result?.action === 'checkUpdates') {
+      handleCheckUpdates();
+    }
+  }, [closeMenu, showModal, handleCheckUpdates]);
 
   return {
     handleNewLyrics,
