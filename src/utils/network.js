@@ -126,6 +126,9 @@ export const resolveBackendOrigin = (port = defaultPort) => {
     const browserUrl = new URL(browserOrigin);
     const browserPort = browserUrl.port;
 
+    console.log('browserPort', browserPort);
+
+
     if (browserPort === '5173') {
       return `${browserUrl.protocol}//${browserUrl.hostname}:${port}`;
     }
