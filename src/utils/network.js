@@ -29,7 +29,7 @@ const normalizeOrigin = (origin) => {
   return origin.endsWith('/') ? origin.slice(0, -1) : origin;
 };
 
-const getBrowserOrigin = () => {
+export const getBrowserOrigin = () => {
   if (typeof window === 'undefined') return '';
   const origin = window.location?.origin;
   if (typeof origin !== 'string' || !origin.startsWith('http')) {
@@ -102,7 +102,7 @@ export const resolveBackendOrigin = (port = defaultPort) => {
       const browserPort = browserUrl.port;
 
       if (browserPort === '5173') {
-        return `http://localhost:${port}`;
+        return `${browserUrl.protocol}//${browserUrl.hostname}:${port}`;
       }
 
       if (browserHost.startsWith('127.')) {
@@ -127,7 +127,7 @@ export const resolveBackendOrigin = (port = defaultPort) => {
     const browserPort = browserUrl.port;
 
     if (browserPort === '5173') {
-      return `http://localhost:${port}`;
+      return `${browserUrl.protocol}//${browserUrl.hostname}:${port}`;
     }
 
     if (!browserIsLocal) {
