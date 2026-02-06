@@ -13,7 +13,7 @@ export function getLocalIPAddress() {
         }
     }
 
-    // Priority 1: Interface name contains "Wi-Fi" (case insensitive)
+    // Priority 1: Interface name contains "Wi-Fi"
     const wifiCandidate = candidates.find(c =>
         c.name.toLowerCase().includes('wi-fi') ||
         c.name.toLowerCase().includes('wifi') ||

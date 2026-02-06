@@ -1343,21 +1343,21 @@ const OutputSettingsPanel = ({ outputKey }) => {
       <div
         ref={fullScreenAdvancedRef}
         className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${fullScreenOptionsWrapperClass}`}
-        // aria-hidden={!fullScreenAdvancedVisible}
+        aria-hidden={!fullScreenAdvancedVisible}
         style={{ marginTop: fullScreenAdvancedVisible ? undefined : 0 }}
       >
-        <div className={`flex items-center gap-3 justify-between w-full pt-2`}>
+        <div className={`flex items-center gap-3 justify-between w-full pt-2 ${fullScreenControlsDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
           <Select
             value={fullScreenBackgroundTypeValue}
             onValueChange={handleFullScreenBackgroundTypeChange}
-            disabled={false}
+            disabled={fullScreenControlsDisabled}
           >
             <SelectTrigger
-              disabled={false}
+              disabled={fullScreenControlsDisabled}
               className={`w-[200px] ${darkMode
                 ? 'bg-gray-700 border-gray-600 text-gray-200'
                 : 'bg-white border-gray-300'
-                } `}
+                } ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <SelectValue />
             </SelectTrigger>
@@ -1372,7 +1372,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
               value={fullScreenBackgroundColorValue}
               onChange={handleFullScreenColorChange}
               darkMode={darkMode}
-              disabled={false}
+              disabled={fullScreenControlsDisabled}
               className={`ml-auto ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             />
           ) : (
@@ -1383,11 +1383,13 @@ const OutputSettingsPanel = ({ outputKey }) => {
                 accept="image/*,video/*"
                 className="hidden"
                 onChange={handleMediaSelection}
+                disabled={fullScreenControlsDisabled}
               />
               <Button
                 variant="outline"
                 onClick={triggerFileDialog}
-                className={`h-9 px-4 flex-shrink-0 ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}`}
+                disabled={fullScreenControlsDisabled}
+                className={`h-9 px-4 flex-shrink-0 ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {hasBackgroundMedia ? 'File Added' : 'Add File'}
               </Button>
