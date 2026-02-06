@@ -1,41 +1,40 @@
 import { networkInterfaces } from 'os';
+import dgram from 'dgram';
 
-export function getLocalIPAddress() {
+function getActiveIP() {
+    return new Promise((resolve) => {
+        const socket = dgram.createSocket('udp4');
+
+        socket.connect(80, '8.8.8.8', () => {
+            const { address } = socket.address();
+            socket.close();
+            resolve(address);
+        });
+
+        socket.on('error', () => resolve('localhost'));
+    });
+}
+
+
+export async function getLocalIPAddress() {
+    const activeIP = await getActiveIP();
     const nets = networkInterfaces();
-    const candidates = [];
+
+    if (!activeIP || activeIP === '0.0.0.0') {
+        return 'localhost';
+    }
 
     for (const name of Object.keys(nets)) {
-        for (const net of nets[name]) {
-            // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-            if (net.family === 'IPv4' && !net.internal) {
-                candidates.push({ name, address: net.address });
+        for (const net of nets[name] ?? []) {
+            if (
+                net.family === 'IPv4' &&
+                !net.internal &&
+                net.address === activeIP
+            ) {
+                return net.address;
             }
         }
     }
 
-    // Priority 1: Interface name contains "Wi-Fi"
-    const wifiCandidate = candidates.find(c =>
-        c.name.toLowerCase().includes('wi-fi') ||
-        c.name.toLowerCase().includes('wifi') ||
-        c.name.toLowerCase().includes('wireless') ||
-        c.name.toLowerCase().includes('wlan')
-    );
-
-    if (wifiCandidate) {
-        return wifiCandidate.address;
-    }
-
-    // Priority 2: Standard LAN IPs
-    const lanCandidate = candidates.find(c =>
-        c.address.startsWith('192.168.') ||
-        c.address.startsWith('10.') ||
-        (c.address.startsWith('172.') && parseInt(c.address.split('.')[1]) >= 16 && parseInt(c.address.split('.')[1]) <= 31)
-    );
-
-    if (lanCandidate) {
-        return lanCandidate.address;
-    }
-
-    // Priority 3: First available
-    return candidates.length > 0 ? candidates[0].address : 'localhost';
+    return activeIP;
 }
