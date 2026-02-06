@@ -304,7 +304,7 @@ const Output2 = () => {
 
   const isOutputActive = isPreviewMode || Boolean(isOutputOn && output2Enabled);
   const isVisible = Boolean(isOutputActive && line);
-  const shouldShowFullScreenBackground = fullScreenMode && (alwaysShowBackground || isOutputActive);
+  const shouldShowFullScreenBackground = fullScreenMode || (alwaysShowBackground && isOutputActive);
 
   const fullScreenBackgroundColorValue =
     shouldShowFullScreenBackground && fullScreenBackgroundType === 'color'
