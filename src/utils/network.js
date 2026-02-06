@@ -29,7 +29,7 @@ const normalizeOrigin = (origin) => {
   return origin.endsWith('/') ? origin.slice(0, -1) : origin;
 };
 
-export const getBrowserOrigin = () => {
+const getBrowserOrigin = () => {
   if (typeof window === 'undefined') return '';
   const origin = window.location?.origin;
   if (typeof origin !== 'string' || !origin.startsWith('http')) {
@@ -125,8 +125,6 @@ export const resolveBackendOrigin = (port = defaultPort) => {
   if (browserOrigin) {
     const browserUrl = new URL(browserOrigin);
     const browserPort = browserUrl.port;
-
-    console.log('browserPort', browserPort);
 
 
     if (browserPort === '5173') {
