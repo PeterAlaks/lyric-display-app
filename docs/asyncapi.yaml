@@ -4,7 +4,7 @@ asyncapi: 3.0.0
 
 info:
   title: LyricDisplay App Socket.IO API
-  version: 6.2.1 
+  version: 6.2.5 
   description: |
     Real-time control surface for LyricDisplay over Socket.IO. All connections must provide
     a JWT in the Socket.IO auth payload (`auth.token`), minted via `/api/auth/token`.

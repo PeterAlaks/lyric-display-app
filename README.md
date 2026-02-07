@@ -2,7 +2,7 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 6.2.1
+**Version:** 6.2.5
 **Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
@@ -431,7 +431,7 @@ Their inclusion does **not imply endorsement, partnership, or affiliation** with
 > **Disclaimer:** LyricDisplay and its developers are not affiliated with or endorsed by any of the above content providers.  
 > This feature is offered “as is” for convenience and educational purposes only.
 
-**Copyright © 2025. All Rights Reserved.**
+**Copyright © 2026. All Rights Reserved.**
 
 **Developers:**
 - Peter Alakembi (Lead Designer and Developer)
