@@ -18,6 +18,9 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   const [joinCode, setJoinCode] = useState(null);
   const { showToast } = useToast();
 
+  const port = import.meta.env.DEV ? '5173' : '4000';
+  const urlBase = `http://${localIP}:${port}/`;
+
   const refreshJoinCode = useCallback(async () => {
     try {
       if (window.electronAPI?.getJoinCode) {
@@ -88,7 +91,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
       setIsGenerating(true);
 
       try {
-        const url = `http://${localIP}:4000/?client=mobile&joinCode=${joinCode}`;
+        const url = `${urlBase}?client=mobile&joinCode=${joinCode}`;
 
         const dataURL = await QRCode.toDataURL(url, {
           width: 200,
@@ -137,7 +140,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
 
   if (!visible) return null;
 
-  const connectionURL = `http://${localIP}:4000/?client=mobile`;
+  const connectionURL = `${urlBase}?client=mobile`;
 
   const topMenuHeight = typeof document !== 'undefined'
     ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')

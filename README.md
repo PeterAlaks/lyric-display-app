@@ -55,7 +55,11 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 git clone https://github.com/PeterAlaks/lyric-display-app.git
 cd lyric-display-app
 
-# Install dependencies
+# Install client dependencies
+npm install
+
+# Install server dependencies
+cd server
 npm install
 
 # Development mode
