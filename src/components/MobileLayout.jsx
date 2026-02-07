@@ -501,7 +501,7 @@ const MobileLayout = () => {
             : 'text-gray-600 bg-gray-50 border-gray-200'
             }`}
         >
-          © 2025 LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
+          © {new Date().getFullYear()} LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
         </div>
 
         {/* Setlist Modal */}

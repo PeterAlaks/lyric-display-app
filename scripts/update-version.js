@@ -17,6 +17,15 @@ function getCurrentVersion() {
   return pkg.version;
 }
 
+function updateCopyrightYear(content) {
+  const currentYear = new Date().getFullYear();
+  // Match patterns like "© 2025", "Copyright © 2025", "© 2024", etc.
+  return content.replace(
+    /(©\s*)(\d{4})/g,
+    `$1${currentYear}`
+  );
+}
+
 function updateVersionNumbers(version) {
   if (!version) version = getCurrentVersion();
 
@@ -26,6 +35,7 @@ function updateVersionNumbers(version) {
       /(\*\*Version:\*\*\s*)(\d+\.\d+\.\d+)/i,
       `$1${version}`
     );
+    content = updateCopyrightYear(content);
     fs.writeFileSync(readmePath, content);
     console.log(`ƒo. Updated README.md to version ${version}`);
   }
@@ -36,6 +46,7 @@ function updateVersionNumbers(version) {
       /(Version:\s*)(\d+\.\d+\.\d+)/i,
       `$1${version}`
     );
+    content = updateCopyrightYear(content);
     fs.writeFileSync(guidePath, content);
     console.log(`ƒo. Updated Installation Guide to version ${version}`);
   }
