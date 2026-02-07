@@ -102,7 +102,7 @@ export const resolveBackendOrigin = (port = defaultPort) => {
       const browserPort = browserUrl.port;
 
       if (browserPort === '5173') {
-        return `http://localhost:${port}`;
+        return `${browserUrl.protocol}//${browserUrl.hostname}:${port}`;
       }
 
       if (browserHost.startsWith('127.')) {
@@ -126,8 +126,9 @@ export const resolveBackendOrigin = (port = defaultPort) => {
     const browserUrl = new URL(browserOrigin);
     const browserPort = browserUrl.port;
 
+
     if (browserPort === '5173') {
-      return `http://localhost:${port}`;
+      return `${browserUrl.protocol}//${browserUrl.hostname}:${port}`;
     }
 
     if (!browserIsLocal) {
