@@ -232,19 +232,32 @@ jobs:
             
             See the [Installation Guide](https://lyricdisplay.app/integration-guide) for detailed setup instructions.
             
-            ### Important Notes
+            ---
             
-            **Security Notice:**
-            Because this build is not code-signed, your operating system may show a security warning the first time you open it.
-
-            To install and run:
-            1. Download the installer file for your operating system.
-            2. Open or extract the file as required.
-            3. Launch the app. If a security prompt appears, choose the option that allows you to proceed (for example: "Open", "Run anyway", or similar).
-            4. After approving it once, the app will open normally on subsequent launches.
-
-            If your system requires executable permission (common on some Linux environments):
+            ### ⚠️ macOS Users: Important Installation Steps
+            
+            Because this app is not code-signed with an Apple Developer certificate, macOS will show a "damaged" or "can't be opened" error. **This is expected** and can be easily fixed:
+            
+            1. Download and open the `.dmg` file, drag LyricDisplay to Applications
+            2. **Before opening the app**, open Terminal and run:
+               ```
+               xattr -cr /Applications/LyricDisplay.app
+               ```
+            3. Now open LyricDisplay from Applications
+            4. If prompted, go to **System Preferences → Security & Privacy → General** and click "Open Anyway"
+            
+            You only need to do this once. After the first launch, macOS will remember your choice.
+            
+            ---
+            
+            ### Windows & Linux Notes
+            
+            **Windows:** If SmartScreen appears, click "More info" → "Run anyway"
+            
+            **Linux:** Make the AppImage executable before running:
+            ```
             chmod +x LyricDisplay-*.AppImage
-            ./LyricDisplay-*.AppImage`
+            ./LyricDisplay-*.AppImage
+            ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -60,17 +60,50 @@ LyricDisplay is a free desktop app that provides perfectly clear, sharp and tran
 **Linux:**
 &nbsp;  [​Click here to download for Linux​](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.2.1/LyricDisplay-6.2.1-Linux.AppImage)
 
-**2. Run Installer**
+---
 
+**2. Installation Instructions by Platform**
+
+**Windows:**
 &nbsp;  - Right-click installer → Run as Administrator
 &nbsp;  - If SmartScreen appears: More info → Run anyway
 &nbsp;  - Follow wizard, accept defaults
-
 &nbsp;  - Create desktop shortcut (recommended)
+
+**macOS:**
+
+Because LyricDisplay is not code-signed with an Apple Developer certificate, macOS Gatekeeper will block the app with a message saying it is "damaged" or "can't be verified." This is expected behavior for unsigned apps downloaded from the internet.
+
+**To install and run LyricDisplay on macOS:**
+
+1. Download the appropriate .dmg file for your Mac (Apple Silicon or Intel)
+2. Open the .dmg file and drag LyricDisplay to your Applications folder
+3. **Before opening the app**, open Terminal (Applications → Utilities → Terminal) and run:
+
+```
+xattr -cr /Applications/LyricDisplay.app
+```
+
+4. Now open LyricDisplay from your Applications folder
+5. If you still see a warning, go to **System Preferences → Security & Privacy → General** and click "Open Anyway"
+
+**Alternative method (right-click):**
+&nbsp;  - After running the xattr command above, you can also right-click (or Control-click) on LyricDisplay.app
+&nbsp;  - Select "Open" from the context menu
+&nbsp;  - Click "Open" in the dialog that appears
+
+*Note: You only need to do this once. After the first successful launch, macOS will remember your choice.*
+
+**Linux:**
+&nbsp;  - Download the AppImage file
+&nbsp;  - Make it executable: `chmod +x LyricDisplay-*.AppImage`
+&nbsp;  - Run: `./LyricDisplay-*.AppImage`
+
+---
 
 **3. Launch Application**
 
-&nbsp;  - Open from desktop shortcut or Start menu
+&nbsp;  - Open from desktop shortcut, Start menu, Applications folder, or run the AppImage
 
 &nbsp;  - Control panel interface will appear
 
@@ -304,6 +337,24 @@ Solutions:
 → Use "Sync Outputs" button in settings
 → Refresh browser source in OBS
 → Check browser console (F12) for errors
+
+**PROBLEM: macOS says app is "damaged" or "can't be opened"**
+
+This happens because the app is not code-signed with an Apple Developer certificate. macOS blocks unsigned apps downloaded from the internet by default.
+
+Solutions:
+→ Open Terminal and run: `xattr -cr /Applications/LyricDisplay.app`
+→ Then try opening the app again
+→ If still blocked, go to System Preferences → Security & Privacy → General → Click "Open Anyway"
+→ Alternatively, right-click the app and select "Open" instead of double-clicking
+
+**PROBLEM: macOS shows "unidentified developer" warning**
+
+Solutions:
+→ Right-click (or Control-click) on LyricDisplay.app
+→ Select "Open" from the context menu
+→ Click "Open" in the dialog that appears
+→ This only needs to be done once
 
 
 ###### **Keyboard Shortcuts**

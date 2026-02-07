@@ -47,6 +47,8 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 2. Run the installer for your platform
 3. Launch LyricDisplay
 
+> **macOS Users:** Because the app is not code-signed, macOS will show a "damaged" error. Before opening, run `xattr -cr /Applications/LyricDisplay.app` in Terminal. See the [Installation Guide](INSTALLATION.md) for detailed instructions.
+
 ### Development Setup
 ```bash
 # Clone the repository
