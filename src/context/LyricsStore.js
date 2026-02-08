@@ -26,6 +26,8 @@ export async function loadPreferencesIntoStore(store) {
       const result = await window.electronAPI.preferences.getFileHandling();
       if (result.success && result.settings) {
         maxSetlistFilesLimit = result.settings.maxSetlistFiles ?? 50;
+        // Trigger a re-render by updating a dummy state
+        store.getState().updateMaxSetlistFiles(maxSetlistFilesLimit);
       }
     }
   } catch (error) {
@@ -208,6 +210,7 @@ const useLyricsStore = create(
       lyricsTimestamps: [],
       hasSeenIntelligentAutoplayInfo: false,
       pendingSavedVersion: null,
+      maxSetlistFilesVersion: 0,
 
       setLyrics: (lines) => set({ lyrics: lines }),
       setLyricsSections: (sections) => set({ lyricsSections: Array.isArray(sections) ? sections : [] }),
@@ -254,6 +257,11 @@ const useLyricsStore = create(
       },
       
       getMaxSetlistFiles: () => maxSetlistFilesLimit,
+
+      updateMaxSetlistFiles: (newLimit) => {
+        maxSetlistFilesLimit = newLimit;
+        set((state) => ({ maxSetlistFilesVersion: state.maxSetlistFilesVersion + 1 }));
+      },
 
       output1Settings: defaultOutput1Settings,
       output2Settings: defaultOutput2Settings,

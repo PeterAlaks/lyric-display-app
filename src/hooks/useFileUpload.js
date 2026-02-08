@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useLyricsState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -10,14 +10,31 @@ const useFileUpload = () => {
   const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
 
-  const MAX_FILE_SIZE_MB = 2;
-  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+  const [maxFileSize, setMaxFileSize] = useState(2);
+
+  useEffect(() => {
+    const loadMaxFileSize = async () => {
+      try {
+        if (window.electronAPI?.preferences?.getFileHandling) {
+          const result = await window.electronAPI.preferences.getFileHandling();
+          if (result.success && result.settings) {
+            setMaxFileSize(result.settings.maxFileSize ?? 2);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load max file size preference:', error);
+      }
+    };
+    loadMaxFileSize();
+  }, []);
+
+  const MAX_FILE_SIZE_BYTES = maxFileSize * 1024 * 1024;
 
   const handleFileUpload = useCallback(async (file, additionalOptions = {}) => {
     try {
       if (!file) return false;
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        showToast({ title: 'File too large', message: `Max ${MAX_FILE_SIZE_MB} MB allowed.`, variant: 'error' });
+        showToast({ title: 'File too large', message: `Max ${maxFileSize} MB allowed.`, variant: 'error' });
         return false;
       }
 
@@ -97,7 +114,7 @@ const useFileUpload = () => {
       showToast({ title: 'Failed to load file', message: 'Please check the file and try again.', variant: 'error' });
       return false;
     }
-  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setSongMetadata, setLyricsTimestamps, emitLyricsLoad, socket, showToast]);
+  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setSongMetadata, setLyricsTimestamps, emitLyricsLoad, socket, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
 
   return handleFileUpload;
 };

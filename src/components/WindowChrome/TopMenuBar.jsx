@@ -391,6 +391,8 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('edit', 4, el)} label="Paste" shortcut="Ctrl/Cmd + V" onClick={() => menuHandlers.handleClipboardAction('paste')} active={openMenu === 'edit' && activeIndex === 4} />
                 <MenuItem ref={(el) => registerItemRef('edit', 5, el)} label="Delete" shortcut="Del" onClick={() => menuHandlers.handleClipboardAction('delete')} active={openMenu === 'edit' && activeIndex === 5} />
                 <MenuItem ref={(el) => registerItemRef('edit', 6, el)} label="Select All" shortcut="Ctrl/Cmd + A" onClick={() => menuHandlers.handleClipboardAction('selectAll')} active={openMenu === 'edit' && activeIndex === 6} />
+                <Separator />
+                <MenuItem ref={(el) => registerItemRef('edit', 7, el)} label="Preferences" shortcut="Ctrl/Cmd + I" onClick={menuHandlers.handlePreferences} active={openMenu === 'edit' && activeIndex === 7} />
               </div>
             )}
           </div>

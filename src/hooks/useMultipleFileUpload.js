@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSetlistState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -6,12 +6,30 @@ import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 
 const useMultipleFileUpload = () => {
-  const { setlistFiles, isSetlistFull, getAvailableSetlistSlots } = useSetlistState();
+  const { setlistFiles, isSetlistFull, getAvailableSetlistSlots, getMaxSetlistFiles } = useSetlistState();
   const { emitSetlistAdd } = useControlSocket();
   const { showToast } = useToast();
 
-  const MAX_FILE_SIZE_MB = 2;
-  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+  const [maxFileSize, setMaxFileSize] = useState(2);
+  const maxSetlistFiles = getMaxSetlistFiles();
+
+  useEffect(() => {
+    const loadMaxFileSize = async () => {
+      try {
+        if (window.electronAPI?.preferences?.getFileHandling) {
+          const result = await window.electronAPI.preferences.getFileHandling();
+          if (result.success && result.settings) {
+            setMaxFileSize(result.settings.maxFileSize ?? 2);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load max file size preference:', error);
+      }
+    };
+    loadMaxFileSize();
+  }, []);
+
+  const MAX_FILE_SIZE_BYTES = maxFileSize * 1024 * 1024;
 
   const handleMultipleFileUpload = useCallback(async (files) => {
     try {
@@ -22,7 +40,7 @@ const useMultipleFileUpload = () => {
       if (availableSlots === 0) {
         showToast({
           title: 'Setlist full',
-          message: 'Cannot add files. Setlist has reached maximum capacity (50 files).',
+          message: `Cannot add files. Setlist has reached maximum capacity (${maxSetlistFiles} files).`,
           variant: 'error'
         });
         return false;
@@ -54,7 +72,7 @@ const useMultipleFileUpload = () => {
         if (oversizedFiles.length > 0) {
           showToast({
             title: 'Files too large',
-            message: `${oversizedFiles.length} file(s) exceed ${MAX_FILE_SIZE_MB}MB limit.`,
+            message: `${oversizedFiles.length} file(s) exceed ${maxFileSize}MB limit.`,
             variant: 'error'
           });
         } else if (invalidFiles.length > 0) {
@@ -173,7 +191,7 @@ const useMultipleFileUpload = () => {
       });
       return false;
     }
-  }, [emitSetlistAdd, getAvailableSetlistSlots, showToast]);
+  }, [emitSetlistAdd, getAvailableSetlistSlots, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
 
   return handleMultipleFileUpload;
 };

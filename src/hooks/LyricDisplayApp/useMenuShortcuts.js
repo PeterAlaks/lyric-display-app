@@ -94,6 +94,13 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
         return;
       }
 
+      if (cmdOrCtrl && !event.shiftKey && (event.key === 'i' || event.key === 'I')) {
+        if (isTyping) return;
+        event.preventDefault();
+        window.dispatchEvent(new Event('open-user-preferences'));
+        return;
+      }
+
       if (cmdOrCtrl && !event.shiftKey && (event.key === '+' || event.key === '=')) {
         event.preventDefault();
         window.electronAPI?.windowControls?.setZoom?.('in');

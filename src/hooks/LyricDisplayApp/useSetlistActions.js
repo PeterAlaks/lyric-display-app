@@ -23,12 +23,14 @@ const useSetlistActions = (emitSetlistAdd) => {
     !isDesktopApp || !hasLyrics || !rawLyricsContent || !lyricsFileName || isSetlistFull() || isFileAlreadyInSetlist()
   ), [isDesktopApp, hasLyrics, rawLyricsContent, lyricsFileName, isSetlistFull, isFileAlreadyInSetlist]);
 
+  const maxSetlistFiles = useLyricsStore((state) => state.getMaxSetlistFiles());
+
   const title = useMemo(() => {
     if (!isDesktopApp) return 'Only available on desktop app';
-    if (isSetlistFull()) return 'Setlist is full (50 files maximum)';
+    if (isSetlistFull()) return `Setlist is full (${maxSetlistFiles} files maximum)`;
     if (isFileAlreadyInSetlist()) return 'File already in setlist';
     return 'Add current file to setlist';
-  }, [isDesktopApp, isSetlistFull, isFileAlreadyInSetlist]);
+  }, [isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, maxSetlistFiles]);
 
   const handleAddToSetlist = useCallback(() => {
     if (disabled) {
@@ -37,7 +39,7 @@ const useSetlistActions = (emitSetlistAdd) => {
         return;
       }
       if (isSetlistFull()) {
-        showToast({ title: 'Setlist full', message: '50 files maximum reached', variant: 'warn' });
+        showToast({ title: 'Setlist full', message: `${maxSetlistFiles} files maximum reached`, variant: 'warn' });
         return;
       }
       if (isFileAlreadyInSetlist()) {

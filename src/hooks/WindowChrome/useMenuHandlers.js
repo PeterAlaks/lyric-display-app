@@ -373,6 +373,20 @@ const useMenuHandlers = (closeMenu) => {
     }
   }, [closeMenu, showModal, handleCheckUpdates]);
 
+  const handlePreferences = useCallback(() => {
+    closeMenu();
+    showModal({
+      title: 'Preferences',
+      headerDescription: 'Configure application settings and preferences',
+      component: 'UserPreferences',
+      variant: 'info',
+      size: 'lg',
+      actions: [],
+      allowBackdropClose: false,
+      customLayout: true
+    });
+  }, [closeMenu, showModal]);
+
   return {
     handleNewLyrics,
     handleOpenLyrics,
@@ -386,6 +400,7 @@ const useMenuHandlers = (closeMenu) => {
     handleUndo,
     handleRedo,
     handleClipboardAction,
+    handlePreferences,
 
     handleToggleDarkMode,
     handleZoom,

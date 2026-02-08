@@ -23,7 +23,8 @@ export const useKeyboardShortcuts = ({
   handleEditLyrics,
   handleAddToSetlist,
   handleNavigateSetlistPrevious,
-  handleNavigateSetlistNext
+  handleNavigateSetlistNext,
+  handleOpenPreferences
 }) => {
 
   useEffect(() => {
@@ -87,11 +88,18 @@ export const useKeyboardShortcuts = ({
         handleNavigateSetlistNext?.();
         return;
       }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'i' || event.key === 'I')) {
+        if (isTyping) return;
+        event.preventDefault();
+        handleOpenPreferences?.();
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleOpenSetlist, handleOpenOnlineLyricsSearch, handleOpenFileDialog, handleCreateNewSong, handleEditLyrics, hasLyrics, handleAddToSetlist, handleNavigateSetlistPrevious, handleNavigateSetlistNext]);
+  }, [handleOpenSetlist, handleOpenOnlineLyricsSearch, handleOpenFileDialog, handleCreateNewSong, handleEditLyrics, hasLyrics, handleAddToSetlist, handleNavigateSetlistPrevious, handleNavigateSetlistNext, handleOpenPreferences]);
 
   useEffect(() => {
     if (!hasLyrics) return;

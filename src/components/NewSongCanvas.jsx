@@ -1253,6 +1253,18 @@ const NewSongCanvas = () => {
     handleOpenSearchBar: openSearchBar,
     handleOpenReplaceBar: openReplaceBar,
     handleOpenLyrics,
+    handleOpenPreferences: () => {
+      showModal({
+        title: 'Preferences',
+        headerDescription: 'Configure application settings and preferences',
+        component: 'UserPreferences',
+        variant: 'info',
+        size: 'lg',
+        actions: [],
+        allowBackdropClose: false,
+        customLayout: true
+      });
+    },
     isContentEmpty,
     isTitleEmpty,
     composeMode,

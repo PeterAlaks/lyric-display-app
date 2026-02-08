@@ -46,8 +46,9 @@ const LyricDisplayApp = () => {
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
   const { darkMode, setDarkMode } = useDarkModeState();
-  const { setSetlistModalOpen, setlistFiles, setSetlistFiles } = useSetlistState();
+  const { setSetlistModalOpen, setlistFiles, setSetlistFiles, getMaxSetlistFiles } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
+  const maxSetlistFiles = getMaxSetlistFiles();
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
 
@@ -408,6 +409,19 @@ const LyricDisplayApp = () => {
     }
   }, [hasLyrics, setlistFiles, lyricsFileName, emitSetlistLoad, showToast]);
 
+  const handleOpenPreferences = React.useCallback(() => {
+    showModal({
+      title: 'Preferences',
+      headerDescription: 'Configure application settings and preferences',
+      component: 'UserPreferences',
+      variant: 'info',
+      size: 'lg',
+      actions: [],
+      allowBackdropClose: false,
+      customLayout: true
+    });
+  }, [showModal]);
+
   const handleNavigateSetlistNext = React.useCallback(() => {
     if (!hasLyrics || setlistFiles.length === 0) {
       showToast({
@@ -458,7 +472,8 @@ const LyricDisplayApp = () => {
     handleEditLyrics,
     handleAddToSetlist,
     handleNavigateSetlistPrevious,
-    handleNavigateSetlistNext
+    handleNavigateSetlistNext,
+    handleOpenPreferences
   });
 
   // External control (MIDI/OSC) integration
@@ -514,7 +529,7 @@ const LyricDisplayApp = () => {
                 </Tooltip>
 
                 {/* Setlist Button */}
-                <Tooltip content={<span>View and manage your song setlist (up to 50 songs) - <strong>Ctrl+Shift+S</strong></span>} side="bottom">
+                <Tooltip content={<span>View and manage your song setlist (up to {maxSetlistFiles} songs) - <strong>Ctrl+Shift+S</strong></span>} side="bottom">
                   <button
                     className={iconButtonClass(false)}
                     onClick={handleOpenSetlist}

@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 const SetlistModal = () => {
-  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull, getAvailableSetlistSlots, setSetlistFiles } = useSetlistState();
+  const { setlistModalOpen, setSetlistModalOpen, setlistFiles, isSetlistFull, getAvailableSetlistSlots, setSetlistFiles, getMaxSetlistFiles } = useSetlistState();
 
   const { darkMode } = useDarkModeState();
   const isDesktopApp = useIsDesktopApp();
+  const maxSetlistFiles = getMaxSetlistFiles();
 
   const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad, emitSetlistReorder, emitSetlistClear } = useControlSocket();
   const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
@@ -87,7 +88,7 @@ const SetlistModal = () => {
     if (isSetlistFull()) {
       showModal({
         title: 'Setlist is full',
-        description: 'You already have the maximum of 50 songs in the setlist.',
+        description: `You already have the maximum of ${maxSetlistFiles} songs in the setlist.`,
         variant: 'warn',
         dismissLabel: 'Got it',
       });
@@ -516,7 +517,7 @@ const SetlistModal = () => {
           <div>
             <h2 className="text-xl font-bold">Setlist Songs</h2>
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Add up to 50 lyric files to setlist ({setlistFiles.length}/50)
+              Add up to {maxSetlistFiles} lyric files to setlist ({setlistFiles.length}/{maxSetlistFiles})
             </p>
           </div>
 
@@ -658,7 +659,7 @@ const SetlistModal = () => {
 
             {/* Add Files Button */}
             {isDesktopApp && (
-              <Tooltip content={isSetlistFull() ? 'Setlist is full (50 files)' : 'Add files to setlist'}>
+              <Tooltip content={isSetlistFull() ? `Setlist is full (${maxSetlistFiles} files)` : 'Add files to setlist'}>
                 <Button
                   onClick={handleFileSelect}
                   disabled={isSetlistFull() || isLoading}

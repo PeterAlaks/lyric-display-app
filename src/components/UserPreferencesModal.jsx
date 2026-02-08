@@ -35,6 +35,7 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
   const [midiStatus, setMidiStatus] = useState(null);
   const [oscStatus, setOscStatus] = useState(null);
   const [midiLearnActive, setMidiLearnActive] = useState(false);
+  const [midiRefreshing, setMidiRefreshing] = useState(false);
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
 
@@ -81,6 +82,12 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
         const result = await window.electronAPI.preferences.saveAll(newPreferences);
         if (result.success) {
           setLastSaved(new Date());
+          
+          // Reload preferences into store to update maxSetlistFiles
+          const { loadPreferencesIntoStore } = await import('../context/LyricsStore');
+          const useLyricsStore = (await import('../context/LyricsStore')).default;
+          await loadPreferencesIntoStore(useLyricsStore);
+          
           // Clear the confirmation after 3 seconds
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {
@@ -177,6 +184,7 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
 
   // MIDI handlers
   const handleMidiRefreshPorts = useCallback(async () => {
+    setMidiRefreshing(true);
     try {
       const result = await window.electronAPI?.midi?.refreshPorts();
       if (result.success) {
@@ -184,6 +192,8 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
       }
     } catch (error) {
       console.error('Failed to refresh MIDI ports:', error);
+    } finally {
+      setTimeout(() => setMidiRefreshing(false), 500);
     }
   }, []);
 
@@ -347,6 +357,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.general?.rememberLastOpenedPath ?? true}
                 onCheckedChange={(checked) => updatePreference('general', 'rememberLastOpenedPath', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 
@@ -358,6 +373,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.general?.confirmOnClose ?? true}
                 onCheckedChange={(checked) => updatePreference('general', 'confirmOnClose', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
           </div>
@@ -374,6 +394,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.parsing?.enableAutoLineGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableAutoLineGrouping', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 
@@ -385,6 +410,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.parsing?.enableTranslationGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableTranslationGrouping', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 
@@ -411,6 +441,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.parsing?.enableCrossBlankLineGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableCrossBlankLineGrouping', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 
@@ -447,6 +482,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.lineSplitting?.enabled ?? true}
                 onCheckedChange={(checked) => updatePreference('lineSplitting', 'enabled', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 
@@ -545,8 +585,16 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Maximum number of songs allowed in a setlist
+                Maximum number of songs allowed in a setlist (10-100)
               </p>
+              {(preferences.fileHandling?.maxSetlistFiles ?? 50) > 75 && (
+                <div className={`flex items-start gap-2 p-2 rounded ${darkMode ? 'bg-yellow-900/20 border border-yellow-600/30' : 'bg-yellow-50 border border-yellow-200'}`}>
+                  <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                  <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                    Large setlists may impact performance when loading or switching between songs
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -592,15 +640,20 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
                       checked={midiStatus?.enabled || false}
                       onCheckedChange={handleMidiToggle}
                       disabled={midiStatus?.selectedPortIndex < 0}
+                      className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                        ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                        : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                        }`}
+                      thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className={`text-sm font-medium ${labelClass}`}>MIDI Input Device</label>
-                      <Button variant="ghost" size="sm" onClick={handleMidiRefreshPorts}>
-                        <RefreshCw className="w-4 h-4 mr-1" />
-                        Refresh
+                      <Button variant="ghost" size="sm" onClick={handleMidiRefreshPorts} disabled={midiRefreshing}>
+                        <RefreshCw className={`w-4 h-4 mr-1 ${midiRefreshing ? 'animate-spin' : ''}`} />
+                        {midiRefreshing ? 'Refreshing...' : 'Refresh'}
                       </Button>
                     </div>
                     <Select
@@ -669,6 +722,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
                     <Switch
                       checked={oscStatus?.enabled || false}
                       onCheckedChange={handleOscToggle}
+                      className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                        ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                        : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                        }`}
+                      thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
                     />
                   </div>
 
@@ -693,6 +751,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
                     <Switch
                       checked={oscStatus?.feedbackEnabled || false}
                       onCheckedChange={handleOscFeedbackToggle}
+                      className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                        ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                        : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                        }`}
+                      thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
                     />
                   </div>
 
@@ -748,6 +811,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.autoplay?.defaultLoop ?? true}
                 onCheckedChange={(checked) => updatePreference('autoplay', 'defaultLoop', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 
@@ -759,6 +827,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.autoplay?.defaultStartFromFirst ?? true}
                 onCheckedChange={(checked) => updatePreference('autoplay', 'defaultStartFromFirst', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 
@@ -770,6 +843,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.autoplay?.defaultSkipBlankLines ?? true}
                 onCheckedChange={(checked) => updatePreference('autoplay', 'defaultSkipBlankLines', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
           </div>
@@ -798,6 +876,11 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               <Switch
                 checked={preferences.advanced?.enableDebugLogging ?? false}
                 onCheckedChange={(checked) => updatePreference('advanced', 'enableDebugLogging', checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
 

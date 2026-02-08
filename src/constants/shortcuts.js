@@ -8,6 +8,7 @@ export const SHORTCUTS = [
       { label: 'Open Setlist Modal', combo: 'Ctrl/Cmd + Shift + S' },
       { label: 'Open Online Lyrics Search', combo: 'Ctrl/Cmd + Shift + O' },
       { label: 'Add Current Song to Setlist', combo: 'Ctrl/Cmd + Alt + S' },
+      { label: 'Open Preferences', combo: 'Ctrl/Cmd + I' },
     ]
   },
   {
