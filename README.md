@@ -166,6 +166,21 @@ LyricDisplay accepts plain text (.txt) and lyrics (.lrc) files
 ```
 lyric-display-app/
 ├── main/                                   # Electron main script modules
+|   ├── ipc/                                # IPC handlers
+|   |   ├── index.js                        # Main registration point
+|   |   ├── app.js                          # App-level handlers (version, dark mode)
+|   |   ├── window.js                       # Window controls (minimize, maximize, close, etc.)
+|   |   ├── files.js                        # File operations (load, save, parse lyrics)
+|   |   ├── recents.js                      # Recent files management
+|   |   ├── auth.js                         # Authentication (admin key, JWT, join code, tokens)
+|   |   ├── lyrics.js                       # Lyrics providers (search, fetch, API keys)
+|   |   ├── easyworship.js                  # EasyWorship import handlers
+|   |   ├── setlist.js                      # Setlist operations (save, load, browse, export)
+|   |   ├── display.js                      # Display management (assignments, output windows)
+|   |   ├── updater.js                      # App updater controls
+|   |   ├── templates.js                    # User templates handlers
+|   |   ├── preferences.js                  # User preferences handlers
+|   |   └── misc.js                         # Miscellaneous (fonts, IP address, browser)
 │   ├── lyricsProviders/
 |   |   ├── providers/
 |   |   |   ├── chartlyrics.js              # ChartLyrics lyrics provider definitions
@@ -184,12 +199,15 @@ lyric-display-app/
 |   ├── displayDetection.js                 # External display detection in main process
 |   ├── displayManager.js                   # External assignment and management module
 |   ├── easyWorship.js                      # EasyWorship song lyric files conversion module
+|   ├── externalControl.js                  # External control module for MIDI and OSC
 |   ├── fileHandler.js                      # Main process file processing handler
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
-|   ├── ipc.js                              # IPC handlers
+|   ├── ipc.js                              # IPC handlers import (Backward compatibility)
 |   ├── loadingWindow.js                    # Loading process window
 |   ├── menuBridge.js                       # Renderer/menu bridge (dark mode, undo/redo state)
+|   ├── midiController.js                   # MIDI main controller module
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
+|   ├── oscController.js                    # OSC main controller module
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
 |   ├── providerCredentials.js              # secure storage utility for online lyrics provider credentials
@@ -200,8 +218,9 @@ lyric-display-app/
 |   ├── startup.js                          # Main app startup processes
 |   ├── systemFonts.js                      # Helper module for loading system installed fonts
 |   ├── themePreferences.js                 # Theme manager for main process dark mode sync
-|   ├── userTemplates.js                    # Backend manager for user-stored output settings template system
 |   ├── updater.js                          # Module to manage app updates
+|   ├── userPreferences.js                  # User preferences and app settings manager
+|   ├── userTemplates.js                    # Backend manager for user-stored output settings template system
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
 ├── public/                                 # Static assets
@@ -268,6 +287,7 @@ lyric-display-app/
 |   |   ├── StageTemplatesModal.jsx         # Stage settings templates modal
 |   |   ├── SupportDevelopmentBridge.jsx    # Support development modal bridge
 |   |   ├── SupportDevelopmentModal.jsx     # Support development modal
+|   |   └── UserPreferencesModal.jsx        # User preferences UI
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
 │   ├── constants/
 |   |   ├── easyWorship.js                  # Some EasyWorship constants
@@ -324,6 +344,7 @@ lyric-display-app/
 |   |   ├── useContextMenuPosition.js       # Hook for space-aware context menu positioning
 |   |   ├── useContextSubmenus.js           # Context submenus definitions and logic
 |   |   ├── useDarkModeSync.js              # Hook for global dark mode sync
+|   |   ├── useExternalControl.js           # Hook for external control (MIDI, OSC, etc.)
 |   |   ├── useFileUpload.js                # Custom React hook for file uploads
 |   |   ├── useModal.js                     # Global modal hook
 |   |   ├── useMultipleFileUpload.js        # Multiple file upload handler
