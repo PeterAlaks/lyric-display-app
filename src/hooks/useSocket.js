@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import useAuth from './useAuth';
 import { resolveBackendOrigin } from '../utils/network';
 import useSocketEvents from './useSocketEvents';
-import { connectionManager } from '../utils/connectionManager';
+import { connectionManager, getAdvancedSettings } from '../utils/connectionManager';
 import { logDebug, logError, logWarn } from '../utils/logger';
 
 const LONG_BACKOFF_WARNING_MS = 4000;
@@ -49,11 +49,12 @@ const useSocket = (role = 'output') => {
       clearInterval(heartbeatIntervalRef.current);
     }
 
+    const settings = getAdvancedSettings();
     heartbeatIntervalRef.current = setInterval(() => {
       if (socketRef.current && socketRef.current.connected) {
         socketRef.current.emit('heartbeat');
       }
-    }, 30000);
+    }, settings.heartbeatInterval);
   }, []);
 
   const stopHeartbeat = useCallback(() => {
@@ -205,9 +206,10 @@ const useSocket = (role = 'output') => {
 
       await cleanupSocket();
 
+      const settings = getAdvancedSettings();
       const socketOptions = {
         transports: ['websocket', 'polling'],
-        timeout: 10000,
+        timeout: settings.connectionTimeout,
         reconnection: false,
         forceNew: true,
         auth: { token },

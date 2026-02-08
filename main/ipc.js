@@ -15,6 +15,7 @@ import { saveDarkModePreference } from './themePreferences.js';
 import { handleFileOpen } from './fileHandler.js';
 import { exportSetlistToPDF, exportSetlistToTXT } from './setlistExport.js';
 import * as userTemplates from './userTemplates.js';
+import * as userPreferences from './userPreferences.js';
 
 const { autoUpdater } = updaterPkg;
 
@@ -192,7 +193,25 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
   ipcMain.handle('load-lyrics-file', async () => {
     try {
       const win = getMainWindow?.();
-      const result = await dialog.showOpenDialog(win || undefined, { properties: ['openFile'], filters: [{ name: 'Text Files', extensions: ['txt', 'lrc'] }] });
+      const rememberLastPath = userPreferences.getPreference('general.rememberLastOpenedPath') ?? true;
+      
+      let defaultPath;
+      if (rememberLastPath) {
+        // Try to get the last opened directory first
+        const { getLastOpenedDirectory } = await import('./recents.js');
+        defaultPath = await getLastOpenedDirectory();
+      }
+      
+      // Fall back to user's configured default path if no recent or rememberLastPath is false
+      if (!defaultPath) {
+        defaultPath = userPreferences.getDefaultLyricsPath();
+      }
+      
+      const result = await dialog.showOpenDialog(win || undefined, { 
+        properties: ['openFile'], 
+        filters: [{ name: 'Text Files', extensions: ['txt', 'lrc'] }],
+        defaultPath: defaultPath || undefined
+      });
       if (!result.canceled && result.filePaths.length > 0) {
         const filePath = result.filePaths[0];
         const content = await readFile(filePath, 'utf8');
@@ -220,8 +239,27 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
         return { success: false, error: 'No lyric content available for parsing' };
       }
 
+      // Get user preferences for parsing
+      const parsingConfig = userPreferences.getParsingConfig();
+      const parsingOptions = {
+        enableSplitting: parsingConfig.enableSplitting ?? true,
+        splitConfig: parsingConfig.splitConfig || {
+          TARGET_LENGTH: 60,
+          MIN_LENGTH: 40,
+          MAX_LENGTH: 80,
+          OVERFLOW_TOLERANCE: 15,
+        },
+        groupingConfig: {
+          enableAutoLineGrouping: parsingConfig.normalGroupConfig?.ENABLED ?? true,
+          enableTranslationGrouping: parsingConfig.enableTranslationGrouping ?? true,
+          maxLineLength: parsingConfig.normalGroupConfig?.MAX_LINE_LENGTH ?? 45,
+          enableCrossBlankLineGrouping: parsingConfig.normalGroupConfig?.CROSS_BLANK_LINE_GROUPING ?? true,
+          structureTagMode: parsingConfig.structureTagsConfig?.MODE ?? 'isolate',
+        }
+      };
+
       const parser = fileType === 'lrc' ? parseLrcContent : parseTxtContent;
-      const result = parser(content);
+      const result = parser(content, parsingOptions);
 
       return { success: true, payload: result };
     } catch (error) {
@@ -1017,6 +1055,138 @@ export function registerIpcHandlers({ getMainWindow, openInAppBrowser, updateDar
       return { success: true, exists };
     } catch (error) {
       console.error('[UserTemplates] Error checking template name:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // User Preferences handlers
+  ipcMain.handle('preferences:get-all', async () => {
+    try {
+      const preferences = userPreferences.getAllPreferences();
+      return { success: true, preferences };
+    } catch (error) {
+      console.error('[UserPreferences] Error getting all preferences:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:get-category', async (_event, { category }) => {
+    try {
+      const data = userPreferences.getPreferenceCategory(category);
+      return { success: true, data };
+    } catch (error) {
+      console.error('[UserPreferences] Error getting category:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:get', async (_event, { path }) => {
+    try {
+      const value = userPreferences.getPreference(path);
+      return { success: true, value };
+    } catch (error) {
+      console.error('[UserPreferences] Error getting preference:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:set', async (_event, { path, value }) => {
+    try {
+      userPreferences.setPreference(path, value);
+      return { success: true };
+    } catch (error) {
+      console.error('[UserPreferences] Error setting preference:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:save-all', async (_event, { preferences }) => {
+    try {
+      const result = userPreferences.saveAllPreferences(preferences);
+      return result;
+    } catch (error) {
+      console.error('[UserPreferences] Error saving preferences:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:reset-category', async (_event, { category }) => {
+    try {
+      userPreferences.resetCategoryToDefaults(category);
+      return { success: true };
+    } catch (error) {
+      console.error('[UserPreferences] Error resetting category:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:reset-all', async () => {
+    try {
+      const result = userPreferences.resetAllToDefaults();
+      return result;
+    } catch (error) {
+      console.error('[UserPreferences] Error resetting all preferences:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:browse-default-path', async () => {
+    try {
+      const win = getMainWindow?.();
+      const result = await dialog.showOpenDialog(win || undefined, {
+        title: 'Select Default Lyrics Folder',
+        properties: ['openDirectory', 'createDirectory']
+      });
+
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+
+      const selectedPath = result.filePaths[0];
+      userPreferences.setPreference('general.defaultLyricsPath', selectedPath);
+      return { success: true, path: selectedPath };
+    } catch (error) {
+      console.error('[UserPreferences] Error browsing for default path:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:get-parsing-config', async () => {
+    try {
+      const config = userPreferences.getParsingConfig();
+      return { success: true, config };
+    } catch (error) {
+      console.error('[UserPreferences] Error getting parsing config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:get-autoplay-defaults', async () => {
+    try {
+      const defaults = userPreferences.getAutoplayDefaults();
+      return { success: true, defaults };
+    } catch (error) {
+      console.error('[UserPreferences] Error getting autoplay defaults:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:get-advanced-settings', async () => {
+    try {
+      const settings = userPreferences.getAdvancedSettings();
+      return { success: true, settings };
+    } catch (error) {
+      console.error('[UserPreferences] Error getting advanced settings:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('preferences:get-file-handling', async () => {
+    try {
+      const settings = userPreferences.getFileHandlingSettings();
+      return { success: true, settings };
+    } catch (error) {
+      console.error('[UserPreferences] Error getting file handling settings:', error);
       return { success: false, error: error.message };
     }
   });

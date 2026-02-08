@@ -1,6 +1,38 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Default autoplay settings - will be overridden by user preferences when available
+const defaultAutoplaySettings = {
+  interval: 5,
+  loop: true,
+  startFromFirst: true,
+  skipBlankLines: true,
+};
+
+// Default max setlist files - will be overridden by user preferences when available
+let maxSetlistFilesLimit = 50;
+
+// Function to load preferences from main process (called after app init)
+export async function loadPreferencesIntoStore(store) {
+  try {
+    if (window.electronAPI?.preferences?.getAutoplayDefaults) {
+      const result = await window.electronAPI.preferences.getAutoplayDefaults();
+      if (result.success && result.defaults) {
+        store.getState().setAutoplaySettings(result.defaults);
+      }
+    }
+    
+    if (window.electronAPI?.preferences?.getFileHandling) {
+      const result = await window.electronAPI.preferences.getFileHandling();
+      if (result.success && result.settings) {
+        maxSetlistFilesLimit = result.settings.maxSetlistFiles ?? 50;
+      }
+    }
+  } catch (error) {
+    console.warn('[LyricsStore] Failed to load preferences:', error);
+  }
+}
+
 export const defaultOutput1Settings = {
   fontStyle: 'Bebas Neue',
   bold: false,
@@ -213,13 +245,15 @@ const useLyricsStore = create(
 
       isSetlistFull: () => {
         const state = get();
-        return state.setlistFiles.length >= 50;
+        return state.setlistFiles.length >= maxSetlistFilesLimit;
       },
 
       getAvailableSetlistSlots: () => {
         const state = get();
-        return Math.max(0, 50 - state.setlistFiles.length);
+        return Math.max(0, maxSetlistFilesLimit - state.setlistFiles.length);
       },
+      
+      getMaxSetlistFiles: () => maxSetlistFilesLimit,
 
       output1Settings: defaultOutput1Settings,
       output2Settings: defaultOutput2Settings,

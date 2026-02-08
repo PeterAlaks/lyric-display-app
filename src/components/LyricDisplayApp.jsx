@@ -35,6 +35,7 @@ import { useKeyboardShortcuts } from '../hooks/LyricDisplayApp/useKeyboardShortc
 import { useElectronListeners } from '../hooks/LyricDisplayApp/useElectronListeners';
 import { useResponsiveWidth } from '../hooks/LyricDisplayApp/useResponsiveWidth';
 import { useDragAndDrop } from '../hooks/LyricDisplayApp/useDragAndDrop';
+import { useExternalControl } from '../hooks/useExternalControl';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -460,6 +461,24 @@ const LyricDisplayApp = () => {
     handleNavigateSetlistNext
   });
 
+  // External control (MIDI/OSC) integration
+  useExternalControl({
+    lyrics,
+    selectedLine,
+    isOutputOn,
+    autoplayActive,
+    selectLine,
+    setIsOutputOn,
+    emitLineUpdate,
+    emitOutputToggle,
+    handleAutoplayToggle,
+    handleSetlistNext: handleNavigateSetlistNext,
+    handleSetlistPrev: handleNavigateSetlistPrevious,
+    handleSyncOutputs,
+    showToast,
+    enabled: isDesktopApp
+  });
+
   const iconButtonClass = (disabled = false) => {
     const base = 'p-2.5 rounded-lg font-medium transition-colors';
     if (disabled) {
@@ -541,14 +560,19 @@ const LyricDisplayApp = () => {
                 </Tooltip>
 
                 {/* User Preferences Button */}
-                <Tooltip content="User preferences" side="bottom">
+                <Tooltip content="Application preferences and settings" side="bottom">
                   <button
                     className={iconButtonClass(false)}
                     onClick={() => {
-                      showToast({
-                        title: 'User Preferences',
-                        message: 'User preferences panel coming soon!',
-                        variant: 'info'
+                      showModal({
+                        title: 'Preferences',
+                        headerDescription: 'Configure application settings and preferences',
+                        component: 'UserPreferences',
+                        variant: 'info',
+                        size: 'lg',
+                        actions: [],
+                        allowBackdropClose: false,
+                        customLayout: true
                       });
                     }}
                   >

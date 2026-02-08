@@ -236,6 +236,59 @@ contextBridge.exposeInMainWorld('electronAPI', {
     delete: (type, templateId) => ipcRenderer.invoke('templates:delete', { type, templateId }),
     update: (type, templateId, updates) => ipcRenderer.invoke('templates:update', { type, templateId, updates }),
     nameExists: (type, name, excludeId) => ipcRenderer.invoke('templates:name-exists', { type, name, excludeId })
+  },
+  
+  // External Control (MIDI/OSC)
+  externalControl: {
+    getStatus: () => ipcRenderer.invoke('external-control:get-status'),
+    onAction: (callback) => {
+      const channel = 'external-control:action';
+      ipcRenderer.removeAllListeners(channel);
+      ipcRenderer.on(channel, (_event, action) => callback?.(action));
+      return () => ipcRenderer.removeAllListeners(channel);
+    }
+  },
+  
+  midi: {
+    initialize: () => ipcRenderer.invoke('midi:initialize'),
+    getStatus: () => ipcRenderer.invoke('midi:get-status'),
+    refreshPorts: () => ipcRenderer.invoke('midi:refresh-ports'),
+    selectPort: (portIndex) => ipcRenderer.invoke('midi:select-port', { portIndex }),
+    enable: () => ipcRenderer.invoke('midi:enable'),
+    disable: () => ipcRenderer.invoke('midi:disable'),
+    setMapping: (type, key, mapping) => ipcRenderer.invoke('midi:set-mapping', { type, key, mapping }),
+    removeMapping: (type, key) => ipcRenderer.invoke('midi:remove-mapping', { type, key }),
+    resetMappings: () => ipcRenderer.invoke('midi:reset-mappings'),
+    startLearn: (timeout) => ipcRenderer.invoke('midi:start-learn', { timeout })
+  },
+  
+  osc: {
+    initialize: () => ipcRenderer.invoke('osc:initialize'),
+    getStatus: () => ipcRenderer.invoke('osc:get-status'),
+    enable: () => ipcRenderer.invoke('osc:enable'),
+    disable: () => ipcRenderer.invoke('osc:disable'),
+    setPort: (port) => ipcRenderer.invoke('osc:set-port', { port }),
+    setFeedbackPort: (port) => ipcRenderer.invoke('osc:set-feedback-port', { port }),
+    setAddressPrefix: (prefix) => ipcRenderer.invoke('osc:set-address-prefix', { prefix }),
+    setFeedbackEnabled: (enabled) => ipcRenderer.invoke('osc:set-feedback-enabled', { enabled }),
+    getSupportedAddresses: () => ipcRenderer.invoke('osc:get-supported-addresses'),
+    sendFeedback: (address, args) => ipcRenderer.invoke('osc:send-feedback', { address, args })
+  },
+
+  // User Preferences
+  preferences: {
+    getAll: () => ipcRenderer.invoke('preferences:get-all'),
+    getCategory: (category) => ipcRenderer.invoke('preferences:get-category', { category }),
+    get: (path) => ipcRenderer.invoke('preferences:get', { path }),
+    set: (path, value) => ipcRenderer.invoke('preferences:set', { path, value }),
+    saveAll: (preferences) => ipcRenderer.invoke('preferences:save-all', { preferences }),
+    resetCategory: (category) => ipcRenderer.invoke('preferences:reset-category', { category }),
+    resetAll: () => ipcRenderer.invoke('preferences:reset-all'),
+    browseDefaultPath: () => ipcRenderer.invoke('preferences:browse-default-path'),
+    getParsingConfig: () => ipcRenderer.invoke('preferences:get-parsing-config'),
+    getAutoplayDefaults: () => ipcRenderer.invoke('preferences:get-autoplay-defaults'),
+    getAdvancedSettings: () => ipcRenderer.invoke('preferences:get-advanced-settings'),
+    getFileHandling: () => ipcRenderer.invoke('preferences:get-file-handling')
   }
 });
 

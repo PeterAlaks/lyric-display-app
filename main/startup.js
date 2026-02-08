@@ -11,6 +11,7 @@ import { processPendingFile } from './fileHandler.js';
 import { updateLoadingStatus, closeLoadingWindow } from './loadingWindow.js';
 import { preloadSystemFonts } from './systemFonts.js';
 import { getSavedDarkMode } from './themePreferences.js';
+import { initializeExternalControl, registerExternalControlIPC } from './externalControl.js';
 
 export async function handleMissingAdminKey() {
   const message = 'LyricDisplay requires the administrative key to unlock local access.';
@@ -178,6 +179,14 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     await new Promise(resolve => setTimeout(resolve, 600));
 
     setupNativeTheme(mainWindow, menuAPI);
+
+    // Initialize external control (MIDI/OSC)
+    updateLoadingStatus('Initializing external control');
+    registerExternalControlIPC();
+    initializeExternalControl({ getMainWindow: () => mainWindow }).catch(err => {
+      console.warn('[Startup] External control initialization warning:', err.message);
+    });
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     updateLoadingStatus('Finalizing');
     await new Promise(resolve => setTimeout(resolve, 500));

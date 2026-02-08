@@ -9,7 +9,9 @@ import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import JoinCodePromptBridge from './components/JoinCodePromptBridge';
 import SupportDevelopmentBridge from './components/SupportDevelopmentBridge';
 import { useDarkModeState, useIsDesktopApp } from './hooks/useStoreSelectors';
-import useLyricsStore from './context/LyricsStore';
+import useLyricsStore, { loadPreferencesIntoStore } from './context/LyricsStore';
+import { loadAdvancedSettings } from './utils/connectionManager';
+import { loadDebugLoggingPreference } from './utils/logger';
 import { ToastProvider } from '@/components/toast/ToastProvider';
 import { ModalProvider } from '@/components/modal/ModalProvider';
 import useToast from '@/hooks/useToast';
@@ -38,6 +40,7 @@ export default function App() {
     <ModalProvider isDark={!!darkMode}>
       <ToastProvider isDark={!!darkMode}>
         <AppErrorBoundary>
+          <PreferencesLoaderBridge />
           <ElectronModalBridge />
           <JoinCodePromptBridge />
           <WelcomeSplashBridge />
@@ -70,6 +73,20 @@ export default function App() {
       </ToastProvider>
     </ModalProvider>
   );
+}
+
+// Bridge to load user preferences into the store on startup
+function PreferencesLoaderBridge() {
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    
+    // Load preferences into the store and connection manager
+    loadPreferencesIntoStore(useLyricsStore);
+    loadAdvancedSettings();
+    loadDebugLoggingPreference();
+  }, []);
+  
+  return null;
 }
 
 function WelcomeSplashBridge() {

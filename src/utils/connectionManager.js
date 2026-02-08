@@ -1,5 +1,40 @@
 // src/utils/connectionManager.js - Centralized connection management for sockets
-import { logDebug, logError, logWarn } from './logger';
+import { logDebug, logWarn } from './logger';
+
+// Default settings - can be overridden by user preferences
+let advancedSettings = {
+  connectionTimeout: 10000,
+  heartbeatInterval: 30000,
+  maxConnectionAttempts: 10,
+};
+
+/**
+ * Load advanced settings from user preferences
+ * Called on app startup
+ */
+export async function loadAdvancedSettings() {
+  try {
+    if (window.electronAPI?.preferences?.getAdvancedSettings) {
+      const result = await window.electronAPI.preferences.getAdvancedSettings();
+      if (result.success && result.settings) {
+        advancedSettings = {
+          ...advancedSettings,
+          ...result.settings,
+        };
+        logDebug('Loaded advanced settings:', advancedSettings);
+      }
+    }
+  } catch (error) {
+    logWarn('Failed to load advanced settings:', error);
+  }
+}
+
+/**
+ * Get current advanced settings
+ */
+export function getAdvancedSettings() {
+  return { ...advancedSettings };
+}
 
 class ConnectionManager {
   constructor() {
@@ -67,7 +102,7 @@ class ConnectionManager {
         lastAttemptTime: null,
         backoffUntil: null,
         connectionPromise: null,
-        maxAttempts: 10,
+        maxAttempts: advancedSettings.maxConnectionAttempts,
         isConnecting: false,
       });
     }

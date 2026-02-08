@@ -2,6 +2,7 @@ import { app, dialog } from 'electron';
 import { requestRendererModal } from './modalBridge.js';
 import path from 'path';
 import { promises as fs } from 'fs';
+import * as userPreferences from './userPreferences.js';
 
 let recents = [];
 const subscribers = new Set();
@@ -75,10 +76,25 @@ export async function addRecent(filePath) {
   await loadRecents();
   const normalized = filePath.trim();
 
-  recents = [normalized, ...recents.filter(p => p !== normalized)].slice(0, 10);
+  // Get max recent files from user preferences
+  const maxRecentFiles = userPreferences.getPreference('fileHandling.maxRecentFiles') ?? 10;
+  
+  recents = [normalized, ...recents.filter(p => p !== normalized)].slice(0, maxRecentFiles);
   await persist();
   notify();
   return [...recents];
+}
+
+/**
+ * Get the most recent file's directory path
+ * @returns {string|null} Directory path of the most recent file, or null if no recents
+ */
+export async function getLastOpenedDirectory() {
+  await loadRecents();
+  if (recents.length > 0) {
+    return path.dirname(recents[0]);
+  }
+  return null;
 }
 
 export async function clearRecents() {

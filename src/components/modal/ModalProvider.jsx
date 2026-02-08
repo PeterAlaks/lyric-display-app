@@ -15,6 +15,7 @@ import StageTemplatesModal from '../StageTemplatesModal';
 import SaveTemplateModal from '../SaveTemplateModal';
 import AboutAppModal from '../AboutAppModal';
 import SetlistExportModal from '../SetlistExportModal';
+import UserPreferencesModal from '../UserPreferencesModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -320,13 +321,16 @@ export function ModalProvider({ children, isDark = false }) {
 
                 {/* Scrollable Content */}
                 <div className={cn(
-                  'flex-1 px-6 py-5',
-                  modal.scrollBehavior === 'scroll' ? 'overflow-y-scroll' : 'overflow-y-auto'
+                  'flex-1',
+                  modal.customLayout ? 'overflow-hidden' : 'px-6 py-5',
+                  !modal.customLayout && (modal.scrollBehavior === 'scroll' ? 'overflow-y-scroll' : 'overflow-y-auto')
                 )}>
                   {(modal.description || modal.body || modal.component) && (
                     <div
                       id={`modal-${modal.id}-description`}
-                      className="text-sm leading-relaxed text-gray-500 dark:text-gray-300"
+                      className={cn(
+                        modal.customLayout ? 'h-full' : 'text-sm leading-relaxed text-gray-500 dark:text-gray-300'
+                      )}
                     >
                       {/* Render component-based modals */}
                       {modal.component === 'ConnectionDiagnostics' && (
@@ -470,6 +474,12 @@ export function ModalProvider({ children, isDark = false }) {
                           onExport={modal.onExport}
                           defaultTitle={modal.defaultTitle || 'Setlist'}
                           setExportState={modal.setExportState}
+                        />
+                      )}
+                      {modal.component === 'UserPreferences' && (
+                        <UserPreferencesModal
+                          darkMode={isDark}
+                          onClose={() => closeModal(modal.id, { dismissed: true })}
                         />
                       )}
 
