@@ -318,8 +318,21 @@ export const useAutoplayManager = ({
       variant: 'info',
       size: 'sm',
       settings: autoplaySettings,
-      onSave: (newSettings) => {
+      onSave: async (newSettings) => {
         setAutoplaySettings?.(newSettings);
+        
+        // Also persist to user preferences file so UserPreferencesModal stays in sync
+        try {
+          if (window.electronAPI?.preferences?.set) {
+            await window.electronAPI.preferences.set('autoplay.defaultInterval', newSettings.interval);
+            await window.electronAPI.preferences.set('autoplay.defaultLoop', newSettings.loop);
+            await window.electronAPI.preferences.set('autoplay.defaultStartFromFirst', newSettings.startFromFirst);
+            await window.electronAPI.preferences.set('autoplay.defaultSkipBlankLines', newSettings.skipBlankLines);
+          }
+        } catch (error) {
+          console.warn('[AutoplaySettings] Failed to persist to preferences:', error);
+        }
+        
         showToast({
           title: 'Settings Saved',
           message: 'Autoplay settings updated successfully.',

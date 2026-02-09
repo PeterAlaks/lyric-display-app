@@ -198,6 +198,9 @@ function extractStructureTags(text) {
   if (!text || typeof text !== 'string') return text;
   if (!STRUCTURE_TAGS_CONFIG.ENABLED) return text;
 
+  const config = getEffectiveGroupingConfig();
+  const structureTagMode = config.structureTagMode || STRUCTURE_TAGS_CONFIG.MODE;
+
   const lines = text.split(/\r?\n/);
   const processedLines = [];
 
@@ -215,12 +218,12 @@ function extractStructureTags(text) {
         const tag = match[0].trim();
         const remainder = line.substring(match[0].length).trim();
 
-        if (STRUCTURE_TAGS_CONFIG.MODE === 'strip') {
+        if (structureTagMode === 'strip') {
 
           if (remainder) {
             processedLines.push(remainder);
           }
-        } else if (STRUCTURE_TAGS_CONFIG.MODE === 'isolate') {
+        } else if (structureTagMode === 'isolate') {
 
           processedLines.push(tag);
           if (remainder) {
@@ -348,9 +351,13 @@ function applyIntelligentSplittingWithTimestamps(entries = [], options = {}) {
  */
 function flattenClusters(clusters) {
   const result = [];
+  const config = getEffectiveGroupingConfig();
+  const enableTranslationGrouping = config.enableTranslationGrouping;
+  const enableAutoLineGrouping = config.enableAutoLineGrouping;
 
   clusters.forEach((cluster, clusterIndex) => {
-    if (cluster.length === 2 && isTranslationLine(cluster[1].line) && !isTranslationLine(cluster[0].line) && !isStructureTag(cluster[0].line) && !isStructureTag(cluster[1].line)) {
+    // Translation grouping for 2-line clusters (only if enabled)
+    if (enableTranslationGrouping && cluster.length === 2 && isTranslationLine(cluster[1].line) && !isTranslationLine(cluster[0].line) && !isStructureTag(cluster[0].line) && !isStructureTag(cluster[1].line)) {
       const groupedLine = {
         type: 'group',
         id: `group_${clusterIndex}_${cluster[0].originalIndex}`,
@@ -364,14 +371,16 @@ function flattenClusters(clusters) {
       return;
     }
 
-    if (cluster.length >= 2 && NORMAL_GROUP_CONFIG.ENABLED) {
+    // Process clusters with 2+ lines - handle both translation and normal grouping
+    if (cluster.length >= 2 && (enableAutoLineGrouping || enableTranslationGrouping)) {
       let i = 0;
       while (i < cluster.length) {
         const currentItem = cluster[i];
         const nextItem = cluster[i + 1];
         const nextNextItem = cluster[i + 2];
 
-        if (nextItem && isTranslationLine(nextItem.line) && !isTranslationLine(currentItem.line) && !isStructureTag(currentItem.line) && !isStructureTag(nextItem.line)) {
+        // Translation grouping within clusters (only if enabled)
+        if (enableTranslationGrouping && nextItem && isTranslationLine(nextItem.line) && !isTranslationLine(currentItem.line) && !isStructureTag(currentItem.line) && !isStructureTag(nextItem.line)) {
           const translationGroup = {
             type: 'group',
             id: `group_${clusterIndex}_${currentItem.originalIndex}`,
@@ -386,7 +395,8 @@ function flattenClusters(clusters) {
           continue;
         }
 
-        if (nextItem && nextNextItem && isTranslationLine(nextNextItem.line) && !isTranslationLine(nextItem.line) && !isStructureTag(nextItem.line) && !isStructureTag(nextNextItem.line)) {
+        // Translation grouping with lookahead (only if enabled)
+        if (enableTranslationGrouping && nextItem && nextNextItem && isTranslationLine(nextNextItem.line) && !isTranslationLine(nextItem.line) && !isStructureTag(nextItem.line) && !isStructureTag(nextNextItem.line)) {
           result.push(currentItem.line);
           const translationGroup = {
             type: 'group',
@@ -402,10 +412,12 @@ function flattenClusters(clusters) {
           continue;
         }
 
+        // Normal grouping (only if enabled)
         if (
+          enableAutoLineGrouping &&
           nextItem &&
-          isNormalGroupCandidate(currentItem.line) &&
-          isNormalGroupCandidate(nextItem.line) &&
+          isNormalGroupCandidate(currentItem.line, config) &&
+          isNormalGroupCandidate(nextItem.line, config) &&
           !isTranslationLine(nextItem.line) &&
           !isStructureTag(currentItem.line) &&
           !isStructureTag(nextItem.line)
@@ -446,7 +458,9 @@ function flattenClusters(clusters) {
  * @returns {Array<string | object>}
  */
 function mergeAcrossBlankLines(processedLines) {
-  if (!NORMAL_GROUP_CONFIG.ENABLED || !NORMAL_GROUP_CONFIG.CROSS_BLANK_LINE_GROUPING) {
+  const config = getEffectiveGroupingConfig();
+  
+  if (!config.enableAutoLineGrouping || !config.enableCrossBlankLineGrouping) {
     return processedLines;
   }
 
@@ -472,8 +486,8 @@ function mergeAcrossBlankLines(processedLines) {
       !nextIsStructureTag &&
       !currentIsSongSeparator &&
       !nextIsSongSeparator &&
-      isNormalGroupCandidate(current) &&
-      isNormalGroupCandidate(next)
+      isNormalGroupCandidate(current, config) &&
+      isNormalGroupCandidate(next, config)
     ) {
 
       const crossBlankGroup = {
@@ -738,6 +752,11 @@ export function parseLrcContent(rawText = '', options = {}) {
 
   const splitEntries = applyIntelligentSplittingWithTimestamps(uniqueEntries, { enableSplitting, splitConfig });
 
+  // Get effective config for grouping decisions
+  const config = getEffectiveGroupingConfig();
+  const enableTranslationGrouping = config.enableTranslationGrouping;
+  const enableAutoLineGrouping = config.enableAutoLineGrouping;
+
   const grouped = [];
   const groupedTimestamps = [];
   for (let i = 0; i < splitEntries.length; i += 1) {
@@ -746,7 +765,8 @@ export function parseLrcContent(rawText = '', options = {}) {
     const nextIsTranslation = next && isTranslationLine(next.text);
     const sameTimestamp = next && main.t === next.t;
 
-    if (next && nextIsTranslation && !isTranslationLine(main.text) && sameTimestamp) {
+    // Translation grouping (only if enabled)
+    if (enableTranslationGrouping && next && nextIsTranslation && !isTranslationLine(main.text) && sameTimestamp) {
       grouped.push({
         type: 'group',
         id: `lrc_group_${i}`,
@@ -759,12 +779,13 @@ export function parseLrcContent(rawText = '', options = {}) {
       groupedTimestamps.push(main.t !== undefined ? main.t : null);
       i += 1;
     } else if (
+      enableAutoLineGrouping &&
       next &&
       sameTimestamp &&
       !isTranslationLine(main.text) &&
       !isTranslationLine(next.text) &&
-      isNormalGroupCandidate(main.text) &&
-      isNormalGroupCandidate(next.text)
+      isNormalGroupCandidate(main.text, config) &&
+      isNormalGroupCandidate(next.text, config)
     ) {
       const normalGroup = {
         type: 'normal-group',

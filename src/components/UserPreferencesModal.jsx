@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import useLyricsStore from '../context/LyricsStore';
 
 // Category definitions
 const CATEGORIES = [
@@ -786,6 +787,26 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
         );
 
       case 'autoplay':
+        // Helper to update both preferences file and store immediately
+        const updateAutoplaySetting = (key, value) => {
+          updatePreference('autoplay', key, value);
+          // Also update the store immediately for runtime sync
+          const currentSettings = useLyricsStore.getState().autoplaySettings;
+          const storeKeyMap = {
+            defaultInterval: 'interval',
+            defaultLoop: 'loop',
+            defaultStartFromFirst: 'startFromFirst',
+            defaultSkipBlankLines: 'skipBlankLines'
+          };
+          const storeKey = storeKeyMap[key];
+          if (storeKey) {
+            useLyricsStore.getState().setAutoplaySettings({
+              ...currentSettings,
+              [storeKey]: value
+            });
+          }
+        };
+
         return (
           <div className="space-y-6">
             <div className="space-y-2">
@@ -795,7 +816,7 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
                 min="1"
                 max="60"
                 value={preferences.autoplay?.defaultInterval ?? 5}
-                onChange={(e) => updatePreference('autoplay', 'defaultInterval', parseInt(e.target.value) || 5)}
+                onChange={(e) => updateAutoplaySetting('defaultInterval', parseInt(e.target.value) || 5)}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -810,7 +831,7 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               </div>
               <Switch
                 checked={preferences.autoplay?.defaultLoop ?? true}
-                onCheckedChange={(checked) => updatePreference('autoplay', 'defaultLoop', checked)}
+                onCheckedChange={(checked) => updateAutoplaySetting('defaultLoop', checked)}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                   : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -826,7 +847,7 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               </div>
               <Switch
                 checked={preferences.autoplay?.defaultStartFromFirst ?? true}
-                onCheckedChange={(checked) => updatePreference('autoplay', 'defaultStartFromFirst', checked)}
+                onCheckedChange={(checked) => updateAutoplaySetting('defaultStartFromFirst', checked)}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                   : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -842,7 +863,7 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
               </div>
               <Switch
                 checked={preferences.autoplay?.defaultSkipBlankLines ?? true}
-                onCheckedChange={(checked) => updatePreference('autoplay', 'defaultSkipBlankLines', checked)}
+                onCheckedChange={(checked) => updateAutoplaySetting('defaultSkipBlankLines', checked)}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                   : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'

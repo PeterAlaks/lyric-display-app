@@ -58,7 +58,7 @@ const LyricDisplayApp = () => {
   const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
+  const { socket, emitOutputToggle, emitIndividualOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
   const handleMultipleFileUpload = useMultipleFileUpload();
@@ -486,6 +486,9 @@ const LyricDisplayApp = () => {
     setIsOutputOn,
     emitLineUpdate,
     emitOutputToggle,
+    emitOutput1Toggle: (enabled) => emitIndividualOutputToggle({ output: 'output1', enabled }),
+    emitOutput2Toggle: (enabled) => emitIndividualOutputToggle({ output: 'output2', enabled }),
+    emitStageToggle: (enabled) => emitIndividualOutputToggle({ output: 'stage', enabled }),
     handleAutoplayToggle,
     handleSetlistNext: handleNavigateSetlistNext,
     handleSetlistPrev: handleNavigateSetlistPrevious,

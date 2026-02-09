@@ -16,6 +16,9 @@ import { useEffect, useCallback, useRef } from 'react';
  * @param {Function} options.setIsOutputOn - Function to toggle output
  * @param {Function} options.emitLineUpdate - Function to emit line update via socket
  * @param {Function} options.emitOutputToggle - Function to emit output toggle via socket
+ * @param {Function} options.emitOutput1Toggle - Function to emit output 1 toggle via socket (optional)
+ * @param {Function} options.emitOutput2Toggle - Function to emit output 2 toggle via socket (optional)
+ * @param {Function} options.emitStageToggle - Function to emit stage toggle via socket (optional)
  * @param {Function} options.handleAutoplayToggle - Function to toggle autoplay
  * @param {Function} options.handleSetlistNext - Function to go to next song in setlist
  * @param {Function} options.handleSetlistPrev - Function to go to previous song in setlist
@@ -32,6 +35,9 @@ export function useExternalControl({
   setIsOutputOn,
   emitLineUpdate,
   emitOutputToggle,
+  emitOutput1Toggle,
+  emitOutput2Toggle,
+  emitStageToggle,
   handleAutoplayToggle,
   handleSetlistNext,
   handleSetlistPrev,
@@ -214,6 +220,55 @@ export function useExternalControl({
         }
         break;
 
+      // Individual output controls (from OSC)
+      case 'toggle-output-1':
+        if (typeof emitOutput1Toggle === 'function') {
+          emitOutput1Toggle();
+        } else {
+          console.log('[ExternalControl] Output 1 toggle not available');
+        }
+        break;
+
+      case 'set-output-1':
+        if (typeof emitOutput1Toggle === 'function' && typeof action.enabled === 'boolean') {
+          emitOutput1Toggle(action.enabled);
+        } else {
+          console.log('[ExternalControl] Output 1 set not available');
+        }
+        break;
+
+      case 'toggle-output-2':
+        if (typeof emitOutput2Toggle === 'function') {
+          emitOutput2Toggle();
+        } else {
+          console.log('[ExternalControl] Output 2 toggle not available');
+        }
+        break;
+
+      case 'set-output-2':
+        if (typeof emitOutput2Toggle === 'function' && typeof action.enabled === 'boolean') {
+          emitOutput2Toggle(action.enabled);
+        } else {
+          console.log('[ExternalControl] Output 2 set not available');
+        }
+        break;
+
+      case 'toggle-stage':
+        if (typeof emitStageToggle === 'function') {
+          emitStageToggle();
+        } else {
+          console.log('[ExternalControl] Stage toggle not available');
+        }
+        break;
+
+      case 'set-stage':
+        if (typeof emitStageToggle === 'function' && typeof action.enabled === 'boolean') {
+          emitStageToggle(action.enabled);
+        } else {
+          console.log('[ExternalControl] Stage set not available');
+        }
+        break;
+
       default:
         console.log('[ExternalControl] Unknown action type:', action.type);
     }
@@ -233,7 +288,10 @@ export function useExternalControl({
     handleSetlistNext,
     handleSetlistPrev,
     handleSyncOutputs,
-    handleScrollLines
+    handleScrollLines,
+    emitOutput1Toggle,
+    emitOutput2Toggle,
+    emitStageToggle
   ]);
 
   /**
