@@ -51,3 +51,9 @@ release/
 *~
 .release-notes-temp.txt
 .commit-msg-temp.txt
+
+# NDI Companion (separate repo - github.com/PeterAlaks/lyricdisplay-ndi)
+lyricdisplay-ndi/
+
+# NDI Companion (runtime install directory)
+ndi-companion/

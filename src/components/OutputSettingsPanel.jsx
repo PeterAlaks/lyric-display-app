@@ -15,7 +15,7 @@ import useFullscreenBackground from '../hooks/OutputSettingsPanel/useFullscreenB
 import useAdvancedSectionPersistence from '../hooks/OutputSettingsPanel/useAdvancedSectionPersistence';
 import useTypographyAndBands from '../hooks/OutputSettingsPanel/useTypographyAndBands';
 import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenModeState';
-import { Type, PaintBucket, Contrast, TextCursorInput, Square, Frame, Move, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Palette, Power, TextAlignJustify, SquareMenu, ArrowRightLeft, Save } from 'lucide-react';
+import { Type, PaintBucket, Contrast, TextCursorInput, Square, Frame, Move, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Palette, Power, TextAlignJustify, SquareMenu, ArrowRightLeft, Save, Cast } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
 import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
@@ -580,6 +580,55 @@ const OutputSettingsPanel = ({ outputKey }) => {
                 }`}
             >
               <Power className="w-4 h-4" />
+            </button>
+          </Tooltip>
+
+          {/* NDI Button */}
+          <Tooltip content="NDI Broadcasting" side="bottom">
+            <button
+              onClick={async () => {
+                const status = await window.electronAPI?.ndi?.checkInstalled();
+                if (!status?.installed) {
+                  showToast({
+                    title: 'NDI Unavailable',
+                    message: 'Download the NDI companion to enable broadcasting.',
+                    variant: 'info',
+                    duration: 8000,
+                    actions: [{
+                      label: 'Download',
+                      onClick: () => {
+                        showModal({
+                          title: 'Preferences',
+                          component: 'UserPreferences',
+                          variant: 'info',
+                          size: 'lg',
+                          customLayout: true,
+                          initialCategory: 'ndi',
+                          actions: []
+                        });
+                      }
+                    }]
+                  });
+                  return;
+                }
+                showModal({
+                  title: 'NDI Output Settings',
+                  headerDescription: `Configure NDI broadcast for ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`,
+                  component: 'NdiOutputSettings',
+                  variant: 'info',
+                  size: 'sm',
+                  outputKey: outputKey,
+                  customLayout: true,
+                  dismissLabel: 'Close',
+                });
+              }}
+              className={`px-1.5 py-1.5 rounded-lg transition-colors text-[12px] leading-none ${darkMode
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                }`}
+              style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700 }}
+            >
+              NDI
             </button>
           </Tooltip>
 

@@ -16,6 +16,7 @@ import SaveTemplateModal from '../SaveTemplateModal';
 import AboutAppModal from '../AboutAppModal';
 import SetlistExportModal from '../SetlistExportModal';
 import UserPreferencesModal from '../UserPreferencesModal';
+import NdiOutputSettingsModal from '../NdiOutputSettingsModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -479,6 +480,14 @@ export function ModalProvider({ children, isDark = false }) {
                       {modal.component === 'UserPreferences' && (
                         <UserPreferencesModal
                           darkMode={isDark}
+                          initialCategory={modal.initialCategory}
+                          onClose={() => closeModal(modal.id, { dismissed: true })}
+                        />
+                      )}
+                      {modal.component === 'NdiOutputSettings' && (
+                        <NdiOutputSettingsModal
+                          darkMode={isDark}
+                          outputKey={modal.outputKey}
                           onClose={() => closeModal(modal.id, { dismissed: true })}
                         />
                       )}

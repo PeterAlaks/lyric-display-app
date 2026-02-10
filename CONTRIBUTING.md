@@ -6,6 +6,7 @@ Thank you for helping build LyricDisplay. This guide captures the conventions th
 
 ## Getting Started
 - Use Node 18+ and npm. Install deps with `npm install`.
+- **NDI Broadcasting (optional):** The NDI companion is a separate repo. To work on NDI features locally, clone it into the project root: `git clone https://github.com/PeterAlaks/lyricdisplay-ndi.git` then `cd lyricdisplay-ndi && npm install`. The app detects it automatically in dev mode. Without it, the NDI feature simply shows "Not Installed" — everything else works normally.
 - Development: `npm run electron-dev` (spins up Vite + Electron + backend). Frontend only: `npm run dev`. Backend only: `npm run server`.
 - Production build: `npm run build` (Vite) and `npm run electron-pack` for installers.
 - Do not commit artifacts from `dist/`, `build/`, `release/`, or `uploads/`.

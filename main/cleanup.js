@@ -3,6 +3,7 @@ import { stopBackend } from './backend.js';
 import { cleanupDisplayManager } from './displayManager.js';
 import { getLoadingWindow } from './loadingWindow.js';
 import { destroyExternalControl } from './externalControl.js';
+import { cleanupNdiManager } from './ndiManager.js';
 
 export function closeOutputWindows() {
   try {
@@ -64,6 +65,12 @@ export function performCleanup() {
     destroyExternalControl();
   } catch (error) {
     console.error('[Cleanup] Error destroying external control:', error);
+  }
+
+  try {
+    cleanupNdiManager();
+  } catch (error) {
+    console.error('[Cleanup] Error cleaning up NDI manager:', error);
   }
 
   closeOutputWindows();

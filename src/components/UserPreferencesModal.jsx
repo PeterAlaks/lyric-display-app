@@ -8,12 +8,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Settings, FolderOpen, FileText, Music, Radio, Play, Sliders, 
   AlertTriangle, RotateCcw, Check, Loader2, ChevronRight,
-  Zap, RefreshCw, HardDrive
+  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
 
 // Category definitions
@@ -23,12 +24,13 @@ const CATEGORIES = [
   { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
   { id: 'externalControls', label: 'External Controls', icon: Radio },
+  { id: 'ndi', label: 'NDI Broadcasting', icon: Cast },
   { id: 'autoplay', label: 'Autoplay', icon: Play },
   { id: 'advanced', label: 'Advanced', icon: AlertTriangle },
 ];
 
-const UserPreferencesModal = ({ darkMode, onClose }) => {
-  const [activeCategory, setActiveCategory] = useState('general');
+const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
+  const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,6 +39,13 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
   const [oscStatus, setOscStatus] = useState(null);
   const [midiLearnActive, setMidiLearnActive] = useState(false);
   const [midiRefreshing, setMidiRefreshing] = useState(false);
+  // NDI state
+  const [ndiStatus, setNdiStatus] = useState({ installed: false, version: '', installPath: '' });
+  const [downloadProgress, setDownloadProgress] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [companionRunning, setCompanionRunning] = useState(false);
+  const [ndiAutoLaunch, setNdiAutoLaunch] = useState(false);
+  const { showToast } = useToast();
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
 
@@ -58,6 +67,19 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
           if (statusResult.success) {
             setMidiStatus(statusResult.midi);
             setOscStatus(statusResult.osc);
+          }
+        }
+
+        // Load NDI status
+        if (window.electronAPI?.ndi?.checkInstalled) {
+          const ndiResult = await window.electronAPI.ndi.checkInstalled();
+          setNdiStatus(ndiResult);
+        }
+        if (window.electronAPI?.ndi?.getCompanionStatus) {
+          const companionResult = await window.electronAPI.ndi.getCompanionStatus();
+          setCompanionRunning(companionResult.running);
+          if (typeof companionResult.autoLaunch === 'boolean') {
+            setNdiAutoLaunch(companionResult.autoLaunch);
           }
         }
       } catch (error) {
@@ -785,6 +807,230 @@ const UserPreferencesModal = ({ darkMode, onClose }) => {
             </div>
           </div>
         );
+
+      case 'ndi': {
+        const handleNdiDownload = async () => {
+          setIsDownloading(true);
+          setDownloadProgress({ percent: 0, status: 'downloading' });
+
+          const cleanup = window.electronAPI?.ndi?.onDownloadProgress((progress) => {
+            setDownloadProgress(progress);
+          });
+
+          try {
+            const result = await window.electronAPI.ndi.download();
+            if (result.success) {
+              setNdiStatus({ installed: true, version: result.version, installPath: result.path });
+              showToast({ title: 'NDI Installed', message: 'NDI companion has been downloaded and is ready to use.', variant: 'success' });
+            } else {
+              showToast({ title: 'Download Failed', message: result.error || 'The NDI companion could not be downloaded.', variant: 'error' });
+            }
+          } catch (error) {
+            console.error('NDI download failed:', error);
+            showToast({ title: 'Download Failed', message: error?.message || 'An unexpected error occurred while downloading the NDI companion.', variant: 'error' });
+          } finally {
+            setIsDownloading(false);
+            setDownloadProgress(null);
+            if (cleanup) cleanup();
+          }
+        };
+
+        const handleNdiLaunch = async () => {
+          try {
+            const result = await window.electronAPI?.ndi?.launchCompanion();
+            if (result?.success) {
+              setCompanionRunning(true);
+              showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
+            } else {
+              showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
+            }
+          } catch (error) {
+            console.error('NDI launch failed:', error);
+            showToast({ title: 'Launch Failed', message: error?.message || 'An unexpected error occurred while launching the NDI companion.', variant: 'error' });
+          }
+        };
+
+        const handleNdiStop = async () => {
+          try {
+            const result = await window.electronAPI?.ndi?.stopCompanion();
+            if (result?.success) {
+              setCompanionRunning(false);
+              showToast({ title: 'NDI Companion Stopped', message: 'The NDI companion has been stopped.', variant: 'info' });
+            } else {
+              showToast({ title: 'Stop Failed', message: result?.error || 'Could not stop the NDI companion.', variant: 'error' });
+            }
+          } catch (error) {
+            console.error('NDI stop failed:', error);
+            showToast({ title: 'Stop Failed', message: error?.message || 'An unexpected error occurred while stopping the NDI companion.', variant: 'error' });
+          }
+        };
+
+        const handleNdiUninstall = async () => {
+          if (!confirm('Are you sure you want to uninstall the NDI companion?')) return;
+          try {
+            const result = await window.electronAPI?.ndi?.uninstall();
+            if (result?.success) {
+              setNdiStatus({ installed: false, version: '', installPath: '' });
+              setCompanionRunning(false);
+              showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
+            } else {
+              showToast({ title: 'Uninstall Failed', message: result?.error || 'Could not uninstall the NDI companion.', variant: 'error' });
+            }
+          } catch (error) {
+            console.error('NDI uninstall failed:', error);
+            showToast({ title: 'Uninstall Failed', message: error?.message || 'An unexpected error occurred while uninstalling the NDI companion.', variant: 'error' });
+          }
+        };
+
+        const handleNdiAutoLaunchToggle = async (checked) => {
+          try {
+            await window.electronAPI?.ndi?.setAutoLaunch(checked);
+            setNdiAutoLaunch(checked);
+          } catch (error) {
+            console.error('NDI auto-launch toggle failed:', error);
+            showToast({ title: 'Setting Failed', message: 'Could not update the auto-launch setting.', variant: 'error' });
+          }
+        };
+
+        return (
+          <div className="space-y-6">
+            <p className={`text-sm ${mutedClass}`}>
+              The NDI companion broadcasts your lyric outputs as NDI video sources, allowing integration with OBS, vMix, and other NDI-compatible software.
+            </p>
+
+            {/* Status Badge */}
+            <div className="flex items-center gap-3">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                ndiStatus.installed
+                  ? darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700'
+                  : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${ndiStatus.installed ? 'bg-green-400' : 'bg-gray-400'}`} />
+                {ndiStatus.installed ? 'Installed' : 'Not Installed'}
+              </span>
+              {ndiStatus.installed && ndiStatus.version && (
+                <span className={`text-xs ${mutedClass}`}>v{ndiStatus.version}</span>
+              )}
+              {ndiStatus.installed && (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                  companionRunning
+                    ? darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-700'
+                    : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${companionRunning ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
+                  {companionRunning ? 'Running' : 'Stopped'}
+                </span>
+              )}
+            </div>
+
+            {!ndiStatus.installed ? (
+              /* Not Installed State */
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <div className="space-y-4">
+                  <p className={`text-sm ${labelClass}`}>
+                    Download the NDI companion to enable video broadcasting from your lyric outputs.
+                  </p>
+
+                  {isDownloading && downloadProgress && (
+                    <div className="space-y-2">
+                      <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                        <div
+                          className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                          style={{ width: `${downloadProgress.percent || 0}%` }}
+                        />
+                      </div>
+                      <p className={`text-xs ${mutedClass}`}>
+                        {downloadProgress.status === 'extracting' ? 'Extracting...' : `Downloading... ${downloadProgress.percent || 0}%`}
+                      </p>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleNdiDownload}
+                    disabled={isDownloading}
+                    className={`w-full ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download NDI Companion
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Installed State */
+              <div className="space-y-4">
+                {/* Install Path */}
+                <div className="space-y-2">
+                  <label className={`text-sm font-medium ${labelClass}`}>Install Location</label>
+                  <Input
+                    value={ndiStatus.installPath || ''}
+                    readOnly
+                    className={`${inputClass} opacity-70 cursor-default`}
+                  />
+                </div>
+
+                {/* Auto-launch Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className={`text-sm font-medium ${labelClass}`}>Start with LyricDisplay</label>
+                    <p className={`text-xs ${mutedClass}`}>Launch NDI companion when LyricDisplay opens</p>
+                  </div>
+                  <Switch
+                    checked={ndiAutoLaunch}
+                    onCheckedChange={handleNdiAutoLaunchToggle}
+                    className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                      ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                      : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                    }`}
+                    thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                  />
+                </div>
+
+                {/* Launch / Stop Buttons */}
+                <div className="flex gap-2">
+                  {!companionRunning ? (
+                    <Button
+                      onClick={handleNdiLaunch}
+                      className={`flex-1 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}
+                    >
+                      <Power className="w-4 h-4 mr-2" />
+                      Launch NDI Companion
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleNdiStop}
+                      className={`flex-1 ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                    >
+                      <Power className="w-4 h-4 mr-2" />
+                      Stop NDI Companion
+                    </Button>
+                  )}
+                </div>
+
+                {/* Uninstall */}
+                <div className={`pt-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <Button
+                    variant="outline"
+                    onClick={handleNdiUninstall}
+                    className={`w-full ${darkMode ? 'border-red-600/50 text-red-400 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Uninstall NDI Companion
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
 
       case 'autoplay':
         // Helper to update both preferences file and store immediately

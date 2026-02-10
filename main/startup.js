@@ -12,6 +12,7 @@ import { updateLoadingStatus, closeLoadingWindow } from './loadingWindow.js';
 import { preloadSystemFonts } from './systemFonts.js';
 import { getSavedDarkMode } from './themePreferences.js';
 import { initializeExternalControl, registerExternalControlIPC } from './externalControl.js';
+import { initializeNdiManager, registerNdiIpcHandlers } from './ndiManager.js';
 
 export async function handleMissingAdminKey() {
   const message = 'LyricDisplay requires the administrative key to unlock local access.';
@@ -187,6 +188,12 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
       console.warn('[Startup] External control initialization warning:', err.message);
     });
     await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Initialize NDI manager
+    updateLoadingStatus('Initializing NDI manager');
+    registerNdiIpcHandlers();
+    initializeNdiManager(() => mainWindow);
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     updateLoadingStatus('Finalizing');
     await new Promise(resolve => setTimeout(resolve, 500));

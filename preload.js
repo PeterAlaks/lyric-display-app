@@ -275,6 +275,35 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sendFeedback: (address, args) => ipcRenderer.invoke('osc:send-feedback', { address, args })
   },
 
+  // NDI Broadcasting
+  ndi: {
+    checkInstalled: () => ipcRenderer.invoke('ndi:check-installed'),
+    download: () => ipcRenderer.invoke('ndi:download'),
+    onDownloadProgress: (callback) => {
+      const channel = 'ndi:download-progress';
+      ipcRenderer.removeAllListeners(channel);
+      ipcRenderer.on(channel, (_event, progress) => callback(progress));
+      return () => ipcRenderer.removeAllListeners(channel);
+    },
+    uninstall: () => ipcRenderer.invoke('ndi:uninstall'),
+    launchCompanion: () => ipcRenderer.invoke('ndi:launch-companion'),
+    stopCompanion: () => ipcRenderer.invoke('ndi:stop-companion'),
+    getCompanionStatus: () => ipcRenderer.invoke('ndi:get-companion-status'),
+    setAutoLaunch: (enabled) => ipcRenderer.invoke('ndi:set-auto-launch', { enabled }),
+    getOutputSettings: (outputKey) => ipcRenderer.invoke('ndi:get-output-settings', { outputKey }),
+    setOutputEnabled: (outputKey, enabled) => ipcRenderer.invoke('ndi:set-output-enabled', { outputKey, enabled }),
+    setSourceName: (outputKey, name) => ipcRenderer.invoke('ndi:set-source-name', { outputKey, name }),
+    setResolution: (outputKey, resolution) => ipcRenderer.invoke('ndi:set-resolution', { outputKey, resolution }),
+    setCustomResolution: (outputKey, width, height) => ipcRenderer.invoke('ndi:set-custom-resolution', { outputKey, width, height }),
+    setFramerate: (outputKey, framerate) => ipcRenderer.invoke('ndi:set-framerate', { outputKey, framerate }),
+    onCompanionStatus: (callback) => {
+      const channel = 'ndi:companion-status';
+      ipcRenderer.removeAllListeners(channel);
+      ipcRenderer.on(channel, (_event, status) => callback(status));
+      return () => ipcRenderer.removeAllListeners(channel);
+    }
+  },
+
   // User Preferences
   preferences: {
     getAll: () => ipcRenderer.invoke('preferences:get-all'),
