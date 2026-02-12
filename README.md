@@ -165,6 +165,7 @@ LyricDisplay accepts plain text (.txt) and lyrics (.lrc) files
 ### Project Structure
 ```
 lyric-display-app/
+├── lyricdisplay-ndi/                       # LyricDisplay NDI Companion (Separate repo but needed here for development)
 ├── main/                                   # Electron main script modules
 |   ├── ipc/                                # IPC handlers
 |   |   ├── index.js                        # Main registration point
@@ -207,7 +208,8 @@ lyric-display-app/
 |   ├── menuBridge.js                       # Renderer/menu bridge (dark mode, undo/redo state)
 |   ├── midiController.js                   # MIDI main controller module
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
-|   ├── oscController.js                    # OSC main controller module
+|   ├── modalBridge.js                      # Global modal bridge for electron main process
+|   ├── ndiManager.js                       # Main NDI manager module for main app
 |   ├── paths.js                            # Production paths resolver
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
 |   ├── providerCredentials.js              # secure storage utility for online lyrics provider credentials
@@ -268,6 +270,7 @@ lyric-display-app/
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
+|   |   ├── NdiOutputSettingsModal.jsx      # NDI output settings modal for each output
 |   |   ├── NewSongCanvas.jsx               # New/edit song text editor
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
 |   |   ├── OnlineLyricsWelcomeSplash.jsx   # Online Lyrics Search welcome and help modal component
