@@ -208,7 +208,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          STAGE DISPLAY SETTINGS
+          Stage Settings
         </h3>
 
         <div className="flex items-center gap-2">

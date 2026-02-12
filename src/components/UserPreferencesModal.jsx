@@ -5,8 +5,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  Settings, FolderOpen, FileText, Music, Radio, Play, Sliders, 
+import {
+  Settings, FolderOpen, FileText, Music, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Check, Loader2, ChevronRight,
   Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power
 } from 'lucide-react';
@@ -24,7 +24,7 @@ const CATEGORIES = [
   { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
   { id: 'externalControls', label: 'External Controls', icon: Radio },
-  { id: 'ndi', label: 'NDI Broadcasting', icon: Cast },
+  { id: 'ndi', label: 'NDI', icon: Cast },
   { id: 'autoplay', label: 'Autoplay', icon: Play },
   { id: 'advanced', label: 'Advanced', icon: AlertTriangle },
 ];
@@ -45,6 +45,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [companionRunning, setCompanionRunning] = useState(false);
   const [ndiAutoLaunch, setNdiAutoLaunch] = useState(false);
+  const [ndiUpdateInfo, setNdiUpdateInfo] = useState(null);
+  const [ndiCheckingUpdate, setNdiCheckingUpdate] = useState(false);
+  const [ndiUpdating, setNdiUpdating] = useState(false);
   const { showToast } = useToast();
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
@@ -105,12 +108,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         const result = await window.electronAPI.preferences.saveAll(newPreferences);
         if (result.success) {
           setLastSaved(new Date());
-          
+
           // Reload preferences into store to update maxSetlistFiles
           const { loadPreferencesIntoStore } = await import('../context/LyricsStore');
           const useLyricsStore = (await import('../context/LyricsStore')).default;
           await loadPreferencesIntoStore(useLyricsStore);
-          
+
           // Clear the confirmation after 3 seconds
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {
@@ -135,13 +138,13 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           [key]: value
         }
       };
-      
+
       // Debounce the save
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         savePreferences(newPreferences);
       }, 300);
-      
+
       return newPreferences;
     });
   }, [savePreferences]);
@@ -159,13 +162,13 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           }
         }
       };
-      
+
       // Debounce the save
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         savePreferences(newPreferences);
       }, 300);
-      
+
       return newPreferences;
     });
   }, [savePreferences]);
@@ -821,6 +824,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             const result = await window.electronAPI.ndi.download();
             if (result.success) {
               setNdiStatus({ installed: true, version: result.version, installPath: result.path });
+              setNdiUpdateInfo(null);
               showToast({ title: 'NDI Installed', message: 'NDI companion has been downloaded and is ready to use.', variant: 'success' });
             } else {
               showToast({ title: 'Download Failed', message: result.error || 'The NDI companion could not be downloaded.', variant: 'error' });
@@ -872,6 +876,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             if (result?.success) {
               setNdiStatus({ installed: false, version: '', installPath: '' });
               setCompanionRunning(false);
+              setNdiUpdateInfo(null);
               showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
             } else {
               showToast({ title: 'Uninstall Failed', message: result?.error || 'Could not uninstall the NDI companion.', variant: 'error' });
@@ -892,6 +897,54 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           }
         };
 
+        const handleNdiCheckForUpdate = async () => {
+          setNdiCheckingUpdate(true);
+          try {
+            const result = await window.electronAPI?.ndi?.checkForUpdate();
+            if (result) {
+              setNdiUpdateInfo(result);
+              if (result.updateAvailable) {
+                showToast({ title: 'Update Available', message: `NDI Companion v${result.latestVersion} is available.`, variant: 'info' });
+              } else {
+                showToast({ title: 'Up to Date', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
+              }
+            }
+          } catch (error) {
+            console.error('NDI update check failed:', error);
+            showToast({ title: 'Check Failed', message: 'Could not check for updates. Please try again later.', variant: 'warning' });
+          } finally {
+            setNdiCheckingUpdate(false);
+          }
+        };
+
+        const handleNdiUpdate = async () => {
+          setNdiUpdating(true);
+          setDownloadProgress({ percent: 0, status: 'downloading' });
+
+          const cleanup = window.electronAPI?.ndi?.onDownloadProgress((progress) => {
+            setDownloadProgress(progress);
+          });
+
+          try {
+            const result = await window.electronAPI.ndi.updateCompanion();
+            if (result?.success) {
+              setNdiStatus({ installed: true, version: result.version, installPath: result.path });
+              setNdiUpdateInfo(null);
+              setCompanionRunning(false);
+              showToast({ title: 'NDI Companion Updated', message: `Updated to v${result.version}. You can relaunch it now.`, variant: 'success' });
+            } else {
+              showToast({ title: 'Update Failed', message: result?.error || 'Could not update the NDI companion.', variant: 'error' });
+            }
+          } catch (error) {
+            console.error('NDI update failed:', error);
+            showToast({ title: 'Update Failed', message: error?.message || 'An unexpected error occurred while updating.', variant: 'error' });
+          } finally {
+            setNdiUpdating(false);
+            setDownloadProgress(null);
+            if (cleanup) cleanup();
+          }
+        };
+
         return (
           <div className="space-y-6">
             <p className={`text-sm ${mutedClass}`}>
@@ -899,12 +952,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </p>
 
             {/* Status Badge */}
-            <div className="flex items-center gap-3">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                ndiStatus.installed
-                  ? darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700'
-                  : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-              }`}>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${ndiStatus.installed
+                ? darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700'
+                : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+                }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${ndiStatus.installed ? 'bg-green-400' : 'bg-gray-400'}`} />
                 {ndiStatus.installed ? 'Installed' : 'Not Installed'}
               </span>
@@ -912,16 +964,57 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <span className={`text-xs ${mutedClass}`}>v{ndiStatus.version}</span>
               )}
               {ndiStatus.installed && (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                  companionRunning
-                    ? darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-700'
-                    : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-                }`}>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionRunning
+                  ? darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-700'
+                  : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+                  }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${companionRunning ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
                   {companionRunning ? 'Running' : 'Stopped'}
                 </span>
               )}
             </div>
+
+            {/* Update Available Banner */}
+            {ndiStatus.installed && ndiUpdateInfo?.updateAvailable && (
+              <div className={`flex items-start gap-3 p-3 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-600/30' : 'bg-blue-50 border border-blue-200'}`}>
+                <Download className={`w-4 h-4 mt-0.5 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                    Update available: v{ndiUpdateInfo.latestVersion}
+                  </p>
+                  <p className={`text-xs mt-0.5 ${darkMode ? 'text-blue-400/80' : 'text-blue-600'}`}>
+                    You have v{ndiUpdateInfo.currentVersion}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleNdiUpdate}
+                  disabled={ndiUpdating || isDownloading}
+                  className={`flex-shrink-0 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                >
+                  {ndiUpdating ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    'Update'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Download progress for updates */}
+            {(ndiUpdating || isDownloading) && downloadProgress && (
+              <div className="space-y-2">
+                <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                    style={{ width: `${downloadProgress.percent || 0}%` }}
+                  />
+                </div>
+                <p className={`text-xs ${mutedClass}`}>
+                  {downloadProgress.status === 'extracting' ? 'Extracting...' : `Downloading... ${downloadProgress.percent || 0}%`}
+                </p>
+              </div>
+            )}
 
             {!ndiStatus.installed ? (
               /* Not Installed State */
@@ -930,20 +1023,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   <p className={`text-sm ${labelClass}`}>
                     Download the NDI companion to enable video broadcasting from your lyric outputs.
                   </p>
-
-                  {isDownloading && downloadProgress && (
-                    <div className="space-y-2">
-                      <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
-                        <div
-                          className="h-full rounded-full bg-blue-500 transition-all duration-300"
-                          style={{ width: `${downloadProgress.percent || 0}%` }}
-                        />
-                      </div>
-                      <p className={`text-xs ${mutedClass}`}>
-                        {downloadProgress.status === 'extracting' ? 'Extracting...' : `Downloading... ${downloadProgress.percent || 0}%`}
-                      </p>
-                    </div>
-                  )}
 
                   <Button
                     onClick={handleNdiDownload}
@@ -989,7 +1068,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                     className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                       ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                       : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                    }`}
+                      }`}
                     thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
                   />
                 </div>
@@ -1013,6 +1092,28 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                       Stop NDI Companion
                     </Button>
                   )}
+                </div>
+
+                {/* Check for Updates */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleNdiCheckForUpdate}
+                    disabled={ndiCheckingUpdate}
+                    className="flex-1"
+                  >
+                    {ndiCheckingUpdate ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Check for Updates
+                      </>
+                    )}
+                  </Button>
                 </div>
 
                 {/* Uninstall */}
@@ -1219,11 +1320,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                    isActive
-                      ? `${activeCategoryBg} ${darkMode ? 'text-white' : 'text-gray-900'} shadow-sm`
-                      : `${darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${isActive
+                    ? `${activeCategoryBg} ${darkMode ? 'text-white' : 'text-gray-900'} shadow-sm`
+                    : `${darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`
+                    }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
                   <span className="text-sm font-medium truncate">{category.label}</span>

@@ -237,7 +237,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     update: (type, templateId, updates) => ipcRenderer.invoke('templates:update', { type, templateId, updates }),
     nameExists: (type, name, excludeId) => ipcRenderer.invoke('templates:name-exists', { type, name, excludeId })
   },
-  
+
   // External Control (MIDI/OSC)
   externalControl: {
     getStatus: () => ipcRenderer.invoke('external-control:get-status'),
@@ -248,7 +248,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeAllListeners(channel);
     }
   },
-  
+
   midi: {
     initialize: () => ipcRenderer.invoke('midi:initialize'),
     getStatus: () => ipcRenderer.invoke('midi:get-status'),
@@ -261,7 +261,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     resetMappings: () => ipcRenderer.invoke('midi:reset-mappings'),
     startLearn: (timeout) => ipcRenderer.invoke('midi:start-learn', { timeout })
   },
-  
+
   osc: {
     initialize: () => ipcRenderer.invoke('osc:initialize'),
     getStatus: () => ipcRenderer.invoke('osc:get-status'),
@@ -275,10 +275,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sendFeedback: (address, args) => ipcRenderer.invoke('osc:send-feedback', { address, args })
   },
 
-  // NDI Broadcasting
+  // NDI
   ndi: {
     checkInstalled: () => ipcRenderer.invoke('ndi:check-installed'),
     download: () => ipcRenderer.invoke('ndi:download'),
+    updateCompanion: () => ipcRenderer.invoke('ndi:update-companion'),
+    checkForUpdate: () => ipcRenderer.invoke('ndi:check-for-update'),
     onDownloadProgress: (callback) => {
       const channel = 'ndi:download-progress';
       ipcRenderer.removeAllListeners(channel);
@@ -300,6 +302,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       const channel = 'ndi:companion-status';
       ipcRenderer.removeAllListeners(channel);
       ipcRenderer.on(channel, (_event, status) => callback(status));
+      return () => ipcRenderer.removeAllListeners(channel);
+    },
+    onUpdateAvailable: (callback) => {
+      const channel = 'ndi:update-available';
+      ipcRenderer.removeAllListeners(channel);
+      ipcRenderer.on(channel, (_event, info) => callback(info));
       return () => ipcRenderer.removeAllListeners(channel);
     }
   },
