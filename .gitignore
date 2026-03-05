@@ -51,3 +51,6 @@ release/
 *~
 .release-notes-temp.txt
 .commit-msg-temp.txt
+
+# NDI Companion App Repo
+ndi-companion/
