@@ -59,6 +59,7 @@ const TopMenuBar = () => {
   const barRef = useRef(null);
   const keyHandlersRef = useRef({});
   const recentsCloseTimerRef = useRef(null);
+  const importCloseTimerRef = useRef(null);
 
   const topMenuOrder = ['file', 'edit', 'view', 'window', 'help'];
 
@@ -108,6 +109,23 @@ const TopMenuBar = () => {
     setOpenReason: ensureReason,
   });
 
+  const {
+    submenuIndex: importIndex,
+    resetSubmenuRefs: resetImportRefs,
+    registerSubmenuItemRef: registerImportItemRef,
+    openSubmenu: openImportSubmenu,
+    closeSubmenuToParent: closeImportSubmenu,
+    handleSubmenuKeyDown: handleImportKeyDown,
+  } = useSubMenuListNav({
+    submenuId: 'file:import',
+    parentMenuId: 'file',
+    openMenu,
+    setOpenMenu,
+    topMenuOrder,
+    focusParentItem: () => focusIndex('file', 4),
+    setOpenReason: ensureReason,
+  });
+
   const menuHandlers = useMenuHandlers(closeMenu);
 
   const menuBg = darkMode ? 'bg-slate-900/95 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900';
@@ -125,12 +143,25 @@ const TopMenuBar = () => {
     recentsCloseTimerRef.current = setTimeout(closeRecentsSubmenu, 180);
   }, [clearRecentsCloseTimer, closeRecentsSubmenu]);
 
+  const clearImportCloseTimer = useCallback(() => {
+    if (importCloseTimerRef.current) {
+      clearTimeout(importCloseTimerRef.current);
+      importCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const closeImportAfterDelay = useCallback(() => {
+    clearImportCloseTimer();
+    importCloseTimerRef.current = setTimeout(closeImportSubmenu, 180);
+  }, [clearImportCloseTimer, closeImportSubmenu]);
+
   useEffect(() => {
     return () => {
       clearCloseTimer();
       clearRecentsCloseTimer();
+      clearImportCloseTimer();
     };
-  }, [clearCloseTimer, clearRecentsCloseTimer]);
+  }, [clearCloseTimer, clearRecentsCloseTimer, clearImportCloseTimer]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -232,10 +263,16 @@ const TopMenuBar = () => {
       itemCount: cfg.count,
       submenuIndexes: cfg.sub,
       openSubmenu: menuId === 'file'
-        ? () => openRecentsSubmenu(true, 'keyboard')
+        ? (index) => {
+          if (index === 2) {
+            openRecentsSubmenu(true, 'keyboard');
+          } else if (index === 4) {
+            openImportSubmenu(true, 'keyboard');
+          }
+        }
         : undefined,
     });
-  }, [createMenuKeyHandler, menuConfig, openRecentsSubmenu]);
+  }, [createMenuKeyHandler, menuConfig, openImportSubmenu, openRecentsSubmenu]);
 
   useEffect(() => {
     keyHandlersRef.current = {
@@ -248,8 +285,12 @@ const TopMenuBar = () => {
         ensureReason('keyboard');
         return handleRecentsKeyDown(event);
       },
+      'file:import': (event) => {
+        ensureReason('keyboard');
+        return handleImportKeyDown(event);
+      },
     };
-  }, [buildMenuHandler, ensureReason, handleRecentsKeyDown]);
+  }, [buildMenuHandler, ensureReason, handleImportKeyDown, handleRecentsKeyDown]);
 
   const getMenuKeyDown = useCallback((menuId) => {
     const cfg = menuConfig?.[menuId];
@@ -303,17 +344,20 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('file', 1, el)} label="Load Lyrics File" shortcut="Ctrl/Cmd + O" onClick={menuHandlers.handleOpenLyrics} active={openMenu?.startsWith('file') && activeIndex === 1} />
                 <div
                   className="relative"
-                  onMouseEnter={clearRecentsCloseTimer}
+                  onMouseEnter={() => {
+                    clearRecentsCloseTimer();
+                    clearImportCloseTimer();
+                  }}
                   onMouseLeave={closeRecentsAfterDelay}
                 >
                   <MenuItem
                     ref={(el) => registerItemRef('file', 2, el)}
                     label="Open Recent"
-                    shortcut="›"
+                    shortcut=">"
                     onClick={() => { }}
                     disabled={false}
                     active={openMenu?.startsWith('file') && activeIndex === 2}
-                    onMouseEnter={() => { clearCloseTimer(); clearRecentsCloseTimer(); openRecentsSubmenu(false, 'hover'); }}
+                    onMouseEnter={() => { clearCloseTimer(); clearRecentsCloseTimer(); clearImportCloseTimer(); openRecentsSubmenu(false, 'hover'); }}
                     onMouseLeave={closeRecentsAfterDelay}
                   />
                   {openMenu === 'file:recent' && (
@@ -323,7 +367,7 @@ const TopMenuBar = () => {
                       tabIndex={0}
                       ref={(el) => { menuContainerRefs.current['file:recent'] = el; }}
                       onKeyDown={handleRecentsKeyDown}
-                      onMouseEnter={() => { clearCloseTimer(); clearRecentsCloseTimer(); openRecentsSubmenu(false, 'hover'); }}
+                      onMouseEnter={() => { clearCloseTimer(); clearRecentsCloseTimer(); clearImportCloseTimer(); openRecentsSubmenu(false, 'hover'); }}
                       onMouseLeave={closeRecentsAfterDelay}
                     >
                       {resetRecentsRefs()}
@@ -353,7 +397,62 @@ const TopMenuBar = () => {
                 </div>
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 3} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
-                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Import Songs from EasyWorship" onClick={menuHandlers.handleEasyWorship} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 4} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <div
+                  className="relative"
+                  onMouseEnter={() => {
+                    clearRecentsCloseTimer();
+                    clearImportCloseTimer();
+                  }}
+                  onMouseLeave={closeImportAfterDelay}
+                >
+                  <MenuItem
+                    ref={(el) => registerItemRef('file', 4, el)}
+                    label="Import Lyrics"
+                    shortcut=">"
+                    onClick={() => { }}
+                    disabled={isNewSongCanvas}
+                    active={openMenu?.startsWith('file') && activeIndex === 4}
+                    title={isNewSongCanvas ? 'Only available in Control Panel' : undefined}
+                    onMouseEnter={() => {
+                      if (isNewSongCanvas) return;
+                      clearCloseTimer();
+                      clearRecentsCloseTimer();
+                      clearImportCloseTimer();
+                      openImportSubmenu(false, 'hover');
+                    }}
+                    onMouseLeave={closeImportAfterDelay}
+                  />
+                  {openMenu === 'file:import' && (
+                    <div
+                      className={`absolute left-full top-0 ml-1 w-72 rounded-xl border shadow-xl z-50 p-1 ${menuBg} ${menuPanelExtra}`}
+                      role="menu"
+                      tabIndex={0}
+                      ref={(el) => { menuContainerRefs.current['file:import'] = el; }}
+                      onKeyDown={handleImportKeyDown}
+                      onMouseEnter={() => {
+                        clearCloseTimer();
+                        clearRecentsCloseTimer();
+                        clearImportCloseTimer();
+                        openImportSubmenu(false, 'hover');
+                      }}
+                      onMouseLeave={closeImportAfterDelay}
+                    >
+                      {resetImportRefs()}
+                      <MenuItem
+                        ref={registerImportItemRef(0)}
+                        label="Import from EasyWorship"
+                        active={openMenu === 'file:import' && importIndex === 0}
+                        onClick={menuHandlers.handleEasyWorship}
+                      />
+                      <MenuItem
+                        ref={registerImportItemRef(1)}
+                        label="Import from PowerPoint"
+                        active={openMenu === 'file:import' && importIndex === 1}
+                        onClick={menuHandlers.handlePresentationImport}
+                      />
+                    </div>
+                  )}
+                </div>
                 <MenuItem ref={(el) => registerItemRef('file', 5, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 5} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('file', 6, el)} label="Quit" shortcut="Alt + F4" onClick={menuHandlers.handleQuit} active={openMenu?.startsWith('file') && activeIndex === 6} />

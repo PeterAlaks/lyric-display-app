@@ -32,6 +32,10 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
         failed: 0,
         errors: []
     });
+    const selectedVersionConfig = React.useMemo(
+        () => EASYWORSHIP_VERSIONS.find((v) => v.version === selectedVersion) || EASYWORSHIP_VERSIONS[0],
+        [selectedVersion]
+    );
 
     useEffect(() => {
         if (isOpen) {
@@ -88,9 +92,12 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
         setValidationError('');
 
         try {
-            const result = await window.electronAPI.easyWorship.validatePath(databasePath);
+            const result = await window.electronAPI.easyWorship.validatePath(databasePath, selectedVersion);
 
             if (result.success) {
+                if (result.resolvedPath && result.resolvedPath !== databasePath) {
+                    setDatabasePath(result.resolvedPath);
+                }
                 setIsValid(true);
                 setDiscoveredSongs(result.songs || []);
                 return true;
@@ -106,7 +113,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
         } finally {
             setIsValidating(false);
         }
-    }, [databasePath]);
+    }, [databasePath, selectedVersion]);
 
     const handleBrowseFolder = async () => {
         try {
@@ -353,6 +360,11 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    {selectedVersionConfig?.fallbackHint && (
+                                        <p className={cn('mt-2 text-xs', darkMode ? 'text-gray-400' : 'text-gray-600')}>
+                                            {selectedVersionConfig.fallbackHint}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>

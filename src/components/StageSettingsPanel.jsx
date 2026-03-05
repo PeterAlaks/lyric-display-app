@@ -262,7 +262,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                   headerDescription: 'Configure NDI broadcast for Stage Display',
                   component: 'NdiOutputSettings',
                   variant: 'info',
-                  size: 'sm',
+                  size: 'lg',
                   outputKey: 'stage',
                   customLayout: true,
                   dismissLabel: 'Close',

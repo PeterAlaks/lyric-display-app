@@ -135,6 +135,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, callback);
     return () => ipcRenderer.removeAllListeners(channel);
   },
+  onOpenPresentationImport: (callback) => {
+    const channel = 'open-presentation-import';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, callback);
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
   onOpenSupportDevModal: (callback) => {
     const channel = 'open-support-dev-modal';
     ipcRenderer.removeAllListeners(channel);
@@ -204,12 +210,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   easyWorship: {
-    validatePath: (path) => ipcRenderer.invoke('easyworship:validate-path', { path }),
+    validatePath: (path, version) => ipcRenderer.invoke('easyworship:validate-path', { path, version }),
     browseForPath: () => ipcRenderer.invoke('easyworship:browse-path'),
     browseForDestination: () => ipcRenderer.invoke('easyworship:browse-destination'),
     importSong: (params) => ipcRenderer.invoke('easyworship:import-song', params),
     openFolder: (path) => ipcRenderer.invoke('easyworship:open-folder', { path }),
     getUserHome: () => ipcRenderer.invoke('easyworship:get-user-home')
+  },
+  presentation: {
+    validatePath: (path) => ipcRenderer.invoke('presentation:validate-path', { path }),
+    browseForPath: () => ipcRenderer.invoke('presentation:browse-path'),
+    browseForDestination: () => ipcRenderer.invoke('presentation:browse-destination'),
+    importFile: (params) => ipcRenderer.invoke('presentation:import-file', params),
+    openFolder: (path) => ipcRenderer.invoke('presentation:open-folder', { path }),
+    getUserHome: () => ipcRenderer.invoke('presentation:get-user-home')
   },
   display: {
     getAll: () => ipcRenderer.invoke('display:get-all'),

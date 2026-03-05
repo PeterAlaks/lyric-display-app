@@ -14,6 +14,7 @@ import MobileLayout from './MobileLayout';
 import SetlistModal from './SetlistModal';
 import OnlineLyricsSearchModal from './OnlineLyricsSearchModal';
 import EasyWorshipImportModal from './EasyWorshipImportModal';
+import PresentationImportModal from './PresentationImportModal';
 import DraftApprovalModal from './DraftApprovalModal';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import { Switch } from "@/components/ui/switch";
@@ -84,6 +85,7 @@ const LyricDisplayApp = () => {
 
   const [onlineLyricsModalOpen, setOnlineLyricsModalOpen] = React.useState(false);
   const [easyWorshipModalOpen, setEasyWorshipModalOpen] = React.useState(false);
+  const [presentationModalOpen, setPresentationModalOpen] = React.useState(false);
   const headerContainerRef = useRef(null);
 
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch: baseHandleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
@@ -217,6 +219,7 @@ const LyricDisplayApp = () => {
     processLoadedLyrics,
     showToast,
     setEasyWorshipModalOpen,
+    setPresentationModalOpen,
     setlistFiles,
     setSetlistFiles,
     emitSetlistAdd,
@@ -1037,6 +1040,12 @@ const LyricDisplayApp = () => {
         <EasyWorshipImportModal
           isOpen={easyWorshipModalOpen}
           onClose={() => setEasyWorshipModalOpen(false)}
+          darkMode={darkMode}
+        />
+
+        <PresentationImportModal
+          isOpen={presentationModalOpen}
+          onClose={() => setPresentationModalOpen(false)}
           darkMode={darkMode}
         />
       </div>

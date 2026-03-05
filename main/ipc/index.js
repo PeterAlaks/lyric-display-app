@@ -10,6 +10,7 @@
  * - auth: Authentication (admin key, JWT, join code, token store)
  * - lyrics: Lyrics providers (search, fetch, provider keys)
  * - easyworship: EasyWorship import handlers
+ * - presentation: Presentation import handlers
  * - setlist: Setlist operations (save, load, browse, export)
  * - display: Display management (assignments, output windows)
  * - updater: App updater controls
@@ -25,6 +26,7 @@ import { registerRecentsHandlers } from './recents.js';
 import { registerAuthHandlers } from './auth.js';
 import { registerLyricsHandlers } from './lyrics.js';
 import { registerEasyWorshipHandlers } from './easyworship.js';
+import { registerPresentationHandlers } from './presentation.js';
 import { registerSetlistHandlers } from './setlist.js';
 import { registerDisplayHandlers } from './display.js';
 import { registerUpdaterHandlers } from './updater.js';
@@ -51,6 +53,7 @@ export function registerIpcHandlers(context) {
   registerAuthHandlers(context);
   registerLyricsHandlers(context);
   registerEasyWorshipHandlers(context);
+  registerPresentationHandlers(context);
   registerSetlistHandlers(context);
   registerDisplayHandlers(context);
   registerUpdaterHandlers(context);

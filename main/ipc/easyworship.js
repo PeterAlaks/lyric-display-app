@@ -7,9 +7,9 @@ import * as easyWorship from '../easyWorship.js';
  */
 export function registerEasyWorshipHandlers({ getMainWindow }) {
   
-  ipcMain.handle('easyworship:validate-path', async (_event, { path: dbPath }) => {
+  ipcMain.handle('easyworship:validate-path', async (_event, { path: dbPath, version }) => {
     try {
-      return await easyWorship.validateDatabasePath(dbPath);
+      return await easyWorship.validateDatabasePath(dbPath, { version });
     } catch (error) {
       console.error('Error validating EasyWorship path:', error);
       return { success: false, error: error.message };

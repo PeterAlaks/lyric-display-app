@@ -2,7 +2,7 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 6.2.5
+**Version:** 6.2.10
 **Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
@@ -211,8 +211,9 @@ lyric-display-app/
 |   ├── modalBridge.js                      # Global modal bridge for electron main process
 |   ├── ndiManager.js                       # Main NDI manager module for main app
 |   ├── paths.js                            # Production paths resolver
+|   ├── presentation.js                     # Presentation file import and conversion engine
 |   ├── progressWindow.js                   # App updater dialog window configuration and styling
-|   ├── providerCredentials.js              # secure storage utility for online lyrics provider credentials
+|   ├── providerCredentials.js              # Secure storage utility for online lyrics provider credentials
 |   ├── recents.js                          # Module for token storage
 |   ├── secureTokenStore.js                 # Main token storage for desktop 
 |   ├── setlistExport.js                    # Backend process for setlist export operations
@@ -277,6 +278,7 @@ lyric-display-app/
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
 |   |   ├── OutputSettingsShared.jsx        # Shared UI components for output and stage settings panel
 |   |   ├── OutputTemplatesModal.jsx        # Output settings templates modal
+|   |   ├── PresentationImportModal.jsx     # Presentation file import/conversion modal
 |   |   ├── PreviewOutputsModal.jsx         # Display outputs preview modal
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
 |   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
@@ -296,6 +298,7 @@ lyric-display-app/
 |   |   ├── easyWorship.js                  # Some EasyWorship constants
 |   |   ├── fonts.js                        # Featured fonts dropdown store
 |   |   ├── lyricsFormat.js                 # Constants used in lyrics formatting/cleanup utility
+|   |   ├── presentationImport.js           # Presentation file import constants
 |   |   ├── shortcuts.js                    # Keyboard shortcut definitions used for shortcuts help modal
 |   |   └── songCanvas.js                   # Some constants used in canvas editor
 │   ├── context/

@@ -616,7 +616,7 @@ const OutputSettingsPanel = ({ outputKey }) => {
                   headerDescription: `Configure NDI broadcast for ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`,
                   component: 'NdiOutputSettings',
                   variant: 'info',
-                  size: 'sm',
+                  size: 'lg',
                   outputKey: outputKey,
                   customLayout: true,
                   dismissLabel: 'Close',
