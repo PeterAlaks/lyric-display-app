@@ -199,6 +199,11 @@ const useMenuHandlers = (closeMenu) => {
     window.dispatchEvent(new Event('open-easyworship-import'));
   }, [closeMenu]);
 
+  const handlePresentationImport = useCallback(() => {
+    closeMenu();
+    window.dispatchEvent(new Event('open-presentation-import'));
+  }, [closeMenu]);
+
   const handlePreviewOutputs = useCallback(() => {
     closeMenu();
     showModal({
@@ -380,6 +385,7 @@ const useMenuHandlers = (closeMenu) => {
     handleClearRecents,
     handleConnectMobile,
     handleEasyWorship,
+    handlePresentationImport,
     handlePreviewOutputs,
     handleQuit,
 

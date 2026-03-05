@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const DEFAULT_MENU_CONFIG = {
-  file: { count: 7, sub: [2] },
+  file: { count: 7, sub: [2, 4] },
   edit: { count: 7, sub: [] },
   view: { count: 7, sub: [] },
   window: { count: 5, sub: [] },
@@ -140,7 +140,7 @@ const useTopMenuState = ({
 
       if (submenuIndexes?.includes(targetIndex) && openSubmenu) {
         ensureReason('keyboard');
-        openSubmenu();
+        openSubmenu(targetIndex);
       } else {
         menuRefs.current?.[menuId]?.[targetIndex]?.click?.();
       }
@@ -153,7 +153,7 @@ const useTopMenuState = ({
     else if (key === 'ArrowLeft' || key === 'ArrowRight') {
       if (key === 'ArrowRight' && submenuIndexes?.includes(currentIndex) && openSubmenu) {
         ensureReason('keyboard');
-        openSubmenu();
+        openSubmenu(currentIndex);
       } else {
         const currentIdx = topMenuOrder.indexOf(menuId);
         const offset = key === 'ArrowLeft' ? -1 : 1;
