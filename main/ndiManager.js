@@ -1,23 +1,26 @@
 /**
  * NDI Manager
  * Manages NDI companion app installation, lifecycle, settings, and version checking.
- * The companion is a separate Node.js app with Puppeteer that handles actual NDI broadcasting
- * by rendering output pages in headless Chromium and sending frames via grandi.
+ * The companion is a native Rust process packaged from the lyricdisplay-ndi repository.
  */
 
 import { app, ipcMain, BrowserWindow } from 'electron';
 import Store from 'electron-store';
 import path from 'path';
 import fs from 'fs';
-import { spawn, execSync as execSyncFn } from 'child_process';
+import { spawn } from 'child_process';
 import https from 'https';
 import http from 'http';
+import { createNativeCommand, sendNativeCommand } from './ndiNativeClient.js';
 
 const isDev = !app.isPackaged;
 
 const GITHUB_OWNER = 'PeterAlaks';
 const GITHUB_REPO = 'lyricdisplay-ndi';
 const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
+const DEFAULT_NATIVE_IPC_HOST = '127.0.0.1';
+const DEFAULT_NATIVE_IPC_PORT = 9137;
+const DEFAULT_NDI_RUNTIME_DIRNAME = 'ndi-runtime';
 
 const ndiStore = new Store({
   name: 'ndi-settings',
@@ -26,6 +29,10 @@ const ndiStore = new Store({
     version: '',
     installPath: '',
     autoLaunch: false,
+    nativeIpc: {
+      host: DEFAULT_NATIVE_IPC_HOST,
+      port: DEFAULT_NATIVE_IPC_PORT
+    },
     outputs: {
       output1: {
         enabled: false,
@@ -59,49 +66,126 @@ let companionProcess = null;
 let latestReleaseCache = null;
 let lastReleaseCheck = 0;
 const RELEASE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
+let nativeCommandSeq = 0;
+let nativeStatsInterval = null;
+const VALID_OUTPUT_TARGETS = new Set(['output1', 'output2', 'stage', 'global']);
 
 // ============ Path Helpers ============
 
+function getNativeIpcConfig() {
+  const settings = ndiStore.get('nativeIpc') || {};
+  const host = String(settings.host || DEFAULT_NATIVE_IPC_HOST);
+  const rawPort = Number(settings.port || DEFAULT_NATIVE_IPC_PORT);
+  const port = Number.isFinite(rawPort) ? Math.max(1024, Math.min(65535, rawPort)) : DEFAULT_NATIVE_IPC_PORT;
+  return { host, port };
+}
+
+function getNextNativeSeq() {
+  nativeCommandSeq += 1;
+  return nativeCommandSeq;
+}
+
 function getInstallPath() {
   if (isDev) {
-    // In dev mode, use the local lyricdisplay-ndi/ source directory directly
-    const devPath = path.join(app.getAppPath(), 'lyricdisplay-ndi');
-    if (fs.existsSync(devPath)) {
-      return devPath;
+    // In dev mode, always resolve to the sibling lyricdisplay-ndi repository path.
+    return path.join(app.getAppPath(), 'lyricdisplay-ndi');
+  }
+
+  // In production, keep companion binaries under a lyricdisplay-ndi folder.
+  return path.join(path.dirname(app.getPath('exe')), 'lyricdisplay-ndi');
+}
+
+function getNativeBinaryName() {
+  return process.platform === 'win32' ? 'lyricdisplay-ndi-native.exe' : 'lyricdisplay-ndi-native';
+}
+
+function getNativeCompanionEntryPath() {
+  const binary = getNativeBinaryName();
+  const installPath = getInstallPath();
+  const appRoot = app.getAppPath();
+
+  const candidates = isDev
+    ? [
+      path.join(appRoot, 'lyricdisplay-ndi', 'native', 'target', 'release', binary),
+      path.join(appRoot, 'lyricdisplay-ndi', 'native', 'target', 'debug', binary),
+      path.join(appRoot, 'lyricdisplay-ndi', binary)
+    ]
+    : [
+      path.join(installPath, binary),
+      path.join(installPath, 'lyricdisplay-ndi', binary),
+      path.join(installPath, 'native', 'target', 'release', binary),
+      path.join(installPath, 'native', 'target', 'debug', binary)
+    ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
     }
   }
-  // In production, install to a dedicated directory next to the app executable
-  return path.join(path.dirname(app.getPath('exe')), 'ndi-companion');
+
+  return candidates[0];
 }
 
-function getCompanionEntryPath() {
+function getRuntimeLibraryCandidates() {
+  if (process.platform === 'win32') {
+    return ['Processing.NDI.Lib.x64.dll'];
+  }
+  if (process.platform === 'darwin') {
+    return ['libndi.dylib'];
+  }
+  return ['libndi.so.6', 'libndi.so.5', 'libndi.so'];
+}
+
+function hasAnyRuntimeLibrary(folderPath) {
+  if (!folderPath) {
+    return false;
+  }
+
+  return getRuntimeLibraryCandidates().some((library) =>
+    fs.existsSync(path.join(folderPath, library))
+  );
+}
+
+function getBundledRuntimeFolder() {
   const installPath = getInstallPath();
-  // The downloaded zip extracts with a lyricdisplay-ndi subfolder structure
-  // Check both possible layouts: flat (src/index.js) and nested (lyricdisplay-ndi/src/index.js)
-  const flatPath = path.join(installPath, 'src', 'index.js');
-  const nestedPath = path.join(installPath, 'lyricdisplay-ndi', 'src', 'index.js');
+  const nativePath = getNativeCompanionEntryPath();
+  const candidates = [
+    path.join(installPath, DEFAULT_NDI_RUNTIME_DIRNAME),
+    path.join(installPath, 'runtime'),
+    path.join(path.dirname(nativePath), DEFAULT_NDI_RUNTIME_DIRNAME),
+    path.dirname(nativePath)
+  ];
 
-  if (fs.existsSync(flatPath)) return flatPath;
-  if (fs.existsSync(nestedPath)) return nestedPath;
+  for (const candidate of candidates) {
+    if (hasAnyRuntimeLibrary(candidate)) {
+      return candidate;
+    }
+  }
 
-  // Default to flat path (for dev mode and fresh installs)
-  return flatPath;
+  return '';
 }
 
-function getCompanionRootPath() {
-  // Returns the actual root of the companion app (where package.json lives)
-  const installPath = getInstallPath();
-  const flatPkg = path.join(installPath, 'package.json');
-  const nestedPkg = path.join(installPath, 'lyricdisplay-ndi', 'package.json');
+function isSystemRuntimeAvailable() {
+  if (process.platform === 'win32') {
+    return (
+      fs.existsSync('C:\\Program Files\\NDI\\NDI 6 Runtime\\Processing.NDI.Lib.x64.dll') ||
+      fs.existsSync('C:\\Program Files\\NDI\\NDI 5 Runtime\\Processing.NDI.Lib.x64.dll')
+    );
+  }
 
-  if (fs.existsSync(flatPkg)) return installPath;
-  if (fs.existsSync(nestedPkg)) return path.join(installPath, 'lyricdisplay-ndi');
+  if (process.platform === 'darwin') {
+    return (
+      fs.existsSync('/usr/local/lib/libndi.dylib') ||
+      fs.existsSync('/opt/homebrew/lib/libndi.dylib')
+    );
+  }
 
-  return installPath;
-}
-
-function getCompanionNodeModulesPath() {
-  return path.join(getCompanionRootPath(), 'node_modules');
+  return (
+    fs.existsSync('/usr/lib/libndi.so.6') ||
+    fs.existsSync('/usr/local/lib/libndi.so.6') ||
+    fs.existsSync('/usr/lib/libndi.so.5') ||
+    fs.existsSync('/usr/local/lib/libndi.so.5')
+  );
 }
 
 // ============ Platform Helpers ============
@@ -115,44 +199,45 @@ function getPlatformSuffix() {
 // ============ Installation Check ============
 
 function checkInstalled() {
-  const entryPath = getCompanionEntryPath();
-  const modulesPath = getCompanionNodeModulesPath();
-  const entryExists = fs.existsSync(entryPath);
-  const modulesExist = fs.existsSync(modulesPath);
-  const exists = entryExists && modulesExist;
+  const nativeEntryPath = getNativeCompanionEntryPath();
+  const installed = fs.existsSync(nativeEntryPath);
+  const bundledRuntimePath = getBundledRuntimeFolder();
+  const systemRuntimeAvailable = isSystemRuntimeAvailable();
+  const runtimeReady = Boolean(bundledRuntimePath) || systemRuntimeAvailable;
 
-  if (exists) {
-    let version = ndiStore.get('version') || '';
-
-    // If store has no version, try reading from the companion's package.json
-    if (!version) {
-      try {
-        const pkgPath = path.join(getCompanionRootPath(), 'package.json');
-        if (fs.existsSync(pkgPath)) {
-          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-          version = pkg.version || '';
-          if (version) {
-            ndiStore.set('version', version);
-          }
-        }
-      } catch {
-        // Ignore read errors
-      }
-    }
-
+  if (installed) {
     return {
       installed: true,
-      version: version || '',
-      installPath: getInstallPath()
+      version: ndiStore.get('version') || '',
+      installPath: getInstallPath(),
+      nativeAvailable: true,
+      nativePath: nativeEntryPath,
+      runtime: {
+        bundled: Boolean(bundledRuntimePath),
+        bundledPath: bundledRuntimePath,
+        systemAvailable: systemRuntimeAvailable,
+        ready: runtimeReady
+      }
     };
   }
 
-  // If the files don't exist but store says installed, correct the store
   if (ndiStore.get('installed')) {
     ndiStore.set('installed', false);
   }
 
-  return { installed: false, version: '', installPath: '' };
+  return {
+    installed: false,
+    version: ndiStore.get('version') || '',
+    installPath: '',
+    nativeAvailable: false,
+    nativePath: nativeEntryPath,
+    runtime: {
+      bundled: false,
+      bundledPath: '',
+      systemAvailable: false,
+      ready: false
+    }
+  };
 }
 
 // ============ GitHub API Helpers ============
@@ -352,17 +437,16 @@ async function downloadCompanion(mainWindow, updateInfo = null) {
           // Clean up zip file
           try { fs.unlinkSync(zipPath); } catch { }
 
-          // Determine the installed version from the extracted package.json
+          // Determine installed version (prefer release metadata from update flow)
           let installedVersion = updateInfo?.latestVersion || '';
           if (!installedVersion) {
             try {
-              const pkgPath = path.join(getCompanionRootPath(), 'package.json');
-              if (fs.existsSync(pkgPath)) {
-                const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-                installedVersion = pkg.version || '1.0.0';
+              const latest = await checkForCompanionUpdate();
+              if (latest?.latestVersion) {
+                installedVersion = latest.latestVersion;
               }
             } catch {
-              installedVersion = '1.0.0';
+              installedVersion = '';
             }
           }
 
@@ -374,12 +458,18 @@ async function downloadCompanion(mainWindow, updateInfo = null) {
           latestReleaseCache = null;
           lastReleaseCheck = 0;
 
+          const installStatus = checkInstalled();
+          if (!installStatus.runtime?.ready) {
+            console.warn('[NDI Native] Companion installed without detectable NDI runtime libraries');
+          }
+
           console.log(`[NDI] Companion installed: v${installedVersion} at ${installPath}`);
 
           resolve({
             success: true,
             version: installedVersion,
-            path: installPath
+            path: installPath,
+            runtime: installStatus.runtime || null
           });
         } catch (err) {
           // Clean up on extraction failure
@@ -437,89 +527,181 @@ function uninstallCompanion() {
 
 // ============ Companion Process Management ============
 
+function buildNativeOutputsPayload() {
+  return {
+    outputs: {
+      output1: ndiStore.get('outputs.output1'),
+      output2: ndiStore.get('outputs.output2'),
+      stage: ndiStore.get('outputs.stage')
+    }
+  };
+}
+
+async function sendNativeCompanionCommand(type, payload = {}, extra = {}) {
+  const ipcConfig = getNativeIpcConfig();
+  const command = createNativeCommand(type, payload, {
+    seq: getNextNativeSeq(),
+    ts: Date.now(),
+    ...extra
+  });
+
+  return sendNativeCommand(command, {
+    host: ipcConfig.host,
+    port: ipcConfig.port,
+    timeoutMs: 1500
+  });
+}
+
+function normalizeOutputTarget(outputKey) {
+  if (typeof outputKey !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = outputKey.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  return VALID_OUTPUT_TARGETS.has(trimmed) ? trimmed : undefined;
+}
+
+async function forwardNativeRuntimeCommand(type, outputKey, payload = {}) {
+  if (!companionProcess) {
+    return { success: false, error: 'Companion not running' };
+  }
+
+  const output = normalizeOutputTarget(outputKey);
+  const commandPayload = payload && typeof payload === 'object' ? payload : {};
+
+  return sendNativeCompanionCommand(type, commandPayload, output ? { output } : {});
+}
+
+async function syncNativeCompanionOutputs() {
+  if (!companionProcess) {
+    return;
+  }
+
+  const result = await sendNativeCompanionCommand('set_outputs', buildNativeOutputsPayload());
+  if (!result.success) {
+    console.warn('[NDI Native] Failed to sync output settings:', result.error || 'Unknown error');
+  }
+}
+
+async function requestNativeCompanionStats() {
+  if (!companionProcess) {
+    return;
+  }
+
+  const result = await sendNativeCompanionCommand('request_stats', {});
+  if (!result.success || !Array.isArray(result.responses)) {
+    return;
+  }
+
+  const stats = result.responses.find((entry) => entry?.type === 'stats');
+  const health = result.responses.find((entry) => entry?.type === 'health');
+
+  if (stats || health) {
+    notifyAllWindows('ndi:native-telemetry', {
+      stats: stats?.payload || null,
+      health: health?.payload || null
+    });
+  }
+}
+
+function startNativeStatsLoop() {
+  if (nativeStatsInterval) {
+    clearInterval(nativeStatsInterval);
+  }
+
+  nativeStatsInterval = setInterval(() => {
+    requestNativeCompanionStats().catch((error) => {
+      console.warn('[NDI Native] Telemetry poll failed:', error?.message || error);
+    });
+  }, 5000);
+}
+
+function stopNativeStatsLoop() {
+  if (nativeStatsInterval) {
+    clearInterval(nativeStatsInterval);
+    nativeStatsInterval = null;
+  }
+}
+
 async function launchCompanion() {
   if (companionProcess) {
     return { success: true, message: 'Already running' };
   }
 
-  const entryPath = getCompanionEntryPath();
-  if (!fs.existsSync(entryPath)) {
-    return { success: false, error: 'Companion not installed' };
+  const nativePath = getNativeCompanionEntryPath();
+  if (!fs.existsSync(nativePath)) {
+    return {
+      success: false,
+      error: `NDI companion not found at ${nativePath}.`
+    };
   }
 
-  // Determine the backend port (default 4000)
-  const backendPort = process.env.PORT || '4000';
+  const nativeIpc = getNativeIpcConfig();
+  const args = ['--host', nativeIpc.host, '--port', String(nativeIpc.port)];
+  const bundledRuntimePath = getBundledRuntimeFolder();
+  const launchEnv = {
+    ...process.env
+  };
+
+  if (bundledRuntimePath) {
+    launchEnv.NDILIB_REDIST_FOLDER = bundledRuntimePath;
+  }
 
   try {
-    // Use system node if available (preferred for native module compatibility
-    // with grandi). Fall back to Electron's embedded Node.js (process.execPath)
-    // if system node is not on PATH.
-    let nodeExecutable = 'node';
-    if (!isDev) {
-      try {
-        execSyncFn('node --version', { stdio: 'ignore', timeout: 5000 });
-      } catch {
-        // System node not available, use Electron's embedded Node.js
-        nodeExecutable = process.execPath;
-        console.log('[NDI] System node not found, using Electron Node.js');
-      }
-    }
-    const companionRoot = getCompanionRootPath();
+    console.log(`[NDI Native] Launching: ${nativePath} ${args.join(' ')}`);
 
-    const args = [
-      entryPath,
-      '--port', backendPort
-    ];
-
-    // In dev mode, the frontend is served by Vite on port 5173, not by Express on port 4000.
-    // The companion needs to load pages from the Vite dev server to get the React app.
-    if (isDev) {
-      args.push('--frontend-url', 'http://localhost:5173');
-    }
-
-    console.log(`[NDI] Launching: ${nodeExecutable} ${args.join(' ')}`);
-    console.log(`[NDI] CWD: ${companionRoot}`);
-
-    companionProcess = spawn(nodeExecutable, args, {
+    companionProcess = spawn(nativePath, args, {
       detached: false,
       stdio: ['ignore', 'pipe', 'pipe'],
-      cwd: companionRoot,
-      env: {
-        ...process.env,
-        NODE_PATH: getCompanionNodeModulesPath()
-      }
+      cwd: path.dirname(nativePath),
+      env: launchEnv
     });
 
-    // Log companion stdout/stderr
     companionProcess.stdout.on('data', (data) => {
       const msg = data.toString().trim();
-      if (msg) console.log(`[NDI Companion] ${msg}`);
+      if (msg) console.log(`[NDI Native] ${msg}`);
     });
 
     companionProcess.stderr.on('data', (data) => {
       const msg = data.toString().trim();
-      if (msg) console.error(`[NDI Companion] ${msg}`);
+      if (msg) console.error(`[NDI Native] ${msg}`);
     });
 
     companionProcess.on('exit', (code) => {
-      console.log('[NDI] Companion exited with code:', code);
+      console.log('[NDI Native] Companion exited with code:', code);
       companionProcess = null;
+      stopNativeStatsLoop();
       notifyAllWindows('ndi:companion-status', { running: false });
     });
 
     companionProcess.on('error', (err) => {
-      console.error('[NDI] Companion error:', err);
+      console.error('[NDI Native] Companion error:', err);
       companionProcess = null;
+      stopNativeStatsLoop();
       notifyAllWindows('ndi:companion-status', { running: false, error: err.message });
     });
 
-    // Notify renderer that companion is running
     notifyAllWindows('ndi:companion-status', { running: true });
+    startNativeStatsLoop();
 
-    console.log('[NDI] Companion launched successfully');
+    // Give the IPC listener a brief moment to initialize, then perform handshake and first sync.
+    setTimeout(async () => {
+      const hello = await sendNativeCompanionCommand('hello', {});
+      if (!hello.success) {
+        console.warn('[NDI Native] Hello handshake failed:', hello.error || 'Unknown error');
+      }
+      await syncNativeCompanionOutputs();
+      await requestNativeCompanionStats();
+    }, 300);
+
+    console.log('[NDI Native] Companion launched successfully');
     return { success: true };
   } catch (error) {
-    console.error('[NDI] Failed to launch companion:', error);
+    console.error('[NDI Native] Failed to launch companion:', error);
     companionProcess = null;
     return { success: false, error: error.message };
   }
@@ -530,12 +712,17 @@ function stopCompanion() {
     return { success: true, message: 'Not running' };
   }
 
+  sendNativeCompanionCommand('shutdown', {}).catch((error) => {
+    console.warn('[NDI Native] Graceful shutdown request failed:', error?.message || error);
+  });
+
   try {
     companionProcess.kill();
   } catch (error) {
     console.warn('[NDI] Error killing companion process:', error);
   }
 
+  stopNativeStatsLoop();
   companionProcess = null;
   notifyAllWindows('ndi:companion-status', { running: false });
   console.log('[NDI] Companion stopped');
@@ -543,9 +730,13 @@ function stopCompanion() {
 }
 
 function getCompanionStatus() {
+  const installStatus = checkInstalled();
   return {
     running: companionProcess !== null,
-    installed: checkInstalled().installed,
+    installed: installStatus.installed,
+    nativeAvailable: installStatus.nativeAvailable,
+    nativePath: installStatus.nativePath,
+    runtime: installStatus.runtime,
     version: ndiStore.get('version') || '',
     autoLaunch: ndiStore.get('autoLaunch') || false
   };
@@ -571,7 +762,11 @@ function getOutputSettings(outputKey) {
 
 function setOutputSetting(outputKey, key, value) {
   ndiStore.set(`outputs.${outputKey}.${key}`, value);
-  // The companion watches the ndi-settings.json file for changes
+  if (companionProcess) {
+    syncNativeCompanionOutputs().catch((error) => {
+      console.warn('[NDI Native] Failed syncing output setting change:', error?.message || error);
+    });
+  }
   return { success: true };
 }
 
@@ -598,7 +793,7 @@ async function performStartupUpdateCheck() {
 
     const updateInfo = await checkForCompanionUpdate();
     if (updateInfo.updateAvailable) {
-      console.log(`[NDI] Companion update available: v${updateInfo.currentVersion} → v${updateInfo.latestVersion}`);
+      console.log(`[NDI] Companion update available: v${updateInfo.currentVersion} -> v${updateInfo.latestVersion}`);
       notifyAllWindows('ndi:update-available', updateInfo);
     }
   } catch (error) {
@@ -609,8 +804,11 @@ async function performStartupUpdateCheck() {
 // ============ Initialization & IPC ============
 
 export function initializeNdiManager(getMainWindow) {
+  const installStatus = checkInstalled();
+  const canAutoLaunch = installStatus.installed;
+
   // Auto-launch companion if enabled and installed
-  if (ndiStore.get('autoLaunch') && checkInstalled().installed) {
+  if (ndiStore.get('autoLaunch') && canAutoLaunch) {
     console.log('[NDI] Auto-launching companion');
     // Delay auto-launch to ensure backend is fully ready
     setTimeout(() => {
@@ -695,11 +893,34 @@ export function registerNdiIpcHandlers() {
     ndiStore.set(`outputs.${outputKey}.resolution`, 'custom');
     ndiStore.set(`outputs.${outputKey}.customWidth`, Math.max(320, Math.min(7680, width)));
     ndiStore.set(`outputs.${outputKey}.customHeight`, Math.max(240, Math.min(4320, height)));
+
+    if (companionProcess) {
+      syncNativeCompanionOutputs().catch((error) => {
+        console.warn('[NDI Native] Failed syncing custom resolution change:', error?.message || error);
+      });
+    }
+
     return { success: true };
   });
 
   ipcMain.handle('ndi:set-framerate', (_, { outputKey, framerate }) => {
     return setOutputSetting(outputKey, 'framerate', framerate);
+  });
+
+  ipcMain.handle('ndi:set-content', async (_, { outputKey, content }) => {
+    return forwardNativeRuntimeCommand('set_content', outputKey, content);
+  });
+
+  ipcMain.handle('ndi:set-scene-style', async (_, { outputKey, style }) => {
+    return forwardNativeRuntimeCommand('set_scene_style', outputKey, style);
+  });
+
+  ipcMain.handle('ndi:set-media', async (_, { outputKey, media }) => {
+    return forwardNativeRuntimeCommand('set_media', outputKey, media);
+  });
+
+  ipcMain.handle('ndi:set-transition', async (_, { outputKey, transition }) => {
+    return forwardNativeRuntimeCommand('set_transition', outputKey, transition);
   });
 
   console.log('[NDI] IPC handlers registered');

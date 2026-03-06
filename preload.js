@@ -297,9 +297,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     checkForUpdate: () => ipcRenderer.invoke('ndi:check-for-update'),
     onDownloadProgress: (callback) => {
       const channel = 'ndi:download-progress';
-      ipcRenderer.removeAllListeners(channel);
-      ipcRenderer.on(channel, (_event, progress) => callback(progress));
-      return () => ipcRenderer.removeAllListeners(channel);
+      const listener = (_event, progress) => callback(progress);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
     },
     uninstall: () => ipcRenderer.invoke('ndi:uninstall'),
     launchCompanion: () => ipcRenderer.invoke('ndi:launch-companion'),
@@ -314,15 +314,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setFramerate: (outputKey, framerate) => ipcRenderer.invoke('ndi:set-framerate', { outputKey, framerate }),
     onCompanionStatus: (callback) => {
       const channel = 'ndi:companion-status';
-      ipcRenderer.removeAllListeners(channel);
-      ipcRenderer.on(channel, (_event, status) => callback(status));
-      return () => ipcRenderer.removeAllListeners(channel);
+      const listener = (_event, status) => callback(status);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
     },
     onUpdateAvailable: (callback) => {
       const channel = 'ndi:update-available';
-      ipcRenderer.removeAllListeners(channel);
-      ipcRenderer.on(channel, (_event, info) => callback(info));
-      return () => ipcRenderer.removeAllListeners(channel);
+      const listener = (_event, info) => callback(info);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onNativeTelemetry: (callback) => {
+      const channel = 'ndi:native-telemetry';
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    setContent: (outputKey, content) => ipcRenderer.invoke('ndi:set-content', { outputKey, content }),
+    setSceneStyle: (outputKey, style) => ipcRenderer.invoke('ndi:set-scene-style', { outputKey, style }),
+    setMedia: (outputKey, media) => ipcRenderer.invoke('ndi:set-media', { outputKey, media }),
+    setTransition: (outputKey, transition) => ipcRenderer.invoke('ndi:set-transition', { outputKey, transition })
     }
   },
 

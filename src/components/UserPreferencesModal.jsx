@@ -40,7 +40,17 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [midiLearnActive, setMidiLearnActive] = useState(false);
   const [midiRefreshing, setMidiRefreshing] = useState(false);
   // NDI state
-  const [ndiStatus, setNdiStatus] = useState({ installed: false, version: '', installPath: '' });
+  const [ndiStatus, setNdiStatus] = useState({
+    installed: false,
+    version: '',
+    installPath: '',
+    runtime: {
+      bundled: false,
+      bundledPath: '',
+      systemAvailable: false,
+      ready: false
+    }
+  });
   const [downloadProgress, setDownloadProgress] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [companionRunning, setCompanionRunning] = useState(false);
@@ -48,12 +58,16 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [ndiUpdateInfo, setNdiUpdateInfo] = useState(null);
   const [ndiCheckingUpdate, setNdiCheckingUpdate] = useState(false);
   const [ndiUpdating, setNdiUpdating] = useState(false);
+  const [ndiTelemetry, setNdiTelemetry] = useState({ stats: null, health: null, updatedAt: 0 });
   const { showToast } = useToast();
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
 
   // Load preferences on mount
   useEffect(() => {
+    let cleanupCompanionStatus = null;
+    let cleanupNativeTelemetry = null;
+
     const loadPreferences = async () => {
       setLoading(true);
       try {
@@ -85,6 +99,24 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             setNdiAutoLaunch(companionResult.autoLaunch);
           }
         }
+
+        if (window.electronAPI?.ndi?.onCompanionStatus) {
+          cleanupCompanionStatus = window.electronAPI.ndi.onCompanionStatus((status) => {
+            if (typeof status?.running === 'boolean') {
+              setCompanionRunning(status.running);
+            }
+          });
+        }
+
+        if (window.electronAPI?.ndi?.onNativeTelemetry) {
+          cleanupNativeTelemetry = window.electronAPI.ndi.onNativeTelemetry((payload) => {
+            setNdiTelemetry({
+              stats: payload?.stats || null,
+              health: payload?.health || null,
+              updatedAt: Date.now()
+            });
+          });
+        }
       } catch (error) {
         console.error('Failed to load preferences:', error);
       } finally {
@@ -95,6 +127,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     loadPreferences();
 
     return () => {
+      if (cleanupCompanionStatus) cleanupCompanionStatus();
+      if (cleanupNativeTelemetry) cleanupNativeTelemetry();
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
     };
@@ -812,6 +846,17 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         );
 
       case 'ndi': {
+        const refreshNdiStatus = async () => {
+          try {
+            const latest = await window.electronAPI?.ndi?.checkInstalled?.();
+            if (latest) {
+              setNdiStatus(latest);
+            }
+          } catch (error) {
+            console.warn('Failed to refresh NDI status:', error);
+          }
+        };
+
         const handleNdiDownload = async () => {
           setIsDownloading(true);
           setDownloadProgress({ percent: 0, status: 'downloading' });
@@ -823,7 +868,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           try {
             const result = await window.electronAPI.ndi.download();
             if (result.success) {
-              setNdiStatus({ installed: true, version: result.version, installPath: result.path });
+              await refreshNdiStatus();
               setNdiUpdateInfo(null);
               showToast({ title: 'NDI Installed', message: 'NDI companion has been downloaded and is ready to use.', variant: 'success' });
             } else {
@@ -844,7 +889,15 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             const result = await window.electronAPI?.ndi?.launchCompanion();
             if (result?.success) {
               setCompanionRunning(true);
-              showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
+              if (ndiStatus?.runtime?.ready) {
+                showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
+              } else {
+                showToast({
+                  title: 'Companion Running (Mock Mode)',
+                  message: 'NDI runtime was not detected. The companion started, but NDI output will stay in mock mode.',
+                  variant: 'warning'
+                });
+              }
             } else {
               showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
             }
@@ -874,7 +927,17 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           try {
             const result = await window.electronAPI?.ndi?.uninstall();
             if (result?.success) {
-              setNdiStatus({ installed: false, version: '', installPath: '' });
+              setNdiStatus({
+                installed: false,
+                version: '',
+                installPath: '',
+                runtime: {
+                  bundled: false,
+                  bundledPath: '',
+                  systemAvailable: false,
+                  ready: false
+                }
+              });
               setCompanionRunning(false);
               setNdiUpdateInfo(null);
               showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
@@ -928,7 +991,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           try {
             const result = await window.electronAPI.ndi.updateCompanion();
             if (result?.success) {
-              setNdiStatus({ installed: true, version: result.version, installPath: result.path });
+              await refreshNdiStatus();
               setNdiUpdateInfo(null);
               setCompanionRunning(false);
               showToast({ title: 'NDI Companion Updated', message: `Updated to v${result.version}. You can relaunch it now.`, variant: 'success' });
@@ -944,6 +1007,15 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             if (cleanup) cleanup();
           }
         };
+
+        const stats = ndiTelemetry?.stats || null;
+        const health = ndiTelemetry?.health || null;
+        const formatMetric = (value, digits = 1) => (
+          typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '--'
+        );
+        const telemetryAgeSeconds = ndiTelemetry?.updatedAt
+          ? Math.max(0, Math.floor((Date.now() - ndiTelemetry.updatedAt) / 1000))
+          : null;
 
         return (
           <div className="space-y-6">
@@ -964,6 +1036,15 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <span className={`text-xs ${mutedClass}`}>v{ndiStatus.version}</span>
               )}
               {ndiStatus.installed && (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${ndiStatus?.runtime?.ready
+                  ? darkMode ? 'bg-emerald-900/40 text-emerald-400' : 'bg-emerald-100 text-emerald-700'
+                  : darkMode ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${ndiStatus?.runtime?.ready ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  {ndiStatus?.runtime?.ready ? 'NDI Runtime Ready' : 'Runtime Missing'}
+                </span>
+              )}
+              {ndiStatus.installed && (
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionRunning
                   ? darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-700'
                   : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
@@ -973,6 +1054,58 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 </span>
               )}
             </div>
+
+            {/* Native telemetry snapshot */}
+            {ndiStatus.installed && companionRunning && (
+              <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className={`text-xs font-medium ${labelClass}`}>Runtime Telemetry</p>
+                  {telemetryAgeSeconds !== null && (
+                    <span className={`text-[11px] ${mutedClass}`}>
+                      Updated {telemetryAgeSeconds}s ago
+                    </span>
+                  )}
+                </div>
+                {stats ? (
+                  <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 text-xs ${mutedClass}`}>
+                    <div>
+                      <p className={labelClass}>Render FPS</p>
+                      <p>{formatMetric(stats.render_fps)}</p>
+                    </div>
+                    <div>
+                      <p className={labelClass}>Send FPS</p>
+                      <p>{formatMetric(stats.send_fps)}</p>
+                    </div>
+                    <div>
+                      <p className={labelClass}>Dropped Frames</p>
+                      <p>{typeof stats.dropped_frames === 'number' ? stats.dropped_frames : '--'}</p>
+                    </div>
+                    <div>
+                      <p className={labelClass}>Send Failures</p>
+                      <p>{typeof stats.ndi_send_failures === 'number' ? stats.ndi_send_failures : '--'}</p>
+                    </div>
+                    <div>
+                      <p className={labelClass}>Avg Frame (ms)</p>
+                      <p>{formatMetric(stats.avg_frame_ms, 2)}</p>
+                    </div>
+                    <div>
+                      <p className={labelClass}>P95 Frame (ms)</p>
+                      <p>{formatMetric(stats.p95_frame_ms, 2)}</p>
+                    </div>
+                    <div>
+                      <p className={labelClass}>Backend</p>
+                      <p>{health?.ndi_backend || '--'}</p>
+                    </div>
+                    <div>
+                      <p className={labelClass}>Warnings</p>
+                      <p>{Array.isArray(health?.warning_flags) && health.warning_flags.length > 0 ? health.warning_flags.join(', ') : 'none'}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className={`text-xs ${mutedClass}`}>Waiting for telemetry snapshot from native companion...</p>
+                )}
+              </div>
+            )}
 
             {/* Update Available Banner */}
             {ndiStatus.installed && ndiUpdateInfo?.updateAvailable && (
@@ -1012,6 +1145,17 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 </div>
                 <p className={`text-xs ${mutedClass}`}>
                   {downloadProgress.status === 'extracting' ? 'Extracting...' : `Downloading... ${downloadProgress.percent || 0}%`}
+                </p>
+              </div>
+            )}
+
+            {ndiStatus.installed && !ndiStatus?.runtime?.ready && (
+              <div className={`rounded-lg border p-3 ${darkMode ? 'border-amber-700/60 bg-amber-900/20' : 'border-amber-300 bg-amber-50'}`}>
+                <p className={`text-sm font-medium ${darkMode ? 'text-amber-300' : 'text-amber-800'}`}>
+                  NDI runtime not detected
+                </p>
+                <p className={`text-xs mt-1 ${darkMode ? 'text-amber-200/90' : 'text-amber-700'}`}>
+                  This companion build can start, but it will only send mock frames until runtime libraries are bundled in the companion package or installed system-wide.
                 </p>
               </div>
             )}

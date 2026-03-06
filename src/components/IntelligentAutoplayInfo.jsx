@@ -67,7 +67,7 @@ const IntelligentAutoplayInfo = ({ darkMode, onStart, onClose, setDontShowAgain 
             </div>
             <div>
               <h4 className={`text-sm font-semibold mb-1 ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                Legacy Mode Available
+                Classic Mode Available
               </h4>
               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Your regular autoplay with custom interval settings is still available. Use whichever works best for your workflow.

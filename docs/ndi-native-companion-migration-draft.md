@@ -12,6 +12,25 @@ Professional presentation systems avoid screenshot pipelines. They use a native 
 
 This draft proposes a migration to a native standalone companion (Rust) while preserving the current app as control plane.
 
+## Implementation Status (March 5, 2026)
+1. Rust scaffold added in `lyricdisplay-ndi/native/` with command IPC server and telemetry stubs.
+2. Electron `main/ndiManager.js` now launches the native companion process only.
+3. Existing in-app user flow is preserved:
+- download/install companion
+- launch/stop companion
+- configure output settings
+4. Native sync path added for `set_outputs` and periodic `request_stats`.
+5. Phase 1 runtime loop implemented in Rust scaffold:
+- `set_outputs` now starts/stops per-output workers.
+- workers run deterministic frame pacing and update per-output telemetry.
+6. Main app bridge now pushes native commands for live state:
+- `set_content` (global + per output line state)
+- `set_scene_style`, `set_media`, `set_transition`
+7. Software RGBA frame generation is wired in Rust for pipeline validation.
+8. Native sender backend now attempts runtime NDI SDK loading and frame submission with mock fallback.
+9. Companion launch now auto-injects bundled runtime path (`NDILIB_REDIST_FOLDER`) when release zip includes `ndi-runtime/`.
+10. GPU scene rendering, media decode, and production hardening are still pending.
+
 ## Current Constraints (Observed)
 1. Capture path uses CDP screenshot PNG per frame and PNG decode.
 2. Render and NDI send loops are independently timed.
@@ -40,7 +59,7 @@ This draft proposes a migration to a native standalone companion (Rust) while pr
 
 2. Main app integration
 - `main/ndiManager.js` keeps install/launch/update orchestration.
-- Replace Node companion entry with native executable launch.
+- Use native executable launch and native IPC command sync.
 - Preserve settings schema where possible for low migration risk.
 
 ### Rendering Stack (Proposed)
@@ -171,9 +190,8 @@ Add optional new keys:
 3. `statsOverlay`: boolean
 
 ### Migration Strategy
-1. Use dual-engine rollout gates during transition.
-2. Feature flag in app:
-- `NDI Engine: legacy | native`.
+1. Use direct cutover to native companion.
+2. Preserve current NDI user workflow in-app (download/install/start/stop/settings).
 3. Roll out native by output type first:
 - Output1/Output2, then Stage.
 
@@ -230,11 +248,11 @@ Acceptance:
 - Mitigation: software decode fallback with profile downgrade.
 
 4. Migration complexity.
-- Mitigation: dual-engine rollout with feature flag.
+- Mitigation: native-only cutover with phased validation by output path (Output1/Output2, then Stage).
 
 ## Suggested Repository Layout (Future)
 ```text
-ndi-native/
+lyricdisplay-ndi/native/
   Cargo.toml
   src/
     main.rs
@@ -247,7 +265,8 @@ ndi-native/
 ```
 
 ## Immediate Next Steps
-1. Approve this architecture direction.
-2. Create `ndi-native` scaffold with IPC handshake and one static test frame output.
-3. Implement Phase 1 and validate 1080p30 overlay targets.
-4. Begin Phase 2 with hardware-accelerated media decode and adaptive quality controls.
+1. Complete Phase 1 renderer + NDI sender in `lyricdisplay-ndi/native`.
+2. Publish release assets with bundled platform runtime libraries in `ndi-runtime/` (subject to redistribution approval).
+3. Validate native-only flow in app: download/install, launch/stop, output enable/disable, update/uninstall.
+4. Run 1080p30 overlay soak tests for 60 minutes and capture telemetry.
+5. Begin Phase 2 with hardware-accelerated media decode and adaptive quality controls.
