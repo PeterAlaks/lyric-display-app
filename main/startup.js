@@ -171,6 +171,9 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
       nativeTheme.themeSource = savedDarkMode ? 'dark' : 'light';
     }
 
+    updateLoadingStatus('Initializing NDI manager');
+    registerNdiIpcHandlers();
+
     const mainWindow = createWindow('/');
 
     setupMainWindowCloseHandler(mainWindow);
@@ -189,9 +192,7 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     });
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    // Initialize NDI manager
-    updateLoadingStatus('Initializing NDI manager');
-    registerNdiIpcHandlers();
+    // Initialize NDI manager (handlers already registered above)
     initializeNdiManager(() => mainWindow);
     await new Promise(resolve => setTimeout(resolve, 200));
 
