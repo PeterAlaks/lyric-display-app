@@ -334,7 +334,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setSceneStyle: (outputKey, style) => ipcRenderer.invoke('ndi:set-scene-style', { outputKey, style }),
     setMedia: (outputKey, media) => ipcRenderer.invoke('ndi:set-media', { outputKey, media }),
     setTransition: (outputKey, transition) => ipcRenderer.invoke('ndi:set-transition', { outputKey, transition })
-    }
   },
 
   // User Preferences
