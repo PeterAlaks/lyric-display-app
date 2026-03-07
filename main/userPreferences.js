@@ -15,6 +15,7 @@ const preferencesStore = new Store({
       defaultLyricsPath: '',
       rememberLastOpenedPath: true,
       confirmOnClose: true,
+      showTooltips: true,
       startMinimized: false,
       minimizeToTray: false,
     },

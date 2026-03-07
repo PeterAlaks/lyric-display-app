@@ -524,6 +524,26 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Show Tooltips</label>
+                <p className={`text-xs ${mutedClass}`}>Display helpful tooltips when hovering over controls</p>
+              </div>
+              <Switch
+                checked={preferences.general?.showTooltips ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('general', 'showTooltips', checked);
+                  // Update the store immediately for runtime sync
+                  useLyricsStore.getState().setShowTooltips(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
           </div>
         );
 

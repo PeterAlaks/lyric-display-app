@@ -12,6 +12,7 @@ const defaultAutoplaySettings = {
 // Default max setlist files - will be overridden by user preferences when available
 let maxSetlistFilesLimit = 50;
 
+
 // Function to load preferences from main process (called after app init)
 export async function loadPreferencesIntoStore(store) {
   try {
@@ -28,6 +29,14 @@ export async function loadPreferencesIntoStore(store) {
         maxSetlistFilesLimit = result.settings.maxSetlistFiles ?? 50;
         // Trigger a re-render by updating a dummy state
         store.getState().updateMaxSetlistFiles(maxSetlistFilesLimit);
+      }
+    }
+
+    // Load tooltip visibility preference
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('general.showTooltips');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setShowTooltips(result.value);
       }
     }
   } catch (error) {
@@ -209,6 +218,7 @@ const useLyricsStore = create(
       },
       lyricsTimestamps: [],
       hasSeenIntelligentAutoplayInfo: false,
+      showTooltips: true,
       pendingSavedVersion: null,
       maxSetlistFilesVersion: 0,
 
@@ -230,6 +240,7 @@ const useLyricsStore = create(
       setSongMetadata: (metadata) => set({ songMetadata: metadata }),
       setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
+      setShowTooltips: (show) => set({ showTooltips: show }),
       setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),

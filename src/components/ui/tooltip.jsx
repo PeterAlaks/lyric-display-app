@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useLyricsStore from '@/context/LyricsStore';
 
 let globalActiveTooltip = null;
 
 export function Tooltip({ children, content, delay = 1000, side = 'top', className }) {
+    const showTooltips = useLyricsStore((state) => state.showTooltips);
     const [visible, setVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const timeoutRef = useRef(null);
@@ -73,6 +75,21 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
         }
     }, [childTitle]);
 
+    // When tooltips are disabled, dismiss any visible tooltip and render children directly
+    useEffect(() => {
+        if (!showTooltips && visible) {
+            setVisible(false);
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+            }
+        }
+    }, [showTooltips, visible]);
+
+    if (!showTooltips) {
+        return children;
+    }
+
     const calculatePosition = () => {
         if (!triggerRef.current) return;
 
@@ -138,12 +155,6 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
         }
         setVisible(false);
     };
-
-    useEffect(() => {
-        if (visible && tooltipRef.current) {
-            calculatePosition();
-        }
-    }, [visible]);
 
     const tooltipContent = visible && typeof document !== 'undefined' ? (
         createPortal(
