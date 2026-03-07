@@ -18,7 +18,6 @@ import useToast from '@/hooks/useToast';
 import useModal from '@/hooks/useModal';
 import ElectronModalBridge from './components/ElectronModalBridge';
 import QRCodeDialogBridge from './components/QRCodeDialogBridge';
-import NdiNativeSyncBridge from './components/NdiNativeSyncBridge';
 import { ControlSocketProvider } from './context/ControlSocketProvider';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from './utils/markdownParser';
 import DesktopShell from './components/WindowChrome/DesktopShell';
@@ -55,7 +54,6 @@ export default function App() {
               <Route path="/" element={
                 <ConditionalDesktopShell>
                   <ControlSocketProvider>
-                    <NdiNativeSyncBridge />
                     <ControlPanel />
                   </ControlSocketProvider>
                 </ConditionalDesktopShell>

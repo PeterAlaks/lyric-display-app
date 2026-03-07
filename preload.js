@@ -324,16 +324,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
-    onNativeTelemetry: (callback) => {
-      const channel = 'ndi:native-telemetry';
+    onCompanionTelemetry: (callback) => {
+      const channel = 'ndi:companion-telemetry';
       const listener = (_event, payload) => callback(payload);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
-    setContent: (outputKey, content) => ipcRenderer.invoke('ndi:set-content', { outputKey, content }),
-    setSceneStyle: (outputKey, style) => ipcRenderer.invoke('ndi:set-scene-style', { outputKey, style }),
-    setMedia: (outputKey, media) => ipcRenderer.invoke('ndi:set-media', { outputKey, media }),
-    setTransition: (outputKey, transition) => ipcRenderer.invoke('ndi:set-transition', { outputKey, transition })
   },
 
   // User Preferences

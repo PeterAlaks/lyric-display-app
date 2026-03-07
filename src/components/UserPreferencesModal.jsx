@@ -44,12 +44,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     installed: false,
     version: '',
     installPath: '',
-    runtime: {
-      bundled: false,
-      bundledPath: '',
-      systemAvailable: false,
-      ready: false
-    }
   });
   const [downloadProgress, setDownloadProgress] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -67,6 +61,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   useEffect(() => {
     let cleanupCompanionStatus = null;
     let cleanupNativeTelemetry = null;
+    let cleanupUpdateAvailable = null;
 
     const loadPreferences = async () => {
       setLoading(true);
@@ -108,13 +103,22 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           });
         }
 
-        if (window.electronAPI?.ndi?.onNativeTelemetry) {
-          cleanupNativeTelemetry = window.electronAPI.ndi.onNativeTelemetry((payload) => {
+        if (window.electronAPI?.ndi?.onCompanionTelemetry) {
+          cleanupNativeTelemetry = window.electronAPI.ndi.onCompanionTelemetry((payload) => {
             setNdiTelemetry({
               stats: payload?.stats || null,
               health: payload?.health || null,
               updatedAt: Date.now()
             });
+          });
+        }
+
+        // Listen for push update notifications from the startup check.
+        if (window.electronAPI?.ndi?.onUpdateAvailable) {
+          cleanupUpdateAvailable = window.electronAPI.ndi.onUpdateAvailable((info) => {
+            if (info?.updateAvailable) {
+              setNdiUpdateInfo(info);
+            }
           });
         }
       } catch (error) {
@@ -129,6 +133,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     return () => {
       if (cleanupCompanionStatus) cleanupCompanionStatus();
       if (cleanupNativeTelemetry) cleanupNativeTelemetry();
+      if (cleanupUpdateAvailable) cleanupUpdateAvailable();
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
     };
@@ -889,15 +894,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             const result = await window.electronAPI?.ndi?.launchCompanion();
             if (result?.success) {
               setCompanionRunning(true);
-              if (ndiStatus?.runtime?.ready) {
-                showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
-              } else {
-                showToast({
-                  title: 'Companion Running (Mock Mode)',
-                  message: 'NDI runtime was not detected. The companion started, but NDI output will stay in mock mode.',
-                  variant: 'warning'
-                });
-              }
+              showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
             } else {
               showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
             }
@@ -931,12 +928,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 installed: false,
                 version: '',
                 installPath: '',
-                runtime: {
-                  bundled: false,
-                  bundledPath: '',
-                  systemAvailable: false,
-                  ready: false
-                }
               });
               setCompanionRunning(false);
               setNdiUpdateInfo(null);
@@ -1036,15 +1027,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <span className={`text-xs ${mutedClass}`}>v{ndiStatus.version}</span>
               )}
               {ndiStatus.installed && (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${ndiStatus?.runtime?.ready
-                  ? darkMode ? 'bg-emerald-900/40 text-emerald-400' : 'bg-emerald-100 text-emerald-700'
-                  : darkMode ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${ndiStatus?.runtime?.ready ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  {ndiStatus?.runtime?.ready ? 'NDI Runtime Ready' : 'Runtime Missing'}
-                </span>
-              )}
-              {ndiStatus.installed && (
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionRunning
                   ? darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-700'
                   : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
@@ -1102,7 +1084,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                     </div>
                   </div>
                 ) : (
-                  <p className={`text-xs ${mutedClass}`}>Waiting for telemetry snapshot from native companion...</p>
+                  <p className={`text-xs ${mutedClass}`}>Waiting for telemetry data from companion...</p>
                 )}
               </div>
             )}
@@ -1145,17 +1127,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 </div>
                 <p className={`text-xs ${mutedClass}`}>
                   {downloadProgress.status === 'extracting' ? 'Extracting...' : `Downloading... ${downloadProgress.percent || 0}%`}
-                </p>
-              </div>
-            )}
-
-            {ndiStatus.installed && !ndiStatus?.runtime?.ready && (
-              <div className={`rounded-lg border p-3 ${darkMode ? 'border-amber-700/60 bg-amber-900/20' : 'border-amber-300 bg-amber-50'}`}>
-                <p className={`text-sm font-medium ${darkMode ? 'text-amber-300' : 'text-amber-800'}`}>
-                  NDI runtime not detected
-                </p>
-                <p className={`text-xs mt-1 ${darkMode ? 'text-amber-200/90' : 'text-amber-700'}`}>
-                  This companion build can start, but it will only send mock frames until runtime libraries are bundled in the companion package or installed system-wide.
                 </p>
               </div>
             )}
@@ -1273,6 +1244,21 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 </div>
               </div>
             )}
+
+            {/* NDI Trademark Notice */}
+            <div className={`pt-4 mt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <p className={`text-[11px] leading-relaxed ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                NDI® is a registered trademark of Vizrt NDI AB. This application is not affiliated with or endorsed by Vizrt NDI AB. Learn more at{' '}
+                <a
+                  href="https://ndi.video"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`underline hover:no-underline ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
+                >
+                  ndi.video
+                </a>.
+              </p>
+            </div>
           </div>
         );
       }

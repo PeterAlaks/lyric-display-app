@@ -33,6 +33,7 @@ LyricDisplay is a comprehensive Electron-based application designed for use in p
 - **Full Screen Mode**:    Fill colour/media background options for full screen lyrics display
 
 ### Professional Features
+- **NDI® Output**: Broadcast lyrics over NDI for use in OBS, vMix, and other production software — with transparency and per-output resolution control
 - **Auto-Updates**: Seamless background updates via GitHub releases
 - **Dark Mode**: System-integrated dark/light theme switching
 - **Keyboard Shortcuts**: Full menu-driven workflow
@@ -444,6 +445,9 @@ All lyrics, metadata, and related content displayed through these services remai
 - **Vagalume** — © Vagalume Media Group. Lyrics and artist data are provided through the official Vagalume API.  
 - **Hymnary.org** — © Hymnary.org / Christian Classics Ethereal Library (CCEL). Content is provided for educational and liturgical purposes.  
 - **Open Hymnal Project** — Public domain hymn texts and music as compiled by the Open Hymnal Project.
+
+### NDI® Trademark Notice
+NDI® is a registered trademark of Vizrt NDI AB. LyricDisplay uses the NDI SDK via the open-source [grandi](https://www.npmjs.com/package/grandi) module for video output over IP networks. This project is not affiliated with or endorsed by Vizrt NDI AB. For more information about NDI, visit [ndi.video](https://ndi.video).
 
 ### Logos & Trademarks
 Logos and brand marks of the above providers are displayed in LyricDisplay **for identification and attribution purposes only**.  
