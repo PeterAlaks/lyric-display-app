@@ -235,9 +235,18 @@ function checkInstalled() {
   // In dev mode, check if the companion source exists.
   if (isDev) {
     const installed = fs.existsSync(entryPath);
+    let version = ndiStore.get('version') || '';
+    // In dev mode, read the version directly from the companion's package.json
+    // so it always reflects the current source, not a stale store value.
+    if (installed) {
+      try {
+        const companionPkg = JSON.parse(fs.readFileSync(path.join(getInstallPath(), 'package.json'), 'utf8'));
+        if (companionPkg.version) version = companionPkg.version;
+      } catch { /* fallback to store value */ }
+    }
     return {
       installed,
-      version: ndiStore.get('version') || '',
+      version,
       installPath: getInstallPath(),
       companionPath: entryPath,
     };

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Tooltip } from '@/components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
 
@@ -370,6 +371,84 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       console.error('Failed to toggle OSC feedback:', error);
     }
   }, [oscStatus?.feedbackEnabled, updateNestedPreference]);
+
+  // NDI action handlers (component-level so they can be used in the header)
+  const refreshNdiStatus = useCallback(async () => {
+    try {
+      const latest = await window.electronAPI?.ndi?.checkInstalled?.();
+      if (latest) setNdiStatus(latest);
+    } catch (error) {
+      console.warn('Failed to refresh NDI status:', error);
+    }
+  }, []);
+
+  const handleNdiLaunch = useCallback(async () => {
+    try {
+      const result = await window.electronAPI?.ndi?.launchCompanion();
+      if (result?.success) {
+        setCompanionRunning(true);
+        showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
+      } else {
+        showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
+      }
+    } catch (error) {
+      console.error('NDI launch failed:', error);
+      showToast({ title: 'Launch Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
+    }
+  }, [showToast]);
+
+  const handleNdiStop = useCallback(async () => {
+    try {
+      const result = await window.electronAPI?.ndi?.stopCompanion();
+      if (result?.success) {
+        setCompanionRunning(false);
+        showToast({ title: 'NDI Companion Stopped', message: 'The NDI companion has been stopped.', variant: 'info' });
+      } else {
+        showToast({ title: 'Stop Failed', message: result?.error || 'Could not stop the NDI companion.', variant: 'error' });
+      }
+    } catch (error) {
+      console.error('NDI stop failed:', error);
+      showToast({ title: 'Stop Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
+    }
+  }, [showToast]);
+
+  const handleNdiCheckForUpdate = useCallback(async () => {
+    setNdiCheckingUpdate(true);
+    try {
+      const result = await window.electronAPI?.ndi?.checkForUpdate();
+      if (result) {
+        setNdiUpdateInfo(result);
+        if (result.updateAvailable) {
+          showToast({ title: 'Update Available', message: `NDI Companion v${result.latestVersion} is available.`, variant: 'info' });
+        } else {
+          showToast({ title: 'Up to Date', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
+        }
+      }
+    } catch (error) {
+      console.error('NDI update check failed:', error);
+      showToast({ title: 'Check Failed', message: 'Could not check for updates.', variant: 'warning' });
+    } finally {
+      setNdiCheckingUpdate(false);
+    }
+  }, [showToast]);
+
+  const handleNdiUninstall = useCallback(async () => {
+    if (!confirm('Are you sure you want to uninstall the NDI companion?')) return;
+    try {
+      const result = await window.electronAPI?.ndi?.uninstall();
+      if (result?.success) {
+        setNdiStatus({ installed: false, version: '', installPath: '' });
+        setCompanionRunning(false);
+        setNdiUpdateInfo(null);
+        showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
+      } else {
+        showToast({ title: 'Uninstall Failed', message: result?.error || 'Could not uninstall the NDI companion.', variant: 'error' });
+      }
+    } catch (error) {
+      console.error('NDI uninstall failed:', error);
+      showToast({ title: 'Uninstall Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
+    }
+  }, [showToast]);
 
   if (loading) {
     return (
@@ -851,17 +930,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         );
 
       case 'ndi': {
-        const refreshNdiStatus = async () => {
-          try {
-            const latest = await window.electronAPI?.ndi?.checkInstalled?.();
-            if (latest) {
-              setNdiStatus(latest);
-            }
-          } catch (error) {
-            console.warn('Failed to refresh NDI status:', error);
-          }
-        };
-
         const handleNdiDownload = async () => {
           setIsDownloading(true);
           setDownloadProgress({ percent: 0, status: 'downloading' });
@@ -889,58 +957,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           }
         };
 
-        const handleNdiLaunch = async () => {
-          try {
-            const result = await window.electronAPI?.ndi?.launchCompanion();
-            if (result?.success) {
-              setCompanionRunning(true);
-              showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
-            } else {
-              showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
-            }
-          } catch (error) {
-            console.error('NDI launch failed:', error);
-            showToast({ title: 'Launch Failed', message: error?.message || 'An unexpected error occurred while launching the NDI companion.', variant: 'error' });
-          }
-        };
-
-        const handleNdiStop = async () => {
-          try {
-            const result = await window.electronAPI?.ndi?.stopCompanion();
-            if (result?.success) {
-              setCompanionRunning(false);
-              showToast({ title: 'NDI Companion Stopped', message: 'The NDI companion has been stopped.', variant: 'info' });
-            } else {
-              showToast({ title: 'Stop Failed', message: result?.error || 'Could not stop the NDI companion.', variant: 'error' });
-            }
-          } catch (error) {
-            console.error('NDI stop failed:', error);
-            showToast({ title: 'Stop Failed', message: error?.message || 'An unexpected error occurred while stopping the NDI companion.', variant: 'error' });
-          }
-        };
-
-        const handleNdiUninstall = async () => {
-          if (!confirm('Are you sure you want to uninstall the NDI companion?')) return;
-          try {
-            const result = await window.electronAPI?.ndi?.uninstall();
-            if (result?.success) {
-              setNdiStatus({
-                installed: false,
-                version: '',
-                installPath: '',
-              });
-              setCompanionRunning(false);
-              setNdiUpdateInfo(null);
-              showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
-            } else {
-              showToast({ title: 'Uninstall Failed', message: result?.error || 'Could not uninstall the NDI companion.', variant: 'error' });
-            }
-          } catch (error) {
-            console.error('NDI uninstall failed:', error);
-            showToast({ title: 'Uninstall Failed', message: error?.message || 'An unexpected error occurred while uninstalling the NDI companion.', variant: 'error' });
-          }
-        };
-
         const handleNdiAutoLaunchToggle = async (checked) => {
           try {
             await window.electronAPI?.ndi?.setAutoLaunch(checked);
@@ -948,26 +964,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           } catch (error) {
             console.error('NDI auto-launch toggle failed:', error);
             showToast({ title: 'Setting Failed', message: 'Could not update the auto-launch setting.', variant: 'error' });
-          }
-        };
-
-        const handleNdiCheckForUpdate = async () => {
-          setNdiCheckingUpdate(true);
-          try {
-            const result = await window.electronAPI?.ndi?.checkForUpdate();
-            if (result) {
-              setNdiUpdateInfo(result);
-              if (result.updateAvailable) {
-                showToast({ title: 'Update Available', message: `NDI Companion v${result.latestVersion} is available.`, variant: 'info' });
-              } else {
-                showToast({ title: 'Up to Date', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
-              }
-            }
-          } catch (error) {
-            console.error('NDI update check failed:', error);
-            showToast({ title: 'Check Failed', message: 'Could not check for updates. Please try again later.', variant: 'warning' });
-          } finally {
-            setNdiCheckingUpdate(false);
           }
         };
 
@@ -1188,61 +1184,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   />
                 </div>
 
-                {/* Launch / Stop Buttons */}
-                <div className="flex gap-2">
-                  {!companionRunning ? (
-                    <Button
-                      onClick={handleNdiLaunch}
-                      className={`flex-1 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}
-                    >
-                      <Power className="w-4 h-4 mr-2" />
-                      Launch NDI Companion
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleNdiStop}
-                      className={`flex-1 ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}
-                    >
-                      <Power className="w-4 h-4 mr-2" />
-                      Stop NDI Companion
-                    </Button>
-                  )}
-                </div>
-
-                {/* Check for Updates */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleNdiCheckForUpdate}
-                    disabled={ndiCheckingUpdate}
-                    className="flex-1"
-                  >
-                    {ndiCheckingUpdate ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Checking...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Check for Updates
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Uninstall */}
-                <div className={`pt-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <Button
-                    variant="outline"
-                    onClick={handleNdiUninstall}
-                    className={`w-full ${darkMode ? 'border-red-600/50 text-red-400 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Uninstall NDI Companion
-                  </Button>
-                </div>
-              </div>
+                              </div>
             )}
 
             {/* NDI Trademark Notice */}
@@ -1466,10 +1408,40 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
         {/* Right Pane - Settings (scrollable) */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="mb-6">
+          <div className="mb-6 flex items-center justify-between gap-3">
             <h3 className={`text-lg font-semibold ${labelClass}`}>
               {CATEGORIES.find(c => c.id === activeCategory)?.label}
             </h3>
+            {/* NDI header action buttons */}
+            {activeCategory === 'ndi' && ndiStatus.installed && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!companionRunning ? (
+                  <Tooltip content="Launch the NDI companion process" side="bottom">
+                    <Button size="sm" onClick={handleNdiLaunch} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                      <Power className="w-3.5 h-3.5 mr-1.5" />
+                      Launch
+                    </Button>
+                  </Tooltip>
+                ) : (
+                  <Tooltip content="Stop the NDI companion process" side="bottom">
+                    <Button size="sm" onClick={handleNdiStop} className={`${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}>
+                      <Power className="w-3.5 h-3.5 mr-1.5" />
+                      Stop
+                    </Button>
+                  </Tooltip>
+                )}
+                <Tooltip content="Check for companion updates" side="bottom">
+                  <Button size="sm" variant="outline" onClick={handleNdiCheckForUpdate} disabled={ndiCheckingUpdate}>
+                    {ndiCheckingUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Uninstall NDI companion" side="bottom">
+                  <Button size="sm" variant="outline" onClick={handleNdiUninstall} className={`${darkMode ? 'border-red-600/50 text-red-400 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'}`}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </Tooltip>
+              </div>
+            )}
           </div>
           {renderCategoryContent()}
         </div>
