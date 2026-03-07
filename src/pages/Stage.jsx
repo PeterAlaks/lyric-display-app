@@ -176,6 +176,7 @@ const Stage = () => {
   const {
     fontStyle = 'Bebas Neue',
     backgroundColor = '#000000',
+    letterSpacing = 0,
 
     liveFontSize = 120,
     liveColor = '#FFFFFF',
@@ -464,6 +465,7 @@ const Stage = () => {
       style={{
         backgroundColor,
         fontFamily: fontStyle,
+        letterSpacing: letterSpacing ? `${letterSpacing}px` : undefined,
       }}
     >
       {/* Top Bar - Song Names */}

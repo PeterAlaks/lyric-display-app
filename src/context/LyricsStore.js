@@ -8,6 +8,7 @@ export const defaultOutput1Settings = {
   underline: false,
   allCaps: false,
   textAlign: 'center',
+  letterSpacing: 0,
   fontSize: 48,
   translationFontSizeMode: 'bound',
   translationFontSize: 48,
@@ -55,6 +56,7 @@ export const defaultOutput2Settings = {
   underline: false,
   allCaps: false,
   textAlign: 'center',
+  letterSpacing: 0,
   fontSize: 72,
   translationFontSizeMode: 'bound',
   translationFontSize: 72,
@@ -98,6 +100,7 @@ export const defaultOutput2Settings = {
 export const defaultStageSettings = {
   fontStyle: 'Bebas Neue',
   backgroundColor: '#000000',
+  letterSpacing: 0,
   liveFontSize: 120,
   liveColor: '#FFFFFF',
   liveBold: true,

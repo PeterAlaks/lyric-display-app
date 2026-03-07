@@ -331,6 +331,40 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         />
       </div>
 
+      {/* Letter Tracking */}
+      <div className="flex items-center justify-between gap-4">
+        <Tooltip content="Adjust letter spacing / tracking (-5 to 20 pixels)" side="right">
+          <LabelWithIcon icon={ArrowRightLeft} text="Tracking" darkMode={darkMode} />
+        </Tooltip>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="-5"
+            max="20"
+            step="0.5"
+            value={settings.letterSpacing ?? 0}
+            onChange={(e) => update('letterSpacing', parseFloat(e.target.value))}
+            className="w-24 accent-current"
+          />
+          <Input
+            type="number"
+            value={settings.letterSpacing ?? 0}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              if (!isNaN(val)) {
+                update('letterSpacing', Math.min(20, Math.max(-5, val)));
+              }
+            }}
+            onKeyDown={blurInputOnEnter}
+            min="-5"
+            max="20"
+            step="0.5"
+            className={`w-20 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+          />
+          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>px</span>
+        </div>
+      </div>
+
       {/* Background Color */}
       <div className="flex items-center justify-between gap-4">
         <Tooltip content="Set background color for stage display" side="right">
