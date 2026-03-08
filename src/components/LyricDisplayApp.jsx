@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Volume2, VolumeX, Moon, Sun, Settings } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Moon, Sun, Settings } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -111,7 +111,7 @@ const LyricDisplayApp = () => {
   }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
-  const { showToast, muted, toggleMute } = useToast();
+  const { showToast } = useToast();
   const { showModal } = useModal();
 
   const { isDragging, dragFileCount, handleDragEnter, handleDragLeave, handleDragOver, handleDrop } = useDragAndDrop({
@@ -522,8 +522,8 @@ const LyricDisplayApp = () => {
           {/* Fixed Header Section */}
           <div className={`flex-shrink-0 p-6 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center mb-6">
+              <div className="flex items-center gap-2 w-full">
                 {/* Online Lyrics Search Button */}
                 <Tooltip content={<span>Search and import lyrics from online providers - <strong>Ctrl+Shift+O</strong></span>} side="bottom">
                   <button
@@ -552,16 +552,6 @@ const LyricDisplayApp = () => {
                     onClick={handleSyncOutputs}
                   >
                     <RefreshCw className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-
-                {/* Mute Toast Sounds Button */}
-                <Tooltip content={muted ? "Unmute toast sounds" : "Mute toast sounds"} side="bottom">
-                  <button
-                    className={iconButtonClass(false)}
-                    onClick={toggleMute}
-                  >
-                    {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                   </button>
                 </Tooltip>
 

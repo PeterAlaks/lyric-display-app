@@ -39,6 +39,14 @@ export async function loadPreferencesIntoStore(store) {
         store.getState().setShowTooltips(result.value);
       }
     }
+
+    // Load toast sounds muted preference
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('general.toastSoundsMuted');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setToastSoundsMuted(result.value);
+      }
+    }
   } catch (error) {
     console.warn('[LyricsStore] Failed to load preferences:', error);
   }
@@ -224,6 +232,7 @@ const useLyricsStore = create(
       lyricsTimestamps: [],
       hasSeenIntelligentAutoplayInfo: false,
       showTooltips: true,
+      toastSoundsMuted: false,
       pendingSavedVersion: null,
       maxSetlistFilesVersion: 0,
 
@@ -246,6 +255,7 @@ const useLyricsStore = create(
       setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
       setShowTooltips: (show) => set({ showTooltips: show }),
+      setToastSoundsMuted: (muted) => set({ toastSoundsMuted: muted }),
       setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),

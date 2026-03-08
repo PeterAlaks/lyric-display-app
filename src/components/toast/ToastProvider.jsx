@@ -1,25 +1,13 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
+import useLyricsStore from '../../context/LyricsStore';
 
 export const ToastContext = createContext(null);
 
 let idSeq = 1;
 
 export function ToastProvider({ children, position = 'bottom-right', offset = 20, max = 3, isDark = false }) {
-  const [muted, setMuted] = useState(() => {
-    try {
-      const stored = localStorage.getItem('toast-muted');
-      return stored === 'true';
-    } catch { return false; }
-  });
-
-  const toggleMute = useCallback(() => {
-    setMuted(prev => {
-      const next = !prev;
-      try { localStorage.setItem('toast-muted', String(next)); } catch { }
-      return next;
-    });
-  }, []);
+  const muted = useLyricsStore((state) => state.toastSoundsMuted);
 
   const [toasts, setToasts] = useState([]);
   const removeTimer = useRef(new Map());
@@ -97,7 +85,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     exitTimer.current.clear();
   }, []);
 
-  const value = useMemo(() => ({ show, remove, muted, toggleMute }), [show, remove, muted, toggleMute]);
+  const value = useMemo(() => ({ show, remove }), [show, remove]);
 
   const posStyle = useMemo(() => {
     const base = { position: 'fixed', zIndex: 9999, pointerEvents: 'none' };

@@ -16,6 +16,7 @@ const preferencesStore = new Store({
       rememberLastOpenedPath: true,
       confirmOnClose: true,
       showTooltips: true,
+      toastSoundsMuted: false,
       startMinimized: false,
       minimizeToTray: false,
     },
