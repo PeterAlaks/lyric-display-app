@@ -31,6 +31,7 @@ const ndiStore = new Store({
     version: '',
     installPath: '',
     autoLaunch: false,
+    pendingUpdateInfo: null,
     ipc: {
       host: DEFAULT_IPC_HOST,
       port: DEFAULT_IPC_PORT,
@@ -320,6 +321,23 @@ function compareVersions(a, b) {
 }
 
 async function checkForCompanionUpdate() {
+  // Skip GitHub checks in development mode
+  if (isDev) {
+    const status = checkInstalled();
+    const currentVersion = status.version || '';
+    return {
+      updateAvailable: false,
+      latestVersion: currentVersion,
+      currentVersion,
+      downloadUrl: null,
+      downloadSize: 0,
+      releaseNotes: '[Development Mode] Using local companion source',
+      releaseName: '',
+      releaseDate: '',
+      htmlUrl: '',
+    };
+  }
+
   const now = Date.now();
   if (latestReleaseCache && (now - lastReleaseCheck) < RELEASE_CHECK_INTERVAL) {
     return latestReleaseCache;
@@ -746,6 +764,24 @@ function setOutputSetting(outputKey, key, value) {
   return { success: true };
 }
 
+// ============ Pending Update State ============
+
+function storePendingUpdateInfo(updateInfo) {
+  if (updateInfo && updateInfo.updateAvailable) {
+    ndiStore.set('pendingUpdateInfo', updateInfo);
+    return true;
+  }
+  return false;
+}
+
+function getPendingUpdateInfo() {
+  return ndiStore.get('pendingUpdateInfo') || null;
+}
+
+function clearPendingUpdateInfo() {
+  ndiStore.set('pendingUpdateInfo', null);
+}
+
 // ============ Helpers ============
 
 function notifyAllWindows(channel, data) {
@@ -764,11 +800,18 @@ function notifyAllWindows(channel, data) {
 
 async function performStartupUpdateCheck() {
   try {
+    // Skip update checks in development mode (same as main app updater)
+    if (isDev) {
+      console.log('[NDI] Skipping startup update check in development mode');
+      return;
+    }
+
     const status = checkInstalled();
     if (!status.installed) return;
     const updateInfo = await checkForCompanionUpdate();
     if (updateInfo.updateAvailable) {
       console.log(`[NDI] Companion update available: v${updateInfo.currentVersion} -> v${updateInfo.latestVersion}`);
+      storePendingUpdateInfo(updateInfo);
       notifyAllWindows('ndi:update-available', updateInfo);
     }
   } catch (error) {
@@ -850,6 +893,13 @@ export function registerNdiIpcHandlers() {
   });
 
   ipcMain.handle('ndi:set-framerate', (_, { outputKey, framerate }) => setOutputSetting(outputKey, 'framerate', framerate));
+
+  ipcMain.handle('ndi:get-pending-update-info', () => getPendingUpdateInfo());
+
+  ipcMain.handle('ndi:clear-pending-update-info', () => {
+    clearPendingUpdateInfo();
+    return { success: true };
+  });
 
   console.log('[NDI] IPC handlers registered');
 }

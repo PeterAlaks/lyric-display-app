@@ -343,7 +343,11 @@ function NdiCompanionUpdaterBridge() {
           {
             label: 'Later',
             variant: 'outline',
-            value: 'later'
+            value: 'later',
+            onSelect: async () => {
+              // Keep the pending update info so it appears again if the preferences modal is reopened
+              // User explicitly chose "Later", so we leave the state intact
+            }
           },
           {
             label: 'Update Now',
@@ -360,6 +364,10 @@ function NdiCompanionUpdaterBridge() {
 
                 const result = await window.electronAPI.ndi.updateCompanion();
                 if (result?.success) {
+                  // Clear pending update info after successful update
+                  if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
+                    await window.electronAPI.ndi.clearPendingUpdateInfo();
+                  }
                   showToast({
                     title: 'NDI Companion Updated',
                     message: `Updated to v${result.version}. You can relaunch it from Preferences → NDI.`,

@@ -330,6 +330,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
+    getPendingUpdateInfo: () => ipcRenderer.invoke('ndi:get-pending-update-info'),
+    clearPendingUpdateInfo: () => ipcRenderer.invoke('ndi:clear-pending-update-info'),
   },
 
   // User Preferences

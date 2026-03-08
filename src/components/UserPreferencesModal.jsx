@@ -96,6 +96,14 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           }
         }
 
+        // Load any pending update info from the store
+        if (window.electronAPI?.ndi?.getPendingUpdateInfo) {
+          const pendingUpdate = await window.electronAPI.ndi.getPendingUpdateInfo();
+          if (pendingUpdate?.updateAvailable) {
+            setNdiUpdateInfo(pendingUpdate);
+          }
+        }
+
         if (window.electronAPI?.ndi?.onCompanionStatus) {
           cleanupCompanionStatus = window.electronAPI.ndi.onCompanionStatus((status) => {
             if (typeof status?.running === 'boolean') {
@@ -1001,6 +1009,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               await refreshNdiStatus();
               setNdiUpdateInfo(null);
               setCompanionRunning(false);
+              // Clear pending update info from store
+              if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
+                await window.electronAPI.ndi.clearPendingUpdateInfo();
+              }
               showToast({ title: 'NDI Companion Updated', message: `Updated to v${result.version}. You can relaunch it now.`, variant: 'success' });
             } else {
               showToast({ title: 'Update Failed', message: result?.error || 'Could not update the NDI companion.', variant: 'error' });
