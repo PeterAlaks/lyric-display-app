@@ -89,7 +89,7 @@ export function getAllPreferences() {
       general: preferencesStore.get('general'),
       parsing: preferencesStore.get('parsing'),
       lineSplitting: preferencesStore.get('lineSplitting'),
-      externalControls: preferencesStore.get('externalControls'),
+      externalControl: preferencesStore.get('externalControl'),
       autoplay: preferencesStore.get('autoplay'),
       fileHandling: preferencesStore.get('fileHandling'),
       advanced: preferencesStore.get('advanced'),

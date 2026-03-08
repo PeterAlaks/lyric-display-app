@@ -24,7 +24,7 @@ const CATEGORIES = [
   { id: 'parsing', label: 'Lyrics Parsing', icon: FileText },
   { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
-  { id: 'externalControls', label: 'External Controls', icon: Radio },
+  { id: 'externalControl', label: 'External Control', icon: Radio },
   { id: 'ndi', label: 'NDI', icon: Cast },
   { id: 'autoplay', label: 'Autoplay', icon: Play },
   { id: 'advanced', label: 'Advanced', icon: AlertTriangle },
@@ -197,7 +197,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     });
   }, [savePreferences]);
 
-  // Update nested preference (for external controls)
+  // Update nested preference (for external control)
   const updateNestedPreference = useCallback((category, subcategory, key, value) => {
     setPreferences(prev => {
       const newPreferences = {
@@ -291,11 +291,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       if (midiStatus?.enabled) {
         await window.electronAPI?.midi?.disable();
         setMidiStatus(prev => ({ ...prev, enabled: false }));
-        updateNestedPreference('externalControls', 'midi', 'enabled', false);
+        updateNestedPreference('externalControl', 'midi', 'enabled', false);
       } else {
         await window.electronAPI?.midi?.enable();
         setMidiStatus(prev => ({ ...prev, enabled: true }));
-        updateNestedPreference('externalControls', 'midi', 'enabled', true);
+        updateNestedPreference('externalControl', 'midi', 'enabled', true);
       }
     } catch (error) {
       console.error('Failed to toggle MIDI:', error);
@@ -334,11 +334,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       if (oscStatus?.enabled) {
         await window.electronAPI?.osc?.disable();
         setOscStatus(prev => ({ ...prev, enabled: false }));
-        updateNestedPreference('externalControls', 'osc', 'enabled', false);
+        updateNestedPreference('externalControl', 'osc', 'enabled', false);
       } else {
         await window.electronAPI?.osc?.enable();
         setOscStatus(prev => ({ ...prev, enabled: true }));
-        updateNestedPreference('externalControls', 'osc', 'enabled', true);
+        updateNestedPreference('externalControl', 'osc', 'enabled', true);
       }
     } catch (error) {
       console.error('Failed to toggle OSC:', error);
@@ -350,7 +350,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       const result = await window.electronAPI?.osc?.setPort(parseInt(port));
       if (result.success) {
         setOscStatus(prev => ({ ...prev, port: parseInt(port) }));
-        updateNestedPreference('externalControls', 'osc', 'port', parseInt(port));
+        updateNestedPreference('externalControl', 'osc', 'port', parseInt(port));
       }
     } catch (error) {
       console.error('Failed to set OSC port:', error);
@@ -362,7 +362,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       const result = await window.electronAPI?.osc?.setFeedbackPort(parseInt(port));
       if (result.success) {
         setOscStatus(prev => ({ ...prev, feedbackPort: parseInt(port) }));
-        updateNestedPreference('externalControls', 'osc', 'feedbackPort', parseInt(port));
+        updateNestedPreference('externalControl', 'osc', 'feedbackPort', parseInt(port));
       }
     } catch (error) {
       console.error('Failed to set OSC feedback port:', error);
@@ -374,7 +374,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       const newValue = !oscStatus?.feedbackEnabled;
       await window.electronAPI?.osc?.setFeedbackEnabled(newValue);
       setOscStatus(prev => ({ ...prev, feedbackEnabled: newValue }));
-      updateNestedPreference('externalControls', 'osc', 'feedbackEnabled', newValue);
+      updateNestedPreference('externalControl', 'osc', 'feedbackEnabled', newValue);
     } catch (error) {
       console.error('Failed to toggle OSC feedback:', error);
     }
@@ -787,7 +787,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           </div>
         );
 
-      case 'externalControls':
+      case 'externalControl':
         return (
           <div className="space-y-6">
             {/* MIDI Section */}
