@@ -15,10 +15,11 @@ import useFullscreenBackground from '../hooks/OutputSettingsPanel/useFullscreenB
 import useAdvancedSectionPersistence from '../hooks/OutputSettingsPanel/useAdvancedSectionPersistence';
 import useTypographyAndBands from '../hooks/OutputSettingsPanel/useTypographyAndBands';
 import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenModeState';
-import { Type, PaintBucket, Contrast, TextCursorInput, Square, Frame, Move, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Palette, Power, TextAlignJustify, SquareMenu, ArrowRightLeft, Save } from 'lucide-react';
+import { Type, PaintBucket, Contrast, TextCursorInput, Square, Frame, Move, AlignVerticalSpaceAround, ScreenShare, ListStart, ArrowUpDown, Rows3, MoveHorizontal, MoveVertical, Sparkles, Languages, Palette, Power, TextAlignJustify, SquareMenu, ArrowRightLeft, Save, BetweenVerticalEnd } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
 import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
+import { Slider } from '@/components/ui/slider';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true, darkMode }) => (
@@ -739,29 +740,6 @@ const OutputSettingsPanel = ({ outputKey }) => {
         onChange={(val) => update('fontStyle', val)}
       />
 
-      {/* Bold / Italic / Underline / All Caps */}
-      <EmphasisRow
-        darkMode={darkMode}
-        icon={SquareMenu}
-        boldValue={settings.bold}
-        italicValue={settings.italic}
-        underlineValue={settings.underline}
-        allCapsValue={settings.allCaps}
-        onBoldChange={(val) => update('bold', val)}
-        onItalicChange={(val) => update('italic', val)}
-        onUnderlineChange={(val) => update('underline', val)}
-        onAllCapsChange={(val) => update('allCaps', val)}
-      />
-
-      {/* Text Alignment */}
-      <AlignmentRow
-        darkMode={darkMode}
-        icon={TextAlignJustify}
-        value={settings.textAlign}
-        onChange={(val) => update('textAlign', val)}
-        tooltip="Text alignment for lyrics display"
-      />
-
       {/* Font Size */}
       <div className="flex items-center justify-between gap-4">
         <Tooltip content="Adjust text size in pixels (24-100)" side="right">
@@ -1061,6 +1039,61 @@ const OutputSettingsPanel = ({ outputKey }) => {
             onChange={(val) => update('translationLineColor', val)}
             darkMode={darkMode}
             className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+          />
+        </div>
+      </div>
+
+      {/* Bold / Italic / Underline / All Caps */}
+      <EmphasisRow
+        darkMode={darkMode}
+        icon={SquareMenu}
+        boldValue={settings.bold}
+        italicValue={settings.italic}
+        underlineValue={settings.underline}
+        allCapsValue={settings.allCaps}
+        onBoldChange={(val) => update('bold', val)}
+        onItalicChange={(val) => update('italic', val)}
+        onUnderlineChange={(val) => update('underline', val)}
+        onAllCapsChange={(val) => update('allCaps', val)}
+      />
+
+      {/* Text Alignment */}
+      <AlignmentRow
+        darkMode={darkMode}
+        icon={TextAlignJustify}
+        value={settings.textAlign}
+        onChange={(val) => update('textAlign', val)}
+        tooltip="Text alignment for lyrics display"
+      />
+
+      {/* Letter Spacing */}
+      <div className="flex items-center justify-between gap-4">
+        <Tooltip content="Adjust letter spacing (-5 to 20 pixels)" side="right">
+          <LabelWithIcon icon={BetweenVerticalEnd} text="Letter Spacing" darkMode={darkMode} />
+        </Tooltip>
+        <div className="flex items-center gap-2">
+          <Slider
+            min={-5}
+            max={20}
+            step={0.5}
+            value={[settings.letterSpacing ?? 0]}
+            onValueChange={([val]) => update('letterSpacing', val)}
+            className="w-24"
+          />
+          <Input
+            type="number"
+            value={settings.letterSpacing ?? 0}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              if (!isNaN(val)) {
+                update('letterSpacing', Math.min(20, Math.max(-5, val)));
+              }
+            }}
+            onKeyDown={blurInputOnEnter}
+            min="-5"
+            max="20"
+            step="0.5"
+            className={`w-20 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
           />
         </div>
       </div>

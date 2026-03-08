@@ -6,9 +6,10 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
-import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge, Save } from 'lucide-react';
+import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge, Save, BetweenVerticalEnd } from 'lucide-react';
 import FontSelect from './FontSelect';
 import { blurInputOnEnter, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
+import { Slider } from '@/components/ui/slider';
 import useToast from '../hooks/useToast';
 import { sanitizeIntegerInput } from '../utils/numberInput';
 
@@ -93,6 +94,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       underlineKey: 'liveUnderline',
       allCapsKey: 'liveAllCaps',
       alignKey: 'liveAlign',
+      letterSpacingKey: 'liveLetterSpacing',
       tooltip: 'Font size and color for current lyric line',
       alignTooltip: 'Text alignment for current line',
       extra: (
@@ -118,6 +120,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       underlineKey: 'nextUnderline',
       allCapsKey: 'nextAllCaps',
       alignKey: 'nextAlign',
+      letterSpacingKey: 'nextLetterSpacing',
       tooltip: 'Font size and color for upcoming lyric line',
       alignTooltip: 'Text alignment for upcoming line',
       extra: (
@@ -156,6 +159,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       underlineKey: 'prevUnderline',
       allCapsKey: 'prevAllCaps',
       alignKey: 'prevAlign',
+      letterSpacingKey: 'prevLetterSpacing',
       tooltip: 'Font size and color for previous lyric line',
       alignTooltip: 'Text alignment for previous line'
     }
@@ -198,6 +202,38 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         onChange={(val) => update(section.alignKey, val)}
         tooltip={section.alignTooltip || 'Text alignment'}
       />
+
+      {/* Letter Spacing */}
+      <div className="flex items-center justify-between gap-4">
+        <Tooltip content="Adjust letter spacing (-5 to 20 pixels)" side="right">
+          <LabelWithIcon icon={BetweenVerticalEnd} text="Letter Spacing" darkMode={darkMode} />
+        </Tooltip>
+        <div className="flex items-center gap-2">
+          <Slider
+            min={-5}
+            max={20}
+            step={0.5}
+            value={[settings[section.letterSpacingKey] ?? 0]}
+            onValueChange={([val]) => update(section.letterSpacingKey, val)}
+            className="w-24"
+          />
+          <Input
+            type="number"
+            value={settings[section.letterSpacingKey] ?? 0}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              if (!isNaN(val)) {
+                update(section.letterSpacingKey, Math.min(20, Math.max(-5, val)));
+              }
+            }}
+            onKeyDown={blurInputOnEnter}
+            min="-5"
+            max="20"
+            step="0.5"
+            className={`w-20 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+          />
+        </div>
+      </div>
 
       {section.extra}
     </>

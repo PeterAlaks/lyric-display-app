@@ -184,6 +184,7 @@ const Stage = () => {
     liveUnderline = false,
     liveAllCaps = false,
     liveAlign = 'left',
+    liveLetterSpacing = 0,
 
     nextFontSize = 72,
     nextColor = '#808080',
@@ -192,6 +193,7 @@ const Stage = () => {
     nextUnderline = false,
     nextAllCaps = false,
     nextAlign = 'left',
+    nextLetterSpacing = 0,
     showNextArrow = true,
     nextArrowColor = '#FFA500',
 
@@ -202,6 +204,7 @@ const Stage = () => {
     prevUnderline = false,
     prevAllCaps = false,
     prevAlign = 'left',
+    prevLetterSpacing = 0,
 
     currentSongColor = '#FFFFFF',
     currentSongSize = 24,
@@ -662,6 +665,7 @@ const Stage = () => {
                     style={{
                       fontWeight: prevBold ? 'bold' : 'normal',
                       textAlign: getTextAlign(prevAlign),
+                      letterSpacing: prevLetterSpacing ? `${prevLetterSpacing}px` : undefined,
                     }}
                   >
                     {renderLineContent(getLineText(currentLine - 1), prevColor, responsivePrevFontSize, 'prev')}
@@ -693,6 +697,7 @@ const Stage = () => {
                     color: liveColor,
                     fontWeight: liveBold ? 'bold' : 'normal',
                     textAlign: getTextAlign(liveAlign),
+                    letterSpacing: liveLetterSpacing ? `${liveLetterSpacing}px` : undefined,
                   }}
                 >
                   {renderLineContent(getLineText(currentLine), liveColor, responsiveLiveFontSize, 'live')}
@@ -756,6 +761,7 @@ const Stage = () => {
                       style={{
                         fontWeight: nextBold ? 'bold' : 'normal',
                         textAlign: getTextAlign(nextAlign),
+                        letterSpacing: nextLetterSpacing ? `${nextLetterSpacing}px` : undefined,
                       }}
                     >
                       {renderLineContent(getLineText(currentLine + 1), nextColor, responsiveNextFontSize, 'next')}

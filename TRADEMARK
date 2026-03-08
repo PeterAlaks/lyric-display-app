@@ -1,0 +1,27 @@
+LyricDisplay Trademark Policy
+
+The LyricDisplay name and associated logos, icons, and other brand assets
+(collectively, the "LyricDisplay Trademarks") are trademarks of the
+LyricDisplay project owner(s).
+
+This repository's source code is licensed under the GNU General Public
+License, version 2 (GPL-2.0). The GPL license does not grant permission to
+use the LyricDisplay Trademarks.
+
+Permission is granted to use the LyricDisplay Trademarks only to:
+- refer to the unmodified project and official releases, and/or
+- describe that your software is based on or derived from this project in a
+  factual, non-misleading manner.
+
+You may NOT, without prior written permission:
+- distribute modified versions using the LyricDisplay name, logos, or other
+  branding, or any confusingly similar name/branding;
+- distribute any software (modified or unmodified) in a way that implies it
+  is official, endorsed by, or affiliated with LyricDisplay when it is not;
+- use the LyricDisplay Trademarks in advertising or promotions for your
+  derivative works, forks, or distributions.
+
+Forks and redistributions must use their own name, logos, and branding.
+
+All goodwill associated with the LyricDisplay Trademarks remains with the
+LyricDisplay project owner(s).
