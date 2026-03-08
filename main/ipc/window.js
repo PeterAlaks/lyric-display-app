@@ -5,7 +5,7 @@ import { ipcMain } from 'electron';
  * Handles window operations like minimize, maximize, close, fullscreen, devtools, zoom
  */
 export function registerWindowHandlers({ getMainWindow, updateUndoRedoState }) {
-  
+
   ipcMain.on('undo-redo-state', (_event, { canUndo, canRedo }) => {
     if (typeof updateUndoRedoState === 'function') {
       updateUndoRedoState({ canUndo, canRedo });
@@ -15,11 +15,11 @@ export function registerWindowHandlers({ getMainWindow, updateUndoRedoState }) {
   ipcMain.handle('window:minimize', () => {
     const win = getMainWindow?.();
     if (win && !win.isDestroyed()) {
-      try { 
-        win.minimize(); 
-        return { success: true }; 
-      } catch (error) { 
-        return { success: false, error: error.message }; 
+      try {
+        win.minimize();
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
       }
     }
     return { success: false, error: 'No window' };
@@ -39,8 +39,8 @@ export function registerWindowHandlers({ getMainWindow, updateUndoRedoState }) {
         isFullScreen: win.isFullScreen(),
         isFocused: win.isFocused()
       };
-      try { 
-        win.webContents.send('window-state', payload); 
+      try {
+        win.webContents.send('window-state', payload);
       } catch { }
       return { success: true, ...payload };
     } catch (error) {
@@ -51,11 +51,11 @@ export function registerWindowHandlers({ getMainWindow, updateUndoRedoState }) {
   ipcMain.handle('window:close', () => {
     const win = getMainWindow?.();
     if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
-    try { 
-      win.close(); 
-      return { success: true }; 
-    } catch (error) { 
-      return { success: false, error: error.message }; 
+    try {
+      win.close();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   });
 
@@ -65,6 +65,14 @@ export function registerWindowHandlers({ getMainWindow, updateUndoRedoState }) {
     try {
       const next = !win.isFullScreen();
       win.setFullScreen(next);
+
+      try {
+        win.webContents.send('window-state', {
+          isMaximized: win.isMaximized(),
+          isFullScreen: next,
+          isFocused: win.isFocused()
+        });
+      } catch { }
       return { success: true, isFullScreen: next };
     } catch (error) {
       return { success: false, error: error.message };
@@ -74,11 +82,11 @@ export function registerWindowHandlers({ getMainWindow, updateUndoRedoState }) {
   ipcMain.handle('window:reload', () => {
     const win = getMainWindow?.();
     if (!win || win.isDestroyed()) return { success: false, error: 'No window' };
-    try { 
-      win.reload(); 
-      return { success: true }; 
-    } catch (error) { 
-      return { success: false, error: error.message }; 
+    try {
+      win.reload();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   });
 

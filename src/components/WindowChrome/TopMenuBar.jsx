@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Minus, Square, Copy, X } from 'lucide-react';
+import { Minus, Square, Copy, X, Minimize2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useTopMenuState from '@/hooks/WindowChrome/useTopMenuState';
@@ -199,6 +199,17 @@ const TopMenuBar = () => {
     return () => unsubscribe?.();
   }, []);
 
+  // Refresh window state from the main process
+  const refreshWindowState = useCallback(() => {
+    window.electronAPI?.windowControls?.getState?.()
+      .then((res) => {
+        if (res?.success && res.state) {
+          setWindowState(res.state);
+        }
+      })
+      .catch(() => { });
+  }, []);
+
   useEffect(() => {
     const unsubscribe = window.electronAPI?.onWindowState?.((state) => {
       if (state) {
@@ -206,16 +217,24 @@ const TopMenuBar = () => {
       }
     });
 
-    window.electronAPI?.windowControls?.getState?.()
-      .then((res) => {
-        if (res?.success && res.state) {
-          setWindowState(res.state);
-        }
-      })
-      .catch((error) => console.warn('Failed to get window state:', error));
+    refreshWindowState();
 
     return () => unsubscribe?.();
-  }, []);
+  }, [refreshWindowState]);
+
+  // Listen for fullscreen toggle from F11 key (handled in useMenuShortcuts)
+  // and re-check state after a delay to catch async Windows fullscreen transitions
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'F11') {
+
+        setTimeout(refreshWindowState, 300);
+        setTimeout(refreshWindowState, 600);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [refreshWindowState]);
 
   useEffect(() => {
     let isMounted = true;
@@ -247,6 +266,20 @@ const TopMenuBar = () => {
   const handleMaximizeToggle = () => {
     menuHandlers.handleMaximizeToggle(setWindowState);
   };
+
+  const handleFullscreenToggle = useCallback(async () => {
+    closeMenu();
+    try {
+      const result = await window.electronAPI?.windowControls?.toggleFullscreen?.();
+      if (result?.success && typeof result.isFullScreen === 'boolean') {
+        setWindowState((prev) => ({ ...prev, isFullScreen: result.isFullScreen }));
+      }
+
+      setTimeout(refreshWindowState, 300);
+    } catch (error) {
+      console.warn('Failed to toggle fullscreen:', error);
+    }
+  }, [closeMenu, refreshWindowState]);
 
   const handleAbout = () => {
     menuHandlers.handleAbout(appVersion);
@@ -296,6 +329,33 @@ const TopMenuBar = () => {
     const cfg = menuConfig?.[menuId];
     return cfg ? buildMenuHandler(menuId) : undefined;
   }, [buildMenuHandler, menuConfig]);
+
+  const isFullScreen = windowState.isFullScreen;
+
+  if (isFullScreen) {
+    return (
+      <div
+        ref={barRef}
+        className={`relative z-[1500] h-9 flex items-center justify-center border-b text-[12px] ${darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-100' : 'bg-slate-50/95 border-slate-200 text-slate-900'}`}
+        style={dragRegion}
+      >
+        <button
+          type="button"
+          onClick={handleFullscreenToggle}
+          style={noDrag}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium transition-all duration-150 border ${darkMode
+            ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white hover:border-slate-600'
+            : 'bg-white/80 border-slate-300 text-slate-600 hover:bg-white hover:text-slate-900 hover:border-slate-400'
+            }`}
+          title="Exit Fullscreen (F11)"
+          aria-label="Exit Fullscreen"
+        >
+          <Minimize2 className="w-3 h-3" />
+          Exit Fullscreen
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -526,7 +586,7 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('view', 4, el)} label="Zoom Out" shortcut="Ctrl/Cmd -" onClick={() => menuHandlers.handleZoom('out')} active={openMenu === 'view' && activeIndex === 4} />
                 <MenuItem ref={(el) => registerItemRef('view', 5, el)} label="Reset Zoom" shortcut="Ctrl/Cmd 0" onClick={() => menuHandlers.handleZoom('reset')} active={openMenu === 'view' && activeIndex === 5} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('view', 6, el)} label="Toggle Fullscreen" shortcut="F11" onClick={menuHandlers.handleFullscreen} active={openMenu === 'view' && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('view', 6, el)} label="Toggle Fullscreen" shortcut="F11" onClick={handleFullscreenToggle} active={openMenu === 'view' && activeIndex === 6} />
               </div>
             )}
           </div>
