@@ -124,6 +124,18 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
 
             {/* Content Card */}
             <div className={contentClasses}>
+                {/* Always-visible close button */}
+                <button
+                    onClick={handleClose}
+                    className={`absolute top-4 right-4 z-30 p-2 rounded-full transition-all duration-300 ${scrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'} ${darkMode
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
+                    aria-label="Close welcome screen"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+
                 {/* Collapsed Header (shown when scrolled) */}
                 <div
                     className={`absolute top-0 left-0 right-0 z-20 px-6 py-3 flex items-center justify-between border-b transition-opacity duration-500 ease-out ${darkMode ? 'bg-gray-900/98 border-gray-700 backdrop-blur-md' : 'bg-white/98 border-gray-200 backdrop-blur-md'
