@@ -2,9 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Monitor, Video, Cast, Check, Network, Copy } from 'lucide-react';
 
+/**
+ * Detect the current platform.
+ * Returns 'win32', 'darwin', or 'linux'.
+ */
+function usePlatform() {
+    const [platform, setPlatform] = useState('win32');
+    useEffect(() => {
+        const p = window.electronAPI?.getPlatform?.();
+        if (p) setPlatform(p);
+    }, []);
+    return platform;
+}
+
 export function IntegrationInstructions({ darkMode }) {
     const [localIP, setLocalIP] = useState('localhost');
     const [activeTab, setActiveTab] = useState('obs');
+    const platform = usePlatform();
 
     useEffect(() => {
         if (window.electronAPI?.getLocalIP) {
@@ -13,6 +27,16 @@ export function IntegrationInstructions({ darkMode }) {
             }).catch(() => { });
         }
     }, []);
+
+    // vMix is Windows-only; Wirecast is Windows + macOS
+    const showVmix = platform === 'win32';
+    const showWirecast = platform === 'win32' || platform === 'darwin';
+
+    // If the active tab becomes hidden due to platform, reset to OBS
+    useEffect(() => {
+        if (activeTab === 'vmix' && !showVmix) setActiveTab('obs');
+        if (activeTab === 'wirecast' && !showWirecast) setActiveTab('obs');
+    }, [platform, activeTab, showVmix, showWirecast]);
 
     return (
         <div className="flex flex-col h-full">
@@ -27,20 +51,24 @@ export function IntegrationInstructions({ darkMode }) {
                             <Monitor className="w-4 h-4" />
                             <span className="font-medium">OBS Studio</span>
                         </TabsTrigger>
-                        <TabsTrigger
-                            value="vmix"
-                            className={`flex-1 h-10 gap-2 ${darkMode ? 'data-[state=active]:bg-gray-100' : 'data-[state=active]:bg-white'}`}
-                        >
-                            <Video className="w-4 h-4" />
-                            <span className="font-medium">vMix</span>
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="wirecast"
-                            className={`flex-1 h-10 gap-2 ${darkMode ? 'data-[state=active]:bg-gray-100' : 'data-[state=active]:bg-white'}`}
-                        >
-                            <Cast className="w-4 h-4" />
-                            <span className="font-medium">Wirecast</span>
-                        </TabsTrigger>
+                        {showVmix && (
+                            <TabsTrigger
+                                value="vmix"
+                                className={`flex-1 h-10 gap-2 ${darkMode ? 'data-[state=active]:bg-gray-100' : 'data-[state=active]:bg-white'}`}
+                            >
+                                <Video className="w-4 h-4" />
+                                <span className="font-medium">vMix</span>
+                            </TabsTrigger>
+                        )}
+                        {showWirecast && (
+                            <TabsTrigger
+                                value="wirecast"
+                                className={`flex-1 h-10 gap-2 ${darkMode ? 'data-[state=active]:bg-gray-100' : 'data-[state=active]:bg-white'}`}
+                            >
+                                <Cast className="w-4 h-4" />
+                                <span className="font-medium">Wirecast</span>
+                            </TabsTrigger>
+                        )}
                     </TabsList>
                 </Tabs>
             </div>
@@ -49,22 +77,199 @@ export function IntegrationInstructions({ darkMode }) {
             <div className="flex-1 overflow-y-auto pt-6 px-1 min-h-0">
                 <Tabs value={activeTab}>
                     <TabsContent value="obs" className="mt-0">
-                        <OBSInstructions darkMode={darkMode} localIP={localIP} />
+                        <OBSInstructions darkMode={darkMode} localIP={localIP} platform={platform} />
                     </TabsContent>
-                    <TabsContent value="vmix" className="mt-0">
-                        <VMixInstructions darkMode={darkMode} localIP={localIP} />
-                    </TabsContent>
-                    <TabsContent value="wirecast" className="mt-0">
-                        <WirecastInstructions darkMode={darkMode} localIP={localIP} />
-                    </TabsContent>
+                    {showVmix && (
+                        <TabsContent value="vmix" className="mt-0">
+                            <VMixInstructions darkMode={darkMode} localIP={localIP} platform={platform} />
+                        </TabsContent>
+                    )}
+                    {showWirecast && (
+                        <TabsContent value="wirecast" className="mt-0">
+                            <WirecastInstructions darkMode={darkMode} localIP={localIP} platform={platform} />
+                        </TabsContent>
+                    )}
                 </Tabs>
             </div>
         </div>
     );
 }
 
-// OBS Instructions
-function OBSInstructions({ darkMode, localIP }) {
+// ─── Platform-aware helper components ────────────────────────────────────────
+
+function ModifierKey({ platform }) {
+    return platform === 'darwin' ? 'Cmd' : 'Ctrl';
+}
+
+function StaticIPSteps({ darkMode, localIP, platform }) {
+    if (platform === 'darwin') {
+        return (
+            <SubSteps darkMode={darkMode}>
+                <SubStep darkMode={darkMode}>Open <Strong>System Settings</Strong> (or System Preferences on older macOS)</SubStep>
+                <SubStep darkMode={darkMode}>Go to <Strong>Network</Strong></SubStep>
+                <SubStep darkMode={darkMode}>Select your active connection (Wi-Fi or Ethernet)</SubStep>
+                <SubStep darkMode={darkMode}>Click <Strong>Details…</Strong> → <Strong>TCP/IP</Strong></SubStep>
+                <SubStep darkMode={darkMode}>Change "Configure IPv4" to <Strong>Manually</Strong></SubStep>
+                <SubStep darkMode={darkMode}>IP Address: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Subnet Mask: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Router: Usually <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> or <InlineCode darkMode={darkMode}>192.168.0.1</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Click <Strong>OK</Strong>, then <Strong>Apply</Strong></SubStep>
+            </SubSteps>
+        );
+    }
+    if (platform === 'linux') {
+        return (
+            <SubSteps darkMode={darkMode}>
+                <SubStep darkMode={darkMode}>Open your network manager (e.g. <Strong>Settings → Network</Strong> on GNOME, or <Strong>System Settings → Connections</Strong> on KDE)</SubStep>
+                <SubStep darkMode={darkMode}>Select your active connection and click the gear/edit icon</SubStep>
+                <SubStep darkMode={darkMode}>Go to the <Strong>IPv4</Strong> tab</SubStep>
+                <SubStep darkMode={darkMode}>Change Method to <Strong>Manual</Strong></SubStep>
+                <SubStep darkMode={darkMode}>Address: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Netmask: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Gateway: Usually <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> or <InlineCode darkMode={darkMode}>192.168.0.1</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Save and reconnect</SubStep>
+            </SubSteps>
+        );
+    }
+    // Windows (default)
+    return (
+        <SubSteps darkMode={darkMode}>
+            <SubStep darkMode={darkMode}>Open Windows Settings → Network & Internet</SubStep>
+            <SubStep darkMode={darkMode}>Click your connection (Ethernet or Wi-Fi)</SubStep>
+            <SubStep darkMode={darkMode}>Click "Edit" next to IP assignment</SubStep>
+            <SubStep darkMode={darkMode}>Choose "Manual" and enter IP: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
+            <SubStep darkMode={darkMode}>Subnet mask: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
+            <SubStep darkMode={darkMode}>Gateway: Usually <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> or <InlineCode darkMode={darkMode}>192.168.0.1</InlineCode></SubStep>
+            <SubStep darkMode={darkMode}>Click Save</SubStep>
+        </SubSteps>
+    );
+}
+
+function FirewallSteps({ darkMode, platform }) {
+    if (platform === 'darwin') {
+        return (
+            <>
+                <Step number={3} darkMode={darkMode}>
+                    Allow LyricDisplay through your firewall:
+                    <SubSteps darkMode={darkMode}>
+                        <SubStep darkMode={darkMode}>Open <Strong>System Settings</Strong> → <Strong>Network</Strong> → <Strong>Firewall</Strong></SubStep>
+                        <SubStep darkMode={darkMode}>If the firewall is on, click <Strong>Options…</Strong></SubStep>
+                        <SubStep darkMode={darkMode}>Click <Strong>+</Strong> and add <Strong>LyricDisplay</Strong> from your Applications folder</SubStep>
+                        <SubStep darkMode={darkMode}>Set it to <Strong>Allow incoming connections</Strong></SubStep>
+                    </SubSteps>
+                    <Hint darkMode={darkMode}>If the firewall is off, you can skip this step — connections are already allowed</Hint>
+                </Step>
+            </>
+        );
+    }
+    if (platform === 'linux') {
+        return (
+            <>
+                <Step number={3} darkMode={darkMode}>
+                    Allow LyricDisplay through your firewall:
+                    <SubSteps darkMode={darkMode}>
+                        <SubStep darkMode={darkMode}>If using <Strong>ufw</Strong> (Ubuntu/Debian): run <InlineCode darkMode={darkMode}>sudo ufw allow 4000/tcp</InlineCode></SubStep>
+                        <SubStep darkMode={darkMode}>If using <Strong>firewalld</Strong> (Fedora/RHEL): run <InlineCode darkMode={darkMode}>sudo firewall-cmd --add-port=4000/tcp --permanent && sudo firewall-cmd --reload</InlineCode></SubStep>
+                        <SubStep darkMode={darkMode}>If you have no firewall configured, you can skip this step</SubStep>
+                    </SubSteps>
+                    <Hint darkMode={darkMode}>This lets other computers on your network talk to LyricDisplay</Hint>
+                </Step>
+            </>
+        );
+    }
+    // Windows (default)
+    return (
+        <>
+            <Step number={3} darkMode={darkMode}>
+                Allow LyricDisplay through your firewall:
+                <SubSteps darkMode={darkMode}>
+                    <SubStep darkMode={darkMode}>Search "Windows Defender Firewall" in Start menu</SubStep>
+                    <SubStep darkMode={darkMode}>Click "Allow an app through firewall"</SubStep>
+                    <SubStep darkMode={darkMode}>Click "Change settings" then "Allow another app"</SubStep>
+                    <SubStep darkMode={darkMode}>Browse to: <InlineCode darkMode={darkMode}>C:\Program Files\LyricDisplay\LyricDisplay.exe</InlineCode></SubStep>
+                    <SubStep darkMode={darkMode}>Check both "Private" and "Public" boxes</SubStep>
+                    <SubStep darkMode={darkMode}>Click Add</SubStep>
+                </SubSteps>
+                <Hint darkMode={darkMode}>This lets other computers talk to LyricDisplay</Hint>
+            </Step>
+        </>
+    );
+}
+
+/** Compact static IP + firewall steps for vMix/Wirecast network sections */
+function CompactStaticIPSteps({ darkMode, localIP, platform }) {
+    if (platform === 'darwin') {
+        return (
+            <SubSteps darkMode={darkMode}>
+                <SubStep darkMode={darkMode}>System Settings → Network → select connection → Details → TCP/IP</SubStep>
+                <SubStep darkMode={darkMode}>Change "Configure IPv4" to <Strong>Manually</Strong></SubStep>
+                <SubStep darkMode={darkMode}>IP address: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Subnet: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Router: <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> (or your router's address)</SubStep>
+                <SubStep darkMode={darkMode}>Click OK, then Apply</SubStep>
+            </SubSteps>
+        );
+    }
+    if (platform === 'linux') {
+        return (
+            <SubSteps darkMode={darkMode}>
+                <SubStep darkMode={darkMode}>Open your network manager settings</SubStep>
+                <SubStep darkMode={darkMode}>Edit your connection → IPv4 tab → set Method to <Strong>Manual</Strong></SubStep>
+                <SubStep darkMode={darkMode}>Address: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Netmask: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>Gateway: <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> (or your router's address)</SubStep>
+                <SubStep darkMode={darkMode}>Save and reconnect</SubStep>
+            </SubSteps>
+        );
+    }
+    // Windows
+    return (
+        <SubSteps darkMode={darkMode}>
+            <SubStep darkMode={darkMode}>Windows Settings → Network → IP settings → Edit</SubStep>
+            <SubStep darkMode={darkMode}>Choose "Manual"</SubStep>
+            <SubStep darkMode={darkMode}>IP address: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
+            <SubStep darkMode={darkMode}>Subnet: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
+            <SubStep darkMode={darkMode}>Gateway: <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> (or your router's address)</SubStep>
+            <SubStep darkMode={darkMode}>Save changes</SubStep>
+        </SubSteps>
+    );
+}
+
+function CompactFirewallSteps({ darkMode, platform }) {
+    if (platform === 'darwin') {
+        return (
+            <SubSteps darkMode={darkMode}>
+                <SubStep darkMode={darkMode}>System Settings → Network → Firewall → Options</SubStep>
+                <SubStep darkMode={darkMode}>Add LyricDisplay and allow incoming connections</SubStep>
+                <SubStep darkMode={darkMode}>(Skip if firewall is off)</SubStep>
+            </SubSteps>
+        );
+    }
+    if (platform === 'linux') {
+        return (
+            <SubSteps darkMode={darkMode}>
+                <SubStep darkMode={darkMode}>ufw: <InlineCode darkMode={darkMode}>sudo ufw allow 4000/tcp</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>firewalld: <InlineCode darkMode={darkMode}>sudo firewall-cmd --add-port=4000/tcp --permanent && sudo firewall-cmd --reload</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>(Skip if no firewall is configured)</SubStep>
+            </SubSteps>
+        );
+    }
+    // Windows
+    return (
+        <SubSteps darkMode={darkMode}>
+            <SubStep darkMode={darkMode}>Search "Windows Defender Firewall"</SubStep>
+            <SubStep darkMode={darkMode}>Allow an app → Change settings → Allow another app</SubStep>
+            <SubStep darkMode={darkMode}>Add LyricDisplay.exe from Program Files</SubStep>
+            <SubStep darkMode={darkMode}>Check Private and Public boxes</SubStep>
+        </SubSteps>
+    );
+}
+
+// ─── OBS Instructions ────────────────────────────────────────────────────────
+
+function OBSInstructions({ darkMode, localIP, platform }) {
+    const modKey = platform === 'darwin' ? '⌘' : 'Ctrl';
+
     return (
         <div className="space-y-6 pb-4">
             <IntroSection darkMode={darkMode}>
@@ -122,7 +327,7 @@ function OBSInstructions({ darkMode, localIP }) {
                 </StepsList>
 
                 <TestingBox darkMode={darkMode}>
-                    <Strong>Testing:</Strong> Load lyrics in LyricDisplay (Ctrl+O), click any line, and it appears in OBS!
+                    <Strong>Testing:</Strong> Load lyrics in LyricDisplay ({modKey}+O), click any line, and it appears in OBS!
                 </TestingBox>
             </SetupOption>
 
@@ -146,28 +351,9 @@ function OBSInstructions({ darkMode, localIP }) {
                     </Step>
                     <Step number={2} darkMode={darkMode}>
                         Make this address permanent (so it doesn't change):
-                        <SubSteps darkMode={darkMode}>
-                            <SubStep darkMode={darkMode}>Open Windows Settings → Network & Internet</SubStep>
-                            <SubStep darkMode={darkMode}>Click your connection (Ethernet or Wi-Fi)</SubStep>
-                            <SubStep darkMode={darkMode}>Click "Edit" next to IP assignment</SubStep>
-                            <SubStep darkMode={darkMode}>Choose "Manual" and enter IP: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Subnet mask: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Gateway: Usually <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> or <InlineCode darkMode={darkMode}>192.168.0.1</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Click Save</SubStep>
-                        </SubSteps>
+                        <StaticIPSteps darkMode={darkMode} localIP={localIP} platform={platform} />
                     </Step>
-                    <Step number={3} darkMode={darkMode}>
-                        Allow LyricDisplay through your firewall:
-                        <SubSteps darkMode={darkMode}>
-                            <SubStep darkMode={darkMode}>Search "Windows Defender Firewall" in Start menu</SubStep>
-                            <SubStep darkMode={darkMode}>Click "Allow an app through firewall"</SubStep>
-                            <SubStep darkMode={darkMode}>Click "Change settings" then "Allow another app"</SubStep>
-                            <SubStep darkMode={darkMode}>Browse to: <InlineCode darkMode={darkMode}>C:\Program Files\LyricDisplay\LyricDisplay.exe</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Check both "Private" and "Public" boxes</SubStep>
-                            <SubStep darkMode={darkMode}>Click Add</SubStep>
-                        </SubSteps>
-                        <Hint darkMode={darkMode}>This lets other computers talk to LyricDisplay</Hint>
-                    </Step>
+                    <FirewallSteps darkMode={darkMode} platform={platform} />
                 </StepsList>
 
                 <SectionHeader darkMode={darkMode}>On the OBS Computer:</SectionHeader>
@@ -208,8 +394,9 @@ function OBSInstructions({ darkMode, localIP }) {
     );
 }
 
-// vMix Instructions
-function VMixInstructions({ darkMode, localIP }) {
+// ─── vMix Instructions (Windows only) ───────────────────────────────────────
+
+function VMixInstructions({ darkMode, localIP, platform }) {
     return (
         <div className="space-y-6 pb-4">
             <IntroSection darkMode={darkMode}>
@@ -282,23 +469,11 @@ function VMixInstructions({ darkMode, localIP }) {
                     </Step>
                     <Step number={2} darkMode={darkMode}>
                         Make this address permanent:
-                        <SubSteps darkMode={darkMode}>
-                            <SubStep darkMode={darkMode}>Windows Settings → Network → IP settings → Edit</SubStep>
-                            <SubStep darkMode={darkMode}>Choose "Manual"</SubStep>
-                            <SubStep darkMode={darkMode}>IP address: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Subnet: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Gateway: <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> (or your router's address)</SubStep>
-                            <SubStep darkMode={darkMode}>Save changes</SubStep>
-                        </SubSteps>
+                        <CompactStaticIPSteps darkMode={darkMode} localIP={localIP} platform={platform} />
                     </Step>
                     <Step number={3} darkMode={darkMode}>
-                        Allow through Windows Firewall:
-                        <SubSteps darkMode={darkMode}>
-                            <SubStep darkMode={darkMode}>Search "Windows Defender Firewall"</SubStep>
-                            <SubStep darkMode={darkMode}>Allow an app → Change settings → Allow another app</SubStep>
-                            <SubStep darkMode={darkMode}>Add LyricDisplay.exe from Program Files</SubStep>
-                            <SubStep darkMode={darkMode}>Check Private and Public boxes</SubStep>
-                        </SubSteps>
+                        Allow through firewall:
+                        <CompactFirewallSteps darkMode={darkMode} platform={platform} />
                     </Step>
                 </StepsList>
 
@@ -340,8 +515,9 @@ function VMixInstructions({ darkMode, localIP }) {
     );
 }
 
-// Wirecast Instructions
-function WirecastInstructions({ darkMode, localIP }) {
+// ─── Wirecast Instructions (Windows + macOS) ────────────────────────────────
+
+function WirecastInstructions({ darkMode, localIP, platform }) {
     return (
         <div className="space-y-6 pb-4">
             <IntroSection darkMode={darkMode}>
@@ -426,22 +602,11 @@ function WirecastInstructions({ darkMode, localIP }) {
                     </Step>
                     <Step number={2} darkMode={darkMode}>
                         Set a permanent IP address:
-                        <SubSteps darkMode={darkMode}>
-                            <SubStep darkMode={darkMode}>Open Network Settings</SubStep>
-                            <SubStep darkMode={darkMode}>Change adapter options → Right-click connection → Properties</SubStep>
-                            <SubStep darkMode={darkMode}>IPv4 → Properties → "Use the following IP address"</SubStep>
-                            <SubStep darkMode={darkMode}>IP: <InlineCode darkMode={darkMode}>{localIP}</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Subnet: <InlineCode darkMode={darkMode}>255.255.255.0</InlineCode></SubStep>
-                            <SubStep darkMode={darkMode}>Gateway: <InlineCode darkMode={darkMode}>192.168.1.1</InlineCode> (usually)</SubStep>
-                        </SubSteps>
+                        <CompactStaticIPSteps darkMode={darkMode} localIP={localIP} platform={platform} />
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Configure firewall:
-                        <SubSteps darkMode={darkMode}>
-                            <SubStep darkMode={darkMode}>Search "Windows Defender Firewall"</SubStep>
-                            <SubStep darkMode={darkMode}>Allow an app → Add LyricDisplay.exe</SubStep>
-                            <SubStep darkMode={darkMode}>Check Private and Public boxes</SubStep>
-                        </SubSteps>
+                        <CompactFirewallSteps darkMode={darkMode} platform={platform} />
                     </Step>
                 </StepsList>
 
@@ -482,6 +647,8 @@ function WirecastInstructions({ darkMode, localIP }) {
         </div>
     );
 }
+
+// ─── Shared UI Components ────────────────────────────────────────────────────
 
 function IntroSection({ children, darkMode }) {
     return (
