@@ -812,9 +812,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <div className="space-y-6">
             {/* MIDI Section */}
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+            <div>
               <div className="flex items-center gap-2 mb-4">
-                <Music className="w-5 h-5" />
+                <Music className={`w-4 h-4 ${mutedClass}`} />
                 <h4 className={`text-sm font-semibold ${labelClass}`}>MIDI Control</h4>
               </div>
 
@@ -894,10 +894,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               )}
             </div>
 
+            <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+
             {/* OSC Section */}
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+            <div>
               <div className="flex items-center gap-2 mb-4">
-                <Radio className="w-5 h-5" />
+                <Radio className={`w-4 h-4 ${mutedClass}`} />
                 <h4 className={`text-sm font-semibold ${labelClass}`}>OSC Control</h4>
               </div>
 
