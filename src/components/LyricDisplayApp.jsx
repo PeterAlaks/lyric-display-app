@@ -28,7 +28,7 @@ import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { hasValidTimestamps } from '../utils/timestampHelpers';
-import { parseLrcContent } from '../../shared/lyricsParsing.js';
+import { parseLrcContent, STRUCTURE_TAG_PATTERNS } from '../../shared/lyricsParsing.js';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
 import { useSyncOutputs } from '../hooks/useSyncOutputs';
 import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
@@ -111,6 +111,21 @@ const LyricDisplayApp = () => {
   }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
+
+  const lineCounterText = React.useMemo(() => {
+    if (!hasLyrics) return '';
+    const isTag = (line) => typeof line === 'string' && STRUCTURE_TAG_PATTERNS.some((p) => p.test(line.trim()));
+    const contentLineCount = lyrics.reduce((n, l) => n + (isTag(l) ? 0 : 1), 0);
+    if (selectedLine !== null && selectedLine !== undefined) {
+      let contentPos = 0;
+      for (let i = 0; i <= selectedLine; i++) {
+        if (!isTag(lyrics[i])) contentPos++;
+      }
+      return `Line ${contentPos} of ${contentLineCount} loaded lyric lines`;
+    }
+    return `${contentLineCount} loaded lyric ${contentLineCount === 1 ? 'line' : 'lines'}`;
+  }, [lyrics, selectedLine, hasLyrics]);
+
   const { showToast } = useToast();
   const { showModal } = useModal();
 
@@ -768,10 +783,7 @@ const LyricDisplayApp = () => {
                 </h2>
                 {hasLyrics && (
                   <p className={`text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {selectedLine !== null && selectedLine !== undefined
-                      ? `Line ${selectedLine + 1} of ${lyrics.length} loaded lyric lines`
-                      : `${lyrics.length} loaded lyric ${lyrics.length === 1 ? 'line' : 'lines'}`
-                    }
+                    {lineCounterText}
                   </p>
                 )}
               </div>

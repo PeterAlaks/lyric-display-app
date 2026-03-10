@@ -54,7 +54,16 @@ const useSocketEvents = (role) => {
         }
       }
 
-      if (state.selectedLine === null || (typeof state.selectedLine === 'number' && state.selectedLine >= 0)) {
+      const isDesktop = state.isDesktopClient === true;
+      if (isDesktop && state.selectedLine === null) {
+        const persisted = useLyricsStore.getState().selectedLine;
+        if (typeof persisted === 'number' && persisted >= 0) {
+
+          logDebug('Preserving persisted selectedLine:', persisted);
+        } else {
+          selectLine(null);
+        }
+      } else if (state.selectedLine === null || (typeof state.selectedLine === 'number' && state.selectedLine >= 0)) {
         selectLine(state.selectedLine);
       }
 
@@ -112,9 +121,20 @@ const useSocketEvents = (role) => {
       const lineToSection = payload?.lineToSection;
 
       logDebug('Received lyrics load:', lyrics?.length, 'lines');
+
+      const currentStore = useLyricsStore.getState();
+      const isSameLyrics = Array.isArray(lyrics) &&
+        Array.isArray(currentStore.lyrics) &&
+        lyrics.length === currentStore.lyrics.length &&
+        lyrics.length > 0 &&
+        lyrics[0] === currentStore.lyrics[0] &&
+        lyrics[lyrics.length - 1] === currentStore.lyrics[lyrics.length - 1];
+
       setLyrics(lyrics);
       setLyricsTimestamps([]);
-      selectLine(null);
+      if (!isSameLyrics) {
+        selectLine(null);
+      }
       applySections(sections, lineToSection, lyrics);
     });
 
@@ -388,7 +408,10 @@ const useSocketEvents = (role) => {
       }
       applySections(state.lyricsSections || state.sections, state.lineToSection, state.lyrics);
 
-      if (state.selectedLine === null) {
+      const isSyncDesktop = state.isDesktopClient === true;
+      if (isSyncDesktop && state.selectedLine === null) {
+
+      } else if (state.selectedLine === null) {
         selectLine(null);
       } else if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
         const currentLyrics = useLyricsStore.getState().lyrics;
