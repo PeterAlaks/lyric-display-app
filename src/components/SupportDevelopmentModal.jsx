@@ -146,8 +146,8 @@ export function SupportDevelopmentModal({ isOpen, onClose, isDark = false }) {
                       isDark ? 'text-gray-300' : 'text-gray-600'
                     )}
                   >
-                    LyricDisplay is a passion project built to serve worship teams and content creators worldwide.
-                    Your donation helps us maintain servers, develop new features, and keep all functionality
+                    LyricDisplay is a passion project built to serve church media groups, worship teams and content creators worldwide.
+                    Your donation helps us maintain absolute security, develop new features and keep all functionality
                     completely free for everyone.
                   </p>
 
@@ -184,7 +184,7 @@ export function SupportDevelopmentModal({ isOpen, onClose, isDark = false }) {
                     isDark ? 'text-gray-500' : 'text-gray-400'
                   )}
                 >
-                  Thank you for considering supporting LyricDisplay!
+                  Thank you for supporting LyricDisplay!
                 </p>
               </div>
             </div>
