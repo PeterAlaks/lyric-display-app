@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDarkMode: () => ipcRenderer.invoke('get-dark-mode'),
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
   syncNativeDarkMode: (isDark) => ipcRenderer.invoke('sync-native-dark-mode', isDark),
+  syncNativeThemeSource: (themeSource) => ipcRenderer.invoke('sync-native-theme-source', themeSource),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
   parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
   getAdminKey: () => ipcRenderer.invoke('get-admin-key'),

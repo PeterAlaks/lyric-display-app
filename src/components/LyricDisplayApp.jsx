@@ -46,7 +46,7 @@ const LyricDisplayApp = () => {
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
-  const { darkMode, setDarkMode } = useDarkModeState();
+  const { darkMode, setDarkMode, themeMode, setThemeMode } = useDarkModeState();
   const { setSetlistModalOpen, setlistFiles, setSetlistFiles, getMaxSetlistFiles } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
   const maxSetlistFiles = getMaxSetlistFiles();
@@ -571,14 +571,22 @@ const LyricDisplayApp = () => {
                 </Tooltip>
 
                 {/* Dark Mode Toggle Button */}
-                <Tooltip content={darkMode ? "Switch to light mode" : "Switch to dark mode"} side="bottom">
+                <Tooltip content={
+                  themeMode === 'system'
+                    ? "Theme is managed by system preferences. Change in Preferences → Appearance."
+                    : darkMode ? "Switch to light mode" : "Switch to dark mode"
+                } side="bottom">
                   <button
-                    className={iconButtonClass(false)}
+                    className={iconButtonClass(themeMode === 'system')}
+                    disabled={themeMode === 'system'}
                     onClick={() => {
+                      if (themeMode === 'system') return;
                       const next = !darkMode;
+                      const nextMode = next ? 'dark' : 'light';
                       setDarkMode(next);
+                      setThemeMode(nextMode);
+                      window.electronAPI?.syncNativeThemeSource?.(nextMode);
                       window.electronAPI?.setDarkMode?.(next);
-                      window.electronAPI?.syncNativeDarkMode?.(next);
                     }}
                   >
                     {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Settings, FolderOpen, FileText, Music, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Check, Loader2, ChevronRight,
-  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power
+  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power, Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,10 +17,12 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Tooltip } from '@/components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
+import { useDarkModeState } from '../hooks/useStoreSelectors';
 
 // Category definitions
 const CATEGORIES = [
   { id: 'general', label: 'General', icon: Settings },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'parsing', label: 'Lyrics Parsing', icon: FileText },
   { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
@@ -535,26 +537,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Show Tooltips</label>
-                <p className={`text-xs ${mutedClass}`}>Display helpful tooltips when hovering over controls</p>
-              </div>
-              <Switch
-                checked={preferences.general?.showTooltips ?? true}
-                onCheckedChange={(checked) => {
-                  updatePreference('general', 'showTooltips', checked);
-                  // Update the store immediately for runtime sync
-                  useLyricsStore.getState().setShowTooltips(checked);
-                }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Toast Sounds</label>
                 <p className={`text-xs ${mutedClass}`}>Play notification sounds when toast messages appear</p>
               </div>
@@ -563,7 +545,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 onCheckedChange={(checked) => {
                   const muted = !checked;
                   updatePreference('general', 'toastSoundsMuted', muted);
-                  // Update the store immediately for runtime sync
+
                   useLyricsStore.getState().setToastSoundsMuted(muted);
                 }}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
@@ -575,6 +557,88 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
           </div>
         );
+
+      case 'appearance': {
+        const currentThemeMode = useLyricsStore.getState().themeMode || 'light';
+
+        const handleThemeModeChange = async (newMode) => {
+
+          useLyricsStore.getState().setThemeMode(newMode);
+
+          let effectiveDark;
+          if (window.electronAPI?.syncNativeThemeSource) {
+            const result = await window.electronAPI.syncNativeThemeSource(newMode);
+            if (result?.success) {
+              effectiveDark = result.shouldUseDarkColors;
+            } else {
+              effectiveDark = newMode === 'dark';
+            }
+          } else {
+            effectiveDark = newMode === 'system'
+              ? (window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false)
+              : newMode === 'dark';
+          }
+
+          useLyricsStore.getState().setDarkMode(effectiveDark);
+
+          if (window.electronAPI?.setDarkMode) {
+            window.electronAPI.setDarkMode(effectiveDark);
+          }
+
+          updatePreference('appearance', 'themeMode', newMode);
+        };
+
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className={`text-sm font-medium ${labelClass}`}>App Theme</label>
+              <Select
+                value={currentThemeMode}
+                onValueChange={handleThemeModeChange}
+              >
+                <SelectTrigger className={inputClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                  <SelectItem value="light">Light Mode</SelectItem>
+                  <SelectItem value="dark">Dark Mode</SelectItem>
+                  <SelectItem value="system">System Default</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className={`text-xs ${mutedClass}`}>
+                Choose the application color theme. "System Default" follows your operating system's theme setting.
+              </p>
+              {currentThemeMode === 'system' && (
+                <div className={`flex items-start gap-2 p-3 rounded-lg mt-3 ${darkMode ? 'bg-blue-900/20 border border-blue-600/30' : 'bg-blue-50 border border-blue-200'}`}>
+                  <p className={`text-xs ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                    When using System Default, the dark mode toggle in the control panel and the View menu will be disabled. The app will automatically switch between light and dark mode based on your system preferences.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Show Tooltips</label>
+                <p className={`text-xs ${mutedClass}`}>Display helpful tooltips when hovering over controls</p>
+              </div>
+              <Switch
+                checked={preferences.appearance?.showTooltips ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('appearance', 'showTooltips', checked);
+                  // Update the store immediately for runtime sync
+                  useLyricsStore.getState().setShowTooltips(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+          </div>
+        );
+      }
 
       case 'parsing':
         return (
@@ -1239,7 +1303,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   />
                 </div>
 
-                              </div>
+              </div>
             )}
 
             {/* NDI Trademark Notice */}

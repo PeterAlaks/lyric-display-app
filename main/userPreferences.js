@@ -15,7 +15,6 @@ const preferencesStore = new Store({
       defaultLyricsPath: '',
       rememberLastOpenedPath: true,
       confirmOnClose: true,
-      showTooltips: true,
       toastSoundsMuted: false,
       startMinimized: false,
       minimizeToTray: false,
@@ -70,6 +69,12 @@ const preferencesStore = new Store({
       maxSetlistFiles: 50,
     },
 
+    // Appearance Settings
+    appearance: {
+      themeMode: 'light', // 'light', 'dark', 'system'
+      showTooltips: true,
+    },
+
     // Advanced Settings
     advanced: {
       enableDebugLogging: false,
@@ -88,6 +93,7 @@ export function getAllPreferences() {
   try {
     return {
       general: preferencesStore.get('general'),
+      appearance: preferencesStore.get('appearance'),
       parsing: preferencesStore.get('parsing'),
       lineSplitting: preferencesStore.get('lineSplitting'),
       externalControl: preferencesStore.get('externalControl'),
@@ -233,7 +239,7 @@ export function getParsingConfig() {
   try {
     const parsing = preferencesStore.get('parsing');
     const lineSplitting = preferencesStore.get('lineSplitting');
-    
+
     return {
       enableSplitting: lineSplitting?.enabled ?? true,
       splitConfig: {
