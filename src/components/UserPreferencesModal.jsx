@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Settings, FolderOpen, FileText, Music, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Check, Loader2, ChevronRight,
-  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power, Palette
+  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power, Palette, Wand2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ const CATEGORIES = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'parsing', label: 'Lyrics Parsing', icon: FileText },
+  { id: 'formatting', label: 'Lyrics Formatting', icon: Wand2 },
   { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
   { id: 'externalControl', label: 'External Control', icon: Radio },
@@ -652,6 +653,87 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <p className={`text-xs ${mutedClass}`}>
                 How to handle [Verse], [Chorus], etc. tags
               </p>
+            </div>
+          </div>
+        );
+
+      case 'formatting':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Auto Cleanup on Paste</label>
+                <p className={`text-xs ${mutedClass}`}>Automatically format and clean up lyrics when pasting into the song canvas</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.enableCleanupOnPaste ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'enableCleanupOnPaste', checked);
+                  useLyricsStore.getState().setCanvasCleanupOnPaste(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Capitalize First Letter</label>
+                <p className={`text-xs ${mutedClass}`}>Automatically capitalize the first letter of each lyric line during cleanup</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.capitalizeFirstLetter ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'capitalizeFirstLetter', checked);
+                  useLyricsStore.getState().setFormattingCapitalizeFirstLetter(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Capitalize Religious Terms</label>
+                <p className={`text-xs ${mutedClass}`}>Auto-capitalize words like Jesus, God, Holy Spirit, Hallelujah, etc.</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.capitalizeReligiousTerms ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'capitalizeReligiousTerms', checked);
+                  useLyricsStore.getState().setFormattingCapitalizeReligiousTerms(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Normalize Typographic Characters</label>
+                <p className={`text-xs ${mutedClass}`}>Convert smart quotes, em dashes, and other typographic characters to plain equivalents</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.normalizeTypographicChars ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'normalizeTypographicChars', checked);
+                  useLyricsStore.getState().setFormattingNormalizeTypographicChars(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
             </div>
           </div>
         );
@@ -1415,7 +1497,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       {/* Main Content - Two Pane Layout */}
       <div className="flex flex-1 min-h-0">
         {/* Left Pane - Categories */}
-        <div className={`w-48 flex-shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
+        <div className={`w-52 flex-shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
           <nav className="p-2 space-y-1">
             {CATEGORIES.map((category) => {
               const Icon = category.icon;

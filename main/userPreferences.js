@@ -29,6 +29,14 @@ const preferencesStore = new Store({
       structureTagMode: 'isolate', // 'isolate', 'strip', 'keep'
     },
 
+    // Lyrics Formatting Settings
+    formatting: {
+      enableCleanupOnPaste: true,
+      capitalizeFirstLetter: true,
+      capitalizeReligiousTerms: true,
+      normalizeTypographicChars: true,
+    },
+
     // Line Splitting Settings
     lineSplitting: {
       enabled: true,
@@ -95,6 +103,7 @@ export function getAllPreferences() {
       general: preferencesStore.get('general'),
       appearance: preferencesStore.get('appearance'),
       parsing: preferencesStore.get('parsing'),
+      formatting: preferencesStore.get('formatting'),
       lineSplitting: preferencesStore.get('lineSplitting'),
       externalControl: preferencesStore.get('externalControl'),
       autoplay: preferencesStore.get('autoplay'),

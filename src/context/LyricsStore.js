@@ -35,6 +35,32 @@ export async function loadPreferencesIntoStore(store) {
       }
     }
 
+    // Load formatting preferences
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.enableCleanupOnPaste');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setCanvasCleanupOnPaste(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.capitalizeFirstLetter');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setFormattingCapitalizeFirstLetter(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.capitalizeReligiousTerms');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setFormattingCapitalizeReligiousTerms(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.normalizeTypographicChars');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setFormattingNormalizeTypographicChars(result.value);
+      }
+    }
+
     if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('appearance.themeMode');
       if (result.success && typeof result.value === 'string' && ['light', 'dark', 'system'].includes(result.value)) {
@@ -239,6 +265,10 @@ const useLyricsStore = create(
       hasSeenIntelligentAutoplayInfo: false,
       showTooltips: true,
       toastSoundsMuted: false,
+      canvasCleanupOnPaste: true,
+      formattingCapitalizeFirstLetter: true,
+      formattingCapitalizeReligiousTerms: true,
+      formattingNormalizeTypographicChars: true,
       pendingSavedVersion: null,
       maxSetlistFilesVersion: 0,
 
@@ -263,6 +293,10 @@ const useLyricsStore = create(
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
       setShowTooltips: (show) => set({ showTooltips: show }),
       setToastSoundsMuted: (muted) => set({ toastSoundsMuted: muted }),
+      setCanvasCleanupOnPaste: (enabled) => set({ canvasCleanupOnPaste: enabled }),
+      setFormattingCapitalizeFirstLetter: (enabled) => set({ formattingCapitalizeFirstLetter: enabled }),
+      setFormattingCapitalizeReligiousTerms: (enabled) => set({ formattingCapitalizeReligiousTerms: enabled }),
+      setFormattingNormalizeTypographicChars: (enabled) => set({ formattingNormalizeTypographicChars: enabled }),
       setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
