@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import useToast from '../hooks/useToast';
+import useNdiStore from '../context/NdiStore';
 
 const RESOLUTION_PRESETS = [
   { value: '720p', label: '720p (1280x720)' },
@@ -35,7 +36,7 @@ const OUTPUT_LABELS = {
 
 const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
   const [settings, setSettings] = useState(null);
-  const [companionRunning, setCompanionRunning] = useState(false);
+  const companionRunning = useNdiStore((s) => s.companionRunning);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
@@ -48,12 +49,6 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
         const result = await window.electronAPI?.ndi?.getOutputSettings(outputKey);
         if (result?.settings) {
           setSettings(result.settings);
-          setCompanionRunning(result.companionConnected || false);
-        }
-
-        const status = await window.electronAPI?.ndi?.getCompanionStatus();
-        if (status) {
-          setCompanionRunning(status.running || false);
         }
       } catch (error) {
         console.error('Failed to load NDI output settings:', error);
@@ -64,15 +59,6 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
 
     load();
   }, [outputKey]);
-
-  useEffect(() => {
-    const cleanup = window.electronAPI?.ndi?.onCompanionStatus((status) => {
-      setCompanionRunning(status.running || false);
-    });
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, []);
 
   const updateSetting = useCallback(async (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));

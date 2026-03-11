@@ -193,7 +193,7 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     await new Promise(resolve => setTimeout(resolve, 300));
 
     // Initialize NDI manager (handlers already registered above)
-    initializeNdiManager(() => mainWindow);
+    initializeNdiManager();
     await new Promise(resolve => setTimeout(resolve, 200));
 
     updateLoadingStatus('Finalizing');

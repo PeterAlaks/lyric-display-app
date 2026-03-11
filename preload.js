@@ -302,6 +302,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
+    onDownloadComplete: (callback) => {
+      const channel = 'ndi:download-complete';
+      const listener = (_event, result) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onDownloadFailed: (callback) => {
+      const channel = 'ndi:download-failed';
+      const listener = (_event, result) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
     uninstall: () => ipcRenderer.invoke('ndi:uninstall'),
     launchCompanion: () => ipcRenderer.invoke('ndi:launch-companion'),
     stopCompanion: () => ipcRenderer.invoke('ndi:stop-companion'),

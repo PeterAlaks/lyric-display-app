@@ -17,6 +17,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Tooltip } from '@/components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
+import useNdiStore from '../context/NdiStore';
 import { useDarkModeState } from '../hooks/useStoreSelectors';
 
 // Category definitions
@@ -42,30 +43,25 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [oscStatus, setOscStatus] = useState(null);
   const [midiLearnActive, setMidiLearnActive] = useState(false);
   const [midiRefreshing, setMidiRefreshing] = useState(false);
-  // NDI state
-  const [ndiStatus, setNdiStatus] = useState({
-    installed: false,
-    version: '',
-    installPath: '',
-  });
-  const [downloadProgress, setDownloadProgress] = useState(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [companionRunning, setCompanionRunning] = useState(false);
-  const [ndiAutoLaunch, setNdiAutoLaunch] = useState(false);
-  const [ndiUpdateInfo, setNdiUpdateInfo] = useState(null);
-  const [ndiCheckingUpdate, setNdiCheckingUpdate] = useState(false);
-  const [ndiUpdating, setNdiUpdating] = useState(false);
-  const [ndiTelemetry, setNdiTelemetry] = useState({ stats: null, health: null, updatedAt: 0 });
+
+  const ndiInstalled = useNdiStore((s) => s.installed);
+  const ndiVersion = useNdiStore((s) => s.version);
+  const ndiInstallPath = useNdiStore((s) => s.installPath);
+  const downloadProgress = useNdiStore((s) => s.downloadProgress);
+  const isDownloading = useNdiStore((s) => s.isDownloading);
+  const companionRunning = useNdiStore((s) => s.companionRunning);
+  const ndiAutoLaunch = useNdiStore((s) => s.autoLaunch);
+  const ndiUpdateInfo = useNdiStore((s) => s.updateInfo);
+  const ndiCheckingUpdate = useNdiStore((s) => s.checkingUpdate);
+  const ndiUpdating = useNdiStore((s) => s.isUpdating);
+  const ndiTelemetry = useNdiStore((s) => s.telemetry);
+  const ndiStatus = { installed: ndiInstalled, version: ndiVersion, installPath: ndiInstallPath };
   const { showToast } = useToast();
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
 
   // Load preferences on mount
   useEffect(() => {
-    let cleanupCompanionStatus = null;
-    let cleanupNativeTelemetry = null;
-    let cleanupUpdateAvailable = null;
-
     const loadPreferences = async () => {
       setLoading(true);
       try {
@@ -84,54 +80,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             setOscStatus(statusResult.osc);
           }
         }
-
-        // Load NDI status
-        if (window.electronAPI?.ndi?.checkInstalled) {
-          const ndiResult = await window.electronAPI.ndi.checkInstalled();
-          setNdiStatus(ndiResult);
-        }
-        if (window.electronAPI?.ndi?.getCompanionStatus) {
-          const companionResult = await window.electronAPI.ndi.getCompanionStatus();
-          setCompanionRunning(companionResult.running);
-          if (typeof companionResult.autoLaunch === 'boolean') {
-            setNdiAutoLaunch(companionResult.autoLaunch);
-          }
-        }
-
-        // Load any pending update info from the store
-        if (window.electronAPI?.ndi?.getPendingUpdateInfo) {
-          const pendingUpdate = await window.electronAPI.ndi.getPendingUpdateInfo();
-          if (pendingUpdate?.updateAvailable) {
-            setNdiUpdateInfo(pendingUpdate);
-          }
-        }
-
-        if (window.electronAPI?.ndi?.onCompanionStatus) {
-          cleanupCompanionStatus = window.electronAPI.ndi.onCompanionStatus((status) => {
-            if (typeof status?.running === 'boolean') {
-              setCompanionRunning(status.running);
-            }
-          });
-        }
-
-        if (window.electronAPI?.ndi?.onCompanionTelemetry) {
-          cleanupNativeTelemetry = window.electronAPI.ndi.onCompanionTelemetry((payload) => {
-            setNdiTelemetry({
-              stats: payload?.stats || null,
-              health: payload?.health || null,
-              updatedAt: Date.now()
-            });
-          });
-        }
-
-        // Listen for push update notifications from the startup check.
-        if (window.electronAPI?.ndi?.onUpdateAvailable) {
-          cleanupUpdateAvailable = window.electronAPI.ndi.onUpdateAvailable((info) => {
-            if (info?.updateAvailable) {
-              setNdiUpdateInfo(info);
-            }
-          });
-        }
       } catch (error) {
         console.error('Failed to load preferences:', error);
       } finally {
@@ -142,9 +90,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     loadPreferences();
 
     return () => {
-      if (cleanupCompanionStatus) cleanupCompanionStatus();
-      if (cleanupNativeTelemetry) cleanupNativeTelemetry();
-      if (cleanupUpdateAvailable) cleanupUpdateAvailable();
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
     };
@@ -159,12 +104,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         if (result.success) {
           setLastSaved(new Date());
 
-          // Reload preferences into store to update maxSetlistFiles
           const { loadPreferencesIntoStore } = await import('../context/LyricsStore');
           const useLyricsStore = (await import('../context/LyricsStore')).default;
           await loadPreferencesIntoStore(useLyricsStore);
 
-          // Clear the confirmation after 3 seconds
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {
             setLastSaved(null);
@@ -178,7 +121,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     }
   }, []);
 
-  // Update a preference value with debounced save
   const updatePreference = useCallback((category, key, value) => {
     setPreferences(prev => {
       const newPreferences = {
@@ -382,21 +324,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     }
   }, [oscStatus?.feedbackEnabled, updateNestedPreference]);
 
-  // NDI action handlers (component-level so they can be used in the header)
-  const refreshNdiStatus = useCallback(async () => {
-    try {
-      const latest = await window.electronAPI?.ndi?.checkInstalled?.();
-      if (latest) setNdiStatus(latest);
-    } catch (error) {
-      console.warn('Failed to refresh NDI status:', error);
-    }
-  }, []);
-
   const handleNdiLaunch = useCallback(async () => {
     try {
       const result = await window.electronAPI?.ndi?.launchCompanion();
       if (result?.success) {
-        setCompanionRunning(true);
         showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
       } else {
         showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
@@ -411,7 +342,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     try {
       const result = await window.electronAPI?.ndi?.stopCompanion();
       if (result?.success) {
-        setCompanionRunning(false);
         showToast({ title: 'NDI Companion Stopped', message: 'The NDI companion has been stopped.', variant: 'info' });
       } else {
         showToast({ title: 'Stop Failed', message: result?.error || 'Could not stop the NDI companion.', variant: 'error' });
@@ -423,11 +353,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   }, [showToast]);
 
   const handleNdiCheckForUpdate = useCallback(async () => {
-    setNdiCheckingUpdate(true);
+    useNdiStore.getState().setCheckingUpdate(true);
     try {
       const result = await window.electronAPI?.ndi?.checkForUpdate();
       if (result) {
-        setNdiUpdateInfo(result);
+        useNdiStore.getState().setUpdateInfo(result);
         if (result.updateAvailable) {
           showToast({ title: 'Update Available', message: `NDI Companion v${result.latestVersion} is available.`, variant: 'info' });
         } else {
@@ -438,7 +368,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       console.error('NDI update check failed:', error);
       showToast({ title: 'Check Failed', message: 'Could not check for updates.', variant: 'warning' });
     } finally {
-      setNdiCheckingUpdate(false);
+      useNdiStore.getState().setCheckingUpdate(false);
     }
   }, [showToast]);
 
@@ -447,9 +377,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     try {
       const result = await window.electronAPI?.ndi?.uninstall();
       if (result?.success) {
-        setNdiStatus({ installed: false, version: '', installPath: '' });
-        setCompanionRunning(false);
-        setNdiUpdateInfo(null);
+        useNdiStore.getState().resetAll();
         showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
       } else {
         showToast({ title: 'Uninstall Failed', message: result?.error || 'Could not uninstall the NDI companion.', variant: 'error' });
@@ -1046,36 +974,28 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
       case 'ndi': {
         const handleNdiDownload = async () => {
-          setIsDownloading(true);
-          setDownloadProgress({ percent: 0, status: 'downloading' });
-
-          const cleanup = window.electronAPI?.ndi?.onDownloadProgress((progress) => {
-            setDownloadProgress(progress);
-          });
+          // Mark downloading in global store — progress comes via NdiBridge IPC listener
+          useNdiStore.getState().setDownloading(true);
+          useNdiStore.getState().setDownloadProgress({ percent: 0, status: 'downloading' });
 
           try {
             const result = await window.electronAPI.ndi.download();
-            if (result.success) {
-              await refreshNdiStatus();
-              setNdiUpdateInfo(null);
+            if (result?.success) {
+              useNdiStore.getState().setUpdateInfo(null);
               showToast({ title: 'NDI Installed', message: 'NDI companion has been downloaded and is ready to use.', variant: 'success' });
             } else {
-              showToast({ title: 'Download Failed', message: result.error || 'The NDI companion could not be downloaded.', variant: 'error' });
+              showToast({ title: 'Download Failed', message: result?.error || 'The NDI companion could not be downloaded.', variant: 'error' });
             }
           } catch (error) {
             console.error('NDI download failed:', error);
             showToast({ title: 'Download Failed', message: error?.message || 'An unexpected error occurred while downloading the NDI companion.', variant: 'error' });
-          } finally {
-            setIsDownloading(false);
-            setDownloadProgress(null);
-            if (cleanup) cleanup();
           }
         };
 
         const handleNdiAutoLaunchToggle = async (checked) => {
           try {
             await window.electronAPI?.ndi?.setAutoLaunch(checked);
-            setNdiAutoLaunch(checked);
+            useNdiStore.getState().setAutoLaunch(checked);
           } catch (error) {
             console.error('NDI auto-launch toggle failed:', error);
             showToast({ title: 'Setting Failed', message: 'Could not update the auto-launch setting.', variant: 'error' });
@@ -1083,20 +1003,15 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         };
 
         const handleNdiUpdate = async () => {
-          setNdiUpdating(true);
-          setDownloadProgress({ percent: 0, status: 'downloading' });
-
-          const cleanup = window.electronAPI?.ndi?.onDownloadProgress((progress) => {
-            setDownloadProgress(progress);
-          });
+          useNdiStore.getState().setUpdating(true);
+          useNdiStore.getState().setDownloadProgress({ percent: 0, status: 'downloading' });
 
           try {
             const result = await window.electronAPI.ndi.updateCompanion();
             if (result?.success) {
-              await refreshNdiStatus();
-              setNdiUpdateInfo(null);
-              setCompanionRunning(false);
-              // Clear pending update info from store
+              useNdiStore.getState().setUpdateInfo(null);
+              useNdiStore.getState().setCompanionRunning(false);
+
               if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
                 await window.electronAPI.ndi.clearPendingUpdateInfo();
               }
@@ -1107,10 +1022,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           } catch (error) {
             console.error('NDI update failed:', error);
             showToast({ title: 'Update Failed', message: error?.message || 'An unexpected error occurred while updating.', variant: 'error' });
-          } finally {
-            setNdiUpdating(false);
-            setDownloadProgress(null);
-            if (cleanup) cleanup();
           }
         };
 
@@ -1231,17 +1142,19 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               </div>
             )}
 
-            {/* Download progress for updates */}
+            {/* Download / extraction progress */}
             {(ndiUpdating || isDownloading) && downloadProgress && (
               <div className="space-y-2">
                 <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
                   <div
-                    className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                    className={`h-full rounded-full transition-all duration-300 ${downloadProgress.status === 'extracting' ? 'bg-amber-500' : 'bg-blue-500'}`}
                     style={{ width: `${downloadProgress.percent || 0}%` }}
                   />
                 </div>
                 <p className={`text-xs ${mutedClass}`}>
-                  {downloadProgress.status === 'extracting' ? 'Extracting...' : `Downloading... ${downloadProgress.percent || 0}%`}
+                  {downloadProgress.status === 'extracting'
+                    ? `Extracting... ${downloadProgress.percent || 0}%`
+                    : `Downloading... ${downloadProgress.percent || 0}%`}
                 </p>
               </div>
             )}

@@ -272,6 +272,7 @@ lyric-display-app/
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
+|   |   ├── NdiBridge.jsx                   # Global NDI store initiator and main-process NDI events sync
 |   |   ├── NdiOutputSettingsModal.jsx      # NDI output settings modal for each output
 |   |   ├── NewSongCanvas.jsx               # New/edit song text editor
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
@@ -304,7 +305,8 @@ lyric-display-app/
 |   |   └── songCanvas.js                   # Some constants used in canvas editor
 │   ├── context/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
-|   |   └── LyricsStore.js                  # Zustand store definitions
+|   |   ├── LyricsStore.js                  # Global Zustand store definitions
+|   |   └── NdiStore.js                     # NDI Zustand store definitions
 │   ├── hooks/
 |   |   ├── LyricDisplayApp/
 |   |   |   ├── useDragAndDrop.js           # Drag and drop operations for control panel

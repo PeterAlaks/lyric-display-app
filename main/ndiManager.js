@@ -73,6 +73,8 @@ let commandSeq = 0;
 let statsInterval = null;
 let companionProtocolVersion = null; // set from hello handshake
 
+let activeDownloadOperation = null;
+
 // ============ Persistent Connection ============
 
 /**
@@ -306,7 +308,11 @@ function getInstallPath() {
   if (isDev) {
     return path.join(app.getAppPath(), 'lyricdisplay-ndi');
   }
-  return path.join(path.dirname(app.getPath('exe')), 'lyricdisplay-ndi');
+
+  if (process.platform === 'win32') {
+    return path.join(path.dirname(app.getPath('exe')), 'lyricdisplay-ndi');
+  }
+  return path.join(app.getPath('userData'), 'lyricdisplay-ndi');
 }
 
 function getCompanionBinaryName() {
@@ -536,7 +542,7 @@ function followRedirects(url, maxRedirects = 5) {
   });
 }
 
-function streamToFile(response, filePath, mainWindow) {
+function streamToFile(response, filePath) {
   return new Promise((resolve, reject) => {
     const totalSize = parseInt(response.headers['content-length'], 10) || 0;
     let downloadedSize = 0;
@@ -545,14 +551,13 @@ function streamToFile(response, filePath, mainWindow) {
     response.on('data', (chunk) => {
       downloadedSize += chunk.length;
       const percent = totalSize > 0 ? Math.round((downloadedSize / totalSize) * 100) : 0;
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('ndi:download-progress', {
-          percent,
-          downloaded: downloadedSize,
-          total: totalSize,
-          status: 'downloading',
-        });
-      }
+
+      notifyAllWindows('ndi:download-progress', {
+        percent,
+        downloaded: downloadedSize,
+        total: totalSize,
+        status: 'downloading',
+      });
     });
 
     response.pipe(file);
@@ -568,70 +573,162 @@ function streamToFile(response, filePath, mainWindow) {
   });
 }
 
-async function downloadCompanion(mainWindow, updateInfo = null) {
-  let downloadUrl;
-  if (updateInfo?.downloadUrl) {
-    downloadUrl = updateInfo.downloadUrl;
-  } else {
-    const assetName = getPlatformAssetName();
-    downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/${assetName}`;
+async function downloadCompanion(updateInfo = null) {
+
+  if (activeDownloadOperation) {
+    console.warn('[NDI] Download already in progress, returning existing operation');
+    return activeDownloadOperation;
   }
 
-  const installPath = getInstallPath();
-  const zipPath = path.join(app.getPath('temp'), `ndi-companion-${Date.now()}.zip`);
-  fs.mkdirSync(installPath, { recursive: true });
+  const operation = (async () => {
+    let downloadUrl;
+    let resolvedVersion = updateInfo?.latestVersion || '';
 
-  try {
-    console.log(`[NDI] Downloading from: ${downloadUrl}`);
-    const response = await followRedirects(downloadUrl);
+    if (updateInfo?.downloadUrl) {
+      downloadUrl = updateInfo.downloadUrl;
+    } else {
 
-    await streamToFile(response, zipPath, mainWindow);
+      try {
+        const releaseInfo = await checkForCompanionUpdate();
+        if (releaseInfo?.downloadUrl) {
+          downloadUrl = releaseInfo.downloadUrl;
+          resolvedVersion = releaseInfo.latestVersion || '';
+        }
+      } catch { /* fallback below */ }
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('ndi:download-progress', { percent: 100, status: 'extracting' });
-    }
-
-    // Stop companion before replacing files.
-    stopCompanion();
-
-    // Clean existing installation before extracting.
-    if (fs.existsSync(installPath) && !isDev) {
-      const entries = fs.readdirSync(installPath);
-      for (const entry of entries) {
-        const entryPath = path.join(installPath, entry);
-        fs.rmSync(entryPath, { recursive: true, force: true });
+      if (!downloadUrl) {
+        const assetName = getPlatformAssetName();
+        downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/${assetName}`;
       }
     }
 
-    await extractZip(zipPath, installPath);
-    try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
+    const installPath = getInstallPath();
+    const zipPath = path.join(app.getPath('temp'), `ndi-companion-${Date.now()}.zip`);
 
-    let installedVersion = updateInfo?.latestVersion || '';
-    if (!installedVersion) {
-      try {
-        const latest = await checkForCompanionUpdate();
-        if (latest?.latestVersion) installedVersion = latest.latestVersion;
-      } catch { /* ignore */ }
+    try {
+      console.log(`[NDI] Downloading from: ${downloadUrl}`);
+      const response = await followRedirects(downloadUrl);
+
+      await streamToFile(response, zipPath);
+
+      stopCompanion();
+
+
+      await extractZip(zipPath, installPath);
+      try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
+
+
+      if (!resolvedVersion) {
+        try {
+
+          const candidates = [
+            path.join(installPath, 'package.json'),
+            path.join(installPath, 'resources', 'app', 'package.json'),
+          ];
+          for (const pkgPath of candidates) {
+            if (fs.existsSync(pkgPath)) {
+              const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+              if (pkg.version) { resolvedVersion = pkg.version; break; }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (!resolvedVersion) {
+        try {
+          latestReleaseCache = null;
+          lastReleaseCheck = 0;
+          const latest = await checkForCompanionUpdate();
+          if (latest?.latestVersion) resolvedVersion = latest.latestVersion;
+        } catch { /* ignore */ }
+      }
+
+      ndiStore.set('installed', true);
+      ndiStore.set('version', resolvedVersion);
+      ndiStore.set('installPath', installPath);
+
+      latestReleaseCache = null;
+      lastReleaseCheck = 0;
+
+      const result = { success: true, version: resolvedVersion, path: installPath };
+      console.log(`[NDI] Companion installed: v${resolvedVersion} at ${installPath}`);
+
+      notifyAllWindows('ndi:download-complete', result);
+
+      return result;
+    } catch (err) {
+      try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
+      const errorResult = { success: false, error: `Download/install failed: ${err.message}` };
+
+      notifyAllWindows('ndi:download-failed', errorResult);
+      return errorResult;
     }
+  })();
 
-    ndiStore.set('installed', true);
-    ndiStore.set('version', installedVersion);
-    ndiStore.set('installPath', installPath);
-
-    latestReleaseCache = null;
-    lastReleaseCheck = 0;
-
-    console.log(`[NDI] Companion installed: v${installedVersion} at ${installPath}`);
-    return { success: true, version: installedVersion, path: installPath };
-  } catch (err) {
-    try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
-    throw new Error(`Download/install failed: ${err.message}`);
+  activeDownloadOperation = operation;
+  try {
+    return await operation;
+  } finally {
+    activeDownloadOperation = null;
   }
 }
 
+
 async function extractZip(zipPath, destPath) {
   const extract = (await import('extract-zip')).default;
-  await extract(zipPath, { dir: destPath });
+
+  const tempExtractPath = destPath + '-extracting-' + Date.now();
+
+  console.log('[NDI] Starting extraction to temp:', tempExtractPath);
+  const start = Date.now();
+
+  notifyAllWindows('ndi:download-progress', { percent: 0, status: 'extracting' });
+
+  const previousNoAsar = process.noAsar;
+  process.noAsar = true;
+
+  try {
+    fs.mkdirSync(tempExtractPath, { recursive: true });
+
+    let entriesProcessed = 0;
+    let totalEntries = 0;
+
+    await extract(zipPath, {
+      dir: tempExtractPath,
+      onEntry(entry, zipfile) {
+
+        if (!totalEntries && zipfile.entryCount) {
+          totalEntries = zipfile.entryCount;
+        }
+        entriesProcessed += 1;
+        if (totalEntries > 0) {
+          const percent = Math.min(99, Math.round((entriesProcessed / totalEntries) * 100));
+          notifyAllWindows('ndi:download-progress', { percent, status: 'extracting' });
+        }
+      },
+    });
+
+    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+    console.log(`[NDI] Extraction completed in ${elapsed}s, moving to final location`);
+
+    if (fs.existsSync(destPath)) {
+      fs.rmSync(destPath, { recursive: true, force: true });
+    }
+
+    fs.renameSync(tempExtractPath, destPath);
+
+    console.log('[NDI] Moved extracted files to:', destPath);
+  } catch (err) {
+
+    try { fs.rmSync(tempExtractPath, { recursive: true, force: true }); } catch { /* ignore */ }
+    throw err;
+  } finally {
+
+    process.noAsar = previousNoAsar;
+  }
+
+  notifyAllWindows('ndi:download-progress', { percent: 100, status: 'extracting' });
+
 
   if (process.platform !== 'win32') {
     try {
@@ -786,7 +883,6 @@ async function launchCompanion() {
       return { success: false, error: error.message };
     }
   } else {
-
     if (!fs.existsSync(entryPath)) {
       return { success: false, error: `NDI companion not found at ${entryPath}` };
     }
@@ -844,12 +940,10 @@ async function launchCompanion() {
   startStatsLoop();
 
   setTimeout(async () => {
-
     const hello = await sendCommand('hello', {});
     if (!hello.success) {
       console.warn('[NDI] Hello handshake failed:', hello.error || 'Unknown error');
     } else {
-
       const helloResponse = hello.responses?.find((r) => r?.type === 'hello');
       if (helloResponse?.payload?.version) {
         companionProtocolVersion = helloResponse.payload.version;
@@ -927,7 +1021,6 @@ function getOutputSettings(outputKey) {
 function setOutputSetting(outputKey, key, value) {
   ndiStore.set(`outputs.${outputKey}.${key}`, value);
   if (companionProcess) {
-
     syncSingleOutput(outputKey).catch((error) => {
       console.warn('[NDI] Failed syncing output setting change:', error?.message || error);
     });
@@ -971,14 +1064,19 @@ function notifyAllWindows(channel, data) {
 
 async function performStartupUpdateCheck() {
   try {
-
     if (isDev) {
       console.log('[NDI] Skipping startup update check in development mode');
+      ndiStore.set('pendingUpdateInfo', null);
       return;
     }
 
     const status = checkInstalled();
     if (!status.installed) return;
+
+    const pending = ndiStore.get('pendingUpdateInfo');
+    if (pending?.latestVersion && status.version && compareVersions(status.version, pending.latestVersion) >= 0) {
+      ndiStore.set('pendingUpdateInfo', null);
+    }
     const updateInfo = await checkForCompanionUpdate();
     if (updateInfo.updateAvailable) {
       console.log(`[NDI] Companion update available: v${updateInfo.currentVersion} -> v${updateInfo.latestVersion}`);
@@ -992,7 +1090,52 @@ async function performStartupUpdateCheck() {
 
 // ============ Initialization & IPC ============
 
-export function initializeNdiManager(getMainWindow) {
+function cleanupStaleArtifacts() {
+  try {
+    const installPath = getInstallPath();
+    const parentDir = path.dirname(installPath);
+    const baseName = path.basename(installPath);
+
+    if (!fs.existsSync(parentDir)) return;
+
+    const entries = fs.readdirSync(parentDir);
+    for (const entry of entries) {
+      if (entry.startsWith(baseName + '-extracting-')) {
+        const fullPath = path.join(parentDir, entry);
+        try {
+          fs.rmSync(fullPath, { recursive: true, force: true });
+          console.log('[NDI] Cleaned up stale extraction directory:', fullPath);
+        } catch (err) {
+          console.warn('[NDI] Failed to clean up stale directory:', fullPath, err.message);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[NDI] Stale artifact cleanup failed:', err.message);
+  }
+
+  try {
+    const tempDir = app.getPath('temp');
+    const tempEntries = fs.readdirSync(tempDir);
+    for (const entry of tempEntries) {
+      if (entry.startsWith('ndi-companion-') && entry.endsWith('.zip')) {
+        const fullPath = path.join(tempDir, entry);
+        try {
+          fs.unlinkSync(fullPath);
+          console.log('[NDI] Cleaned up stale temp zip:', fullPath);
+        } catch { /* may be in use by another process */ }
+      }
+    }
+  } catch { /* non-critical */ }
+}
+
+export function initializeNdiManager() {
+  cleanupStaleArtifacts();
+
+  if (isDev) {
+    ndiStore.set('pendingUpdateInfo', null);
+  }
+
   const installStatus = checkInstalled();
 
   if (ndiStore.get('autoLaunch') && installStatus.installed) {
@@ -1012,16 +1155,24 @@ export function initializeNdiManager(getMainWindow) {
 export function registerNdiIpcHandlers() {
   ipcMain.handle('ndi:check-installed', () => checkInstalled());
 
-  ipcMain.handle('ndi:download', async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    return downloadCompanion(win);
+  ipcMain.handle('ndi:download', async () => {
+    try {
+      return await downloadCompanion();
+    } catch (err) {
+      console.error('[NDI] Download handler error:', err);
+      return { success: false, error: err?.message || 'Download failed' };
+    }
   });
 
-  ipcMain.handle('ndi:update-companion', async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    const updateInfo = await checkForCompanionUpdate();
-    stopCompanion();
-    return downloadCompanion(win, updateInfo);
+  ipcMain.handle('ndi:update-companion', async () => {
+    try {
+      const updateInfo = await checkForCompanionUpdate();
+      stopCompanion();
+      return await downloadCompanion(updateInfo);
+    } catch (err) {
+      console.error('[NDI] Update handler error:', err);
+      return { success: false, error: err?.message || 'Update failed' };
+    }
   });
 
   ipcMain.handle('ndi:uninstall', () => uninstallCompanion());

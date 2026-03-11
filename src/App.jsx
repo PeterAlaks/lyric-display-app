@@ -21,6 +21,8 @@ import QRCodeDialogBridge from './components/QRCodeDialogBridge';
 import { ControlSocketProvider } from './context/ControlSocketProvider';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from './utils/markdownParser';
 import DesktopShell from './components/WindowChrome/DesktopShell';
+import NdiBridge from './components/NdiBridge';
+import useNdiStore from './context/NdiStore';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
 
@@ -41,6 +43,7 @@ export default function App() {
       <ToastProvider isDark={!!darkMode}>
         <AppErrorBoundary>
           <PreferencesLoaderBridge />
+          <NdiBridge />
           <ElectronModalBridge />
           <JoinCodePromptBridge />
           <WelcomeSplashBridge />
@@ -265,6 +268,9 @@ function UpdaterBridge() {
 function NdiCompanionUpdaterBridge() {
   const { showToast } = useToast();
   const { showModal } = useModal();
+  const ndiSetUpdating = useNdiStore((s) => s.setUpdating);
+  const ndiSetUpdateInfo = useNdiStore((s) => s.setUpdateInfo);
+  const ndiRefreshInstallStatus = useNdiStore((s) => s.refreshInstallStatus);
 
   useEffect(() => {
     if (!window.electronAPI?.ndi?.onUpdateAvailable) return;
@@ -344,16 +350,14 @@ function NdiCompanionUpdaterBridge() {
             label: 'Later',
             variant: 'outline',
             value: 'later',
-            onSelect: async () => {
-              // Keep the pending update info so it appears again if the preferences modal is reopened
-              // User explicitly chose "Later", so we leave the state intact
-            }
           },
           {
             label: 'Update Now',
             variant: 'default',
             value: 'update',
             onSelect: async () => {
+
+              ndiSetUpdating(true);
               try {
                 showToast({
                   title: 'Updating NDI Companion',
@@ -364,10 +368,12 @@ function NdiCompanionUpdaterBridge() {
 
                 const result = await window.electronAPI.ndi.updateCompanion();
                 if (result?.success) {
-                  // Clear pending update info after successful update
+
                   if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
                     await window.electronAPI.ndi.clearPendingUpdateInfo();
                   }
+                  ndiSetUpdateInfo(null);
+                  ndiRefreshInstallStatus();
                   showToast({
                     title: 'NDI Companion Updated',
                     message: `Updated to v${result.version}. You can relaunch it from Preferences → NDI.`,
@@ -389,6 +395,8 @@ function NdiCompanionUpdaterBridge() {
                   variant: 'error',
                   duration: 7000,
                 });
+              } finally {
+                ndiSetUpdating(false);
               }
             }
           },
@@ -397,7 +405,7 @@ function NdiCompanionUpdaterBridge() {
     });
 
     return () => { offNdiUpdate?.(); };
-  }, [showToast, showModal]);
+  }, [showToast, showModal, ndiSetUpdating, ndiSetUpdateInfo, ndiRefreshInstallStatus]);
 
   return null;
 }
