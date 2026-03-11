@@ -512,6 +512,7 @@ const LyricDisplayApp = () => {
     handleSetlistPrev: handleNavigateSetlistPrevious,
     handleSyncOutputs,
     showToast,
+    songName: lyricsFileName,
     enabled: isDesktopApp
   });
 

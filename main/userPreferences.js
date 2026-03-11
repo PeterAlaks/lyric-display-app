@@ -46,8 +46,8 @@ const preferencesStore = new Store({
       overflowTolerance: 15,
     },
 
-    // External Controls (MIDI/OSC)
-    externalControls: {
+    // External Control (MIDI/OSC)
+    externalControl: {
       midi: {
         enabled: false,
         selectedPortIndex: -1,

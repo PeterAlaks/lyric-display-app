@@ -256,6 +256,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // External Control (MIDI/OSC)
   externalControl: {
     getStatus: () => ipcRenderer.invoke('external-control:get-status'),
+    updateState: (state) => ipcRenderer.invoke('external-control:update-state', state),
     onAction: (callback) => {
       const channel = 'external-control:action';
       ipcRenderer.removeAllListeners(channel);
