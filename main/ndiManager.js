@@ -74,6 +74,7 @@ let statsInterval = null;
 let companionProtocolVersion = null; // set from hello handshake
 
 let activeDownloadOperation = null;
+let activeDownloadAbortController = null;
 
 // ============ Persistent Connection ============
 
@@ -309,16 +310,13 @@ function getInstallPath() {
     return path.join(app.getAppPath(), 'lyricdisplay-ndi');
   }
 
-  if (process.platform === 'win32') {
-    return path.join(path.dirname(app.getPath('exe')), 'lyricdisplay-ndi');
-  }
   return path.join(app.getPath('userData'), 'lyricdisplay-ndi');
 }
 
 function getCompanionBinaryName() {
   if (process.platform === 'win32') return 'LyricDisplay NDI.exe';
   if (process.platform === 'darwin') return 'LyricDisplay NDI.app/Contents/MacOS/LyricDisplay NDI';
-  return 'lyricdisplay-ndi'; // Linux
+  return 'lyricdisplay-ndi';
 }
 
 function getCompanionEntryPath() {
@@ -542,13 +540,27 @@ function followRedirects(url, maxRedirects = 5) {
   });
 }
 
-function streamToFile(response, filePath) {
+function streamToFile(response, filePath, abortController) {
   return new Promise((resolve, reject) => {
     const totalSize = parseInt(response.headers['content-length'], 10) || 0;
     let downloadedSize = 0;
+    let cancelled = false;
     const file = fs.createWriteStream(filePath);
 
+    const onAbort = () => {
+      cancelled = true;
+      response.destroy();
+      file.destroy();
+      try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+      reject(new Error('Download cancelled by user'));
+    };
+
+    if (abortController) {
+      abortController.signal.addEventListener('abort', onAbort, { once: true });
+    }
+
     response.on('data', (chunk) => {
+      if (cancelled) return;
       downloadedSize += chunk.length;
       const percent = totalSize > 0 ? Math.round((downloadedSize / totalSize) * 100) : 0;
 
@@ -563,10 +575,18 @@ function streamToFile(response, filePath) {
     response.pipe(file);
 
     file.on('finish', () => {
+      if (cancelled) return;
+      if (abortController) {
+        abortController.signal.removeEventListener('abort', onAbort);
+      }
       file.close(() => resolve());
     });
 
     file.on('error', (err) => {
+      if (cancelled) return;
+      if (abortController) {
+        abortController.signal.removeEventListener('abort', onAbort);
+      }
       try { fs.unlinkSync(filePath); } catch { /* ignore */ }
       reject(err);
     });
@@ -579,6 +599,9 @@ async function downloadCompanion(updateInfo = null) {
     console.warn('[NDI] Download already in progress, returning existing operation');
     return activeDownloadOperation;
   }
+
+  const abortController = new AbortController();
+  activeDownloadAbortController = abortController;
 
   const operation = (async () => {
     let downloadUrl;
@@ -609,7 +632,7 @@ async function downloadCompanion(updateInfo = null) {
       console.log(`[NDI] Downloading from: ${downloadUrl}`);
       const response = await followRedirects(downloadUrl);
 
-      await streamToFile(response, zipPath);
+      await streamToFile(response, zipPath, abortController);
 
       stopCompanion();
 
@@ -658,7 +681,13 @@ async function downloadCompanion(updateInfo = null) {
       return result;
     } catch (err) {
       try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
-      const errorResult = { success: false, error: `Download/install failed: ${err.message}` };
+
+      const isCancelled = err.message === 'Download cancelled by user';
+      const errorResult = {
+        success: false,
+        error: isCancelled ? 'Download cancelled' : `Download/install failed: ${err.message}`,
+        cancelled: isCancelled,
+      };
 
       notifyAllWindows('ndi:download-failed', errorResult);
       return errorResult;
@@ -670,7 +699,17 @@ async function downloadCompanion(updateInfo = null) {
     return await operation;
   } finally {
     activeDownloadOperation = null;
+    activeDownloadAbortController = null;
   }
+}
+
+function cancelDownload() {
+  if (activeDownloadAbortController) {
+    console.log('[NDI] Cancelling active download');
+    activeDownloadAbortController.abort();
+    return { success: true };
+  }
+  return { success: false, error: 'No active download to cancel' };
 }
 
 
@@ -1222,6 +1261,8 @@ export function registerNdiIpcHandlers() {
     clearPendingUpdateInfo();
     return { success: true };
   });
+
+  ipcMain.handle('ndi:cancel-download', () => cancelDownload());
 
   console.log('[NDI] IPC handlers registered');
 }

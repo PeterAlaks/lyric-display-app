@@ -48,8 +48,11 @@ export default function NdiBridge() {
     }
 
     if (api.onDownloadFailed) {
-      cleanups.push(api.onDownloadFailed(() => {
+      cleanups.push(api.onDownloadFailed((result) => {
         resetOperationState();
+        if (result?.error) {
+          useNdiStore.getState().setLastError(result.cancelled ? null : result.error);
+        }
       }));
     }
 

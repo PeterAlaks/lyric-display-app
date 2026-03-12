@@ -346,6 +346,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     getPendingUpdateInfo: () => ipcRenderer.invoke('ndi:get-pending-update-info'),
     clearPendingUpdateInfo: () => ipcRenderer.invoke('ndi:clear-pending-update-info'),
+    cancelDownload: () => ipcRenderer.invoke('ndi:cancel-download'),
   },
 
   // User Preferences

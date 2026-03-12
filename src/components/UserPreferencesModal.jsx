@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Settings, FolderOpen, FileText, Music, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Check, Loader2, ChevronRight,
-  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power, Palette, Wand2
+  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power, Palette, Wand2, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
 import useNdiStore from '../context/NdiStore';
 import { useDarkModeState } from '../hooks/useStoreSelectors';
+import useModal from '../hooks/useModal';
 
 // Category definitions
 const CATEGORIES = [
@@ -58,6 +59,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const ndiTelemetry = useNdiStore((s) => s.telemetry);
   const ndiStatus = { installed: ndiInstalled, version: ndiVersion, installPath: ndiInstallPath };
   const { showToast } = useToast();
+  const { showModal } = useModal();
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
 
@@ -359,10 +361,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       const result = await window.electronAPI?.ndi?.checkForUpdate();
       if (result) {
         useNdiStore.getState().setUpdateInfo(result);
-        if (result.updateAvailable) {
-          showToast({ title: 'Update Available', message: `NDI Companion v${result.latestVersion} is available.`, variant: 'info' });
-        } else {
-          showToast({ title: 'Up to Date', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
+        if (!result.updateAvailable) {
+          showToast({ title: 'No Update Available', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
         }
       }
     } catch (error) {
@@ -374,7 +374,27 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   }, [showToast]);
 
   const handleNdiUninstall = useCallback(async () => {
-    if (!confirm('Are you sure you want to uninstall the NDI companion?')) return;
+    const confirmation = await showModal({
+      title: 'Uninstall NDI Companion',
+      description: 'Are you sure you want to uninstall the NDI companion? This will remove all companion files and stop any running NDI broadcasts.',
+      variant: 'destructive',
+      actions: [
+        {
+          label: 'Cancel',
+          value: 'cancel',
+          variant: 'outline',
+        },
+        {
+          label: 'Uninstall',
+          value: 'uninstall',
+          variant: 'destructive',
+          autoFocus: true,
+        },
+      ],
+    });
+
+    if (confirmation !== 'uninstall') return;
+
     try {
       const result = await window.electronAPI?.ndi?.uninstall();
       if (result?.success) {
@@ -387,7 +407,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       console.error('NDI uninstall failed:', error);
       showToast({ title: 'Uninstall Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
     }
-  }, [showToast]);
+  }, [showModal, showToast]);
 
   if (loading) {
     return (
@@ -1065,12 +1085,22 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             if (result?.success) {
               useNdiStore.getState().setUpdateInfo(null);
               showToast({ title: 'NDI Installed', message: 'NDI companion has been downloaded and is ready to use.', variant: 'success' });
+            } else if (result?.cancelled) {
+              showToast({ title: 'Download Cancelled', message: 'NDI companion download was cancelled.', variant: 'info' });
             } else {
               showToast({ title: 'Download Failed', message: result?.error || 'The NDI companion could not be downloaded.', variant: 'error' });
             }
           } catch (error) {
             console.error('NDI download failed:', error);
             showToast({ title: 'Download Failed', message: error?.message || 'An unexpected error occurred while downloading the NDI companion.', variant: 'error' });
+          }
+        };
+
+        const handleNdiCancelDownload = async () => {
+          try {
+            await window.electronAPI?.ndi?.cancelDownload();
+          } catch (error) {
+            console.error('NDI cancel download failed:', error);
           }
         };
 
@@ -1104,6 +1134,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           } catch (error) {
             console.error('NDI update failed:', error);
             showToast({ title: 'Update Failed', message: error?.message || 'An unexpected error occurred while updating.', variant: 'error' });
+          } finally {
+            useNdiStore.getState().resetOperationState();
           }
         };
 
@@ -1233,11 +1265,24 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                     style={{ width: `${downloadProgress.percent || 0}%` }}
                   />
                 </div>
-                <p className={`text-xs ${mutedClass}`}>
-                  {downloadProgress.status === 'extracting'
-                    ? `Extracting... ${downloadProgress.percent || 0}%`
-                    : `Downloading... ${downloadProgress.percent || 0}%`}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className={`text-xs ${mutedClass}`}>
+                    {downloadProgress.status === 'extracting'
+                      ? `Extracting... ${downloadProgress.percent || 0}%`
+                      : `Downloading... ${downloadProgress.percent || 0}%`}
+                  </p>
+                  {downloadProgress.status !== 'extracting' && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleNdiCancelDownload}
+                      className={`h-6 px-2 text-xs ${darkMode ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/20' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'}`}
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
