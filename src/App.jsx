@@ -355,49 +355,49 @@ function NdiCompanionUpdaterBridge() {
             label: 'Update Now',
             variant: 'default',
             value: 'update',
-            onSelect: async () => {
+            onSelect: () => {
+              showToast({
+                title: 'Updating NDI Companion',
+                message: 'Downloading the latest version...',
+                variant: 'info',
+                duration: 5000,
+              });
 
               ndiSetUpdating(true);
-              try {
-                showToast({
-                  title: 'Updating NDI Companion',
-                  message: 'Downloading the latest version...',
-                  variant: 'info',
-                  duration: 5000,
-                });
-
-                const result = await window.electronAPI.ndi.updateCompanion();
-                if (result?.success) {
-
-                  if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
-                    await window.electronAPI.ndi.clearPendingUpdateInfo();
+              (async () => {
+                try {
+                  const result = await window.electronAPI.ndi.updateCompanion();
+                  if (result?.success) {
+                    if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
+                      await window.electronAPI.ndi.clearPendingUpdateInfo();
+                    }
+                    ndiSetUpdateInfo(null);
+                    ndiRefreshInstallStatus();
+                    showToast({
+                      title: 'NDI Companion Updated',
+                      message: `Updated to v${result.version}. You can relaunch it from Preferences → NDI.`,
+                      variant: 'success',
+                      duration: 8000,
+                    });
+                  } else {
+                    showToast({
+                      title: 'Update Failed',
+                      message: result?.error || 'Could not update the NDI companion.',
+                      variant: 'error',
+                      duration: 7000,
+                    });
                   }
-                  ndiSetUpdateInfo(null);
-                  ndiRefreshInstallStatus();
-                  showToast({
-                    title: 'NDI Companion Updated',
-                    message: `Updated to v${result.version}. You can relaunch it from Preferences → NDI.`,
-                    variant: 'success',
-                    duration: 8000,
-                  });
-                } else {
+                } catch (error) {
                   showToast({
                     title: 'Update Failed',
-                    message: result?.error || 'Could not update the NDI companion.',
+                    message: error?.message || 'An unexpected error occurred.',
                     variant: 'error',
                     duration: 7000,
                   });
+                } finally {
+                  ndiSetUpdating(false);
                 }
-              } catch (error) {
-                showToast({
-                  title: 'Update Failed',
-                  message: error?.message || 'An unexpected error occurred.',
-                  variant: 'error',
-                  duration: 7000,
-                });
-              } finally {
-                ndiSetUpdating(false);
-              }
+              })();
             }
           },
         ],
