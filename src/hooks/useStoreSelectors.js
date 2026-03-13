@@ -75,6 +75,26 @@ export const useOutput2Settings = () =>
         shallow
     );
 
+export const useOutputSettings = (outputKey) =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            settings: state[`${outputKey}Settings`],
+            updateSettings: (newSettings) =>
+                state.updateOutputSettings(outputKey, newSettings),
+        }),
+        shallow
+    );
+
+export const useOutputEnabled = (outputKey) =>
+    useLyricsStore((state) => state[`${outputKey}Enabled`]);
+
+export const useCustomOutputIds = () =>
+    useLyricsStore((state) => state.customOutputIds);
+
+export const useAllOutputIds = () =>
+    useLyricsStore((state) => ['output1', 'output2', ...(state.customOutputIds || [])]);
+
 export const useStageSettings = () =>
     useStoreWithEqualityFn(
         useLyricsStore,

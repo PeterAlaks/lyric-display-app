@@ -4,6 +4,7 @@ import ControlPanel from './pages/ControlPanel';
 import Output1 from './pages/Output1';
 import Output2 from './pages/Output2';
 import Stage from './pages/Stage';
+import OutputPage from './pages/OutputPage';
 import NewSongCanvas from './components/NewSongCanvas';
 import ShortcutsHelpBridge from './components/ShortcutsHelpBridge';
 import JoinCodePromptBridge from './components/JoinCodePromptBridge';
@@ -60,6 +61,10 @@ export default function App() {
               } />
               <Route path="/output1" element={<Output1 />} />
               <Route path="/output2" element={<Output2 />} />
+              <Route path="/output3" element={<OutputPage outputId="output3" />} />
+              <Route path="/output4" element={<OutputPage outputId="output4" />} />
+              <Route path="/output5" element={<OutputPage outputId="output5" />} />
+              <Route path="/output6" element={<OutputPage outputId="output6" />} />
               <Route path="/stage" element={<Stage />} />
               <Route path="/new-song" element={
                 <ConditionalDesktopShell>

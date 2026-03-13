@@ -6,28 +6,52 @@ let currentLyricsFileName = '';
 let currentSelectedLine = null;
 let currentLyricsSections = [];
 let currentLineToSection = {};
-let currentOutput1Settings = {};
-let currentOutput2Settings = {};
+
+const outputSettings = new Map();
+const outputEnabled = new Map();
+
+outputSettings.set('output1', {});
+outputSettings.set('output2', {});
+outputEnabled.set('output1', true);
+outputEnabled.set('output2', true);
+
 let currentStageSettings = {};
 let currentIsOutputOn = false;
-let currentOutput1Enabled = true;
-let currentOutput2Enabled = true;
 let currentStageEnabled = true;
 let setlistFiles = [];
 let connectedClients = new Map();
-let outputInstances = {
-  output1: new Map(),
-  output2: new Map(),
-  stage: new Map()
-};
+let outputInstances = new Map();
+
+outputInstances.set('output1', new Map());
+outputInstances.set('output2', new Map());
+outputInstances.set('stage', new Map());
+
 let currentStageTimerState = { running: false, paused: false, endTime: null, remaining: null };
 let currentStageMessages = [];
 let pendingDrafts = new Map();
+
+const isOutputClientType = (type) => typeof type === 'string' && type.startsWith('output');
+
+const ensureOutputExists = (outputId) => {
+  if (!outputSettings.has(outputId)) {
+    outputSettings.set(outputId, {});
+  }
+  if (!outputEnabled.has(outputId)) {
+    outputEnabled.set(outputId, true);
+  }
+  if (!outputInstances.has(outputId)) {
+    outputInstances.set(outputId, new Map());
+  }
+};
 
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
     const { clientType, deviceId, sessionId } = socket.userData;
     console.log(`Authenticated user connected: ${clientType} (${deviceId}) - Socket: ${socket.id}`);
+
+    if (isOutputClientType(clientType)) {
+      ensureOutputExists(clientType);
+    }
 
     connectedClients.set(socket.id, {
       type: clientType,
@@ -334,10 +358,9 @@ export default function registerSocketEvents(io, { hasPermission }) {
         return;
       }
 
-      if (output === 'output1') {
-        currentOutput1Enabled = enabled;
-      } else if (output === 'output2') {
-        currentOutput2Enabled = enabled;
+      if (isOutputClientType(output)) {
+        ensureOutputExists(output);
+        outputEnabled.set(output, enabled);
       } else if (output === 'stage') {
         currentStageEnabled = enabled;
       }
@@ -426,13 +449,10 @@ export default function registerSocketEvents(io, { hasPermission }) {
         return;
       }
 
-      if (output === 'output1') {
-        currentOutput1Settings = { ...currentOutput1Settings, ...settings };
-      }
-      if (output === 'output2') {
-        currentOutput2Settings = { ...currentOutput2Settings, ...settings };
-      }
-      if (output === 'stage') {
+      if (isOutputClientType(output)) {
+        ensureOutputExists(output);
+        outputSettings.set(output, { ...outputSettings.get(output), ...settings });
+      } else if (output === 'stage') {
         currentStageSettings = { ...currentStageSettings, ...settings };
       }
       console.log(`Style updated for ${output} by ${clientType} client`);
@@ -462,13 +482,15 @@ export default function registerSocketEvents(io, { hasPermission }) {
     });
 
     socket.on('outputMetrics', ({ output, metrics }) => {
-      if (!(clientType === 'output1' || clientType === 'output2')) {
+      if (!isOutputClientType(clientType)) {
         socket.emit('permissionError', 'Insufficient permissions to publish metrics');
         return;
       }
-      if (!output || !metrics || (output !== 'output1' && output !== 'output2')) {
+      if (!output || !metrics || !isOutputClientType(output)) {
         return;
       }
+
+      ensureOutputExists(output);
 
       const safe = {};
       if (Number.isFinite(metrics.adjustedFontSize) || metrics.adjustedFontSize === null) safe.adjustedFontSize = metrics.adjustedFontSize;
@@ -477,13 +499,13 @@ export default function registerSocketEvents(io, { hasPermission }) {
       if (Number.isFinite(metrics.viewportHeight)) safe.viewportHeight = metrics.viewportHeight;
       if (Number.isFinite(metrics.timestamp)) safe.timestamp = metrics.timestamp;
 
-      outputInstances[output].set(socket.id, {
+      outputInstances.get(output).set(socket.id, {
         ...safe,
         socketId: socket.id,
         lastUpdate: Date.now()
       });
 
-      const allInstances = Array.from(outputInstances[output].values());
+      const allInstances = Array.from(outputInstances.get(output).values());
 
       const primaryInstance = allInstances.reduce((largest, current) => {
         if (!largest) return current;
@@ -662,10 +684,10 @@ export default function registerSocketEvents(io, { hasPermission }) {
       console.log(`Authenticated user disconnected: ${clientType} (${deviceId}) - Reason: ${reason}`);
       connectedClients.delete(socket.id);
 
-      if (clientType === 'output1' || clientType === 'output2') {
-        outputInstances[clientType]?.delete(socket.id);
+      if (isOutputClientType(clientType) && outputInstances.has(clientType)) {
+        outputInstances.get(clientType).delete(socket.id);
 
-        const remainingInstances = Array.from(outputInstances[clientType]?.values() || []);
+        const remainingInstances = Array.from(outputInstances.get(clientType).values());
         if (remainingInstances.length > 0) {
           const primaryInstance = remainingInstances.reduce((largest, current) => {
             if (!largest) return current;
@@ -733,12 +755,8 @@ function buildCurrentState(clientInfo) {
     selectedLine: currentSelectedLine,
     lyricsSections: currentLyricsSections,
     lineToSection: currentLineToSection,
-    output1Settings: currentOutput1Settings,
-    output2Settings: currentOutput2Settings,
     stageSettings: currentStageSettings,
     isOutputOn: currentIsOutputOn,
-    output1Enabled: currentOutput1Enabled,
-    output2Enabled: currentOutput2Enabled,
     stageEnabled: currentStageEnabled,
     setlistFiles,
     lyricsFileName: currentLyricsFileName || '',
@@ -747,6 +765,13 @@ function buildCurrentState(clientInfo) {
     timestamp,
     syncTimestamp: timestamp,
   };
+
+  for (const [outputId, settings] of outputSettings) {
+    state[`${outputId}Settings`] = settings;
+  }
+  for (const [outputId, enabled] of outputEnabled) {
+    state[`${outputId}Enabled`] = enabled;
+  }
 
   if (clientInfo?.type === 'stage') {
     state.stageTimerState = currentStageTimerState;

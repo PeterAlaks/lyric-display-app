@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDarkModeState, useOutput1Settings, useOutput2Settings, useStageSettings, useIndividualOutputState } from '../hooks/useStoreSelectors';
+import { useDarkModeState, useOutput1Settings, useOutput2Settings, useOutputSettings as useOutputSettingsSelector, useStageSettings, useIndividualOutputState, useOutputEnabled } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -326,7 +326,7 @@ const TransitionSection = ({
   </SettingRow>
 );
 
-const OutputSettingsPanel = ({ outputKey }) => {
+const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
   const { darkMode } = useDarkModeState();
   const { emitStyleUpdate, emitIndividualOutputToggle } = useControlSocket();
   const { showToast } = useToast();
@@ -337,20 +337,22 @@ const OutputSettingsPanel = ({ outputKey }) => {
 
   const stageSettingsHook = useStageSettings();
 
+  // Use the generic hook for any output key (works for output1, output2, output3, …)
+  const genericOutputHook = useOutputSettingsSelector(outputKey);
+
   const { settings, updateSettings } =
     outputKey === 'stage'
       ? stageSettingsHook
-      : outputKey === 'output1'
-        ? useOutput1Settings()
-        : useOutput2Settings();
+      : genericOutputHook;
 
-  const isOutputEnabled = outputKey === 'output1' ? output1Enabled
-    : outputKey === 'output2' ? output2Enabled
-      : stageEnabled;
+  const outputEnabledFromStore = useOutputEnabled(outputKey);
+
+  const isOutputEnabled = outputKey === 'stage' ? stageEnabled : (outputEnabledFromStore ?? true);
 
   const setOutputEnabled = outputKey === 'output1' ? setOutput1Enabled
     : outputKey === 'output2' ? setOutput2Enabled
-      : setStageEnabled;
+      : outputKey === 'stage' ? setStageEnabled
+        : (enabled) => { import('../context/LyricsStore').then(m => m.default.getState().setOutputEnabled(outputKey, enabled)); };
 
   const { handleToggleOutput } = useOutputToggle({
     outputKey,
@@ -560,14 +562,31 @@ const OutputSettingsPanel = ({ outputKey }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          {outputKey.toUpperCase()} SETTINGS
+          {outputKey.replace('output', 'OUTPUT ')} SETTINGS
         </h3>
 
         <div className="flex items-center gap-2">
+          {/* Delete Output Button (custom outputs only) */}
+          {onDeleteOutput && (
+            <Tooltip content={`Delete ${outputKey.replace('output', 'Output ')}`} side="bottom">
+              <button
+                onClick={() => onDeleteOutput(outputKey)}
+                className={`p-1.5 rounded-lg transition-colors ${darkMode
+                  ? 'hover:bg-red-600/30 text-gray-400 hover:text-red-400'
+                  : 'hover:bg-red-100 text-gray-500 hover:text-red-600'
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </Tooltip>
+          )}
+
           {/* Toggle Output Button */}
           <Tooltip content={isOutputEnabled
-            ? `Turn off ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`
-            : `Turn on ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`}
+            ? `Turn off ${outputKey.replace('output', 'Output ')}`
+            : `Turn on ${outputKey.replace('output', 'Output ')}`}
             side="bottom">
             <button
               onClick={handleToggleOutput}

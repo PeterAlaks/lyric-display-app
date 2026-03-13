@@ -100,6 +100,59 @@ export const defaultOutput1Settings = {
   transitionSpeed: 150
 };
 
+/** Default settings factory for any new output */
+export const createDefaultOutputSettings = (overrides = {}) => ({
+  fontStyle: 'Bebas Neue',
+  bold: false,
+  italic: false,
+  underline: false,
+  allCaps: false,
+  textAlign: 'center',
+  letterSpacing: 0,
+  fontSize: 48,
+  translationFontSizeMode: 'bound',
+  translationFontSize: 48,
+  fontColor: '#FFFFFF',
+  translationLineColor: '#FBBF24',
+  borderColor: '#000000',
+  borderSize: 0,
+  dropShadowColor: '#000000',
+  dropShadowOpacity: 4,
+  dropShadowOffsetX: 0,
+  dropShadowOffsetY: 8,
+  dropShadowBlur: 10,
+  backgroundColor: '#000000',
+  backgroundOpacity: 0,
+  backgroundBandVerticalPadding: 20,
+  backgroundBandHeightMode: 'adaptive',
+  backgroundBandCustomLines: 3,
+  backgroundBandLockedToMaxLines: false,
+  lyricsPosition: 'lower',
+  fullScreenMode: false,
+  fullScreenBackgroundType: 'color',
+  fullScreenBackgroundColor: '#000000',
+  fullScreenBackgroundMedia: null,
+  fullScreenBackgroundMediaName: '',
+  alwaysShowBackground: false,
+  fullScreenRestorePosition: null,
+  xMargin: 3.5,
+  yMargin: 2,
+  maxLinesEnabled: false,
+  maxLines: 3,
+  minFontSize: 24,
+  autosizerActive: false,
+  primaryViewportWidth: null,
+  primaryViewportHeight: null,
+  allInstances: null,
+  instanceCount: 0,
+  transitionAnimation: 'none',
+  transitionSpeed: 150,
+  ...overrides,
+});
+
+/** Maximum number of user-created outputs (on top of the 2 defaults) */
+export const MAX_CUSTOM_OUTPUTS = 4;
+
 export const defaultOutput2Settings = {
   fontStyle: 'Bebas Neue',
   bold: false,
@@ -210,6 +263,8 @@ const useLyricsStore = create(
       output1Enabled: true,
       output2Enabled: true,
       stageEnabled: true,
+      // IDs of user-created outputs beyond the default output1/output2
+      customOutputIds: [],
       darkMode: false,
       hasSeenWelcome: false,
       setlistFiles: [],
@@ -299,48 +354,105 @@ const useLyricsStore = create(
             ...newSettings
           }
         })),
+
+      /** Returns the ordered list of all output IDs (default + custom) */
+      getAllOutputIds: () => {
+        const state = get();
+        return ['output1', 'output2', ...state.customOutputIds];
+      },
+
+      /** Add a new custom output. Returns the new output ID or null if at limit. */
+      addCustomOutput: () => {
+        const state = get();
+        if (state.customOutputIds.length >= MAX_CUSTOM_OUTPUTS) return null;
+
+        // Find the next available number (starting from 3)
+        const allIds = ['output1', 'output2', ...state.customOutputIds];
+        let nextNum = 3;
+        while (allIds.includes(`output${nextNum}`)) nextNum++;
+        const newId = `output${nextNum}`;
+
+        set({
+          customOutputIds: [...state.customOutputIds, newId],
+          [`${newId}Settings`]: createDefaultOutputSettings(),
+          [`${newId}Enabled`]: true,
+        });
+
+        return newId;
+      },
+
+      /** Remove a custom output by ID. Only custom outputs (not output1/output2) can be removed. */
+      removeCustomOutput: (outputId) => {
+        const state = get();
+        if (outputId === 'output1' || outputId === 'output2') return false;
+        if (!state.customOutputIds.includes(outputId)) return false;
+
+        const updates = {
+          customOutputIds: state.customOutputIds.filter(id => id !== outputId),
+        };
+        // Clean up the settings and enabled keys
+        updates[`${outputId}Settings`] = undefined;
+        updates[`${outputId}Enabled`] = undefined;
+
+        set(updates);
+        return true;
+      },
+
+      /** Generic setter for any output's enabled state */
+      setOutputEnabled: (outputId, enabled) =>
+        set({ [`${outputId}Enabled`]: enabled }),
     }),
     {
       name: 'lyrics-store',
-      partialize: (state) => ({
-        lyrics: state.lyrics,
-        rawLyricsContent: state.rawLyricsContent,
-        selectedLine: state.selectedLine,
-        lyricsFileName: state.lyricsFileName,
-        songMetadata: state.songMetadata,
-        isOutputOn: state.isOutputOn,
-        lyricsSections: state.lyricsSections,
-        lineToSection: state.lineToSection,
-        output1Enabled: state.output1Enabled,
-        output2Enabled: state.output2Enabled,
-        stageEnabled: state.stageEnabled,
-        darkMode: state.darkMode,
-        hasSeenWelcome: state.hasSeenWelcome,
-        output1Settings: state.output1Settings,
-        output2Settings: state.output2Settings,
-        stageSettings: state.stageSettings,
-        autoplaySettings: state.autoplaySettings,
-        lyricsTimestamps: state.lyricsTimestamps,
-        hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
-      }),
+      partialize: (state) => {
+        const persisted = {
+          lyrics: state.lyrics,
+          rawLyricsContent: state.rawLyricsContent,
+          selectedLine: state.selectedLine,
+          lyricsFileName: state.lyricsFileName,
+          songMetadata: state.songMetadata,
+          isOutputOn: state.isOutputOn,
+          lyricsSections: state.lyricsSections,
+          lineToSection: state.lineToSection,
+          output1Enabled: state.output1Enabled,
+          output2Enabled: state.output2Enabled,
+          stageEnabled: state.stageEnabled,
+          darkMode: state.darkMode,
+          themeMode: state.themeMode,
+          hasSeenWelcome: state.hasSeenWelcome,
+          output1Settings: state.output1Settings,
+          output2Settings: state.output2Settings,
+          stageSettings: state.stageSettings,
+          autoplaySettings: state.autoplaySettings,
+          lyricsTimestamps: state.lyricsTimestamps,
+          hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
+          customOutputIds: state.customOutputIds,
+        };
+
+        // Persist settings and enabled state for each custom output
+        for (const id of (state.customOutputIds || [])) {
+          if (state[`${id}Settings`]) persisted[`${id}Settings`] = state[`${id}Settings`];
+          if (typeof state[`${id}Enabled`] === 'boolean') persisted[`${id}Enabled`] = state[`${id}Enabled`];
+        }
+
+        return persisted;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.output1Settings = {
-            ...state.output1Settings,
-            autosizerActive: false,
-            primaryViewportWidth: null,
-            primaryViewportHeight: null,
-            allInstances: null,
-            instanceCount: 0,
-          };
-          state.output2Settings = {
-            ...state.output2Settings,
-            autosizerActive: false,
-            primaryViewportWidth: null,
-            primaryViewportHeight: null,
-            allInstances: null,
-            instanceCount: 0,
-          };
+          // Reset runtime-only fields for all outputs
+          const allOutputIds = ['output1', 'output2', ...(state.customOutputIds || [])];
+          for (const id of allOutputIds) {
+            if (state[`${id}Settings`]) {
+              state[`${id}Settings`] = {
+                ...state[`${id}Settings`],
+                autosizerActive: false,
+                primaryViewportWidth: null,
+                primaryViewportHeight: null,
+                allInstances: null,
+                instanceCount: 0,
+              };
+            }
+          }
         }
       },
     }

@@ -1,8 +1,8 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Moon, Sun, Settings } from 'lucide-react';
+import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Moon, Sun, Settings, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useMultipleFileUpload from '../hooks/useMultipleFileUpload';
@@ -28,7 +28,9 @@ import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { hasValidTimestamps } from '../utils/timestampHelpers';
-import { parseLrcContent } from '../../shared/lyricsParsing.js';
+import { parseLrcContent, STRUCTURE_TAG_PATTERNS } from '../../shared/lyricsParsing.js';
+import useLyricsStore from '../context/LyricsStore';
+import { MAX_CUSTOM_OUTPUTS } from '../context/LyricsStore';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
 import { useSyncOutputs } from '../hooks/useSyncOutputs';
 import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
@@ -65,21 +67,9 @@ const LyricDisplayApp = () => {
   const handleMultipleFileUpload = useMultipleFileUpload();
   const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
 
+  const allOutputIds = useAllOutputIds();
+
   const { activeTab, setActiveTab } = useOutputSettings({
-    output1Settings,
-    output2Settings,
-    stageSettings,
-    updateOutputSettings: (output, settings) => {
-      if (output === 'output1') {
-        updateOutput1Settings(settings);
-      } else if (output === 'output2') {
-        updateOutput2Settings(settings);
-      } else if (output === 'stage') {
-        updateStageSettings(settings);
-      }
-      emitStyleUpdate(output, settings);
-      trackAction('settings_changed');
-    },
     emitStyleUpdate,
   });
 
@@ -375,12 +365,57 @@ const LyricDisplayApp = () => {
   }, [emitLineUpdate, selectLine]);
 
   const handleOutputTabSwitch = React.useCallback((tab) => {
-    if (tab !== 'output1' && tab !== 'output2' && tab !== 'stage') return;
+    if (!tab.startsWith('output') && tab !== 'stage') return;
     setActiveTab(tab);
     if (scrollableSettingsRef.current) {
       scrollableSettingsRef.current.scrollTop = 0;
     }
   }, [setActiveTab]);
+
+  const handleAddOutput = React.useCallback(() => {
+    const newId = useLyricsStore.getState().addCustomOutput();
+    if (newId) {
+      setActiveTab(newId);
+      // Sync the new output's settings and enabled state to the server
+      const newSettings = useLyricsStore.getState()[`${newId}Settings`];
+      if (newSettings) {
+        emitStyleUpdate(newId, newSettings);
+      }
+      emitIndividualOutputToggle({ output: newId, enabled: true });
+      showToast({ title: 'Output Created', message: `${newId.replace('output', 'Output ')} has been created`, variant: 'success' });
+    } else {
+      showToast({ title: 'Limit Reached', message: 'Maximum of 6 outputs reached', variant: 'warning' });
+    }
+  }, [setActiveTab, showToast, emitStyleUpdate, emitIndividualOutputToggle]);
+
+  const handleDeleteOutput = React.useCallback((outputId) => {
+    const outputLabel = outputId.replace('output', 'Output ');
+    showModal({
+      title: `Delete ${outputLabel}`,
+      description: `Are you sure you want to delete ${outputLabel}? This will remove all its settings permanently.`,
+      variant: 'info',
+      size: 'sm',
+      actions: [
+        {
+          label: 'Cancel',
+          value: 'cancel',
+          variant: 'outline',
+        },
+        {
+          label: 'Delete',
+          value: 'delete',
+          destructive: true,
+          onSelect: () => {
+            const removed = useLyricsStore.getState().removeCustomOutput(outputId);
+            if (removed) {
+              if (activeTab === outputId) setActiveTab('output1');
+              showToast({ title: 'Output Deleted', message: `${outputLabel} has been deleted`, variant: 'success' });
+            }
+          }
+        }
+      ]
+    });
+  }, [activeTab, setActiveTab, showModal, showToast]);
 
   const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
@@ -688,13 +723,31 @@ const LyricDisplayApp = () => {
 
             {/* Output Tabs */}
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
-              <TabsList className={`w-full p-1.5 h-11 mb-8 gap-2 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
-                <TabsTrigger value="output1" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
-                  Output 1
-                </TabsTrigger>
-                <TabsTrigger value="output2" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
-                  Output 2
-                </TabsTrigger>
+              <TabsList className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
+                {allOutputIds.map((id) => {
+                  const num = id.replace('output', '');
+                  const useShortLabel = allOutputIds.length > 2;
+                  return (
+                    <TabsTrigger
+                      key={id}
+                      value={id}
+                      className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}
+                    >
+                      {useShortLabel ? num : `Output ${num}`}
+                    </TabsTrigger>
+                  );
+                })}
+                {allOutputIds.length < 2 + MAX_CUSTOM_OUTPUTS && (
+                  <Tooltip content="Add a new output" side="bottom">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAddOutput(); }}
+                      className={`flex items-center justify-center h-full px-2 rounded-md transition-colors ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
+                      aria-label="Add output"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </Tooltip>
+                )}
                 <TabsTrigger value="stage" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
                   Stage
                 </TabsTrigger>
@@ -720,36 +773,17 @@ const LyricDisplayApp = () => {
           >
             {/* Tab Content */}
             <div>
-              {activeTab === 'output1' && (
+              {activeTab.startsWith('output') && (
                 <OutputSettingsPanel
-                  outputKey="output1"
-                  settings={output1Settings}
-                  updateSettings={(settings) => {
-                    updateOutput1Settings(settings);
-                    emitStyleUpdate('output1', settings);
-                  }}
-                />
-              )}
-
-              {activeTab === 'output2' && (
-                <OutputSettingsPanel
-                  outputKey="output2"
-                  settings={output2Settings}
-                  updateSettings={(settings) => {
-                    updateOutput2Settings(settings);
-                    emitStyleUpdate('output2', settings);
-                  }}
+                  key={activeTab}
+                  outputKey={activeTab}
+                  onDeleteOutput={activeTab !== 'output1' && activeTab !== 'output2' ? handleDeleteOutput : undefined}
                 />
               )}
 
               {activeTab === 'stage' && (
                 <OutputSettingsPanel
                   outputKey="stage"
-                  settings={stageSettings}
-                  updateSettings={(settings) => {
-                    updateStageSettings(settings);
-                    emitStyleUpdate('stage', settings);
-                  }}
                 />
               )}
             </div>

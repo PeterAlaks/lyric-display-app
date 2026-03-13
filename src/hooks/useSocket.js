@@ -31,10 +31,8 @@ const useSocket = (role = 'output') => {
   } = useSocketEvents(role);
 
   const getClientType = useCallback(() => {
-    if (role === 'output1') return 'output1';
-    if (role === 'output2') return 'output2';
+    if (role.startsWith('output')) return role;
     if (role === 'stage') return 'stage';
-    if (role === 'output') return 'output1';
     if (window.electronAPI) return 'desktop';
     if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
       return 'mobile';
@@ -361,7 +359,7 @@ const useSocket = (role = 'output') => {
   }, [clearBackoffWarning]);
 
   useEffect(() => {
-    const staggerDelay = role === 'control' ? 0 : role === 'output1' ? 500 : 1000;
+    const staggerDelay = role === 'control' ? 0 : role === 'output1' ? 500 : role === 'output2' ? 1000 : 1500;
 
     const startConnection = setTimeout(() => {
       connectSocket();

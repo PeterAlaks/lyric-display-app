@@ -58,13 +58,12 @@ const useSocketEvents = (role) => {
         selectLine(state.selectedLine);
       }
 
-      if (state.output1Settings) {
-        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output1Settings;
-        updateOutputSettings('output1', styleSettings);
-      }
-      if (state.output2Settings) {
-        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output2Settings;
-        updateOutputSettings('output2', styleSettings);
+      for (const key of Object.keys(state)) {
+        if (key.startsWith('output') && key.endsWith('Settings') && state[key]) {
+          const outputId = key.slice(0, -'Settings'.length);
+          const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state[key];
+          updateOutputSettings(outputId, styleSettings);
+        }
       }
       if (state.stageSettings && role === 'stage') {
         updateOutputSettings('stage', state.stageSettings);
@@ -75,11 +74,13 @@ const useSocketEvents = (role) => {
         useLyricsStore.getState().setIsOutputOn(state.isOutputOn);
       }
 
-      if (typeof state.output1Enabled === 'boolean') {
-        useLyricsStore.getState().setOutput1Enabled(state.output1Enabled);
-      }
-      if (typeof state.output2Enabled === 'boolean') {
-        useLyricsStore.getState().setOutput2Enabled(state.output2Enabled);
+      for (const key of Object.keys(state)) {
+        if (key.startsWith('output') && key.endsWith('Enabled') && typeof state[key] === 'boolean') {
+          const setter = useLyricsStore.getState()[`set${key.charAt(0).toUpperCase()}${key.slice(1)}`];
+          if (typeof setter === 'function') {
+            setter(state[key]);
+          }
+        }
       }
       if (typeof state.stageEnabled === 'boolean') {
         useLyricsStore.getState().setStageEnabled(state.stageEnabled);
@@ -136,16 +137,13 @@ const useSocketEvents = (role) => {
     socket.on('individualOutputToggle', ({ output, enabled }) => {
       logDebug('Received individual output toggle:', output, enabled);
       const store = useLyricsStore.getState();
-      if (output === 'output1') {
-        store.setOutput1Enabled(enabled);
-      } else if (output === 'output2') {
-        store.setOutput2Enabled(enabled);
-      } else if (output === 'stage') {
-        store.setStageEnabled(enabled);
+      const setterName = `set${output.charAt(0).toUpperCase()}${output.slice(1)}Enabled`;
+      if (typeof store[setterName] === 'function') {
+        store[setterName](enabled);
       }
     });
 
-    const shouldHandleOutputMetrics = role === 'control' || role === 'output' || role === 'output1' || role === 'output2' || role === 'stage';
+    const shouldHandleOutputMetrics = role === 'control' || role === 'stage' || (typeof role === 'string' && role.startsWith('output'));
 
     if (shouldHandleOutputMetrics) {
       socket.on('styleUpdate', ({ output, settings }) => {
@@ -171,7 +169,7 @@ const useSocketEvents = (role) => {
             instanceCount: instanceCount || 1,
           };
 
-          if (output === 'output1' || output === 'output2') {
+          if (typeof output === 'string' && output.startsWith('output')) {
             updateOutputSettings(output, updates);
 
             if (instanceCount > 1) {
@@ -397,13 +395,12 @@ const useSocketEvents = (role) => {
         }
       }
 
-      if (state.output1Settings) {
-        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output1Settings;
-        updateOutputSettings('output1', styleSettings);
-      }
-      if (state.output2Settings) {
-        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state.output2Settings;
-        updateOutputSettings('output2', styleSettings);
+      for (const key of Object.keys(state)) {
+        if (key.startsWith('output') && key.endsWith('Settings') && state[key]) {
+          const outputId = key.slice(0, -'Settings'.length);
+          const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = state[key];
+          updateOutputSettings(outputId, styleSettings);
+        }
       }
       if (state.stageSettings && role === 'stage') {
         updateOutputSettings('stage', state.stageSettings);
@@ -411,11 +408,13 @@ const useSocketEvents = (role) => {
       if (state.setlistFiles) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
 
-      if (typeof state.output1Enabled === 'boolean') {
-        useLyricsStore.getState().setOutput1Enabled(state.output1Enabled);
-      }
-      if (typeof state.output2Enabled === 'boolean') {
-        useLyricsStore.getState().setOutput2Enabled(state.output2Enabled);
+      for (const key of Object.keys(state)) {
+        if (key.startsWith('output') && key.endsWith('Enabled') && typeof state[key] === 'boolean') {
+          const setter = useLyricsStore.getState()[`set${key.charAt(0).toUpperCase()}${key.slice(1)}`];
+          if (typeof setter === 'function') {
+            setter(state[key]);
+          }
+        }
       }
       if (typeof state.stageEnabled === 'boolean') {
         useLyricsStore.getState().setStageEnabled(state.stageEnabled);
@@ -452,23 +451,23 @@ const useSocketEvents = (role) => {
         socket.emit('requestCurrentState');
       }, 500);
 
-      const shouldSyncOutputSettings = role !== 'output' && role !== 'output1' && role !== 'output2' && role !== 'stage';
+      const isOutputRole = typeof role === 'string' && role.startsWith('output');
+      const shouldSyncOutputSettings = !isOutputRole && role !== 'stage';
 
       if (shouldSyncOutputSettings && clientType === 'desktop') {
         const syncOutputSettingsFromStore = () => {
           try {
-            const { output1Settings, output2Settings, stageSettings } = useLyricsStore.getState();
+            const storeState = useLyricsStore.getState();
 
-            if (output1Settings) {
-              socket.emit('styleUpdate', { output: 'output1', settings: output1Settings });
+            for (const key of Object.keys(storeState)) {
+              if (key.startsWith('output') && key.endsWith('Settings') && storeState[key]) {
+                const outputId = key.slice(0, -'Settings'.length);
+                socket.emit('styleUpdate', { output: outputId, settings: storeState[key] });
+              }
             }
 
-            if (output2Settings) {
-              socket.emit('styleUpdate', { output: 'output2', settings: output2Settings });
-            }
-
-            if (stageSettings) {
-              socket.emit('styleUpdate', { output: 'stage', settings: stageSettings });
+            if (storeState.stageSettings) {
+              socket.emit('styleUpdate', { output: 'stage', settings: storeState.stageSettings });
             }
 
             logDebug('Synced output settings to server after reconnect');
@@ -503,11 +502,11 @@ const useSocketEvents = (role) => {
             socket.emit('lineUpdate', { index: currentState.selectedLine });
             socket.emit('outputToggle', currentState.isOutputOn);
 
-            if (typeof currentState.output1Enabled === 'boolean') {
-              socket.emit('individualOutputToggle', { output: 'output1', enabled: currentState.output1Enabled });
-            }
-            if (typeof currentState.output2Enabled === 'boolean') {
-              socket.emit('individualOutputToggle', { output: 'output2', enabled: currentState.output2Enabled });
+            for (const key of Object.keys(currentState)) {
+              if (key.startsWith('output') && key.endsWith('Enabled') && typeof currentState[key] === 'boolean') {
+                const outputId = key.slice(0, -'Enabled'.length);
+                socket.emit('individualOutputToggle', { output: outputId, enabled: currentState[key] });
+              }
             }
             if (typeof currentState.stageEnabled === 'boolean') {
               socket.emit('individualOutputToggle', { output: 'stage', enabled: currentState.stageEnabled });

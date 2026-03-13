@@ -45,6 +45,7 @@ const ADMIN_TOKEN_EXPIRY = secrets.ADMIN_TOKEN_EXPIRY || process.env.ADMIN_TOKEN
 
 global.controllerJoinCode = String(Math.floor(100000 + Math.random() * 900000));
 const VALID_CLIENT_TYPES = ['desktop', 'web', 'output1', 'output2', 'stage', 'mobile'];
+const isOutputClientType = (type) => typeof type === 'string' && type.startsWith('output');
 const CONTROLLER_CLIENT_TYPES = ['web', 'mobile'];
 const isControllerClient = (clientType) => CONTROLLER_CLIENT_TYPES.includes(clientType);
 
@@ -195,7 +196,7 @@ app.post('/api/auth/token', (req, res) => {
     });
   }
 
-  if (!VALID_CLIENT_TYPES.includes(clientType)) {
+  if (!VALID_CLIENT_TYPES.includes(clientType) && !isOutputClientType(clientType)) {
     return res.status(400).json({
       error: 'Invalid client type. Must be one of: ' + VALID_CLIENT_TYPES.join(', ')
     });
@@ -379,7 +380,7 @@ app.post(
       const relativePath = `/media/backgrounds/${req.file.filename}`;
 
       const outputKey = req.body.outputKey;
-      if (outputKey && /^output[12]$/.test(outputKey)) {
+      if (outputKey && isOutputClientType(outputKey)) {
         cleanupOldMediaFiles(outputKey).catch(err =>
           console.warn('Background cleanup failed (non-blocking):', err.message)
         );
@@ -438,8 +439,6 @@ function getClientPermissions(clientType) {
       'setlist:read',
       'output:control', 'settings:read', 'settings:write'
     ],
-    output1: ['lyrics:read', 'settings:read'],
-    output2: ['lyrics:read', 'settings:read'],
     stage: ['lyrics:read', 'settings:read'],
     mobile: [
       'lyrics:read', 'lyrics:write', 'lyrics:draft',
@@ -447,6 +446,10 @@ function getClientPermissions(clientType) {
       'output:control', 'settings:read', 'settings:write'
     ]
   };
+
+  if (isOutputClientType(clientType)) {
+    return ['lyrics:read', 'settings:read'];
+  }
 
   return permissions[clientType] || ['lyrics:read'];
 }
