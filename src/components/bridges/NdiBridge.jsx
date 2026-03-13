@@ -4,7 +4,7 @@
  * subscribes to all main-process NDI events, and keeps the store in sync.
  */
 import { useEffect } from 'react';
-import useNdiStore from '../context/NdiStore';
+import useNdiStore from '../../context/NdiStore';
 
 export default function NdiBridge() {
   const initialize = useNdiStore((s) => s.initialize);
