@@ -391,6 +391,7 @@ lyric-display-app/
 |   |   ├── maxLinesCalculator.js           # Calculator for maximum lines feature in outputs display
 |   |   ├── network.js                      # Network utility for backend URL resolution
 |   |   ├── numberInput.js                  # Integer value sanitization utility for settings panel
+|   |   ├── outputLabels.js                 # Output label builder utility for settings panel, etc.
 |   |   ├── outputTemplates.js              # Output templates for settings panel
 |   |   ├── parseLrc.js                     # LRC file parser
 |   |   ├── parseLyrics.js                  # Text file parser

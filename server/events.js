@@ -29,6 +29,7 @@ outputInstances.set('stage', new Map());
 let currentStageTimerState = { running: false, paused: false, endTime: null, remaining: null };
 let currentStageMessages = [];
 let pendingDrafts = new Map();
+let registeredOutputs = new Set(['output1', 'output2']);
 
 const isOutputClientType = (type) => typeof type === 'string' && type.startsWith('output');
 
@@ -44,12 +45,70 @@ const ensureOutputExists = (outputId) => {
   }
 };
 
+const normalizeCustomOutputs = (outputs = []) => {
+  if (!Array.isArray(outputs)) return [];
+  return outputs
+    .filter((id) => typeof id === 'string' && id.startsWith('output'))
+    .filter((id) => id !== 'output1' && id !== 'output2');
+};
+
+const registerOutputs = (customOutputs = []) => {
+  const normalized = normalizeCustomOutputs(customOutputs);
+  const next = new Set(['output1', 'output2', ...normalized]);
+
+  for (const id of Array.from(registeredOutputs)) {
+    if (id !== 'output1' && id !== 'output2' && !next.has(id)) {
+      outputSettings.delete(id);
+      outputEnabled.delete(id);
+      outputInstances.delete(id);
+    }
+  }
+
+  for (const id of next) {
+    if (id !== 'output1' && id !== 'output2') {
+      ensureOutputExists(id);
+    }
+  }
+
+  registeredOutputs = next;
+};
+
+const buildOutputList = () => {
+  const custom = Array.from(registeredOutputs)
+    .filter((id) => id !== 'output1' && id !== 'output2' && typeof id === 'string' && id.startsWith('output'))
+    .sort((a, b) => {
+      const numA = parseInt(a.replace('output', ''), 10);
+      const numB = parseInt(b.replace('output', ''), 10);
+      if (Number.isFinite(numA) && Number.isFinite(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+
+  return ['output1', 'output2', ...custom];
+};
+
+export const getOutputRegistry = () => ({
+  outputs: buildOutputList(),
+  stageEnabled: currentStageEnabled,
+});
+
+export const hasOutput = (outputId) => {
+  if (outputId === 'output1' || outputId === 'output2') return true;
+  if (outputId === 'stage') return true;
+  if (!outputId || typeof outputId !== 'string') return false;
+  return registeredOutputs.has(outputId);
+};
+
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
     const { clientType, deviceId, sessionId } = socket.userData;
     console.log(`Authenticated user connected: ${clientType} (${deviceId}) - Socket: ${socket.id}`);
 
     if (isOutputClientType(clientType)) {
+      if (!registeredOutputs.has(clientType)) {
+        socket.emit('outputUnavailable', { output: clientType });
+        socket.disconnect(true);
+        return;
+      }
       ensureOutputExists(clientType);
     }
 
@@ -450,6 +509,9 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
 
       if (isOutputClientType(output)) {
+        if (!registeredOutputs.has(output)) {
+          return;
+        }
         ensureOutputExists(output);
         outputSettings.set(output, { ...outputSettings.get(output), ...settings });
       } else if (output === 'stage') {
@@ -457,6 +519,41 @@ export default function registerSocketEvents(io, { hasPermission }) {
       }
       console.log(`Style updated for ${output} by ${clientType} client`);
       io.emit('styleUpdate', { output, settings });
+    });
+
+    socket.on('outputRemove', ({ output }) => {
+      if (!hasPermission(socket, 'settings:write')) {
+        socket.emit('permissionError', 'Insufficient permissions to remove outputs');
+        return;
+      }
+
+      if (!isOutputClientType(output)) {
+        return;
+      }
+
+      if (output === 'output1' || output === 'output2') {
+        return;
+      }
+
+      outputSettings.delete(output);
+      outputEnabled.delete(output);
+      outputInstances.delete(output);
+      if (registeredOutputs.has(output)) {
+        registeredOutputs.delete(output);
+      }
+
+      console.log(`Output ${output} removed by ${clientType} client`);
+      io.emit('outputRemoved', { output });
+    });
+
+    socket.on('outputsRegister', ({ outputs }) => {
+      if (!hasPermission(socket, 'settings:write')) {
+        socket.emit('permissionError', 'Insufficient permissions to register outputs');
+        return;
+      }
+
+      registerOutputs(outputs);
+      io.emit('outputsRegistry', { outputs: buildOutputList() });
     });
 
     socket.on('stageTimerUpdate', (timerData) => {
@@ -490,7 +587,13 @@ export default function registerSocketEvents(io, { hasPermission }) {
         return;
       }
 
-      ensureOutputExists(output);
+      if (!outputSettings.has(output) && !outputEnabled.has(output)) {
+        return;
+      }
+
+      if (!outputInstances.has(output)) {
+        outputInstances.set(output, new Map());
+      }
 
       const safe = {};
       if (Number.isFinite(metrics.adjustedFontSize) || metrics.adjustedFontSize === null) safe.adjustedFontSize = metrics.adjustedFontSize;

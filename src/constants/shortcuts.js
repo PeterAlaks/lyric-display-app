@@ -65,7 +65,11 @@ export const SHORTCUTS = [
     items: [
       { label: 'Switch to Output 1 tab', combo: '1' },
       { label: 'Switch to Output 2 tab', combo: '2' },
-      { label: 'Switch to Stage tab', combo: '3' },
+      { label: 'Switch to Output 3 tab (if available)', combo: '3' },
+      { label: 'Switch to Output 4 tab (if available)', combo: '4' },
+      { label: 'Switch to Output 5 tab (if available)', combo: '5' },
+      { label: 'Switch to Output 6 tab (if available)', combo: '6' },
+      { label: 'Switch to Stage tab', combo: '0' },
     ]
   },
 ];

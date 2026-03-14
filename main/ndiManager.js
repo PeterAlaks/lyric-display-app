@@ -810,12 +810,9 @@ function uninstallCompanion() {
 // ============ Companion Process Management ============
 
 function buildOutputsPayload() {
+  const outputs = ndiStore.get('outputs');
   return {
-    outputs: {
-      output1: ndiStore.get('outputs.output1'),
-      output2: ndiStore.get('outputs.output2'),
-      stage: ndiStore.get('outputs.stage'),
-    },
+    outputs: outputs && typeof outputs === 'object' ? outputs : {},
   };
 }
 
@@ -1041,23 +1038,50 @@ function getCompanionStatus() {
 
 // ============ Settings ============
 
-function getOutputSettings(outputKey) {
-  const settings = ndiStore.get(`outputs.${outputKey}`);
+function formatOutputLabel(outputKey) {
+  if (outputKey === 'stage') return 'Stage';
+  const match = /^output(\d+)$/i.exec(String(outputKey));
+  if (match) return `Output ${match[1]}`;
+  return String(outputKey);
+}
+
+function getOutputDefaults(outputKey) {
+  const label = formatOutputLabel(outputKey);
   return {
-    settings: settings || {
-      enabled: false,
-      resolution: '1080p',
-      customWidth: 1920,
-      customHeight: 1080,
-      framerate: 30,
-      sourceName: `LyricDisplay ${outputKey === 'stage' ? 'Stage' : outputKey === 'output1' ? 'Output 1' : 'Output 2'}`,
-    },
+    enabled: false,
+    resolution: '1080p',
+    customWidth: 1920,
+    customHeight: 1080,
+    framerate: 30,
+    sourceName: `LyricDisplay ${label}`,
+  };
+}
+
+function ensureOutputSettings(outputKey) {
+  const defaults = getOutputDefaults(outputKey);
+  const current = ndiStore.get(`outputs.${outputKey}`);
+  const safeCurrent = (current && typeof current === 'object') ? current : {};
+  const merged = { ...defaults, ...safeCurrent };
+  const needsWrite = Object.keys(defaults).some((key) => safeCurrent[key] === undefined);
+
+  if (needsWrite) {
+    ndiStore.set(`outputs.${outputKey}`, merged);
+  }
+
+  return merged;
+}
+
+function getOutputSettings(outputKey) {
+  const settings = ensureOutputSettings(outputKey);
+  return {
+    settings,
     companionConnected: companionProcess !== null,
     isBroadcasting: settings?.enabled && companionProcess !== null,
   };
 }
 
 function setOutputSetting(outputKey, key, value) {
+  ensureOutputSettings(outputKey);
   ndiStore.set(`outputs.${outputKey}.${key}`, value);
   if (companionProcess) {
     syncSingleOutput(outputKey).catch((error) => {
@@ -1242,6 +1266,7 @@ export function registerNdiIpcHandlers() {
   ipcMain.handle('ndi:set-resolution', (_, { outputKey, resolution }) => setOutputSetting(outputKey, 'resolution', resolution));
 
   ipcMain.handle('ndi:set-custom-resolution', (_, { outputKey, width, height }) => {
+    ensureOutputSettings(outputKey);
     ndiStore.set(`outputs.${outputKey}.resolution`, 'custom');
     ndiStore.set(`outputs.${outputKey}.customWidth`, Math.max(320, Math.min(7680, width)));
     ndiStore.set(`outputs.${outputKey}.customHeight`, Math.max(240, Math.min(4320, height)));

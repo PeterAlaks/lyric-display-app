@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import useToast from '../hooks/useToast';
 import useNdiStore from '../context/NdiStore';
+import { formatOutputLabel } from '../utils/outputLabels';
 
 const RESOLUTION_PRESETS = [
   { value: '720p', label: '720p (1280x720)' },
@@ -28,19 +29,13 @@ const FRAMERATE_OPTIONS = [
   { value: 60, label: '60 fps' },
 ];
 
-const OUTPUT_LABELS = {
-  output1: 'Output 1',
-  output2: 'Output 2',
-  stage: 'Stage',
-};
-
 const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
   const [settings, setSettings] = useState(null);
   const companionRunning = useNdiStore((s) => s.companionRunning);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
-  const outputLabel = OUTPUT_LABELS[outputKey] || outputKey;
+  const outputLabel = formatOutputLabel(outputKey);
 
   useEffect(() => {
     const load = async () => {

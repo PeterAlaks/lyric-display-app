@@ -21,6 +21,7 @@ import StageSettingsPanel from './StageSettingsPanel';
 import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
 import { Slider } from '@/components/ui/slider';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
+import { formatOutputLabel } from '../utils/outputLabels';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true, darkMode }) => (
   <div className="flex items-center justify-between gap-4">
@@ -562,13 +563,13 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          {outputKey.replace('output', 'OUTPUT ')} SETTINGS
+          {formatOutputLabel(outputKey, { uppercase: true })} SETTINGS
         </h3>
 
         <div className="flex items-center gap-2">
           {/* Delete Output Button (custom outputs only) */}
           {onDeleteOutput && (
-            <Tooltip content={`Delete ${outputKey.replace('output', 'Output ')}`} side="bottom">
+            <Tooltip content={`Delete ${formatOutputLabel(outputKey)}`} side="bottom">
               <button
                 onClick={() => onDeleteOutput(outputKey)}
                 className={`p-1.5 rounded-lg transition-colors ${darkMode
@@ -585,8 +586,8 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
 
           {/* Toggle Output Button */}
           <Tooltip content={isOutputEnabled
-            ? `Turn off ${outputKey.replace('output', 'Output ')}`
-            : `Turn on ${outputKey.replace('output', 'Output ')}`}
+            ? `Turn off ${formatOutputLabel(outputKey)}`
+            : `Turn on ${formatOutputLabel(outputKey)}`}
             side="bottom">
             <button
               onClick={handleToggleOutput}
@@ -633,7 +634,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
                 }
                 showModal({
                   title: 'NDI Output Settings',
-                  headerDescription: `Configure NDI broadcast for ${outputKey === 'output1' ? 'Output 1' : 'Output 2'}`,
+                  headerDescription: `Configure NDI broadcast for ${formatOutputLabel(outputKey)}`,
                   component: 'NdiOutputSettings',
                   variant: 'info',
                   size: 'lg',

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLyricsState, useOutputState, useOutputSettings, useOutputEnabled } from '../hooks/useStoreSelectors';
+import useLyricsStore from '../context/LyricsStore';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
@@ -17,10 +18,13 @@ import { calculateOptimalFontSize } from '../utils/maxLinesCalculator';
 const OutputPage = ({ outputId }) => {
   const label = outputId.charAt(0).toUpperCase() + outputId.slice(1);
 
-  // Always connect the socket unconditionally — same as output1/output2.
-  // The server handles unknown outputs gracefully. Visual rendering is gated
-  // on whether settings actually exist (outputSettings is truthy).
-  const { socket, isConnected, connectionStatus, isAuthenticated, emitStyleUpdate, emitOutputMetrics } = useSocket(outputId);
+  const isDefaultOutput = outputId === 'output1' || outputId === 'output2';
+  const [isOutputAvailable, setIsOutputAvailable] = useState(isDefaultOutput);
+
+  // Only connect when the output exists on the server (or is a default output).
+  const { socket, isConnected, connectionStatus, isAuthenticated, emitOutputMetrics } = useSocket(outputId, {
+    enabled: isOutputAvailable,
+  });
   const { settings: outputSettings, updateSettings: updateOutputSettings } = useOutputSettings(outputId);
   const outputEnabled = useOutputEnabled(outputId);
   const { lyrics, selectedLine, setLyrics, selectLine } = useLyricsState();
@@ -30,10 +34,14 @@ const OutputPage = ({ outputId }) => {
 
   const stateRequestTimeoutRef = useRef(null);
   const pendingStateRequestRef = useRef(false);
+  const [isOutputRemoved, setIsOutputRemoved] = useState(false);
+  const lastStateRequestAtRef = useRef(0);
+  const lastStateReceivedAtRef = useRef(0);
 
   const [adjustedFontSize, setAdjustedFontSize] = useState(null);
   const [isTruncated, setIsTruncated] = useState(false);
   const textContainerRef = useRef(null);
+
 
   const [preloadedVideoUrl, setPreloadedVideoUrl] = useState(null);
   const [isPreloading, setIsPreloading] = useState(false);
@@ -44,6 +52,23 @@ const OutputPage = ({ outputId }) => {
 
   const requestCurrentStateWithRetry = useCallback((retryCount = 0) => {
     const maxRetries = 3;
+    const now = Date.now();
+    const minRequestIntervalMs = 1500;
+    const minSinceReceiveMs = 1500;
+
+    if (isOutputRemoved || !isOutputAvailable) {
+      return;
+    }
+
+    if (now - lastStateRequestAtRef.current < minRequestIntervalMs) {
+      logDebug(`${label}: Skipping state request - throttled`);
+      return;
+    }
+
+    if (lastStateReceivedAtRef.current && (now - lastStateReceivedAtRef.current) < minSinceReceiveMs) {
+      logDebug(`${label}: Skipping state request - recently synced`);
+      return;
+    }
 
     if (retryCount === 0 && pendingStateRequestRef.current) {
       logDebug(`${label}: Skipping state request - pending request in progress`);
@@ -64,6 +89,7 @@ const OutputPage = ({ outputId }) => {
       return;
     }
 
+    lastStateRequestAtRef.current = now;
     pendingStateRequestRef.current = true;
     logDebug(`${label}: Requesting current state (attempt ${retryCount + 1})`);
     socket.emit('requestCurrentState');
@@ -77,7 +103,7 @@ const OutputPage = ({ outputId }) => {
       logDebug(`${label}: State request timeout (attempt ${retryCount + 1}), retrying...`);
       requestCurrentStateWithRetry(retryCount + 1);
     }, 3000);
-  }, [socket, isAuthenticated, label]);
+  }, [socket, isAuthenticated, label, isOutputRemoved, isOutputAvailable]);
 
   useEffect(() => {
     const transparentStyle = 'background: transparent !important';
@@ -96,6 +122,45 @@ const OutputPage = ({ outputId }) => {
     };
   }, []);
 
+  const clearLocalOutputSettings = useCallback(() => {
+    useLyricsStore.setState({
+      [`${outputId}Settings`]: undefined,
+      [`${outputId}Enabled`]: undefined,
+    });
+  }, [outputId]);
+
+  useEffect(() => {
+    if (isDefaultOutput) return;
+
+    let isActive = true;
+
+    const checkAvailability = async () => {
+      try {
+        const response = await fetch(resolveBackendUrl(`/api/outputs/${outputId}`), { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!isActive) return;
+        if (typeof data?.exists === 'boolean') {
+          setIsOutputAvailable(data.exists);
+          if (!data.exists) {
+            setIsOutputRemoved(true);
+            clearLocalOutputSettings();
+          }
+        }
+      } catch { }
+    };
+
+    checkAvailability();
+
+    if (isOutputAvailable) return () => { isActive = false; };
+
+    const interval = setInterval(checkAvailability, 3000);
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [outputId, isDefaultOutput, isOutputAvailable, clearLocalOutputSettings]);
+
   useEffect(() => {
     if (!socket) return;
 
@@ -109,10 +174,19 @@ const OutputPage = ({ outputId }) => {
         stateRequestTimeoutRef.current = null;
       }
       pendingStateRequestRef.current = false;
+      lastStateReceivedAtRef.current = Date.now();
 
       if (state.lyrics) setLyrics(state.lyrics);
       if (state.selectedLine !== undefined) selectLine(state.selectedLine);
-      if (state[settingsKey]) updateOutputSettings(state[settingsKey]);
+      if (Object.prototype.hasOwnProperty.call(state, settingsKey)) {
+        updateOutputSettings(state[settingsKey] || {});
+        setIsOutputRemoved(false);
+        setIsOutputAvailable(true);
+      } else if (outputId !== 'output1' && outputId !== 'output2') {
+        clearLocalOutputSettings();
+        setIsOutputRemoved(true);
+        setIsOutputAvailable(false);
+      }
       if (typeof state.isOutputOn === 'boolean') setIsOutputOn(state.isOutputOn);
     };
 
@@ -131,6 +205,8 @@ const OutputPage = ({ outputId }) => {
       if (output === outputId) {
         logDebug(`${label}: Received style update`);
         updateOutputSettings(settings);
+        setIsOutputRemoved(false);
+        setIsOutputAvailable(true);
       }
     };
 
@@ -139,11 +215,28 @@ const OutputPage = ({ outputId }) => {
       setIsOutputOn(state);
     };
 
+    const handleOutputRemoved = ({ output }) => {
+      if (output === outputId) {
+        logDebug(`${label}: Output removed, clearing local settings`);
+        clearLocalOutputSettings();
+        setIsOutputRemoved(true);
+        setIsOutputAvailable(false);
+        if (stateRequestTimeoutRef.current) {
+          clearTimeout(stateRequestTimeoutRef.current);
+          stateRequestTimeoutRef.current = null;
+        }
+        pendingStateRequestRef.current = false;
+        lastStateRequestAtRef.current = 0;
+        lastStateReceivedAtRef.current = 0;
+      }
+    };
+
     socket.on('currentState', handleCurrentState);
     socket.on('lineUpdate', handleLineUpdate);
     socket.on('lyricsLoad', handleLyricsLoad);
     socket.on('styleUpdate', handleStyleUpdate);
     socket.on('outputToggle', handleOutputToggle);
+    socket.on('outputRemoved', handleOutputRemoved);
 
     if (socket.connected) {
       setTimeout(() => requestCurrentStateWithRetry(0), 100);
@@ -159,20 +252,21 @@ const OutputPage = ({ outputId }) => {
       socket.off('lyricsLoad', handleLyricsLoad);
       socket.off('styleUpdate', handleStyleUpdate);
       socket.off('outputToggle', handleOutputToggle);
+      socket.off('outputRemoved', handleOutputRemoved);
     };
 
-  }, [socket, requestCurrentStateWithRetry, outputId, label]);
+  }, [socket, requestCurrentStateWithRetry, outputId, label, clearLocalOutputSettings, updateOutputSettings, setIsOutputOn]);
 
   useEffect(() => {
     logDebug(`${label} connection status: ${connectionStatus}`);
 
-    if (connectionStatus === 'connected' && socket) {
+    if (!isOutputRemoved && isOutputAvailable && connectionStatus === 'connected' && socket) {
       setTimeout(() => requestCurrentStateWithRetry(0), 200);
     }
-  }, [connectionStatus, socket, requestCurrentStateWithRetry, label]);
+  }, [connectionStatus, socket, requestCurrentStateWithRetry, label, isOutputRemoved, isOutputAvailable]);
 
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected || isOutputRemoved || !isOutputAvailable) return;
 
     const syncCheckInterval = setInterval(() => {
       logDebug(`${label}: Periodic sync check`);
@@ -182,7 +276,7 @@ const OutputPage = ({ outputId }) => {
     }, 60000);
 
     return () => clearInterval(syncCheckInterval);
-  }, [isConnected, socket, requestCurrentStateWithRetry, label]);
+  }, [isConnected, socket, requestCurrentStateWithRetry, label, isOutputRemoved, isOutputAvailable]);
 
   useEffect(() => {
     return () => {
@@ -322,7 +416,8 @@ const OutputPage = ({ outputId }) => {
 
   // Only show content if this output has settings (either from store or received from server).
   // outputEnabled defaults to true when undefined (custom output not yet in local store).
-  const isOutputActive = Boolean(outputSettings) && (isPreviewMode || Boolean(isOutputOn && (outputEnabled !== false)));
+  const isOutputActive = Boolean(outputSettings)
+    && (isPreviewMode || Boolean(isOutputOn && (outputEnabled !== false)));
   const isVisible = Boolean(isOutputActive && line);
   const shouldShowFullScreenBackground = fullScreenMode && (alwaysShowBackground || isOutputActive);
 

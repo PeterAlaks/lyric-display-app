@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import multer from 'multer';
-import registerSocketEvents from './events.js';
+import registerSocketEvents, { getOutputRegistry, hasOutput } from './events.js';
 import { assertJoinCodeAllowed, recordJoinCodeAttempt, getJoinCodeGuardSnapshot } from './joinCodeGuard.js';
 import SimpleSecretManager from './secretManager.js';
 
@@ -115,6 +115,16 @@ const corsMiddleware = (req, res, next) => {
 app.use(corsMiddleware);
 app.use(express.json());
 app.use('/api/auth', tokenRateLimit);
+
+app.get('/api/outputs', (_req, res) => {
+  res.json({ success: true, ...getOutputRegistry() });
+});
+
+app.get('/api/outputs/:outputId', (req, res) => {
+  const outputId = req.params.outputId;
+  const exists = hasOutput(outputId);
+  res.json({ success: true, output: outputId, exists });
+});
 
 const localhostOnly = (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;

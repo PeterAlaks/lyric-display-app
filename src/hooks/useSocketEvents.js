@@ -160,6 +160,16 @@ const useSocketEvents = (role) => {
       const setterName = `set${output.charAt(0).toUpperCase()}${output.slice(1)}Enabled`;
       if (typeof store[setterName] === 'function') {
         store[setterName](enabled);
+      } else if (typeof store.setOutputEnabled === 'function' && typeof output === 'string' && output.startsWith('output')) {
+        store.setOutputEnabled(output, enabled);
+      }
+    });
+
+    socket.on('outputRemoved', ({ output }) => {
+      if (typeof output !== 'string') return;
+      const store = useLyricsStore.getState();
+      if (typeof store.removeCustomOutput === 'function') {
+        store.removeCustomOutput(output);
       }
     });
 
@@ -433,9 +443,13 @@ const useSocketEvents = (role) => {
 
       for (const key of Object.keys(state)) {
         if (key.startsWith('output') && key.endsWith('Enabled') && typeof state[key] === 'boolean') {
-          const setter = useLyricsStore.getState()[`set${key.charAt(0).toUpperCase()}${key.slice(1)}`];
+          const outputId = key.slice(0, -'Enabled'.length);
+          const store = useLyricsStore.getState();
+          const setter = store[`set${key.charAt(0).toUpperCase()}${key.slice(1)}`];
           if (typeof setter === 'function') {
             setter(state[key]);
+          } else if (typeof store.setOutputEnabled === 'function') {
+            store.setOutputEnabled(outputId, state[key]);
           }
         }
       }
@@ -481,6 +495,7 @@ const useSocketEvents = (role) => {
         const syncOutputSettingsFromStore = () => {
           try {
             const storeState = useLyricsStore.getState();
+            socket.emit('outputsRegister', { outputs: storeState.customOutputIds || [] });
 
             for (const key of Object.keys(storeState)) {
               if (key.startsWith('output') && key.endsWith('Settings') && storeState[key]) {

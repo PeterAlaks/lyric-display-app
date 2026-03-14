@@ -61,7 +61,7 @@ const LyricDisplayApp = () => {
   const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitIndividualOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, emitAutoplayStateUpdate, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
+  const { socket, emitOutputToggle, emitIndividualOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, emitAutoplayStateUpdate, emitOutputRemove, emitOutputsRegister, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
   const handleMultipleFileUpload = useMultipleFileUpload();
@@ -391,7 +391,9 @@ const LyricDisplayApp = () => {
     const newId = useLyricsStore.getState().addCustomOutput();
     if (newId) {
       setActiveTab(newId);
-      // Sync the new output's settings and enabled state to the server
+      const customOutputs = useLyricsStore.getState().customOutputIds || [];
+      emitOutputsRegister({ outputs: customOutputs });
+
       const newSettings = useLyricsStore.getState()[`${newId}Settings`];
       if (newSettings) {
         emitStyleUpdate(newId, newSettings);
@@ -424,6 +426,9 @@ const LyricDisplayApp = () => {
             const removed = useLyricsStore.getState().removeCustomOutput(outputId);
             if (removed) {
               if (activeTab === outputId) setActiveTab('output1');
+              emitOutputRemove({ output: outputId });
+              const customOutputs = useLyricsStore.getState().customOutputIds || [];
+              emitOutputsRegister({ outputs: customOutputs });
               showToast({ title: 'Output Deleted', message: `${outputLabel} has been deleted`, variant: 'success' });
             }
           }
@@ -526,10 +531,10 @@ const LyricDisplayApp = () => {
     handleAddToSetlist,
     handleNavigateSetlistPrevious,
     handleNavigateSetlistNext,
-    handleOpenPreferences
+    handleOpenPreferences,
+    availableOutputIds: allOutputIds
   });
 
-  // External control (MIDI/OSC) integration
   useExternalControl({
     lyrics,
     selectedLine,
@@ -750,14 +755,13 @@ const LyricDisplayApp = () => {
               <TabsList className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
                 {allOutputIds.map((id) => {
                   const num = id.replace('output', '');
-                  const useShortLabel = allOutputIds.length > 2;
                   return (
                     <TabsTrigger
                       key={id}
                       value={id}
                       className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}
                     >
-                      {useShortLabel ? num : `Output ${num}`}
+                      {num}
                     </TabsTrigger>
                   );
                 })}
@@ -765,7 +769,7 @@ const LyricDisplayApp = () => {
                   <Tooltip content="Add a new output" side="bottom">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAddOutput(); }}
-                      className={`flex items-center justify-center h-full px-2 rounded-md transition-colors ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
+                      className={`flex-1 flex items-center justify-center h-full min-w-0 rounded-md transition-colors ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
                       aria-label="Add output"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -773,7 +777,7 @@ const LyricDisplayApp = () => {
                   </Tooltip>
                 )}
                 <TabsTrigger value="stage" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
-                  Stage
+                  {allOutputIds.length >= 5 ? 'S' : 'Stage'}
                 </TabsTrigger>
               </TabsList>
             </Tabs>

@@ -24,7 +24,8 @@ export const useKeyboardShortcuts = ({
   handleAddToSetlist,
   handleNavigateSetlistPrevious,
   handleNavigateSetlistNext,
-  handleOpenPreferences
+  handleOpenPreferences,
+  availableOutputIds
 }) => {
 
   useEffect(() => {
@@ -164,19 +165,19 @@ export const useKeyboardShortcuts = ({
       if (isTyping) return;
 
       if (!event.ctrlKey && !event.metaKey && !event.altKey) {
-        if (event.key === '1') {
-          event.preventDefault();
-          handleOutputTabSwitch('output1');
-          return;
-        }
-        if (event.key === '2') {
-          event.preventDefault();
-          handleOutputTabSwitch('output2');
-          return;
-        }
-        if (event.key === '3') {
+        if (event.key === '0') {
           event.preventDefault();
           handleOutputTabSwitch('stage');
+          return;
+        }
+
+        if (/^[1-9]$/.test(event.key)) {
+          const outputIds = Array.isArray(availableOutputIds) ? availableOutputIds : [];
+          const targetOutput = `output${event.key}`;
+          if (outputIds.includes(targetOutput)) {
+            event.preventDefault();
+            handleOutputTabSwitch(targetOutput);
+          }
           return;
         }
       }
@@ -235,6 +236,7 @@ export const useKeyboardShortcuts = ({
     totalMatches,
     highlightedLineIndex,
     handleOpenSetlist,
-    handleOpenOnlineLyricsSearch
+    handleOpenOnlineLyricsSearch,
+    availableOutputIds
   ]);
 };
