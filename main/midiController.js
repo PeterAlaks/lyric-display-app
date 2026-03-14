@@ -3,7 +3,6 @@
  * Handles MIDI input for external hardware control of LyricDisplay
  */
 
-import { app } from 'electron';
 import { EventEmitter } from 'events';
 import Store from 'electron-store';
 
@@ -17,7 +16,7 @@ class MIDIController extends EventEmitter {
     this.isEnabled = false;
     this.selectedPortIndex = -1;
     this.availablePorts = [];
-    
+
     // Store for persisting MIDI settings
     this.store = new Store({
       name: 'midi-settings',
@@ -27,7 +26,7 @@ class MIDIController extends EventEmitter {
         mappings: this.getDefaultMappings()
       }
     });
-    
+
     this.mappings = this.store.get('mappings') || this.getDefaultMappings();
   }
 
@@ -47,7 +46,7 @@ class MIDIController extends EventEmitter {
         40: { action: 'toggle-autoplay', description: 'Toggle Autoplay (E2)' },
         41: { action: 'prev-song', description: 'Previous Song (F2)' },
         42: { action: 'next-song', description: 'Next Song (F#2)' },
-        
+
         // Direct line selection (C4-C6 = lines 1-25)
         60: { action: 'select-line', line: 0, description: 'Select Line 1 (C4)' },
         61: { action: 'select-line', line: 1, description: 'Select Line 2 (C#4)' },
@@ -75,7 +74,7 @@ class MIDIController extends EventEmitter {
         83: { action: 'select-line', line: 23, description: 'Select Line 24 (B5)' },
         84: { action: 'select-line', line: 24, description: 'Select Line 25 (C6)' }
       },
-      
+
       // Control Change mappings
       controlChanges: {
         1: { action: 'scroll-lines', description: 'Scroll Lines (Mod Wheel)' },
@@ -98,28 +97,28 @@ class MIDIController extends EventEmitter {
       // Using @julusian/midi which is a maintained fork of node-midi
       const midiModule = await import('@julusian/midi');
       this.midi = midiModule.default || midiModule;
-      
+
       this.isInitialized = true;
       this.refreshPorts();
-      
+
       // Restore saved settings
       const savedEnabled = this.store.get('enabled');
       const savedPort = this.store.get('selectedPort');
-      
+
       if (savedEnabled && savedPort >= 0) {
         await this.selectPort(savedPort);
         if (this.input) {
           this.enable();
         }
       }
-      
+
       console.log('[MIDI] Controller initialized successfully');
       return { success: true, ports: this.availablePorts };
     } catch (error) {
       console.warn('[MIDI] Failed to initialize MIDI controller:', error.message);
       console.warn('[MIDI] MIDI functionality will be unavailable. Install @julusian/midi to enable.');
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error.message,
         hint: 'Run "npm install @julusian/midi" to enable MIDI support'
       };
@@ -135,10 +134,11 @@ class MIDIController extends EventEmitter {
       return [];
     }
 
+    let tempInput = null;
     try {
-      const tempInput = new this.midi.Input();
+      tempInput = new this.midi.Input();
       const portCount = tempInput.getPortCount();
-      
+
       this.availablePorts = [];
       for (let i = 0; i < portCount; i++) {
         this.availablePorts.push({
@@ -146,14 +146,17 @@ class MIDIController extends EventEmitter {
           name: tempInput.getPortName(i)
         });
       }
-      
-      tempInput.closePort();
+
       console.log('[MIDI] Found', portCount, 'input ports:', this.availablePorts.map(p => p.name));
       return this.availablePorts;
     } catch (error) {
       console.error('[MIDI] Error refreshing ports:', error);
       this.availablePorts = [];
       return [];
+    } finally {
+      if (tempInput) {
+        try { tempInput.closePort(); } catch (e) { /* ignore */ }
+      }
     }
   }
 
@@ -186,12 +189,12 @@ class MIDIController extends EventEmitter {
       this.input.openPort(portIndex);
       this.selectedPortIndex = portIndex;
       this.store.set('selectedPort', portIndex);
-      
+
       // Set up message handler
       this.input.on('message', (deltaTime, message) => {
         this.handleMIDIMessage(message);
       });
-      
+
       console.log('[MIDI] Opened port:', this.availablePorts[portIndex].name);
       return { success: true, port: this.availablePorts[portIndex] };
     } catch (error) {
@@ -240,7 +243,7 @@ class MIDIController extends EventEmitter {
     }
 
     console.log('[MIDI] Note On:', note, '→', mapping.action);
-    
+
     const action = {
       type: mapping.action,
       source: 'midi',
@@ -300,7 +303,7 @@ class MIDIController extends EventEmitter {
     if (!this.input) {
       return { success: false, error: 'No MIDI port selected' };
     }
-    
+
     this.isEnabled = true;
     this.store.set('enabled', true);
     console.log('[MIDI] Input enabled');

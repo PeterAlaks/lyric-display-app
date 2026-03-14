@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Minus, Square, Copy, X, Minimize2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
+import useLyricsStore from '@/context/LyricsStore';
 import useTopMenuState from '@/hooks/WindowChrome/useTopMenuState';
 import useSubMenuListNav from '@/hooks/WindowChrome/useSubmenuListNav';
 import useMenuHandlers from '@/hooks/WindowChrome/useMenuHandlers';
@@ -578,7 +579,18 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('view')}
                 onKeyDown={getMenuKeyDown('view')}
               >
-                <MenuItem ref={(el) => registerItemRef('view', 0, el)} label={darkMode ? 'Light Mode' : 'Dark Mode'} onClick={menuHandlers.handleToggleDarkMode} active={openMenu === 'view' && activeIndex === 0} />
+                <MenuItem
+                  ref={(el) => registerItemRef('view', 0, el)}
+                  label={
+                    useLyricsStore.getState().themeMode === 'system'
+                      ? `App theme is system managed`
+                      : darkMode ? 'Light Mode' : 'Dark Mode'
+                  }
+                  onClick={menuHandlers.handleToggleDarkMode}
+                  disabled={useLyricsStore.getState().themeMode === 'system'}
+                  active={openMenu === 'view' && activeIndex === 0}
+                  title={useLyricsStore.getState().themeMode === 'system' ? 'Theme is managed by system preferences. Change in Preferences → Appearance.' : undefined}
+                />
                 <MenuItem ref={(el) => registerItemRef('view', 1, el)} label="Reload" shortcut="Ctrl/Cmd + R" onClick={menuHandlers.handleReload} active={openMenu === 'view' && activeIndex === 1} />
                 <MenuItem ref={(el) => registerItemRef('view', 2, el)} label="Toggle Developer Tools" shortcut="Ctrl/Cmd + Shift + I" onClick={menuHandlers.handleToggleDevTools} active={openMenu === 'view' && activeIndex === 2} />
                 <Separator />

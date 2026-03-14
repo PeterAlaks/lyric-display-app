@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
-import SupportDevelopmentModal from './SupportDevelopmentModal';
+import SupportDevelopmentModal from '../SupportDevelopmentModal';
 
 export default function SupportDevelopmentBridge() {
   const { darkMode } = useDarkModeState();

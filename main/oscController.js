@@ -21,43 +21,56 @@ const OSC_TYPE_NIL = 'N';
  */
 function parseOSCMessage(buffer) {
   let offset = 0;
-  
+
   // Read address pattern (null-terminated string, padded to 4 bytes)
   const addressEnd = buffer.indexOf(0, offset);
   if (addressEnd === -1) return null;
-  
+
   const address = buffer.toString('utf8', offset, addressEnd);
   offset = Math.ceil((addressEnd + 1) / 4) * 4;
-  
+
   // Read type tag string
   if (buffer[offset] !== 0x2C) { // ','
     // No type tag, assume no arguments
     return { address, args: [] };
   }
-  
+
   const typeTagEnd = buffer.indexOf(0, offset);
   if (typeTagEnd === -1) return null;
-  
+
   const typeTag = buffer.toString('utf8', offset + 1, typeTagEnd);
   offset = Math.ceil((typeTagEnd + 1) / 4) * 4;
-  
+
   // Parse arguments based on type tags
   const args = [];
   for (const type of typeTag) {
     switch (type) {
       case OSC_TYPE_INT:
+        if (offset + 4 > buffer.length) return { address, args };
         args.push({ type: 'int', value: buffer.readInt32BE(offset) });
         offset += 4;
         break;
       case OSC_TYPE_FLOAT:
+        if (offset + 4 > buffer.length) return { address, args };
         args.push({ type: 'float', value: buffer.readFloatBE(offset) });
         offset += 4;
         break;
-      case OSC_TYPE_STRING:
+      case OSC_TYPE_STRING: {
         const strEnd = buffer.indexOf(0, offset);
+        if (strEnd === -1) return { address, args };
         args.push({ type: 'string', value: buffer.toString('utf8', offset, strEnd) });
         offset = Math.ceil((strEnd + 1) / 4) * 4;
         break;
+      }
+      case OSC_TYPE_BLOB: {
+        if (offset + 4 > buffer.length) return { address, args };
+        const blobSize = buffer.readInt32BE(offset);
+        offset += 4;
+        if (offset + blobSize > buffer.length) return { address, args };
+        args.push({ type: 'blob', value: buffer.slice(offset, offset + blobSize) });
+        offset += Math.ceil(blobSize / 4) * 4;
+        break;
+      }
       case OSC_TYPE_TRUE:
         args.push({ type: 'bool', value: true });
         break;
@@ -68,11 +81,10 @@ function parseOSCMessage(buffer) {
         args.push({ type: 'nil', value: null });
         break;
       default:
-        // Unknown type, skip
         break;
     }
   }
-  
+
   return { address, args };
 }
 
@@ -81,17 +93,17 @@ function parseOSCMessage(buffer) {
  */
 function createOSCMessage(address, args = []) {
   const parts = [];
-  
+
   // Address pattern (null-terminated, padded to 4 bytes)
   const addressBuf = Buffer.from(address + '\0');
   const addressPadded = Buffer.alloc(Math.ceil(addressBuf.length / 4) * 4);
   addressBuf.copy(addressPadded);
   parts.push(addressPadded);
-  
+
   // Type tag string
   let typeTag = ',';
   const argBuffers = [];
-  
+
   for (const arg of args) {
     if (typeof arg === 'number') {
       if (Number.isInteger(arg)) {
@@ -117,15 +129,15 @@ function createOSCMessage(address, args = []) {
       typeTag += OSC_TYPE_NIL;
     }
   }
-  
+
   const typeTagBuf = Buffer.from(typeTag + '\0');
   const typeTagPadded = Buffer.alloc(Math.ceil(typeTagBuf.length / 4) * 4);
   typeTagBuf.copy(typeTagPadded);
   parts.push(typeTagPadded);
-  
+
   // Arguments
   parts.push(...argBuffers);
-  
+
   return Buffer.concat(parts);
 }
 
@@ -141,8 +153,7 @@ class OSCController extends EventEmitter {
     this.port = 8000;
     this.feedbackPort = 9000;
     this.addressPrefix = '/lyricdisplay';
-    
-    // Store for persisting OSC settings
+
     this.store = new Store({
       name: 'osc-settings',
       defaults: {
@@ -153,13 +164,11 @@ class OSCController extends EventEmitter {
         feedbackEnabled: true
       }
     });
-    
-    // Load saved settings
+
     this.port = this.store.get('port');
     this.feedbackPort = this.store.get('feedbackPort');
     this.addressPrefix = this.store.get('addressPrefix');
-    
-    // Current state for feedback
+
     this.currentState = {
       line: null,
       output: false,
@@ -170,14 +179,10 @@ class OSCController extends EventEmitter {
       lineCount: 0,
       autoplay: false
     };
-    
-    // Define supported OSC addresses and their handlers
+
     this.addressHandlers = this.createAddressHandlers();
   }
 
-  /**
-   * Create address handlers map
-   */
   createAddressHandlers() {
     const prefix = this.addressPrefix;
     return {
@@ -209,7 +214,7 @@ class OSCController extends EventEmitter {
 
     try {
       this.server = dgram.createSocket('udp4');
-      
+
       this.server.on('error', (err) => {
         console.error('[OSC] Server error:', err);
         this.emit('error', err);
@@ -225,12 +230,18 @@ class OSCController extends EventEmitter {
         this.emit('listening', address);
       });
 
-      // Bind to port
       await new Promise((resolve, reject) => {
-        this.server.bind(this.port, '0.0.0.0', (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
+        const onError = (err) => {
+          this.server.removeListener('listening', onListening);
+          reject(err);
+        };
+        const onListening = () => {
+          this.server.removeListener('error', onError);
+          resolve();
+        };
+        this.server.once('error', onError);
+        this.server.once('listening', onListening);
+        this.server.bind(this.port, '0.0.0.0');
       });
 
       // Restore enabled state
@@ -395,7 +406,7 @@ class OSCController extends EventEmitter {
    */
   updateState(updates) {
     Object.assign(this.currentState, updates);
-    
+
     if (this.store.get('feedbackEnabled')) {
       this.sendFeedback();
     }
@@ -447,7 +458,7 @@ class OSCController extends EventEmitter {
     if (!this.server || !this.isEnabled) return;
 
     const fullAddress = address.startsWith('/') ? address : `${this.addressPrefix}/${address}`;
-    
+
     for (const client of this.feedbackClients.values()) {
       try {
         const buffer = createOSCMessage(fullAddress, args);

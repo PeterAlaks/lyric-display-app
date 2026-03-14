@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import QRCodeDialog from './QRCodeDialog';
-import { useDarkModeState } from '../hooks/useStoreSelectors';
+import QRCodeDialog from '../QRCodeDialog';
+import { useDarkModeState } from '../../hooks/useStoreSelectors';
 
 export default function QRCodeDialogBridge() {
   const { darkMode } = useDarkModeState();

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+﻿import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Moon, Sun, Settings, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -48,7 +48,7 @@ const LyricDisplayApp = () => {
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
-  const { darkMode, setDarkMode } = useDarkModeState();
+  const { darkMode, setDarkMode, themeMode, setThemeMode } = useDarkModeState();
   const { setSetlistModalOpen, setlistFiles, setSetlistFiles, getMaxSetlistFiles } = useSetlistState();
   const isDesktopApp = useIsDesktopApp();
   const maxSetlistFiles = getMaxSetlistFiles();
@@ -101,6 +101,21 @@ const LyricDisplayApp = () => {
   }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
+
+  const lineCounterText = React.useMemo(() => {
+    if (!hasLyrics) return '';
+    const isTag = (line) => typeof line === 'string' && STRUCTURE_TAG_PATTERNS.some((p) => p.test(line.trim()));
+    const contentLineCount = lyrics.reduce((n, l) => n + (isTag(l) ? 0 : 1), 0);
+    if (selectedLine !== null && selectedLine !== undefined) {
+      let contentPos = 0;
+      for (let i = 0; i <= selectedLine; i++) {
+        if (!isTag(lyrics[i])) contentPos++;
+      }
+      return `Line ${contentPos} of ${contentLineCount} loaded lyric lines`;
+    }
+    return `${contentLineCount} loaded lyric ${contentLineCount === 1 ? 'line' : 'lines'}`;
+  }, [lyrics, selectedLine, hasLyrics]);
+
   const { showToast } = useToast();
   const { showModal } = useModal();
 
@@ -532,6 +547,7 @@ const LyricDisplayApp = () => {
     handleSetlistPrev: handleNavigateSetlistPrevious,
     handleSyncOutputs,
     showToast,
+    songName: lyricsFileName,
     enabled: isDesktopApp
   });
 
@@ -591,14 +607,22 @@ const LyricDisplayApp = () => {
                 </Tooltip>
 
                 {/* Dark Mode Toggle Button */}
-                <Tooltip content={darkMode ? "Switch to light mode" : "Switch to dark mode"} side="bottom">
+                <Tooltip content={
+                  themeMode === 'system'
+                    ? "Theme is managed by system preferences. Change in Preferences â†’ Appearance."
+                    : darkMode ? "Switch to light mode" : "Switch to dark mode"
+                } side="bottom">
                   <button
-                    className={iconButtonClass(false)}
+                    className={iconButtonClass(themeMode === 'system')}
+                    disabled={themeMode === 'system'}
                     onClick={() => {
+                      if (themeMode === 'system') return;
                       const next = !darkMode;
+                      const nextMode = next ? 'dark' : 'light';
                       setDarkMode(next);
+                      setThemeMode(nextMode);
+                      window.electronAPI?.syncNativeThemeSource?.(nextMode);
                       window.electronAPI?.setDarkMode?.(next);
-                      window.electronAPI?.syncNativeDarkMode?.(next);
                     }}
                   >
                     {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -802,10 +826,7 @@ const LyricDisplayApp = () => {
                 </h2>
                 {hasLyrics && (
                   <p className={`text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {selectedLine !== null && selectedLine !== undefined
-                      ? `Line ${selectedLine + 1} of ${lyrics.length} loaded lyric lines`
-                      : `${lyrics.length} loaded lyric ${lyrics.length === 1 ? 'line' : 'lines'}`
-                    }
+                    {lineCounterText}
                   </p>
                 )}
               </div>

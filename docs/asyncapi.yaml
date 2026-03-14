@@ -4,7 +4,7 @@ asyncapi: 3.0.0
 
 info:
   title: LyricDisplay App Socket.IO API
-  version: 6.2.10 
+  version: 6.3.0 
   description: |
     Real-time control surface for LyricDisplay over Socket.IO. All connections must provide
     a JWT in the Socket.IO auth payload (`auth.token`), minted via `/api/auth/token`.
@@ -49,8 +49,6 @@ channels:
         $ref: '#/components/messages/lyricsLoad'
       lyricsTimestampsUpdate:
         $ref: '#/components/messages/lyricsTimestampsUpdate'
-      lyricsSectionsUpdate:
-        $ref: '#/components/messages/lyricsSectionsUpdate'
       styleUpdate:
         $ref: '#/components/messages/styleUpdate'
       stageTimerUpdate:
@@ -79,8 +77,8 @@ channels:
         $ref: '#/components/messages/authError'
       currentState:
         $ref: '#/components/messages/currentState'
-      lyricsSectionsUpdate:
-        $ref: '#/components/messages/lyricsSectionsUpdate'
+      serverLyricsSectionsUpdate:
+        $ref: '#/components/messages/serverLyricsSectionsUpdate'
       permissionError:
         $ref: '#/components/messages/permissionError'
       setlistUpdate:
@@ -160,7 +158,6 @@ operations:
       - $ref: '#/channels/socketChannel/messages/individualOutputToggle'
       - $ref: '#/channels/socketChannel/messages/lyricsLoad'
       - $ref: '#/channels/socketChannel/messages/lyricsTimestampsUpdate'
-      - $ref: '#/channels/socketChannel/messages/lyricsSectionsUpdate'
       - $ref: '#/channels/socketChannel/messages/styleUpdate'
       - $ref: '#/channels/socketChannel/messages/stageTimerUpdate'
       - $ref: '#/channels/socketChannel/messages/stageMessagesUpdate'
@@ -180,7 +177,7 @@ operations:
     messages:
       - $ref: '#/channels/socketChannel/messages/authError'
       - $ref: '#/channels/socketChannel/messages/currentState'
-      - $ref: '#/channels/socketChannel/messages/lyricsSectionsUpdate'
+      - $ref: '#/channels/socketChannel/messages/serverLyricsSectionsUpdate'
       - $ref: '#/channels/socketChannel/messages/permissionError'
       - $ref: '#/channels/socketChannel/messages/setlistUpdate'
       - $ref: '#/channels/socketChannel/messages/setlistError'
@@ -362,6 +359,10 @@ components:
       payload:
         type: string
         description: File ID to load
+      description: |
+        Loads a setlist item by ID. On success the server emits lyricsLoad,
+        lyricsTimestampsUpdate, lyricsSectionsUpdate, and setlistLoadSuccess
+        to all clients.
       x-permissions: ['setlist:read']
     setlistClear:
       name: setlistClear
@@ -413,6 +414,10 @@ components:
         type: array
         items:
           $ref: '#/components/schemas/LyricLine'
+      description: |
+        Load lyrics into the server state. The server also emits
+        lyricsTimestampsUpdate (cleared) and lyricsSectionsUpdate
+        (derived) to all clients as side effects.
       x-permissions: ['lyrics:write']
     lyricsTimestampsUpdate:
       name: lyricsTimestampsUpdate
@@ -425,17 +430,6 @@ components:
               type: number
             lineIndex:
               type: integer
-      x-permissions: ['lyrics:write']
-    lyricsSectionsUpdate:
-      name: lyricsSectionsUpdate
-      payload:
-        type: object
-        properties:
-          sections:
-            type: array
-          lineToSection:
-            type: object
-      description: Sends derived sections and mapping for loaded lyrics.
       x-permissions: ['lyrics:write']
     styleUpdate:
       name: styleUpdate
@@ -493,8 +487,12 @@ components:
                 type: number
               timestamp:
                 type: integer
-      description: Output instances publish autosizer and viewport metrics.
-      x-permissions: ['lyrics:read']
+      description: >
+        Output instances publish autosizer and viewport metrics.
+        Only accepted from output1 or output2 client types (enforced by
+        client-type check, not permission scope).
+      x-permissions: []
+      x-client-types: ['output1', 'output2']
     fileNameUpdate:
       name: fileNameUpdate
       payload:
@@ -530,6 +528,10 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/LyricLine'
+      description: |
+        Desktop client approves a pending draft. On success the server emits
+        lyricsLoad, fileNameUpdate, lyricsSectionsUpdate to all clients, and
+        optionally setlistLoadSuccess (with origin 'draft') if rawText is present.
       x-permissions: ['lyrics:write']
     lyricsDraftReject:
       name: lyricsDraftReject
@@ -552,6 +554,9 @@ components:
             type: boolean
           clientType:
             type: string
+      description: >
+        Updates autoplay state. The server broadcasts this to all clients
+        except the sender (socket.broadcast.emit).
       x-permissions: ['output:control']
     heartbeat:
       name: heartbeat
@@ -581,6 +586,10 @@ components:
             type: array
             items:
               type: object
+          selectedLine:
+            type: integer
+            nullable: true
+            description: Currently selected line index, or null if none selected
           lyricsSections:
             type: array
           lineToSection:
@@ -615,7 +624,31 @@ components:
             type: integer
           syncTimestamp:
             type: integer
-          # ... Add other state properties as required
+          stageTimerState:
+            type: object
+            nullable: true
+            description: Only included for stage clients
+            properties:
+              running:
+                type: boolean
+              paused:
+                type: boolean
+              endTime:
+                type: integer
+                nullable: true
+              remaining:
+                type: integer
+                nullable: true
+          stageMessages:
+            type: array
+            nullable: true
+            description: Only included for stage clients
+            items:
+              type: object
+      description: >
+        Full application state sent on connection, on requestCurrentState,
+        and as an initial push ~100ms after connection. Stage clients receive
+        additional stageTimerState and stageMessages fields.
     permissionError:
       name: permissionError
       payload:
@@ -655,8 +688,8 @@ components:
           fileName:
             type: string
           originalName:
-             type: string
-             nullable: true
+            type: string
+            nullable: true
           fileType:
             type: string
           linesCount:
@@ -666,10 +699,20 @@ components:
           loadedBy:
             type: string
           origin:
-             type: string
-             nullable: true
+            type: string
+            nullable: true
+            description: Set to 'draft' when loaded via draft approval
           metadata:
             type: object
+            nullable: true
+            description: May contain sections and lineToSection when loaded from setlist
+            properties:
+              sections:
+                type: array
+                items:
+                  type: object
+              lineToSection:
+                type: object
     setlistClearSuccess:
       name: setlistClearSuccess
       payload:
@@ -717,7 +760,7 @@ components:
         type: array
         items:
           type: object
-    lyricsSectionsUpdate:
+    serverLyricsSectionsUpdate:
       name: lyricsSectionsUpdate
       payload:
         type: object
@@ -726,6 +769,10 @@ components:
             type: array
           lineToSection:
             type: object
+      description: >
+        Server-only event. Emitted as a side effect of lyricsLoad,
+        splitNormalGroup, setlistLoad, and lyricsDraftApprove. There is
+        no corresponding client-to-server lyricsSectionsUpdate event.
     serverStyleUpdate:
       name: styleUpdate
       payload:
@@ -779,9 +826,29 @@ components:
       name: lyricsDraftReceived
       payload:
         type: object
+        description: Full draft payload sent to desktop clients for approval
         properties:
           draftId:
             type: string
+          title:
+            type: string
+          rawText:
+            type: string
+          processedLines:
+            type: array
+            items:
+              $ref: '#/components/schemas/LyricLine'
+          submittedBy:
+            type: object
+            properties:
+              clientType:
+                type: string
+              deviceId:
+                type: string
+              sessionId:
+                type: string
+              timestamp:
+                type: integer
     draftSubmitted:
       name: draftSubmitted
       payload:
@@ -824,6 +891,8 @@ components:
             type: boolean
           clientType:
             type: string
+      description: >
+        Broadcast to all clients except the sender (socket.broadcast.emit).
     heartbeat_ack:
       name: heartbeat_ack
       payload:
@@ -848,4 +917,4 @@ components:
       name: periodicStateSync
       payload:
         type: object
-        # same as currentState
+        description: Same shape as currentState, sent every 30 seconds to each connected client.

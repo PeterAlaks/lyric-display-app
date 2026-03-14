@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDarkMode: () => ipcRenderer.invoke('get-dark-mode'),
   setDarkMode: (isDark) => ipcRenderer.invoke('set-dark-mode', isDark),
   syncNativeDarkMode: (isDark) => ipcRenderer.invoke('sync-native-dark-mode', isDark),
+  syncNativeThemeSource: (themeSource) => ipcRenderer.invoke('sync-native-theme-source', themeSource),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
   parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
   getAdminKey: () => ipcRenderer.invoke('get-admin-key'),
@@ -255,6 +256,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // External Control (MIDI/OSC)
   externalControl: {
     getStatus: () => ipcRenderer.invoke('external-control:get-status'),
+    updateState: (state) => ipcRenderer.invoke('external-control:update-state', state),
     onAction: (callback) => {
       const channel = 'external-control:action';
       ipcRenderer.removeAllListeners(channel);
@@ -301,6 +303,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
+    onDownloadComplete: (callback) => {
+      const channel = 'ndi:download-complete';
+      const listener = (_event, result) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onDownloadFailed: (callback) => {
+      const channel = 'ndi:download-failed';
+      const listener = (_event, result) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
     uninstall: () => ipcRenderer.invoke('ndi:uninstall'),
     launchCompanion: () => ipcRenderer.invoke('ndi:launch-companion'),
     stopCompanion: () => ipcRenderer.invoke('ndi:stop-companion'),
@@ -332,6 +346,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     getPendingUpdateInfo: () => ipcRenderer.invoke('ndi:get-pending-update-info'),
     clearPendingUpdateInfo: () => ipcRenderer.invoke('ndi:clear-pending-update-info'),
+    cancelDownload: () => ipcRenderer.invoke('ndi:cancel-download'),
   },
 
   // User Preferences

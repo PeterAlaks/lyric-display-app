@@ -4,7 +4,7 @@
  * Translates external control actions into IPC messages
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain } from 'electron';
 import { getMIDIController, initializeMIDI, destroyMIDI } from './midiController.js';
 import { getOSCController, initializeOSC, destroyOSC } from './oscController.js';
 
@@ -65,7 +65,7 @@ export async function initializeExternalControl(options = {}) {
   try {
     const midiResult = await initializeMIDI();
     results.midi = midiResult;
-    
+
     if (midiResult.success) {
       const midiController = getMIDIController();
       midiController.on('action', handleMIDIAction);
@@ -79,7 +79,7 @@ export async function initializeExternalControl(options = {}) {
   try {
     const oscResult = await initializeOSC();
     results.osc = oscResult;
-    
+
     if (oscResult.success) {
       const oscController = getOSCController();
       oscController.on('action', handleOSCAction);
@@ -119,6 +119,7 @@ export function registerExternalControlIPC() {
       const result = await initializeMIDI();
       if (result.success) {
         const controller = getMIDIController();
+        controller.removeListener('action', handleMIDIAction);
         controller.on('action', handleMIDIAction);
       }
       return result;
@@ -217,6 +218,7 @@ export function registerExternalControlIPC() {
       const result = await initializeOSC();
       if (result.success) {
         const controller = getOSCController();
+        controller.removeListener('action', handleOSCAction);
         controller.on('action', handleOSCAction);
       }
       return result;
@@ -307,13 +309,20 @@ export function registerExternalControlIPC() {
     }
   });
 
-  // ============ Combined Status ============
+  ipcMain.handle('external-control:update-state', (_event, state) => {
+    try {
+      updateOSCState(state);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
 
   ipcMain.handle('external-control:get-status', () => {
     try {
       const midiController = getMIDIController();
       const oscController = getOSCController();
-      
+
       return {
         success: true,
         midi: midiController?.getStatus() || { initialized: false },

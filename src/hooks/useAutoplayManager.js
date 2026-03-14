@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getLineDisplayText } from '../utils/parseLyrics';
 import { calculateTimestampDelay } from '../utils/timestampHelpers';
+import { STRUCTURE_TAG_PATTERNS } from '../../shared/lyricsParsing.js';
 
 export const useAutoplayManager = ({
   lyrics,
@@ -48,7 +49,10 @@ export const useAutoplayManager = ({
   const isLineBlank = useCallback((line) => {
     if (!line) return true;
     const displayText = getLineDisplayText(line);
-    return !displayText || displayText.trim() === '';
+    if (!displayText || displayText.trim() === '') return true;
+
+    if (typeof line === 'string' && STRUCTURE_TAG_PATTERNS.some((p) => p.test(line.trim()))) return true;
+    return false;
   }, []);
 
   useEffect(() => {
@@ -320,7 +324,7 @@ export const useAutoplayManager = ({
       settings: autoplaySettings,
       onSave: async (newSettings) => {
         setAutoplaySettings?.(newSettings);
-        
+
         // Also persist to user preferences file so UserPreferencesModal stays in sync
         try {
           if (window.electronAPI?.preferences?.set) {
@@ -332,7 +336,7 @@ export const useAutoplayManager = ({
         } catch (error) {
           console.warn('[AutoplaySettings] Failed to persist to preferences:', error);
         }
-        
+
         showToast({
           title: 'Settings Saved',
           message: 'Autoplay settings updated successfully.',

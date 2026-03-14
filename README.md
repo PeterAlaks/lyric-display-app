@@ -2,7 +2,7 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 6.2.10
+**Version:** 6.3.0
 **Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
@@ -247,6 +247,18 @@ lyric-display-app/
 ├── src/                                    # React frontend source
 │   ├── assets/                             # Fonts, etc.
 │   ├── components/
+|   |   ├── bridges/                        # Bridge components connecting Electron main process events to React UI
+|   |   |   ├── ElectronModalBridge.jsx     # In-app listener for global modal usage in Electron
+|   |   |   ├── JoinCodePromptBridge.jsx    # Bridge and component for join code user flow
+|   |   |   ├── NdiBridge.jsx               # Global NDI store initiator and main-process NDI events sync
+|   |   |   ├── NdiUpdaterBridge.jsx        # NDI companion update notification and installation bridge
+|   |   |   ├── PreferencesLoaderBridge.jsx # Loads user preferences into the store on startup
+|   |   |   ├── QRCodeDialogBridge.jsx      # Bridge component for QR Code Dialog
+|   |   |   ├── ShortcutsHelpBridge.jsx     # Shortcuts help modal and bridge
+|   |   |   ├── SupportDevelopmentBridge.jsx # Support development modal bridge
+|   |   |   ├── UpdaterBridge.jsx           # App update notification, download and install bridge
+|   |   |   ├── WelcomeSplashBridge.jsx     # Welcome splash trigger bridge for first time install
+|   |   |   └── index.js                    # Barrel export for all bridge components
 |   |   ├── modal/
 |   |   |   └── ModalProvider.jsx           # Global modal component
 |   |   ├── toast/
@@ -256,6 +268,7 @@ lyric-display-app/
 |   |   |   ├── DesktopShell.jsx            # Desktop app wrapper component
 |   |   |   └── TopMenuBar.jsx              # Custom renderer-based native top menu bar
 |   |   ├── AboutAppModal.jsx               # About the app modal
+|   |   ├── AppErrorBoundary.jsx            # Top-level React error boundary component
 |   |   ├── AuthStatusIndicator.jsx         # Authentication status component
 |   |   ├── AutoplaySettings.jsx            # Autoplay settings modal
 |   |   ├── ConnectionBackoffBanner.jsx     # Global connection backoff modal component
@@ -263,12 +276,10 @@ lyric-display-app/
 |   |   ├── DisplayDetectionModal.jsx       # Display detection modal component
 |   |   ├── DraftApprovalModal.jsx          # Approval modal component for lyric drafts submitted from secondary controllers
 |   |   ├── EasyWorshipImportModal.jsx      # Song import from local EasyWorship store wizard
-|   |   ├── ElectronModalBridge.jsx         # In-app listener for global modal usage in Electron
 |   |   ├── FontSelect.jsx                  # Custom font selection overlay
 |   |   ├── HelpContent.jsx                 # Help and operation tips modal
 |   |   ├── IntegrationInstructions.jsx     # Integration help modal for OBS, VMix and Wirecast
 |   |   ├── IntelligentAutoplayInfo.jsx     # Intelligent Autoplay info modal
-|   |   ├── JoinCodePromptBridge.jsx        # Bridge and component for join code user flow
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
@@ -282,18 +293,15 @@ lyric-display-app/
 |   |   ├── PresentationImportModal.jsx     # Presentation file import/conversion modal
 |   |   ├── PreviewOutputsModal.jsx         # Display outputs preview modal
 |   |   ├── QRCodeDialog.jsx                # QR Code Dialog UI for mobile controller connection
-|   |   ├── QRCodeDialogBridge.jsx          # Bridge component for QR Code Dialog
 |   |   ├── SaveTemplateModal.jsx           # Save settings combo as template modal
 |   |   ├── SearchBar.jsx                   # Search bar component for control panel
 |   |   ├── SetlistExportModal.jsx          # Setlist export modal
 |   |   ├── SetlistModal.jsx                # Setlist modal
-|   |   ├── ShortcutsHelpBridge.jsx         # Shortcuts help modal and bridge
 |   |   ├── SongInfoModal.jsx               # Info modal for loaded lyrics
 |   |   ├── StageSettingsPanel.jsx          # Stage settings interface
 |   |   ├── StageTemplatesModal.jsx         # Stage settings templates modal
-|   |   ├── SupportDevelopmentBridge.jsx    # Support development modal bridge
 |   |   ├── SupportDevelopmentModal.jsx     # Support development modal
-|   |   └── UserPreferencesModal.jsx        # User preferences UI
+|   |   ├── UserPreferencesModal.jsx        # User preferences UI
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
 │   ├── constants/
 |   |   ├── easyWorship.js                  # Some EasyWorship constants
@@ -304,7 +312,8 @@ lyric-display-app/
 |   |   └── songCanvas.js                   # Some constants used in canvas editor
 │   ├── context/
 |   |   ├── ControlSocketProvider.jsx       # Control socket provider
-|   |   └── LyricsStore.js                  # Zustand store definitions
+|   |   ├── LyricsStore.js                  # Global Zustand store definitions
+|   |   └── NdiStore.js                     # NDI Zustand store definitions
 │   ├── hooks/
 |   |   ├── LyricDisplayApp/
 |   |   |   ├── useDragAndDrop.js           # Drag and drop operations for control panel

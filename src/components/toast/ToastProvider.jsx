@@ -3,6 +3,7 @@ import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import useLyricsStore from '../../context/LyricsStore';
 
 export const ToastContext = createContext(null);
+export const globalToastRef = { current: null };
 
 let idSeq = 1;
 
@@ -84,6 +85,11 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     exitTimer.current.forEach((t) => clearTimeout(t));
     exitTimer.current.clear();
   }, []);
+
+  useEffect(() => {
+    globalToastRef.current = { show, remove };
+    return () => { globalToastRef.current = null; };
+  }, [show, remove]);
 
   const value = useMemo(() => ({ show, remove }), [show, remove]);
 

@@ -1,19 +1,9 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Default autoplay settings - will be overridden by user preferences when available
-const defaultAutoplaySettings = {
-  interval: 5,
-  loop: true,
-  startFromFirst: true,
-  skipBlankLines: true,
-};
-
-// Default max setlist files - will be overridden by user preferences when available
 let maxSetlistFilesLimit = 50;
 
 
-// Function to load preferences from main process (called after app init)
 export async function loadPreferencesIntoStore(store) {
   try {
     if (window.electronAPI?.preferences?.getAutoplayDefaults) {
@@ -22,29 +12,70 @@ export async function loadPreferencesIntoStore(store) {
         store.getState().setAutoplaySettings(result.defaults);
       }
     }
-    
+
     if (window.electronAPI?.preferences?.getFileHandling) {
       const result = await window.electronAPI.preferences.getFileHandling();
       if (result.success && result.settings) {
         maxSetlistFilesLimit = result.settings.maxSetlistFiles ?? 50;
-        // Trigger a re-render by updating a dummy state
         store.getState().updateMaxSetlistFiles(maxSetlistFilesLimit);
       }
     }
 
-    // Load tooltip visibility preference
     if (window.electronAPI?.preferences?.get) {
-      const result = await window.electronAPI.preferences.get('general.showTooltips');
+      const result = await window.electronAPI.preferences.get('appearance.showTooltips');
       if (result.success && typeof result.value === 'boolean') {
         store.getState().setShowTooltips(result.value);
       }
     }
 
-    // Load toast sounds muted preference
     if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('general.toastSoundsMuted');
       if (result.success && typeof result.value === 'boolean') {
         store.getState().setToastSoundsMuted(result.value);
+      }
+    }
+
+    // Load formatting preferences
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.enableCleanupOnPaste');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setCanvasCleanupOnPaste(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.capitalizeFirstLetter');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setFormattingCapitalizeFirstLetter(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.capitalizeReligiousTerms');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setFormattingCapitalizeReligiousTerms(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.normalizeTypographicChars');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setFormattingNormalizeTypographicChars(result.value);
+      }
+    }
+
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('appearance.themeMode');
+      if (result.success && typeof result.value === 'string' && ['light', 'dark', 'system'].includes(result.value)) {
+        store.getState().setThemeMode(result.value);
+
+        let effectiveDark;
+        if (window.electronAPI?.syncNativeThemeSource) {
+          const themeResult = await window.electronAPI.syncNativeThemeSource(result.value);
+          effectiveDark = themeResult?.success ? themeResult.shouldUseDarkColors : (result.value === 'dark');
+        } else {
+          effectiveDark = result.value === 'system'
+            ? (window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false)
+            : result.value === 'dark';
+        }
+        store.getState().setDarkMode(effectiveDark);
       }
     }
   } catch (error) {
@@ -266,6 +297,7 @@ const useLyricsStore = create(
       // IDs of user-created outputs beyond the default output1/output2
       customOutputIds: [],
       darkMode: false,
+      themeMode: 'light',
       hasSeenWelcome: false,
       setlistFiles: [],
       isDesktopApp: false,
@@ -288,6 +320,10 @@ const useLyricsStore = create(
       hasSeenIntelligentAutoplayInfo: false,
       showTooltips: true,
       toastSoundsMuted: false,
+      canvasCleanupOnPaste: true,
+      formattingCapitalizeFirstLetter: true,
+      formattingCapitalizeReligiousTerms: true,
+      formattingNormalizeTypographicChars: true,
       pendingSavedVersion: null,
       maxSetlistFilesVersion: 0,
 
@@ -302,6 +338,7 @@ const useLyricsStore = create(
       setOutput2Enabled: (enabled) => set({ output2Enabled: enabled }),
       setStageEnabled: (enabled) => set({ stageEnabled: enabled }),
       setDarkMode: (mode) => set({ darkMode: mode }),
+      setThemeMode: (mode) => set({ themeMode: mode }),
       setHasSeenWelcome: (seen) => set({ hasSeenWelcome: seen }),
       setSetlistFiles: (files) => set({ setlistFiles: files }),
       setIsDesktopApp: (isDesktop) => set({ isDesktopApp: isDesktop }),
@@ -311,6 +348,10 @@ const useLyricsStore = create(
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
       setShowTooltips: (show) => set({ showTooltips: show }),
       setToastSoundsMuted: (muted) => set({ toastSoundsMuted: muted }),
+      setCanvasCleanupOnPaste: (enabled) => set({ canvasCleanupOnPaste: enabled }),
+      setFormattingCapitalizeFirstLetter: (enabled) => set({ formattingCapitalizeFirstLetter: enabled }),
+      setFormattingCapitalizeReligiousTerms: (enabled) => set({ formattingCapitalizeReligiousTerms: enabled }),
+      setFormattingNormalizeTypographicChars: (enabled) => set({ formattingNormalizeTypographicChars: enabled }),
       setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
@@ -336,7 +377,7 @@ const useLyricsStore = create(
         const state = get();
         return Math.max(0, maxSetlistFilesLimit - state.setlistFiles.length);
       },
-      
+
       getMaxSetlistFiles: () => maxSetlistFilesLimit,
 
       updateMaxSetlistFiles: (newLimit) => {

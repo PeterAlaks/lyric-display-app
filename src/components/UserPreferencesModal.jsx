@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Settings, FolderOpen, FileText, Music, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Check, Loader2, ChevronRight,
-  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power
+  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power, Palette, Wand2, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,11 +17,16 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Tooltip } from '@/components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
+import useNdiStore from '../context/NdiStore';
+import { useDarkModeState } from '../hooks/useStoreSelectors';
+import useModal from '../hooks/useModal';
 
 // Category definitions
 const CATEGORIES = [
   { id: 'general', label: 'General', icon: Settings },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'parsing', label: 'Lyrics Parsing', icon: FileText },
+  { id: 'formatting', label: 'Lyrics Formatting', icon: Wand2 },
   { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
   { id: 'externalControl', label: 'External Control', icon: Radio },
@@ -40,30 +45,26 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [oscStatus, setOscStatus] = useState(null);
   const [midiLearnActive, setMidiLearnActive] = useState(false);
   const [midiRefreshing, setMidiRefreshing] = useState(false);
-  // NDI state
-  const [ndiStatus, setNdiStatus] = useState({
-    installed: false,
-    version: '',
-    installPath: '',
-  });
-  const [downloadProgress, setDownloadProgress] = useState(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [companionRunning, setCompanionRunning] = useState(false);
-  const [ndiAutoLaunch, setNdiAutoLaunch] = useState(false);
-  const [ndiUpdateInfo, setNdiUpdateInfo] = useState(null);
-  const [ndiCheckingUpdate, setNdiCheckingUpdate] = useState(false);
-  const [ndiUpdating, setNdiUpdating] = useState(false);
-  const [ndiTelemetry, setNdiTelemetry] = useState({ stats: null, health: null, updatedAt: 0 });
+
+  const ndiInstalled = useNdiStore((s) => s.installed);
+  const ndiVersion = useNdiStore((s) => s.version);
+  const ndiInstallPath = useNdiStore((s) => s.installPath);
+  const downloadProgress = useNdiStore((s) => s.downloadProgress);
+  const isDownloading = useNdiStore((s) => s.isDownloading);
+  const companionRunning = useNdiStore((s) => s.companionRunning);
+  const ndiAutoLaunch = useNdiStore((s) => s.autoLaunch);
+  const ndiUpdateInfo = useNdiStore((s) => s.updateInfo);
+  const ndiCheckingUpdate = useNdiStore((s) => s.checkingUpdate);
+  const ndiUpdating = useNdiStore((s) => s.isUpdating);
+  const ndiTelemetry = useNdiStore((s) => s.telemetry);
+  const ndiStatus = { installed: ndiInstalled, version: ndiVersion, installPath: ndiInstallPath };
   const { showToast } = useToast();
+  const { showModal } = useModal();
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
 
   // Load preferences on mount
   useEffect(() => {
-    let cleanupCompanionStatus = null;
-    let cleanupNativeTelemetry = null;
-    let cleanupUpdateAvailable = null;
-
     const loadPreferences = async () => {
       setLoading(true);
       try {
@@ -82,54 +83,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             setOscStatus(statusResult.osc);
           }
         }
-
-        // Load NDI status
-        if (window.electronAPI?.ndi?.checkInstalled) {
-          const ndiResult = await window.electronAPI.ndi.checkInstalled();
-          setNdiStatus(ndiResult);
-        }
-        if (window.electronAPI?.ndi?.getCompanionStatus) {
-          const companionResult = await window.electronAPI.ndi.getCompanionStatus();
-          setCompanionRunning(companionResult.running);
-          if (typeof companionResult.autoLaunch === 'boolean') {
-            setNdiAutoLaunch(companionResult.autoLaunch);
-          }
-        }
-
-        // Load any pending update info from the store
-        if (window.electronAPI?.ndi?.getPendingUpdateInfo) {
-          const pendingUpdate = await window.electronAPI.ndi.getPendingUpdateInfo();
-          if (pendingUpdate?.updateAvailable) {
-            setNdiUpdateInfo(pendingUpdate);
-          }
-        }
-
-        if (window.electronAPI?.ndi?.onCompanionStatus) {
-          cleanupCompanionStatus = window.electronAPI.ndi.onCompanionStatus((status) => {
-            if (typeof status?.running === 'boolean') {
-              setCompanionRunning(status.running);
-            }
-          });
-        }
-
-        if (window.electronAPI?.ndi?.onCompanionTelemetry) {
-          cleanupNativeTelemetry = window.electronAPI.ndi.onCompanionTelemetry((payload) => {
-            setNdiTelemetry({
-              stats: payload?.stats || null,
-              health: payload?.health || null,
-              updatedAt: Date.now()
-            });
-          });
-        }
-
-        // Listen for push update notifications from the startup check.
-        if (window.electronAPI?.ndi?.onUpdateAvailable) {
-          cleanupUpdateAvailable = window.electronAPI.ndi.onUpdateAvailable((info) => {
-            if (info?.updateAvailable) {
-              setNdiUpdateInfo(info);
-            }
-          });
-        }
       } catch (error) {
         console.error('Failed to load preferences:', error);
       } finally {
@@ -140,9 +93,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     loadPreferences();
 
     return () => {
-      if (cleanupCompanionStatus) cleanupCompanionStatus();
-      if (cleanupNativeTelemetry) cleanupNativeTelemetry();
-      if (cleanupUpdateAvailable) cleanupUpdateAvailable();
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
     };
@@ -157,12 +107,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         if (result.success) {
           setLastSaved(new Date());
 
-          // Reload preferences into store to update maxSetlistFiles
           const { loadPreferencesIntoStore } = await import('../context/LyricsStore');
           const useLyricsStore = (await import('../context/LyricsStore')).default;
           await loadPreferencesIntoStore(useLyricsStore);
 
-          // Clear the confirmation after 3 seconds
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {
             setLastSaved(null);
@@ -176,7 +124,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     }
   }, []);
 
-  // Update a preference value with debounced save
   const updatePreference = useCallback((category, key, value) => {
     setPreferences(prev => {
       const newPreferences = {
@@ -380,21 +327,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     }
   }, [oscStatus?.feedbackEnabled, updateNestedPreference]);
 
-  // NDI action handlers (component-level so they can be used in the header)
-  const refreshNdiStatus = useCallback(async () => {
-    try {
-      const latest = await window.electronAPI?.ndi?.checkInstalled?.();
-      if (latest) setNdiStatus(latest);
-    } catch (error) {
-      console.warn('Failed to refresh NDI status:', error);
-    }
-  }, []);
-
   const handleNdiLaunch = useCallback(async () => {
     try {
       const result = await window.electronAPI?.ndi?.launchCompanion();
       if (result?.success) {
-        setCompanionRunning(true);
         showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
       } else {
         showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
@@ -409,7 +345,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     try {
       const result = await window.electronAPI?.ndi?.stopCompanion();
       if (result?.success) {
-        setCompanionRunning(false);
         showToast({ title: 'NDI Companion Stopped', message: 'The NDI companion has been stopped.', variant: 'info' });
       } else {
         showToast({ title: 'Stop Failed', message: result?.error || 'Could not stop the NDI companion.', variant: 'error' });
@@ -421,33 +356,49 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   }, [showToast]);
 
   const handleNdiCheckForUpdate = useCallback(async () => {
-    setNdiCheckingUpdate(true);
+    useNdiStore.getState().setCheckingUpdate(true);
     try {
       const result = await window.electronAPI?.ndi?.checkForUpdate();
       if (result) {
-        setNdiUpdateInfo(result);
-        if (result.updateAvailable) {
-          showToast({ title: 'Update Available', message: `NDI Companion v${result.latestVersion} is available.`, variant: 'info' });
-        } else {
-          showToast({ title: 'Up to Date', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
+        useNdiStore.getState().setUpdateInfo(result);
+        if (!result.updateAvailable) {
+          showToast({ title: 'No Update Available', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
         }
       }
     } catch (error) {
       console.error('NDI update check failed:', error);
       showToast({ title: 'Check Failed', message: 'Could not check for updates.', variant: 'warning' });
     } finally {
-      setNdiCheckingUpdate(false);
+      useNdiStore.getState().setCheckingUpdate(false);
     }
   }, [showToast]);
 
   const handleNdiUninstall = useCallback(async () => {
-    if (!confirm('Are you sure you want to uninstall the NDI companion?')) return;
+    const confirmation = await showModal({
+      title: 'Uninstall NDI Companion',
+      description: 'Are you sure you want to uninstall the NDI companion? This will remove all companion files and stop any running NDI broadcasts.',
+      variant: 'destructive',
+      actions: [
+        {
+          label: 'Cancel',
+          value: 'cancel',
+          variant: 'outline',
+        },
+        {
+          label: 'Uninstall',
+          value: 'uninstall',
+          variant: 'destructive',
+          autoFocus: true,
+        },
+      ],
+    });
+
+    if (confirmation !== 'uninstall') return;
+
     try {
       const result = await window.electronAPI?.ndi?.uninstall();
       if (result?.success) {
-        setNdiStatus({ installed: false, version: '', installPath: '' });
-        setCompanionRunning(false);
-        setNdiUpdateInfo(null);
+        useNdiStore.getState().resetAll();
         showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
       } else {
         showToast({ title: 'Uninstall Failed', message: result?.error || 'Could not uninstall the NDI companion.', variant: 'error' });
@@ -456,7 +407,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       console.error('NDI uninstall failed:', error);
       showToast({ title: 'Uninstall Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
     }
-  }, [showToast]);
+  }, [showModal, showToast]);
 
   if (loading) {
     return (
@@ -535,26 +486,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Show Tooltips</label>
-                <p className={`text-xs ${mutedClass}`}>Display helpful tooltips when hovering over controls</p>
-              </div>
-              <Switch
-                checked={preferences.general?.showTooltips ?? true}
-                onCheckedChange={(checked) => {
-                  updatePreference('general', 'showTooltips', checked);
-                  // Update the store immediately for runtime sync
-                  useLyricsStore.getState().setShowTooltips(checked);
-                }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Toast Sounds</label>
                 <p className={`text-xs ${mutedClass}`}>Play notification sounds when toast messages appear</p>
               </div>
@@ -563,7 +494,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 onCheckedChange={(checked) => {
                   const muted = !checked;
                   updatePreference('general', 'toastSoundsMuted', muted);
-                  // Update the store immediately for runtime sync
+
                   useLyricsStore.getState().setToastSoundsMuted(muted);
                 }}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
@@ -575,6 +506,88 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
           </div>
         );
+
+      case 'appearance': {
+        const currentThemeMode = useLyricsStore.getState().themeMode || 'light';
+
+        const handleThemeModeChange = async (newMode) => {
+
+          useLyricsStore.getState().setThemeMode(newMode);
+
+          let effectiveDark;
+          if (window.electronAPI?.syncNativeThemeSource) {
+            const result = await window.electronAPI.syncNativeThemeSource(newMode);
+            if (result?.success) {
+              effectiveDark = result.shouldUseDarkColors;
+            } else {
+              effectiveDark = newMode === 'dark';
+            }
+          } else {
+            effectiveDark = newMode === 'system'
+              ? (window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false)
+              : newMode === 'dark';
+          }
+
+          useLyricsStore.getState().setDarkMode(effectiveDark);
+
+          if (window.electronAPI?.setDarkMode) {
+            window.electronAPI.setDarkMode(effectiveDark);
+          }
+
+          updatePreference('appearance', 'themeMode', newMode);
+        };
+
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className={`text-sm font-medium ${labelClass}`}>App Theme</label>
+              <Select
+                value={currentThemeMode}
+                onValueChange={handleThemeModeChange}
+              >
+                <SelectTrigger className={inputClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                  <SelectItem value="light">Light Mode</SelectItem>
+                  <SelectItem value="dark">Dark Mode</SelectItem>
+                  <SelectItem value="system">System Default</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className={`text-xs ${mutedClass}`}>
+                Choose the application color theme. "System Default" follows your operating system's theme setting.
+              </p>
+              {currentThemeMode === 'system' && (
+                <div className={`flex items-start gap-2 p-3 rounded-lg mt-3 ${darkMode ? 'bg-blue-900/20 border border-blue-600/30' : 'bg-blue-50 border border-blue-200'}`}>
+                  <p className={`text-xs ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                    When using System Default, the dark mode toggle in the control panel and the View menu will be disabled. The app will automatically switch between light and dark mode based on your system preferences.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Show Tooltips</label>
+                <p className={`text-xs ${mutedClass}`}>Display helpful tooltips when hovering over controls</p>
+              </div>
+              <Switch
+                checked={preferences.appearance?.showTooltips ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('appearance', 'showTooltips', checked);
+                  // Update the store immediately for runtime sync
+                  useLyricsStore.getState().setShowTooltips(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+          </div>
+        );
+      }
 
       case 'parsing':
         return (
@@ -660,6 +673,87 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <p className={`text-xs ${mutedClass}`}>
                 How to handle [Verse], [Chorus], etc. tags
               </p>
+            </div>
+          </div>
+        );
+
+      case 'formatting':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Auto Cleanup on Paste</label>
+                <p className={`text-xs ${mutedClass}`}>Automatically format and clean up lyrics when pasting into the song canvas</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.enableCleanupOnPaste ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'enableCleanupOnPaste', checked);
+                  useLyricsStore.getState().setCanvasCleanupOnPaste(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Capitalize First Letter</label>
+                <p className={`text-xs ${mutedClass}`}>Automatically capitalize the first letter of each lyric line during cleanup</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.capitalizeFirstLetter ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'capitalizeFirstLetter', checked);
+                  useLyricsStore.getState().setFormattingCapitalizeFirstLetter(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Capitalize Religious Terms</label>
+                <p className={`text-xs ${mutedClass}`}>Auto-capitalize words like Jesus, God, Holy Spirit, Hallelujah, etc.</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.capitalizeReligiousTerms ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'capitalizeReligiousTerms', checked);
+                  useLyricsStore.getState().setFormattingCapitalizeReligiousTerms(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Normalize Typographic Characters</label>
+                <p className={`text-xs ${mutedClass}`}>Convert smart quotes, em dashes, and other typographic characters to plain equivalents</p>
+              </div>
+              <Switch
+                checked={preferences.formatting?.normalizeTypographicChars ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('formatting', 'normalizeTypographicChars', checked);
+                  useLyricsStore.getState().setFormattingNormalizeTypographicChars(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
             </div>
           </div>
         );
@@ -982,36 +1076,38 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
       case 'ndi': {
         const handleNdiDownload = async () => {
-          setIsDownloading(true);
-          setDownloadProgress({ percent: 0, status: 'downloading' });
-
-          const cleanup = window.electronAPI?.ndi?.onDownloadProgress((progress) => {
-            setDownloadProgress(progress);
-          });
+          // Mark downloading in global store — progress comes via NdiBridge IPC listener
+          useNdiStore.getState().setDownloading(true);
+          useNdiStore.getState().setDownloadProgress({ percent: 0, status: 'downloading' });
 
           try {
             const result = await window.electronAPI.ndi.download();
-            if (result.success) {
-              await refreshNdiStatus();
-              setNdiUpdateInfo(null);
+            if (result?.success) {
+              useNdiStore.getState().setUpdateInfo(null);
               showToast({ title: 'NDI Installed', message: 'NDI companion has been downloaded and is ready to use.', variant: 'success' });
+            } else if (result?.cancelled) {
+              showToast({ title: 'Download Cancelled', message: 'NDI companion download was cancelled.', variant: 'info' });
             } else {
-              showToast({ title: 'Download Failed', message: result.error || 'The NDI companion could not be downloaded.', variant: 'error' });
+              showToast({ title: 'Download Failed', message: result?.error || 'The NDI companion could not be downloaded.', variant: 'error' });
             }
           } catch (error) {
             console.error('NDI download failed:', error);
             showToast({ title: 'Download Failed', message: error?.message || 'An unexpected error occurred while downloading the NDI companion.', variant: 'error' });
-          } finally {
-            setIsDownloading(false);
-            setDownloadProgress(null);
-            if (cleanup) cleanup();
+          }
+        };
+
+        const handleNdiCancelDownload = async () => {
+          try {
+            await window.electronAPI?.ndi?.cancelDownload();
+          } catch (error) {
+            console.error('NDI cancel download failed:', error);
           }
         };
 
         const handleNdiAutoLaunchToggle = async (checked) => {
           try {
             await window.electronAPI?.ndi?.setAutoLaunch(checked);
-            setNdiAutoLaunch(checked);
+            useNdiStore.getState().setAutoLaunch(checked);
           } catch (error) {
             console.error('NDI auto-launch toggle failed:', error);
             showToast({ title: 'Setting Failed', message: 'Could not update the auto-launch setting.', variant: 'error' });
@@ -1019,20 +1115,15 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         };
 
         const handleNdiUpdate = async () => {
-          setNdiUpdating(true);
-          setDownloadProgress({ percent: 0, status: 'downloading' });
-
-          const cleanup = window.electronAPI?.ndi?.onDownloadProgress((progress) => {
-            setDownloadProgress(progress);
-          });
+          useNdiStore.getState().setUpdating(true);
+          useNdiStore.getState().setDownloadProgress({ percent: 0, status: 'downloading' });
 
           try {
             const result = await window.electronAPI.ndi.updateCompanion();
             if (result?.success) {
-              await refreshNdiStatus();
-              setNdiUpdateInfo(null);
-              setCompanionRunning(false);
-              // Clear pending update info from store
+              useNdiStore.getState().setUpdateInfo(null);
+              useNdiStore.getState().setCompanionRunning(false);
+
               if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
                 await window.electronAPI.ndi.clearPendingUpdateInfo();
               }
@@ -1044,9 +1135,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             console.error('NDI update failed:', error);
             showToast({ title: 'Update Failed', message: error?.message || 'An unexpected error occurred while updating.', variant: 'error' });
           } finally {
-            setNdiUpdating(false);
-            setDownloadProgress(null);
-            if (cleanup) cleanup();
+            useNdiStore.getState().resetOperationState();
           }
         };
 
@@ -1167,18 +1256,33 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               </div>
             )}
 
-            {/* Download progress for updates */}
+            {/* Download / extraction progress */}
             {(ndiUpdating || isDownloading) && downloadProgress && (
               <div className="space-y-2">
                 <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
                   <div
-                    className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                    className={`h-full rounded-full transition-all duration-300 ${downloadProgress.status === 'extracting' ? 'bg-amber-500' : 'bg-blue-500'}`}
                     style={{ width: `${downloadProgress.percent || 0}%` }}
                   />
                 </div>
-                <p className={`text-xs ${mutedClass}`}>
-                  {downloadProgress.status === 'extracting' ? 'Extracting...' : `Downloading... ${downloadProgress.percent || 0}%`}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className={`text-xs ${mutedClass}`}>
+                    {downloadProgress.status === 'extracting'
+                      ? `Extracting... ${downloadProgress.percent || 0}%`
+                      : `Downloading... ${downloadProgress.percent || 0}%`}
+                  </p>
+                  {downloadProgress.status !== 'extracting' && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleNdiCancelDownload}
+                      className={`h-6 px-2 text-xs ${darkMode ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/20' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'}`}
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1239,7 +1343,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   />
                 </div>
 
-                              </div>
+              </div>
             )}
 
             {/* NDI Trademark Notice */}
@@ -1438,7 +1542,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       {/* Main Content - Two Pane Layout */}
       <div className="flex flex-1 min-h-0">
         {/* Left Pane - Categories */}
-        <div className={`w-48 flex-shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
+        <div className={`w-52 flex-shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
           <nav className="p-2 space-y-1">
             {CATEGORIES.map((category) => {
               const Icon = category.icon;

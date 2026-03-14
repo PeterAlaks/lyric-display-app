@@ -6,14 +6,14 @@ import { saveDarkModePreference } from '../themePreferences.js';
  * Handles app version, dark mode, and general app settings
  */
 export function registerAppHandlers({ updateDarkModeMenu }) {
-  
+
   ipcMain.handle('get-dark-mode', () => {
     return false;
   });
 
   ipcMain.handle('set-dark-mode', (_event, _isDark) => {
-    try { 
-      updateDarkModeMenu(); 
+    try {
+      updateDarkModeMenu();
     } catch { }
     return true;
   });
@@ -23,6 +23,16 @@ export function registerAppHandlers({ updateDarkModeMenu }) {
       nativeTheme.themeSource = isDark ? 'dark' : 'light';
       saveDarkModePreference(isDark);
       return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('sync-native-theme-source', (_event, themeSource) => {
+    try {
+      nativeTheme.themeSource = themeSource;
+      const shouldUseDark = nativeTheme.shouldUseDarkColors;
+      return { success: true, shouldUseDarkColors: shouldUseDark };
     } catch (error) {
       return { success: false, error: error.message };
     }

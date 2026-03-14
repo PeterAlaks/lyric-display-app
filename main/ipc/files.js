@@ -9,7 +9,7 @@ import * as userPreferences from '../userPreferences.js';
  * Handles file dialogs, reading, writing, and parsing lyrics files
  */
 export function registerFileHandlers({ getMainWindow }) {
-  
+
   ipcMain.handle('show-save-dialog', async (_event, options) => {
     const win = getMainWindow?.();
     const result = await dialog.showSaveDialog(win || undefined, options);
@@ -25,31 +25,35 @@ export function registerFileHandlers({ getMainWindow }) {
     try {
       const win = getMainWindow?.();
       const rememberLastPath = userPreferences.getPreference('general.rememberLastOpenedPath') ?? true;
-      
+
+      const configuredPath = userPreferences.getPreference('general.defaultLyricsPath');
       let defaultPath;
-      if (rememberLastPath) {
-        // Try to get the last opened directory first
+
+      if (configuredPath && configuredPath.trim()) {
+
+        defaultPath = configuredPath;
+      } else if (rememberLastPath) {
+
         const { getLastOpenedDirectory } = await import('../recents.js');
         defaultPath = await getLastOpenedDirectory();
       }
-      
-      // Fall back to user's configured default path if no recent or rememberLastPath is false
+
       if (!defaultPath) {
         defaultPath = userPreferences.getDefaultLyricsPath();
       }
-      
-      const result = await dialog.showOpenDialog(win || undefined, { 
-        properties: ['openFile'], 
+
+      const result = await dialog.showOpenDialog(win || undefined, {
+        properties: ['openFile'],
         filters: [{ name: 'Text Files', extensions: ['txt', 'lrc'] }],
         defaultPath: defaultPath || undefined
       });
-      
+
       if (!result.canceled && result.filePaths.length > 0) {
         const filePath = result.filePaths[0];
         const content = await readFile(filePath, 'utf8');
         const fileName = filePath.split(/[\\/]/).pop();
-        try { 
-          await addRecent(filePath); 
+        try {
+          await addRecent(filePath);
         } catch { }
         return { success: true, content, fileName, filePath };
       }

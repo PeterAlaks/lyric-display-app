@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import useModal from '@/hooks/useModal';
 import useToast from '@/hooks/useToast';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
+import useLyricsStore from '@/context/LyricsStore';
 
 const useMenuHandlers = (closeMenu) => {
   const navigate = useNavigate();
@@ -243,10 +244,18 @@ const useMenuHandlers = (closeMenu) => {
 
   const handleToggleDarkMode = useCallback(() => {
     closeMenu();
+    const themeMode = useLyricsStore.getState?.()?.themeMode;
+    if (themeMode === 'system') return;
+
     const next = !darkMode;
+    const nextMode = next ? 'dark' : 'light';
     setDarkMode(next);
+    const { setThemeMode } = useLyricsStore.getState?.() || {};
+    if (setThemeMode) {
+      setThemeMode(nextMode);
+    }
+    window.electronAPI?.syncNativeThemeSource?.(nextMode);
     window.electronAPI?.setDarkMode?.(next);
-    window.electronAPI?.syncNativeDarkMode?.(next);
   }, [closeMenu, darkMode, setDarkMode]);
 
   const handleZoom = useCallback((direction) => {

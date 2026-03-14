@@ -112,6 +112,8 @@ export const useDarkModeState = () =>
         (state) => ({
             darkMode: state.darkMode,
             setDarkMode: state.setDarkMode,
+            themeMode: state.themeMode,
+            setThemeMode: state.setThemeMode,
         }),
         shallow
     );

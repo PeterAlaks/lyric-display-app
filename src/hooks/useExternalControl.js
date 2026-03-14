@@ -24,6 +24,7 @@ import { useEffect, useCallback, useRef } from 'react';
  * @param {Function} options.handleSetlistPrev - Function to go to previous song in setlist
  * @param {Function} options.handleSyncOutputs - Function to sync all outputs
  * @param {Function} options.showToast - Function to show toast notifications
+ * @param {string} options.songName - Current song/file name for OSC feedback
  * @param {boolean} options.enabled - Whether external control is enabled
  */
 export function useExternalControl({
@@ -43,6 +44,7 @@ export function useExternalControl({
   handleSetlistPrev,
   handleSyncOutputs,
   showToast,
+  songName = '',
   enabled = true
 }) {
   const lyricsRef = useRef(lyrics);
@@ -62,11 +64,11 @@ export function useExternalControl({
   const handleSelectLine = useCallback((lineIndex) => {
     const currentLyrics = lyricsRef.current;
     if (!currentLyrics || currentLyrics.length === 0) return;
-    
+
     const clampedIndex = Math.max(0, Math.min(lineIndex, currentLyrics.length - 1));
     selectLine(clampedIndex);
     emitLineUpdate(clampedIndex);
-    
+
     // Scroll to the selected line
     window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
       detail: { lineIndex: clampedIndex }
@@ -79,9 +81,9 @@ export function useExternalControl({
   const handleNextLine = useCallback(() => {
     const currentLyrics = lyricsRef.current;
     const currentLine = selectedLineRef.current;
-    
+
     if (!currentLyrics || currentLyrics.length === 0) return;
-    
+
     const nextIndex = currentLine === null ? 0 : Math.min(currentLine + 1, currentLyrics.length - 1);
     handleSelectLine(nextIndex);
   }, [handleSelectLine]);
@@ -92,9 +94,9 @@ export function useExternalControl({
   const handlePrevLine = useCallback(() => {
     const currentLyrics = lyricsRef.current;
     const currentLine = selectedLineRef.current;
-    
+
     if (!currentLyrics || currentLyrics.length === 0) return;
-    
+
     const prevIndex = currentLine === null ? 0 : Math.max(currentLine - 1, 0);
     handleSelectLine(prevIndex);
   }, [handleSelectLine]);
@@ -131,7 +133,7 @@ export function useExternalControl({
   const handleScrollLines = useCallback((percentage) => {
     const currentLyrics = lyricsRef.current;
     if (!currentLyrics || currentLyrics.length === 0) return;
-    
+
     const lineIndex = Math.floor(percentage * (currentLyrics.length - 1));
     handleSelectLine(lineIndex);
   }, [handleSelectLine]);
@@ -312,6 +314,24 @@ export function useExternalControl({
       }
     };
   }, [enabled, processAction]);
+
+  /**
+   * Send state updates to main process for OSC feedback
+   * Fires whenever relevant app state changes so OSC clients stay in sync
+   */
+  useEffect(() => {
+    if (!enabled || !window.electronAPI?.externalControl?.updateState) {
+      return;
+    }
+
+    window.electronAPI.externalControl.updateState({
+      line: selectedLine,
+      output: isOutputOn,
+      songName: songName || '',
+      lineCount: lyrics?.length || 0,
+      autoplay: autoplayActive || false
+    });
+  }, [enabled, selectedLine, isOutputOn, songName, lyrics?.length, autoplayActive]);
 
   return {
     processAction,

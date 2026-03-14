@@ -15,7 +15,6 @@ const preferencesStore = new Store({
       defaultLyricsPath: '',
       rememberLastOpenedPath: true,
       confirmOnClose: true,
-      showTooltips: true,
       toastSoundsMuted: false,
       startMinimized: false,
       minimizeToTray: false,
@@ -30,6 +29,14 @@ const preferencesStore = new Store({
       structureTagMode: 'isolate', // 'isolate', 'strip', 'keep'
     },
 
+    // Lyrics Formatting Settings
+    formatting: {
+      enableCleanupOnPaste: true,
+      capitalizeFirstLetter: true,
+      capitalizeReligiousTerms: true,
+      normalizeTypographicChars: true,
+    },
+
     // Line Splitting Settings
     lineSplitting: {
       enabled: true,
@@ -39,8 +46,8 @@ const preferencesStore = new Store({
       overflowTolerance: 15,
     },
 
-    // External Controls (MIDI/OSC)
-    externalControls: {
+    // External Control (MIDI/OSC)
+    externalControl: {
       midi: {
         enabled: false,
         selectedPortIndex: -1,
@@ -70,6 +77,12 @@ const preferencesStore = new Store({
       maxSetlistFiles: 50,
     },
 
+    // Appearance Settings
+    appearance: {
+      themeMode: 'light', // 'light', 'dark', 'system'
+      showTooltips: true,
+    },
+
     // Advanced Settings
     advanced: {
       enableDebugLogging: false,
@@ -88,7 +101,9 @@ export function getAllPreferences() {
   try {
     return {
       general: preferencesStore.get('general'),
+      appearance: preferencesStore.get('appearance'),
       parsing: preferencesStore.get('parsing'),
+      formatting: preferencesStore.get('formatting'),
       lineSplitting: preferencesStore.get('lineSplitting'),
       externalControl: preferencesStore.get('externalControl'),
       autoplay: preferencesStore.get('autoplay'),
@@ -233,7 +248,7 @@ export function getParsingConfig() {
   try {
     const parsing = preferencesStore.get('parsing');
     const lineSplitting = preferencesStore.get('lineSplitting');
-    
+
     return {
       enableSplitting: lineSplitting?.enabled ?? true,
       splitConfig: {

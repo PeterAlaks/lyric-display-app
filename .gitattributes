@@ -2,7 +2,6 @@
 * text=auto
 
 # Force Unix-style (LF) line endings for all text files
-# Helps keep consistency across teams and platforms
 *.js     text eol=lf
 *.jsx    text eol=lf
 *.ts     text eol=lf
