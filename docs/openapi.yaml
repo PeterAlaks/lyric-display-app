@@ -38,6 +38,7 @@ paths:
                   enum: [desktop, web, output1, output2, stage, mobile]
                 deviceId:
                   type: string
+                  description: Stable device identifier used for rate limiting and permissions
                 sessionId:
                   type: string
                 adminKey:
@@ -46,9 +47,6 @@ paths:
                 joinCode:
                   type: string
                   description: Required for controller clients (web, mobile)
-                deviceId:
-                  type: string
-                  description: Stable device identifier used for rate limiting and permissions
       responses:
         '200':
           description: Token generated successfully
@@ -62,6 +60,15 @@ paths:
           description: Forbidden (invalid admin key or join code)
         '423':
           description: Locked (too many invalid join code attempts)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  retryAfterMs:
+                    type: integer
         '500':
           description: Server error
 
@@ -107,6 +114,8 @@ paths:
           description: Missing token
         '401':
           description: Invalid or expired token
+        '500':
+          description: Failed to refresh token
 
   /api/auth/validate:
     post:
@@ -170,12 +179,31 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        sessionId:
+                          type: string
+                        deviceId:
+                          type: string
+                        connectedAt:
+                          type: integer
+                        permissions:
+                          type: array
+                          items:
+                            type: string
+                        socketCount:
+                          type: integer
                   totalCount:
                     type: integer
                   timestamp:
                     type: integer
         '403':
           description: Insufficient permissions
+        '500':
+          description: Failed to fetch connected clients
 
   /api/media/backgrounds:
     post:
@@ -219,12 +247,14 @@ paths:
                     type: integer
         '400':
           description: Upload failed
+        '401':
+          description: Authentication token required or invalid
 
   /api/admin/secrets/status:
     get:
       summary: Get secrets status
       description: Localhost access only
-      security: [] 
+      security: []
       responses:
         '200':
           description: Secrets status
@@ -256,6 +286,15 @@ paths:
                     type: string
         '500':
           description: Rotation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
 
   /api/health:
     get:
@@ -271,12 +310,26 @@ paths:
                 properties:
                   status:
                     type: string
+                    example: healthy
                   timestamp:
                     type: string
+                    format: date-time
                   environment:
                     type: string
+                    enum: [development, production]
                   security:
                     type: object
+                    properties:
+                      secretsLoaded:
+                        type: boolean
+                      daysSinceRotation:
+                        type: integer
+                        nullable: true
+                      needsRotation:
+                        type: boolean
+                      joinCodeGuard:
+                        type: object
+                        description: Join code rate-limiting metrics snapshot
 
   /api/health/ready:
     get:
@@ -290,7 +343,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReadinessStatus'
         '503':
-          description: Server is not ready
+          description: Server is not ready or encountered an error
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ReadinessStatus'
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        example: error
+                      serverListening:
+                        type: boolean
+                      timestamp:
+                        type: string
+                        format: date-time
+                      error:
+                        type: string
 
 components:
   securitySchemes:
@@ -349,6 +419,17 @@ components:
           type: string
         checks:
           type: object
+          properties:
+            serverListening:
+              type: boolean
+            secretsLoaded:
+              type: boolean
+            joinCodeGenerated:
+              type: boolean
+            socketIOReady:
+              type: boolean
+            rateLimiterActive:
+              type: boolean
         uptime:
           type: number
         port:
