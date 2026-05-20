@@ -1,10 +1,10 @@
 import React from 'react';
-import { Monitor, Network, Projector, Power, ScreenShare } from 'lucide-react';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { AlertTriangle, CheckCircle2, Monitor, Network, Projector, Power, ScreenShare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useToast from '@/hooks/useToast';
 import useLyricsStore from '@/context/LyricsStore';
 import { formatOutputLabel } from '@/utils/outputLabels';
+import { cn } from '@/lib/utils';
 
 const DESKTOP_TARGET = 'desktop';
 
@@ -34,6 +34,14 @@ const projectionTargetLabel = (projection) => {
   if (!projection) return 'Unknown target';
   if (projection.targetType === 'desktop') return 'This Monitor';
   return projection.displayName || 'External Display';
+};
+
+const outputHint = (value) => {
+  if (value === 'stage') return 'Presenter view';
+  if (value === 'time') return 'Clock and timer';
+  if (value === 'output1') return 'Main lyrics display';
+  if (value === 'output2') return 'Alternate lyrics display';
+  return 'Custom lyrics display';
 };
 
 const ProjectOutputModal = ({
@@ -139,6 +147,11 @@ const ProjectOutputModal = ({
     [targetOptions, selectedTarget]
   );
 
+  React.useEffect(() => {
+    if (targetOptions.some((option) => option.value === selectedTarget)) return;
+    setSelectedTarget(DESKTOP_TARGET);
+  }, [selectedTarget, targetOptions]);
+
   const activeProjections = React.useMemo(
     () => projections.filter((entry) => entry && entry.outputKey),
     [projections]
@@ -159,11 +172,13 @@ const ProjectOutputModal = ({
 
   const projectActionLabel = React.useMemo(() => {
     if (isProjecting) return 'Projecting...';
-    if (targetOccupant && activeProjection) return 'Replace and Move';
-    if (targetOccupant) return 'Replace and Project';
-    if (activeProjection) return 'Move Projection';
-    return 'Project Output';
-  }, [isProjecting, targetOccupant, activeProjection]);
+    const outputLabel = formatOutputLabel(selectedOutput);
+    const targetLabel = selectedTargetInfo?.label?.replace(' (Behind Windows)', '') || 'Selected Target';
+    if (targetOccupant && activeProjection) return `Replace and Move ${outputLabel}`;
+    if (targetOccupant) return `Replace with ${outputLabel}`;
+    if (activeProjection) return `Move ${outputLabel} to ${targetLabel}`;
+    return `Show ${outputLabel} on ${targetLabel}`;
+  }, [isProjecting, targetOccupant, activeProjection, selectedOutput, selectedTargetInfo]);
 
   const handleProject = async () => {
     if (!window?.electronAPI?.display?.projectOutput) {
@@ -257,96 +272,27 @@ const ProjectOutputModal = ({
   const detectionBanner = triggerSource !== 'manual' && Array.isArray(detectedDisplays) && detectedDisplays.length > 0;
 
   return (
-    <div className="flex h-[500px] flex-col overflow-hidden rounded-b-2xl">
+    <div className="flex h-[540px] flex-col overflow-hidden rounded-b-2xl">
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="space-y-5">
           {detectionBanner && (
             <div className={`rounded-lg border px-4 py-3 ${darkMode ? 'border-blue-700/50 bg-blue-500/10 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
-              <p className="text-xs leading-relaxed">
+              <p className="text-sm font-semibold">
+                {detectedDisplays.length > 1 ? 'External displays found' : 'External display found'}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed">
                 {detectedDisplays.length > 1
-                  ? `${detectedDisplays.length} external displays were detected. Select an output and projection target.`
-                  : 'An external display was detected. Select an output and projection target.'}
+                  ? `${detectedDisplays.length} displays are available. Pick what to show, then choose where it should appear.`
+                  : 'Pick what to show, then choose the detected display as the destination.'}
               </p>
             </div>
           )}
 
-          <div className={`rounded-lg border p-4 ${darkMode ? 'border-cyan-700/50 bg-cyan-500/10' : 'border-cyan-200 bg-cyan-50'}`}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 gap-3">
-                <Network className={`mt-0.5 h-4 w-4 shrink-0 ${darkMode ? 'text-cyan-300' : 'text-cyan-700'}`} />
-                <div className="min-w-0">
-                  <p className={`text-sm font-semibold ${darkMode ? 'text-cyan-100' : 'text-cyan-900'}`}>
-                    Using OBS, vMix or Wirecast?
-                  </p>
-                  <p className={`mt-1 text-xs leading-relaxed ${darkMode ? 'text-cyan-200/90' : 'text-cyan-800'}`}>
-                    Add LyricDisplay as a browser or web source for the main production workflow.
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenIntegrationGuide?.()}
-                className={`shrink-0 ${darkMode ? 'bg-transparent border-cyan-500/60 text-cyan-100 hover:bg-cyan-500/20 hover:text-white hover:border-cyan-400' : 'border-cyan-300 text-cyan-800 hover:bg-cyan-100 hover:text-cyan-900'}`}
-              >
-                Open Integration Guide
-              </Button>
-            </div>
-          </div>
-
-          <div className={`rounded-lg border p-4 space-y-3 ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
-            <div className="flex items-center gap-2">
-              <Projector className={`w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`} />
-              <p className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Projection Setup</p>
-            </div>
-
-            <div className="space-y-2">
-              <label className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Output</label>
-              <Select value={selectedOutput} onValueChange={setSelectedOutput}>
-                <SelectTrigger className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}>
-                  <SelectValue placeholder="Select output" />
-                </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}>
-                  {outputOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Projection Target</label>
-              <Select value={selectedTarget} onValueChange={setSelectedTarget}>
-                <SelectTrigger className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}>
-                  <SelectValue placeholder="Select target" />
-                </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}>
-                  {targetOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className={`text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {selectedTargetInfo?.sub}
-              </p>
-              {targetOccupant && (
-                <div className={`rounded-md px-3 py-2 text-xs ${darkMode ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-50 text-amber-700'}`}>
-                  {projectionTargetLabel(targetOccupant)} is currently showing {formatOutputLabel(targetOccupant.outputKey)}.
-                  Projecting will replace it.
-                </div>
-              )}
-            </div>
-          </div>
-
           <div className={`rounded-lg border p-4 ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Monitor className={`w-4 h-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
-                <p className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Current Status</p>
+                <Monitor className={`h-4 w-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+                <p className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Currently Projecting</p>
               </div>
               {loadingState && (
                 <span className={`text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Refreshing...</span>
@@ -361,17 +307,23 @@ const ProjectOutputModal = ({
                   return (
                     <div
                       key={`${entry.outputKey}-${entry.windowId || entry.displayId || entry.targetType}`}
-                      className={`rounded-md px-3 py-2 flex items-center justify-between ${darkMode
-                        ? (isSelected ? 'bg-green-500/15 text-green-100' : 'bg-green-500/10 text-green-200')
-                        : (isSelected ? 'bg-green-100 text-green-900' : 'bg-green-50 text-green-800')
-                        }`}
+                      className={cn(
+                        'flex items-center justify-between gap-3 rounded-md px-3 py-2',
+                        darkMode
+                          ? (isSelected ? 'bg-green-500/15 text-green-100' : 'bg-gray-900/50 text-gray-200')
+                          : (isSelected ? 'bg-green-50 text-green-900 ring-1 ring-green-200' : 'bg-gray-50 text-gray-800')
+                      )}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <ScreenShare className="w-4 h-4 shrink-0" />
-                        <span className="text-xs truncate">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOutput(entry.outputKey)}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      >
+                        <ScreenShare className="h-4 w-4 shrink-0" />
+                        <span className="truncate text-xs font-medium">
                           {formatOutputLabel(entry.outputKey)} to {projectionTargetLabel(entry)}
                         </span>
-                      </div>
+                      </button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -385,21 +337,141 @@ const ProjectOutputModal = ({
                   );
                 })
               ) : (
-                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  No outputs are currently projected.
-                </p>
-              )}
-              {!activeProjection && (
-                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {formatOutputLabel(selectedOutput)} is not currently projected.
-                </p>
-              )}
-              {activeProjection && (
-                <div className={`rounded-md px-3 py-2 text-xs ${darkMode ? 'bg-gray-900/40 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                  Selected output target: {projectionTargetLabel(activeProjection)}
-                  {isActiveOnSelectedTarget ? '' : ` (changing to ${selectedTargetInfo?.label || 'selected target'})`}
+                <div className={`rounded-md px-3 py-3 text-xs ${darkMode ? 'bg-gray-900/40 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
+                  Nothing is being projected right now.
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className={`rounded-lg border p-4 space-y-4 ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Projector className={`h-4 w-4 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`} />
+                <p className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Project an Output</p>
+              </div>
+              {activeProjection && (
+                <span className={`rounded-full px-2 py-1 text-[11px] ${darkMode ? 'bg-green-500/15 text-green-200' : 'bg-green-100 text-green-800'}`}>
+                  {formatOutputLabel(selectedOutput)} is live
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <p className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Choose Output</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {outputOptions.map((option) => {
+                  const isSelected = option.value === selectedOutput;
+                  const projection = activeProjections.find((entry) => entry.outputKey === option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSelectedOutput(option.value)}
+                      className={cn(
+                        'min-h-[76px] rounded-lg border px-3 py-2 text-left transition-colors',
+                        darkMode
+                          ? 'border-gray-700 bg-gray-900/40 hover:border-blue-500/70 hover:bg-gray-900'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50',
+                        isSelected && (darkMode ? 'border-blue-400 bg-blue-500/15 ring-1 ring-blue-400/50' : 'border-blue-500 bg-blue-50 ring-1 ring-blue-200')
+                      )}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className={`truncate text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {option.label}
+                        </span>
+                        {isSelected && <CheckCircle2 className={`h-4 w-4 shrink-0 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />}
+                      </span>
+                      <span className={`mt-1 block text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {projection ? `Live on ${projectionTargetLabel(projection)}` : outputHint(option.value)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Choose Destination</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {targetOptions.map((option) => {
+                  const isSelected = option.value === selectedTarget;
+                  const occupant = activeProjections.find((entry) => projectionTargetValue(entry) === option.value);
+                  const selectedOutputOwnsTarget = occupant?.outputKey === selectedOutput;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSelectedTarget(option.value)}
+                      className={cn(
+                        'min-h-[84px] rounded-lg border px-3 py-2 text-left transition-colors',
+                        darkMode
+                          ? 'border-gray-700 bg-gray-900/40 hover:border-blue-500/70 hover:bg-gray-900'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50',
+                        isSelected && (darkMode ? 'border-blue-400 bg-blue-500/15 ring-1 ring-blue-400/50' : 'border-blue-500 bg-blue-50 ring-1 ring-blue-200')
+                      )}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className={`truncate text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {option.label.replace(' (Behind Windows)', '')}
+                        </span>
+                        {isSelected && <CheckCircle2 className={`h-4 w-4 shrink-0 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />}
+                      </span>
+                      <span className={`mt-1 block text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {option.sub}
+                      </span>
+                      {occupant && (
+                        <span className={cn(
+                          'mt-2 flex items-center gap-1.5 rounded px-2 py-1 text-[11px]',
+                          selectedOutputOwnsTarget
+                            ? (darkMode ? 'bg-green-500/15 text-green-200' : 'bg-green-50 text-green-800')
+                            : (darkMode ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-50 text-amber-700')
+                        )}>
+                          {selectedOutputOwnsTarget ? (
+                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          ) : (
+                            <AlertTriangle className="h-3 w-3 shrink-0" />
+                          )}
+                          <span className="truncate">
+                            {selectedOutputOwnsTarget ? 'Showing this output' : `In use: ${formatOutputLabel(occupant.outputKey)}`}
+                          </span>
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {targetOccupant && (
+                <div className={`rounded-md px-3 py-2 text-xs ${darkMode ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-50 text-amber-700'}`}>
+                  {projectionTargetLabel(targetOccupant)} is currently showing {formatOutputLabel(targetOccupant.outputKey)}. Continuing will replace it with {formatOutputLabel(selectedOutput)}.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={`rounded-lg border p-3 ${darkMode ? 'border-cyan-700/50 bg-cyan-500/10' : 'border-cyan-200 bg-cyan-50'}`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 gap-3">
+                <Network className={`mt-0.5 h-4 w-4 shrink-0 ${darkMode ? 'text-cyan-300' : 'text-cyan-700'}`} />
+                <div className="min-w-0">
+                  <p className={`text-xs font-semibold ${darkMode ? 'text-cyan-100' : 'text-cyan-900'}`}>
+                    Using OBS, vMix or Wirecast?
+                  </p>
+                  <p className={`mt-0.5 text-[11px] leading-relaxed ${darkMode ? 'text-cyan-200/90' : 'text-cyan-800'}`}>
+                    Use a browser or web source for production software.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenIntegrationGuide?.()}
+                className={`shrink-0 ${darkMode ? 'bg-transparent border-cyan-500/60 text-cyan-100 hover:bg-cyan-500/20 hover:text-white hover:border-cyan-400' : 'border-cyan-300 text-cyan-800 hover:bg-cyan-100 hover:text-cyan-900'}`}
+              >
+                Integration Guide
+              </Button>
             </div>
           </div>
         </div>

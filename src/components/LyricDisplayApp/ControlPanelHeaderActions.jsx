@@ -102,11 +102,12 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(false)}
             onClick={() => {
               showModal({
-                title: 'Project Output',
-                headerDescription: 'Choose an output and where to project it.',
+                title: 'Project to Display',
+                headerDescription: 'Choose what to show and where it should appear.',
                 component: 'ProjectOutput',
                 variant: 'info',
-                size: 'md',
+                size: 'lg',
+                className: 'max-w-4xl',
                 actions: [],
                 customLayout: true,
               });

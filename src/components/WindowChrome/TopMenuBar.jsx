@@ -630,7 +630,7 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('window', 2, el)} label="Close" onClick={menuHandlers.handleQuit} active={openMenu === 'window' && activeIndex === 2} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('window', 3, el)} label="Keyboard Shortcuts" onClick={menuHandlers.handleShortcuts} active={openMenu === 'window' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('window', 4, el)} label="Project Output" onClick={menuHandlers.handleDisplaySettings} active={openMenu === 'window' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('window', 4, el)} label="Project to Display" onClick={menuHandlers.handleDisplaySettings} active={openMenu === 'window' && activeIndex === 4} />
               </div>
             )}
           </div>
