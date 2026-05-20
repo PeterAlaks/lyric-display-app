@@ -1,5 +1,30 @@
 export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
 
+export const createDefaultTimerControlSet = (index = 0) => ({
+  id: `timer-set-${index + 1}`,
+  label: `Timer ${index + 1}`,
+  durationMs: 5 * 60000,
+});
+
+export const DEFAULT_TIMER_CONTROL_SETTINGS = {
+  mode: 'countdown',
+  durationMinutes: 5,
+  targetTime: '',
+  targetHourFormat: '12',
+  warningSeconds: 60,
+  criticalSeconds: 30,
+  overrunMode: false,
+  useSets: false,
+  sets: [
+    createDefaultTimerControlSet(0),
+    createDefaultTimerControlSet(1),
+  ],
+  autoStartNext: true,
+  indicatorEnabled: true,
+  indicatorSeconds: 10,
+  indicatorLabel: 'Next timer starts in',
+};
+
 export const DEFAULT_TIMER_DISPLAY = {
   displayUpdatedAt: 0,
   label: 'Time Left:',
@@ -64,6 +89,20 @@ export const clampNumber = (value, fallback = 0, min = 0, max = Number.MAX_SAFE_
   return Math.min(max, Math.max(min, numeric));
 };
 
+const normalizeTimerNumberInput = (value, fallback = 0, min = 0, max = Number.MAX_SAFE_INTEGER) => {
+  if (value === '') return '';
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+
+  const clamped = Math.min(max, Math.max(min, numeric));
+  if (typeof value === 'string' && /^(\d+(\.\d*)?|\.\d+)$/.test(value) && numeric === clamped) {
+    return value;
+  }
+
+  return clamped;
+};
+
 export const minutesToMs = (minutes) => Math.round(clampNumber(minutes, 0, 0, 1440) * 60000);
 
 export const secondsToMs = (seconds) => Math.round(clampNumber(seconds, 0, 0, 86400) * 1000);
@@ -71,6 +110,51 @@ export const secondsToMs = (seconds) => Math.round(clampNumber(seconds, 0, 0, 86
 export const msToMinutesInput = (ms) => {
   const numeric = clampNumber(ms, 0, 0);
   return Math.max(0, Math.round((numeric / 60000) * 100) / 100);
+};
+
+const isValidTargetTime = (value) => {
+  if (typeof value !== 'string' || !value) return false;
+  const [hours, minutes] = value.split(':').map((part) => Number(part));
+  return Number.isInteger(hours)
+    && Number.isInteger(minutes)
+    && hours >= 0
+    && hours <= 23
+    && minutes >= 0
+    && minutes <= 59;
+};
+
+export const normalizeTimerControlSettings = (raw) => {
+  const settings = raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? raw
+    : {};
+
+  const sets = Array.isArray(settings.sets)
+    ? settings.sets
+      .map((set, index) => ({
+        id: String(set?.id || `timer-set-${index + 1}`),
+        label: typeof set?.label === 'string' ? set.label : `Timer ${index + 1}`,
+        durationMs: clampNumber(set?.durationMs, 5 * 60000, 0),
+      }))
+      .filter((set) => set.durationMs > 0)
+    : DEFAULT_TIMER_CONTROL_SETTINGS.sets;
+
+  return {
+    ...DEFAULT_TIMER_CONTROL_SETTINGS,
+    ...settings,
+    mode: ['countdown', 'countup', 'target'].includes(settings.mode) ? settings.mode : DEFAULT_TIMER_CONTROL_SETTINGS.mode,
+    durationMinutes: normalizeTimerNumberInput(settings.durationMinutes, DEFAULT_TIMER_CONTROL_SETTINGS.durationMinutes, 0, 1440),
+    targetTime: isValidTargetTime(settings.targetTime) ? settings.targetTime : '',
+    targetHourFormat: settings.targetHourFormat === '24' ? '24' : '12',
+    warningSeconds: normalizeTimerNumberInput(settings.warningSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.warningSeconds, 0, 86400),
+    criticalSeconds: normalizeTimerNumberInput(settings.criticalSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.criticalSeconds, 0, 86400),
+    overrunMode: Boolean(settings.overrunMode),
+    useSets: Boolean(settings.useSets),
+    sets: sets.length > 0 ? sets : [createDefaultTimerControlSet(0)],
+    autoStartNext: settings.autoStartNext !== false,
+    indicatorEnabled: settings.indicatorEnabled !== false,
+    indicatorSeconds: normalizeTimerNumberInput(settings.indicatorSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds, 0, 86400),
+    indicatorLabel: typeof settings.indicatorLabel === 'string' ? settings.indicatorLabel : DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+  };
 };
 
 export const normalizeTimerState = (raw) => {

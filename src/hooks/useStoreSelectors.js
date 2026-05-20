@@ -164,6 +164,16 @@ export const useTimerDisplaySettings = () =>
         shallow
     );
 
+export const useTimerControlSettings = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            settings: state.timerControlSettings,
+            updateSettings: state.updateTimerControlSettings,
+        }),
+        shallow
+    );
+
 export const useIntelligentAutoplayState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,

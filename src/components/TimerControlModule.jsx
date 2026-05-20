@@ -7,8 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useSharedTimer from '../hooks/useSharedTimer';
-import { DEFAULT_TIMER_DISPLAY, formatGlobalClock, minutesToMs, msToMinutesInput, secondsToMs, splitClockPeriod } from '../utils/timerUtils';
-import { useDarkModeState, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
+import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, formatGlobalClock, minutesToMs, msToMinutesInput, secondsToMs, splitClockPeriod } from '../utils/timerUtils';
+import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import FontSelect from './FontSelect';
 
 const QUICK_MINUTES = [1, 3, 5, 10, 15, 30];
@@ -166,6 +166,7 @@ const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, da
 const TimerControlModule = () => {
   const { emitStageTimerUpdate } = useControlSocket();
   const { darkMode } = useDarkModeState();
+  const { settings: timerControlSettings, updateSettings: updateTimerControlSettings } = useTimerControlSettings();
   const { settings: timerDisplaySettings, updateSettings: updateTimerDisplaySettings } = useTimerDisplaySettings();
   const { timerState, now, displayValue, intensity, progress, actions } = useSharedTimer({
     emitTimerUpdate: emitStageTimerUpdate,
@@ -173,20 +174,71 @@ const TimerControlModule = () => {
   });
   const { commitTimerState } = actions;
   const latestTimerStateRef = React.useRef(timerState);
+  const controlSettings = timerControlSettings || DEFAULT_TIMER_CONTROL_SETTINGS;
 
-  const [mode, setMode] = React.useState('countdown');
-  const [durationMinutes, setDurationMinutes] = React.useState(5);
-  const [targetTime, setTargetTime] = React.useState('');
-  const [targetHourFormat, setTargetHourFormat] = React.useState('12');
-  const [warningSeconds, setWarningSeconds] = React.useState(60);
-  const [criticalSeconds, setCriticalSeconds] = React.useState(30);
-  const [overrunMode, setOverrunMode] = React.useState(false);
-  const [useSets, setUseSets] = React.useState(false);
-  const [sets, setSets] = React.useState([createTimerSet(0), createTimerSet(1)]);
-  const [autoStartNext, setAutoStartNext] = React.useState(true);
-  const [indicatorEnabled, setIndicatorEnabled] = React.useState(true);
-  const [indicatorSeconds, setIndicatorSeconds] = React.useState(10);
-  const [indicatorLabel, setIndicatorLabel] = React.useState('Next timer starts in');
+  const {
+    mode,
+    durationMinutes,
+    targetTime,
+    targetHourFormat,
+    warningSeconds,
+    criticalSeconds,
+    overrunMode,
+    useSets,
+    sets = DEFAULT_TIMER_CONTROL_SETTINGS.sets,
+    autoStartNext,
+    indicatorEnabled,
+    indicatorSeconds,
+    indicatorLabel,
+  } = controlSettings;
+
+  const setTimerControlSettings = React.useCallback((partial) => {
+    updateTimerControlSettings(partial);
+  }, [updateTimerControlSettings]);
+
+  const applyTimerControlSettings = React.useCallback((partial) => {
+    setTimerControlSettings(partial);
+
+    const current = latestTimerStateRef.current;
+    const isActive = current.running || current.paused;
+    if (!isActive) return;
+
+    const liveUpdates = {};
+    if (Object.prototype.hasOwnProperty.call(partial, 'warningSeconds')) {
+      liveUpdates.warningMs = secondsToMs(partial.warningSeconds);
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'criticalSeconds')) {
+      liveUpdates.criticalMs = secondsToMs(partial.criticalSeconds);
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'overrunMode')) {
+      liveUpdates.overrunMode = Boolean(partial.overrunMode);
+      if (partial.overrunMode === false) {
+        liveUpdates.overrunStartedAt = null;
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'autoStartNext')) {
+      liveUpdates.autoStartNext = partial.autoStartNext !== false;
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'indicatorEnabled')) {
+      liveUpdates.indicatorEnabled = Boolean(partial.indicatorEnabled);
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'indicatorSeconds')) {
+      liveUpdates.indicatorDurationMs = secondsToMs(partial.indicatorSeconds);
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'indicatorLabel')) {
+      liveUpdates.indicatorLabel = partial.indicatorLabel;
+      if (current.phase === 'indicator') {
+        liveUpdates.label = partial.indicatorLabel;
+      }
+    }
+
+    if (Object.keys(liveUpdates).length > 0) {
+      commitTimerState({
+        ...current,
+        ...liveUpdates,
+      });
+    }
+  }, [commitTimerState, setTimerControlSettings]);
 
   const displaySettings = React.useMemo(() => {
     const settings = {
@@ -199,6 +251,8 @@ const TimerControlModule = () => {
   }, [timerDisplaySettings]);
 
   const active = timerState.running || timerState.paused;
+  const activeTimerUsesSets = active && Array.isArray(timerState.sets) && timerState.sets.length > 0;
+  const setRuntimeOptionsEnabled = useSets || activeTimerUsesSets;
   const accent = intensity === 'critical' ? '#EF4444' : intensity === 'warning' ? '#F59E0B' : displaySettings.accentColor;
   const showSecondaryText = displaySettings.showSecondaryText !== false;
   const globalClockValue = React.useMemo(() => formatGlobalClock(now, {
@@ -228,6 +282,18 @@ const TimerControlModule = () => {
       display: nextDisplay,
     });
   }, [commitTimerState, displaySettings, updateTimerDisplaySettings]);
+
+  const applyTimerLabel = React.useCallback((label) => {
+    applyTimerDisplaySettings({ label });
+
+    const current = latestTimerStateRef.current;
+    if ((current.running || current.paused) && current.phase === 'timer' && (!current.sets || current.sets.length === 0)) {
+      commitTimerState({
+        ...current,
+        label,
+      });
+    }
+  }, [applyTimerDisplaySettings, commitTimerState]);
 
   const buildDisplay = () => ({
     ...displaySettings,
@@ -275,18 +341,53 @@ const TimerControlModule = () => {
   };
 
   const updateSet = (id, updates) => {
-    if (active) return;
-    setSets((current) => current.map((set) => (set.id === id ? { ...set, ...updates } : set)));
+    const nextSets = sets.map((set) => (set.id === id ? { ...set, ...updates } : set));
+    setTimerControlSettings({ sets: nextSets });
+
+    const current = latestTimerStateRef.current;
+    const isActive = current.running || current.paused;
+    if (!isActive || !Array.isArray(current.sets) || current.sets.length === 0) return;
+
+    const runtimeSetIndex = current.sets.findIndex((set) => set.id === id);
+    if (runtimeSetIndex === -1) return;
+
+    const runtimeUpdates = {};
+    if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
+      runtimeUpdates.label = updates.label;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(updates, 'durationMs')
+      && runtimeSetIndex > current.activeSetIndex
+    ) {
+      runtimeUpdates.durationMs = updates.durationMs;
+    }
+    if (Object.keys(runtimeUpdates).length === 0) return;
+
+    const nextRuntimeSets = current.sets.map((set, index) => (
+      index === runtimeSetIndex ? { ...set, ...runtimeUpdates } : set
+    ));
+    const activeSet = nextRuntimeSets[current.activeSetIndex];
+    const liveUpdates = { sets: nextRuntimeSets };
+    if (current.phase === 'timer' && activeSet?.id === id && Object.prototype.hasOwnProperty.call(runtimeUpdates, 'label')) {
+      liveUpdates.label = runtimeUpdates.label;
+    }
+
+    commitTimerState({
+      ...current,
+      ...liveUpdates,
+    });
   };
 
   const addSet = () => {
-    if (active) return;
-    setSets((current) => [...current, createTimerSet(current.length)]);
+    setTimerControlSettings({
+      sets: [...sets, createTimerSet(sets.length)],
+    });
   };
 
   const removeSet = (id) => {
-    if (active) return;
-    setSets((current) => current.length <= 1 ? current : current.filter((set) => set.id !== id));
+    setTimerControlSettings({
+      sets: sets.length <= 1 ? sets : sets.filter((set) => set.id !== id),
+    });
   };
 
   const panelClass = darkMode ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 bg-white text-gray-900';
@@ -325,12 +426,11 @@ const TimerControlModule = () => {
           <section className={`rounded-lg border p-4 space-y-4 ${panelClass}`}>
             <div>
               <h2 className="text-sm font-semibold">Timer Setup</h2>
-              <p className={`text-xs ${mutedText}`}>Inputs lock while a timer is active.</p>
             </div>
 
             <div className="space-y-2">
               <label className="text-xs font-medium">Mode</label>
-              <Select value={mode} onValueChange={setMode} disabled={active || useSets}>
+              <Select value={mode} onValueChange={(value) => setTimerControlSettings({ mode: value })} disabled={useSets}>
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
@@ -350,9 +450,8 @@ const TimerControlModule = () => {
                     type="number"
                     min="0"
                     step="0.5"
-                    disabled={active}
                     value={durationMinutes}
-                    onChange={(event) => setDurationMinutes(event.target.value)}
+                    onChange={(event) => setTimerControlSettings({ durationMinutes: event.target.value })}
                     className={inputClass}
                   />
                   <span className={`self-center text-xs ${mutedText}`}>minutes</span>
@@ -361,8 +460,7 @@ const TimerControlModule = () => {
                   {QUICK_MINUTES.map((minutes) => (
                     <button
                       key={minutes}
-                      disabled={active}
-                      onClick={() => setDurationMinutes(minutes)}
+                      onClick={() => setTimerControlSettings({ durationMinutes: minutes })}
                       className={`h-8 rounded text-xs font-medium transition-colors disabled:opacity-50 ${subtleButtonClass}`}
                     >
                       {minutes}m
@@ -377,13 +475,13 @@ const TimerControlModule = () => {
                 <label className="text-xs font-medium">Target Time</label>
                 <TargetTimePicker
                   value={targetTime}
-                  onChange={setTargetTime}
-                  disabled={active}
+                  onChange={(value) => setTimerControlSettings({ targetTime: value })}
+                  disabled={false}
                   inputClass={inputClass}
                   mutedText={mutedText}
                   darkMode={darkMode}
                   hourFormat={targetHourFormat}
-                  onHourFormatChange={setTargetHourFormat}
+                  onHourFormatChange={(value) => setTimerControlSettings({ targetHourFormat: value })}
                 />
               </div>
             )}
@@ -391,9 +489,8 @@ const TimerControlModule = () => {
             <div className="space-y-2">
               <label className="text-xs font-medium">Display Label</label>
               <Input
-                disabled={active}
                 value={displaySettings.label || ''}
-                onChange={(event) => applyTimerDisplaySettings({ label: event.target.value })}
+                onChange={(event) => applyTimerLabel(event.target.value)}
                 className={inputClass}
               />
             </div>
@@ -401,17 +498,17 @@ const TimerControlModule = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <label className="text-xs font-medium">Warn At</label>
-                <Input type="number" min="0" disabled={active} value={warningSeconds} onChange={(event) => setWarningSeconds(event.target.value)} className={inputClass} />
+                <Input type="number" min="0" value={warningSeconds} onChange={(event) => applyTimerControlSettings({ warningSeconds: event.target.value })} className={inputClass} />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Critical At</label>
-                <Input type="number" min="0" disabled={active} value={criticalSeconds} onChange={(event) => setCriticalSeconds(event.target.value)} className={inputClass} />
+                <Input type="number" min="0" value={criticalSeconds} onChange={(event) => applyTimerControlSettings({ criticalSeconds: event.target.value })} className={inputClass} />
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-sm">Continue as overrun</span>
-              <Switch checked={overrunMode} onCheckedChange={setOverrunMode} disabled={active} {...getSwitchProps(active)} />
+              <Switch checked={overrunMode} onCheckedChange={(checked) => applyTimerControlSettings({ overrunMode: checked })} {...getSwitchProps(false)} />
             </div>
 
           </section>
@@ -642,7 +739,7 @@ const TimerControlModule = () => {
                 <h2 className="text-sm font-semibold">Timer Sets</h2>
                 <p className={`text-xs ${mutedText}`}>Run multiple timers in sequence.</p>
               </div>
-              <Switch checked={useSets} onCheckedChange={setUseSets} disabled={active} {...getSwitchProps(active)} />
+              <Switch checked={useSets} onCheckedChange={(checked) => setTimerControlSettings({ useSets: checked })} {...getSwitchProps(false)} />
             </div>
 
             {useSets && (
@@ -651,8 +748,8 @@ const TimerControlModule = () => {
                   <div key={set.id} className={`rounded-md border p-2 space-y-2 ${darkMode ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'}`}>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs w-5 ${mutedText}`}>{index + 1}</span>
-                      <Input disabled={active} value={set.label} onChange={(event) => updateSet(set.id, { label: event.target.value })} className={inputClass} />
-                      <button disabled={active || sets.length <= 1} onClick={() => removeSet(set.id)} className={`p-2 rounded ${darkMode ? 'hover:bg-gray-700 disabled:opacity-40' : 'hover:bg-gray-200 disabled:opacity-40'}`}>
+                      <Input value={set.label} onChange={(event) => updateSet(set.id, { label: event.target.value })} className={inputClass} />
+                      <button disabled={sets.length <= 1} onClick={() => removeSet(set.id)} className={`p-2 rounded ${darkMode ? 'hover:bg-gray-700 disabled:opacity-40' : 'hover:bg-gray-200 disabled:opacity-40'}`}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -661,7 +758,6 @@ const TimerControlModule = () => {
                         type="number"
                         min="0"
                         step="0.5"
-                        disabled={active}
                         value={msToMinutesInput(set.durationMs)}
                         onChange={(event) => updateSet(set.id, { durationMs: minutesToMs(event.target.value) })}
                         className={inputClass}
@@ -670,7 +766,7 @@ const TimerControlModule = () => {
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" size="sm" className={outlineButtonClass} onClick={addSet} disabled={active}>
+                <Button variant="outline" size="sm" className={outlineButtonClass} onClick={addSet}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Timer
                 </Button>
@@ -680,15 +776,15 @@ const TimerControlModule = () => {
             <div className="space-y-3 pt-2 border-t border-gray-700/30">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Auto-start next</span>
-                <Switch checked={autoStartNext} onCheckedChange={setAutoStartNext} disabled={active || !useSets} {...getSwitchProps(active || !useSets)} />
+                <Switch checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} disabled={!setRuntimeOptionsEnabled} {...getSwitchProps(!setRuntimeOptionsEnabled)} />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Indicator period</span>
-                <Switch checked={indicatorEnabled} onCheckedChange={setIndicatorEnabled} disabled={active || !useSets} {...getSwitchProps(active || !useSets)} />
+                <Switch checked={indicatorEnabled} onCheckedChange={(checked) => applyTimerControlSettings({ indicatorEnabled: checked })} disabled={!setRuntimeOptionsEnabled} {...getSwitchProps(!setRuntimeOptionsEnabled)} />
               </div>
               <div className="grid grid-cols-[1fr_90px] gap-2">
-                <Input disabled={active || !useSets || !indicatorEnabled} value={indicatorLabel} onChange={(event) => setIndicatorLabel(event.target.value)} className={inputClass} />
-                <Input type="number" min="0" disabled={active || !useSets || !indicatorEnabled} value={indicatorSeconds} onChange={(event) => setIndicatorSeconds(event.target.value)} className={inputClass} />
+                <Input disabled={!setRuntimeOptionsEnabled || !indicatorEnabled} value={indicatorLabel} onChange={(event) => applyTimerControlSettings({ indicatorLabel: event.target.value })} className={inputClass} />
+                <Input type="number" min="0" disabled={!setRuntimeOptionsEnabled || !indicatorEnabled} value={indicatorSeconds} onChange={(event) => applyTimerControlSettings({ indicatorSeconds: event.target.value })} className={inputClass} />
               </div>
             </div>
 

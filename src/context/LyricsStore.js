@@ -1,6 +1,6 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { DEFAULT_TIMER_DISPLAY } from '../utils/timerUtils';
+import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
 
 let maxSetlistFilesLimit = 50;
 
@@ -430,6 +430,7 @@ const useLyricsStore = create(
         startFromFirst: true,
         skipBlankLines: true,
       },
+      timerControlSettings: { ...DEFAULT_TIMER_CONTROL_SETTINGS },
       timerDisplaySettings: { ...DEFAULT_TIMER_DISPLAY },
       lyricsTimestamps: [],
       hasSeenIntelligentAutoplayInfo: false,
@@ -476,6 +477,12 @@ const useLyricsStore = create(
         }
       }),
       setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
+      updateTimerControlSettings: (settings) => set((state) => ({
+        timerControlSettings: normalizeTimerControlSettings({
+          ...state.timerControlSettings,
+          ...(settings && typeof settings === 'object' ? settings : {}),
+        }),
+      })),
       updateTimerDisplaySettings: (settings, options = {}) => set((state) => {
         const incomingSettings = settings && typeof settings === 'object' ? settings : {};
         const currentUpdatedAt = Number(state.timerDisplaySettings?.displayUpdatedAt) || 0;
@@ -666,6 +673,7 @@ const useLyricsStore = create(
           output1Settings: state.output1Settings,
           output2Settings: state.output2Settings,
           stageSettings: state.stageSettings,
+          timerControlSettings: state.timerControlSettings,
           timerDisplaySettings: state.timerDisplaySettings,
           autoplaySettings: state.autoplaySettings,
           lyricsTimestamps: state.lyricsTimestamps,
@@ -691,6 +699,7 @@ const useLyricsStore = create(
             otherItemsScale: state.timerDisplaySettings?.otherItemsScale ?? state.timerDisplaySettings?.globalClockScale ?? DEFAULT_TIMER_DISPLAY.otherItemsScale,
             displayUpdatedAt: Number.isFinite(Number(state.timerDisplaySettings?.displayUpdatedAt)) ? Number(state.timerDisplaySettings.displayUpdatedAt) : 0,
           };
+          state.timerControlSettings = normalizeTimerControlSettings(state.timerControlSettings);
           const allOutputIds = ['output1', 'output2', ...(state.customOutputIds || [])];
           for (const id of allOutputIds) {
             if (state[`${id}Settings`]) {
