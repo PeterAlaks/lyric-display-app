@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Monitor, Video, Cast, Check, Network, Copy } from 'lucide-react';
+import { Monitor, Video, Cast, Check, Network, Copy, ExternalLink } from 'lucide-react';
+import { createRoutePath, createRouteUrl } from '@/integrations/sourceUrls';
 
 /**
  * Detect the current platform.
@@ -15,7 +16,7 @@ function usePlatform() {
     return platform;
 }
 
-export function IntegrationInstructions({ darkMode }) {
+export function IntegrationInstructions({ darkMode, onRequestClose }) {
     const [localIP, setLocalIP] = useState('localhost');
     const [activeTab, setActiveTab] = useState('obs');
     const platform = usePlatform();
@@ -77,7 +78,7 @@ export function IntegrationInstructions({ darkMode }) {
             <div className="flex-1 overflow-y-auto pt-6 px-1 min-h-0">
                 <Tabs value={activeTab}>
                     <TabsContent value="obs" className="mt-0">
-                        <OBSInstructions darkMode={darkMode} localIP={localIP} platform={platform} />
+                        <OBSInstructions darkMode={darkMode} localIP={localIP} platform={platform} onRequestClose={onRequestClose} />
                     </TabsContent>
                     {showVmix && (
                         <TabsContent value="vmix" className="mt-0">
@@ -267,7 +268,7 @@ function CompactFirewallSteps({ darkMode, platform }) {
 
 // ─── OBS Instructions ────────────────────────────────────────────────────────
 
-function OBSInstructions({ darkMode, localIP, platform }) {
+function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
     const modKey = platform === 'darwin' ? '⌘' : 'Ctrl';
 
     return (
@@ -275,6 +276,8 @@ function OBSInstructions({ darkMode, localIP, platform }) {
             <IntroSection darkMode={darkMode}>
                 LyricDisplay works with OBS Studio through a browser source. Think of it as a transparent window that displays your lyrics over your video feed.
             </IntroSection>
+
+            <SourceCreatorCallout darkMode={darkMode} localIP={localIP} onRequestClose={onRequestClose} />
 
             <SetupOption
                 icon={<Monitor className="w-5 h-5" />}
@@ -649,6 +652,49 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
 }
 
 // ─── Shared UI Components ────────────────────────────────────────────────────
+
+function SourceCreatorCallout({ darkMode, localIP, onRequestClose }) {
+    const setupBaseUrl = import.meta.env.MODE === 'development'
+        ? `http://${localIP}:5173`
+        : `http://${localIP}:4000`;
+    const setupUrl = createRouteUrl({ baseUrl: setupBaseUrl, route: '/obs-setup' });
+    const openCreator = async () => {
+        if (window.electronAPI?.display?.openObsSourceCreatorWindow) {
+            const result = await window.electronAPI.display.openObsSourceCreatorWindow();
+            if (result?.success) {
+                onRequestClose?.();
+            }
+            return;
+        }
+
+        const path = createRoutePath('/obs-setup');
+        window.open(path, '_blank', 'noopener,noreferrer');
+    };
+
+    return (
+        <div className={`rounded-lg border p-4 ${darkMode ? 'bg-blue-500/10 border-blue-500/30 text-blue-100' : 'bg-blue-50 border-blue-200 text-blue-900'}`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 className="text-sm font-semibold">Create the OBS source automatically</h3>
+                    <p className={`mt-1 text-xs leading-relaxed ${darkMode ? 'text-blue-200/80' : 'text-blue-800'}`}>
+                        Use the source creator for same-computer setup, or open the network setup link on the OBS computer.
+                    </p>
+                    <div className={`mt-2 break-all font-mono text-xs ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                        {setupUrl}
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={openCreator}
+                    className={`inline-flex h-9 flex-shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors ${darkMode ? 'bg-blue-400 text-gray-950 hover:bg-blue-300' : 'bg-blue-700 text-white hover:bg-blue-800'}`}
+                >
+                    <ExternalLink className="h-4 w-4" />
+                    Open Creator
+                </button>
+            </div>
+        </div>
+    );
+}
 
 function IntroSection({ children, darkMode }) {
     return (

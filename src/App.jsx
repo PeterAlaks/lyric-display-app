@@ -6,6 +6,7 @@ import Output2 from './pages/Output2';
 import Stage from './pages/Stage';
 import TimeDisplay from './pages/TimeDisplay';
 import OutputPage from './pages/OutputPage';
+import ObsSetup from './pages/ObsSetup';
 import NewSongCanvas from './components/NewSongCanvas';
 import TimerControlModule from './components/TimerControlModule';
 import { useDarkModeState, useIsDesktopApp } from './hooks/useStoreSelectors';
@@ -133,6 +134,11 @@ export default function App() {
               <Route path="/output6" element={<OutputPage outputId="output6" />} />
               <Route path="/stage" element={<Stage />} />
               <Route path="/time" element={<TimeDisplay />} />
+              <Route path="/obs-setup" element={
+                <ConditionalDesktopShell>
+                  <ObsSetup />
+                </ConditionalDesktopShell>
+              } />
               <Route path="/new-song" element={
                 <ConditionalDesktopShell>
                   <ControlSocketProvider>

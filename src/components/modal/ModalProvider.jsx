@@ -580,7 +580,10 @@ export function ModalProvider({ children, isDark = false }) {
                         <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />
                       )}
                       {modal.component === 'IntegrationInstructions' && (
-                        <IntegrationInstructions darkMode={isDark} />
+                        <IntegrationInstructions
+                          darkMode={isDark}
+                          onRequestClose={() => closeModal(modal.id, { action: 'open-obs-source-creator' })}
+                        />
                       )}
                       {modal.component === 'SongInfoModal' && (
                         <SongInfoModal darkMode={isDark} />

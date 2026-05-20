@@ -239,6 +239,33 @@ const openTimerControlWindow = async () => {
   return { success: true, route: '/timer-control', reused: false };
 };
 
+const openObsSourceCreatorWindow = async () => {
+  const { createWindow } = await import('../windows.js');
+  const windows = BrowserWindow.getAllWindows();
+
+  for (const win of windows) {
+    if (!win || win.isDestroyed()) continue;
+    try {
+      const url = win.webContents.getURL();
+      if (!/(?:#\/|\/)obs-setup(?:\?|$)/i.test(String(url || ''))) continue;
+      if (win.isMinimized?.()) win.restore?.();
+      win.focus?.();
+      return { success: true, route: '/obs-setup', reused: true };
+    } catch (error) {
+      console.warn('[IPC] Error checking OBS source creator window URL:', error);
+    }
+  }
+
+  createWindow('/obs-setup', {
+    width: 1100,
+    height: 700,
+    minWidth: 1100,
+    minHeight: 560,
+    title: 'LyricDisplay OBS Source Creator',
+  });
+  return { success: true, route: '/obs-setup', reused: false };
+};
+
 /**
  * Register display management IPC handlers
  * Handles display detection, projection state, and output windows
@@ -436,6 +463,15 @@ export function registerDisplayHandlers({ getMainWindow }) {
       return await openTimerControlWindow();
     } catch (error) {
       console.error('Error opening timer control window:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('display:open-obs-source-creator-window', async () => {
+    try {
+      return await openObsSourceCreatorWindow();
+    } catch (error) {
+      console.error('Error opening OBS source creator window:', error);
       return { success: false, error: error.message };
     }
   });

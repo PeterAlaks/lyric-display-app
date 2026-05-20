@@ -23,6 +23,7 @@ import { registerConnectionRoutes } from './routes/connection.js';
 import { registerMediaRoutes } from './routes/media.js';
 import { registerAdminSecretRoutes } from './routes/adminSecrets.js';
 import { registerHealthRoutes } from './routes/health.js';
+import { registerIntegrationRoutes } from './routes/integrations.js';
 
 dotenv.config();
 
@@ -84,6 +85,7 @@ app.use(express.json());
 app.use('/api/auth', tokenRateLimit);
 
 registerOutputRoutes(app, { getOutputRegistry, hasOutput });
+registerIntegrationRoutes(app, { getOutputRegistry, port: PORT });
 registerAuthRoutes(app, { secrets, tokenService });
 registerConnectionRoutes(app, { authenticateRequest });
 registerMediaRoutes(app, {

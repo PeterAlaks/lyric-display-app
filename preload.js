@@ -240,6 +240,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     stopProjection: (payload) => ipcRenderer.invoke('display:stop-projection', payload),
     openOutputWindow: (outputKey) => ipcRenderer.invoke('display:open-output-window', { outputKey }),
     openTimerControlWindow: () => ipcRenderer.invoke('display:open-timer-control-window'),
+    openObsSourceCreatorWindow: () => ipcRenderer.invoke('display:open-obs-source-creator-window'),
     getAll: () => ipcRenderer.invoke('display:get-all'),
     getPrimary: () => ipcRenderer.invoke('display:get-primary'),
     getById: (displayId) => ipcRenderer.invoke('display:get-by-id', { displayId }),

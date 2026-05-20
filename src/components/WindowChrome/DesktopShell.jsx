@@ -7,7 +7,7 @@ import { useDarkModeState, useIsDesktopApp } from '@/hooks/useStoreSelectors';
 const dragRegion = { WebkitAppRegion: 'drag' };
 const noDrag = { WebkitAppRegion: 'no-drag' };
 
-const CompactTitleBar = ({ darkMode }) => {
+const CompactTitleBar = ({ darkMode, title = 'LyricDisplay' }) => {
   const [windowState, setWindowState] = React.useState({ isMaximized: false });
 
   React.useEffect(() => {
@@ -33,7 +33,7 @@ const CompactTitleBar = ({ darkMode }) => {
     >
       <div className="flex items-center gap-2 px-3 min-w-0">
         <img src="/LyricDisplay-icon.png" alt="" className="h-5 w-5 shrink-0" draggable={false} />
-        <span className="text-xs font-semibold truncate">LyricDisplay Timer</span>
+        <span className="text-xs font-semibold truncate">{title}</span>
       </div>
       <div className="flex items-center" style={noDrag}>
         <button type="button" className={controlClass} onClick={() => window.electronAPI?.windowControls?.minimize?.()} aria-label="Minimize">
@@ -66,6 +66,12 @@ const DesktopShell = ({ children }) => {
   const isDesktopApp = useIsDesktopApp();
   const location = useLocation();
   const isTimerControl = location.pathname === '/timer-control';
+  const isObsSetup = location.pathname === '/obs-setup';
+  const compactTitle = isTimerControl
+    ? 'LyricDisplay Timer'
+    : isObsSetup
+      ? 'LyricDisplay OBS Source Creator'
+      : 'LyricDisplay';
 
   useEffect(() => {
     if (!isDesktopApp || typeof document === 'undefined') return;
@@ -96,7 +102,7 @@ const DesktopShell = ({ children }) => {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col" style={shellStyle}>
-      {isTimerControl ? <CompactTitleBar darkMode={darkMode} /> : <TopMenuBar />}
+      {isTimerControl || isObsSetup ? <CompactTitleBar darkMode={darkMode} title={compactTitle} /> : <TopMenuBar />}
       <div className={`flex-1 min-h-0 flex flex-col ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
         {children}
       </div>

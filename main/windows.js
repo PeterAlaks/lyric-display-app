@@ -33,8 +33,9 @@ export function createWindow(route = '/', options = {}) {
     title = null,
   } = options;
   const isTimerControlWindow = route.startsWith('/timer-control');
-  const isControlWindow = route === '/' || route.startsWith('/new-song') || isTimerControlWindow;
-  const windowTitle = title || (isTimerControlWindow ? 'LyricDisplay Timer' : 'LyricDisplay');
+  const isObsSetupWindow = route.startsWith('/obs-setup');
+  const isControlWindow = route === '/' || route.startsWith('/new-song') || isTimerControlWindow || isObsSetupWindow;
+  const windowTitle = title || (isTimerControlWindow ? 'LyricDisplay Timer' : isObsSetupWindow ? 'LyricDisplay OBS Source Creator' : 'LyricDisplay');
   const defaultBackground = projection
     ? '#000000'
     : (backgroundColor || (isDev ? '#ffffff' : '#f9fafb'));
