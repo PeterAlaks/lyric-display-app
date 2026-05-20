@@ -8,6 +8,7 @@ import { createSourceUrl, DEFAULT_SOURCE_SIZE, formatSourceName } from '@/integr
 import { ObsWebSocketClient } from '@/integrations/obs/obsWebSocketClient';
 import { createOrUpdateObsBrowserSource } from '@/integrations/obs/createObsBrowserSource';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
+import useModal from '@/hooks/useModal';
 
 const PROFILE_KEY = 'lyricdisplay_obs_source_creator_v1';
 const TRANSFORM_MODE_OPTIONS = [
@@ -110,6 +111,32 @@ function Field({ label, children, hint, disabled = false }) {
   );
 }
 
+function HelpButton({ darkMode, showModal }) {
+  return (
+    <button
+      onClick={() => {
+        showModal({
+          title: 'OBS WebSocket Help',
+          headerDescription: 'Steps to connect LyricDisplay to OBS',
+          component: 'ObsWebSocketHelp',
+          variant: 'info',
+          size: 'large',
+          dismissLabel: 'Got it'
+        });
+      }}
+      className={`p-1.5 rounded-lg transition-colors ${darkMode
+        ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+        : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+        }`}
+      title="OBS WebSocket Help"
+    >
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </button>
+  );
+}
+
 function StatusBox({ status }) {
   if (!status?.message) return null;
 
@@ -139,6 +166,7 @@ function StatusBox({ status }) {
 
 export default function ObsSetup() {
   const { darkMode } = useDarkModeState();
+  const { showModal } = useModal();
   const savedProfile = React.useMemo(readProfile, []);
   const [metadata, setMetadata] = React.useState(null);
   const [metadataError, setMetadataError] = React.useState('');
@@ -159,7 +187,7 @@ export default function ObsSetup() {
   const [lockSource, setLockSource] = React.useState(savedProfile.lockSource ?? true);
   const [sourceBaseUrl, setSourceBaseUrl] = React.useState(savedProfile.sourceBaseUrl || '');
   const [sourceName, setSourceName] = React.useState(savedProfile.sourceName || formatSourceName(savedProfile.outputId || 'output1'));
-  const [status, setStatus] = React.useState({ type: 'info', message: 'Connect to OBS to load scenes and create a Browser Source.' });
+  const [status, setStatus] = React.useState({ type: 'info', message: '' });
   const [isLoadingMetadata, setIsLoadingMetadata] = React.useState(true);
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [isCreating, setIsCreating] = React.useState(false);
@@ -426,9 +454,12 @@ export default function ObsSetup() {
 
         <div className="grid flex-1 items-start gap-4 pb-4 lg:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)]">
           <section className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:mb-0">
-            <div className="mb-4 flex items-center gap-2">
-              <PlugZap className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-              <h2 className="text-base font-semibold">OBS Connection</h2>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <PlugZap className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                <h2 className="text-base font-semibold">OBS Connection</h2>
+              </div>
+              <HelpButton darkMode={darkMode} showModal={showModal} />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-[1fr_120px]">

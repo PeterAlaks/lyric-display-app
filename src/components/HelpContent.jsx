@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand } from 'lucide-react';
+import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -348,4 +348,49 @@ export const MobileControllerHelp = ({ darkMode }) => (
     </div>
 );
 
-export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp, MobileControllerHelp };
+export const ObsWebSocketHelp = ({ darkMode }) => (
+    <div className="space-y-3">
+        <HelpSection
+            icon={PlugZap}
+            title="Enable WebSocket Server"
+            description="In OBS Studio, open Tools menu and select WebSocket Server Settings. Toggle the WebSocket server on to enable remote connections from LyricDisplay."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Network}
+            title="Check the Port"
+            description="The default WebSocket server port is 4455. You can use this port or change it if needed, but make sure to match the port number in the LyricDisplay OBS Source Creator (default 4455)."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Key}
+            title="WebSocket Server Password"
+            description="If you enable authentication in OBS WebSocket Server Settings, you'll receive a server password. Copy this password and paste it into the Password field in the OBS Source Creator to authenticate the connection."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Settings}
+            title="Network Setup Considerations"
+            description="If OBS is on the same computer, use Host: 127.0.0.1. For OBS on a different computer in your network, use its IP address (e.g., 192.168.1.x) and select 'Use LAN' for the source base URL."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Globe}
+            title="Test Connection"
+            description="Once configured, click 'Connect to OBS' in the OBS Source Creator. If successful, you'll see confirmation along with your OBS base canvas resolution. You can then select scenes and create the browser source."
+            darkMode={darkMode}
+        />
+
+        <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-amber-900/20 border border-amber-700/30' : 'bg-amber-50 border border-amber-200'}`}>
+            <p className={`text-sm font-medium ${darkMode ? 'text-amber-300' : 'text-amber-800'}`}>
+                💡 <strong>Tip:</strong> If you can't connect, verify that OBS WebSocket Server is enabled, use the correct IP address and port, and check that your firewall allows the connection.
+            </p>
+        </div>
+    </div>
+);
+
+export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp };
