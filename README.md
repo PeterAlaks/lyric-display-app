@@ -269,7 +269,8 @@ lyric-display-app/
 |   |   ├── connection.js                   # Connected-client API endpoint
 |   |   ├── health.js                       # Health and readiness endpoints
 |   |   ├── media.js                        # Background and user media API endpoints
-|   |   └── outputs.js                      # Output registry API endpoints
+|   |   ├── outputs.js                      # Output registry API endpoints
+|   |   └── integrations.js                 # Integrations and external-service routes (OBS, NDI, etc.)
 |   ├── security/
 |   |   └── secretManager.js                # Module handling the secure management of app secrets
 |   ├── events.js                           # Socket event registration entrypoint
@@ -503,6 +504,11 @@ lyric-display-app/
 |   |   ├── useSyncOutputs.js               # Outputs sync manager for control panel
 |   |   ├── useSyncTimer.js                 # Last synced timer hook
 |   |   └── useToast.js                     # Toast notifications hook
+│   ├── integrations/
+|   |   ├── obs/
+|   |   |   ├── createObsBrowserSource.js   # OBS browser source helper
+|   |   |   └── obsWebSocketClient.js       # OBS WebSocket client wrapper
+|   |   └── sourceUrls.js                   # Source URL helpers
 │   ├── lib/
 |   |   └── utils.js                        # UI library utility functions
 │   ├── pages/                              # Route-based page components
@@ -510,6 +516,7 @@ lyric-display-app/
 |   |   ├── Output1.jsx                     # Output 1 display
 |   |   ├── Output2.jsx                     # Output 2 display
 |   |   ├── Stage.jsx                       # Stage output display
+|   |   ├── ObsSetup.jsx                    # OBS integration setup page
 |   |   └── TimeDisplay.jsx                 # Dedicated full-screen timer and clock display
 │   ├── styles/
 |   |   └── fonts.css                       # Display font styles import and definitions
