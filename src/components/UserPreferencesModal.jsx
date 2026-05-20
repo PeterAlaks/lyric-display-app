@@ -4,22 +4,29 @@
  * Uses customLayout mode - handles its own scrolling and footer
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  Settings, FolderOpen, FileText, Music, Radio, Play, Sliders,
-  AlertTriangle, RotateCcw, Check, Loader2, ChevronRight,
-  Zap, RefreshCw, HardDrive, Cast, Download, Trash2, Power, Palette, Wand2, X, ShieldCheck
+  Settings, FolderOpen, FileText, Radio, Play, Sliders,
+  AlertTriangle, RotateCcw, Loader2,
+  HardDrive, Cast, Palette, Wand2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Tooltip } from '@/components/ui/tooltip';
 import useToast from '../hooks/useToast';
-import useLyricsStore, { loadPreferencesIntoStore } from '../context/LyricsStore';
-import useNdiStore from '../context/NdiStore';
-import { useDarkModeState } from '../hooks/useStoreSelectors';
+import useLyricsStore from '../context/LyricsStore';
 import useModal from '../hooks/useModal';
+import { useMidiPreferences } from '../hooks/UserPreferencesModal/useMidiPreferences';
+import { useNdiPreferences } from '../hooks/UserPreferencesModal/useNdiPreferences';
+import { useNumberPreferenceDrafts } from '../hooks/UserPreferencesModal/useNumberPreferenceDrafts';
+import { useOscPreferences } from '../hooks/UserPreferencesModal/useOscPreferences';
+import { usePreferencesPersistence } from '../hooks/UserPreferencesModal/usePreferencesPersistence';
+import { useSecurityPreferences } from '../hooks/UserPreferencesModal/useSecurityPreferences';
+import AdvancedPreferencesSection from './UserPreferencesModal/AdvancedPreferencesSection';
+import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
+import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
+import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
 
 // Category definitions
 const CATEGORIES = [
@@ -37,676 +44,80 @@ const CATEGORIES = [
 
 const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
-  const [preferences, setPreferences] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState(null);
-  const [midiStatus, setMidiStatus] = useState(null);
-  const [oscStatus, setOscStatus] = useState(null);
-  const [midiLearnActive, setMidiLearnActive] = useState(false);
-  const [midiRefreshing, setMidiRefreshing] = useState(false);
-  const [lastLearnedMidi, setLastLearnedMidi] = useState(null);
-  const [midiMappingsExpanded, setMidiMappingsExpanded] = useState(false);
-  const [midiAssigningAction, setMidiAssigningAction] = useState(null);
-  const [numberDrafts, setNumberDrafts] = useState({});
-  const [securityStatus, setSecurityStatus] = useState(null);
-  const [securityLoading, setSecurityLoading] = useState(false);
-  const [securityRotating, setSecurityRotating] = useState(false);
-
-  const ndiInstalled = useNdiStore((s) => s.installed);
-  const ndiVersion = useNdiStore((s) => s.version);
-  const ndiInstallPath = useNdiStore((s) => s.installPath);
-  const downloadProgress = useNdiStore((s) => s.downloadProgress);
-  const isDownloading = useNdiStore((s) => s.isDownloading);
-  const companionRunning = useNdiStore((s) => s.companionRunning);
-  const ndiAutoLaunch = useNdiStore((s) => s.autoLaunch);
-  const ndiUpdateInfo = useNdiStore((s) => s.updateInfo);
-  const ndiCheckingUpdate = useNdiStore((s) => s.checkingUpdate);
-  const ndiUpdating = useNdiStore((s) => s.isUpdating);
-  const ndiTelemetry = useNdiStore((s) => s.telemetry);
-  const ndiStatus = { installed: ndiInstalled, version: ndiVersion, installPath: ndiInstallPath };
   const { showToast } = useToast();
   const { showModal } = useModal();
-  const saveTimeoutRef = useRef(null);
-  const confirmationTimeoutRef = useRef(null);
+  const {
+    handleBrowseDefaultPath,
+    handleResetCategory,
+    lastSaved,
+    loading,
+    midiStatus,
+    oscStatus,
+    preferences,
+    saving,
+    setMidiStatus,
+    setOscStatus,
+    updateNestedPreference,
+    updatePreference,
+  } = usePreferencesPersistence({ showToast });
 
-  // Load preferences on mount
-  useEffect(() => {
-    const loadPreferences = async () => {
-      setLoading(true);
-      try {
-        if (window.electronAPI?.preferences?.getAll) {
-          const result = await window.electronAPI.preferences.getAll();
-          if (result.success) {
-            setPreferences(result.preferences);
-          }
-        }
+  const {
+    commitNumberPreference,
+    getNumberInputValue,
+    handleNumberInputKeyDown,
+    setNumberInputDraft,
+  } = useNumberPreferenceDrafts({ preferences, updatePreference });
 
-        // Load external control status
-        if (window.electronAPI?.externalControl?.getStatus) {
-          const statusResult = await window.electronAPI.externalControl.getStatus();
-          if (statusResult.success) {
-            setMidiStatus(statusResult.midi);
-            setOscStatus(statusResult.osc);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load preferences:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const {
+    formatSecurityDate,
+    handleRotateSecurityTokenKey,
+    loadSecurityStatus,
+    securityLoading,
+    securityRotating,
+    securityStatus,
+  } = useSecurityPreferences({ activeCategory, showModal, showToast });
 
-    loadPreferences();
+  const {
+    handleMidiAssignAction,
+    handleMidiLearn,
+    handleMidiRefreshPorts,
+    handleMidiResetMappings,
+    handleMidiSelectPort,
+    handleMidiToggle,
+    lastLearnedMidi,
+    midiAssigningAction,
+    midiLearnActive,
+    midiMappingsExpanded,
+    midiRefreshing,
+    setMidiMappingsExpanded,
+  } = useMidiPreferences({ midiStatus, setMidiStatus, showToast, updateNestedPreference });
 
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
-    };
-  }, []);
+  const {
+    handleOscFeedbackPortChange,
+    handleOscFeedbackToggle,
+    handleOscPortChange,
+    handleOscToggle,
+  } = useOscPreferences({ oscStatus, setOscStatus, updateNestedPreference });
 
-  // Auto-save preferences when they change
-  const savePreferences = useCallback(async (newPreferences) => {
-    setSaving(true);
-    try {
-      if (window.electronAPI?.preferences?.saveAll) {
-        const result = await window.electronAPI.preferences.saveAll(newPreferences);
-        if (result.success) {
-          setLastSaved(new Date());
-
-          await loadPreferencesIntoStore(useLyricsStore);
-
-          if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
-          confirmationTimeoutRef.current = setTimeout(() => {
-            setLastSaved(null);
-          }, 3000);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to save preferences:', error);
-    } finally {
-      setSaving(false);
-    }
-  }, []);
-
-  const updatePreference = useCallback((category, key, value) => {
-    setPreferences(prev => {
-      const newPreferences = {
-        ...prev,
-        [category]: {
-          ...prev[category],
-          [key]: value
-        }
-      };
-
-      // Debounce the save
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        savePreferences(newPreferences);
-      }, 300);
-
-      if (category === 'parsing' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-        window.dispatchEvent(new CustomEvent('parsing-preferences-updated', {
-          detail: newPreferences.parsing || {}
-        }));
-      }
-
-      return newPreferences;
-    });
-  }, [savePreferences]);
-
-  useEffect(() => {
-    const handleParsingPreferencesUpdated = (event) => {
-      const parsing = event?.detail;
-      if (!parsing || typeof parsing !== 'object') return;
-      setPreferences((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          parsing: {
-            ...prev.parsing,
-            ...parsing,
-          }
-        };
-      });
-    };
-
-    window.addEventListener('parsing-preferences-updated', handleParsingPreferencesUpdated);
-    return () => window.removeEventListener('parsing-preferences-updated', handleParsingPreferencesUpdated);
-  }, []);
-
-  useEffect(() => {
-    const handleTutorialPreferenceUpdated = (event) => {
-      const value = event?.detail?.showTutorialPopovers;
-      if (typeof value !== 'boolean') return;
-
-      setPreferences((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          appearance: {
-            ...prev.appearance,
-            showTutorialPopovers: value,
-          },
-        };
-      });
-    };
-
-    window.addEventListener('tutorial-popovers-preference-updated', handleTutorialPreferenceUpdated);
-    return () => window.removeEventListener('tutorial-popovers-preference-updated', handleTutorialPreferenceUpdated);
-  }, []);
-
-  const loadSecurityStatus = useCallback(async () => {
-    if (!window.electronAPI?.security?.getJwtStatus) return;
-
-    setSecurityLoading(true);
-    try {
-      const result = await window.electronAPI.security.getJwtStatus();
-      if (result?.status) {
-        setSecurityStatus(result.status);
-      }
-      if (result && !result.success) {
-        showToast({
-          title: 'Security Status Unavailable',
-          message: result.error || 'Could not load security token key status.',
-          variant: 'warning',
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load security status:', error);
-      showToast({
-        title: 'Security Status Unavailable',
-        message: error?.message || 'Could not load security token key status.',
-        variant: 'warning',
-      });
-    } finally {
-      setSecurityLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    if (activeCategory === 'advanced') {
-      loadSecurityStatus();
-    }
-  }, [activeCategory, loadSecurityStatus]);
-
-  const formatSecurityDate = useCallback((value) => {
-    if (!value) return 'Not available';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Not available';
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  }, []);
-
-  const handleRotateSecurityTokenKey = useCallback(async () => {
-    if (!window.electronAPI?.security?.rotateJwtAndRestart) {
-      showToast({
-        title: 'Rotation Unavailable',
-        message: 'This build does not expose security token key rotation.',
-        variant: 'warning',
-      });
-      return;
-    }
-
-    const confirmation = await showModal({
-      title: 'Rotate Security Token Key',
-      description: 'The app will rotate the local security token key, clear cached authentication tokens, and restart. Connected controllers may need to reconnect after the restart.',
-      variant: 'warning',
-      actions: [
-        {
-          label: 'Cancel',
-          value: 'cancel',
-          variant: 'outline',
-        },
-        {
-          label: 'Rotate and Restart',
-          value: 'rotate',
-          variant: 'destructive',
-          autoFocus: true,
-        },
-      ],
-    });
-
-    if (confirmation !== 'rotate') return;
-
-    setSecurityRotating(true);
-    try {
-      const result = await window.electronAPI.security.rotateJwtAndRestart();
-      if (!result?.success) {
-        throw new Error(result?.error || 'Security token key rotation failed.');
-      }
-
-      showToast({
-        title: 'Restarting App',
-        message: 'The security token key was rotated. LyricDisplay will restart now.',
-        variant: 'success',
-      });
-    } catch (error) {
-      console.error('Security token key rotation failed:', error);
-      setSecurityRotating(false);
-      showToast({
-        title: 'Rotation Failed',
-        message: error?.message || 'Could not rotate the security token key.',
-        variant: 'error',
-      });
-      loadSecurityStatus();
-    }
-  }, [loadSecurityStatus, showModal, showToast]);
-
-  // Update nested preference (for external control)
-  const updateNestedPreference = useCallback((category, subcategory, key, value) => {
-    setPreferences(prev => {
-      const newPreferences = {
-        ...prev,
-        [category]: {
-          ...prev[category],
-          [subcategory]: {
-            ...prev[category]?.[subcategory],
-            [key]: value
-          }
-        }
-      };
-
-      // Debounce the save
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        savePreferences(newPreferences);
-      }, 300);
-
-      return newPreferences;
-    });
-  }, [savePreferences]);
-
-  const getNumberDraftKey = useCallback((category, key) => `${category}.${key}`, []);
-
-  const getNumberInputValue = useCallback((category, key, fallbackValue) => {
-    const draftKey = getNumberDraftKey(category, key);
-    if (Object.prototype.hasOwnProperty.call(numberDrafts, draftKey)) {
-      return numberDrafts[draftKey];
-    }
-
-    const prefValue = preferences?.[category]?.[key];
-    const resolved = prefValue ?? fallbackValue;
-    return resolved === null || resolved === undefined ? '' : String(resolved);
-  }, [getNumberDraftKey, numberDrafts, preferences]);
-
-  const setNumberInputDraft = useCallback((category, key, value) => {
-    const draftKey = getNumberDraftKey(category, key);
-    setNumberDrafts((prev) => ({
-      ...prev,
-      [draftKey]: value,
-    }));
-  }, [getNumberDraftKey]);
-
-  const commitNumberPreference = useCallback((category, key, options = {}, customCommit) => {
-    const {
-      min,
-      max,
-      fallbackValue,
-      parse = 'int',
-    } = options;
-
-    const draftKey = getNumberDraftKey(category, key);
-    if (!Object.prototype.hasOwnProperty.call(numberDrafts, draftKey)) return;
-
-    const rawValue = numberDrafts[draftKey];
-    const parsedValue = parse === 'float'
-      ? parseFloat(rawValue)
-      : parseInt(rawValue, 10);
-
-    let normalized = Number.isFinite(parsedValue) ? parsedValue : fallbackValue;
-    if (typeof min === 'number') normalized = Math.max(min, normalized);
-    if (typeof max === 'number') normalized = Math.min(max, normalized);
-
-    const currentValue = preferences?.[category]?.[key];
-    if (currentValue !== normalized) {
-      if (typeof customCommit === 'function') {
-        customCommit(normalized);
-      } else {
-        updatePreference(category, key, normalized);
-      }
-    }
-
-    setNumberDrafts((prev) => {
-      if (!Object.prototype.hasOwnProperty.call(prev, draftKey)) return prev;
-      const next = { ...prev };
-      delete next[draftKey];
-      return next;
-    });
-  }, [getNumberDraftKey, numberDrafts, preferences, updatePreference]);
-
-  const handleNumberInputKeyDown = useCallback((event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      event.currentTarget.blur();
-    }
-  }, []);
-
-  // Browse for default lyrics path
-  const handleBrowseDefaultPath = useCallback(async () => {
-    try {
-      if (window.electronAPI?.preferences?.browseDefaultPath) {
-        const result = await window.electronAPI.preferences.browseDefaultPath();
-        if (result.success && result.path) {
-          updatePreference('fileHandling', 'defaultLyricsPath', result.path);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to browse for path:', error);
-    }
-  }, [updatePreference]);
-
-  // Reset category to defaults
-  const handleResetCategory = useCallback(async (category) => {
-    try {
-      if (window.electronAPI?.preferences?.resetCategory) {
-        await window.electronAPI.preferences.resetCategory(category);
-        // Reload preferences
-        const result = await window.electronAPI.preferences.getAll();
-        if (result.success) {
-          setPreferences(result.preferences);
-          setLastSaved(new Date());
-          if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
-          confirmationTimeoutRef.current = setTimeout(() => {
-            setLastSaved(null);
-          }, 3000);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to reset category:', error);
-    }
-  }, []);
-
-  // MIDI handlers
-  const handleMidiRefreshPorts = useCallback(async () => {
-    setMidiRefreshing(true);
-    try {
-      const result = await window.electronAPI?.midi?.refreshPorts();
-      if (result.success) {
-        setMidiStatus(prev => ({ ...prev, availablePorts: result.ports }));
-      }
-    } catch (error) {
-      console.error('Failed to refresh MIDI ports:', error);
-    } finally {
-      setTimeout(() => setMidiRefreshing(false), 500);
-    }
-  }, []);
-
-  const handleMidiSelectPort = useCallback(async (portIndex) => {
-    try {
-      const result = await window.electronAPI?.midi?.selectPort(parseInt(portIndex));
-      if (result.success) {
-        setMidiStatus(prev => ({
-          ...prev,
-          selectedPortIndex: parseInt(portIndex),
-          selectedPort: result.port
-        }));
-      }
-    } catch (error) {
-      console.error('Failed to select MIDI port:', error);
-    }
-  }, []);
-
-  const handleMidiToggle = useCallback(async () => {
-    try {
-      if (midiStatus?.enabled) {
-        await window.electronAPI?.midi?.disable();
-        setMidiStatus(prev => ({ ...prev, enabled: false }));
-        updateNestedPreference('externalControl', 'midi', 'enabled', false);
-      } else {
-        await window.electronAPI?.midi?.enable();
-        setMidiStatus(prev => ({ ...prev, enabled: true }));
-        updateNestedPreference('externalControl', 'midi', 'enabled', true);
-      }
-    } catch (error) {
-      console.error('Failed to toggle MIDI:', error);
-    }
-  }, [midiStatus?.enabled, updateNestedPreference]);
-
-  const refreshMidiStatus = useCallback(async () => {
-    try {
-      const result = await window.electronAPI?.midi?.getStatus();
-      if (result?.success) {
-        setMidiStatus(result.status);
-      }
-    } catch (error) {
-      // ignore
-    }
-  }, []);
-
-  const handleMidiLearn = useCallback(async () => {
-    setMidiLearnActive(true);
-    try {
-      const result = await window.electronAPI?.midi?.startLearn(10000);
-      if (result.success) {
-        setLastLearnedMidi(result.learned);
-        console.log('Learned MIDI input:', result.learned);
-      }
-    } catch (error) {
-      console.log('MIDI learn cancelled or timed out');
-    } finally {
-      setMidiLearnActive(false);
-    }
-  }, []);
-
-  const handleMidiAssignAction = useCallback(async (action) => {
-    setMidiLearnActive(true);
-    setMidiAssigningAction(action);
-
-    try {
-      const learnResult = await window.electronAPI?.midi?.startLearn(10000);
-      if (!learnResult?.success || !learnResult.learned) {
-        showToast({
-          title: 'MIDI Learn Failed',
-          message: learnResult?.error || 'No MIDI input was learned.',
-          variant: 'warning'
-        });
-        return;
-      }
-
-      const learned = learnResult.learned;
-      setLastLearnedMidi(learned);
-
-      const type = learned.type === 'note' ? 'notes' : 'controlChanges';
-      const key = learned.type === 'note' ? learned.note : learned.controller;
-
-      const mapping = {
-        action: action.key,
-        description: action.label
-      };
-
-      const setResult = await window.electronAPI?.midi?.setMapping(type, key, mapping);
-      if (setResult?.success) {
-        await refreshMidiStatus();
-        showToast({
-          title: 'MIDI Mapping Saved',
-          message: `${action.label} assigned to ${learned.type === 'note' ? `Note ${learned.note}` : `CC ${learned.controller}`}`,
-          variant: 'success'
-        });
-      } else {
-        showToast({
-          title: 'Save Failed',
-          message: setResult?.error || 'Could not save the MIDI mapping.',
-          variant: 'error'
-        });
-      }
-    } catch (error) {
-      showToast({
-        title: 'MIDI Learn Cancelled',
-        message: error?.message || 'Learn mode timed out or was cancelled.',
-        variant: 'info'
-      });
-    } finally {
-      setMidiAssigningAction(null);
-      setMidiLearnActive(false);
-    }
-  }, [refreshMidiStatus, showToast]);
-
-  const handleMidiResetMappings = useCallback(async () => {
-    try {
-      const result = await window.electronAPI?.midi?.resetMappings();
-      if (result?.success) {
-        await refreshMidiStatus();
-        showToast({
-          title: 'MIDI Mappings Reset',
-          message: 'Mappings have been restored to defaults.',
-          variant: 'success'
-        });
-      } else {
-        showToast({
-          title: 'Reset Failed',
-          message: result?.error || 'Could not reset MIDI mappings.',
-          variant: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Failed to reset MIDI mappings:', error);
-      showToast({
-        title: 'Reset Failed',
-        message: error?.message || 'Could not reset MIDI mappings.',
-        variant: 'error'
-      });
-    }
-  }, [refreshMidiStatus, showToast]);
-
-  // OSC handlers
-  const handleOscToggle = useCallback(async () => {
-    try {
-      if (oscStatus?.enabled) {
-        await window.electronAPI?.osc?.disable();
-        setOscStatus(prev => ({ ...prev, enabled: false }));
-        updateNestedPreference('externalControl', 'osc', 'enabled', false);
-      } else {
-        await window.electronAPI?.osc?.enable();
-        setOscStatus(prev => ({ ...prev, enabled: true }));
-        updateNestedPreference('externalControl', 'osc', 'enabled', true);
-      }
-    } catch (error) {
-      console.error('Failed to toggle OSC:', error);
-    }
-  }, [oscStatus?.enabled, updateNestedPreference]);
-
-  const handleOscPortChange = useCallback(async (port) => {
-    try {
-      const result = await window.electronAPI?.osc?.setPort(parseInt(port));
-      if (result.success) {
-        setOscStatus(prev => ({ ...prev, port: parseInt(port) }));
-        updateNestedPreference('externalControl', 'osc', 'port', parseInt(port));
-      }
-    } catch (error) {
-      console.error('Failed to set OSC port:', error);
-    }
-  }, [updateNestedPreference]);
-
-  const handleOscFeedbackPortChange = useCallback(async (port) => {
-    try {
-      const result = await window.electronAPI?.osc?.setFeedbackPort(parseInt(port));
-      if (result.success) {
-        setOscStatus(prev => ({ ...prev, feedbackPort: parseInt(port) }));
-        updateNestedPreference('externalControl', 'osc', 'feedbackPort', parseInt(port));
-      }
-    } catch (error) {
-      console.error('Failed to set OSC feedback port:', error);
-    }
-  }, [updateNestedPreference]);
-
-  const handleOscFeedbackToggle = useCallback(async () => {
-    try {
-      const newValue = !oscStatus?.feedbackEnabled;
-      await window.electronAPI?.osc?.setFeedbackEnabled(newValue);
-      setOscStatus(prev => ({ ...prev, feedbackEnabled: newValue }));
-      updateNestedPreference('externalControl', 'osc', 'feedbackEnabled', newValue);
-    } catch (error) {
-      console.error('Failed to toggle OSC feedback:', error);
-    }
-  }, [oscStatus?.feedbackEnabled, updateNestedPreference]);
-
-  const handleNdiLaunch = useCallback(async () => {
-    try {
-      const result = await window.electronAPI?.ndi?.launchCompanion();
-      if (result?.success) {
-        showToast({ title: 'NDI Companion Launched', message: 'The NDI companion is now running.', variant: 'success' });
-      } else {
-        showToast({ title: 'Launch Failed', message: result?.error || 'Could not start the NDI companion.', variant: 'error' });
-      }
-    } catch (error) {
-      console.error('NDI launch failed:', error);
-      showToast({ title: 'Launch Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
-    }
-  }, [showToast]);
-
-  const handleNdiStop = useCallback(async () => {
-    try {
-      const result = await window.electronAPI?.ndi?.stopCompanion();
-      if (result?.success) {
-        showToast({ title: 'NDI Companion Stopped', message: 'The NDI companion has been stopped.', variant: 'info' });
-      } else {
-        showToast({ title: 'Stop Failed', message: result?.error || 'Could not stop the NDI companion.', variant: 'error' });
-      }
-    } catch (error) {
-      console.error('NDI stop failed:', error);
-      showToast({ title: 'Stop Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
-    }
-  }, [showToast]);
-
-  const handleNdiCheckForUpdate = useCallback(async () => {
-    useNdiStore.getState().setCheckingUpdate(true);
-    try {
-      const result = await window.electronAPI?.ndi?.checkForUpdate();
-      if (result) {
-        useNdiStore.getState().setUpdateInfo(result);
-        if (!result.updateAvailable) {
-          showToast({ title: 'No Update Available', message: 'You are running the latest version of the NDI companion.', variant: 'success' });
-        }
-      }
-    } catch (error) {
-      console.error('NDI update check failed:', error);
-      showToast({ title: 'Check Failed', message: 'Could not check for updates.', variant: 'warning' });
-    } finally {
-      useNdiStore.getState().setCheckingUpdate(false);
-    }
-  }, [showToast]);
-
-  const handleNdiUninstall = useCallback(async () => {
-    const confirmation = await showModal({
-      title: 'Uninstall NDI Companion',
-      description: 'Are you sure you want to uninstall the NDI companion? This will remove all companion files and stop any running NDI broadcasts.',
-      variant: 'destructive',
-      actions: [
-        {
-          label: 'Cancel',
-          value: 'cancel',
-          variant: 'outline',
-        },
-        {
-          label: 'Uninstall',
-          value: 'uninstall',
-          variant: 'destructive',
-          autoFocus: true,
-        },
-      ],
-    });
-
-    if (confirmation !== 'uninstall') return;
-
-    try {
-      const result = await window.electronAPI?.ndi?.uninstall();
-      if (result?.success) {
-        useNdiStore.getState().resetAll();
-        showToast({ title: 'NDI Uninstalled', message: 'The NDI companion has been removed.', variant: 'success' });
-      } else {
-        showToast({ title: 'Uninstall Failed', message: result?.error || 'Could not uninstall the NDI companion.', variant: 'error' });
-      }
-    } catch (error) {
-      console.error('NDI uninstall failed:', error);
-      showToast({ title: 'Uninstall Failed', message: error?.message || 'An unexpected error occurred.', variant: 'error' });
-    }
-  }, [showModal, showToast]);
+  const {
+    companionRunning,
+    downloadProgress,
+    handleNdiAutoLaunchToggle,
+    handleNdiCancelDownload,
+    handleNdiCheckForUpdate,
+    handleNdiDownload,
+    handleNdiLaunch,
+    handleNdiStop,
+    handleNdiUninstall,
+    handleNdiUpdate,
+    isDownloading,
+    ndiAutoLaunch,
+    ndiCheckingUpdate,
+    ndiStatus,
+    ndiTelemetry,
+    ndiUpdateInfo,
+    ndiUpdating,
+  } = useNdiPreferences({ showModal, showToast });
 
   if (loading) {
     return (
@@ -1326,649 +737,52 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
       case 'externalControl':
         return (
-          <div className="space-y-6">
-            {/* MIDI Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Music className={`w-4 h-4 ${mutedClass}`} />
-                <h4 className={`text-sm font-semibold ${labelClass}`}>MIDI Control</h4>
-              </div>
-
-              {!midiStatus?.initialized ? (
-                <div className={`text-center py-4 ${mutedClass}`}>
-                  <p className="text-sm">MIDI support requires the @julusian/midi package.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className={`text-sm font-medium ${labelClass}`}>Enable MIDI</label>
-                      <p className={`text-xs ${mutedClass}`}>Process incoming MIDI messages</p>
-                    </div>
-                    <Switch
-                      checked={midiStatus?.enabled || false}
-                      onCheckedChange={handleMidiToggle}
-                      disabled={midiStatus?.selectedPortIndex < 0}
-                      className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                        ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                        : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                        }`}
-                      thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className={`text-sm font-medium ${labelClass}`}>MIDI Input Device</label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleMidiRefreshPorts}
-                        disabled={midiRefreshing}
-                        className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
-                      >
-                        <RefreshCw className={`w-4 h-4 mr-1 ${midiRefreshing ? 'animate-spin' : ''}`} />
-                        {midiRefreshing ? 'Refreshing...' : 'Refresh'}
-                      </Button>
-                    </div>
-                    <Select
-                      value={String(midiStatus?.selectedPortIndex ?? -1)}
-                      onValueChange={handleMidiSelectPort}
-                    >
-                      <SelectTrigger className={inputClass}>
-                        <SelectValue placeholder="Select MIDI device..." />
-                      </SelectTrigger>
-                      <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
-                        <SelectItem value="-1">None</SelectItem>
-                        {midiStatus?.availablePorts?.map((port) => (
-                          <SelectItem key={port.index} value={String(port.index)}>
-                            {port.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* MIDI mappings table */}
-                  {(() => {
-                    const noteEntries = Object.entries(midiStatus?.mappings?.notes || {})
-                      .sort(([a], [b]) => Number(a) - Number(b))
-                      .map(([note, mapping]) => ({
-                        type: 'NOTE',
-                        key: note,
-                        mapping
-                      }));
-
-                    const ccEntries = Object.entries(midiStatus?.mappings?.controlChanges || {})
-                      .sort(([a], [b]) => Number(a) - Number(b))
-                      .map(([cc, mapping]) => ({
-                        type: 'CC',
-                        key: cc,
-                        mapping
-                      }));
-
-                    const allEntries = [...noteEntries, ...ccEntries];
-                    const visibleEntries = midiMappingsExpanded ? allEntries : allEntries.slice(0, 5);
-                    const hiddenCount = Math.max(0, allEntries.length - visibleEntries.length);
-
-                    return (
-                      <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-white'}`}>
-                        <div className={`px-3 py-2 flex items-center justify-between gap-3 ${darkMode ? 'bg-gray-800/60 border-b border-gray-700' : 'bg-gray-50 border-b border-gray-200'}`}>
-                          <p className={`text-xs font-semibold tracking-wide ${labelClass}`}>MIDI Mappings</p>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {lastLearnedMidi && (
-                              <span className={`text-[11px] ${mutedClass}`}>
-                                Last learned: {lastLearnedMidi.type === 'note'
-                                  ? `Note ${lastLearnedMidi.note} (vel ${lastLearnedMidi.velocity ?? '--'}) ch ${((lastLearnedMidi.channel ?? 0) + 1)}`
-                                  : `CC ${lastLearnedMidi.controller} (val ${lastLearnedMidi.value ?? '--'}) ch ${((lastLearnedMidi.channel ?? 0) + 1)}`}
-                              </span>
-                            )}
-
-                            {hiddenCount > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setMidiMappingsExpanded(true)}
-                                className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
-                              >
-                                Expand ({hiddenCount} more)
-                              </Button>
-                            )}
-
-                            {midiMappingsExpanded && allEntries.length > 5 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setMidiMappingsExpanded(false)}
-                                className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
-                              >
-                                Collapse
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className={`grid grid-cols-12 gap-0 text-[11px] ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>Type</div>
-                          <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>Key</div>
-                          <div className={`col-span-8 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>Action</div>
-
-                          {visibleEntries.length === 0 ? (
-                            <div className={`col-span-12 px-3 py-3 border-t ${darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-                              No mappings found.
-                            </div>
-                          ) : (
-                            visibleEntries.map((entry) => (
-                              <React.Fragment key={`${entry.type}-${entry.key}`}>
-                                <div className={`col-span-2 px-3 py-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                                  {entry.type === 'NOTE' ? (
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] ${darkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-                                      NOTE
-                                    </span>
-                                  ) : (
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] ${darkMode ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
-                                      CC
-                                    </span>
-                                  )}
-                                </div>
-                                <div className={`col-span-2 px-3 py-2 border-t tabular-nums ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>{entry.key}</div>
-                                <div className={`col-span-8 px-3 py-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                                  <p className="font-medium truncate">{entry.mapping?.description || entry.mapping?.action || '—'}</p>
-                                  {entry.mapping?.action && (
-                                    <p className={`text-[10px] mt-0.5 ${mutedClass} truncate`}>
-                                      Action key: {entry.mapping.action}
-                                      {entry.type === 'NOTE' && typeof entry.mapping?.line === 'number' ? ` (line ${entry.mapping.line + 1})` : ''}
-                                    </p>
-                                  )}
-                                </div>
-                              </React.Fragment>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <div className="space-y-3">
-                    <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'}`}>
-                      <p className={`text-xs font-medium ${labelClass}`}>Quick assign</p>
-                      <p className={`text-[11px] mt-0.5 ${mutedClass}`}>
-                        Choose an action, then press a button/pedal/knob on your MIDI device. (Listens for an unmapped control.)
-                      </p>
-
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => handleMidiAssignAction({ key: 'prev-line', label: 'Previous Line' })}
-                          disabled={!midiStatus?.enabled || midiLearnActive}
-                          className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                        >
-                          {midiAssigningAction?.key === 'prev-line' && midiLearnActive ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Waiting...
-                            </>
-                          ) : (
-                            'Previous Line'
-                          )}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={() => handleMidiAssignAction({ key: 'next-line', label: 'Next Line' })}
-                          disabled={!midiStatus?.enabled || midiLearnActive}
-                          className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                        >
-                          {midiAssigningAction?.key === 'next-line' && midiLearnActive ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Waiting...
-                            </>
-                          ) : (
-                            'Next Line'
-                          )}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={() => handleMidiAssignAction({ key: 'toggle-output', label: 'Toggle Output' })}
-                          disabled={!midiStatus?.enabled || midiLearnActive}
-                          className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                        >
-                          {midiAssigningAction?.key === 'toggle-output' && midiLearnActive ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Waiting...
-                            </>
-                          ) : (
-                            'Toggle Output'
-                          )}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={() => handleMidiAssignAction({ key: 'clear-output', label: 'Clear Output' })}
-                          disabled={!midiStatus?.enabled || midiLearnActive}
-                          className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                        >
-                          {midiAssigningAction?.key === 'clear-output' && midiLearnActive ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Waiting...
-                            </>
-                          ) : (
-                            'Clear Output'
-                          )}
-                        </Button>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={handleMidiLearn}
-                          disabled={!midiStatus?.enabled || midiLearnActive}
-                          className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                        >
-                          {midiLearnActive ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Waiting...
-                            </>
-                          ) : (
-                            'Learn MIDI (show last input)'
-                          )}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={handleMidiResetMappings}
-                          className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                        >
-                          Reset Defaults
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-
-            {/* OSC Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Radio className={`w-4 h-4 ${mutedClass}`} />
-                <h4 className={`text-sm font-semibold ${labelClass}`}>OSC Control</h4>
-              </div>
-
-              {!oscStatus?.initialized ? (
-                <div className={`text-center py-4 ${mutedClass}`}>
-                  <p className="text-sm">OSC server failed to start. Check if port is in use.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className={`text-sm font-medium ${labelClass}`}>Enable OSC</label>
-                      <p className={`text-xs ${mutedClass}`}>Process incoming OSC messages</p>
-                    </div>
-                    <Switch
-                      checked={oscStatus?.enabled || false}
-                      onCheckedChange={handleOscToggle}
-                      className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                        ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                        : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                        }`}
-                      thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className={`text-sm font-medium ${labelClass}`}>Listening Port</label>
-                    <Input
-                      type="number"
-                      value={oscStatus?.port || 8000}
-                      onChange={(e) => handleOscPortChange(e.target.value)}
-                      min="1"
-                      max="65535"
-                      className={inputClass}
-                    />
-                    <p className={`text-xs ${mutedClass}`}>Requires restart to take effect</p>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className={`text-sm font-medium ${labelClass}`}>Send Feedback</label>
-                      <p className={`text-xs ${mutedClass}`}>Send state updates to OSC clients</p>
-                    </div>
-                    <Switch
-                      checked={oscStatus?.feedbackEnabled || false}
-                      onCheckedChange={handleOscFeedbackToggle}
-                      className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                        ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                        : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                        }`}
-                      thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-                    />
-                  </div>
-
-                  {oscStatus?.feedbackEnabled && (
-                    <div className="space-y-2">
-                      <label className={`text-sm font-medium ${labelClass}`}>Feedback Port</label>
-                      <Input
-                        type="number"
-                        value={oscStatus?.feedbackPort || 9000}
-                        onChange={(e) => handleOscFeedbackPortChange(e.target.value)}
-                        min="1"
-                        max="65535"
-                        className={inputClass}
-                      />
-                    </div>
-                  )}
-
-                  {oscStatus?.connectedClients > 0 && (
-                    <div className={`flex items-center gap-2 text-sm ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                      <Check className="w-4 h-4" />
-                      {oscStatus.connectedClients} client{oscStatus.connectedClients !== 1 ? 's' : ''} connected
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          <ExternalControlPreferencesSection
+            darkMode={darkMode}
+            handleMidiAssignAction={handleMidiAssignAction}
+            handleMidiLearn={handleMidiLearn}
+            handleMidiRefreshPorts={handleMidiRefreshPorts}
+            handleMidiResetMappings={handleMidiResetMappings}
+            handleMidiSelectPort={handleMidiSelectPort}
+            handleMidiToggle={handleMidiToggle}
+            handleOscFeedbackPortChange={handleOscFeedbackPortChange}
+            handleOscFeedbackToggle={handleOscFeedbackToggle}
+            handleOscPortChange={handleOscPortChange}
+            handleOscToggle={handleOscToggle}
+            inputClass={inputClass}
+            labelClass={labelClass}
+            lastLearnedMidi={lastLearnedMidi}
+            midiAssigningAction={midiAssigningAction}
+            midiLearnActive={midiLearnActive}
+            midiMappingsExpanded={midiMappingsExpanded}
+            midiRefreshing={midiRefreshing}
+            midiStatus={midiStatus}
+            mutedClass={mutedClass}
+            oscStatus={oscStatus}
+            setMidiMappingsExpanded={setMidiMappingsExpanded}
+          />
         );
-
-      case 'ndi': {
-        const handleNdiDownload = async () => {
-          // Mark downloading in global store — progress comes via NdiBridge IPC listener
-          useNdiStore.getState().setDownloading(true);
-          useNdiStore.getState().setDownloadProgress({ percent: 0, status: 'downloading' });
-
-          try {
-            const result = await window.electronAPI.ndi.download();
-            if (result?.success) {
-              useNdiStore.getState().setUpdateInfo(null);
-              showToast({ title: 'NDI Installed', message: 'NDI companion has been downloaded and is ready to use.', variant: 'success' });
-            } else if (result?.cancelled) {
-              showToast({ title: 'Download Cancelled', message: 'NDI companion download was cancelled.', variant: 'info' });
-            } else {
-              showToast({ title: 'Download Failed', message: result?.error || 'The NDI companion could not be downloaded.', variant: 'error' });
-            }
-          } catch (error) {
-            console.error('NDI download failed:', error);
-            showToast({ title: 'Download Failed', message: error?.message || 'An unexpected error occurred while downloading the NDI companion.', variant: 'error' });
-          }
-        };
-
-        const handleNdiCancelDownload = async () => {
-          try {
-            await window.electronAPI?.ndi?.cancelDownload();
-          } catch (error) {
-            console.error('NDI cancel download failed:', error);
-          }
-        };
-
-        const handleNdiAutoLaunchToggle = async (checked) => {
-          try {
-            await window.electronAPI?.ndi?.setAutoLaunch(checked);
-            useNdiStore.getState().setAutoLaunch(checked);
-          } catch (error) {
-            console.error('NDI auto-launch toggle failed:', error);
-            showToast({ title: 'Setting Failed', message: 'Could not update the auto-launch setting.', variant: 'error' });
-          }
-        };
-
-        const handleNdiUpdate = async () => {
-          useNdiStore.getState().setUpdating(true);
-          useNdiStore.getState().setDownloadProgress({ percent: 0, status: 'downloading' });
-
-          try {
-            const result = await window.electronAPI.ndi.updateCompanion();
-            if (result?.success) {
-              useNdiStore.getState().setUpdateInfo(null);
-              useNdiStore.getState().setCompanionRunning(false);
-
-              if (window.electronAPI?.ndi?.clearPendingUpdateInfo) {
-                await window.electronAPI.ndi.clearPendingUpdateInfo();
-              }
-              showToast({ title: 'NDI Companion Updated', message: `Updated to v${result.version}. You can relaunch it now.`, variant: 'success' });
-            } else {
-              showToast({ title: 'Update Failed', message: result?.error || 'Could not update the NDI companion.', variant: 'error' });
-            }
-          } catch (error) {
-            console.error('NDI update failed:', error);
-            showToast({ title: 'Update Failed', message: error?.message || 'An unexpected error occurred while updating.', variant: 'error' });
-          } finally {
-            useNdiStore.getState().resetOperationState();
-          }
-        };
-
-        const stats = ndiTelemetry?.stats || null;
-        const health = ndiTelemetry?.health || null;
-        const formatMetric = (value, digits = 1) => (
-          typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '--'
-        );
-        const telemetryAgeSeconds = ndiTelemetry?.updatedAt
-          ? Math.max(0, Math.floor((Date.now() - ndiTelemetry.updatedAt) / 1000))
-          : null;
-
+      case 'ndi':
         return (
-          <div className="space-y-6">
-            <p className={`text-sm ${mutedClass}`}>
-              The NDI companion broadcasts your lyric outputs as NDI video sources, allowing integration with OBS, vMix, and other NDI-compatible software.
-            </p>
-
-            {/* Status Badge */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${ndiStatus.installed
-                ? darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700'
-                : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-                }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${ndiStatus.installed ? 'bg-green-400' : 'bg-gray-400'}`} />
-                {ndiStatus.installed ? 'Installed' : 'Not Installed'}
-              </span>
-              {ndiStatus.installed && ndiStatus.version && (
-                <span className={`text-xs ${mutedClass}`}>v{ndiStatus.version}</span>
-              )}
-              {ndiStatus.installed && (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionRunning
-                  ? darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-700'
-                  : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${companionRunning ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
-                  {companionRunning ? 'Running' : 'Stopped'}
-                </span>
-              )}
-            </div>
-
-            {/* Native telemetry snapshot */}
-            {ndiStatus.installed && companionRunning && (
-              <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className={`text-xs font-medium ${labelClass}`}>Runtime Telemetry</p>
-                  {telemetryAgeSeconds !== null && (
-                    <span className={`text-[11px] ${mutedClass}`}>
-                      Updated {telemetryAgeSeconds}s ago
-                    </span>
-                  )}
-                </div>
-                {stats ? (
-                  <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 text-xs ${mutedClass}`}>
-                    <div>
-                      <p className={labelClass}>Render FPS</p>
-                      <p>{formatMetric(stats.render_fps)}</p>
-                    </div>
-                    <div>
-                      <p className={labelClass}>Send FPS</p>
-                      <p>{formatMetric(stats.send_fps)}</p>
-                    </div>
-                    <div>
-                      <p className={labelClass}>Dropped Frames</p>
-                      <p>{typeof stats.dropped_frames === 'number' ? stats.dropped_frames : '--'}</p>
-                    </div>
-                    <div>
-                      <p className={labelClass}>Send Failures</p>
-                      <p>{typeof stats.ndi_send_failures === 'number' ? stats.ndi_send_failures : '--'}</p>
-                    </div>
-                    <div>
-                      <p className={labelClass}>Avg Frame (ms)</p>
-                      <p>{formatMetric(stats.avg_frame_ms, 2)}</p>
-                    </div>
-                    <div>
-                      <p className={labelClass}>P95 Frame (ms)</p>
-                      <p>{formatMetric(stats.p95_frame_ms, 2)}</p>
-                    </div>
-                    <div>
-                      <p className={labelClass}>Backend</p>
-                      <p>{health?.ndi_backend || '--'}</p>
-                    </div>
-                    <div>
-                      <p className={labelClass}>Warnings</p>
-                      <p>{Array.isArray(health?.warning_flags) && health.warning_flags.length > 0 ? health.warning_flags.join(', ') : 'none'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className={`text-xs ${mutedClass}`}>Waiting for telemetry data from companion...</p>
-                )}
-              </div>
-            )}
-
-            {/* Update Available Banner */}
-            {ndiStatus.installed && ndiUpdateInfo?.updateAvailable && (
-              <div className={`flex items-start gap-3 p-3 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-600/30' : 'bg-blue-50 border border-blue-200'}`}>
-                <Download className={`w-4 h-4 mt-0.5 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
-                    Update available: v{ndiUpdateInfo.latestVersion}
-                  </p>
-                  <p className={`text-xs mt-0.5 ${darkMode ? 'text-blue-400/80' : 'text-blue-600'}`}>
-                    You have v{ndiUpdateInfo.currentVersion}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={handleNdiUpdate}
-                  disabled={ndiUpdating || isDownloading}
-                  className={`flex-shrink-0 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
-                >
-                  {ndiUpdating ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    'Update'
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Download / extraction progress */}
-            {(ndiUpdating || isDownloading) && downloadProgress && (
-              <div className="space-y-2">
-                <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${downloadProgress.status === 'extracting' ? 'bg-amber-500' : 'bg-blue-500'}`}
-                    style={{ width: `${downloadProgress.percent || 0}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className={`text-xs ${mutedClass}`}>
-                    {downloadProgress.status === 'extracting'
-                      ? `Extracting... ${downloadProgress.percent || 0}%`
-                      : `Downloading... ${downloadProgress.percent || 0}%`}
-                  </p>
-                  {downloadProgress.status !== 'extracting' && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleNdiCancelDownload}
-                      className={`h-6 px-2 text-xs ${darkMode ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-500' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'}`}
-                    >
-                      <X className="w-3 h-3 mr-1" />
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {!ndiStatus.installed ? (
-              /* Not Installed State */
-              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                <div className="space-y-4">
-                  <p className={`text-sm ${labelClass}`}>
-                    Download the NDI companion to enable video broadcasting from your lyric outputs.
-                  </p>
-
-                  <Button
-                    onClick={handleNdiDownload}
-                    disabled={isDownloading}
-                    className={`w-full ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
-                  >
-                    {isDownloading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Downloading...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4 mr-2" />
-                        Download NDI Companion
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              /* Installed State */
-              <div className="space-y-4">
-                {/* Install Path */}
-                <div className="space-y-2">
-                  <label className={`text-sm font-medium ${labelClass}`}>Install Location</label>
-                  <Input
-                    value={ndiStatus.installPath || ''}
-                    readOnly
-                    className={`${inputClass} opacity-70 cursor-default`}
-                  />
-                </div>
-
-                {/* Auto-launch Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className={`text-sm font-medium ${labelClass}`}>Start with LyricDisplay</label>
-                    <p className={`text-xs ${mutedClass}`}>Launch NDI companion when LyricDisplay opens</p>
-                  </div>
-                  <Switch
-                    checked={ndiAutoLaunch}
-                    onCheckedChange={handleNdiAutoLaunchToggle}
-                    className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                      ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                      : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                      }`}
-                    thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-                  />
-                </div>
-
-              </div>
-            )}
-
-            {/* NDI Trademark Notice */}
-            <div className={`pt-4 mt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <p className={`text-[11px] leading-relaxed ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                NDI® is a registered trademark of Vizrt NDI AB. This application is not affiliated with or endorsed by Vizrt NDI AB. Learn more at{' '}
-                <a
-                  href="https://ndi.video"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`underline hover:no-underline ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
-                >
-                  ndi.video
-                </a>.
-              </p>
-            </div>
-          </div>
+          <NdiPreferencesSection
+            companionRunning={companionRunning}
+            darkMode={darkMode}
+            downloadProgress={downloadProgress}
+            handleNdiAutoLaunchToggle={handleNdiAutoLaunchToggle}
+            handleNdiCancelDownload={handleNdiCancelDownload}
+            handleNdiDownload={handleNdiDownload}
+            handleNdiUpdate={handleNdiUpdate}
+            inputClass={inputClass}
+            isDownloading={isDownloading}
+            labelClass={labelClass}
+            mutedClass={mutedClass}
+            ndiAutoLaunch={ndiAutoLaunch}
+            ndiStatus={ndiStatus}
+            ndiTelemetry={ndiTelemetry}
+            ndiUpdateInfo={ndiUpdateInfo}
+            ndiUpdating={ndiUpdating}
+          />
         );
-      }
-
       case 'autoplay':
         // Helper to update both preferences file and store immediately
         const updateAutoplaySetting = (key, value) => {
@@ -2066,207 +880,26 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
       case 'advanced':
         return (
-          <div className="space-y-6">
-            <div className={`p-4 rounded-lg border ${darkMode ? 'border-yellow-600/50 bg-yellow-900/20' : 'border-yellow-400 bg-yellow-50'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className={`w-4 h-4 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
-                <span className={`text-sm font-medium ${darkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
-                  Advanced Settings
-                </span>
-              </div>
-              <p className={`text-xs ${darkMode ? 'text-yellow-300/80' : 'text-yellow-700'}`}>
-                These settings are for advanced users. Changing them may affect application stability.
-              </p>
-            </div>
-
-            <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className={`w-4 h-4 ${!securityStatus || securityStatus.error || !securityStatus.exists ? (darkMode ? 'text-gray-400' : 'text-gray-500') : securityStatus.needsRotation ? (darkMode ? 'text-yellow-300' : 'text-yellow-600') : (darkMode ? 'text-green-300' : 'text-green-600')}`} />
-                    <label className={`text-sm font-medium ${labelClass}`}>Security Token Key</label>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${!securityStatus || securityStatus.error || !securityStatus.exists
-                      ? darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-700'
-                      : securityStatus.needsRotation
-                      ? darkMode ? 'bg-yellow-500/15 text-yellow-200' : 'bg-yellow-100 text-yellow-700'
-                      : darkMode ? 'bg-green-500/15 text-green-200' : 'bg-green-100 text-green-700'
-                      }`}>
-                      {securityLoading ? 'Checking' : !securityStatus || securityStatus.error || !securityStatus.exists ? 'Unknown' : securityStatus.needsRotation ? 'Rotation due' : 'Healthy'}
-                    </span>
-                  </div>
-                  <p className={`mt-1 text-xs ${mutedClass}`}>
-                    Used by this app to sign local authentication tokens. Stale keys rotate automatically on startup.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadSecurityStatus}
-                  disabled={securityLoading || securityRotating}
-                  className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
-                >
-                  {securityLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  Refresh
-                </Button>
-              </div>
-
-              <div className={`mt-4 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 ${mutedClass}`}>
-                <div>
-                  <p className={`font-medium ${labelClass}`}>Last rotated</p>
-                  <p>{formatSecurityDate(securityStatus?.lastRotated)}</p>
-                </div>
-                <div>
-                  <p className={`font-medium ${labelClass}`}>Age</p>
-                  <p>
-                    {Number.isFinite(securityStatus?.daysSinceRotation)
-                      ? `${securityStatus.daysSinceRotation} days of ${securityStatus.rotationMaxAgeDays || 180}`
-                      : 'Not available'}
-                  </p>
-                </div>
-                <div>
-                  <p className={`font-medium ${labelClass}`}>Grace period</p>
-                  <p>{securityStatus?.graceActive ? `Active until ${formatSecurityDate(securityStatus.previousSecretExpiry)}` : 'Inactive'}</p>
-                </div>
-                <div>
-                  <p className={`font-medium ${labelClass}`}>Storage</p>
-                  <p>{securityStatus?.storageBackend || 'Not available'}</p>
-                </div>
-              </div>
-
-              {securityStatus?.error && (
-                <p className={`mt-3 text-xs ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
-                  {securityStatus.error}
-                </p>
-              )}
-
-              <Button
-                variant="outline"
-                onClick={handleRotateSecurityTokenKey}
-                disabled={securityLoading || securityRotating}
-                className={darkMode ? 'mt-4 w-full border-yellow-600/60 bg-yellow-950/30 text-yellow-100 hover:bg-yellow-900/40' : 'mt-4 w-full border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100'}
-              >
-                {securityRotating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
-                Rotate and Restart App
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Debug Logging</label>
-                <p className={`text-xs ${mutedClass}`}>Enable verbose logging for troubleshooting</p>
-              </div>
-              <Switch
-                checked={preferences.advanced?.enableDebugLogging ?? false}
-                onCheckedChange={(checked) => updatePreference('advanced', 'enableDebugLogging', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Disable Hardware Acceleration</label>
-                <p className={`text-xs ${mutedClass}`}>Force rendering on the CPU instead of the GPU (requires restart)</p>
-              </div>
-              <Switch
-                checked={preferences.advanced?.disableHardwareAcceleration ?? false}
-                onCheckedChange={(checked) => {
-                  updatePreference('advanced', 'disableHardwareAcceleration', checked);
-                  showToast({
-                    title: 'Restart Required',
-                    message: 'Changes to hardware acceleration require restarting the app.',
-                    variant: 'info',
-                    actions: [
-                      {
-                        label: 'Restart',
-                        onClick: () => {
-                          if (window.electronAPI?.restartApp) {
-                            window.electronAPI.restartApp();
-                          }
-                        }
-                      }
-                    ]
-                  });
-                }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Connection Timeout (ms)</label>
-              <Input
-                type="number"
-                min="5000"
-                max="60000"
-                step="1000"
-                value={getNumberInputValue('advanced', 'connectionTimeout', 10000)}
-                onChange={(e) => setNumberInputDraft('advanced', 'connectionTimeout', e.target.value)}
-                onBlur={() => commitNumberPreference('advanced', 'connectionTimeout', {
-                  min: 5000,
-                  max: 60000,
-                  fallbackValue: 10000,
-                  parse: 'int',
-                })}
-                onKeyDown={handleNumberInputKeyDown}
-                className={inputClass}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Heartbeat Interval (ms)</label>
-              <Input
-                type="number"
-                min="10000"
-                max="120000"
-                step="5000"
-                value={getNumberInputValue('advanced', 'heartbeatInterval', 30000)}
-                onChange={(e) => setNumberInputDraft('advanced', 'heartbeatInterval', e.target.value)}
-                onBlur={() => commitNumberPreference('advanced', 'heartbeatInterval', {
-                  min: 10000,
-                  max: 120000,
-                  fallbackValue: 30000,
-                  parse: 'int',
-                })}
-                onKeyDown={handleNumberInputKeyDown}
-                className={inputClass}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Max Connection Attempts</label>
-              <Input
-                type="number"
-                min="3"
-                max="20"
-                value={getNumberInputValue('advanced', 'maxConnectionAttempts', 10)}
-                onChange={(e) => setNumberInputDraft('advanced', 'maxConnectionAttempts', e.target.value)}
-                onBlur={() => commitNumberPreference('advanced', 'maxConnectionAttempts', {
-                  min: 3,
-                  max: 20,
-                  fallbackValue: 10,
-                  parse: 'int',
-                })}
-                onKeyDown={handleNumberInputKeyDown}
-                className={inputClass}
-              />
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() => handleResetCategory('advanced')}
-              className={darkMode ? 'w-full bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : 'w-full'}
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset Advanced Settings to Defaults
-            </Button>
-          </div>
+          <AdvancedPreferencesSection
+            commitNumberPreference={commitNumberPreference}
+            darkMode={darkMode}
+            formatSecurityDate={formatSecurityDate}
+            getNumberInputValue={getNumberInputValue}
+            handleNumberInputKeyDown={handleNumberInputKeyDown}
+            handleResetCategory={handleResetCategory}
+            handleRotateSecurityTokenKey={handleRotateSecurityTokenKey}
+            inputClass={inputClass}
+            labelClass={labelClass}
+            loadSecurityStatus={loadSecurityStatus}
+            mutedClass={mutedClass}
+            preferences={preferences}
+            securityLoading={securityLoading}
+            securityRotating={securityRotating}
+            securityStatus={securityStatus}
+            setNumberInputDraft={setNumberInputDraft}
+            showToast={showToast}
+            updatePreference={updatePreference}
+          />
         );
 
       default:
@@ -2275,104 +908,27 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   };
 
   return (
-    <div className="flex flex-col h-[500px]">
-      {/* Main Content - Two Pane Layout */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left Pane - Categories */}
-        <div className={`w-52 flex-shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
-          <nav className="p-2 space-y-1">
-            {CATEGORIES.map((category) => {
-              const Icon = category.icon;
-              const isActive = activeCategory === category.id;
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${isActive
-                    ? `${activeCategoryBg} ${darkMode ? 'text-white' : 'text-gray-900'} shadow-sm`
-                    : `${darkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`
-                    }`}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm font-medium truncate">{category.label}</span>
-                  {isActive && <ChevronRight className="w-4 h-4 ml-auto flex-shrink-0" />}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Right Pane - Settings (scrollable) */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mb-6 flex items-center justify-between gap-3">
-            <h3 className={`text-lg font-semibold ${labelClass}`}>
-              {CATEGORIES.find(c => c.id === activeCategory)?.label}
-            </h3>
-            {/* NDI header action buttons */}
-            {activeCategory === 'ndi' && ndiStatus.installed && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {!companionRunning ? (
-                  <Tooltip content="Launch the NDI companion process" side="bottom">
-                    <Button size="sm" onClick={handleNdiLaunch} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
-                      <Power className="w-3.5 h-3.5 mr-1.5" />
-                      Launch
-                    </Button>
-                  </Tooltip>
-                ) : (
-                  <Tooltip content="Stop the NDI companion process" side="bottom">
-                    <Button size="sm" onClick={handleNdiStop} className={`${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}>
-                      <Power className="w-3.5 h-3.5 mr-1.5" />
-                      Stop
-                    </Button>
-                  </Tooltip>
-                )}
-                <Tooltip content="Check for companion updates" side="bottom">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleNdiCheckForUpdate}
-                    disabled={ndiCheckingUpdate}
-                    className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                  >
-                    {ndiCheckingUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                  </Button>
-                </Tooltip>
-                <Tooltip content="Uninstall NDI companion" side="bottom">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleNdiUninstall}
-                    className={`${darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 border-red-600/50 text-red-500 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </Tooltip>
-              </div>
-            )}
-          </div>
-          {renderCategoryContent()}
-        </div>
-      </div>
-
-      {/* Fixed Footer */}
-      <div className={`flex items-center justify-center px-6 py-3 border-t flex-shrink-0 rounded-b-2xl ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-        <div className={`text-xs ${mutedClass} flex items-center gap-2`}>
-          {saving ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Saving...</span>
-            </>
-          ) : lastSaved ? (
-            <>
-              <Check className={`w-3 h-3 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
-              <span className={darkMode ? 'text-green-400' : 'text-green-600'}>Settings saved</span>
-            </>
-          ) : (
-            <span>Changes are saved automatically</span>
-          )}
-        </div>
-      </div>
-    </div>
+    <UserPreferencesLayout
+      activeCategory={activeCategory}
+      activeCategoryBg={activeCategoryBg}
+      categories={CATEGORIES}
+      companionRunning={companionRunning}
+      darkMode={darkMode}
+      handleNdiCheckForUpdate={handleNdiCheckForUpdate}
+      handleNdiLaunch={handleNdiLaunch}
+      handleNdiStop={handleNdiStop}
+      handleNdiUninstall={handleNdiUninstall}
+      labelClass={labelClass}
+      lastSaved={lastSaved}
+      mutedClass={mutedClass}
+      ndiCheckingUpdate={ndiCheckingUpdate}
+      ndiStatus={ndiStatus}
+      panelBg={panelBg}
+      saving={saving}
+      setActiveCategory={setActiveCategory}
+    >
+      {renderCategoryContent()}
+    </UserPreferencesLayout>
   );
 };
 

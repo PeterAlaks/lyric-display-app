@@ -94,11 +94,12 @@ const TimeDisplay = () => {
   const clockValue = React.useMemo(() => formatGlobalClock(now, display), [display, now]);
   const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);
   const showGlobalClock = display.showGlobalClock !== false;
+  const showSecondaryText = display.showSecondaryText !== false;
   const isWaitingForTime = !hasActiveTimer && !showGlobalClock;
   const isIdleFullScreenClock = shouldShowClock && !isWaitingForTime;
 
   const value = isWaitingForTime ? 'Waiting for time...' : (isIdleFullScreenClock ? clockParts.time : displayValue);
-  const label = isWaitingForTime
+  const label = !showSecondaryText || isWaitingForTime
     ? ''
     : shouldShowClock
     ? 'Current Time'
@@ -160,7 +161,7 @@ const TimeDisplay = () => {
           className="w-full flex flex-col justify-center overflow-hidden"
           style={{
             alignItems,
-            height: hasActiveTimer && showGlobalClock ? '70vh' : '86vh',
+            height: hasActiveTimer && showGlobalClock && showSecondaryText ? '70vh' : '86vh',
           }}
         >
           <div
@@ -186,7 +187,7 @@ const TimeDisplay = () => {
           >
             {value}
           </div>
-          {isIdleFullScreenClock && clockParts.period && (
+          {showSecondaryText && isIdleFullScreenClock && clockParts.period && (
             <div
               className="font-bold leading-none text-center"
               style={{
@@ -205,7 +206,7 @@ const TimeDisplay = () => {
           )}
         </div>
 
-        {hasActiveTimer && timerState.sets?.length > 1 && (
+        {showSecondaryText && hasActiveTimer && timerState.sets?.length > 1 && (
           <div className="mt-8 flex justify-center">
             <div
               className="px-5 py-2 rounded bg-white/10 text-white/80 text-sm font-sans"
@@ -217,7 +218,7 @@ const TimeDisplay = () => {
             </div>
           </div>
         )}
-        {showGlobalClock && hasActiveTimer && (
+        {showSecondaryText && showGlobalClock && hasActiveTimer && (
           <div
             className="mx-auto mt-2 w-full text-center font-mono font-semibold leading-none"
             style={{

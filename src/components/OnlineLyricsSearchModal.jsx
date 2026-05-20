@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Search, X, ExternalLink, Loader2, Key, Trash2, Globe2, BookOpen, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Search, X, ExternalLink, Loader2, Globe2, AlertTriangle } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -7,6 +7,9 @@ import { Tooltip } from "@/components/ui/tooltip";
 import useToast from '../hooks/useToast';
 import OnlineLyricsWelcomeSplash from './OnlineLyricsWelcomeSplash';
 import useNetworkStatus from '../hooks/OnlineLyricsSearchModal/useNetworkStatus';
+import useLyricsProviderKeys from '../hooks/OnlineLyricsSearchModal/useLyricsProviderKeys';
+import { FullResultsList, SuggestionsList } from './OnlineLyricsSearchModal/LyricsSearchResults';
+import ProviderAdvancedPanel from './OnlineLyricsSearchModal/ProviderAdvancedPanel';
 import { classifyError } from '../utils/errorClassification';
 import { useKeyboardShortcuts } from '../hooks/OnlineLyricsSearchModal/useKeyboardShortcuts';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
@@ -33,15 +36,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const [lowQualityResults, setLowQualityResults] = useState([]);
   const [showingLowQuality, setShowingLowQuality] = useState(false);
   const [providerStatuses, setProviderStatuses] = useState([]);
-  const [providerDefinitions, setProviderDefinitions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [loadingFullResults, setLoadingFullResults] = useState(false);
   const [selectionLoadingId, setSelectionLoadingId] = useState(null);
   const [showFullResults, setShowFullResults] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [keyEditor, setKeyEditor] = useState(null);
-  const [keyInputValue, setKeyInputValue] = useState('');
-  const [savingKey, setSavingKey] = useState(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
   const [lastError, setLastError] = useState(null);
   const [retrying, setRetrying] = useState(false);
@@ -55,6 +54,17 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const abortControllerRef = useRef(null);
   const partialResultsCleanupRef = useRef(null);
   const hasCheckedWelcome = useRef(false);
+  const {
+    handleDeleteKey,
+    handleSaveKey,
+    keyEditor,
+    keyInputValue,
+    openKeyEditor,
+    providerDefinitions,
+    resetKeyEditor,
+    savingKey,
+    setKeyInputValue,
+  } = useLyricsProviderKeys({ hasElectronBridge, isOpen, showToast });
 
   useEffect(() => {
     if (!isOpen || !visible || hasCheckedWelcome.current) return;
@@ -129,14 +139,13 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       setFullResults(INITIAL_STATE.fullResults);
       setLowQualityResults([]);
       setShowingLowQuality(false);
-      setShowFullResults(false);
-      setSelectionLoadingId(null);
-      setActiveTab(DEFAULT_TAB);
-      setKeyEditor(null);
-      setKeyInputValue('');
-      setLoadingSuggestions(false);
-      setLoadingFullResults(false);
-      setLastError(null);
+    setShowFullResults(false);
+    setSelectionLoadingId(null);
+    setActiveTab(DEFAULT_TAB);
+    resetKeyEditor();
+    setLoadingSuggestions(false);
+    setLoadingFullResults(false);
+    setLastError(null);
       setRetrying(false);
     }
   }, [isOpen, visible]);
@@ -150,8 +159,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     setSelectionLoadingId(null);
     setSelectionIndex(-1);
     setActiveTab(DEFAULT_TAB);
-    setKeyEditor(null);
-    setKeyInputValue('');
+    resetKeyEditor();
     setLastError(null);
     setRetrying(false);
   };
@@ -160,23 +168,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     resetState();
     onClose?.();
   }, [onClose, resetState]);
-
-  useEffect(() => {
-    if (!isOpen || !hasElectronBridge) return;
-    let cancelled = false;
-    const loadProviders = async () => {
-      try {
-        const response = await window.electronAPI.lyrics.listProviders();
-        if (!cancelled && response?.success) {
-          setProviderDefinitions(response.providers || []);
-        }
-      } catch (error) {
-        console.error('Failed to load provider definitions:', error);
-      }
-    };
-    loadProviders();
-    return () => { cancelled = true; };
-  }, [isOpen, hasElectronBridge]);
 
   useEffect(() => {
     if (!isOpen || activeTab !== 'libraries' || !hasElectronBridge || !isSearchFocused) return;
@@ -385,72 +376,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     }
   };
 
-  const openKeyEditor = async (providerId) => {
-    if (!hasElectronBridge) return;
-    setKeyEditor(providerId);
-    setKeyInputValue('');
-    try {
-      const response = await window.electronAPI.lyrics.getProviderKey(providerId);
-      if (response?.success && response?.key) {
-        setKeyInputValue(response.key);
-      }
-    } catch (error) {
-      console.error('Failed to read provider key:', error);
-    }
-  };
-
-  const handleSaveKey = async (providerId) => {
-    if (!hasElectronBridge || !providerId) return;
-    setSavingKey(true);
-    try {
-      await window.electronAPI.lyrics.saveProviderKey(providerId, keyInputValue.trim());
-      showToast({
-        title: 'Key saved',
-        message: 'Provider credentials updated successfully.',
-        variant: 'success',
-      });
-      setKeyEditor(null);
-      setKeyInputValue('');
-      const list = await window.electronAPI.lyrics.listProviders();
-      if (list?.success) setProviderDefinitions(list.providers || []);
-    } catch (error) {
-      const classified = classifyError(error);
-      showToast({
-        title: classified.title,
-        message: classified.message,
-        variant: 'error',
-      });
-    } finally {
-      setSavingKey(false);
-    }
-  };
-
-  const handleDeleteKey = async (providerId) => {
-    if (!hasElectronBridge || !providerId) return;
-    setSavingKey(true);
-    try {
-      await window.electronAPI.lyrics.deleteProviderKey(providerId);
-      showToast({
-        title: 'Key removed',
-        message: 'Provider key deleted.',
-        variant: 'success',
-      });
-      setKeyEditor(null);
-      setKeyInputValue('');
-      const list = await window.electronAPI.lyrics.listProviders();
-      if (list?.success) setProviderDefinitions(list.providers || []);
-    } catch (error) {
-      const classified = classifyError(error);
-      showToast({
-        title: classified.title,
-        message: classified.message,
-        variant: 'error',
-      });
-    } finally {
-      setSavingKey(false);
-    }
-  };
-
   const handleShowLowQuality = () => {
     setShowingLowQuality(true);
   };
@@ -486,156 +411,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     window.addEventListener(REQUEST_MODAL_CLOSE_EVENT, registerCloseCandidate);
     return () => window.removeEventListener(REQUEST_MODAL_CLOSE_EVENT, registerCloseCandidate);
   }, [handleCloseModal, isOpen, visible]);
-
-  const renderSuggestionList = (items) => {
-    if (!isSearchFocused) return null;
-
-    if (!items?.length) {
-      if (!query.trim()) {
-        return null;
-      }
-      return (
-        <div className={`mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-white'}`}>
-          <p className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            No suggestions yet. Press Enter to run a full catalog search.
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        ref={suggestionListRef}
-        className={`mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-56 overflow-y-auto`}
-      >
-        {items.map((item, index) => {
-          const providerName = providerMap.get(item.provider)?.displayName || item.provider;
-          const isLoading = selectionLoadingId === item.id;
-          const isSelected = selectionIndex === index && !showFullResults;
-          return (
-            <button
-              data-result-row
-              key={item.id}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleSelectResult(item)}
-              disabled={isLoading}
-              className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${darkMode
-                ? `${isSelected ? 'bg-blue-900/40 border-l-2 border-blue-500/70' : ''} hover:bg-gray-700 disabled:hover:bg-gray-800/90`
-                : `${isSelected ? 'bg-blue-50 border-l-2 border-blue-500/70' : ''} hover:bg-gray-100 disabled:hover:bg-white`
-                }`}
-              aria-selected={isSelected}
-              onMouseEnter={() => setSelectionIndex(index)}
-            >
-              <div className="min-w-0">
-                <p className={`truncate text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{item.title}</p>
-                <p className={`truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{item.artist || 'Unknown artist'}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`whitespace-nowrap text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {providerName}
-                </span>
-                {isLoading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderFullResults = (items) => {
-    if (loadingFullResults) {
-      return (
-        <div className={`mt-4 flex h-48 items-center justify-center rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-gray-50'}`}>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Fetching results...
-          </div>
-        </div>
-      );
-    }
-
-    if (!items?.length) {
-      return (
-        <div className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-white'}`}>
-          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-            <BookOpen className={`w-6 h-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-            <div>
-              <p className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>No matches found. Try a different title or artist.</p>
-              {lastError && lastError.context === 'fullSearch' && lastError.retryable && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={performFullSearch}
-                  disabled={loadingFullResults}
-                  className="mt-3"
-                >
-                  Retry Search
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        ref={fullResultsRef}
-        className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-72 overflow-y-auto`}
-      >
-        {items.map((item, index) => {
-          const provider = providerMap.get(item.provider);
-          const providerName = provider?.displayName || item.provider;
-          const isLoading = selectionLoadingId === item.id;
-          const isSelected = selectionIndex === index && showFullResults;
-          return (
-            <button
-              data-result-row
-              key={item.id}
-              onClick={() => handleSelectResult(item)}
-              disabled={isLoading}
-              className={`w-full border-b px-4 py-4 text-left transition last:border-b-0 ${darkMode
-                ? `${isSelected ? 'bg-blue-900/40 border-blue-500/70' : 'border-gray-700'} hover:bg-gray-700/70 disabled:hover:bg-transparent`
-                : `${isSelected ? 'bg-blue-50 border-blue-500/70' : 'border-gray-200'} hover:bg-gray-100 disabled:hover:bg-white`
-                }`}
-              aria-selected={isSelected}
-              onMouseEnter={() => setSelectionIndex(index)}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-1">
-                  <p className={`truncate text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{item.title}</p>
-                  <p className={`truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{item.artist || 'Unknown artist'}</p>
-                  {item.snippet && (
-                    <p className={`line-clamp-2 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                      {item.snippet}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`rounded-md px-2 py-1 text-xs font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                    {providerName}
-                  </span>
-                  {isLoading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
-                </div>
-              </div>
-            </button>
-          );
-        })}
-        {lowQualityResults.length > 0 && !showingLowQuality && (
-          <div className={`w-full px-4 py-3 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
-            <button
-              onClick={handleShowLowQuality}
-              disabled={loadingFullResults}
-              className={`text-sm underline underline-offset-4 ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-900'}`}
-            >
-              All Results
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   if (!visible) return null;
 
@@ -720,18 +495,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                   : 'data-[state=active]:bg-white data-[state=active]:text-gray-900'}
                 >Online Song Libraries</TabsTrigger>
               </TabsList>
-
-              {activeTab === 'libraries' && (
-                <span
-                  className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-sm border
-      ${darkMode
-                      ? 'border-gray-600 bg-gray-700 text-gray-300'
-                      : 'border-gray-300 bg-gray-100 text-gray-700'
-                    }`}
-                >
-                  Beta
-                </span>
-              )}
             </div>
 
             <TabsContent value="google" className="animate-in slide-in-from-left-8 duration-300">
@@ -921,199 +684,56 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     </div>
                   )}
 
-                  {!showFullResults && renderSuggestionList(suggestionResults)}
-                  {showFullResults && renderFullResults(combinedFullResults)}
-
-                  {/* Featured Libraries */}
-                  {providerDefinitions?.length > 0 && (
-                    <div className="mt-6">
-                      <p className={`mb-3 text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Featured libraries
-                      </p>
-                      <div className="grid grid-cols-4 gap-3">
-                        {providerDefinitions.map((provider) => {
-                          const logoMap = {
-                            lyricsOvh: '/logos/lyricsovh-logo.png',
-                            openHymnal: '/logos/openhymnal-logo.png',
-                            lrclib: '/logos/lrclib-logo.png',
-                            chartlyrics: '/logos/chartlyrics-logo.png',
-                          };
-
-                          return (
-                            <a
-                              key={provider.id}
-                              href={provider.homepage}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="group relative transition-all hover:opacity-85 hover:scale-105"
-                            >
-                              <img
-                                src={logoMap[provider.id]}
-                                alt={provider.displayName}
-                                className="h-9 w-auto object-contain"
-                              />
-                            </a>
-                          );
-                        })}
-                      </div>
-                    </div>
+                  {!showFullResults && (
+                    <SuggestionsList
+                      darkMode={darkMode}
+                      handleSelectResult={handleSelectResult}
+                      isSearchFocused={isSearchFocused}
+                      items={suggestionResults}
+                      providerMap={providerMap}
+                      query={query}
+                      selectionIndex={selectionIndex}
+                      selectionLoadingId={selectionLoadingId}
+                      setSelectionIndex={setSelectionIndex}
+                      showFullResults={showFullResults}
+                      suggestionListRef={suggestionListRef}
+                    />
+                  )}
+                  {showFullResults && (
+                    <FullResultsList
+                      darkMode={darkMode}
+                      fullResultsRef={fullResultsRef}
+                      handleSelectResult={handleSelectResult}
+                      handleShowLowQuality={handleShowLowQuality}
+                      items={combinedFullResults}
+                      lastError={lastError}
+                      loadingFullResults={loadingFullResults}
+                      lowQualityResults={lowQualityResults}
+                      performFullSearch={performFullSearch}
+                      providerMap={providerMap}
+                      selectionIndex={selectionIndex}
+                      selectionLoadingId={selectionLoadingId}
+                      setSelectionIndex={setSelectionIndex}
+                      showFullResults={showFullResults}
+                      showingLowQuality={showingLowQuality}
+                    />
                   )}
 
-                  {/* Collapsible Advanced Section */}
-                  {(providerStatuses?.length > 0 || providerDefinitions.some((provider) => provider.requiresKey)) && (
-                    <div className={`mt-6 rounded-md border ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
-                      <button
-                        onClick={() => {
-                          const newExpanded = !advancedExpanded;
-                          setAdvancedExpanded(newExpanded);
-                          try {
-                            localStorage.setItem('lyricdisplay_advancedExpanded', newExpanded.toString());
-                          } catch (err) {
-                            console.warn('Failed to save advanced section state:', err);
-                          }
-                        }}
-                        className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors ${darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100/50'}`}
-                      >
-                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                          Advanced Options (API Key Management and more)
-                        </span>
-                        <ChevronRight
-                          className={`w-4 h-4 transition-transform ${advancedExpanded ? 'rotate-90' : ''} ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                        />
-                      </button>
-
-                      <div
-                        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${advancedExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                          }`}
-                      >
-                        <div className="overflow-hidden">
-                          <div className={`px-4 pb-4 space-y-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                            {/* Provider Access Keys */}
-                            {providerDefinitions.some((provider) => provider.requiresKey) && (
-                              <div className="pt-4">
-                                <p className={`mb-3 flex items-center gap-2 text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                                  <Key className="w-4 h-4" />
-                                  Provider access keys
-                                </p>
-                                <div className="space-y-4">
-                                  {providerDefinitions.filter((provider) => provider.requiresKey).map((provider) => {
-                                    const configured = provider.configured;
-                                    const isEditing = keyEditor === provider.id;
-                                    const iconMap = {
-                                      'openHymnal': '/logos/openhymnal-icon.png',
-                                      'lyricsOvh': '/logos/lyricsovh-icon.png',
-                                      'lrclib': '/logos/lrclib-icon.png',
-                                      'chartlyrics': '/logos/chartlyrics-icon.png',
-                                    };
-
-                                    return (
-                                      <div key={provider.id} className={`rounded-md border px-3 py-3 ${darkMode ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white'}`}>
-                                        <div className="flex flex-wrap items-center justify-between gap-3">
-                                          <div className="flex items-center gap-3">
-                                            {iconMap[provider.id] && (
-                                              <img
-                                                src={iconMap[provider.id]}
-                                                alt={provider.displayName}
-                                                className="h-8 w-8 object-contain"
-                                              />
-                                            )}
-                                            <div>
-                                              <p className={`text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>{provider.displayName}</p>
-                                              <p className={`text-xs ${configured ? 'text-green-500' : 'text-red-500'}`}>
-                                                {configured ? 'Configured' : 'Key required'}
-                                              </p>
-                                            </div>
-                                          </div>
-                                          {!isEditing && (
-                                            <div className="flex items-center gap-2">
-                                              <Button size="sm" variant="secondary" onClick={() => openKeyEditor(provider.id)} className={
-                                                darkMode
-                                                  ? 'bg-gray-700 text-white hover:bg-gray-600'
-                                                  : ''
-                                              }
-                                              >{configured ? 'Update key' : 'Add key'}
-                                              </Button>
-                                              {configured && (
-                                                <Button size="icon" variant="ghost" onClick={() => handleDeleteKey(provider.id)} disabled={savingKey}>
-                                                  <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                        {isEditing && (
-                                          <div className="mt-3 space-y-3">
-                                            <Input
-                                              type="text"
-                                              value={keyInputValue}
-                                              onChange={(event) => setKeyInputValue(event.target.value)}
-                                              placeholder="Paste provider API key"
-                                              className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500' : ''}
-                                            />
-                                            <div className="flex justify-end gap-2">
-                                              <Button variant="ghost" size="sm" onClick={() => { setKeyEditor(null); setKeyInputValue(''); }} disabled={savingKey} className={
-                                                darkMode
-                                                  ? 'text-gray-400 hover:bg-gray-700/60 hover:text-white'
-                                                  : ''
-                                              }
-                                              >Cancel
-                                              </Button>
-                                              <Button size="sm" onClick={() => handleSaveKey(provider.id)} disabled={savingKey || !keyInputValue.trim()}>
-                                                {savingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save key'}
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Provider Status */}
-                            {providerStatuses?.length > 0 && (
-                              <div className={providerDefinitions.some((provider) => provider.requiresKey) ? 'pt-0' : 'pt-4'}>
-                                <p className={`font-medium mb-3 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                  <Globe2 className="w-4 h-4" />
-                                  Provider status
-                                </p>
-                                <ul className="space-y-1 text-xs">
-                                  {providerStatuses.map((provider) => (
-                                    <li key={provider.id} className="flex items-center justify-between gap-3">
-                                      <span className="font-medium">{provider.displayName}</span>
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200/40 text-gray-600'}`}>
-                                          {provider.count} hit{provider.count === 1 ? '' : 's'}
-                                        </span>
-                                        {provider.duration != null && (
-                                          <span className={`text-[10px] ${provider.duration > 3000 ? 'text-red-500' : provider.duration > 1200 ? 'text-yellow-500' : 'text-gray-500'}`}>
-                                            {provider.duration}ms
-                                          </span>
-                                        )}
-                                        {provider.penalty > 0 && (
-                                          <span className="text-[10px] text-yellow-500">penalty -{provider.penalty}</span>
-                                        )}
-                                        {provider.health?.requests > 0 && (
-                                          <span className={`text-[10px] ${provider.health.failures > 0 ? 'text-red-500' : 'text-gray-500'}`}>
-                                            {Math.round((provider.health.failures / provider.health.requests) * 100)}% fail
-                                          </span>
-                                        )}
-                                        {provider.errors?.[0] && (
-                                          <span className="text-[10px] text-red-500">{provider.errors[0]}</span>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
+                  <ProviderAdvancedPanel
+                    advancedExpanded={advancedExpanded}
+                    darkMode={darkMode}
+                    handleDeleteKey={handleDeleteKey}
+                    handleSaveKey={handleSaveKey}
+                    keyEditor={keyEditor}
+                    keyInputValue={keyInputValue}
+                    openKeyEditor={openKeyEditor}
+                    providerDefinitions={providerDefinitions}
+                    providerStatuses={providerStatuses}
+                    resetKeyEditor={resetKeyEditor}
+                    savingKey={savingKey}
+                    setAdvancedExpanded={setAdvancedExpanded}
+                    setKeyInputValue={setKeyInputValue}
+                  />                </>
               )}
             </TabsContent>
           </Tabs>

@@ -17,6 +17,7 @@ export const DEFAULT_TIMER_DISPLAY = {
   timerBold: true,
   timerItalic: false,
   timerUnderline: false,
+  showSecondaryText: true,
   showProgress: true,
   showClockWhenIdle: true,
   showGlobalClock: true,

@@ -1,109 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { List, useDynamicRowHeight, useListRef } from 'react-window';
+import { List, useListRef } from 'react-window';
 import { useLyricsState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from '../hooks/useToast';
-import { ArrowRight, Copy, MonitorUp, Link2, Redo, Undo, Ungroup, X } from 'lucide-react';
-import { Tooltip } from '@/components/ui/tooltip';
-import TutorialPopover from '@/components/ui/tutorial-popover';
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
-import useContextMenuPosition from '../hooks/useContextMenuPosition';
-import { STRUCTURE_TAG_PATTERNS, isNormalGroupCandidate, getCleanSectionLabel } from '../../shared/lyricsParsing.js';
-import useElectronListeners from '../hooks/LyricsList/useElectronListeners';
-import useLyricsStore from '../context/LyricsStore';
-import { getLineDisplayText } from '../utils/parseLyrics';
-
-const DEFAULT_ROW_HEIGHT = 48;
-const ROW_GAP = 8;
-const VIRTUALIZATION_THRESHOLD = 200;
-const HORIZONTAL_PADDING_PX = 16;
-const STAGE_ONLY_MARKER_REGEX = /^\s*\/\//;
-
-const hasStageOnlyMarker = (line) => {
-  const displayText = getLineDisplayText(line);
-  if (!displayText) return false;
-  return displayText.split('\n').some((lineText) => STAGE_ONLY_MARKER_REGEX.test(lineText));
-};
-
-const getFirstStageOnlyMarkerIndex = (lyrics) => {
-  if (!Array.isArray(lyrics)) return null;
-  const index = lyrics.findIndex((line) => hasStageOnlyMarker(line));
-  return index >= 0 ? index : null;
-};
-
-const getLyricsLoadSignature = (lyrics, firstMarkerIndex, lyricsFileName) => {
-  if (!Array.isArray(lyrics) || firstMarkerIndex == null) return '';
-  const firstLine = getLineDisplayText(lyrics[0]);
-  const markerLine = getLineDisplayText(lyrics[firstMarkerIndex]);
-  return `${lyricsFileName || ''}|${lyrics.length}|${firstMarkerIndex}|${firstLine}|${markerLine}`;
-};
-
-const getTutorialLoadIdentity = (detail = {}) => {
-  const fileName = detail.fileName || '';
-  const filePath = detail.filePath || '';
-  const fileType = detail.fileType || '';
-  return `${fileName}|${filePath}|${fileType}|${Date.now()}`;
-};
-
-let hasHandledInitialPersistedTutorial = false;
-
-const TutorialLineAnchor = React.memo(({
-  active,
-  open,
-  index,
-  loadKey,
-  darkMode,
-  onVisible,
-  onOpenChange,
-  onNeverShowAgain,
-  children,
-}) => {
-  const anchorRef = React.useRef(null);
-
-  useEffect(() => {
-    if (!active) return undefined;
-
-    const node = anchorRef.current;
-    if (!node) return undefined;
-
-    if (typeof IntersectionObserver === 'undefined') {
-      onVisible(index);
-      return undefined;
-    }
-
-    let hasReportedVisible = false;
-    const observer = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      if (!hasReportedVisible && entry?.isIntersecting && entry.intersectionRatio >= 0.5) {
-        hasReportedVisible = true;
-        onVisible(index);
-      }
-    }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
-
-    observer.observe(node);
-
-    return () => observer.disconnect();
-  }, [active, index, loadKey, onVisible]);
-
-  const child = React.Children.only(children);
-  if (!active) return child;
-
-  const anchor = React.cloneElement(child, { ref: anchorRef });
-
-  return (
-    <TutorialPopover
-      anchor={anchor}
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Stage-only lyric marker"
-      darkMode={darkMode}
-      onNeverShowAgain={onNeverShowAgain}
-      icon={MonitorUp}
-    >
-      Lines that start with <span className="font-mono">//</span> are hidden on output pages. Stage displays show the line after removing the marker.
-    </TutorialPopover>
-  );
-});
+import useStageOnlyTutorial from '../hooks/LyricsList/useStageOnlyTutorial';
+import useSectionNavigation from '../hooks/LyricsList/useSectionNavigation';
+import useLyricsListHistory from '../hooks/LyricsList/useLyricsListHistory';
+import useLyricsListSelection from '../hooks/LyricsList/useLyricsListSelection';
+import useLyricsListGrouping from '../hooks/LyricsList/useLyricsListGrouping';
+import useLyricsListRows from '../hooks/LyricsList/useLyricsListRows';
+import LyricRow from './LyricsList/LyricRow';
+import SectionChips from './LyricsList/SectionChips';
+import LyricsListContextMenu from './LyricsList/LyricsListContextMenu';
+import { HORIZONTAL_PADDING_PX, VIRTUALIZATION_THRESHOLD } from './LyricsList/layout';
 
 export default function LyricsList({
   searchQuery = '',
@@ -130,405 +39,40 @@ export default function LyricsList({
   } = useLyricsState();
   const { darkMode } = useDarkModeState();
   const isDesktopApp = useIsDesktopApp();
-  const showTutorialPopovers = useLyricsStore((state) => state.showTutorialPopovers);
-  const setShowTutorialPopovers = useLyricsStore((state) => state.setShowTutorialPopovers);
   const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup } = useControlSocket();
   const { showToast } = useToast();
   const [hoveredLineIndex, setHoveredLineIndex] = useState(null);
   const [hoveredButtonIndex, setHoveredButtonIndex] = useState(null);
-  const [stageOnlyTutorial, setStageOnlyTutorial] = useState(null);
   const lastResetKeyRef = React.useRef(null);
   const suppressScrollResetRef = React.useRef(false);
-  const historyMutationRef = React.useRef(false);
-  const tutorialMutationRef = React.useRef(false);
-  const tutorialLoadCounterRef = React.useRef(0);
-  const initialTutorialEvaluatedRef = React.useRef(false);
-  const allowInitialPersistedTutorialRef = React.useRef(!hasHandledInitialPersistedTutorial && Array.isArray(lyrics) && lyrics.length > 0);
-  const handledTutorialLoadIdRef = React.useRef(null);
-  const previousShowTutorialPopoversRef = React.useRef(showTutorialPopovers);
-  const historySignatureRef = React.useRef(null);
-  const selectionAnchorRef = React.useRef(null);
-  const containerRef = React.useRef(null);
-  const contextMenuRef = React.useRef(null);
-  const sectionChipsContainerRef = React.useRef(null);
-  const sectionChipsScrollerRef = React.useRef(null);
-  const touchTimerRef = React.useRef(null);
-  const touchStartPosRef = React.useRef(null);
-  const longPressTriggeredRef = React.useRef(false);
-  const prevSelectionModeRef = React.useRef(selectionMode);
 
-  const [selectedIndices, setSelectedIndices] = useState(() => new Set());
-  const [historyPast, setHistoryPast] = useState([]);
-  const [historyFuture, setHistoryFuture] = useState([]);
-  const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0, index: null, mode: 'line' });
-  const [contextMenuDimensions, setContextMenuDimensions] = useState({ width: 0, height: 0 });
-  const [containerSize, setContainerSize] = useState({ width: typeof window !== 'undefined' ? window.innerWidth : 0, height: typeof window !== 'undefined' ? window.innerHeight : 0 });
-  const [lyricsTutorialLoad, setLyricsTutorialLoad] = useState(null);
+  const {
+    stageOnlyTutorial,
+    tutorialMutationRef,
+    handleStageOnlyTutorialVisible,
+    handleStageOnlyTutorialOpenChange,
+    handleNeverShowTutorialPopovers,
+  } = useStageOnlyTutorial({ lyrics, lyricsFileName });
 
-  const isStructureTagLine = useCallback((line) => {
-    if (!line || typeof line !== 'string') return false;
-    const trimmed = line.trim();
-    if (!trimmed) return false;
-    return STRUCTURE_TAG_PATTERNS.some((pattern) => pattern.test(trimmed));
-  }, []);
-
-  const effectiveMaxLinesPerGroup = useMemo(() => {
-    const parsed = parseInt(maxLinesPerGroup, 10);
-    if (!Number.isFinite(parsed)) return 2;
-    return Math.max(2, Math.min(12, parsed));
-  }, [maxLinesPerGroup]);
-
-  const getNormalGroupLines = useCallback((line) => {
-    if (typeof line === 'string') return [line];
-    if (line?.type !== 'normal-group') return [];
-    if (Array.isArray(line.lines) && line.lines.length > 0) {
-      return line.lines.filter((entry) => typeof entry === 'string' && entry.trim().length > 0);
-    }
-    return [line.line1, line.line2].filter((entry) => typeof entry === 'string' && entry.trim().length > 0);
-  }, []);
-
-  const sectionById = useMemo(() => {
-    const map = new Map();
-    (lyricsSections || []).forEach((section) => {
-      if (section?.id) {
-        map.set(section.id, section);
-      }
-    });
-    return map;
-  }, [lyricsSections]);
-
-  const sectionStartLookup = useMemo(() => {
-    const map = new Map();
-    (lyricsSections || []).forEach((section) => {
-      if (section && Number.isInteger(section.startLine)) {
-        map.set(section.startLine, section.id);
-      }
-    });
-    return map;
-  }, [lyricsSections]);
-
-  const activeSectionId = useMemo(() => {
-    if (selectedLine == null) return null;
-    return lineToSection[selectedLine] || null;
-  }, [lineToSection, selectedLine]);
-
-  const firstStageOnlyMarkerIndex = useMemo(
-    () => getFirstStageOnlyMarkerIndex(lyrics),
-    [lyrics]
-  );
-
-  useEffect(() => {
-    const handleLyricsTutorialLoad = (event) => {
-      hasHandledInitialPersistedTutorial = true;
-      setLyricsTutorialLoad({
-        id: getTutorialLoadIdentity(event?.detail),
-        detail: event?.detail || {},
-      });
-    };
-
-    window.addEventListener('lyrics-tutorial-load', handleLyricsTutorialLoad);
-    return () => window.removeEventListener('lyrics-tutorial-load', handleLyricsTutorialLoad);
-  }, []);
-
-  useEffect(() => {
-    if (tutorialMutationRef.current) {
-      tutorialMutationRef.current = false;
-      return;
-    }
-
-    const wasShowingTutorialPopovers = previousShowTutorialPopoversRef.current;
-    previousShowTutorialPopoversRef.current = showTutorialPopovers;
-    const hasUnhandledExplicitLyricsLoad = Boolean(lyricsTutorialLoad?.id && lyricsTutorialLoad.id !== handledTutorialLoadIdRef.current);
-
-    if (!showTutorialPopovers || firstStageOnlyMarkerIndex == null) {
-      if (hasUnhandledExplicitLyricsLoad) {
-        handledTutorialLoadIdRef.current = lyricsTutorialLoad.id;
-      }
-      setStageOnlyTutorial(null);
-      return;
-    }
-
-    const isInitialPersistedLyricsCheck = allowInitialPersistedTutorialRef.current && !initialTutorialEvaluatedRef.current;
-    if (!initialTutorialEvaluatedRef.current) {
-      initialTutorialEvaluatedRef.current = true;
-      if (allowInitialPersistedTutorialRef.current) {
-        hasHandledInitialPersistedTutorial = true;
-      }
-    }
-
-    const wasPreferenceReenabled = !wasShowingTutorialPopovers && showTutorialPopovers;
-
-    if (!isInitialPersistedLyricsCheck && !wasPreferenceReenabled && !hasUnhandledExplicitLyricsLoad) {
-      return;
-    }
-
-    if (hasUnhandledExplicitLyricsLoad) {
-      handledTutorialLoadIdRef.current = lyricsTutorialLoad.id;
-    }
-
-    tutorialLoadCounterRef.current += 1;
-    const loadSignature = getLyricsLoadSignature(lyrics, firstStageOnlyMarkerIndex, lyricsFileName);
-
-    setStageOnlyTutorial({
-      key: `${tutorialLoadCounterRef.current}|${loadSignature}`,
-      index: firstStageOnlyMarkerIndex,
-      open: false,
-      hasShown: false,
-    });
-  }, [firstStageOnlyMarkerIndex, lyrics, lyricsFileName, lyricsTutorialLoad, showTutorialPopovers]);
-
-  const handleStageOnlyTutorialVisible = useCallback((index) => {
-    setStageOnlyTutorial((current) => {
-      if (!current || current.index !== index || current.hasShown) return current;
-      return { ...current, open: true, hasShown: true };
-    });
-  }, []);
-
-  const handleStageOnlyTutorialOpenChange = useCallback((open) => {
-    setStageOnlyTutorial((current) => {
-      if (!current) return current;
-      return { ...current, open };
-    });
-  }, []);
-
-  const handleNeverShowTutorialPopovers = useCallback(async () => {
-    setShowTutorialPopovers(false);
-    setStageOnlyTutorial(null);
-
-    try {
-      if (window.electronAPI?.preferences?.set) {
-        await window.electronAPI.preferences.set('appearance.showTutorialPopovers', false);
-      }
-    } catch (error) {
-      console.error('Failed to save tutorial popover preference:', error);
-    }
-
-    window.dispatchEvent(new CustomEvent('tutorial-popovers-preference-updated', {
-      detail: { showTutorialPopovers: false }
-    }));
-  }, [setShowTutorialPopovers]);
-
-  const dynamicRowHeight = useDynamicRowHeight({
-    defaultRowHeight: DEFAULT_ROW_HEIGHT,
-    key: lyrics.length,
+  const {
+    isStructureTagLine,
+    effectiveMaxLinesPerGroup,
+    getNormalGroupLines,
+    sectionById,
+    sectionStartLookup,
+    activeSectionId,
+    rowHeightConfig,
+    getLineClassName,
+  } = useLyricsListRows({
+    lyrics,
+    lyricsSections,
+    lineToSection,
+    selectedLine,
+    maxLinesPerGroup,
+    highlightedLineIndex,
+    searchQuery,
+    darkMode,
   });
-
-
-  const getInitialRowHeight = useCallback((index) => {
-    const line = lyrics[index];
-    if (!line) return DEFAULT_ROW_HEIGHT;
-
-    if (isStructureTagLine(line)) {
-      return 8;
-    }
-
-    const hasSectionHeader = sectionStartLookup.has(index);
-
-    if (line.type === 'group') {
-      let height = 48;
-
-      if (line.translation) {
-        height += 24;
-      }
-      if (hasSectionHeader) height += 24;
-      return height;
-    }
-
-    if (line.type === 'normal-group') {
-      const lineCount = Math.max(2, getNormalGroupLines(line).length || 2);
-      let height = 48 + (Math.max(0, lineCount - 1) * 24);
-      if (hasSectionHeader) height += 24;
-      return height;
-    }
-
-    return DEFAULT_ROW_HEIGHT + (hasSectionHeader ? 24 : 0);
-  }, [lyrics, sectionStartLookup, isStructureTagLine, getNormalGroupLines]);
-
-  const rowHeightConfig = useMemo(() => ({
-    ...dynamicRowHeight,
-    getAverageRowHeight: () => {
-      const averageContentHeight =
-        dynamicRowHeight.getAverageRowHeight?.() ?? DEFAULT_ROW_HEIGHT;
-      return averageContentHeight + ROW_GAP;
-    },
-    getRowHeight: (index) => {
-      const measured = dynamicRowHeight.getRowHeight?.(index);
-      const contentHeight = measured ?? getInitialRowHeight(index);
-      return contentHeight + ROW_GAP;
-    },
-    observeRowElements: (elements) => {
-      const cleanup = dynamicRowHeight.observeRowElements?.(elements);
-      return typeof cleanup === 'function' ? cleanup : () => { };
-    },
-  }), [dynamicRowHeight, getInitialRowHeight]);
-
-  const selectedIndicesArray = useMemo(() => Array.from(selectedIndices).sort((a, b) => a - b), [selectedIndices]);
-  const hasSelection = selectedIndicesArray.length > 0;
-  const canUndo = historyPast.length > 0;
-  const canRedo = historyFuture.length > 0;
-
-  useEffect(() => {
-    if (!onSelectionStateChange) return;
-    onSelectionStateChange({
-      totalSelected: selectedIndices.size,
-      totalLines: lyrics.length,
-      hasSelection: selectedIndices.size > 0,
-    });
-  }, [lyrics.length, onSelectionStateChange, selectedIndices]);
-
-  const { contextMenuPosition } = useContextMenuPosition({
-    contextMenuState,
-    contextMenuDimensions,
-    containerSize,
-    fallbackDimensions: { width: 192, height: 224 }
-  });
-
-  useEffect(() => {
-    const updateSize = () => setContainerSize({ width: window.innerWidth, height: window.innerHeight });
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenuState({ visible: false, x: 0, y: 0, index: null, mode: 'line' });
-  }, []);
-
-  useEffect(() => {
-    if (!contextMenuState.visible) return;
-    const handleClickAway = (event) => {
-      if (contextMenuRef.current && contextMenuRef.current.contains(event.target)) return;
-      closeContextMenu();
-    };
-    document.addEventListener('mousedown', handleClickAway);
-    return () => document.removeEventListener('mousedown', handleClickAway);
-  }, [contextMenuState.visible, closeContextMenu]);
-
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (!containerRef.current) return;
-
-      const isInsideContainer = containerRef.current.contains(event.target);
-      const isInsideIgnored = (clickAwayIgnoreRefs || []).some((ref) => {
-        const node = ref?.current;
-        return node && node.contains && node.contains(event.target);
-      });
-
-      if (isInsideContainer || isInsideIgnored) return;
-
-      setSelectedIndices(new Set());
-      selectionAnchorRef.current = null;
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [clickAwayIgnoreRefs]);
-
-  const setSelection = useCallback((nextIndices, anchor) => {
-    setSelectedIndices(new Set(nextIndices instanceof Set ? Array.from(nextIndices) : nextIndices));
-    if (anchor !== undefined) {
-      selectionAnchorRef.current = anchor;
-    }
-  }, []);
-
-  const toggleSelection = useCallback((index) => {
-    const next = new Set(selectedIndices);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
-    setSelection(next, index);
-  }, [selectedIndices, setSelection]);
-
-  const handleRangeSelection = useCallback((index) => {
-    const anchor = selectionAnchorRef.current ?? selectedLine ?? index;
-    const start = Math.min(anchor, index);
-    const end = Math.max(anchor, index);
-    const range = [];
-    for (let i = start; i <= end; i += 1) range.push(i);
-    setSelection(range, anchor);
-  }, [selectedLine, setSelection]);
-
-  const handleContextMenuOpen = useCallback((event, index) => {
-    if (longPressTriggeredRef.current) {
-      event?.preventDefault?.();
-      return;
-    }
-
-    if (!isDesktopApp) {
-      const nativeEvent = event?.nativeEvent;
-      if (event?.touches || nativeEvent?.touches || nativeEvent?.pointerType === 'touch') {
-        return;
-      }
-    }
-
-    event.preventDefault();
-    const x = event.clientX;
-    const y = event.clientY;
-
-    if (!selectedIndices.has(index)) {
-      setSelection([index], index);
-    }
-
-    setContextMenuState({
-      visible: true,
-      x,
-      y,
-      index,
-      mode: 'line'
-    });
-  }, [isDesktopApp, selectedIndices, setSelection]);
-
-  const clearTouchTimer = useCallback(() => {
-    if (touchTimerRef.current) {
-      window.clearTimeout(touchTimerRef.current);
-      touchTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => () => clearTouchTimer(), [clearTouchTimer]);
-
-  const handleLongPress = useCallback((index) => {
-    if (isDesktopApp) return;
-    longPressTriggeredRef.current = true;
-    touchStartPosRef.current = null;
-    onEnterSelectionMode?.(index);
-    setSelection([index], index);
-    closeContextMenu();
-  }, [closeContextMenu, isDesktopApp, onEnterSelectionMode, setSelection]);
-
-  const handleRowTouchStart = useCallback((event, index) => {
-    longPressTriggeredRef.current = false;
-    if (!event.touches) {
-      clearTouchTimer();
-      return;
-    }
-    if (event.touches.length !== 1) {
-      clearTouchTimer();
-      return;
-    }
-
-    const touch = event.touches[0];
-    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY, index };
-    clearTouchTimer();
-    touchTimerRef.current = window.setTimeout(() => {
-      handleLongPress(index);
-      touchTimerRef.current = null;
-    }, 450);
-  }, [clearTouchTimer, handleLongPress]);
-
-  const handleRowTouchMove = useCallback((event) => {
-    if (!touchStartPosRef.current || !event.touches || event.touches.length !== 1) return;
-    const touch = event.touches[0];
-    const dx = touch.clientX - touchStartPosRef.current.x;
-    const dy = touch.clientY - touchStartPosRef.current.y;
-    if (Math.hypot(dx, dy) > 10) {
-      clearTouchTimer();
-      touchStartPosRef.current = null;
-    }
-  }, [clearTouchTimer]);
-
-  const handleRowTouchEnd = useCallback(() => {
-    clearTouchTimer();
-    touchStartPosRef.current = null;
-  }, [clearTouchTimer]);
 
   const handleLineClickPlain = useCallback(
     (index) => {
@@ -541,538 +85,103 @@ export default function LyricsList({
     [onSelectLine, selectLine, emitLineUpdate]
   );
 
-  const isInputLike = (target) => {
-    if (!target) return false;
-    const tag = target.tagName;
-    const editable = target.isContentEditable;
-    return editable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-  };
-
-  const handleRowClick = useCallback((event, index) => {
-    if (longPressTriggeredRef.current) {
-      longPressTriggeredRef.current = false;
-      return;
-    }
-
-    if (!isDesktopApp && selectionMode) {
-      toggleSelection(index);
-      closeContextMenu();
-      return;
-    }
-
-    if (event?.shiftKey) {
-      handleRangeSelection(index);
-      closeContextMenu();
-      return;
-    }
-
-    if (event?.ctrlKey || event?.metaKey) {
-      const next = new Set(selectedIndices);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      setSelection(next, index);
-      closeContextMenu();
-      return;
-    }
-
-    selectionAnchorRef.current = index;
-    setSelectedIndices(new Set([index]));
-    closeContextMenu();
-    handleLineClickPlain(index);
-  }, [handleLineClickPlain, handleRangeSelection, selectedIndices, setSelection, closeContextMenu, isDesktopApp, selectionMode, toggleSelection]);
-
-  const isGroupableLine = useCallback((line) => {
-    const candidateLines = getNormalGroupLines(line);
-    if (!candidateLines.length) return false;
-    return candidateLines.every((entry) => (
-      typeof entry === 'string' &&
-      entry.trim().length > 0 &&
-      !isStructureTagLine(entry) &&
-      isNormalGroupCandidate(entry)
-    ));
-  }, [getNormalGroupLines, isStructureTagLine]);
-
-  const canGroupSelected = useMemo(() => {
-    if (selectedIndicesArray.length !== 2) return false;
-    const [first, second] = selectedIndicesArray;
-    if (second !== first + 1) return false;
-    if (!isGroupableLine(lyrics[first]) || !isGroupableLine(lyrics[second])) return false;
-    const selectedLineCount =
-      getNormalGroupLines(lyrics[first]).length +
-      getNormalGroupLines(lyrics[second]).length;
-    return selectedLineCount >= 2 && selectedLineCount <= effectiveMaxLinesPerGroup;
-  }, [effectiveMaxLinesPerGroup, getNormalGroupLines, isGroupableLine, lyrics, selectedIndicesArray]);
-
-  const canUngroupSelected = useMemo(() => {
-    if (selectedIndicesArray.length !== 1) return false;
-    const line = lyrics[selectedIndicesArray[0]];
-    return line?.type === 'normal-group';
-  }, [lyrics, selectedIndicesArray]);
-
-  const cloneLyrics = useCallback(() => lyrics.map((line) => (typeof line === 'string' ? line : { ...line })), [lyrics]);
-  const cloneTimestamps = useCallback(
-    () => (Array.isArray(lyricsTimestamps) ? [...lyricsTimestamps] : []),
-    [lyricsTimestamps]
-  );
-
-  const takeSnapshot = useCallback(() => ({
-    lyrics: cloneLyrics(),
+  const {
+    containerRef,
+    contextMenuRef,
+    selectedIndices,
+    setSelectedIndices,
+    selectedIndicesArray,
+    hasSelection,
+    selectionAnchorRef,
+    contextMenuState,
+    contextMenuPosition,
+    setContextMenuDimensions,
+    closeContextMenu,
+    handleContextMenuOpen,
+    handleRowTouchStart,
+    handleRowTouchMove,
+    handleRowTouchEnd,
+    handleRowClick,
+    handleCopySelection,
+    handleSendSelectionToOutput,
+    handleDeselectFromMenu,
+  } = useLyricsListSelection({
+    lyrics,
     selectedLine,
-    selection: selectedIndicesArray,
-    timestamps: cloneTimestamps()
-  }), [cloneLyrics, cloneTimestamps, selectedIndicesArray, selectedLine]);
+    isDesktopApp,
+    selectionMode,
+    onEnterSelectionMode,
+    onSelectionStateChange,
+    onContextMenuApiReady,
+    clickAwayIgnoreRefs,
+    onLineSelect: handleLineClickPlain,
+    selectLine,
+    emitLineUpdate,
+    getNormalGroupLines,
+    showToast,
+  });
 
-  const pushHistorySnapshot = useCallback((snapshot) => {
-    setHistoryPast((prev) => {
-      const next = [...prev, snapshot];
-      return next.length > 50 ? next.slice(next.length - 50) : next;
-    });
-    setHistoryFuture([]);
-  }, []);
+  const {
+    canUndo,
+    canRedo,
+    historyMutationRef,
+    takeSnapshot,
+    pushHistorySnapshot,
+    handleUndo,
+    handleRedo,
+  } = useLyricsListHistory({
+    lyrics,
+    lyricsTimestamps,
+    selectedLine,
+    selectedIndicesArray,
+    setLyrics,
+    setLyricsTimestamps,
+    selectLine,
+    emitLyricsLoad,
+    setSelectedIndices,
+    selectionAnchorRef,
+    suppressScrollResetRef,
+    tutorialMutationRef,
+    closeContextMenu,
+  });
 
-  const remapSelectedLineAfterGroup = (current, firstIndex) => {
-    if (current == null) return null;
-    if (current === firstIndex || current === firstIndex + 1) return firstIndex;
-    if (current > firstIndex + 1) return current - 1;
-    return current;
-  };
-
-  const remapSelectedLineAfterUngroup = (current, groupIndex, expandedLineCount) => {
-    if (current == null) return null;
-    if (current === groupIndex) return groupIndex;
-    if (current > groupIndex) return current + Math.max(0, expandedLineCount - 1);
-    return current;
-  };
-
-  const applySnapshot = useCallback((snapshot) => {
-    historyMutationRef.current = true;
-    suppressScrollResetRef.current = true;
-    tutorialMutationRef.current = true;
-    setLyrics(snapshot.lyrics);
-    setLyricsTimestamps(snapshot.timestamps || []);
-    if (emitLyricsLoad) emitLyricsLoad(snapshot.lyrics);
-    selectLine(snapshot.selectedLine ?? null);
-    setSelectedIndices(new Set(snapshot.selection || []));
-    selectionAnchorRef.current = snapshot.selection?.[snapshot.selection.length - 1] ?? null;
-  }, [emitLyricsLoad, selectLine, setLyrics, setLyricsTimestamps]);
-
-  const handleUndo = useCallback(() => {
-    setHistoryPast((past) => {
-      if (!past.length) return past;
-      const previous = past[past.length - 1];
-      const current = takeSnapshot();
-      setHistoryFuture((future) => [...future, current]);
-      applySnapshot(previous);
-      closeContextMenu();
-      return past.slice(0, -1);
-    });
-  }, [applySnapshot, closeContextMenu, takeSnapshot]);
-
-  const handleRedo = useCallback(() => {
-    setHistoryFuture((future) => {
-      if (!future.length) return future;
-      const next = future[future.length - 1];
-      const current = takeSnapshot();
-      setHistoryPast((past) => [...past, current]);
-      applySnapshot(next);
-      closeContextMenu();
-      return future.slice(0, -1);
-    });
-  }, [applySnapshot, closeContextMenu, takeSnapshot]);
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (!(event.ctrlKey || event.metaKey)) return;
-      if (isInputLike(event.target)) return;
-
-      if (event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        if (event.shiftKey) handleRedo();
-        else handleUndo();
-      } else if (event.key.toLowerCase() === 'y') {
-        event.preventDefault();
-        handleRedo();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRedo, handleUndo]);
-
-  useEffect(() => {
-    const handleKeyClose = (event) => {
-      if (event.key === 'Escape' && contextMenuState.visible) {
-        closeContextMenu();
-      }
-    };
-    window.addEventListener('keydown', handleKeyClose);
-    return () => window.removeEventListener('keydown', handleKeyClose);
-  }, [closeContextMenu, contextMenuState.visible]);
-
-  useElectronListeners({ canUndo, canRedo, handleUndo, handleRedo });
-
-  useEffect(() => {
-    if (!contextMenuState.visible) return;
-
-    const preventScroll = (event) => {
-      if (contextMenuRef.current && contextMenuRef.current.contains(event.target)) {
-        return;
-      }
-      event.preventDefault();
-    };
-
-    window.addEventListener('wheel', preventScroll, { passive: false });
-    window.addEventListener('touchmove', preventScroll, { passive: false });
-    return () => {
-      window.removeEventListener('wheel', preventScroll, { passive: false });
-      window.removeEventListener('touchmove', preventScroll, { passive: false });
-    };
-  }, [contextMenuState.visible]);
-
-  const buildGroup = useCallback((lines, indexPrefix) => {
-    const normalized = Array.isArray(lines)
-      ? lines.filter((entry) => typeof entry === 'string' && entry.trim().length > 0)
-      : [];
-    return ({
-      type: 'normal-group',
-      id: `manual_group_${indexPrefix}_${Date.now()}`,
-      lines: normalized,
-      line1: normalized[0] || '',
-      line2: normalized[1] || '',
-      displayText: normalized.join('\n'),
-      searchText: normalized.join(' '),
-      originalIndex: indexPrefix,
-    });
-  }, []);
-
-  const handleGroupSelected = useCallback(() => {
-    if (!canGroupSelected) return;
-    const [first, second] = selectedIndicesArray;
-    const firstLines = getNormalGroupLines(lyrics[first]);
-    const secondLines = getNormalGroupLines(lyrics[second]);
-    const groupedLines = [...firstLines, ...secondLines];
-    if (!isGroupableLine(lyrics[first]) || !isGroupableLine(lyrics[second])) return;
-    if (groupedLines.length < 2 || groupedLines.length > effectiveMaxLinesPerGroup) return;
-
-    const hasTimestampData = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length > 0;
-    const timestampsAligned = hasTimestampData && lyricsTimestamps.length === lyrics.length;
-    const firstTimestamp = timestampsAligned ? lyricsTimestamps[first] : null;
-    const secondTimestamp = timestampsAligned ? lyricsTimestamps[second] : null;
-    const timestampsMatch = timestampsAligned && firstTimestamp === secondTimestamp;
-
-    const snapshot = takeSnapshot();
-    const grouped = buildGroup(groupedLines, first);
-    const newLyrics = [...lyrics];
-    newLyrics.splice(first, 2, grouped);
-    let nextTimestamps = timestampsAligned ? [...lyricsTimestamps] : lyricsTimestamps;
-    let disabledIntelligentAutoplay = false;
-
-    if (timestampsAligned) {
-      if (timestampsMatch) {
-        nextTimestamps.splice(first, 2, firstTimestamp ?? null);
-      } else {
-        nextTimestamps = [];
-        disabledIntelligentAutoplay = true;
-      }
-    }
-
-    const nextSelectedLine = remapSelectedLineAfterGroup(selectedLine, first);
-
-    pushHistorySnapshot(snapshot);
-    historyMutationRef.current = true;
-    suppressScrollResetRef.current = true;
-    tutorialMutationRef.current = true;
-    setLyrics(newLyrics);
-    if (timestampsAligned || disabledIntelligentAutoplay) {
-      setLyricsTimestamps(nextTimestamps);
-    }
-    if (emitLyricsLoad) emitLyricsLoad(newLyrics);
-
-    if (typeof nextSelectedLine === 'number') {
-      selectLine(nextSelectedLine);
-      emitLineUpdate(nextSelectedLine);
-    }
-
-    setSelectedIndices(new Set([first]));
-    selectionAnchorRef.current = first;
-    closeContextMenu();
-
-    if (disabledIntelligentAutoplay) {
-      showToast({
-        title: 'Intelligent autoplay disabled',
-        message: 'Grouped lines had different timestamps. Timestamp-based autoplay is unavailable until you undo this grouping.',
-        variant: 'warn',
-      });
-    } else {
-      showToast({
-        title: 'Lines grouped',
-        message: 'Selected lines have been combined.',
-        variant: 'success',
-      });
-    }
-  }, [buildGroup, canGroupSelected, closeContextMenu, effectiveMaxLinesPerGroup, emitLyricsLoad, emitLineUpdate, getNormalGroupLines, isGroupableLine, lyrics, lyricsTimestamps, pushHistorySnapshot, selectedIndicesArray, selectedLine, selectLine, setLyrics, setLyricsTimestamps, showToast, takeSnapshot]);
-
-  const performUngroup = useCallback((index) => {
-    const line = lyrics[index];
-    if (line?.type !== 'normal-group') return;
-    const groupLines = getNormalGroupLines(line);
-    if (groupLines.length < 2) return;
-
-    const snapshot = takeSnapshot();
-    const newLyrics = [...lyrics];
-    newLyrics.splice(index, 1, ...groupLines);
-    const timestampsAligned = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length === lyrics.length;
-    const nextTimestamps = timestampsAligned ? [...lyricsTimestamps] : lyricsTimestamps;
-    if (timestampsAligned) {
-      const groupTimestamp = lyricsTimestamps[index];
-      nextTimestamps.splice(index, 1, ...groupLines.map(() => groupTimestamp ?? null));
-    }
-    const nextSelectedLine = remapSelectedLineAfterUngroup(selectedLine, index, groupLines.length);
-
-    pushHistorySnapshot(snapshot);
-    historyMutationRef.current = true;
-    suppressScrollResetRef.current = true;
-    tutorialMutationRef.current = true;
-    setLyrics(newLyrics);
-    if (timestampsAligned) {
-      setLyricsTimestamps(nextTimestamps);
-    }
-
-    if (emitSplitNormalGroup) {
-      emitSplitNormalGroup({
-        index,
-        lines: groupLines,
-        line1: groupLines[0] || '',
-        line2: groupLines[1] || '',
-      });
-    } else if (emitLyricsLoad) {
-      emitLyricsLoad(newLyrics);
-    }
-
-    if (typeof nextSelectedLine === 'number') {
-      setTimeout(() => {
-        selectLine(nextSelectedLine);
-        emitLineUpdate(nextSelectedLine);
-      }, 0);
-    }
-
-    const expandedRange = Array.from({ length: groupLines.length }, (_, offset) => index + offset);
-    setSelectedIndices(new Set(expandedRange));
-    selectionAnchorRef.current = index;
-    closeContextMenu();
-    setHoveredLineIndex(null);
-
-    showToast({
-      title: 'Group split',
-      message: 'The grouped lines have been separated',
-      variant: 'success',
-    });
-  }, [closeContextMenu, emitLyricsLoad, emitLineUpdate, emitSplitNormalGroup, getNormalGroupLines, lyrics, lyricsTimestamps, pushHistorySnapshot, remapSelectedLineAfterUngroup, selectedLine, selectLine, setLyrics, setLyricsTimestamps, showToast, takeSnapshot]);
-
-  const handleSplitGroup = useCallback(
-    (event, index) => {
-      event.stopPropagation();
-      performUngroup(index);
-    },
-    [performUngroup]
-  );
-
-  const getCopyTextForLine = useCallback((line) => {
-    if (!line) return '';
-    if (typeof line === 'string') return line;
-    if (line.type === 'group') {
-      return [line.mainLine, line.translation].filter(Boolean).join('\n');
-    }
-    if (line.type === 'normal-group') {
-      return getNormalGroupLines(line).join('\n');
-    }
-    return '';
-  }, [getNormalGroupLines]);
-
-  const handleCopySelection = useCallback(async () => {
-    if (!hasSelection) {
-      closeContextMenu();
-      return;
-    }
-
-    const text = selectedIndicesArray
-      .map((i) => getCopyTextForLine(lyrics[i]))
-      .filter(Boolean)
-      .join('\n');
-
-    try {
-      if (text) {
-        await navigator.clipboard.writeText(text);
-        showToast({ title: 'Copied', message: 'Selected lines copied', variant: 'success' });
-      }
-    } catch (err) {
-      showToast({ title: 'Copy failed', message: 'Unable to access clipboard', variant: 'error' });
-    }
-
-    closeContextMenu();
-  }, [closeContextMenu, getCopyTextForLine, hasSelection, lyrics, selectedIndicesArray, showToast]);
-
-  const handleSendSelectionToOutput = useCallback(() => {
-    if (selectedIndicesArray.length !== 1) {
-      closeContextMenu();
-      return;
-    }
-    const target = selectedIndicesArray[0];
-    setSelection([target], target);
-    handleLineClickPlain(target);
-    closeContextMenu();
-  }, [closeContextMenu, handleLineClickPlain, selectedIndicesArray, setSelection]);
-
-  const clearSelection = useCallback(() => {
-    setSelectedIndices(new Set());
-    selectionAnchorRef.current = null;
-  }, []);
-
-  const selectAllLines = useCallback(() => {
-    if (!lyrics || !lyrics.length) {
-      clearSelection();
-      return;
-    }
-    const allIndices = lyrics.map((_, i) => i);
-    setSelection(allIndices, 0);
-  }, [clearSelection, lyrics, setSelection]);
-
-  const openContextMenuForSelection = useCallback((anchorEl) => {
-    const targetIndex = selectedIndicesArray[0] ?? selectedLine ?? null;
-    if (targetIndex == null) return;
-
-    const rect = anchorEl?.getBoundingClientRect?.();
-    const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-    const y = rect ? rect.bottom + 8 : window.innerHeight / 2;
-
-    if (!selectedIndices.size) {
-      setSelection([targetIndex], targetIndex);
-    }
-    setContextMenuState({
-      visible: true,
-      x,
-      y,
-      index: targetIndex,
-      mode: 'line'
-    });
-  }, [selectedIndices.size, selectedIndicesArray, selectedLine, setSelection]);
-
-  useEffect(() => {
-    if (!isDesktopApp && prevSelectionModeRef.current && !selectionMode) {
-      clearSelection();
-      longPressTriggeredRef.current = false;
-    }
-    prevSelectionModeRef.current = selectionMode;
-  }, [clearSelection, isDesktopApp, selectionMode]);
-
-  useEffect(() => {
-    if (!onContextMenuApiReady) return;
-    onContextMenuApiReady({
-      clearSelection,
-      selectAll: selectAllLines,
-      openContextMenuForSelection,
-    });
-    return () => onContextMenuApiReady(null);
-  }, [clearSelection, onContextMenuApiReady, openContextMenuForSelection, selectAllLines]);
-
-  const handleDeselectFromMenu = useCallback(() => {
-    selectLine(null);
-    emitLineUpdate(null);
-    closeContextMenu();
-  }, [closeContextMenu, emitLineUpdate, selectLine]);
-
-  const highlightSearchTerm = (text, searchTerm) => {
-    if (!searchTerm || !text) return text;
-    const regex = new RegExp(
-      `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
-      'gi'
-    );
-    return text.split(regex).map((part, i) =>
-      regex.test(part) ? (
-        <span
-          key={i}
-          className="bg-orange-200 text-orange-900 font-medium"
-        >
-          {part}
-        </span>
-      ) : (
-        part
-      )
-    );
-  };
-
-  const getLineClassName = useCallback(
-    (index, isVirtualized = false, isMultiSelected = false) => {
-      const padding = 'p-3';
-      let base = `${padding} rounded cursor-pointer transition-colors duration-150 select-none `;
-
-      if (index === selectedLine) base += 'bg-blue-400 text-white';
-      else if (index === highlightedLineIndex && searchQuery)
-        base += 'bg-orange-200 text-orange-900 border-2 border-orange-400';
-      else if (isMultiSelected)
-        base += darkMode
-          ? 'bg-blue-900/30 text-blue-50 ring-2 ring-blue-400/80'
-          : 'bg-blue-50 text-blue-900 ring-2 ring-blue-400/80';
-      else
-        base += darkMode
-          ? 'bg-gray-700 text-gray-100 hover:bg-gray-600'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-      return base;
-    },
-    [selectedLine, highlightedLineIndex, searchQuery, darkMode]
-  );
-
-  const renderLine = useCallback(
-    (line, index) => {
-      if (!line) return null;
-
-      if (isStructureTagLine(line)) {
-        return <div className="h-1" aria-hidden="true" />;
-      }
-
-      if (line.type === 'group') {
-        return (
-          <div className="space-y-1">
-            <div className="font-medium">
-              {highlightSearchTerm(line.mainLine, searchQuery)}
-            </div>
-            {line.translation && (
-              <div
-                className={`text-sm italic ${darkMode ? 'text-gray-300' : 'text-gray-600'
-                  }`}
-              >
-                {highlightSearchTerm(line.translation, searchQuery)}
-              </div>
-            )}
-          </div>
-        );
-      }
-
-      if (line.type === 'normal-group') {
-        const normalLines = getNormalGroupLines(line);
-        return (
-          <div className="space-y-1">
-            {normalLines.map((groupLine, groupIndex) => (
-              <div
-                key={`${line.id || index}_${groupIndex}`}
-                className={`${groupIndex === 0 ? 'font-medium' : 'text-sm'} ${groupIndex === 0 ? '' : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}
-              >
-                {highlightSearchTerm(groupLine, searchQuery)}
-              </div>
-            ))}
-          </div>
-        );
-      }
-
-      return highlightSearchTerm(line, searchQuery);
-    },
-    [darkMode, searchQuery, isStructureTagLine, getNormalGroupLines]
-  );
+  const {
+    canGroupSelected,
+    canUngroupSelected,
+    handleGroupSelected,
+    performUngroup,
+    handleSplitGroup,
+  } = useLyricsListGrouping({
+    lyrics,
+    lyricsTimestamps,
+    selectedLine,
+    selectedIndicesArray,
+    effectiveMaxLinesPerGroup,
+    getNormalGroupLines,
+    isStructureTagLine,
+    takeSnapshot,
+    pushHistorySnapshot,
+    historyMutationRef,
+    suppressScrollResetRef,
+    tutorialMutationRef,
+    setLyrics,
+    setLyricsTimestamps,
+    setSelectedIndices,
+    selectionAnchorRef,
+    selectLine,
+    emitLineUpdate,
+    emitLyricsLoad,
+    emitSplitNormalGroup,
+    closeContextMenu,
+    setHoveredLineIndex,
+    showToast,
+  });
 
   const rowPropsData = useMemo(
     () => ({
       lyrics,
+      virtualized: true,
       getLineClassName,
-      renderLine,
       handleRowClick,
       handleSplitGroup,
       handleContextMenuOpen,
@@ -1094,90 +203,27 @@ export default function LyricsList({
       handleStageOnlyTutorialVisible,
       handleStageOnlyTutorialOpenChange,
       handleNeverShowTutorialPopovers,
+      searchQuery,
+      isStructureTagLine,
+      getNormalGroupLines,
     }),
-    [lyrics, getLineClassName, renderLine, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers]
+    [lyrics, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, isStructureTagLine, getNormalGroupLines]
   );
 
   const itemCount = useMemo(() => lyrics.length, [lyrics]);
   const useVirtualized = itemCount > VIRTUALIZATION_THRESHOLD;
   const hasSections = (lyricsSections?.length || 0) > 0;
 
-  const scrollToLineIndex = useCallback((lineIndex) => {
-    if (lineIndex == null) return;
-
-    if (useVirtualized) {
-      if (listRef.current) {
-        listRef.current.scrollToRow({
-          index: lineIndex,
-          align: 'center',
-          behavior: 'smooth'
-        });
-      }
-    } else {
-      setTimeout(() => {
-        const target = document.querySelector(`[data-line-index="${lineIndex}"]`);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 10);
-    }
-  }, [useVirtualized, listRef]);
-
-  const handleSectionJump = useCallback((section) => {
-    if (!section || !Number.isInteger(section.startLine)) return;
-    handleLineClickPlain(section.startLine);
-    scrollToLineIndex(section.startLine);
-  }, [handleLineClickPlain, scrollToLineIndex]);
-
-  const handleSectionChipsWheel = useCallback((event) => {
-    const scroller = sectionChipsScrollerRef.current;
-    if (!scroller) return;
-
-    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
-    if (maxScrollLeft <= 0) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation?.();
-
-    const wheelDelta = event.deltaX + event.deltaY;
-    if (wheelDelta === 0) return;
-
-    const nextScrollLeft = Math.min(
-      maxScrollLeft,
-      Math.max(0, scroller.scrollLeft + wheelDelta)
-    );
-    scroller.scrollLeft = nextScrollLeft;
-  }, []);
-
-  useEffect(() => {
-    const container = sectionChipsContainerRef.current;
-    const scroller = sectionChipsScrollerRef.current;
-    if (!container || !scroller) return;
-
-    const handleNativeWheel = (event) => handleSectionChipsWheel(event);
-    container.addEventListener('wheel', handleNativeWheel, { passive: false, capture: true });
-
-    return () => {
-      container.removeEventListener('wheel', handleNativeWheel, { capture: true });
-    };
-  }, [handleSectionChipsWheel]);
-
-  useEffect(() => {
-    const key = `${lyrics.length}|${lyrics[0]?.id || (typeof lyrics[0] === 'string' ? lyrics[0] : '')}`;
-    if (historySignatureRef.current === key) return;
-    historySignatureRef.current = key;
-
-    if (historyMutationRef.current) {
-      historyMutationRef.current = false;
-      return;
-    }
-
-    setHistoryPast([]);
-    setHistoryFuture([]);
-    setSelectedIndices(new Set());
-    selectionAnchorRef.current = null;
-  }, [lyrics]);
+  const {
+    sectionChipsContainerRef,
+    sectionChipsScrollerRef,
+    handleSectionJump,
+  } = useSectionNavigation({
+    listRef,
+    useVirtualized,
+    lyricsLength: lyrics.length,
+    onLineSelect: handleLineClickPlain,
+  });
 
   useEffect(() => {
     if (!lyrics || lyrics.length === 0) return;
@@ -1196,250 +242,52 @@ export default function LyricsList({
   }, [lyrics]);
 
   const sectionChips = hasSections ? (
-    <div className={`sticky top-0 z-20 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-      <div className="relative" ref={sectionChipsContainerRef}>
-        <div
-          ref={sectionChipsScrollerRef}
-          className="px-4 py-3.5 flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap overscroll-contain"
-        >
-          {lyricsSections.map((section) => {
-            const isActive = section.id && section.id === activeSectionId;
-            return (
-              <button
-                key={section.id}
-                onClick={() => handleSectionJump(section)}
-                className={`text-xs px-4 py-1 rounded-full border transition-colors shrink-0 ${isActive
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : darkMode
-                    ? 'bg-gray-800 text-gray-200 border-gray-700 hover:border-gray-500'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:border-gray-400'
-                  }`}
-              >
-                {getCleanSectionLabel(section.label).toUpperCase()}
-              </button>
-            );
-          })}
-        </div>
-        <div
-          className={`pointer-events-none absolute inset-y-0 right-0 w-12 ${darkMode
-            ? 'bg-gradient-to-l from-gray-800 via-gray-800/85 to-transparent'
-            : 'bg-gradient-to-l from-white via-white/85 to-transparent'
-            }`}
-        />
-      </div>
-    </div>
+    <SectionChips
+      darkMode={darkMode}
+      sections={lyricsSections}
+      activeSectionId={activeSectionId}
+      onSectionJump={handleSectionJump}
+      containerRef={sectionChipsContainerRef}
+      scrollerRef={sectionChipsScrollerRef}
+    />
   ) : null;
-
-  // Virtualized row renderer
-  const Row = useCallback(
-    ({ index, style, lyrics, getLineClassName, renderLine, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, setHoveredLineIndex, hoveredButtonIndex, setHoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers }) => {
-      const line = lyrics[index];
-      if (!line) return null;
-
-      const sectionId = sectionStartLookup.get(index);
-      const sectionLabel = sectionId ? sectionById.get(sectionId)?.label : null;
-      const isActiveSection = sectionId && sectionId === activeSectionId;
-      const isStructureLine = typeof line === 'string' && STRUCTURE_TAG_PATTERNS.some((pattern) => pattern.test(line.trim()));
-      const isBatchSelected = selectedIndices?.has(index);
-
-      const heightValue = style?.height;
-      const adjustedStyle = {
-        ...style,
-        ...(heightValue != null
-          ? {
-            height: `calc(${typeof heightValue === 'number'
-              ? `${heightValue}px`
-              : heightValue} - ${ROW_GAP}px)`,
-          }
-          : {}),
-        paddingLeft: `${HORIZONTAL_PADDING_PX}px`,
-        paddingRight: `${HORIZONTAL_PADDING_PX}px`,
-        boxSizing: 'border-box',
-      };
-
-      if (isStructureLine) {
-        return <div data-line-index={index} style={adjustedStyle} className="pointer-events-none" />;
-      }
-
-      const rowContent = (
-        <div data-line-index={index} style={adjustedStyle}>
-          {sectionLabel && (
-            <div className={`text-xs font-semibold mb-3 flex items-center gap-2 ${isActiveSection ? (darkMode ? 'text-green-400' : 'text-green-600') : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}>
-              <span className="uppercase tracking-wide">{sectionLabel.toUpperCase ? sectionLabel.toUpperCase() : sectionLabel}</span>
-              <span className="h-px flex-1 bg-gray-300 opacity-60" />
-            </div>
-          )}
-          <div
-            className={`${getLineClassName(index, true, isBatchSelected)} relative`}
-            onClick={(event) => handleRowClick(event, index)}
-            onContextMenu={(event) => handleContextMenuOpen(event, index)}
-            onTouchStart={(event) => handleRowTouchStart(event, index)}
-            onTouchMove={handleRowTouchMove}
-            onTouchEnd={handleRowTouchEnd}
-            onMouseEnter={() => setHoveredLineIndex(index)}
-            onMouseLeave={() => setHoveredLineIndex(null)}
-          >
-            {renderLine(line, index)}
-
-            {/* Split button for normal groups (desktop only) */}
-            {isDesktopApp && line?.type === 'normal-group' && hoveredLineIndex === index && (
-              <Tooltip content="Split this group into two separate lines" side="top" sideOffset={5}>
-                <button
-                  onClick={(e) => handleSplitGroup(e, index)}
-                  onMouseEnter={() => setHoveredButtonIndex(index)}
-                  onMouseLeave={() => setHoveredButtonIndex(null)}
-                  className={`absolute top-1.5 right-1.5 rounded-md shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'p-1.5 gap-1.5' : 'p-1.5'
-                    } ${index === selectedLine
-                      ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400'
-                      : darkMode
-                        ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border border-gray-600'
-                        : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
-                    }`}
-                >
-                  <Ungroup className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span
-                    className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === index
-                      ? 'max-w-[60px] opacity-100 ml-0'
-                      : 'max-w-0 opacity-0'
-                      }`}
-                  >
-                    Ungroup
-                  </span>
-                </button>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      );
-
-      return (
-        <TutorialLineAnchor
-          active={stageOnlyTutorial?.index === index}
-          open={Boolean(stageOnlyTutorial?.index === index && stageOnlyTutorial.open)}
-          index={index}
-          loadKey={stageOnlyTutorial?.key}
-          darkMode={darkMode}
-          onVisible={handleStageOnlyTutorialVisible}
-          onOpenChange={handleStageOnlyTutorialOpenChange}
-          onNeverShowAgain={handleNeverShowTutorialPopovers}
-        >
-          {rowContent}
-        </TutorialLineAnchor>
-      );
-    },
-    []
-  );
-
-  useEffect(() => {
-    const handleScrollToLine = (event) => {
-      const { lineIndex } = event.detail;
-      if (lineIndex == null) return;
-
-      if (lyrics.length > VIRTUALIZATION_THRESHOLD) {
-        if (listRef.current) {
-          listRef.current.scrollToRow({
-            index: lineIndex,
-            align: 'center',
-            behavior: 'smooth'
-          });
-        }
-      } else {
-        setTimeout(() => {
-          const target = document.querySelector(`[data-line-index="${lineIndex}"]`);
-          if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 50);
-      }
-    };
-
-    window.addEventListener('scroll-to-lyric-line', handleScrollToLine);
-    return () => window.removeEventListener('scroll-to-lyric-line', handleScrollToLine);
-  }, [lyrics.length]);
 
   const listContent = !useVirtualized ? (
     <div className={`space-y-2 pb-4 relative ${hasSections ? '' : 'pt-4'}`}>
       {sectionChips}
-      {lyrics.map((line, i) => {
-        const sectionId = sectionStartLookup.get(i);
-        const sectionLabel = sectionId ? sectionById.get(sectionId)?.label : null;
-        const isActiveSection = sectionId && sectionId === activeSectionId;
-        const isBatchSelected = selectedIndices.has(i);
-
-        if (typeof line === 'string' && isStructureTagLine(line)) {
-          return (
-            <div key={line?.id || `line_${i}`} data-line-index={i} className="px-4 h-2 pointer-events-none" />
-          );
-        }
-
-        const rowContent = (
-          <div className="px-4">
-            {sectionLabel && (
-              <div className={`text-xs font-semibold mb-2 flex items-center gap-2 ${isActiveSection ? (darkMode ? 'text-green-400' : 'text-green-500') : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}>
-                <span className="uppercase tracking-wide">{sectionLabel.toUpperCase ? sectionLabel.toUpperCase() : sectionLabel}</span>
-                <span className="h-px flex-1 bg-gray-300 opacity-60" />
-              </div>
-            )}
-            <div
-              data-line-index={i}
-              className={`${getLineClassName(i, false, isBatchSelected)} relative`}
-              onClick={(event) => handleRowClick(event, i)}
-              onContextMenu={(event) => handleContextMenuOpen(event, i)}
-              onTouchStart={(event) => handleRowTouchStart(event, i)}
-              onTouchMove={handleRowTouchMove}
-              onTouchEnd={handleRowTouchEnd}
-              onMouseEnter={() => setHoveredLineIndex(i)}
-              onMouseLeave={() => setHoveredLineIndex(null)}
-            >
-              {renderLine(line, i)}
-
-              {/* Split button for normal groups (desktop only) */}
-              {isDesktopApp && line?.type === 'normal-group' && hoveredLineIndex === i && (
-                <Tooltip content="Split this group into two separate lines" side="top" sideOffset={5}>
-                  <button
-                    onClick={(e) => handleSplitGroup(e, i)}
-                    onMouseEnter={() => setHoveredButtonIndex(i)}
-                    onMouseLeave={() => setHoveredButtonIndex(null)}
-                    className={`absolute top-1.5 right-1.5 rounded-md shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === i ? 'p-1.5 gap-1.5' : 'p-1.5'
-                      } ${i === selectedLine
-                        ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400'
-                        : darkMode
-                          ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border-gray-600'
-                          : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
-                      }`}
-                  >
-                    <Ungroup className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span
-                      className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === i
-                        ? 'max-w-[60px] opacity-100 ml-0'
-                        : 'max-w-0 opacity-0'
-                        }`}
-                    >
-                      Ungroup
-                    </span>
-                  </button>
-                </Tooltip>
-              )}
-            </div>
-          </div>
-        );
-
-        return (
-          <TutorialLineAnchor
-            key={line?.id || `line_${i}`}
-            active={stageOnlyTutorial?.index === i}
-            open={Boolean(stageOnlyTutorial?.index === i && stageOnlyTutorial.open)}
-            index={i}
-            loadKey={stageOnlyTutorial?.key}
-            darkMode={darkMode}
-            onVisible={handleStageOnlyTutorialVisible}
-            onOpenChange={handleStageOnlyTutorialOpenChange}
-            onNeverShowAgain={handleNeverShowTutorialPopovers}
-          >
-            {rowContent}
-          </TutorialLineAnchor>
-        );
-      })}
+      {lyrics.map((line, i) => (
+        <LyricRow
+          key={line?.id || `line_${i}`}
+          index={i}
+          line={line}
+          virtualized={false}
+          getLineClassName={getLineClassName}
+          handleRowClick={handleRowClick}
+          handleSplitGroup={handleSplitGroup}
+          handleContextMenuOpen={handleContextMenuOpen}
+          handleRowTouchStart={handleRowTouchStart}
+          handleRowTouchMove={handleRowTouchMove}
+          handleRowTouchEnd={handleRowTouchEnd}
+          selectedLine={selectedLine}
+          darkMode={darkMode}
+          hoveredLineIndex={hoveredLineIndex}
+          setHoveredLineIndex={setHoveredLineIndex}
+          hoveredButtonIndex={hoveredButtonIndex}
+          setHoveredButtonIndex={setHoveredButtonIndex}
+          sectionStartLookup={sectionStartLookup}
+          sectionById={sectionById}
+          activeSectionId={activeSectionId}
+          selectedIndices={selectedIndices}
+          isDesktopApp={isDesktopApp}
+          stageOnlyTutorial={stageOnlyTutorial}
+          handleStageOnlyTutorialVisible={handleStageOnlyTutorialVisible}
+          handleStageOnlyTutorialOpenChange={handleStageOnlyTutorialOpenChange}
+          handleNeverShowTutorialPopovers={handleNeverShowTutorialPopovers}
+          searchQuery={searchQuery}
+          isStructureTagLine={isStructureTagLine}
+          getNormalGroupLines={getNormalGroupLines}
+        />
+      ))}
     </div>
   ) : (
     <div className="flex-1 min-h-0 w-full h-full flex flex-col relative">
@@ -1449,7 +297,7 @@ export default function LyricsList({
           listRef={listRef}
           rowCount={itemCount}
           rowHeight={rowHeightConfig}
-          rowComponent={Row}
+          rowComponent={LyricRow}
           rowProps={rowPropsData}
           style={{
             overflowY: 'auto',
@@ -1467,79 +315,32 @@ export default function LyricsList({
   return (
     <div ref={containerRef} className="relative flex-1 min-h-0 w-full h-full">
       {listContent}
-      <ContextMenu
+      <LyricsListContextMenu
         ref={contextMenuRef}
         visible={contextMenuState.visible}
         position={contextMenuPosition}
-        positioning="fixed"
         darkMode={darkMode}
         onMeasured={setContextMenuDimensions}
-      >
-        <ContextMenuItem
-          onClick={handleSendSelectionToOutput}
-          disabled={selectedIndicesArray.length !== 1}
-          icon={<ArrowRight className="w-4 h-4" />}
-          darkMode={darkMode}
-        >
-          Send to output
-        </ContextMenuItem>
-        <ContextMenuItem
-          onClick={handleDeselectFromMenu}
-          disabled={!hasSelection}
-          icon={<X className="w-4 h-4" />}
-          darkMode={darkMode}
-        >
-          Clear output
-        </ContextMenuItem>
-        <ContextMenuSeparator darkMode={darkMode} />
-        <ContextMenuItem
-          onClick={handleGroupSelected}
-          disabled={!canGroupSelected}
-          icon={<Link2 className="w-4 h-4" />}
-          darkMode={darkMode}
-        >
-          Group
-        </ContextMenuItem>
-        <ContextMenuItem
-          onClick={() => {
+        selectedIndicesArray={selectedIndicesArray}
+        hasSelection={hasSelection}
+        canGroupSelected={canGroupSelected}
+        canUngroupSelected={canUngroupSelected}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onSendSelectionToOutput={handleSendSelectionToOutput}
+        onDeselectFromMenu={handleDeselectFromMenu}
+        onGroupSelected={handleGroupSelected}
+        onUngroupSelected={() => {
             if (selectedIndicesArray.length === 1) {
               performUngroup(selectedIndicesArray[0]);
             } else {
               closeContextMenu();
             }
           }}
-          disabled={!canUngroupSelected}
-          icon={<Ungroup className="w-4 h-4" />}
-          darkMode={darkMode}
-        >
-          Ungroup
-        </ContextMenuItem>
-        <ContextMenuSeparator darkMode={darkMode} />
-        <ContextMenuItem
-          onClick={handleCopySelection}
-          disabled={!hasSelection}
-          icon={<Copy className="w-4 h-4" />}
-          darkMode={darkMode}
-        >
-          Copy
-        </ContextMenuItem>
-        <ContextMenuItem
-          onClick={handleUndo}
-          disabled={!canUndo}
-          icon={<Undo className="w-4 h-4" />}
-          darkMode={darkMode}
-        >
-          Undo
-        </ContextMenuItem>
-        <ContextMenuItem
-          onClick={handleRedo}
-          disabled={!canRedo}
-          icon={<Redo className="w-4 h-4" />}
-          darkMode={darkMode}
-        >
-          Redo
-        </ContextMenuItem>
-      </ContextMenu>
+        onCopySelection={handleCopySelection}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+      />
     </div>
   );
 }

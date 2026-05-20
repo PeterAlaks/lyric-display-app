@@ -1,21 +1,14 @@
-﻿import React, { useRef } from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, FolderOpen, FileText, FilePlusCorner, Edit, ListMusic, Globe, Plus, Info, FileMusic, Play, ChevronDown, Square, Sparkles, Moon, Sun, Settings, PlusCircle, SlidersHorizontal, Video, Timer } from 'lucide-react';
+import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useMultipleFileUpload from '../hooks/useMultipleFileUpload';
 import useSetlistLoader from '../hooks/SetlistModal/useSetlistLoader';
-import AuthStatusIndicator from './AuthStatusIndicator';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
-import LyricsList from './LyricsList';
 import MobileLayout from './MobileLayout';
-import SetlistModal from './SetlistModal';
-import OnlineLyricsSearchModal from './OnlineLyricsSearchModal';
-import EasyWorshipImportModal from './EasyWorshipImportModal';
-import PresentationImportModal from './PresentationImportModal';
 import DraftApprovalModal from './DraftApprovalModal';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import { Switch } from "@/components/ui/switch";
@@ -24,14 +17,9 @@ import useMenuShortcuts from '../hooks/LyricDisplayApp/useMenuShortcuts';
 import useSearch from '../hooks/useSearch';
 import useOutputSettings from '../hooks/LyricDisplayApp/useOutputSettings';
 import useSetlistActions from '../hooks/LyricDisplayApp/useSetlistActions';
-import SearchBar from './SearchBar';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { hasValidTimestamps } from '../utils/timestampHelpers';
-import { parseLrcContent, STRUCTURE_TAG_PATTERNS } from '../../shared/lyricsParsing.js';
-import useLyricsStore from '../context/LyricsStore';
 import { MAX_CUSTOM_OUTPUTS } from '../context/LyricsStore';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
 import { useSyncOutputs } from '../hooks/useSyncOutputs';
@@ -42,6 +30,19 @@ import { useResponsiveWidth } from '../hooks/LyricDisplayApp/useResponsiveWidth'
 import { useDragAndDrop } from '../hooks/LyricDisplayApp/useDragAndDrop';
 import { useQuickParserControls } from '../hooks/LyricDisplayApp/useQuickParserControls';
 import { useExternalControl } from '../hooks/useExternalControl';
+import { useControlPanelFileActions } from '../hooks/LyricDisplayApp/useControlPanelFileActions';
+import { useCustomOutputActions } from '../hooks/LyricDisplayApp/useCustomOutputActions';
+import { useLineCounterText } from '../hooks/LyricDisplayApp/useLineCounterText';
+import { useLrcTimestampHydration } from '../hooks/LyricDisplayApp/useLrcTimestampHydration';
+import { useOutputControlActions } from '../hooks/LyricDisplayApp/useOutputControlActions';
+import { usePendingLyricsLoad } from '../hooks/LyricDisplayApp/usePendingLyricsLoad';
+import { usePendingSavedVersionPrompt } from '../hooks/LyricDisplayApp/usePendingSavedVersionPrompt';
+import { useRegisterCustomOutputs } from '../hooks/LyricDisplayApp/useRegisterCustomOutputs';
+import { useResetLyricsScroll } from '../hooks/LyricDisplayApp/useResetLyricsScroll';
+import { useSetlistNavigation } from '../hooks/LyricDisplayApp/useSetlistNavigation';
+import ControlPanelHeaderActions from './LyricDisplayApp/ControlPanelHeaderActions';
+import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
+import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -91,16 +92,7 @@ const LyricDisplayApp = () => {
   const { showToast } = useToast();
   const { showModal } = useModal();
 
-  React.useEffect(() => {
-    const handleResetScroll = () => {
-      if (lyricsContainerRef.current) {
-        lyricsContainerRef.current.scrollTop = 0;
-      }
-    };
-
-    window.addEventListener('reset-lyrics-scroll', handleResetScroll);
-    return () => window.removeEventListener('reset-lyrics-scroll', handleResetScroll);
-  }, [lyricsContainerRef]);
+  useResetLyricsScroll(lyricsContainerRef);
 
   const handleSearch = React.useCallback((query) => {
     baseHandleSearch(query);
@@ -116,19 +108,7 @@ const LyricDisplayApp = () => {
     }`;
   const quickSwitchThumbClassName = "!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1";
 
-  const lineCounterText = React.useMemo(() => {
-    if (!hasLyrics) return '';
-    const isTag = (line) => typeof line === 'string' && STRUCTURE_TAG_PATTERNS.some((p) => p.test(line.trim()));
-    const contentLineCount = lyrics.reduce((n, l) => n + (isTag(l) ? 0 : 1), 0);
-    if (selectedLine !== null && selectedLine !== undefined) {
-      let contentPos = 0;
-      for (let i = 0; i <= selectedLine; i++) {
-        if (!isTag(lyrics[i])) contentPos++;
-      }
-      return `Line ${contentPos} of ${contentLineCount} loaded lyric lines`;
-    }
-    return `${contentLineCount} loaded lyric ${contentLineCount === 1 ? 'line' : 'lines'}`;
-  }, [lyrics, selectedLine, hasLyrics]);
+  const lineCounterText = useLineCounterText({ hasLyrics, lyrics, selectedLine });
 
   const { isDragging, dragFileCount, handleDragEnter, handleDragLeave, handleDragOver, handleDrop } = useDragAndDrop({
     handleFileUpload,
@@ -141,34 +121,17 @@ const LyricDisplayApp = () => {
 
   const { useIconOnlyButtons } = useResponsiveWidth(headerContainerRef, hasLyrics);
 
-  React.useEffect(() => {
-    if (!hasLyrics) return;
-    if (hasValidTimestamps(lyricsTimestamps)) return;
-    if (!rawLyricsContent) return;
+  useLrcTimestampHydration({
+    hasLyrics,
+    lyrics,
+    lyricsTimestamps,
+    rawLyricsContent,
+    setLineToSection,
+    setLyricsSections,
+    setLyricsTimestamps,
+  });
 
-    const looksLikeLrc = /\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(rawLyricsContent);
-    if (!looksLikeLrc) return;
-
-    try {
-      const parsed = parseLrcContent(rawLyricsContent);
-      const lengthsMatch = Array.isArray(parsed?.processedLines) && parsed.processedLines.length === lyrics.length;
-
-      if (lengthsMatch && Array.isArray(parsed.timestamps) && parsed.timestamps.length > 0) {
-        setLyricsTimestamps(parsed.timestamps);
-        if (parsed.sections && parsed.lineToSection) {
-          setLyricsSections(parsed.sections);
-          setLineToSection(parsed.lineToSection);
-        }
-      }
-    } catch (err) {
-      console.warn('Failed to regenerate timestamps from stored lyrics:', err);
-    }
-  }, [hasLyrics, lyrics, lyricsTimestamps, rawLyricsContent, setLyricsSections, setLineToSection, setLyricsTimestamps]);
-
-  React.useEffect(() => {
-    if (!window.electronAPI?.ndi?.registerOutputs) return;
-    window.electronAPI.ndi.registerOutputs(customOutputIds);
-  }, [customOutputIds]);
+  useRegisterCustomOutputs(customOutputIds);
 
   const {
     autoplayActive,
@@ -267,141 +230,38 @@ const LyricDisplayApp = () => {
     emitSetlistClear
   });
 
-  React.useEffect(() => {
-    if (window.__pendingLyricsLoad) {
-      const pendingData = window.__pendingLyricsLoad;
-      delete window.__pendingLyricsLoad;
+  usePendingLyricsLoad(processLoadedLyrics);
 
-      processLoadedLyrics(pendingData);
-    }
-  }, [processLoadedLyrics]);
+  usePendingSavedVersionPrompt({
+    clearPendingSavedVersion,
+    lyricsFileName,
+    pendingSavedVersion,
+    processLoadedLyrics,
+    rawLyricsContent,
+    showToast,
+  });
 
-  const handledSavedVersionRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!pendingSavedVersion) return;
-
-    const key = pendingSavedVersion.createdAt || `${pendingSavedVersion.filePath || ''}-${pendingSavedVersion.fileName || ''}`;
-    if (handledSavedVersionRef.current === key) {
-      clearPendingSavedVersion();
-      return;
-    }
-    handledSavedVersionRef.current = key;
-
-    const { rawText, fileName: savedBaseName, filePath, extension } = pendingSavedVersion;
-    const safeBaseName = savedBaseName || lyricsFileName || 'lyrics';
-    const savedFileName = `${safeBaseName}.${extension || 'txt'}`;
-
-    const loadSavedVersion = async () => {
-      try {
-        await processLoadedLyrics(
-          {
-            content: rawText || '',
-            fileName: savedFileName,
-            filePath: filePath || null,
-            fileType: extension || 'txt'
-          },
-          { fallbackFileName: savedFileName }
-        );
-      } catch (error) {
-        console.error('Failed to reload saved lyrics from pending version:', error);
-        showToast({
-          title: 'Load failed',
-          message: 'Could not load the last saved lyrics file.',
-          variant: 'error'
-        });
-      }
-    };
-
-    showToast({
-      title: 'Load saved lyrics',
-      message: 'You recently saved a lyrics file. Do you want to load that into the control panel?',
-      variant: 'info',
-      duration: 7000,
-      actions: [
-        { label: 'Load lyrics', onClick: loadSavedVersion }
-      ]
-    });
-
-    clearPendingSavedVersion();
-  }, [pendingSavedVersion, clearPendingSavedVersion, processLoadedLyrics, rawLyricsContent, lyricsFileName, showToast]);
-
-  const openFileDialog = async () => {
-    if (!isAuthenticated) {
-      showToast({
-        title: 'Authentication Required',
-        message: 'Please wait for authentication to complete before loading files.',
-        variant: 'warning'
-      });
-      return;
-    }
-
-    try {
-      if (window?.electronAPI?.loadLyricsFile) {
-        const result = await window.electronAPI.loadLyricsFile();
-        if (result && result.success && result.content) {
-          const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath };
-          window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
-          return;
-        }
-        if (result && result.canceled) return;
-      }
-    } catch { }
-    fileInputRef.current?.click();
-  };
-
-  const handleCreateNewSong = () => {
-    navigate('/new-song?mode=new');
-  };
-
-  const handleEditLyrics = () => {
-    navigate('/new-song?mode=edit');
-  };
-
-  const handleOpenSetlist = () => {
-    setSetlistModalOpen(true);
-  };
-
-  const handleOpenOnlineLyricsSearch = () => {
-    setOnlineLyricsModalOpen(true);
-  };
-
-  const handleOpenTimerControl = React.useCallback(async () => {
-    if (window?.electronAPI?.display?.openTimerControlWindow) {
-      const result = await window.electronAPI.display.openTimerControlWindow();
-      if (!result?.success) {
-        showToast({
-          title: 'Timer unavailable',
-          message: result?.error || 'Could not open the timer control window.',
-          variant: 'error',
-        });
-      }
-      return;
-    }
-
-    navigate('/timer-control');
-  }, [navigate, showToast]);
-
-  const handleCloseOnlineLyricsSearch = () => {
-    setOnlineLyricsModalOpen(false);
-  };
-
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const fileName = file.name.toLowerCase();
-    if (fileName.endsWith('.ldset')) {
-      await loadSetlist(file);
-      return;
-    }
-
-    const success = await handleFileUpload(file);
-    if (success) {
-      clearSearch();
-      trackAction('song_loaded');
-    }
-  };
+  const {
+    handleCloseOnlineLyricsSearch,
+    handleCreateNewSong,
+    handleEditLyrics,
+    handleFileChange,
+    handleOpenOnlineLyricsSearch,
+    handleOpenSetlist,
+    handleOpenTimerControl,
+    openFileDialog,
+  } = useControlPanelFileActions({
+    clearSearch,
+    fileInputRef,
+    handleFileUpload,
+    isAuthenticated,
+    loadSetlist,
+    navigate,
+    setOnlineLyricsModalOpen,
+    setSetlistModalOpen,
+    showToast,
+    trackAction,
+  });
 
   const handleLineSelect = (index) => {
     selectLine(index);
@@ -409,122 +269,42 @@ const LyricDisplayApp = () => {
     trackAction('lyrics_edited');
   };
 
-  const handleToggle = () => {
-    if (!isConnected || !isAuthenticated || !ready) {
-      showToast({
-        title: 'Connection Required',
-        message: 'Cannot control output - not connected or authenticated.',
-        variant: 'warning'
-      });
-      return;
-    }
+  const { handleClearOutput, handleOutputTabSwitch, handleToggle } = useOutputControlActions({
+    allOutputIds,
+    emitLineUpdate,
+    emitOutputToggle,
+    isAuthenticated,
+    isConnected,
+    isOutputOn,
+    ready,
+    scrollableSettingsRef,
+    selectLine,
+    setActiveTab,
+    setIsOutputOn,
+    showToast,
+    trackAction,
+  });
 
-    setIsOutputOn(!isOutputOn);
-    emitOutputToggle(!isOutputOn);
-    if (!isOutputOn) {
-      trackAction('output_opened');
-    }
-  };
-
-  const handleClearOutput = React.useCallback(() => {
-    selectLine(null);
-    emitLineUpdate(null);
-  }, [emitLineUpdate, selectLine]);
-
-  const handleOutputTabSwitch = React.useCallback((tab) => {
-    if (tab === 'stage') {
-      setActiveTab(tab);
-      if (scrollableSettingsRef.current) {
-        scrollableSettingsRef.current.scrollTop = 0;
-      }
-      return;
-    }
-    if (!tab.startsWith('output') || !allOutputIds.includes(tab)) return;
-    setActiveTab(tab);
-    if (scrollableSettingsRef.current) {
-      scrollableSettingsRef.current.scrollTop = 0;
-    }
-  }, [setActiveTab, allOutputIds]);
-
-  const handleAddOutput = React.useCallback(() => {
-    const newId = useLyricsStore.getState().addCustomOutput();
-    if (newId) {
-      setActiveTab(newId);
-      const customOutputs = useLyricsStore.getState().customOutputIds || [];
-      emitOutputsRegister({ outputs: customOutputs });
-
-      const newSettings = useLyricsStore.getState()[`${newId}Settings`];
-      if (newSettings) {
-        emitStyleUpdate(newId, newSettings);
-      }
-      emitIndividualOutputToggle({ output: newId, enabled: true });
-      showToast({ title: 'Output Created', message: `${newId.replace('output', 'Output ')} has been created`, variant: 'success' });
-    } else {
-      showToast({ title: 'Limit Reached', message: 'Maximum of 6 outputs reached', variant: 'warning' });
-    }
-  }, [setActiveTab, showToast, emitStyleUpdate, emitIndividualOutputToggle]);
-
-  const handleDeleteOutput = React.useCallback((outputId) => {
-    const outputLabel = outputId.replace('output', 'Output ');
-    showModal({
-      title: `Delete ${outputLabel}`,
-      description: `Are you sure you want to delete ${outputLabel}? This will remove all its settings permanently.`,
-      variant: 'info',
-      size: 'sm',
-      actions: [
-        {
-          label: 'Cancel',
-          value: 'cancel',
-          variant: 'outline',
-        },
-        {
-          label: 'Delete',
-          value: 'delete',
-          destructive: true,
-          onSelect: () => {
-            const removed = useLyricsStore.getState().removeCustomOutput(outputId);
-            if (removed) {
-              if (activeTab === outputId) setActiveTab('output1');
-              emitOutputRemove({ output: outputId });
-              const customOutputs = useLyricsStore.getState().customOutputIds || [];
-              emitOutputsRegister({ outputs: customOutputs });
-              showToast({ title: 'Output Deleted', message: `${outputLabel} has been deleted`, variant: 'success' });
-            }
-          }
-        }
-      ]
-    });
-  }, [activeTab, setActiveTab, showModal, showToast]);
+  const { handleAddOutput, handleDeleteOutput } = useCustomOutputActions({
+    activeTab,
+    emitIndividualOutputToggle,
+    emitOutputRemove,
+    emitOutputsRegister,
+    emitStyleUpdate,
+    setActiveTab,
+    showModal,
+    showToast,
+  });
 
   const { handleAddToSetlist, disabled: addDisabled, title: addTitle } = useSetlistActions(emitSetlistAdd);
 
-  const handleNavigateSetlistPrevious = React.useCallback(() => {
-    if (!hasLyrics || setlistFiles.length === 0) {
-      showToast({
-        title: 'No files in setlist',
-        message: 'Add songs to your setlist to use navigation',
-        variant: 'info'
-      });
-      return;
-    }
-
-    const currentIndex = setlistFiles.findIndex(file => file.displayName === lyricsFileName);
-    if (currentIndex === -1) {
-      showToast({
-        title: 'Not in setlist',
-        message: 'Current song is not in the setlist',
-        variant: 'info'
-      });
-      return;
-    }
-
-    const previousIndex = currentIndex > 0 ? currentIndex - 1 : setlistFiles.length - 1;
-    const previousFile = setlistFiles[previousIndex];
-
-    if (previousFile) {
-      emitSetlistLoad(previousFile.id);
-    }
-  }, [hasLyrics, setlistFiles, lyricsFileName, emitSetlistLoad, showToast]);
+  const { handleNavigateSetlistPrevious, handleNavigateSetlistNext } = useSetlistNavigation({
+    emitSetlistLoad,
+    hasLyrics,
+    lyricsFileName,
+    setlistFiles,
+    showToast,
+  });
 
   const handleOpenPreferences = React.useCallback(() => {
     showModal({
@@ -538,34 +318,6 @@ const LyricDisplayApp = () => {
       customLayout: true
     });
   }, [showModal]);
-
-  const handleNavigateSetlistNext = React.useCallback(() => {
-    if (!hasLyrics || setlistFiles.length === 0) {
-      showToast({
-        title: 'No files in setlist',
-        message: 'Add songs to your setlist to use navigation',
-        variant: 'info'
-      });
-      return;
-    }
-
-    const currentIndex = setlistFiles.findIndex(file => file.displayName === lyricsFileName);
-    if (currentIndex === -1) {
-      showToast({
-        title: 'Not in setlist',
-        message: 'Current song is not in the setlist',
-        variant: 'info'
-      });
-      return;
-    }
-
-    const nextIndex = currentIndex < setlistFiles.length - 1 ? currentIndex + 1 : 0;
-    const nextFile = setlistFiles[nextIndex];
-
-    if (nextFile) {
-      emitSetlistLoad(nextFile.id);
-    }
-  }, [hasLyrics, setlistFiles, lyricsFileName, emitSetlistLoad, showToast]);
 
   useKeyboardShortcuts({
     hasLyrics,
@@ -636,127 +388,26 @@ const LyricDisplayApp = () => {
         <div className={`w-[420px] flex-shrink-0 shadow-lg flex flex-col h-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           {/* Fixed Header Section */}
           <div className={`flex-shrink-0 p-6 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            {/* Header */}
-            <div className="flex items-center mb-6">
-              <div className="grid grid-cols-8 gap-2 w-full">
-                {/* Online Lyrics Search Button */}
-                <Tooltip content={<span>Search and import lyrics from online providers - <strong>Ctrl+Shift+O</strong></span>} side="bottom">
-                  <button
-                    className={iconButtonClass(false)}
-                    onClick={handleOpenOnlineLyricsSearch}
-                  >
-                    <Globe className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-
-                {/* Setlist Button */}
-                <Tooltip content={<span>View and manage your song setlist (up to {maxSetlistFiles} songs) - <strong>Ctrl+Shift+S</strong></span>} side="bottom">
-                  <button
-                    className={iconButtonClass(false)}
-                    onClick={handleOpenSetlist}
-                  >
-                    <ListMusic className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-
-                {/* Sync Outputs Button - Icon Only */}
-                <Tooltip content="Force refresh all output displays with current state" side="bottom">
-                  <button
-                    disabled={!isConnected || !isAuthenticated || !ready}
-                    className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
-                    onClick={handleSyncOutputs}
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-
-                {/* Dark Mode Toggle Button */}
-                <Tooltip content={
-                  themeMode === 'system'
-                    ? "Theme is managed by system preferences. Change in Preferences â†’ Appearance."
-                    : darkMode ? "Switch to light mode" : "Switch to dark mode"
-                } side="bottom">
-                  <button
-                    className={iconButtonClass(themeMode === 'system')}
-                    disabled={themeMode === 'system'}
-                    onClick={() => {
-                      if (themeMode === 'system') return;
-                      const next = !darkMode;
-                      const nextMode = next ? 'dark' : 'light';
-                      setDarkMode(next);
-                      setThemeMode(nextMode);
-                      window.electronAPI?.preferences?.set?.('appearance.themeMode', nextMode);
-                      window.electronAPI?.syncNativeThemeSource?.(nextMode);
-                      window.electronAPI?.setDarkMode?.(next);
-                    }}
-                  >
-                    {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  </button>
-                </Tooltip>
-
-                {/* User Preferences Button */}
-                <Tooltip content="Application preferences and settings" side="bottom">
-                  <button
-                    className={iconButtonClass(false)}
-                    onClick={() => {
-                      showModal({
-                        title: 'Preferences',
-                        headerDescription: 'Configure application settings and preferences',
-                        component: 'UserPreferences',
-                        variant: 'info',
-                        size: 'lg',
-                        actions: [],
-                        allowBackdropClose: false,
-                        customLayout: true
-                      });
-                    }}
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-
-                {/* Project Output Button */}
-                <Tooltip content="Project an output to this monitor or an external display" side="bottom">
-                  <button
-                    className={iconButtonClass(false)}
-                    onClick={() => {
-                      showModal({
-                        title: 'Project Output',
-                        headerDescription: 'Choose an output and where to project it.',
-                        component: 'ProjectOutput',
-                        variant: 'info',
-                        size: 'md',
-                        actions: [],
-                        customLayout: true,
-                      });
-                    }}
-                  >
-                    <Video className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-
-                {/* Timer Control Button */}
-                <Tooltip content="Open timer control window" side="bottom">
-                  <button
-                    className={iconButtonClass(false)}
-                    onClick={handleOpenTimerControl}
-                  >
-                    <Timer className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-
-                {/* Authentication Status Indicator */}
-                <AuthStatusIndicator
-                  authStatus={authStatus}
-                  connectionStatus={connectionStatus}
-                  onRetry={forceReconnect}
-                  onRefreshToken={refreshAuthToken}
-                  darkMode={darkMode}
-                  compact
-                  className="h-10 w-full"
-                />
-              </div>
-            </div>
+            <ControlPanelHeaderActions
+              authStatus={authStatus}
+              connectionStatus={connectionStatus}
+              darkMode={darkMode}
+              forceReconnect={forceReconnect}
+              handleOpenOnlineLyricsSearch={handleOpenOnlineLyricsSearch}
+              handleOpenSetlist={handleOpenSetlist}
+              handleOpenTimerControl={handleOpenTimerControl}
+              handleSyncOutputs={handleSyncOutputs}
+              iconButtonClass={iconButtonClass}
+              isAuthenticated={isAuthenticated}
+              isConnected={isConnected}
+              maxSetlistFiles={maxSetlistFiles}
+              ready={ready}
+              refreshAuthToken={refreshAuthToken}
+              setDarkMode={setDarkMode}
+              setThemeMode={setThemeMode}
+              showModal={showModal}
+              themeMode={themeMode}
+            />
 
             {/* Load and Create Buttons */}
             <div className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
@@ -911,368 +562,62 @@ const LyricDisplayApp = () => {
           </div>
         </div>
 
-        {/* Right Main Area */}
-        <div className="flex-1 min-w-0 p-6 flex flex-col h-full">
-          {/* Fixed Header */}
-          <div className="mb-6 flex-shrink-0 min-w-0" ref={headerContainerRef}>
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <h2 className={`text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {hasLyrics ? lyricsFileName : ''}
-                </h2>
-                {hasLyrics && (
-                  <p className={`text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {lineCounterText}
-                  </p>
-                )}
-              </div>
-              {hasLyrics && (
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Intelligent Autoplay Button */}
-                  {hasValidTimestamps(lyricsTimestamps) && (
-                    <Tooltip content={
-                      remoteAutoplayActive || autoplayActive
-                        ? "Autoplay is active"
-                        : intelligentAutoplayActive
-                          ? "Stop intelligent autoplay"
-                          : "Start timestamp-based autoplay"
-                    } side="bottom">
-                      <button
-                        onClick={handleIntelligentAutoplayToggle}
-                        disabled={remoteAutoplayActive || autoplayActive}
-                        className={`p-2 rounded-lg text-xs font-medium transition-all ${remoteAutoplayActive || autoplayActive
-                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
-                          : intelligentAutoplayActive
-                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
-                            : darkMode
-                              ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/30 hover:to-blue-600/30 text-purple-300 border border-purple-500/30'
-                              : 'bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 text-purple-700 border border-purple-300'
-                          }`}
-                        title={intelligentAutoplayActive ? "Stop intelligent autoplay" : "Start intelligent autoplay"}
-                      >
-                        <Sparkles className="w-4 h-4" />
-                      </button>
-                    </Tooltip>
-                  )}
-
-                  {/* Autoplay Button */}
-                  <Tooltip content={
-                    remoteAutoplayActive || intelligentAutoplayActive
-                      ? "Autoplay is active"
-                      : autoplayActive
-                        ? "Stop autoplay"
-                        : "Start automatic lyric progression"
-                  } side="bottom">
-                    <div className="relative flex">
-                      <button
-                        onClick={handleAutoplayToggle}
-                        disabled={remoteAutoplayActive || intelligentAutoplayActive}
-                        className={`flex items-center gap-2 text-xs font-medium transition-all ${remoteAutoplayActive || intelligentAutoplayActive
-                          ? useIconOnlyButtons
-                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed px-2 py-2 rounded-lg opacity-60'
-                            : 'bg-gray-400 text-gray-600 cursor-not-allowed px-4 py-2 rounded-lg opacity-60'
-                          : autoplayActive
-                            ? useIconOnlyButtons
-                              ? 'bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-lg'
-                              : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg'
-                            : useIconOnlyButtons
-                              ? darkMode
-                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-2 py-2 rounded-l-lg'
-                                : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-2 rounded-l-lg'
-                              : darkMode
-                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-l-lg'
-                                : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-l-lg'
-                          }`}
-                      >
-                        {autoplayActive ? (
-                          <>
-                            <Square className="w-4 h-4 flex-shrink-0 fill-current" />
-                            {!useIconOnlyButtons && <span className="whitespace-nowrap">Autoplay</span>}
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 flex-shrink-0" />
-                            {!useIconOnlyButtons && <span className="whitespace-nowrap">Autoplay</span>}
-                          </>
-                        )}
-                      </button>
-
-                      {/* Settings dropdown trigger */}
-                      {!autoplayActive && !remoteAutoplayActive && !intelligentAutoplayActive && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenAutoplaySettings();
-                          }}
-                          className={`flex items-center justify-center ${useIconOnlyButtons ? 'px-1.5' : 'px-2'} py-2 rounded-r-lg transition-colors border-l ${autoplayActive
-                            ? 'bg-green-600 hover:bg-green-700 text-white border-green-500'
-                            : darkMode
-                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
-                            }`}
-                          title="Autoplay settings"
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </Tooltip>
-
-                  {/* Add to Setlist Button */}
-                  <Tooltip content="Add current lyrics to your setlist for quick access during service" side="bottom">
-                    <button
-                      onClick={handleAddToSetlist}
-                      aria-disabled={addDisabled}
-                      className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-colors ${addDisabled
-                        ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
-                        : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')
-                        } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}
-                      title={addTitle}
-                      style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
-                    >
-                      <Plus className="w-4 h-4 flex-shrink-0" />
-                      {!useIconOnlyButtons && <span className="whitespace-nowrap overflow-hidden text-ellipsis">Add to Setlist</span>}
-                    </button>
-                  </Tooltip>
-
-                  {/* Edit Button */}
-                  <Tooltip content="Edit current lyrics in the song canvas editor" side="bottom">
-                    <button
-                      onClick={handleEditLyrics}
-                      className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-colors ${darkMode
-                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                        } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}
-                    >
-                      <Edit className="w-4 h-4 flex-shrink-0" />
-                      {!useIconOnlyButtons && <span className="whitespace-nowrap overflow-hidden text-ellipsis">Edit Lyrics</span>}
-                    </button>
-                  </Tooltip>
-
-                  {/* Song Info Button */}
-                  <Tooltip content="View song information" side="bottom">
-                    <button
-                      onClick={() => {
-                        showModal({
-                          title: 'Song Information',
-                          component: 'SongInfoModal',
-                          variant: 'info',
-                          size: 'sm',
-                          dismissLabel: 'Close'
-                        });
-                      }}
-                      className={`p-2 rounded-lg transition-colors ${darkMode
-                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                        }`}
-                      title="Song Information"
-                    >
-                      <Info className="w-4 h-4" />
-                    </button>
-                  </Tooltip>
-                </div>
-              )}
-            </div>
-
-            {/* Search Bar */}
-            {hasLyrics && (
-              <div className="mt-3 w-full">
-                <div className="flex items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <SearchBar
-                      darkMode={darkMode}
-                      searchQuery={searchQuery}
-                      onSearch={handleSearch}
-                      totalMatches={totalMatches}
-                      currentMatchIndex={currentMatchIndex}
-                      onPrev={navigateToPreviousMatch}
-                      onNext={navigateToNextMatch}
-                      onClear={clearSearch}
-                    />
-                  </div>
-                  <Popover open={quickParserOpen} onOpenChange={setQuickParserOpen}>
-                    <Tooltip content="Quick parser controls" side="bottom">
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          disabled={quickParserLoading}
-                          className={`h-9 px-3 rounded-md border flex items-center justify-center transition-colors ${darkMode
-                            ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                            } ${quickParserLoading ? 'opacity-60 cursor-wait' : ''}`}
-                        >
-                          <SlidersHorizontal className="w-4 h-4" />
-                        </button>
-                      </PopoverTrigger>
-                    </Tooltip>
-                    <PopoverContent
-                      align="end"
-                      side="bottom"
-                      sideOffset={6}
-                      className={`w-80 p-3 ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'}`}
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">Auto line grouping</p>
-                            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Group normal consecutive lines automatically</p>
-                          </div>
-                          <Switch
-                            checked={quickParserSettings.enableAutoLineGrouping}
-                            onCheckedChange={(checked) => updateQuickParserSetting('enableAutoLineGrouping', checked)}
-                            className={quickSwitchClassName}
-                            thumbClassName={quickSwitchThumbClassName}
-                          />
-                        </div>
-
-                        {quickParserSettings.enableAutoLineGrouping && (
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium">Maximum lines per group</label>
-                            <Input
-                              type="number"
-                              min="2"
-                              max="12"
-                              value={quickParserSettings.maxLinesPerGroup}
-                              onChange={(e) => updateQuickParserSetting('maxLinesPerGroup', clampGroupSize(e.target.value))}
-                              className={darkMode ? 'bg-gray-900 border-gray-700' : ''}
-                            />
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">Translation grouping</p>
-                            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Keep bracketed translation pairs</p>
-                          </div>
-                          <Switch
-                            checked={quickParserSettings.enableTranslationGrouping}
-                            onCheckedChange={(checked) => updateQuickParserSetting('enableTranslationGrouping', checked)}
-                            className={quickSwitchClassName}
-                            thumbClassName={quickSwitchThumbClassName}
-                          />
-                        </div>
-
-                        <div className="pt-2">
-                          <button
-                            type="button"
-                            onClick={handleReloadWithQuickParser}
-                            disabled={reloadingWithParser}
-                            className={`w-full rounded-md py-2 text-sm font-medium transition-colors ${reloadingWithParser
-                              ? 'bg-gray-400 text-gray-700 cursor-wait'
-                              : darkMode
-                                ? 'bg-blue-500 hover:bg-blue-400 text-white'
-                                : 'bg-black hover:bg-gray-900 text-white'
-                              }`}
-                          >
-                            {reloadingWithParser ? 'Reloading...' : 'Reload Lyrics'}
-                          </button>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Scrollable Content Area */}
-          <div className={`rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
-            }`}>
-            {hasLyrics ? (
-              <div
-                ref={lyricsContainerRef}
-                className="flex-1 overflow-y-auto"
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-              >
-                <LyricsList
-                  searchQuery={searchQuery}
-                  highlightedLineIndex={highlightedLineIndex}
-                  onSelectLine={handleLineSelect}
-                  maxLinesPerGroup={quickParserSettings.maxLinesPerGroup}
-                />
-              </div>
-            ) : (
-              /* Empty State - Drag and Drop */
-              <div
-                className="flex-1 flex items-center justify-center p-4"
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-              >
-                <div className="text-center">
-                  <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                    }`}>
-                    <FolderOpen className={`w-10 h-10 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} />
-                  </div>
-                  <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Drag and drop lyric files (.txt, .lrc) or setlists (.ldset) here
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Drag Overlay */}
-            {isDragging && (
-              <div
-                className={`absolute inset-0 flex items-center justify-center z-50 pointer-events-none ${darkMode ? 'bg-gray-900/90' : 'bg-gray-900/80'
-                  }`}
-              >
-                <div className="text-center px-8 py-10 rounded-2xl border-2 border-dashed max-w-md mx-auto"
-                  style={{
-                    borderColor: darkMode ? '#60a5fa' : '#3b82f6',
-                    backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)'
-                  }}
-                >
-                  <div className={`w-20 h-20 mx-auto mb-5 rounded-full flex items-center justify-center ${darkMode ? 'bg-blue-500/20' : 'bg-blue-100'
-                    }`}>
-                    {dragFileCount === 1 ? (
-                      <FileText className={`w-10 h-10 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                    ) : (
-                      <ListMusic className={`w-10 h-10 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                    )}
-                  </div>
-                  <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {dragFileCount === 1 ? 'Drop to load file' : `Drop ${dragFileCount} files`}
-                  </h3>
-                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {dragFileCount === 1
-                      ? 'This file will be loaded into the app'
-                      : hasLyrics
-                        ? `These files will be added to your ${setlistFiles.length > 0 ? 'current' : ''} setlist`
-                        : 'These files will be added to your setlist'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Setlist Modal */}
-        <SetlistModal />
-
-        {/* Online Lyrics Search Modal */}
-        <OnlineLyricsSearchModal
-          isOpen={onlineLyricsModalOpen}
-          onClose={handleCloseOnlineLyricsSearch}
+        <LyricsWorkspace
+          addDisabled={addDisabled}
+          addTitle={addTitle}
+          autoplayActive={autoplayActive}
+          clampGroupSize={clampGroupSize}
+          clearSearch={clearSearch}
+          currentMatchIndex={currentMatchIndex}
           darkMode={darkMode}
-          onImportLyrics={handleImportFromLibrary}
+          dragFileCount={dragFileCount}
+          handleAddToSetlist={handleAddToSetlist}
+          handleAutoplayToggle={handleAutoplayToggle}
+          handleDragEnter={handleDragEnter}
+          handleDragLeave={handleDragLeave}
+          handleDragOver={handleDragOver}
+          handleDrop={handleDrop}
+          handleEditLyrics={handleEditLyrics}
+          handleIntelligentAutoplayToggle={handleIntelligentAutoplayToggle}
+          handleLineSelect={handleLineSelect}
+          handleOpenAutoplaySettings={handleOpenAutoplaySettings}
+          handleReloadWithQuickParser={handleReloadWithQuickParser}
+          handleSearch={handleSearch}
+          hasLyrics={hasLyrics}
+          headerContainerRef={headerContainerRef}
+          highlightedLineIndex={highlightedLineIndex}
+          intelligentAutoplayActive={intelligentAutoplayActive}
+          isDragging={isDragging}
+          lineCounterText={lineCounterText}
+          lyricsContainerRef={lyricsContainerRef}
+          lyricsFileName={lyricsFileName}
+          lyricsTimestamps={lyricsTimestamps}
+          navigateToNextMatch={navigateToNextMatch}
+          navigateToPreviousMatch={navigateToPreviousMatch}
+          quickParserLoading={quickParserLoading}
+          quickParserOpen={quickParserOpen}
+          quickParserSettings={quickParserSettings}
+          quickSwitchClassName={quickSwitchClassName}
+          quickSwitchThumbClassName={quickSwitchThumbClassName}
+          reloadingWithParser={reloadingWithParser}
+          remoteAutoplayActive={remoteAutoplayActive}
+          searchQuery={searchQuery}
+          setQuickParserOpen={setQuickParserOpen}
+          setlistFileCount={setlistFiles.length}
+          showModal={showModal}
+          totalMatches={totalMatches}
+          updateQuickParserSetting={updateQuickParserSetting}
+          useIconOnlyButtons={useIconOnlyButtons}
         />
-
-        {/* EasyWorship Import Modal */}
-        <EasyWorshipImportModal
-          isOpen={easyWorshipModalOpen}
-          onClose={() => setEasyWorshipModalOpen(false)}
+        <ControlPanelModals
           darkMode={darkMode}
-        />
-
-        <PresentationImportModal
-          isOpen={presentationModalOpen}
-          onClose={() => setPresentationModalOpen(false)}
-          darkMode={darkMode}
+          easyWorshipModalOpen={easyWorshipModalOpen}
+          handleCloseOnlineLyricsSearch={handleCloseOnlineLyricsSearch}
+          handleImportFromLibrary={handleImportFromLibrary}
+          onlineLyricsModalOpen={onlineLyricsModalOpen}
+          presentationModalOpen={presentationModalOpen}
+          setEasyWorshipModalOpen={setEasyWorshipModalOpen}
+          setPresentationModalOpen={setPresentationModalOpen}
         />
       </div>
     </>

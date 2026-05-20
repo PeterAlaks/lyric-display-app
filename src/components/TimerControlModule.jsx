@@ -12,6 +12,10 @@ import { useDarkModeState, useTimerDisplaySettings } from '../hooks/useStoreSele
 import FontSelect from './FontSelect';
 
 const QUICK_MINUTES = [1, 3, 5, 10, 15, 30];
+const TARGET_HOURS = Array.from({ length: 12 }, (_, index) => String(index + 1));
+const TARGET_24_HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'));
+const TARGET_MINUTES = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
+const TARGET_PERIODS = ['AM', 'PM'];
 const PERIOD_STYLE = {
   fontSize: '0.42em',
   marginLeft: '0.12em',
@@ -24,6 +28,140 @@ const createTimerSet = (index = 0) => ({
   label: `Timer ${index + 1}`,
   durationMs: minutesToMs(5),
 });
+
+const toTargetTimeParts = (value, hourFormat = '12') => {
+  if (!value) {
+    return { hour: '', minute: '', period: '' };
+  }
+  const [rawHours, rawMinutes] = value.split(':').map((part) => Number(part));
+  if (!Number.isFinite(rawHours) || !Number.isFinite(rawMinutes)) {
+    return { hour: '', minute: '', period: '' };
+  }
+  const normalizedHours = ((rawHours % 24) + 24) % 24;
+  return {
+    hour: hourFormat === '24'
+      ? String(normalizedHours).padStart(2, '0')
+      : String(normalizedHours % 12 || 12),
+    minute: String(rawMinutes).padStart(2, '0'),
+    period: normalizedHours >= 12 ? 'PM' : 'AM',
+  };
+};
+
+const getCurrentTargetTimeParts = (hourFormat = '12') => {
+  const now = new Date();
+  return {
+    hour: hourFormat === '24'
+      ? String(now.getHours()).padStart(2, '0')
+      : String(now.getHours() % 12 || 12),
+    minute: String(now.getMinutes()).padStart(2, '0'),
+    period: now.getHours() >= 12 ? 'PM' : 'AM',
+  };
+};
+
+const fromTargetTimeParts = ({ hour, minute, period }, hourFormat = '12') => {
+  const hourNumber = Number(hour);
+  const minuteNumber = Number(minute);
+  if (!Number.isFinite(hourNumber) || !Number.isFinite(minuteNumber)) {
+    return '';
+  }
+  if (hourFormat === '24') {
+    return `${String(hourNumber).padStart(2, '0')}:${String(minuteNumber).padStart(2, '0')}`;
+  }
+  if (!period) return '';
+  const hour24 = period === 'PM' ? (hourNumber % 12) + 12 : hourNumber % 12;
+  return `${String(hour24).padStart(2, '0')}:${String(minuteNumber).padStart(2, '0')}`;
+};
+
+const formatTargetTimePreview = (value) => {
+  if (!value) return '';
+  const [hours, minutes] = value.split(':').map((part) => Number(part));
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return '';
+  const next = new Date();
+  next.setHours(hours, minutes, 0, 0);
+  const dayLabel = next.getTime() <= Date.now() ? 'Tomorrow' : 'Today';
+  if (dayLabel === 'Tomorrow') {
+    next.setDate(next.getDate() + 1);
+  }
+  return `${dayLabel} at ${next.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+};
+
+const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, darkMode, hourFormat, onHourFormatChange }) => {
+  const parts = React.useMemo(() => toTargetTimeParts(value, hourFormat), [hourFormat, value]);
+  const preview = React.useMemo(() => formatTargetTimePreview(value), [value]);
+  const selectContentClass = darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : undefined;
+  const hourOptions = hourFormat === '24' ? TARGET_24_HOURS : TARGET_HOURS;
+
+  const updatePart = (part, partValue) => {
+    const fallback = getCurrentTargetTimeParts(hourFormat);
+    const nextParts = {
+      hour: parts.hour || fallback.hour,
+      minute: parts.minute || '00',
+      period: parts.period || fallback.period,
+      [part]: partValue,
+    };
+    onChange(fromTargetTimeParts(nextParts, hourFormat));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Select value={hourFormat} onValueChange={onHourFormatChange} disabled={disabled}>
+        <SelectTrigger className={inputClass}>
+          <SelectValue placeholder="Time format" />
+        </SelectTrigger>
+        <SelectContent className={selectContentClass}>
+          <SelectItem value="12">12-hour time</SelectItem>
+          <SelectItem value="24">24-hour time</SelectItem>
+        </SelectContent>
+      </Select>
+      <div className={`grid gap-2 ${hourFormat === '24' ? 'grid-cols-[1fr_1fr]' : 'grid-cols-[1fr_1fr_1fr]'}`}>
+        <Select value={parts.hour || undefined} onValueChange={(nextHour) => updatePart('hour', nextHour)} disabled={disabled}>
+          <SelectTrigger className={inputClass}>
+            <SelectValue placeholder="HH" />
+          </SelectTrigger>
+          <SelectContent className={selectContentClass}>
+            {hourOptions.map((hour) => (
+              <SelectItem key={hour} value={hour}>{hour}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={parts.minute || undefined} onValueChange={(nextMinute) => updatePart('minute', nextMinute)} disabled={disabled}>
+          <SelectTrigger className={inputClass}>
+            <SelectValue placeholder="MM" />
+          </SelectTrigger>
+          <SelectContent className={selectContentClass}>
+            {TARGET_MINUTES.map((minute) => (
+              <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hourFormat === '12' && (
+          <Select value={parts.period || undefined} onValueChange={(nextPeriod) => updatePart('period', nextPeriod)} disabled={disabled}>
+            <SelectTrigger className={inputClass}>
+              <SelectValue placeholder="AM" />
+            </SelectTrigger>
+            <SelectContent className={selectContentClass}>
+              {TARGET_PERIODS.map((period) => (
+                <SelectItem key={period} value={period}>{period}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+      <div className="flex min-h-5 items-center justify-between gap-2">
+        <span className={`text-xs ${mutedText}`}>{preview}</span>
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className={`text-xs font-medium transition-colors ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const TimerControlModule = () => {
   const { emitStageTimerUpdate } = useControlSocket();
@@ -39,6 +177,7 @@ const TimerControlModule = () => {
   const [mode, setMode] = React.useState('countdown');
   const [durationMinutes, setDurationMinutes] = React.useState(5);
   const [targetTime, setTargetTime] = React.useState('');
+  const [targetHourFormat, setTargetHourFormat] = React.useState('12');
   const [warningSeconds, setWarningSeconds] = React.useState(60);
   const [criticalSeconds, setCriticalSeconds] = React.useState(30);
   const [overrunMode, setOverrunMode] = React.useState(false);
@@ -61,6 +200,7 @@ const TimerControlModule = () => {
 
   const active = timerState.running || timerState.paused;
   const accent = intensity === 'critical' ? '#EF4444' : intensity === 'warning' ? '#F59E0B' : displaySettings.accentColor;
+  const showSecondaryText = displaySettings.showSecondaryText !== false;
   const globalClockValue = React.useMemo(() => formatGlobalClock(now, {
     clockHour12: displaySettings.clockHour12,
     clockShowSeconds: displaySettings.clockShowSeconds,
@@ -235,7 +375,16 @@ const TimerControlModule = () => {
             {!useSets && mode === 'target' && (
               <div className="space-y-2">
                 <label className="text-xs font-medium">Target Time</label>
-                <Input type="time" disabled={active} value={targetTime} onChange={(event) => setTargetTime(event.target.value)} className={inputClass} />
+                <TargetTimePicker
+                  value={targetTime}
+                  onChange={setTargetTime}
+                  disabled={active}
+                  inputClass={inputClass}
+                  mutedText={mutedText}
+                  darkMode={darkMode}
+                  hourFormat={targetHourFormat}
+                  onHourFormatChange={setTargetHourFormat}
+                />
               </div>
             )}
 
@@ -272,9 +421,11 @@ const TimerControlModule = () => {
               className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
               style={{ backgroundColor: displaySettings.backgroundColor }}
             >
-              <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
-                {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
-              </div>
+              {showSecondaryText && (
+                <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
+                  {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
+                </div>
+              )}
               <div
                 className="leading-none max-w-full"
                 style={{
@@ -292,7 +443,7 @@ const TimerControlModule = () => {
               >
                 {displayValue}
               </div>
-              {timerState.sets?.length > 1 && (
+              {showSecondaryText && timerState.sets?.length > 1 && (
                 <div className="mt-4 text-xs text-white/70">
                   {timerState.activeSetIndex + 1} of {timerState.sets.length}
                 </div>
@@ -304,25 +455,27 @@ const TimerControlModule = () => {
               )}
             </div>
 
-            <div
-              className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
-              style={{
-                backgroundColor: displaySettings.backgroundColor,
-                borderColor: 'rgba(255,255,255,0.14)',
-              }}
-            >
-              <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Global Time</span>
-              <span
-                className="font-mono text-2xl font-semibold text-white/80"
+            {showSecondaryText && displaySettings.showGlobalClock && (
+              <div
+                className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
                 style={{
-                  fontVariantNumeric: 'tabular-nums',
-                  fontFeatureSettings: '"tnum" 1, "lnum" 1',
+                  backgroundColor: displaySettings.backgroundColor,
+                  borderColor: 'rgba(255,255,255,0.14)',
                 }}
               >
-                {globalClockParts.time}
-                {globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
-              </span>
-            </div>
+                <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Global Time</span>
+                <span
+                  className="font-mono text-2xl font-semibold text-white/80"
+                  style={{
+                    fontVariantNumeric: 'tabular-nums',
+                    fontFeatureSettings: '"tnum" 1, "lnum" 1',
+                  }}
+                >
+                  {globalClockParts.time}
+                  {globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
+                </span>
+              </div>
+            )}
 
             <div className="mt-4 space-y-2">
               <div className="grid grid-cols-2 gap-2">
@@ -564,8 +717,17 @@ const TimerControlModule = () => {
                 <Switch checked={displaySettings.showProgress} onCheckedChange={(checked) => applyTimerDisplaySettings({ showProgress: checked })} {...getSwitchProps(false)} />
               </div>
               <div className="flex items-center justify-between">
+                <span className="text-sm">Secondary text</span>
+                <Switch checked={showSecondaryText} onCheckedChange={(checked) => applyTimerDisplaySettings({ showSecondaryText: checked })} {...getSwitchProps(false)} />
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-sm">Show global time</span>
-                <Switch checked={displaySettings.showGlobalClock} onCheckedChange={(checked) => applyTimerDisplaySettings({ showGlobalClock: checked })} {...getSwitchProps(false)} />
+                <Switch
+                  checked={displaySettings.showGlobalClock}
+                  onCheckedChange={(checked) => applyTimerDisplaySettings({ showGlobalClock: checked })}
+                  disabled={!showSecondaryText}
+                  {...getSwitchProps(!showSecondaryText)}
+                />
               </div>
               <div className={`rounded-md border p-3 space-y-3 ${darkMode ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'}`}>
                 <div className="text-xs font-medium">Global Time Format</div>

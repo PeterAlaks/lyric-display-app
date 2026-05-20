@@ -336,13 +336,43 @@ lyric-display-app/
 |   |   ├── IntegrationInstructions.jsx     # Integration help modal for OBS, VMix and Wirecast
 |   |   ├── IntelligentAutoplayInfo.jsx     # Intelligent Autoplay info modal
 |   |   ├── LyricDisplayApp.jsx             # Main control panel UI
+|   |   ├── LyricDisplayApp/                # Presentational pieces for the main control panel
+|   |   |   ├── ControlPanelHeaderActions.jsx # Control panel top action grid
+|   |   |   ├── ControlPanelModals.jsx      # Control panel modal mount points
+|   |   |   ├── LyricsDragOverlay.jsx       # Drag-and-drop overlay for lyrics and setlists
+|   |   |   ├── LyricsWorkspace.jsx         # Main lyrics header, search, autoplay, setlist, and lyrics list workspace
+|   |   |   └── QuickParserPopover.jsx      # Quick parser controls popover
 |   |   ├── LyricsList.jsx                  # Control panel lyrics list UI
+|   |   ├── LyricsList/                     # Presentational pieces for the control panel lyrics list
+|   |   |   ├── layout.js                   # Shared lyrics list row layout constants
+|   |   |   ├── LyricLineContent.jsx        # Lyric line/group text renderer with search highlighting
+|   |   |   ├── LyricRow.jsx                # Shared virtualized and non-virtualized lyric row component
+|   |   |   ├── LyricsListContextMenu.jsx   # Lyrics list context menu component
+|   |   |   ├── SectionChips.jsx            # Section jump chips for parsed song sections
+|   |   |   └── TutorialLineAnchor.jsx      # Stage-only marker tutorial anchor wrapper
 |   |   ├── MobileLayout.jsx                # Minified control panel UI for secondary connected clients
 |   |   ├── NdiOutputSettingsModal.jsx      # NDI output settings modal for each output
 |   |   ├── NewSongCanvas.jsx               # New/edit song text editor
+|   |   ├── NewSongCanvas/                  # Presentational pieces for the song canvas editor
+|   |   |   ├── CanvasContextMenu.jsx       # Canvas context menu and submenus
+|   |   |   ├── CanvasFloatingToolbar.jsx   # Floating selected-line action toolbar
+|   |   |   ├── CanvasMeasurementLayer.jsx  # Hidden text measurement layer for canvas line metrics
+|   |   |   ├── CanvasSearchPanel.jsx       # Canvas search and replace popover
+|   |   |   └── SongCanvasHeader.jsx        # Song canvas header, title input, and toolbars
 |   |   ├── OnlineLyricsSearchModal.jsx     # Online Lyrics Search modal
+|   |   ├── OnlineLyricsSearchModal/         # Presentational pieces for online lyrics search
+|   |   |   ├── LyricsSearchResults.jsx   # Suggestion and full-result list renderers
+|   |   |   └── ProviderAdvancedPanel.jsx # Featured providers, key management, and provider status
 |   |   ├── OnlineLyricsWelcomeSplash.jsx   # Online Lyrics Search welcome and help modal component
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
+|   |   ├── OutputSettingsPanel/            # Presentational pieces for output settings
+|   |   |   ├── BackgroundBandSettingsSection.jsx # Background band height and padding controls
+|   |   |   ├── DropShadowSettingsSection.jsx # Drop shadow color, opacity, offset, and blur controls
+|   |   |   ├── FontSizeSettingsSection.jsx # Font size, max lines, and translation-size controls
+|   |   |   ├── FullscreenSettingsSection.jsx # Fullscreen background and image element controls
+|   |   |   ├── PanelHeaderActions.jsx      # Output enable, template, NDI, and help action buttons
+|   |   |   ├── TransitionSettingsSection.jsx # Transition animation and speed controls
+|   |   |   └── TypographySpacingSection.jsx # Letter spacing, line spacing, and text border controls
 |   |   ├── OutputSettingsShared.jsx        # Shared UI components for output and stage settings panel
 |   |   ├── OutputTemplatesModal.jsx        # Output settings templates modal
 |   |   ├── PresentationImportModal.jsx     # Presentation file import/conversion modal
@@ -360,6 +390,11 @@ lyric-display-app/
 |   |   ├── TimerControlModule.jsx          # Dedicated timer control window module
 |   |   ├── UserMediaModal.jsx              # Reusable user media library picker and upload modal
 |   |   ├── UserPreferencesModal.jsx        # User preferences UI
+|   |   ├── UserPreferencesModal/           # Presentational pieces for user preferences
+|   |   |   ├── AdvancedPreferencesSection.jsx # Advanced settings and security-token controls
+|   |   |   ├── ExternalControlPreferencesSection.jsx # MIDI and OSC settings controls
+|   |   |   ├── NdiPreferencesSection.jsx    # NDI companion status, download, and auto-launch controls
+|   |   |   └── UserPreferencesLayout.jsx    # Two-pane preferences modal shell, sidebar, header actions, and footer
 |   |   └── WelcomeSplash.jsx               # Welcome splash modal for first time install
 │   ├── constants/
 |   |   ├── easyWorship.js                  # Some EasyWorship constants
@@ -375,42 +410,78 @@ lyric-display-app/
 |   |   └── NdiStore.js                     # NDI Zustand store definitions
 │   ├── hooks/
 |   |   ├── LyricDisplayApp/
+|   |   |   ├── useControlPanelFileActions.js # Control panel file, editor, setlist, and modal open actions
+|   |   |   ├── useCustomOutputActions.js   # Custom output add/delete actions for the control panel
 |   |   |   ├── useDragAndDrop.js           # Drag and drop operations for control panel
 |   |   |   ├── useElectronListeners.js     # Hook for listening to main process events and broadcasts for control panel
 |   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for control panel
+|   |   |   ├── useLineCounterText.js       # Loaded lyric line counter text calculation
 |   |   |   ├── useLyricsLoader.js          # Multi-source lyrics load processor for control panel 
+|   |   |   ├── useLrcTimestampHydration.js # Stored LRC timestamp and section restoration
 |   |   |   ├── useQuickParserControls.js   # Quick parser state, preferences sync and reload handling
 |   |   |   ├── useMenuShortcuts.js         # Hook for handling menu navigation/shortcuts
+|   |   |   ├── useOutputControlActions.js  # Display output toggle, clear, and settings tab actions
 |   |   |   ├── useOutputSettings.js        # Hook for output settings tab switcher
+|   |   |   ├── usePendingLyricsLoad.js     # Startup pending lyrics load handoff
+|   |   |   ├── usePendingSavedVersionPrompt.js # Prompt for loading recently saved lyrics
+|   |   |   ├── useRegisterCustomOutputs.js # NDI custom output registration effect
+|   |   |   ├── useResetLyricsScroll.js     # Lyrics list reset-scroll event listener
 |   |   |   ├── useResponsiveWidth.js       # Window resize observer hook for control panel button responsiveness
 |   |   |   ├── useSetlistActions.js        # Hook for setlist action functionality
+|   |   |   ├── useSetlistNavigation.js     # Previous/next setlist navigation actions
 |   |   |   └── useSupportDevModal.js       # Hook for processing show time and parameters for support development modal
 |   |   ├── LyricsList/
-|   |   |   └── useElectronListeners.js     # Hook for listening to main process events and broadcasts for lyrics list
+|   |   |   ├── useElectronListeners.js     # Hook for listening to main process events and broadcasts for lyrics list
+|   |   |   ├── useLyricsListGrouping.js    # Lyrics list grouping and ungrouping operations
+|   |   |   ├── useLyricsListHistory.js     # Lyrics list undo/redo history state and Electron menu integration
+|   |   |   ├── useLyricsListRows.js        # Lyrics list row metadata, row height, and class-name logic
+|   |   |   ├── useLyricsListSelection.js   # Lyrics list selection, context-menu, copy, and send-to-output behavior
+|   |   |   ├── useSectionNavigation.js     # Lyrics section chips and scroll-to-line behavior
+|   |   |   └── useStageOnlyTutorial.js     # Stage-only marker tutorial state and preference handling
 |   |   ├── NewSongCanvas/
+|   |   |   ├── useCanvasDismissalEffects.js # Canvas escape-key and outside-click dismissal effects
+|   |   |   ├── useCanvasEditorInteractions.js # Canvas textarea, context-menu, touch, metadata, and section interactions
+|   |   |   ├── useCanvasEditorLayout.js    # Canvas layout measurements, scroll restore, and line offsets
+|   |   |   ├── useCanvasLoadLifecycle.js   # Canvas initial load, edit-mode load, and Electron load handoff lifecycle
+|   |   |   ├── useCanvasNavigationActions.js # Canvas back, new-song, open-file, and preferences actions
 |   |   |   ├── useCanvasSearch.js          # Content search hook for editing area/canvas
+|   |   |   ├── useCanvasSearchHighlight.js # Search match highlight positioning and scroll behavior
+|   |   |   ├── useDraftEvents.js           # Secondary-controller draft submission event handlers
+|   |   |   ├── useDraftLoader.js           # Compose-mode draft formatting and submit action
 |   |   |   ├── useEditorClipboard.js       # Hook for cut, copy and paste handlers
 |   |   |   ├── useEditorHistory.js         # Hook for history state management of lyrics editor canvas
+|   |   |   ├── useEditorUndoRedoShortcuts.js # Undo/redo metadata restore and keyboard shortcuts
 |   |   |   ├── useElectronListeners.js     # Hook for listening to main process events and broadcasts for new song canvas
 |   |   |   ├── useFileSave.js              # Canvas file operations hook
 |   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for canvas
 |   |   |   ├── useLineMeasurements.js      # Hook for measuring and calculating line dimensions in canvas
 |   |   |   ├── useLineOperations.js        # Hook for line manipulation operations in canvas
 |   |   |   ├── useLrcEligibility.js        # Hook for determining LRC format eligibility
+|   |   |   ├── usePendingCanvasFocus.js    # Deferred textarea focus and selection restoration
 |   |   |   ├── useTimestampOperations.js   # Hook for timestamp handling and operations
 |   |   |   └── useTitlePrefill.js          # Hook for auto-prefilling song title in canvas
 |   |   ├── OnlineLyricsSearchModal/
 |   |   |   ├── useKeyboardShortcuts.js     # Keyboard entry listener for online lyrics search modal
+|   |   |   ├── useLyricsProviderKeys.js    # Provider key loading, editing, saving, and deletion
 |   |   |   └── useNetworkStatus.js         # Internet connection status hook
 |   |   ├── OutputSettingsPanel/
-|   |   |   ├── useAdvancedSectio....js     # Hook for advanced sections visibility states
+|   |   |   ├── useAdvancedSectionPersistence.js # Hook for advanced sections visibility states
+|   |   |   ├── useFullscreenAdvancedAutoExpand.js # Fullscreen advanced section auto-expand and reveal behavior
 |   |   |   ├── useFullscreenBackground.js  # Hook for handling fullscreen background controls
+|   |   |   ├── useFullscreenElementMedia.js # Fullscreen overlay image selection and defaults
 |   |   |   ├── useFullscreenModeState.js   # Fullscreen mode and settings visibility state hook
 |   |   |   ├── useOutputToggle.js          # Individual output switch manager
 |   |   |   ├── useStageDisplayControls.js  # Hook for stage display controls
 |   |   |   └── useTypographyAndBands.js    # Background band and related logic hook
 |   |   ├── SetlistModal/
 |   |   |   └── useSetlistLoader.js         # Hook for setlist file loading functionality
+|   |   ├── UserPreferencesModal/
+|   |   |   ├── useMidiPreferences.js       # MIDI status, learning, mapping, and port actions
+|   |   |   ├── useNdiPreferences.js        # NDI companion store selectors and companion actions
+|   |   |   ├── useNumberPreferenceDrafts.js # Numeric preference draft and commit helpers
+|   |   |   ├── useOscPreferences.js        # OSC enable, port, and feedback actions
+|   |   |   ├── usePreferencesPersistence.js # Preferences load, save, browse, and category reset lifecycle
+|   |   |   └── useSecurityPreferences.js    # Security token key status and rotation actions
 |   |   ├── WindowChrome/
 |   |   |   ├── useMenuHandlers.js          # Menu operations hook for top menu bar
 |   |   |   ├── useSubMenuListNav.js        # Hook for handling top menu bar sub-menu navigation
