@@ -137,7 +137,7 @@ function HelpButton({ darkMode, showModal }) {
   );
 }
 
-function StatusBox({ status }) {
+function StatusBox({ status, port }) {
   if (!status?.message) return null;
 
   const styles = {
@@ -147,6 +147,7 @@ function StatusBox({ status }) {
   };
 
   const Icon = status.type === 'success' ? CheckCircle2 : status.type === 'error' ? ShieldAlert : PlugZap;
+  const portLabel = port ? String(port) : 'configured port';
 
   return (
     <div className={`flex items-start gap-2 rounded-md border p-3 text-sm ${styles[status.type] || styles.info}`}>
@@ -156,7 +157,7 @@ function StatusBox({ status }) {
         {status.showObsHelp && (
           <div className="mt-2 space-y-1 text-xs leading-relaxed">
             <div>In OBS, open <strong>Tools</strong> then <strong>WebSocket Server Settings</strong>.</div>
-            <div>Enable the WebSocket server, confirm the port is <strong>4455</strong>, and copy the server password here if authentication is enabled.</div>
+            <div>Enable the WebSocket server, confirm the port is <strong>{portLabel}</strong>, and copy the server password here if authentication is enabled.</div>
           </div>
         )}
       </div>
@@ -308,6 +309,10 @@ export default function ObsSetup() {
     });
   }, [fps, height, lockSource, mode, obsBaseResolution, obsHost, obsPort, selectedOutput, selectedScene, sourceBaseUrl, sourceName, transformMode, useObsBaseResolution, width]);
 
+  React.useEffect(() => {
+    saveCurrentProfile();
+  }, [saveCurrentProfile]);
+
   const connectToObs = React.useCallback(async () => {
     setIsConnecting(true);
     setIsObsConnected(false);
@@ -435,7 +440,7 @@ export default function ObsSetup() {
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-xl font-semibold">OBS Source Creator</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Create or update a LyricDisplay Browser Source in OBS.
               </p>
             </div>
@@ -515,7 +520,7 @@ export default function ObsSetup() {
             </Button>
 
             <div className="mt-4">
-              <StatusBox status={status} />
+              <StatusBox status={status} port={obsPort} />
             </div>
 
             <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-800 dark:bg-gray-950">

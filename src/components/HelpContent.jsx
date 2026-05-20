@@ -360,7 +360,7 @@ export const ObsWebSocketHelp = ({ darkMode }) => (
         <HelpSection
             icon={Network}
             title="Check the Port"
-            description="The default WebSocket server port is 4455. You can use this port or change it if needed, but make sure to match the port number in the LyricDisplay OBS Source Creator (default 4455)."
+            description="The default WebSocket server port is 4455, but if you change it in OBS, make sure it matches the port number entered in the LyricDisplay OBS Source Creator."
             darkMode={darkMode}
         />
 

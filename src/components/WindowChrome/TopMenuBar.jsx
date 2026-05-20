@@ -123,7 +123,7 @@ const TopMenuBar = () => {
     openMenu,
     setOpenMenu,
     topMenuOrder,
-    focusParentItem: () => focusIndex('file', 4),
+    focusParentItem: () => focusIndex('file', 5),
     setOpenReason: ensureReason,
   });
 
@@ -457,7 +457,8 @@ const TopMenuBar = () => {
                   )}
                 </div>
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 3} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="OBS Source Creator" onClick={menuHandlers.handleOpenObsSourceCreator} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 3} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 4} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <div
                   className="relative"
                   onMouseEnter={() => {
@@ -467,12 +468,12 @@ const TopMenuBar = () => {
                   onMouseLeave={closeImportAfterDelay}
                 >
                   <MenuItem
-                    ref={(el) => registerItemRef('file', 4, el)}
+                    ref={(el) => registerItemRef('file', 5, el)}
                     label="Import Lyrics"
                     shortcut=">"
                     onClick={() => { }}
                     disabled={isNewSongCanvas}
-                    active={openMenu?.startsWith('file') && activeIndex === 4}
+                    active={openMenu?.startsWith('file') && activeIndex === 5}
                     title={isNewSongCanvas ? 'Only available in Control Panel' : undefined}
                     onMouseEnter={() => {
                       if (isNewSongCanvas) return;
@@ -514,9 +515,9 @@ const TopMenuBar = () => {
                     </div>
                   )}
                 </div>
-                <MenuItem ref={(el) => registerItemRef('file', 5, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 5} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('file', 6, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 6} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('file', 6, el)} label="Quit" shortcut="Alt + F4" onClick={menuHandlers.handleQuit} active={openMenu?.startsWith('file') && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('file', 7, el)} label="Quit" shortcut="Alt + F4" onClick={menuHandlers.handleQuit} active={openMenu?.startsWith('file') && activeIndex === 7} />
               </div>
             )}
           </div>

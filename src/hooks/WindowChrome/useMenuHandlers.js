@@ -183,6 +183,15 @@ const useMenuHandlers = (closeMenu) => {
     window.dispatchEvent(new Event('open-qr-dialog'));
   }, [closeMenu]);
 
+  const handleOpenObsSourceCreator = useCallback(() => {
+    closeMenu();
+    try {
+      window.electronAPI?.display?.openObsSourceCreatorWindow?.();
+    } catch (error) {
+      console.warn('Failed to open OBS Source Creator window:', error);
+    }
+  }, [closeMenu]);
+
   const handleEasyWorship = useCallback(() => {
     closeMenu();
     window.dispatchEvent(new Event('open-easyworship-import'));
@@ -390,6 +399,7 @@ const useMenuHandlers = (closeMenu) => {
     handleOpenRecent,
     handleClearRecents,
     handleConnectMobile,
+    handleOpenObsSourceCreator,
     handleEasyWorship,
     handlePresentationImport,
     handlePreviewOutputs,
