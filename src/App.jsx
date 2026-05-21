@@ -1,14 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
-import ControlPanel from './pages/ControlPanel';
-import Output1 from './pages/Output1';
-import Output2 from './pages/Output2';
-import Stage from './pages/Stage';
-import TimeDisplay from './pages/TimeDisplay';
-import OutputPage from './pages/OutputPage';
-import ObsSetup from './pages/ObsSetup';
-import NewSongCanvas from './components/NewSongCanvas';
-import TimerControlModule from './components/TimerControlModule';
+import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useDarkModeState, useIsDesktopApp } from './hooks/useStoreSelectors';
 import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
@@ -16,10 +7,30 @@ import { ModalProvider } from '@/components/modal/ModalProvider';
 import { ControlSocketProvider } from './context/ControlSocketProvider';
 import DesktopShell from './components/WindowChrome/DesktopShell';
 import AppErrorBoundary from './components/AppErrorBoundary';
-import { ElectronModalBridge, JoinCodePromptBridge, NdiBridge, NdiUpdaterBridge, PreferencesLoaderBridge, QRCodeDialogBridge, ShortcutsHelpBridge, SupportDevelopmentBridge, UpdaterBridge, WelcomeSplashBridge, } from './components/bridges';
+import PreferencesLoaderBridge from './components/bridges/PreferencesLoaderBridge';
 import { REQUEST_MODAL_CLOSE_EVENT } from './constants/modalEvents';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
+
+const ControlPanel = React.lazy(() => import('./pages/ControlPanel'));
+const Output1 = React.lazy(() => import('./pages/Output1'));
+const Output2 = React.lazy(() => import('./pages/Output2'));
+const Stage = React.lazy(() => import('./pages/Stage'));
+const TimeDisplay = React.lazy(() => import('./pages/TimeDisplay'));
+const OutputPage = React.lazy(() => import('./pages/OutputPage'));
+const ObsSetup = React.lazy(() => import('./pages/ObsSetup'));
+const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
+const TimerControlModule = React.lazy(() => import('./components/TimerControlModule'));
+
+const ElectronModalBridge = React.lazy(() => import('./components/bridges/ElectronModalBridge'));
+const JoinCodePromptBridge = React.lazy(() => import('./components/bridges/JoinCodePromptBridge'));
+const NdiBridge = React.lazy(() => import('./components/bridges/NdiBridge'));
+const NdiUpdaterBridge = React.lazy(() => import('./components/bridges/NdiUpdaterBridge'));
+const QRCodeDialogBridge = React.lazy(() => import('./components/bridges/QRCodeDialogBridge'));
+const ShortcutsHelpBridge = React.lazy(() => import('./components/bridges/ShortcutsHelpBridge'));
+const SupportDevelopmentBridge = React.lazy(() => import('./components/bridges/SupportDevelopmentBridge'));
+const UpdaterBridge = React.lazy(() => import('./components/bridges/UpdaterBridge'));
+const WelcomeSplashBridge = React.lazy(() => import('./components/bridges/WelcomeSplashBridge'));
 
 function ConditionalDesktopShell({ children }) {
   const isDesktopApp = useIsDesktopApp();
@@ -29,6 +40,71 @@ function ConditionalDesktopShell({ children }) {
   }
 
   return <>{children}</>;
+}
+
+function MainWindowBridges() {
+  return (
+    <React.Suspense fallback={null}>
+      <NdiBridge />
+      <ElectronModalBridge />
+      <JoinCodePromptBridge />
+      <WelcomeSplashBridge />
+      <UpdaterBridge />
+      <NdiUpdaterBridge />
+      <QRCodeDialogBridge />
+      <ShortcutsHelpBridge />
+      <SupportDevelopmentBridge />
+    </React.Suspense>
+  );
+}
+
+function AppRoutes() {
+  const location = useLocation();
+  const isMainWindowRoute = location.pathname === '/' || location.pathname.startsWith('/new-song');
+
+  return (
+    <>
+      {isMainWindowRoute && <MainWindowBridges />}
+      <React.Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={
+            <ConditionalDesktopShell>
+              <ControlSocketProvider>
+                <ControlPanel />
+              </ControlSocketProvider>
+            </ConditionalDesktopShell>
+          } />
+          <Route path="/output1" element={<Output1 />} />
+          <Route path="/output2" element={<Output2 />} />
+          <Route path="/output3" element={<OutputPage outputId="output3" />} />
+          <Route path="/output4" element={<OutputPage outputId="output4" />} />
+          <Route path="/output5" element={<OutputPage outputId="output5" />} />
+          <Route path="/output6" element={<OutputPage outputId="output6" />} />
+          <Route path="/stage" element={<Stage />} />
+          <Route path="/time" element={<TimeDisplay />} />
+          <Route path="/obs-setup" element={
+            <ConditionalDesktopShell>
+              <ObsSetup />
+            </ConditionalDesktopShell>
+          } />
+          <Route path="/new-song" element={
+            <ConditionalDesktopShell>
+              <ControlSocketProvider>
+                <NewSongCanvas />
+              </ControlSocketProvider>
+            </ConditionalDesktopShell>
+          } />
+          <Route path="/timer-control" element={
+            <ConditionalDesktopShell>
+              <ControlSocketProvider role="timer-control">
+                <TimerControlModule />
+              </ControlSocketProvider>
+            </ConditionalDesktopShell>
+          } />
+        </Routes>
+      </React.Suspense>
+    </>
+  );
 }
 
 export default function App() {
@@ -108,52 +184,8 @@ export default function App() {
       <ToastProvider isDark={!!darkMode}>
         <AppErrorBoundary>
           <PreferencesLoaderBridge />
-          <NdiBridge />
-          <ElectronModalBridge />
-          <JoinCodePromptBridge />
-          <WelcomeSplashBridge />
-          <UpdaterBridge />
-          <NdiUpdaterBridge />
-          <QRCodeDialogBridge />
-          <ShortcutsHelpBridge />
-          <SupportDevelopmentBridge />
           <Router>
-            <Routes>
-              <Route path="/" element={
-                <ConditionalDesktopShell>
-                  <ControlSocketProvider>
-                    <ControlPanel />
-                  </ControlSocketProvider>
-                </ConditionalDesktopShell>
-              } />
-              <Route path="/output1" element={<Output1 />} />
-              <Route path="/output2" element={<Output2 />} />
-              <Route path="/output3" element={<OutputPage outputId="output3" />} />
-              <Route path="/output4" element={<OutputPage outputId="output4" />} />
-              <Route path="/output5" element={<OutputPage outputId="output5" />} />
-              <Route path="/output6" element={<OutputPage outputId="output6" />} />
-              <Route path="/stage" element={<Stage />} />
-              <Route path="/time" element={<TimeDisplay />} />
-              <Route path="/obs-setup" element={
-                <ConditionalDesktopShell>
-                  <ObsSetup />
-                </ConditionalDesktopShell>
-              } />
-              <Route path="/new-song" element={
-                <ConditionalDesktopShell>
-                  <ControlSocketProvider>
-                    <NewSongCanvas />
-                  </ControlSocketProvider>
-                </ConditionalDesktopShell>
-              } />
-              <Route path="/timer-control" element={
-                <ConditionalDesktopShell>
-                  <ControlSocketProvider>
-                    <TimerControlModule />
-                  </ControlSocketProvider>
-                </ConditionalDesktopShell>
-              } />
-            </Routes>
+            <AppRoutes />
           </Router>
         </AppErrorBoundary>
       </ToastProvider>

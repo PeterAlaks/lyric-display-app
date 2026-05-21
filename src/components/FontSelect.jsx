@@ -65,6 +65,7 @@ const FontSelect = ({
   const [searchTerm, setSearchTerm] = React.useState('');
   const [installedFonts, setInstalledFonts] = React.useState([]);
   const [loadingFonts, setLoadingFonts] = React.useState(false);
+  const [fontsLoaded, setFontsLoaded] = React.useState(false);
   const [menuState, setMenuState] = React.useState('closed');
   const searchInputRef = React.useRef(null);
   const containerRef = React.useRef(null);
@@ -144,24 +145,30 @@ const FontSelect = ({
   const normalizedValue = normalizeFontName(value);
 
   React.useEffect(() => {
-    if (!isDesktopApp) return undefined;
+    if (!isDesktopApp || !isMenuVisible || fontsLoaded) return undefined;
 
     let mounted = true;
     setLoadingFonts(true);
 
     loadSystemFonts()
       .then((fonts) => {
-        if (mounted) setInstalledFonts(fonts || []);
+        if (mounted) {
+          setInstalledFonts(fonts || []);
+          setFontsLoaded(true);
+        }
       })
       .catch(() => {
-        if (mounted) setInstalledFonts([]);
+        if (mounted) {
+          setInstalledFonts([]);
+          setFontsLoaded(true);
+        }
       })
       .finally(() => {
         if (mounted) setLoadingFonts(false);
       });
 
     return () => { mounted = false; };
-  }, [isDesktopApp]);
+  }, [fontsLoaded, isDesktopApp, isMenuVisible]);
 
   const filterFonts = React.useCallback((list) => {
     if (!searchTerm.trim()) return list;

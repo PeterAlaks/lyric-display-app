@@ -171,6 +171,7 @@ const TimerControlModule = () => {
   const { timerState, now, displayValue, intensity, progress, actions } = useSharedTimer({
     emitTimerUpdate: emitStageTimerUpdate,
     controller: true,
+    tickIntervalMs: 1000,
   });
   const { commitTimerState } = actions;
   const latestTimerStateRef = React.useRef(timerState);

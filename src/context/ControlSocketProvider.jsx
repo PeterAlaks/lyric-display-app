@@ -18,7 +18,7 @@ export const useControlSocket = () => {
 
 const LONG_BACKOFF_WARNING_MS = 4000;
 
-export const ControlSocketProvider = ({ children }) => {
+export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const socketRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
     const heartbeatIntervalRef = useRef(null);
@@ -37,7 +37,7 @@ export const ControlSocketProvider = ({ children }) => {
         clearAuthToken,
     } = useAuth();
 
-    const { registerAuthenticatedHandlers } = useSocketEvents('control');
+    const { registerAuthenticatedHandlers } = useSocketEvents(role);
 
     const getClientType = useCallback(() => {
         if (window.electronAPI) return 'desktop';

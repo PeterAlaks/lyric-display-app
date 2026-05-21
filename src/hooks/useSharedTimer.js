@@ -55,11 +55,12 @@ const getPausedRemainingLabel = (state) => (
     : null
 );
 
-export const useSharedTimer = ({ emitTimerUpdate, controller = false } = {}) => {
+export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickIntervalMs = 250 } = {}) => {
   const [timerState, setTimerState] = React.useState(() => readStoredTimerState());
   const [now, setNow] = React.useState(Date.now());
   const latestStateRef = React.useRef(timerState);
   const emitRef = React.useRef(emitTimerUpdate);
+  const activeTickIntervalMs = Math.max(100, Number(tickIntervalMs) || 250);
 
   React.useEffect(() => {
     latestStateRef.current = timerState;
@@ -123,9 +124,9 @@ export const useSharedTimer = ({ emitTimerUpdate, controller = false } = {}) => 
 
   React.useEffect(() => {
     const shouldTick = timerState.running || timerState.status === 'running' || timerState.status === 'paused';
-    const interval = window.setInterval(() => setNow(Date.now()), shouldTick ? 250 : 1000);
+    const interval = window.setInterval(() => setNow(Date.now()), shouldTick ? activeTickIntervalMs : 1000);
     return () => window.clearInterval(interval);
-  }, [timerState.running, timerState.status]);
+  }, [activeTickIntervalMs, timerState.running, timerState.status]);
 
   const startTimer = React.useCallback((options = {}) => {
     const current = latestStateRef.current;
