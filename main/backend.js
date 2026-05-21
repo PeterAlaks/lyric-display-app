@@ -35,7 +35,7 @@ async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
   return false;
 }
 
-export function startBackend() {
+export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false } = {}) {
   return new Promise((resolve, reject) => {
     const serverPath = resolveProductionPath('server', 'index.js');
     const backendDataDir = path.join(app.getPath('userData'), 'backend');
@@ -45,7 +45,9 @@ export function startBackend() {
       env: {
         ...process.env,
         NODE_ENV: app.isPackaged ? 'production' : 'development',
-        LYRICDISPLAY_DATA_DIR: backendDataDir
+        LYRICDISPLAY_DATA_DIR: backendDataDir,
+        LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
+        LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     });
@@ -127,6 +129,18 @@ export function startBackend() {
       }
     }, 3000);
   });
+}
+
+export function registerObsDockPairingToken(token) {
+  if (!backendProcess || !token) return false;
+
+  try {
+    backendProcess.send({ type: 'obs-dock-pairing-token', token });
+    return true;
+  } catch (error) {
+    console.warn('[Backend] Failed to send OBS dock pairing token:', error);
+    return false;
+  }
 }
 
 export function stopBackend() {

@@ -146,10 +146,10 @@ export async function handleBackendStartupError(error, requestRendererModal) {
  * @param {Function} options.handleDisplayChange - Display change handler
  * @returns {Promise<BrowserWindow>} - The main window instance
  */
-export async function performStartupSequence({ menuAPI, requestRendererModal, handleDisplayChange }) {
+export async function performStartupSequence({ menuAPI, requestRendererModal, handleDisplayChange, headless = false, obsDockPairingToken = null }) {
   try {
     updateLoadingStatus('Starting backend server');
-    await startBackend();
+    await startBackend({ obsDockPairingToken, allowLocalObsDockAuth: headless });
     console.log('[Startup] Backend started successfully');
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -176,6 +176,13 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     updateLoadingStatus('Initializing NDI manager');
     registerNdiIpcHandlers();
     registerExternalControlIPC();
+
+    if (headless) {
+      initDisplayManager(handleDisplayChange);
+      initializeNdiManager();
+      console.log('[Startup] Headless mode initialized without creating renderer windows');
+      return null;
+    }
 
     const mainWindow = createWindow('/');
 

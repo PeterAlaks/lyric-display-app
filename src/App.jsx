@@ -9,6 +9,7 @@ import OutputPage from './pages/OutputPage';
 import ObsSetup from './pages/ObsSetup';
 import NewSongCanvas from './components/NewSongCanvas';
 import TimerControlModule from './components/TimerControlModule';
+import ObsDockLayout from './components/ObsDockLayout';
 import { useDarkModeState, useIsDesktopApp } from './hooks/useStoreSelectors';
 import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
@@ -138,6 +139,11 @@ export default function App() {
                 <ConditionalDesktopShell>
                   <ObsSetup />
                 </ConditionalDesktopShell>
+              } />
+              <Route path="/obs-dock" element={
+                <ControlSocketProvider>
+                  <ObsDockLayout />
+                </ControlSocketProvider>
               } />
               <Route path="/new-song" element={
                 <ConditionalDesktopShell>

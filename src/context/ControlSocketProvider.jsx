@@ -5,6 +5,7 @@ import { resolveBackendOrigin } from '../utils/network';
 import useSocketEvents from '../hooks/useSocketEvents';
 import { connectionManager } from '../utils/connectionManager';
 import { logDebug, logError, logWarn } from '../utils/logger';
+import { getRequestedControllerClientType } from '../utils/clientType';
 
 const ControlSocketContext = createContext(null);
 
@@ -41,6 +42,8 @@ export const ControlSocketProvider = ({ children }) => {
 
     const getClientType = useCallback(() => {
         if (window.electronAPI) return 'desktop';
+        const requestedClientType = getRequestedControllerClientType();
+        if (requestedClientType) return requestedClientType;
         if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
             return 'mobile';
         }
@@ -227,7 +230,7 @@ export const ControlSocketProvider = ({ children }) => {
                     setReady(false);
                     stopHeartbeat();
 
-                    if (reason !== 'io client disconnect' && reason !== 'transport close') {
+                    if (reason !== 'io client disconnect') {
                         scheduleRetry();
                     }
                 };

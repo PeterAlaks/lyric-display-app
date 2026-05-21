@@ -166,6 +166,8 @@ LyricDisplay accepts plain text (.txt) and lyrics (.lrc) files
 ### Project Structure
 ```
 lyric-display-app/
+├── build/                                  # Packaging support files
+|   └── Start LyricDisplay Headless.cmd     # Windows helper to launch LyricDisplay for OBS dock use
 ├── lyricdisplay-ndi/                       # LyricDisplay NDI Companion (Separate repo but needed here for development)
 ├── main/                                   # Electron main script modules
 |   ├── ipc/                                # IPC handlers
@@ -232,6 +234,7 @@ lyric-display-app/
 |   ├── utils.js                            # Utility file to get local IP address
 |   └── windows.js                          # Main window builder
 ├── public/                                 # Static assets
+|   └── obs-dock.html                       # Static OBS custom-dock launcher for headless startup
 ├── scripts/                                # Custom npm scripts
 |   ├── release.js                          # Release assistant main script
 |   └── update-version.js                   # Helper script for updating current version in readme and install guide
@@ -239,6 +242,7 @@ lyric-display-app/
 |   ├── auth/                               # Backend authentication and permission helpers
 |   |   ├── httpAuth.js                     # Express bearer-token authentication middleware factory
 |   |   ├── joinCodeGuard.js                # Guard/limiter for join code attempts by secondary controllers
+|   |   ├── obsDockPairing.js               # Temporary token exchange for OBS dock headless pairing
 |   |   ├── permissions.js                  # Backend client permission mapping and permission checks
 |   |   ├── socketAuth.js                   # Socket.io JWT authentication middleware factory
 |   |   └── tokens.js                       # JWT generation, validation, expiry, and rotation grace helpers
@@ -365,6 +369,7 @@ lyric-display-app/
 |   |   |   ├── LyricsSearchResults.jsx   # Suggestion and full-result list renderers
 |   |   |   └── ProviderAdvancedPanel.jsx # Featured providers, key management, and provider status
 |   |   ├── OnlineLyricsWelcomeSplash.jsx   # Online Lyrics Search welcome and help modal component
+|   |   ├── ObsDockLayout.jsx               # Compact OBS custom-dock controller UI
 |   |   ├── OutputSettingsPanel.jsx         # Settings panel interface
 |   |   ├── OutputSettingsPanel/            # Presentational pieces for output settings
 |   |   |   ├── BackgroundBandSettingsSection.jsx # Background band height and padding controls
@@ -523,6 +528,7 @@ lyric-display-app/
 │   ├── utils/
 |   |   ├── artistDetection.js              # Scans Known Artists database for various uses around the app
 |   |   ├── asyncLyricsParser.js            # Picks worker/IPC/sync parsing strategy
+|   |   ├── clientType.js                   # URL and route based controller client type resolution
 |   |   ├── connectionManager.js            # Socket connection management utility
 |   |   ├── errorClassification.js          # Network error detection and description utility
 |   |   ├── logger.js                       # Simple event and error logger utility

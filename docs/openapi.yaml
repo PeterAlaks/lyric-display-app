@@ -9,7 +9,9 @@ info:
     API documentation for the LyricDisplay App's Express REST API. JWTs minted here
     are required for Socket.IO connections (`auth.token`). Desktop tokens in production
     require the admin key; web/mobile controller tokens require the 6-digit join code
-    and are rate-limited.
+    and are rate-limited. OBS dock controllers can also authenticate through the
+    local-only temporary pairing exchange used by protocol startup, or through
+    local-only dock auth when LyricDisplay was intentionally started headless.
 
 servers:
   - url: http://localhost:4000
@@ -35,7 +37,7 @@ paths:
               properties:
                 clientType:
                   type: string
-                  enum: [desktop, web, output1, output2, stage, mobile]
+                  enum: [desktop, web, obsDock, output1, output2, stage, mobile]
                 deviceId:
                   type: string
                   description: Stable device identifier used for rate limiting and permissions
@@ -46,7 +48,7 @@ paths:
                   description: Required for desktop clients in production
                 joinCode:
                   type: string
-                  description: Required for controller clients (web, mobile)
+                  description: Required for controller clients (web, mobile, obsDock) unless obsDock uses the local pairing endpoint
       responses:
         '200':
           description: Token generated successfully
@@ -87,6 +89,47 @@ paths:
                   joinCode:
                     type: string
                     nullable: true
+
+  /api/auth/obs-dock/token:
+    post:
+      summary: Exchange OBS dock local startup proof for an obsDock JWT
+      description: >
+        Local-only endpoint used by the bundled OBS dock launcher after it starts
+        LyricDisplay through the lyricdisplay://start-headless protocol. The
+        pairing token is short-lived and consumed on successful exchange. If
+        LyricDisplay was started in headless mode with local OBS dock auth enabled,
+        the endpoint may also mint a limited obsDock token without a pairing token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceId
+                - pairingToken
+              properties:
+                deviceId:
+                  type: string
+                sessionId:
+                  type: string
+                pairingToken:
+                  type: string
+                  description: Temporary token from the OBS dock launcher; optional when local headless OBS dock auth is enabled
+      responses:
+        '200':
+          description: OBS dock token generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad request (missing fields)
+        '403':
+          description: Forbidden (non-local origin or invalid pairing token)
+        '500':
+          description: Server error
 
   /api/auth/refresh:
     post:

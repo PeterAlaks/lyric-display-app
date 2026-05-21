@@ -109,6 +109,18 @@
       {
         "from": "INSTALLATION.md",
         "to": "INSTALLATION.md"
+      },
+      {
+        "from": "public/obs-dock.html",
+        "to": "obs-dock.html"
+      },
+      {
+        "from": "public/LyricDisplay-icon.png",
+        "to": "LyricDisplay-icon.png"
+      },
+      {
+        "from": "build/Start LyricDisplay Headless.cmd",
+        "to": "Start LyricDisplay Headless.cmd"
       }
     ],
     "win": {
@@ -250,6 +262,12 @@
           "description": "LyricDisplay setlist file",
           "mimeType": "application/x-ldset"
         }
+      ]
+    },
+    "protocols": {
+      "name": "LyricDisplay",
+      "schemes": [
+        "lyricdisplay"
       ]
     },
     "publish": [

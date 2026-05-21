@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import registerSocketEvents, { getOutputRegistry, hasOutput } from './events.js';
 import SimpleSecretManager from './security/secretManager.js';
 import { createTokenService } from './auth/tokens.js';
+import { registerObsDockPairingToken } from './auth/obsDockPairing.js';
 import { createRequestAuthenticator } from './auth/httpAuth.js';
 import { createSocketAuthenticator } from './auth/socketAuth.js';
 import { hasPermission } from './auth/permissions.js';
@@ -43,6 +44,10 @@ const TOKEN_EXPIRY = secrets.TOKEN_EXPIRY || process.env.TOKEN_EXPIRY || '24h';
 const ADMIN_TOKEN_EXPIRY = secrets.ADMIN_TOKEN_EXPIRY || process.env.ADMIN_TOKEN_EXPIRY || '7d';
 
 global.controllerJoinCode = String(Math.floor(100000 + Math.random() * 900000));
+
+if (process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN) {
+  registerObsDockPairingToken(process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -115,6 +120,15 @@ registerHealthRoutes(app, {
   secretManager,
   startupSecretRotation,
   tokenRateLimit,
+});
+
+process.on('message', (message) => {
+  if (message?.type === 'obs-dock-pairing-token') {
+    const registered = registerObsDockPairingToken(message.token);
+    if (registered) {
+      console.log('Registered temporary OBS dock pairing token');
+    }
+  }
 });
 
 if (!isDev) {

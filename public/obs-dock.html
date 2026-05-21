@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LyricDisplay OBS Dock</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #070a12;
+        color: #f8fafc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #070a12;
+      }
+
+      main {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        justify-content: center;
+        gap: 18px;
+        padding: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand img {
+        height: 34px;
+        width: 34px;
+        border-radius: 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 0;
+        color: #9ca3af;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .status {
+        min-height: 44px;
+        border: 1px solid #1f2937;
+        border-radius: 8px;
+        background: #111827;
+        padding: 10px 12px;
+        color: #d1d5db;
+        font-size: 13px;
+      }
+
+      .status.ready {
+        border-color: #16a34a;
+        color: #bbf7d0;
+      }
+
+      .status.error {
+        border-color: #dc2626;
+        color: #fecaca;
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      button,
+      a.button {
+        display: inline-flex;
+        min-height: 42px;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #ffffff;
+        cursor: pointer;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      button.secondary,
+      a.button.secondary {
+        border: 1px solid #374151;
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      code {
+        overflow-wrap: anywhere;
+        color: #bfdbfe;
+        font-size: 12px;
+      }
+
+      .hidden-frame {
+        display: none;
+        height: 0;
+        width: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <img src="./LyricDisplay-icon.png" alt="" />
+        <div>
+          <h1>LyricDisplay OBS Dock</h1>
+          <p>Open the OBS dock controller. If OBS cannot start the app, use the headless shortcut beside this file.</p>
+        </div>
+      </div>
+
+      <div id="status" class="status">Checking local LyricDisplay service...</div>
+
+      <div class="actions">
+        <button id="startButton" type="button">Open / Try Start Dock</button>
+        <a id="dockLink" class="button secondary" href="http://127.0.0.1:4000/#/obs-dock">Open Dock Controller</a>
+        <button id="openDesktopButton" class="secondary" type="button">Open Desktop App</button>
+      </div>
+
+      <p>Dock URL: <code id="dockUrlLabel">http://127.0.0.1:4000/#/obs-dock</code></p>
+      <iframe id="protocolFrame" class="hidden-frame" title=""></iframe>
+    </main>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const startButton = document.getElementById('startButton');
+      const protocolFrame = document.getElementById('protocolFrame');
+      const isViteDev = window.location.protocol.startsWith('http') && window.location.port === '5173';
+      const pageParams = new URLSearchParams(window.location.search || '');
+      const createPairingToken = () => {
+        const bytes = new Uint8Array(32);
+        if (window.crypto && window.crypto.getRandomValues) {
+          window.crypto.getRandomValues(bytes);
+        } else {
+          for (let index = 0; index < bytes.length; index += 1) {
+            bytes[index] = Math.floor(Math.random() * 256);
+          }
+        }
+        return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+      };
+
+      const requestedPairingToken = pageParams.get('obsPairingToken');
+      const pairingToken = requestedPairingToken && requestedPairingToken.trim().length >= 32
+        ? requestedPairingToken.trim()
+        : createPairingToken();
+      const dockUrl = isViteDev
+        ? `${window.location.origin}/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`
+        : `http://127.0.0.1:4000/#/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`;
+      const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
+      document.getElementById('dockLink').href = dockUrl;
+      document.getElementById('dockUrlLabel').textContent = dockUrl;
+
+      const setStatus = (message, className = '') => {
+        statusEl.className = `status ${className}`.trim();
+        statusEl.textContent = message;
+      };
+
+      const requestProtocolLaunch = (url) => {
+        try {
+          protocolFrame.src = 'about:blank';
+          window.setTimeout(() => {
+            protocolFrame.src = url;
+          }, 0);
+        } catch {
+        }
+      };
+
+      const checkReady = async () => {
+        try {
+          const response = await fetch(readyUrl, { cache: 'no-store' });
+          if (!response.ok) return false;
+          const payload = await response.json();
+          return payload && payload.status === 'ready' && payload.serverListening;
+        } catch {
+          return false;
+        }
+      };
+
+      const pollReady = async ({ navigate = false, attempts = 40, pendingMessage = 'Waiting for LyricDisplay to become ready...' } = {}) => {
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+          const ready = await checkReady();
+          if (ready) {
+            setStatus(navigate ? 'LyricDisplay is running. Opening dock controller...' : 'LyricDisplay is running.', 'ready');
+            if (navigate) window.location.href = dockUrl;
+            return true;
+          }
+          if (attempt === 0) {
+            setStatus(pendingMessage);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 750));
+        }
+
+        return false;
+      };
+
+      const launchHeadlessAndPair = async () => {
+        if (await checkReady()) {
+          setStatus('LyricDisplay is already running. Opening dock controller...', 'ready');
+          window.location.href = dockUrl;
+          return;
+        }
+
+        setStatus('Requesting LyricDisplay headless startup...');
+        requestProtocolLaunch(`lyricdisplay://start-headless?obsPairingToken=${encodeURIComponent(pairingToken)}`);
+        window.setTimeout(async () => {
+          const ready = await pollReady({
+            navigate: true,
+            attempts: 40,
+            pendingMessage: 'Waiting for LyricDisplay to start...'
+          });
+
+          if (!ready) {
+            setStatus('OBS did not hand off the app link. Run "Start LyricDisplay Headless.cmd" from the LyricDisplay install folder, then click Open Dock Controller.', 'error');
+          }
+        }, 1200);
+      };
+
+      startButton.addEventListener('click', launchHeadlessAndPair);
+      document.getElementById('dockLink').addEventListener('click', async (event) => {
+        event.preventDefault();
+        if (await checkReady()) {
+          window.location.href = dockUrl;
+          return;
+        }
+        launchHeadlessAndPair();
+      });
+      document.getElementById('openDesktopButton').addEventListener('click', () => {
+        requestProtocolLaunch('lyricdisplay://open');
+      });
+
+      pollReady({ navigate: true, attempts: 4, pendingMessage: 'Checking local LyricDisplay service...' }).then((ready) => {
+        if (!ready) {
+          setStatus('LyricDisplay is not running. Click Open / Try Start Dock, or run "Start LyricDisplay Headless.cmd" from the install folder.', '');
+        }
+      });
+    </script>
+  </body>
+</html>

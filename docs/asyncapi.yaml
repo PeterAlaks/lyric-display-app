@@ -315,7 +315,7 @@ components:
         properties:
           type:
             type: string
-            enum: ['desktop', 'web', 'output1', 'output2', 'stage', 'mobile']
+            enum: ['desktop', 'web', 'obsDock', 'output1', 'output2', 'stage', 'mobile']
       description: Must be sent after successful authenticated connection.
       x-permissions: ['lyrics:read']
     splitNormalGroup:
