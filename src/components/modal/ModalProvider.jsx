@@ -483,7 +483,7 @@ export function ModalProvider({ children, isDark = false }) {
               className="pointer-events-none relative flex h-full items-center justify-center px-4 py-10">
               <div
                 className={cn(
-                  'pointer-events-auto transform rounded-2xl border ring-1 transition-all duration-200 flex flex-col',
+                  'pointer-events-auto transform rounded-2xl border ring-1 transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
                   isDark ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200',
                   palette.ring,
                   isTopModal ? 'shadow-2xl' : 'shadow-xl',
@@ -543,7 +543,7 @@ export function ModalProvider({ children, isDark = false }) {
 
                 {/* Scrollable Content */}
                 <div className={cn(
-                  'flex-1',
+                  'min-h-0 flex-1',
                   modal.customLayout ? 'overflow-hidden' : 'px-6 py-5',
                   !modal.customLayout && (modal.scrollBehavior === 'scroll' ? 'overflow-y-scroll' : 'overflow-y-auto')
                 )}>
@@ -551,7 +551,7 @@ export function ModalProvider({ children, isDark = false }) {
                     <div
                       id={`modal-${modal.id}-description`}
                       className={cn(
-                        modal.customLayout ? 'h-full' : 'text-sm leading-relaxed text-gray-500 dark:text-gray-300'
+                        modal.customLayout ? 'h-full min-h-0' : 'text-sm leading-relaxed text-gray-500 dark:text-gray-300'
                       )}
                     >
                       {/* Render component-based modals */}

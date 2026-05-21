@@ -240,9 +240,9 @@ const ProjectOutputModal = ({
   const dark = darkMode;
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-b-2xl" style={{ height: 560 }}>
+    <div className="flex h-[560px] max-h-full min-h-0 flex-col overflow-hidden rounded-b-2xl">
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
         {/* Detection banner */}
         {detectionBanner && (
