@@ -1,13 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
+import useSupportDevModal from '@/hooks/LyricDisplayApp/useSupportDevModal';
 import SupportDevelopmentModal from '../SupportDevelopmentModal';
 
 export default function SupportDevelopmentBridge() {
   const { darkMode } = useDarkModeState();
-  const [isOpen, setIsOpen] = useState(false);
+  const {
+    isOpen,
+    openModal,
+    closeModal,
+    trackAction,
+  } = useSupportDevModal();
 
   useEffect(() => {
-    const handler = () => setIsOpen(true);
+    const handler = () => openModal();
     let unsubscribe;
 
     try {
@@ -28,16 +34,21 @@ export default function SupportDevelopmentBridge() {
       }
       window.removeEventListener('open-support-dev-modal', handler);
     };
-  }, []);
+  }, [openModal]);
 
-  const handleClose = () => {
-    setIsOpen(false);
-  };
+  useEffect(() => {
+    const handler = (event) => {
+      trackAction(event?.detail?.actionType);
+    };
+
+    window.addEventListener('support-dev:track-action', handler);
+    return () => window.removeEventListener('support-dev:track-action', handler);
+  }, [trackAction]);
 
   return (
     <SupportDevelopmentModal
       isOpen={isOpen}
-      onClose={handleClose}
+      onClose={closeModal}
       isDark={darkMode}
     />
   );

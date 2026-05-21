@@ -88,7 +88,11 @@ const LyricDisplayApp = () => {
 
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch: baseHandleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
 
-  const trackAction = React.useCallback(() => { }, []);
+  const trackAction = React.useCallback((actionType) => {
+    window.dispatchEvent(new CustomEvent('support-dev:track-action', {
+      detail: { actionType }
+    }));
+  }, []);
   const { showToast } = useToast();
   const { showModal } = useModal();
 
