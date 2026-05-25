@@ -20,15 +20,27 @@ export const STRUCTURE_TAGS_CONFIG = {
 
 // Common structure tag patterns
 export const STRUCTURE_TAG_PATTERNS = [
-  // [Verse], (Verse), {Verse}, <Verse>, [Verse 1:], [Chorus], [Chorus: Artist Name], etc.
-  // Matches section markers with optional numbers and optional artist/descriptor after colon
-  /^\s*[\[\(\{<](Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?(?:\s*:\s*[^\]\)\}>]*)?\s*[\]\)\}>]\s*/i,
+  // [Verse], (Verse), {Verse}, <Verse>, [Verse 1:], [Chorus: Artist], etc.
+  // Supports many common song structure markers with optional numbering/sub-labels
+  /^\s*[\[\(\{<](Verse|Vamp|Chorus|Hook|Refrain|Bridge|Intro|Outro|Pre[- ]?Chorus|Post[- ]?Chorus|Pre[- ]?Hook|Post[- ]?Hook|Interlude|Break|Instrumental|Solo|Rap|Rap Verse|Spoken|Coda|Backing Vocals|Ad[- ]?Libs?|Adlibs?|Outro Chorus|Final Chorus|Ending Chorus)(\s+\d+)?(?:\s*[-–]\s*[^\]\)\}>:]+)?(?:\s*:\s*[^\]\)\}>]*)?\s*[\]\)\}>]\s*/i,
 
-  // Verse 1:, Chorus:, etc. (WITH colon at start of line)
-  /^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*:\s*/i,
+  // Verse 1:, Chorus:, Bridge:, etc. (with colon)
+  /^\s*(Verse|Vamp|Chorus|Hook|Refrain|Bridge|Intro|Outro|Pre[- ]?Chorus|Post[- ]?Chorus|Pre[- ]?Hook|Post[- ]?Hook|Interlude|Break|Instrumental|Solo|Rap|Rap Verse|Spoken|Coda|Backing Vocals|Ad[- ]?Libs?|Adlibs?|Outro Chorus|Final Chorus|Ending Chorus)(\s+\d+)?(?:\s*[-–]\s*[^:]+)?\s*:\s*/i,
 
-  // Verse 1, Chorus, Bridge, etc. (WITHOUT colon, standalone on line)
-  /^\s*(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Pre Chorus|Hook|Refrain|Interlude|Break)(\s+\d+)?\s*$/i,
+  // Verse 1, Chorus, Bridge, etc. (standalone line without colon)
+  /^\s*(Verse|Vamp|Chorus|Hook|Refrain|Bridge|Intro|Outro|Pre[- ]?Chorus|Post[- ]?Chorus|Pre[- ]?Hook|Post[- ]?Hook|Interlude|Break|Instrumental|Solo|Rap|Rap Verse|Spoken|Coda|Backing Vocals|Ad[- ]?Libs?|Adlibs?|Outro Chorus|Final Chorus|Ending Chorus)(\s+\d+)?\s*$/i,
+
+  // Roman numeral sections: Verse II, Chorus IV, etc.
+  /^\s*(Verse|Chorus|Bridge|Hook|Refrain)\s+[IVXLC]+\s*:?$/i,
+
+  // Numeric shorthand: V1, C2, B1, PC, etc. Single-letter forms require numbers.
+  /^\s*(?:(?:V|C|B|O|I|R)\d+|(?:PC|HC)\d*)\s*:?$/i,
+
+  // ALL CAPS common markers
+  /^\s*(VERSE|CHORUS|BRIDGE|HOOK|REFRAIN|INTRO|OUTRO|PRE[- ]?CHORUS|POST[- ]?CHORUS|INTERLUDE|INSTRUMENTAL|SOLO|RAP)(\s+\d+)?\s*:?$/,
+
+  // Double section markers: Chorus x2, Repeat Chorus, etc.
+  /^\s*(Repeat\s+)?(Verse|Chorus|Bridge|Hook|Refrain|Outro|Intro)(\s+\d+)?(\s*x\d+)?\s*:?$/i,
 ];
 
 export const TIME_TAG_REGEX = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
