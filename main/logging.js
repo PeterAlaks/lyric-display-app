@@ -9,6 +9,7 @@ const MAX_ROTATED_LOGS = 3;
 let initialized = false;
 let logDir = null;
 let logFilePath = null;
+let latestLogFilePath = null;
 let logStream = null;
 let originals = null;
 
@@ -24,6 +25,15 @@ const safeInspect = (value) => {
 };
 
 const formatArgs = (args) => args.map(safeInspect).join(' ');
+
+const createSessionLogFileName = () => {
+  const stamp = new Date()
+    .toISOString()
+    .replace(/[:.]/g, '-')
+    .replace('T', '_')
+    .replace('Z', '');
+  return `lyricdisplay-${stamp}-pid${process.pid}.log`;
+};
 
 const resolveLogDir = () => {
   try {
@@ -88,6 +98,7 @@ export const writeRawLog = (level, text) => {
 export const getLogPaths = () => ({
   logDir,
   logFilePath,
+  latestLogFilePath,
 });
 
 export function initFileLogging() {
@@ -104,9 +115,16 @@ export function initFileLogging() {
   try {
     logDir = resolveLogDir();
     fs.mkdirSync(logDir, { recursive: true });
-    logFilePath = path.join(logDir, 'lyricdisplay.log');
+    logFilePath = path.join(logDir, createSessionLogFileName());
+    latestLogFilePath = path.join(logDir, 'latest.log');
     rotateLogs(logFilePath);
+    rotateLogs(latestLogFilePath);
     logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+    try {
+      fs.writeFileSync(latestLogFilePath, logFilePath, 'utf8');
+    } catch (error) {
+      originals.warn('[Logging] Failed to write latest log pointer:', error);
+    }
   } catch (error) {
     originals.warn('[Logging] Failed to initialize file logging:', error);
     return getLogPaths();
