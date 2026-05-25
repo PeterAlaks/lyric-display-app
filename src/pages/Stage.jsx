@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { useLyricsState, useOutputState, useStageSettings, useSetlistState, useIndividualOutputState } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
@@ -121,7 +122,9 @@ const useAutoFitText = (text, options = {}) => {
 };
 
 const Stage = () => {
-  const searchParams = new URLSearchParams(window.location.search);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
 
   useSocket('stage');
@@ -443,7 +446,7 @@ const Stage = () => {
   const responsiveBottomBarSize = bottomBarSize * scaleFactor;
 
   const currentLine = selectedLine !== null && selectedLine !== undefined ? selectedLine : null;
-  const isVisible = Boolean(isOutputOn && stageEnabled && currentLine !== null && lyrics.length > 0);
+  const isVisible = Boolean((isPreviewMode || (isOutputOn && stageEnabled)) && currentLine !== null && lyrics.length > 0);
 
   const getUpcomingSongName = useCallback(() => {
 

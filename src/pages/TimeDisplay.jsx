@@ -136,7 +136,7 @@ const TimeDisplay = () => {
       }}
     >
       {label && (
-      <div className="absolute inset-x-0 top-[1.5vh] flex justify-center px-[1vw]">
+      <div className="absolute inset-x-0 top-[7vh] flex justify-center px-[1vw]">
         <div
           className="font-bold leading-none text-center"
           style={{

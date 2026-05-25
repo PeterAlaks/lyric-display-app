@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { useLyricsState, useOutputState, useOutputSettings, useOutputEnabled, useCustomOutputIds } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
@@ -16,6 +17,7 @@ import { calculateOptimalFontSize } from '../utils/maxLinesCalculator';
  */
 const OutputPage = ({ outputId }) => {
   const label = outputId.charAt(0).toUpperCase() + outputId.slice(1);
+  const location = useLocation();
 
   const isDefaultOutput = outputId === 'output1' || outputId === 'output2';
   const customOutputIds = useCustomOutputIds();
@@ -34,7 +36,7 @@ const OutputPage = ({ outputId }) => {
   const { lyrics, selectedLine } = useLyricsState();
   const { isOutputOn } = useOutputState();
 
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
 
