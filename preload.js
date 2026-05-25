@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSystemFonts: () => ipcRenderer.invoke('fonts:list'),
   getPlatform: () => process.platform,
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  getLogPaths: () => ipcRenderer.invoke('app:get-log-paths'),
   restartApp: () => ipcRenderer.invoke('app:relaunch'),
   windowControls: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

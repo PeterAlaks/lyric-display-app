@@ -1,6 +1,7 @@
 import { BrowserWindow, shell } from 'electron';
 import path from 'path';
 import { isDev, resolveProductionPath, appRoot } from './paths.js';
+import { writeLog } from './logging.js';
 
 function attachWindowStateEvents(win) {
   const sendState = () => {
@@ -20,6 +21,35 @@ function attachWindowStateEvents(win) {
   });
 
   sendState();
+}
+
+function attachRendererDiagnostics(win, route) {
+  const describeWindow = () => {
+    try {
+      return `${win.getTitle?.() || 'Untitled'} (${route || win.webContents.getURL?.() || 'unknown route'})`;
+    } catch {
+      return route || 'unknown route';
+    }
+  };
+
+  win.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[Window] Renderer process gone:', describeWindow(), details);
+  });
+
+  win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    const levelNames = ['VERBOSE', 'INFO', 'WARN', 'ERROR'];
+    const levelName = levelNames[level] || `LEVEL_${level}`;
+    if (level < 2 && !isDev) return;
+    writeLog(`RENDERER_${levelName}`, describeWindow(), `${sourceId || 'unknown'}:${line || 0}`, message);
+  });
+
+  win.on('unresponsive', () => {
+    console.warn('[Window] Renderer became unresponsive:', describeWindow());
+  });
+
+  win.on('responsive', () => {
+    console.log('[Window] Renderer became responsive:', describeWindow());
+  });
 }
 
 export function createWindow(route = '/', options = {}) {
@@ -68,6 +98,7 @@ export function createWindow(route = '/', options = {}) {
   if (isControlWindow) {
     attachWindowStateEvents(win);
   }
+  attachRendererDiagnostics(win, route);
 
   if (projection) {
     try {

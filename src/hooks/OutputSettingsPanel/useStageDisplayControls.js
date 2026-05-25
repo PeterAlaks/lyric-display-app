@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useControlSocket } from '../../context/ControlSocketProvider';
 import useToast from '../useToast';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
@@ -37,6 +37,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
   const [hasUnsavedUpcomingSongName, setHasUnsavedUpcomingSongName] = useState(false);
   const [timerAdvancedExpanded, setTimerAdvancedExpanded] = useState(false);
   const [customMessagesAdvancedExpanded, setCustomMessagesAdvancedExpanded] = useState(false);
+  const latestTimerSnapshotRef = useRef(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem(STORAGE_KEYS.customUpcomingSongName);
@@ -120,6 +121,21 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     const nextPausedRemainingMs = Number.isFinite(nextTimer.pausedRemainingMs)
       ? nextTimer.pausedRemainingMs
       : null;
+    const nextSnapshot = {
+      running: nextRunning,
+      paused: nextPaused,
+      endTime: nextEndTime,
+      pausedRemainingMs: nextPausedRemainingMs,
+      durationMs: nextTimer.durationMs,
+      remaining: nextTimer.remaining || null,
+      finished: Boolean(nextTimer.finished),
+      displayFormat: nextTimer.display?.format || 'auto',
+    };
+
+    if (JSON.stringify(nextSnapshot) === JSON.stringify(latestTimerSnapshotRef.current)) {
+      return;
+    }
+    latestTimerSnapshotRef.current = nextSnapshot;
 
     setTimerRunning(nextRunning);
     setTimerPaused(nextPaused);

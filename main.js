@@ -13,6 +13,7 @@ import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
 import * as userPreferences from './main/userPreferences.js';
+import { initFileLogging } from './main/logging.js';
 
 if (!isDev && process.env.FORCE_COMPATIBILITY) {
   app.commandLine.appendSwitch('--disable-gpu-sandbox');
@@ -48,6 +49,8 @@ const hasLock = setupSingleInstanceLock((commandLine) => {
 if (!hasLock) {
   process.exit(0);
 }
+
+initFileLogging();
 
 if (process.platform === 'win32' && process.argv.length >= 2) {
   const filePath = extractFilePathFromArgs(process.argv);

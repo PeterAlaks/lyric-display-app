@@ -210,6 +210,7 @@ lyric-display-app/
 |   ├── inAppBrowser.js                     # In-App browser window configuration and styling
 |   ├── ipc.js                              # IPC handlers import (Backward compatibility)
 |   ├── loadingWindow.js                    # Loading process window
+|   ├── logging.js                          # Production file logging and renderer/backend diagnostics
 |   ├── menuBridge.js                       # Renderer/menu bridge (dark mode, undo/redo state)
 |   ├── midiController.js                   # MIDI main controller module
 |   ├── modalBridge.js                      # Global modal bridge for electron main process

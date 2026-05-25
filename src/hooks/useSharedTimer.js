@@ -55,6 +55,22 @@ const getPausedRemainingLabel = (state) => (
     : null
 );
 
+const stripVolatileTimerFields = (state) => {
+  if (!state || typeof state !== 'object') return state;
+  return {
+    ...state,
+    updatedAt: 0,
+  };
+};
+
+const timerStatesAreEquivalent = (a, b) => {
+  try {
+    return JSON.stringify(stripVolatileTimerFields(a)) === JSON.stringify(stripVolatileTimerFields(b));
+  } catch {
+    return false;
+  }
+};
+
 export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickIntervalMs = 250 } = {}) => {
   const [timerState, setTimerState] = React.useState(() => readStoredTimerState());
   const [now, setNow] = React.useState(Date.now());
@@ -87,6 +103,7 @@ export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickInterv
       if (!detail || detail.type === 'upcomingSongUpdate') return;
       const normalized = normalizeTimerState(detail);
       applyIncomingDisplaySettings(normalized.display);
+      if (timerStatesAreEquivalent(normalized, latestStateRef.current)) return;
       setTimerState(normalized);
       latestStateRef.current = normalized;
       writeStoredTimerState(normalized);
@@ -96,6 +113,7 @@ export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickInterv
       if (!event?.detail) return;
       const normalized = normalizeTimerState(event.detail);
       applyIncomingDisplaySettings(normalized.display);
+      if (timerStatesAreEquivalent(normalized, latestStateRef.current)) return;
       setTimerState(normalized);
       latestStateRef.current = normalized;
     };
@@ -105,6 +123,7 @@ export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickInterv
       try {
         const normalized = normalizeTimerState(JSON.parse(event.newValue));
         applyIncomingDisplaySettings(normalized.display);
+        if (timerStatesAreEquivalent(normalized, latestStateRef.current)) return;
         setTimerState(normalized);
         latestStateRef.current = normalized;
       } catch {

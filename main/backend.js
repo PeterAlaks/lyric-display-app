@@ -2,6 +2,7 @@ import path from 'path';
 import { fork } from 'child_process';
 import { resolveProductionPath } from './paths.js';
 import { app } from 'electron';
+import { mirrorStreamToLog } from './logging.js';
 
 let backendProcess = null;
 
@@ -47,8 +48,11 @@ export function startBackend() {
         NODE_ENV: app.isPackaged ? 'production' : 'development',
         LYRICDISPLAY_DATA_DIR: backendDataDir
       },
-      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     });
+
+    mirrorStreamToLog(backendProcess.stdout, 'BACKEND', process.stdout);
+    mirrorStreamToLog(backendProcess.stderr, 'BACKEND_ERROR', process.stderr);
 
     let isResolved = false;
 
