@@ -3,11 +3,23 @@ import path from 'path';
 import { isDev, resolveProductionPath, appRoot } from './paths.js';
 import { writeLog } from './logging.js';
 
+const MEMORY_LOG_INTERVAL_MS = 60_000;
+const RECOVERABLE_RENDERER_REASONS = new Set(['crashed', 'killed', 'oom']);
+
+function getUsableWebContents(win) {
+  if (!win || win.isDestroyed()) return null;
+  const webContents = win.webContents;
+  if (!webContents || webContents.isDestroyed()) return null;
+  if (typeof webContents.isCrashed === 'function' && webContents.isCrashed()) return null;
+  return webContents;
+}
+
 function attachWindowStateEvents(win) {
   const sendState = () => {
     try {
-      if (win && !win.isDestroyed()) {
-        win.webContents.send('window-state', {
+      const webContents = getUsableWebContents(win);
+      if (webContents) {
+        webContents.send('window-state', {
           isMaximized: win.isMaximized(),
           isFullScreen: win.isFullScreen(),
           isFocused: win.isFocused()
@@ -23,7 +35,45 @@ function attachWindowStateEvents(win) {
   sendState();
 }
 
-function attachRendererDiagnostics(win, route) {
+function normalizeConsoleMessage(levelOrDetails, message, line, sourceId) {
+  if (levelOrDetails && typeof levelOrDetails === 'object') {
+    return {
+      level: levelOrDetails.level,
+      message: levelOrDetails.message,
+      line: levelOrDetails.lineNumber ?? levelOrDetails.line ?? 0,
+      sourceId: levelOrDetails.sourceId,
+    };
+  }
+
+  return {
+    level: levelOrDetails,
+    message,
+    line: line ?? 0,
+    sourceId,
+  };
+}
+
+function isWarnOrErrorLevel(level) {
+  if (typeof level === 'number') return level >= 2;
+  const normalized = String(level || '').toLowerCase();
+  return normalized === 'warn' || normalized === 'warning' || normalized === 'error';
+}
+
+function getConsoleLevelName(level) {
+  if (typeof level === 'number') {
+    const levelNames = ['VERBOSE', 'INFO', 'WARN', 'ERROR'];
+    return levelNames[level] || `LEVEL_${level}`;
+  }
+  return String(level || 'INFO').toUpperCase();
+}
+
+function shouldRecoverRenderer(route, projection, details) {
+  if (projection) return false;
+  const isControlRoute = route === '/' || route.startsWith('/new-song') || route.startsWith('/timer-control') || route.startsWith('/obs-setup');
+  return isControlRoute && RECOVERABLE_RENDERER_REASONS.has(details?.reason);
+}
+
+function attachRendererDiagnostics(win, route, { projection = false } = {}) {
   const describeWindow = () => {
     try {
       return `${win.getTitle?.() || 'Untitled'} (${route || win.webContents.getURL?.() || 'unknown route'})`;
@@ -34,13 +84,29 @@ function attachRendererDiagnostics(win, route) {
 
   win.webContents.on('render-process-gone', (_event, details) => {
     console.error('[Window] Renderer process gone:', describeWindow(), details);
+    if (!shouldRecoverRenderer(route, projection, details) || win.__rendererRecoveryPending) {
+      return;
+    }
+
+    win.__rendererRecoveryPending = true;
+    const timer = setTimeout(() => {
+      win.__rendererRecoveryPending = false;
+      if (!win || win.isDestroyed()) return;
+      try {
+        console.warn('[Window] Reloading renderer after process exit:', describeWindow(), details);
+        win.reload();
+      } catch (err) {
+        console.error('[Window] Failed to reload renderer after process exit:', describeWindow(), err);
+      }
+    }, 1000);
+    timer.unref?.();
   });
 
-  win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-    const levelNames = ['VERBOSE', 'INFO', 'WARN', 'ERROR'];
-    const levelName = levelNames[level] || `LEVEL_${level}`;
-    if (level < 2 && !isDev) return;
-    writeLog(`RENDERER_${levelName}`, describeWindow(), `${sourceId || 'unknown'}:${line || 0}`, message);
+  win.webContents.on('console-message', (event) => {
+    const details = normalizeConsoleMessage(event);
+    if (!isWarnOrErrorLevel(details.level) && !isDev) return;
+    const levelName = getConsoleLevelName(details.level);
+    writeLog(`RENDERER_${levelName}`, describeWindow(), `${details.sourceId || 'unknown'}:${details.line || 0}`, details.message);
   });
 
   win.on('unresponsive', () => {
@@ -49,6 +115,37 @@ function attachRendererDiagnostics(win, route) {
 
   win.on('responsive', () => {
     console.log('[Window] Renderer became responsive:', describeWindow());
+  });
+
+  let memoryCapturePending = false;
+  const logMemory = async (reason) => {
+    if (memoryCapturePending) return;
+    const webContents = getUsableWebContents(win);
+    if (!webContents || typeof webContents.getProcessMemoryInfo !== 'function') return;
+    memoryCapturePending = true;
+    try {
+      const memory = await webContents.getProcessMemoryInfo();
+      writeLog('WINDOW_MEMORY', describeWindow(), reason, memory);
+    } catch (err) {
+      if (!win.isDestroyed()) {
+        writeLog('WINDOW_MEMORY_ERROR', describeWindow(), reason, err);
+      }
+    } finally {
+      memoryCapturePending = false;
+    }
+  };
+
+  win.webContents.on('did-finish-load', () => {
+    logMemory('did-finish-load');
+  });
+
+  const memoryTimer = setInterval(() => {
+    logMemory('interval');
+  }, MEMORY_LOG_INTERVAL_MS);
+  memoryTimer.unref?.();
+
+  win.on('closed', () => {
+    clearInterval(memoryTimer);
   });
 }
 
@@ -98,7 +195,7 @@ export function createWindow(route = '/', options = {}) {
   if (isControlWindow) {
     attachWindowStateEvents(win);
   }
-  attachRendererDiagnostics(win, route);
+  attachRendererDiagnostics(win, route, { projection });
 
   if (projection) {
     try {

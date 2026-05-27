@@ -5,6 +5,23 @@ let getWindow = () => null;
 let handlersRegistered = false;
 const pending = new Map();
 
+function getUsableWebContents(win) {
+  if (!win || win.isDestroyed()) return null;
+  const webContents = win.webContents;
+  if (!webContents || webContents.isDestroyed()) return null;
+  if (typeof webContents.isCrashed === 'function' && webContents.isCrashed()) return null;
+  return webContents;
+}
+
+function runFallbackOrReject(fallback, rejectMessage) {
+  if (typeof fallback === 'function') {
+    return Promise.resolve()
+      .then(() => fallback())
+      .then((result) => normalizeModalResult(result));
+  }
+  return Promise.reject(new Error(rejectMessage));
+}
+
 function ensureHandlers() {
   if (handlersRegistered) return;
   ipcMain.handle('modal-bridge:resolve', (_event, payload) => {
@@ -46,13 +63,8 @@ export function requestRendererModal(config = {}, options = {}) {
   const win = getWindow?.();
   const fallback = options.fallback;
 
-  if (!win || win.isDestroyed()) {
-    if (typeof fallback === 'function') {
-      return Promise.resolve()
-        .then(() => fallback())
-        .then((result) => normalizeModalResult(result));
-    }
-    return Promise.reject(new Error('No active window available for renderer modal'));
+  if (!getUsableWebContents(win)) {
+    return runFallbackOrReject(fallback, 'No active renderer available for renderer modal');
   }
 
   const requestId = config.id || randomUUID();
@@ -82,7 +94,11 @@ export function requestRendererModal(config = {}, options = {}) {
     });
 
     try {
-      win.webContents.send('modal-bridge:request', { ...config, id: requestId });
+      const webContents = getUsableWebContents(win);
+      if (!webContents) {
+        throw new Error('Renderer is unavailable for modal request');
+      }
+      webContents.send('modal-bridge:request', { ...config, id: requestId });
     } catch (err) {
       clearTimeout(timeout);
       pending.delete(requestId);

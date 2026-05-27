@@ -4,6 +4,10 @@ import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerCo
 
 let maxSetlistFilesLimit = 50;
 
+const settingsChanged = (current = {}, next = {}) => {
+  if (!next || typeof next !== 'object' || Array.isArray(next)) return false;
+  return Object.entries(next).some(([key, value]) => !Object.is(current?.[key], value));
+};
 
 export async function loadPreferencesIntoStore(store) {
   try {
@@ -550,12 +554,17 @@ const useLyricsStore = create(
       output2Settings: defaultOutput2Settings,
       stageSettings: defaultStageSettings,
       updateOutputSettings: (output, newSettings) =>
-        set((state) => ({
-          [`${output}Settings`]: {
-            ...state[`${output}Settings`],
-            ...newSettings
-          }
-        })),
+        set((state) => {
+          const key = `${output}Settings`;
+          const currentSettings = state[key] || {};
+          if (!settingsChanged(currentSettings, newSettings)) return state;
+          return {
+            [key]: {
+              ...currentSettings,
+              ...newSettings
+            }
+          };
+        }),
 
       getAllOutputIds: () => {
         const state = get();

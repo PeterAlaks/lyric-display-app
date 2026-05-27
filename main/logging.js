@@ -5,6 +5,7 @@ import util from 'util';
 
 const MAX_LOG_BYTES = 5 * 1024 * 1024;
 const MAX_ROTATED_LOGS = 3;
+const RESOURCE_LOG_INTERVAL_MS = 60_000;
 
 let initialized = false;
 let logDir = null;
@@ -12,6 +13,7 @@ let logFilePath = null;
 let latestLogFilePath = null;
 let logStream = null;
 let originals = null;
+let resourceDiagnosticsTimer = null;
 
 const timestamp = () => new Date().toISOString();
 
@@ -101,6 +103,55 @@ export const getLogPaths = () => ({
   latestLogFilePath,
 });
 
+function summarizeAppMetrics() {
+  try {
+    return app.getAppMetrics().map((metric) => ({
+      type: metric.type,
+      pid: metric.pid,
+      cpuPercent: metric.cpu?.percentCPUUsage,
+      memory: metric.memory,
+    }));
+  } catch (error) {
+    return { error: error?.message || String(error) };
+  }
+}
+
+async function logResourceDiagnostics(reason) {
+  try {
+    const systemMemory = typeof process.getSystemMemoryInfo === 'function'
+      ? process.getSystemMemoryInfo()
+      : null;
+    const mainProcessMemory = typeof process.getProcessMemoryInfo === 'function'
+      ? await process.getProcessMemoryInfo()
+      : null;
+
+    writeLog('APP_RESOURCE', reason, {
+      systemMemory,
+      mainProcessMemory,
+      appMetrics: summarizeAppMetrics(),
+    });
+  } catch (error) {
+    writeLog('APP_RESOURCE_ERROR', reason, error);
+  }
+}
+
+function startResourceDiagnostics() {
+  if (resourceDiagnosticsTimer) return;
+
+  logResourceDiagnostics('startup');
+  resourceDiagnosticsTimer = setInterval(() => {
+    logResourceDiagnostics('interval');
+  }, RESOURCE_LOG_INTERVAL_MS);
+  resourceDiagnosticsTimer.unref?.();
+
+  app.once('before-quit', () => {
+    if (resourceDiagnosticsTimer) {
+      clearInterval(resourceDiagnosticsTimer);
+      resourceDiagnosticsTimer = null;
+    }
+  });
+}
+
 export function initFileLogging() {
   if (initialized) return getLogPaths();
   initialized = true;
@@ -156,6 +207,15 @@ export function initFileLogging() {
     }
   });
 
+  process.on('warning', (warning) => {
+    writeLog('PROCESS_WARNING', {
+      name: warning?.name,
+      code: warning?.code,
+      message: warning?.message,
+      stack: warning?.stack,
+    });
+  });
+
   writeLog('INFO', 'Logging initialized', {
     appName: app.getName?.(),
     version: app.getVersion?.(),
@@ -163,6 +223,7 @@ export function initFileLogging() {
     pid: process.pid,
     logFilePath,
   });
+  startResourceDiagnostics();
 
   return getLogPaths();
 }
