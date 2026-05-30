@@ -14,6 +14,7 @@ let latestLogFilePath = null;
 let logStream = null;
 let originals = null;
 let resourceDiagnosticsTimer = null;
+let resourceDiagnosticsPending = false;
 
 const timestamp = () => new Date().toISOString();
 
@@ -117,6 +118,8 @@ function summarizeAppMetrics() {
 }
 
 async function logResourceDiagnostics(reason) {
+  if (resourceDiagnosticsPending) return;
+  resourceDiagnosticsPending = true;
   try {
     const systemMemory = typeof process.getSystemMemoryInfo === 'function'
       ? process.getSystemMemoryInfo()
@@ -132,13 +135,18 @@ async function logResourceDiagnostics(reason) {
     });
   } catch (error) {
     writeLog('APP_RESOURCE_ERROR', reason, error);
+  } finally {
+    resourceDiagnosticsPending = false;
   }
 }
 
 function startResourceDiagnostics() {
   if (resourceDiagnosticsTimer) return;
 
-  logResourceDiagnostics('startup');
+  app.whenReady()
+    .then(() => logResourceDiagnostics('startup'))
+    .catch((error) => writeLog('APP_RESOURCE_ERROR', 'startup', error));
+
   resourceDiagnosticsTimer = setInterval(() => {
     logResourceDiagnostics('interval');
   }, RESOURCE_LOG_INTERVAL_MS);

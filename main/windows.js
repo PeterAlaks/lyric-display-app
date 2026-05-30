@@ -1,9 +1,11 @@
-import { BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import path from 'path';
 import { isDev, resolveProductionPath, appRoot } from './paths.js';
-import { writeLog } from './logging.js';
+import { getLogPaths, writeLog } from './logging.js';
 
 const MEMORY_LOG_INTERVAL_MS = 60_000;
+const RECOVERY_WINDOW_MS = 5 * 60_000;
+const MAX_RECOVERY_ATTEMPTS = 3;
 const RECOVERABLE_RENDERER_REASONS = new Set(['crashed', 'killed', 'oom']);
 
 function getUsableWebContents(win) {
@@ -73,6 +75,125 @@ function shouldRecoverRenderer(route, projection, details) {
   return isControlRoute && RECOVERABLE_RENDERER_REASONS.has(details?.reason);
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function recordRendererRecoveryAttempt(win) {
+  const now = Date.now();
+  const attempts = Array.isArray(win.__rendererRecoveryAttempts)
+    ? win.__rendererRecoveryAttempts.filter((timestamp) => now - timestamp < RECOVERY_WINDOW_MS)
+    : [];
+
+  if (attempts.length >= MAX_RECOVERY_ATTEMPTS) {
+    win.__rendererRecoveryAttempts = attempts;
+    return { allowed: false, attempts };
+  }
+
+  attempts.push(now);
+  win.__rendererRecoveryAttempts = attempts;
+  return { allowed: true, attempts };
+}
+
+function showRendererRecoveryFallback(parent, route, details, attemptCount) {
+  if (parent.__rendererRecoveryFallback && !parent.__rendererRecoveryFallback.isDestroyed()) {
+    try {
+      parent.__rendererRecoveryFallback.focus();
+    } catch {
+    }
+    return;
+  }
+
+  const { logFilePath, logDir } = getLogPaths();
+  const fallback = new BrowserWindow({
+    width: 560,
+    height: 360,
+    minWidth: 460,
+    minHeight: 300,
+    title: 'LyricDisplay Recovery',
+    parent: parent && !parent.isDestroyed() ? parent : undefined,
+    modal: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#111827',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  parent.__rendererRecoveryFallback = fallback;
+  fallback.on('closed', () => {
+    if (parent && !parent.isDestroyed()) {
+      parent.__rendererRecoveryFallback = null;
+    }
+  });
+
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LyricDisplay Recovery</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #111827;
+      color: #f9fafb;
+      line-height: 1.5;
+    }
+    main {
+      padding: 28px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    p {
+      margin: 0 0 12px;
+      color: #d1d5db;
+      font-size: 14px;
+    }
+    .meta {
+      margin-top: 18px;
+      padding: 12px;
+      border: 1px solid #374151;
+      background: #1f2937;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      color: #e5e7eb;
+      overflow-wrap: anywhere;
+    }
+    strong {
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>LyricDisplay stopped auto-reloading this window</h1>
+    <p>The <strong>${escapeHtml(route || 'unknown')}</strong> window renderer crashed repeatedly, so LyricDisplay stopped automatic reloads to avoid a crash loop.</p>
+    <p>This can happen under severe memory or GPU pressure. If OBS, capture devices, or recording are active, reduce the load or restart LyricDisplay before continuing the workflow.</p>
+    <p>The timer/projection windows may still be running if their renderer processes are healthy.</p>
+    <div class="meta">
+      Reason: ${escapeHtml(details?.reason || 'unknown')}<br>
+      Exit code: ${escapeHtml(details?.exitCode ?? 'unknown')}<br>
+      Reload attempts: ${escapeHtml(attemptCount)} in ${Math.round(RECOVERY_WINDOW_MS / 60000)} minutes<br>
+      Log: ${escapeHtml(logFilePath || logDir || 'Log path unavailable')}
+    </div>
+  </main>
+</body>
+</html>`;
+
+  fallback.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+}
+
 function attachRendererDiagnostics(win, route, { projection = false } = {}) {
   const describeWindow = () => {
     try {
@@ -88,12 +209,29 @@ function attachRendererDiagnostics(win, route, { projection = false } = {}) {
       return;
     }
 
+    const recovery = recordRendererRecoveryAttempt(win);
+    if (!recovery.allowed) {
+      writeLog('WINDOW_RECOVERY_LIMIT', describeWindow(), {
+        route,
+        details,
+        attempts: recovery.attempts.length,
+        windowMs: RECOVERY_WINDOW_MS,
+      });
+      showRendererRecoveryFallback(win, route, details, recovery.attempts.length);
+      return;
+    }
+
     win.__rendererRecoveryPending = true;
     const timer = setTimeout(() => {
       win.__rendererRecoveryPending = false;
       if (!win || win.isDestroyed()) return;
       try {
-        console.warn('[Window] Reloading renderer after process exit:', describeWindow(), details);
+        console.warn('[Window] Reloading renderer after process exit:', describeWindow(), {
+          ...details,
+          attempt: recovery.attempts.length,
+          maxAttempts: MAX_RECOVERY_ATTEMPTS,
+          windowMs: RECOVERY_WINDOW_MS,
+        });
         win.reload();
       } catch (err) {
         console.error('[Window] Failed to reload renderer after process exit:', describeWindow(), err);
@@ -118,14 +256,20 @@ function attachRendererDiagnostics(win, route, { projection = false } = {}) {
   });
 
   let memoryCapturePending = false;
-  const logMemory = async (reason) => {
+  const logMemory = (reason) => {
     if (memoryCapturePending) return;
     const webContents = getUsableWebContents(win);
-    if (!webContents || typeof webContents.getProcessMemoryInfo !== 'function') return;
+    if (!webContents || typeof webContents.getOSProcessId !== 'function') return;
     memoryCapturePending = true;
     try {
-      const memory = await webContents.getProcessMemoryInfo();
-      writeLog('WINDOW_MEMORY', describeWindow(), reason, memory);
+      const pid = webContents.getOSProcessId();
+      const metric = app.getAppMetrics().find((item) => item.pid === pid);
+      writeLog('WINDOW_MEMORY', describeWindow(), reason, {
+        pid,
+        type: metric?.type || null,
+        cpuPercent: metric?.cpu?.percentCPUUsage ?? null,
+        memory: metric?.memory || null,
+      });
     } catch (err) {
       if (!win.isDestroyed()) {
         writeLog('WINDOW_MEMORY_ERROR', describeWindow(), reason, err);
