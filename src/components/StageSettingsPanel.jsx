@@ -14,6 +14,37 @@ import useToast from '../hooks/useToast';
 import { sanitizeIntegerInput } from '../utils/numberInput';
 import { MAX_STAGE_MESSAGES, MAX_STAGE_MESSAGE_LENGTH } from '../utils/stageMessages';
 
+const formatTimerValue = (remainingMs) => {
+  const safeRemaining = Math.max(0, Number(remainingMs) || 0);
+  const totalSeconds = Math.ceil(safeRemaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const StageTimerValue = React.memo(({ timerRunning, timerPaused, timerEndTime, pausedRemainingMs, timeRemaining }) => {
+  const [now, setNow] = React.useState(Date.now());
+
+  React.useEffect(() => {
+    if (!timerRunning || timerPaused || !timerEndTime) return;
+    setNow(Date.now());
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [timerEndTime, timerPaused, timerRunning]);
+
+  if (timerRunning && timerPaused && Number.isFinite(pausedRemainingMs)) {
+    return formatTimerValue(pausedRemainingMs);
+  }
+
+  if (timerRunning && timerEndTime) {
+    return formatTimerValue(timerEndTime - now);
+  }
+
+  return timeRemaining || '0:00';
+});
+
+StageTimerValue.displayName = 'StageTimerValue';
+
 const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showModal, isOutputEnabled, handleToggleOutput }) => {
   const { showToast } = useToast();
   const {
@@ -30,6 +61,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
     timerPaused,
     timerEndTime,
     timeRemaining,
+    pausedRemainingMs,
     customUpcomingSongName,
     upcomingSongAdvancedExpanded,
     hasUnsavedUpcomingSongName,
@@ -737,7 +769,13 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         {/* Left: Timer Display */}
         <div className={`flex items-center justify-center px-4 py-2 rounded-lg min-w-[120px] ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
           <div className={`text-xl font-mono font-bold ${timerRunning && !timerPaused ? (darkMode ? 'text-green-400' : 'text-green-600') : (darkMode ? 'text-gray-400' : 'text-gray-500')}`}>
-            {timeRemaining || '0:00'}
+            <StageTimerValue
+              timerRunning={timerRunning}
+              timerPaused={timerPaused}
+              timerEndTime={timerEndTime}
+              pausedRemainingMs={pausedRemainingMs}
+              timeRemaining={timeRemaining}
+            />
           </div>
         </div>
 

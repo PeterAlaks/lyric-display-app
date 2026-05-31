@@ -481,12 +481,35 @@ const useLyricsStore = create(
         }
       }),
       setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
-      updateTimerControlSettings: (settings) => set((state) => ({
-        timerControlSettings: normalizeTimerControlSettings({
-          ...state.timerControlSettings,
-          ...(settings && typeof settings === 'object' ? settings : {}),
-        }),
-      })),
+      updateTimerControlSettings: (settings, options = {}) => set((state) => {
+        const incomingSettings = settings && typeof settings === 'object' ? settings : {};
+        const currentSettings = normalizeTimerControlSettings(state.timerControlSettings);
+        const currentUpdatedAt = Number(currentSettings.settingsUpdatedAt) || 0;
+        const incomingUpdatedAt = Number(incomingSettings.settingsUpdatedAt) || 0;
+
+        if (options?.touch === false && incomingUpdatedAt > 0 && currentUpdatedAt > incomingUpdatedAt) {
+          return {};
+        }
+        if (options?.touch === false && incomingUpdatedAt === 0 && currentUpdatedAt > 0) {
+          return {};
+        }
+
+        const nextSettings = normalizeTimerControlSettings({
+          ...currentSettings,
+          ...incomingSettings,
+          settingsUpdatedAt: options?.touch === false
+            ? (incomingUpdatedAt || currentUpdatedAt)
+            : Date.now(),
+        });
+
+        if (JSON.stringify(currentSettings) === JSON.stringify(nextSettings)) {
+          return {};
+        }
+
+        return {
+          timerControlSettings: nextSettings,
+        };
+      }),
       updateTimerDisplaySettings: (settings, options = {}) => set((state) => {
         const incomingSettings = settings && typeof settings === 'object' ? settings : {};
         const currentUpdatedAt = Number(state.timerDisplaySettings?.displayUpdatedAt) || 0;

@@ -154,6 +154,7 @@ export const normalizeTimerControlSettings = (raw) => {
     indicatorEnabled: settings.indicatorEnabled !== false,
     indicatorSeconds: normalizeTimerNumberInput(settings.indicatorSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds, 0, 86400),
     indicatorLabel: typeof settings.indicatorLabel === 'string' ? settings.indicatorLabel : DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+    settingsUpdatedAt: Number.isFinite(Number(settings.settingsUpdatedAt)) ? Number(settings.settingsUpdatedAt) : 0,
   };
 };
 

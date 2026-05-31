@@ -132,9 +132,12 @@ export default function App() {
     const handleStorage = (event) => {
       if (event.key !== 'lyrics-store' || !event.newValue) return;
       try {
-        const nextSettings = JSON.parse(event.newValue)?.state?.timerDisplaySettings;
-        if (nextSettings && typeof nextSettings === 'object') {
-          useLyricsStore.getState().updateTimerDisplaySettings(nextSettings, { touch: false });
+        const nextState = JSON.parse(event.newValue)?.state;
+        if (nextState?.timerDisplaySettings && typeof nextState.timerDisplaySettings === 'object') {
+          useLyricsStore.getState().updateTimerDisplaySettings(nextState.timerDisplaySettings, { touch: false });
+        }
+        if (nextState?.timerControlSettings && typeof nextState.timerControlSettings === 'object') {
+          useLyricsStore.getState().updateTimerControlSettings(nextState.timerControlSettings, { touch: false });
         }
       } catch {
         // Ignore malformed persisted store updates.

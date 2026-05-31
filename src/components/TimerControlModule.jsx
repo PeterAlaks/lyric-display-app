@@ -7,7 +7,18 @@ import { Switch } from '@/components/ui/switch';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useSharedTimer from '../hooks/useSharedTimer';
-import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, formatGlobalClock, minutesToMs, msToMinutesInput, secondsToMs, splitClockPeriod } from '../utils/timerUtils';
+import {
+  DEFAULT_TIMER_CONTROL_SETTINGS,
+  DEFAULT_TIMER_DISPLAY,
+  formatGlobalClock,
+  getTimerDisplay,
+  getTimerIntensity,
+  getTimerProgress,
+  minutesToMs,
+  msToMinutesInput,
+  secondsToMs,
+  splitClockPeriod,
+} from '../utils/timerUtils';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import FontSelect from './FontSelect';
 
@@ -163,15 +174,111 @@ const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, da
   );
 };
 
+const usePreviewClock = (enabled, intervalMs = 1000) => {
+  const [now, setNow] = React.useState(Date.now());
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    setNow(Date.now());
+    const interval = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(interval);
+  }, [enabled, intervalMs]);
+
+  return now;
+};
+
+const TimerPreview = React.memo(({ timerState, displaySettings }) => {
+  const showSecondaryText = displaySettings.showSecondaryText !== false;
+  const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
+  const now = usePreviewClock(needsClock, 1000);
+  const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
+  const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
+  const progress = React.useMemo(() => getTimerProgress(timerState, now), [timerState, now]);
+  const accent = intensity === 'critical' ? '#EF4444' : intensity === 'warning' ? '#F59E0B' : displaySettings.accentColor;
+  const globalClockValue = React.useMemo(() => formatGlobalClock(now, {
+    clockHour12: displaySettings.clockHour12,
+    clockShowSeconds: displaySettings.clockShowSeconds,
+    clockShowPeriod: displaySettings.clockShowPeriod,
+  }), [displaySettings.clockHour12, displaySettings.clockShowPeriod, displaySettings.clockShowSeconds, now]);
+  const globalClockParts = React.useMemo(() => splitClockPeriod(globalClockValue), [globalClockValue]);
+
+  return (
+    <>
+      <div
+        className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
+        style={{ backgroundColor: displaySettings.backgroundColor }}
+      >
+        {showSecondaryText && (
+          <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
+            {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
+          </div>
+        )}
+        <div
+          className="leading-none max-w-full"
+          style={{
+            color: intensity === 'critical' ? '#EF4444' : displaySettings.textColor,
+            fontFamily: displaySettings.timerFontFamily,
+            fontSize: displaySettings.timerFontSizeMode === 'manual' ? `${displaySettings.timerFontSize}px` : 'clamp(4rem, 12vw, 10rem)',
+            fontWeight: displaySettings.timerBold ? 700 : 400,
+            fontStyle: displaySettings.timerItalic ? 'italic' : 'normal',
+            textDecoration: displaySettings.timerUnderline ? 'underline' : 'none',
+            textAlign: displaySettings.timerAlign,
+            fontVariantNumeric: 'tabular-nums',
+            fontFeatureSettings: '"tnum" 1, "lnum" 1',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {displayValue}
+        </div>
+        {showSecondaryText && timerState.sets?.length > 1 && (
+          <div className="mt-4 text-xs text-white/70">
+            {timerState.activeSetIndex + 1} of {timerState.sets.length}
+          </div>
+        )}
+        {displaySettings.showProgress && (
+          <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
+          </div>
+        )}
+      </div>
+
+      {showSecondaryText && displaySettings.showGlobalClock && (
+        <div
+          className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
+          style={{
+            backgroundColor: displaySettings.backgroundColor,
+            borderColor: 'rgba(255,255,255,0.14)',
+          }}
+        >
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Global Time</span>
+          <span
+            className="font-mono text-2xl font-semibold text-white/80"
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              fontFeatureSettings: '"tnum" 1, "lnum" 1',
+            }}
+          >
+            {globalClockParts.time}
+            {globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
+          </span>
+        </div>
+      )}
+    </>
+  );
+});
+
+TimerPreview.displayName = 'TimerPreview';
+
 const TimerControlModule = () => {
   const { emitStageTimerUpdate } = useControlSocket();
   const { darkMode } = useDarkModeState();
   const { settings: timerControlSettings, updateSettings: updateTimerControlSettings } = useTimerControlSettings();
   const { settings: timerDisplaySettings, updateSettings: updateTimerDisplaySettings } = useTimerDisplaySettings();
-  const { timerState, now, displayValue, intensity, progress, actions } = useSharedTimer({
+  const { timerState, actions } = useSharedTimer({
     emitTimerUpdate: emitStageTimerUpdate,
     controller: true,
     tickIntervalMs: 1000,
+    renderTickIntervalMs: null,
   });
   const { commitTimerState } = actions;
   const latestTimerStateRef = React.useRef(timerState);
@@ -254,14 +361,7 @@ const TimerControlModule = () => {
   const active = timerState.running || timerState.paused;
   const activeTimerUsesSets = active && Array.isArray(timerState.sets) && timerState.sets.length > 0;
   const setRuntimeOptionsEnabled = useSets || activeTimerUsesSets;
-  const accent = intensity === 'critical' ? '#EF4444' : intensity === 'warning' ? '#F59E0B' : displaySettings.accentColor;
   const showSecondaryText = displaySettings.showSecondaryText !== false;
-  const globalClockValue = React.useMemo(() => formatGlobalClock(now, {
-    clockHour12: displaySettings.clockHour12,
-    clockShowSeconds: displaySettings.clockShowSeconds,
-    clockShowPeriod: displaySettings.clockShowPeriod,
-  }), [displaySettings.clockHour12, displaySettings.clockShowPeriod, displaySettings.clockShowSeconds, now]);
-  const globalClockParts = React.useMemo(() => splitClockPeriod(globalClockValue), [globalClockValue]);
 
   React.useEffect(() => {
     latestTimerStateRef.current = timerState;
@@ -515,65 +615,7 @@ const TimerControlModule = () => {
           </section>
 
           <section className={`rounded-lg border p-4 flex flex-col ${panelClass}`}>
-            <div
-              className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
-              style={{ backgroundColor: displaySettings.backgroundColor }}
-            >
-              {showSecondaryText && (
-                <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
-                  {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
-                </div>
-              )}
-              <div
-                className="leading-none max-w-full"
-                style={{
-                  color: intensity === 'critical' ? '#EF4444' : displaySettings.textColor,
-                  fontFamily: displaySettings.timerFontFamily,
-                  fontSize: displaySettings.timerFontSizeMode === 'manual' ? `${displaySettings.timerFontSize}px` : 'clamp(4rem, 12vw, 10rem)',
-                  fontWeight: displaySettings.timerBold ? 700 : 400,
-                  fontStyle: displaySettings.timerItalic ? 'italic' : 'normal',
-                  textDecoration: displaySettings.timerUnderline ? 'underline' : 'none',
-                  textAlign: displaySettings.timerAlign,
-                  fontVariantNumeric: 'tabular-nums',
-                  fontFeatureSettings: '"tnum" 1, "lnum" 1',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {displayValue}
-              </div>
-              {showSecondaryText && timerState.sets?.length > 1 && (
-                <div className="mt-4 text-xs text-white/70">
-                  {timerState.activeSetIndex + 1} of {timerState.sets.length}
-                </div>
-              )}
-              {displaySettings.showProgress && (
-                <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
-                </div>
-              )}
-            </div>
-
-            {showSecondaryText && displaySettings.showGlobalClock && (
-              <div
-                className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
-                style={{
-                  backgroundColor: displaySettings.backgroundColor,
-                  borderColor: 'rgba(255,255,255,0.14)',
-                }}
-              >
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Global Time</span>
-                <span
-                  className="font-mono text-2xl font-semibold text-white/80"
-                  style={{
-                    fontVariantNumeric: 'tabular-nums',
-                    fontFeatureSettings: '"tnum" 1, "lnum" 1',
-                  }}
-                >
-                  {globalClockParts.time}
-                  {globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
-                </span>
-              </div>
-            )}
+            <TimerPreview timerState={timerState} displaySettings={displaySettings} />
 
             <div className="mt-4 space-y-2">
               <div className="grid grid-cols-2 gap-2">

@@ -391,25 +391,15 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
   };
 
   useEffect(() => {
-    const formatRemaining = (remainingMs) => {
-      const safeRemaining = Math.max(0, remainingMs);
-      const minutes = Math.floor(safeRemaining / 60000);
-      const seconds = Math.floor((safeRemaining % 60000) / 1000);
-      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    };
-
     if (!timerRunning) return;
 
     if (timerPaused) {
-      if (Number.isFinite(pausedRemainingMs) && pausedRemainingMs > 0) {
-        setTimeRemaining(formatRemaining(pausedRemainingMs));
-      }
       return;
     }
 
     if (!timerEndTime) return;
 
-    const updateTimer = () => {
+    const finishTimerIfExpired = () => {
       const now = Date.now();
       const remaining = timerEndTime - now;
 
@@ -426,16 +416,13 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
         if (emitStageTimerUpdate) {
           emitStageTimerUpdate({ running: false, paused: false, endTime: null, remaining: null });
         }
-        return;
       }
-
-      setTimeRemaining(formatRemaining(remaining));
     };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    finishTimerIfExpired();
+    const interval = setInterval(finishTimerIfExpired, 1000);
     return () => clearInterval(interval);
-  }, [emitStageTimerUpdate, pausedRemainingMs, timerEndTime, timerPaused, timerRunning]);
+  }, [emitStageTimerUpdate, timerEndTime, timerPaused, timerRunning]);
 
   const handleStartTimer = () => {
     if (timerDuration <= 0) return;

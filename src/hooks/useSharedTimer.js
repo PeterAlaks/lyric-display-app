@@ -71,12 +71,18 @@ const timerStatesAreEquivalent = (a, b) => {
   }
 };
 
-export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickIntervalMs = 250 } = {}) => {
+export const useSharedTimer = ({
+  emitTimerUpdate,
+  controller = false,
+  tickIntervalMs = 250,
+  renderTickIntervalMs = tickIntervalMs,
+} = {}) => {
   const [timerState, setTimerState] = React.useState(() => readStoredTimerState());
   const [now, setNow] = React.useState(Date.now());
   const latestStateRef = React.useRef(timerState);
   const emitRef = React.useRef(emitTimerUpdate);
   const activeTickIntervalMs = Math.max(100, Number(tickIntervalMs) || 250);
+  const activeRenderTickIntervalMs = Math.max(100, Number(renderTickIntervalMs) || activeTickIntervalMs);
 
   React.useEffect(() => {
     latestStateRef.current = timerState;
@@ -142,10 +148,11 @@ export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickInterv
   }, []);
 
   React.useEffect(() => {
+    if (renderTickIntervalMs === null || renderTickIntervalMs === false) return;
     const shouldTick = timerState.running || timerState.status === 'running' || timerState.status === 'paused';
-    const interval = window.setInterval(() => setNow(Date.now()), shouldTick ? activeTickIntervalMs : 1000);
+    const interval = window.setInterval(() => setNow(Date.now()), shouldTick ? activeRenderTickIntervalMs : 1000);
     return () => window.clearInterval(interval);
-  }, [activeTickIntervalMs, timerState.running, timerState.status]);
+  }, [activeRenderTickIntervalMs, renderTickIntervalMs, timerState.running, timerState.status]);
 
   const startTimer = React.useCallback((options = {}) => {
     const current = latestStateRef.current;
@@ -293,17 +300,16 @@ export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickInterv
     });
   }, [commitTimerState]);
 
-  React.useEffect(() => {
-    if (!controller) return;
+  const processTimerBoundary = React.useCallback((timestamp = Date.now()) => {
     const current = latestStateRef.current;
     if (!current.running || current.paused || current.mode === 'countup') return;
 
-    const remainingMs = getRemainingMs(current, now);
+    const remainingMs = getRemainingMs(current, timestamp);
     if (!Number.isFinite(remainingMs) || remainingMs > 0) return;
 
     if (current.overrunMode && current.phase === 'timer') {
       if (!current.overrunStartedAt) {
-        commitTimerState({ ...current, overrunStartedAt: current.endTime || now });
+        commitTimerState({ ...current, overrunStartedAt: current.endTime || timestamp });
       }
       return;
     }
@@ -366,7 +372,14 @@ export const useSharedTimer = ({ emitTimerUpdate, controller = false, tickInterv
       pausedRemainingMs: null,
       remaining: '0:00',
     });
-  }, [commitTimerState, controller, now]);
+  }, [commitTimerState]);
+
+  React.useEffect(() => {
+    if (!controller) return;
+    processTimerBoundary();
+    const interval = window.setInterval(() => processTimerBoundary(), activeTickIntervalMs);
+    return () => window.clearInterval(interval);
+  }, [activeTickIntervalMs, controller, processTimerBoundary]);
 
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
   const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
