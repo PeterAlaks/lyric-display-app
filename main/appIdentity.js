@@ -30,7 +30,19 @@ function copyMissingRecursive(sourcePath, targetPath, summary) {
   }
 
   if (stat.isSymbolicLink()) {
-    summary.skippedSymlinks += 1;
+    if (pathExists(targetPath)) {
+      summary.skippedExisting += 1;
+      return;
+    }
+
+    try {
+      const linkTarget = fs.readlinkSync(sourcePath);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.symlinkSync(linkTarget, targetPath);
+      summary.copiedFiles += 1;
+    } catch (error) {
+      summary.errors.push({ path: sourcePath, message: error.message });
+    }
     return;
   }
 
