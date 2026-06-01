@@ -8,6 +8,7 @@ import { mergeResults } from './searchAlgorithm.js';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import '../appIdentity.js';
 
 const providers = [
   openHymnal,

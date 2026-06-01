@@ -5,6 +5,7 @@
 
 import { EventEmitter } from 'events';
 import Store from 'electron-store';
+import './appIdentity.js';
 
 // MIDI controller singleton
 class MIDIController extends EventEmitter {

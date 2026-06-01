@@ -6,6 +6,7 @@
 import { EventEmitter } from 'events';
 import Store from 'electron-store';
 import dgram from 'dgram';
+import './appIdentity.js';
 
 // OSC message types
 const OSC_TYPE_INT = 'i';

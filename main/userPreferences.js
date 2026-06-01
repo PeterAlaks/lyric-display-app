@@ -6,6 +6,7 @@
 import Store from 'electron-store';
 import { app } from 'electron';
 import path from 'path';
+import './appIdentity.js';
 
 const preferencesStore = new Store({
   name: 'user-preferences',

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron';
+import './main/appIdentity.js';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';

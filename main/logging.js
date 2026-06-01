@@ -2,6 +2,7 @@ import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import util from 'util';
+import { getUserDataMigrationResult } from './appIdentity.js';
 
 const MAX_LOG_BYTES = 5 * 1024 * 1024;
 const MAX_ROTATED_LOGS = 3;
@@ -231,6 +232,7 @@ export function initFileLogging() {
     pid: process.pid,
     logFilePath,
   });
+  writeLog('INFO', 'User data migration status', getUserDataMigrationResult());
   startResourceDiagnostics();
 
   return getLogPaths();

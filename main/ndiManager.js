@@ -9,6 +9,7 @@
 
 import { app, ipcMain, BrowserWindow } from 'electron';
 import Store from 'electron-store';
+import './appIdentity.js';
 import path from 'path';
 import fs from 'fs';
 import * as userPreferences from './userPreferences.js';
