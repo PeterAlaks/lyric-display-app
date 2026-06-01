@@ -5,6 +5,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Input } from "@/components/ui/input";
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
+import { PaintPicker } from "@/components/ui/paint-picker";
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import useOutputToggle from '../hooks/OutputSettingsPanel/useOutputToggle';
@@ -125,6 +126,7 @@ const FontColorSection = ({
 );
 
 const BackgroundSection = ({
+  applySettings,
   darkMode,
   settings,
   update,
@@ -179,9 +181,15 @@ const BackgroundSection = ({
           ariaLabel="Toggle background advanced settings"
         />
       </Tooltip>
-      <ColorPicker
-        value={settings.backgroundColor}
-        onChange={(val) => update('backgroundColor', val)}
+      <PaintPicker
+        value={settings.backgroundPaint}
+        fallbackColor={settings.backgroundColor ?? '#000000'}
+        onChange={(val) => {
+          applySettings({
+            backgroundPaint: val,
+            ...(val?.type === 'solid' ? { backgroundColor: val.color } : {}),
+          });
+        }}
         disabled={fullScreenModeChecked}
         darkMode={darkMode}
         className={`${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${fullScreenModeChecked ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -353,12 +361,13 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
     lyricsPositionValue,
     fullScreenBackgroundTypeValue,
     fullScreenBackgroundColorValue,
+    fullScreenBackgroundPaintValue,
     backgroundDisabledTooltip,
     fullScreenOptionsWrapperClass,
     handleLyricsPositionChange,
     handleFullScreenToggle,
     handleFullScreenBackgroundTypeChange,
-    handleFullScreenColorChange
+    handleFullScreenPaintChange
   } = useFullscreenModeState({ settings, applySettings, expand: fullScreenAdvancedExpanded });
 
   const {
@@ -529,6 +538,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
       />
       {/* Background */}
       <BackgroundSection
+        applySettings={applySettings}
         darkMode={darkMode}
         settings={settings}
         update={update}
@@ -581,7 +591,8 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
         fullScreenBackgroundTypeValue={fullScreenBackgroundTypeValue}
         handleFullScreenBackgroundTypeChange={handleFullScreenBackgroundTypeChange}
         fullScreenBackgroundColorValue={fullScreenBackgroundColorValue}
-        handleFullScreenColorChange={handleFullScreenColorChange}
+        fullScreenBackgroundPaintValue={fullScreenBackgroundPaintValue}
+        handleFullScreenPaintChange={handleFullScreenPaintChange}
         openMediaLibrary={openMediaLibrary}
         hasBackgroundMedia={hasBackgroundMedia}
         uploadedMediaName={uploadedMediaName}

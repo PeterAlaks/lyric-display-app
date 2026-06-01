@@ -3,6 +3,7 @@ import useSocket from '../hooks/useSocket';
 import useSharedTimer from '../hooks/useSharedTimer';
 import { formatGlobalClock, splitClockPeriod } from '../utils/timerUtils';
 import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
+import { paintToCss } from '../utils/paint';
 
 const PERIOD_STYLE = {
   fontSize: '0.38em',
@@ -131,7 +132,7 @@ const TimeDisplay = () => {
     <div
       className="relative w-screen h-screen overflow-hidden flex items-center justify-center"
       style={{
-        backgroundColor: display.backgroundColor || '#000000',
+        background: paintToCss(display.backgroundPaint, display.backgroundColor || '#000000'),
         fontFamily: otherItemsFontFamily,
       }}
     >

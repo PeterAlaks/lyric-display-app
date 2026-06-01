@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
-import { ColorPicker } from '@/components/ui/color-picker';
+import { PaintPicker } from '@/components/ui/paint-picker';
 import { AdvancedToggle, LabelWithIcon } from '../OutputSettingsShared';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../../utils/numberInput';
 
@@ -35,7 +35,8 @@ const FullscreenSettingsSection = ({
   fullScreenBackgroundTypeValue,
   handleFullScreenBackgroundTypeChange,
   fullScreenBackgroundColorValue,
-  handleFullScreenColorChange,
+  fullScreenBackgroundPaintValue,
+  handleFullScreenPaintChange,
   openMediaLibrary,
   hasBackgroundMedia,
   uploadedMediaName,
@@ -106,9 +107,10 @@ const FullscreenSettingsSection = ({
         </Select>
 
         {fullScreenBackgroundTypeValue === 'color' ? (
-          <ColorPicker
-            value={fullScreenBackgroundColorValue}
-            onChange={handleFullScreenColorChange}
+          <PaintPicker
+            value={fullScreenBackgroundPaintValue}
+            fallbackColor={fullScreenBackgroundColorValue}
+            onChange={handleFullScreenPaintChange}
             darkMode={darkMode}
             disabled={fullScreenControlsDisabled}
             className={`ml-auto ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}

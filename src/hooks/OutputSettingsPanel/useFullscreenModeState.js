@@ -5,6 +5,7 @@ const useFullscreenModeState = ({ settings, applySettings, expand = false }) => 
   const lyricsPositionValue = settings.lyricsPosition ?? 'lower';
   const fullScreenBackgroundTypeValue = settings.fullScreenBackgroundType ?? 'color';
   const fullScreenBackgroundColorValue = settings.fullScreenBackgroundColor ?? '#000000';
+  const fullScreenBackgroundPaintValue = settings.fullScreenBackgroundPaint;
   const fullScreenRestorePosition = settings.fullScreenRestorePosition ?? null;
   const backgroundDisabledTooltip = 'Cannot use background setting in full screen mode.';
 
@@ -83,8 +84,11 @@ const useFullscreenModeState = ({ settings, applySettings, expand = false }) => 
     applySettings(updates);
   };
 
-  const handleFullScreenColorChange = (value) => {
-    applySettings({ fullScreenBackgroundColor: value });
+  const handleFullScreenPaintChange = (value) => {
+    applySettings({
+      fullScreenBackgroundPaint: value,
+      ...(value?.type === 'solid' ? { fullScreenBackgroundColor: value.color } : {}),
+    });
   };
 
   const fullScreenOptionsWrapperClass = useMemo(() => (
@@ -98,13 +102,14 @@ const useFullscreenModeState = ({ settings, applySettings, expand = false }) => 
     lyricsPositionValue,
     fullScreenBackgroundTypeValue,
     fullScreenBackgroundColorValue,
+    fullScreenBackgroundPaintValue,
     fullScreenRestorePosition,
     backgroundDisabledTooltip,
     fullScreenOptionsWrapperClass,
     handleLyricsPositionChange,
     handleFullScreenToggle,
     handleFullScreenBackgroundTypeChange,
-    handleFullScreenColorChange
+    handleFullScreenPaintChange
   };
 };
 

@@ -116,6 +116,8 @@ export const useSetlistState = () =>
             isSetlistFull: state.isSetlistFull,
             getAvailableSetlistSlots: state.getAvailableSetlistSlots,
             getMaxSetlistFiles: state.getMaxSetlistFiles,
+            maxSetlistFilesLimit: state.maxSetlistFilesLimit,
+            maxFileSizeLimit: state.maxFileSizeLimit,
         }),
         shallow
     );

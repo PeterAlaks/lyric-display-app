@@ -1,12 +1,40 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
+import { createSolidPaint } from '../utils/paint';
 
 let maxSetlistFilesLimit = 50;
+let maxFileSizeLimit = 2;
 
 const settingsChanged = (current = {}, next = {}) => {
   if (!next || typeof next !== 'object' || Array.isArray(next)) return false;
   return Object.entries(next).some(([key, value]) => !Object.is(current?.[key], value));
+};
+
+const normalizePaintSettingUpdates = (settings = {}) => {
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return {};
+  const next = { ...settings };
+
+  const hasBackgroundColor = Object.prototype.hasOwnProperty.call(next, 'backgroundColor');
+  const hasBackgroundPaint = Object.prototype.hasOwnProperty.call(next, 'backgroundPaint');
+  const hasFullscreenColor = Object.prototype.hasOwnProperty.call(next, 'fullScreenBackgroundColor');
+  const hasFullscreenPaint = Object.prototype.hasOwnProperty.call(next, 'fullScreenBackgroundPaint');
+  const isInheritedDefaultPaint = (paint, color) => (
+    paint?.type === 'solid'
+    && paint?.color === '#000000'
+    && typeof color === 'string'
+    && color.toUpperCase() !== '#000000'
+  );
+
+  if (hasBackgroundColor && (!hasBackgroundPaint || isInheritedDefaultPaint(next.backgroundPaint, next.backgroundColor))) {
+    next.backgroundPaint = createSolidPaint(next.backgroundColor);
+  }
+
+  if (hasFullscreenColor && (!hasFullscreenPaint || isInheritedDefaultPaint(next.fullScreenBackgroundPaint, next.fullScreenBackgroundColor))) {
+    next.fullScreenBackgroundPaint = createSolidPaint(next.fullScreenBackgroundColor);
+  }
+
+  return next;
 };
 
 export async function loadPreferencesIntoStore(store) {
@@ -21,8 +49,8 @@ export async function loadPreferencesIntoStore(store) {
     if (window.electronAPI?.preferences?.getFileHandling) {
       const result = await window.electronAPI.preferences.getFileHandling();
       if (result.success && result.settings) {
-        maxSetlistFilesLimit = result.settings.maxSetlistFiles ?? 50;
-        store.getState().updateMaxSetlistFiles(maxSetlistFilesLimit);
+        store.getState().updateMaxFileSize(result.settings.maxFileSize ?? 2);
+        store.getState().updateMaxSetlistFiles(result.settings.maxSetlistFiles ?? 50);
       }
     }
 
@@ -117,6 +145,7 @@ export const defaultOutput1Settings = {
   dropShadowOffsetY: 8,
   dropShadowBlur: 10,
   backgroundColor: '#000000',
+  backgroundPaint: { type: 'solid', color: '#000000' },
   backgroundOpacity: 0,
   backgroundBandVerticalPadding: 20,
   backgroundBandHeightMode: 'adaptive',
@@ -126,6 +155,7 @@ export const defaultOutput1Settings = {
   fullScreenMode: false,
   fullScreenBackgroundType: 'color',
   fullScreenBackgroundColor: '#000000',
+  fullScreenBackgroundPaint: { type: 'solid', color: '#000000' },
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
   fullScreenElementEnabled: false,
@@ -198,6 +228,7 @@ export const createDefaultOutputSettings = (overrides = {}) => ({
   dropShadowOffsetY: 8,
   dropShadowBlur: 10,
   backgroundColor: '#000000',
+  backgroundPaint: { type: 'solid', color: '#000000' },
   backgroundOpacity: 0,
   backgroundBandVerticalPadding: 20,
   backgroundBandHeightMode: 'adaptive',
@@ -207,6 +238,7 @@ export const createDefaultOutputSettings = (overrides = {}) => ({
   fullScreenMode: false,
   fullScreenBackgroundType: 'color',
   fullScreenBackgroundColor: '#000000',
+  fullScreenBackgroundPaint: { type: 'solid', color: '#000000' },
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
   fullScreenElementEnabled: false,
@@ -281,6 +313,7 @@ export const defaultOutput2Settings = {
   dropShadowOffsetY: 8,
   dropShadowBlur: 10,
   backgroundColor: '#000000',
+  backgroundPaint: { type: 'solid', color: '#000000' },
   backgroundOpacity: 0,
   backgroundBandVerticalPadding: 30,
   backgroundBandHeightMode: 'adaptive',
@@ -290,6 +323,7 @@ export const defaultOutput2Settings = {
   fullScreenMode: false,
   fullScreenBackgroundType: 'color',
   fullScreenBackgroundColor: '#000000',
+  fullScreenBackgroundPaint: { type: 'solid', color: '#000000' },
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
   fullScreenElementEnabled: false,
@@ -342,6 +376,7 @@ export const defaultOutput2Settings = {
 export const defaultStageSettings = {
   fontStyle: 'Bebas Neue',
   backgroundColor: '#000000',
+  backgroundPaint: { type: 'solid', color: '#000000' },
   liveFontSize: 120,
   liveColor: '#FFFFFF',
   liveBold: true,
@@ -446,6 +481,8 @@ const useLyricsStore = create(
       formattingCapitalizeReligiousTerms: true,
       formattingNormalizeTypographicChars: true,
       pendingSavedVersion: null,
+      maxFileSizeLimit: 2,
+      maxSetlistFilesLimit: 50,
       maxSetlistFilesVersion: 0,
 
       setLyrics: (lines) => set({ lyrics: lines }),
@@ -511,7 +548,9 @@ const useLyricsStore = create(
         };
       }),
       updateTimerDisplaySettings: (settings, options = {}) => set((state) => {
-        const incomingSettings = settings && typeof settings === 'object' ? settings : {};
+        const incomingSettings = settings && typeof settings === 'object'
+          ? normalizePaintSettingUpdates(settings)
+          : {};
         const currentUpdatedAt = Number(state.timerDisplaySettings?.displayUpdatedAt) || 0;
         const incomingUpdatedAt = Number(incomingSettings.displayUpdatedAt) || 0;
 
@@ -567,10 +606,21 @@ const useLyricsStore = create(
       },
 
       getMaxSetlistFiles: () => maxSetlistFilesLimit,
+      getMaxFileSize: () => maxFileSizeLimit,
 
       updateMaxSetlistFiles: (newLimit) => {
-        maxSetlistFilesLimit = newLimit;
-        set((state) => ({ maxSetlistFilesVersion: state.maxSetlistFilesVersion + 1 }));
+        const normalized = Number.isFinite(Number(newLimit)) ? Number(newLimit) : 50;
+        maxSetlistFilesLimit = normalized;
+        set((state) => ({
+          maxSetlistFilesLimit: normalized,
+          maxSetlistFilesVersion: state.maxSetlistFilesVersion + 1
+        }));
+      },
+
+      updateMaxFileSize: (newLimit) => {
+        const normalized = Number.isFinite(Number(newLimit)) ? Number(newLimit) : 2;
+        maxFileSizeLimit = normalized;
+        set({ maxFileSizeLimit: normalized });
       },
 
       output1Settings: defaultOutput1Settings,
@@ -580,11 +630,12 @@ const useLyricsStore = create(
         set((state) => {
           const key = `${output}Settings`;
           const currentSettings = state[key] || {};
-          if (!settingsChanged(currentSettings, newSettings)) return state;
+          const normalizedSettings = normalizePaintSettingUpdates(newSettings);
+          if (!settingsChanged(currentSettings, normalizedSettings)) return state;
           return {
             [key]: {
               ...currentSettings,
-              ...newSettings
+              ...normalizedSettings
             }
           };
         }),

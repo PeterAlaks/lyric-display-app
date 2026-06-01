@@ -35,6 +35,7 @@ export const DEFAULT_TIMER_DISPLAY = {
   warningColor: '#F59E0B',
   criticalColor: '#EF4444',
   backgroundColor: '#000000',
+  backgroundPaint: { type: 'solid', color: '#000000' },
   timerFontFamily: 'Bebas Neue',
   timerFontSizeMode: 'auto',
   timerFontSize: 180,

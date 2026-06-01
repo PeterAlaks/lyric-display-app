@@ -232,7 +232,7 @@ export function resetAllToDefaults() {
  */
 export function getDefaultLyricsPath() {
   try {
-    const savedPath = preferencesStore.get('general.defaultLyricsPath');
+    const savedPath = preferencesStore.get('fileHandling.defaultLyricsPath');
     if (savedPath && savedPath.trim()) {
       return savedPath;
     }

@@ -90,7 +90,7 @@ export function registerPreferencesHandlers({ getMainWindow }) {
       }
 
       const selectedPath = result.filePaths[0];
-      userPreferences.setPreference('general.defaultLyricsPath', selectedPath);
+      userPreferences.setPreference('fileHandling.defaultLyricsPath', selectedPath);
       return { success: true, path: selectedPath };
     } catch (error) {
       console.error('[UserPreferences] Error browsing for default path:', error);

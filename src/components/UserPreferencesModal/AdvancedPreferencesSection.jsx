@@ -2,6 +2,7 @@ import { AlertTriangle, Loader2, RefreshCw, RotateCcw, ShieldCheck } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { setDebugLogging } from '../../utils/logger';
 
 const AdvancedPreferencesSection = ({
   commitNumberPreference,
@@ -115,7 +116,10 @@ const AdvancedPreferencesSection = ({
       </div>
       <Switch
         checked={preferences.advanced?.enableDebugLogging ?? false}
-        onCheckedChange={(checked) => updatePreference('advanced', 'enableDebugLogging', checked)}
+        onCheckedChange={(checked) => {
+          updatePreference('advanced', 'enableDebugLogging', checked);
+          setDebugLogging(checked);
+        }}
         className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
           ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
           : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'

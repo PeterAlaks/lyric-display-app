@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ColorPicker } from '@/components/ui/color-picker';
+import { PaintPicker } from '@/components/ui/paint-picker';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useSharedTimer from '../hooks/useSharedTimer';
 import {
@@ -19,6 +20,7 @@ import {
   secondsToMs,
   splitClockPeriod,
 } from '../utils/timerUtils';
+import { paintToCss } from '../utils/paint';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import FontSelect from './FontSelect';
 
@@ -206,7 +208,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
     <>
       <div
         className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
-        style={{ backgroundColor: displaySettings.backgroundColor }}
+        style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
       >
         {showSecondaryText && (
           <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
@@ -246,7 +248,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
         <div
           className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
           style={{
-            backgroundColor: displaySettings.backgroundColor,
+            background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000'),
             borderColor: 'rgba(255,255,255,0.14)',
           }}
         >
@@ -676,11 +678,15 @@ const TimerControlModule = () => {
                   </div>
                   <div className="space-y-2 min-w-0">
                     <label className="block text-xs font-medium truncate">Background</label>
-                    <ColorPicker
-                      value={displaySettings.backgroundColor}
-                      onChange={(value) => applyTimerDisplaySettings({ backgroundColor: value })}
+                    <PaintPicker
+                      value={displaySettings.backgroundPaint}
+                      fallbackColor={displaySettings.backgroundColor || '#000000'}
+                      onChange={(value) => applyTimerDisplaySettings({
+                        backgroundPaint: value,
+                        ...(value?.type === 'solid' ? { backgroundColor: value.color } : {}),
+                      })}
                       darkMode={darkMode}
-                      showHex
+                      showValue
                       className={inputClass}
                     />
                   </div>

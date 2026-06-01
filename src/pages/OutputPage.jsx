@@ -7,6 +7,7 @@ import { getLineOutputText } from '../utils/parseLyrics';
 import { logDebug, logError } from '../utils/logger';
 import { resolveBackendUrl } from '../utils/network';
 import { calculateOptimalFontSize } from '../utils/maxLinesCalculator';
+import { paintToCss } from '../utils/paint';
 
 /**
  * Generic output page component. Renders lyrics with full styling support.
@@ -96,6 +97,7 @@ const OutputPage = ({ outputId }) => {
     dropShadowOffsetY = 8,
     dropShadowBlur = 10,
     backgroundColor = '#000000',
+    backgroundPaint,
     backgroundOpacity = 0,
     backgroundBandVerticalPadding = 20,
     backgroundBandHeightMode = 'adaptive',
@@ -104,6 +106,7 @@ const OutputPage = ({ outputId }) => {
     fullScreenMode = false,
     fullScreenBackgroundType = 'color',
     fullScreenBackgroundColor = '#000000',
+    fullScreenBackgroundPaint,
     fullScreenBackgroundMedia,
     fullScreenElementEnabled = false,
     fullScreenElementMedia,
@@ -181,10 +184,7 @@ const OutputPage = ({ outputId }) => {
     ? Math.max(dropShadowBlur, Math.abs(dropShadowOffsetY))
     : 0;
 
-  const getBandBackground = () => {
-    const opacityHex = toHexOpacity(backgroundStrength);
-    return `${backgroundColor}${opacityHex}`;
-  };
+  const getBandBackground = () => paintToCss(backgroundPaint, backgroundColor, backgroundStrength / 10);
 
   const BACKGROUND_VERTICAL_PADDING_REM = backgroundBandVerticalPadding / 16;
 
@@ -215,7 +215,7 @@ const OutputPage = ({ outputId }) => {
 
   const fullScreenBackgroundColorValue =
     shouldShowFullScreenBackground && fullScreenBackgroundType === 'color'
-      ? fullScreenBackgroundColor || '#000000'
+      ? paintToCss(fullScreenBackgroundPaint, fullScreenBackgroundColor || '#000000')
       : 'transparent';
 
   const windowBackgroundColor = isProjectionMode ? '#000000' : fullScreenBackgroundColorValue;
@@ -669,7 +669,7 @@ const OutputPage = ({ outputId }) => {
     <div
       className="relative w-screen h-screen overflow-hidden"
       style={{
-        backgroundColor: windowBackgroundColor,
+        background: windowBackgroundColor,
       }}
     >
       {renderFullScreenMedia()}
@@ -688,7 +688,7 @@ const OutputPage = ({ outputId }) => {
           {(!fullScreenMode && backgroundStrength > 0) ? (
             <div
               style={{
-                backgroundColor: getBandBackground(),
+                background: getBandBackground(),
                 paddingTop: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
                 paddingBottom: `${BACKGROUND_VERTICAL_PADDING_REM}rem`,
                 ...horizontalPaddingStyle,

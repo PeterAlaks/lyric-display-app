@@ -1,32 +1,16 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useLyricsState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
+import useLyricsStore from '../context/LyricsStore';
 
 const useFileUpload = () => {
   const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps } = useLyricsState();
   const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
-
-  const [maxFileSize, setMaxFileSize] = useState(2);
-
-  useEffect(() => {
-    const loadMaxFileSize = async () => {
-      try {
-        if (window.electronAPI?.preferences?.getFileHandling) {
-          const result = await window.electronAPI.preferences.getFileHandling();
-          if (result.success && result.settings) {
-            setMaxFileSize(result.settings.maxFileSize ?? 2);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load max file size preference:', error);
-      }
-    };
-    loadMaxFileSize();
-  }, []);
+  const maxFileSize = useLyricsStore((state) => state.maxFileSizeLimit);
 
   const MAX_FILE_SIZE_BYTES = maxFileSize * 1024 * 1024;
 

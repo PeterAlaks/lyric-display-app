@@ -128,6 +128,26 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
                   {settings.transitionAnimation}
                 </span>
               )}
+              {settings.backgroundOpacity > 0 && !settings.fullScreenMode && (
+                <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-blue-900/40 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>
+                  Band {settings.backgroundBandHeightMode || 'adaptive'}
+                </span>
+              )}
+              {(settings.backgroundOpacity ?? 0) === 0 && !settings.fullScreenMode && (
+                <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-emerald-900/40 text-emerald-200' : 'bg-emerald-100 text-emerald-800'}`}>
+                  Transparent
+                </span>
+              )}
+              {settings.maxLinesEnabled && (
+                <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                  {settings.maxLines} lines
+                </span>
+              )}
+              {settings.fullScreenMode && (
+                <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-indigo-900/40 text-indigo-200' : 'bg-indigo-100 text-indigo-800'}`}>
+                  Fullscreen
+                </span>
+              )}
             </div>
           </div>
 

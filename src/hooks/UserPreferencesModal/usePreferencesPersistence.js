@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useLyricsStore, { loadPreferencesIntoStore } from '../../context/LyricsStore';
+import { loadAdvancedSettings } from '../../utils/connectionManager';
+import { loadDebugLoggingPreference } from '../../utils/logger';
 
 export const usePreferencesPersistence = ({ showToast }) => {
   const [preferences, setPreferences] = useState(null);
@@ -53,6 +55,8 @@ export const usePreferencesPersistence = ({ showToast }) => {
           setLastSaved(new Date());
 
           await loadPreferencesIntoStore(useLyricsStore);
+          await loadAdvancedSettings();
+          await loadDebugLoggingPreference();
 
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {
@@ -121,6 +125,9 @@ export const usePreferencesPersistence = ({ showToast }) => {
         const result = await window.electronAPI.preferences.getAll();
         if (result.success) {
           setPreferences(result.preferences);
+          await loadPreferencesIntoStore(useLyricsStore);
+          await loadAdvancedSettings();
+          await loadDebugLoggingPreference();
           setLastSaved(new Date());
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {

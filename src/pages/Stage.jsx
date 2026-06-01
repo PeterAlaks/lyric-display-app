@@ -8,6 +8,7 @@ import { logDebug } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
 import { normalizeStageMessages } from '../utils/stageMessages';
 import { getTimerDisplay, getTimerIntensity } from '../utils/timerUtils';
+import { paintToCss } from '../utils/paint';
 
 const pulseAnimation = `
 @keyframes pulse {
@@ -207,6 +208,7 @@ const Stage = () => {
   const {
     fontStyle = 'Bebas Neue',
     backgroundColor = '#000000',
+    backgroundPaint,
 
     liveFontSize = 120,
     liveColor = '#FFFFFF',
@@ -554,7 +556,7 @@ const Stage = () => {
     <div
       className="relative w-screen h-screen overflow-hidden flex flex-col"
       style={{
-        backgroundColor: isProjectionMode ? '#000000' : backgroundColor,
+        background: isProjectionMode ? '#000000' : paintToCss(backgroundPaint, backgroundColor),
         fontFamily: fontStyle,
       }}
     >
