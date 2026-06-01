@@ -4,6 +4,7 @@ import path from 'path';
 
 export const APP_NAME = 'LyricDisplay';
 export const LEGACY_APP_NAME = 'lyric-display-app';
+export const NDI_FOLDER_NAME = 'lyricdisplay-ndi';
 
 const MIGRATION_MARKER = 'user-data-migration.json';
 
@@ -83,6 +84,8 @@ function migrateUserData(appDataPath) {
   const sourcePath = path.join(appDataPath, LEGACY_APP_NAME);
   const targetPath = path.join(appDataPath, APP_NAME);
   const markerPath = path.join(targetPath, MIGRATION_MARKER);
+  const legacyNdiPath = path.join(appDataPath, NDI_FOLDER_NAME);
+  const targetNdiPath = path.join(targetPath, NDI_FOLDER_NAME);
 
   const summary = {
     sourcePath,
@@ -95,10 +98,26 @@ function migrateUserData(appDataPath) {
     skippedOther: 0,
     deletedLegacy: false,
     legacyDeleteSkippedReason: null,
+    legacyNdi: createLegacyNdiSummary(legacyNdiPath, targetNdiPath),
     errors: [],
   };
 
-  if (sourcePath === targetPath || !pathExists(sourcePath)) {
+  if (sourcePath === targetPath) {
+    migrateLegacyNdiFolder(summary);
+    return summary;
+  }
+
+  if (!pathExists(sourcePath)) {
+    if (pathExists(markerPath)) {
+      applyExistingMarker(markerPath, summary);
+      summary.deletedLegacy = true;
+      summary.legacyDeleteSkippedReason = null;
+      summary.errors = getMigrationErrors(summary);
+    }
+    migrateLegacyNdiFolder(summary);
+    if (pathExists(markerPath)) {
+      updateMigrationMarker(markerPath, summary);
+    }
     return summary;
   }
 
@@ -109,13 +128,18 @@ function migrateUserData(appDataPath) {
       summary.legacyDeleteSkippedReason = 'Migration marker already exists';
     }
     deleteLegacyUserData(sourcePath, summary);
+    updateMigrationMarker(markerPath, summary);
+    migrateLegacyNdiFolder(summary);
+    updateMigrationMarker(markerPath, summary);
     return summary;
   }
 
   summary.attempted = true;
   try {
     fs.mkdirSync(targetPath, { recursive: true });
-    copyMissingRecursive(sourcePath, targetPath, summary);
+    withAsarDisabled(() => {
+      copyMissingRecursive(sourcePath, targetPath, summary);
+    });
 
     if (isMigrationComplete(summary)) {
       fs.writeFileSync(
@@ -134,6 +158,7 @@ function migrateUserData(appDataPath) {
         'utf8'
       );
       deleteLegacyUserData(sourcePath, summary);
+      migrateLegacyNdiFolder(summary);
       updateMigrationMarker(markerPath, summary);
     } else if (!summary.legacyDeleteSkippedReason) {
       summary.legacyDeleteSkippedReason = 'Migration did not complete cleanly';
@@ -148,10 +173,125 @@ function migrateUserData(appDataPath) {
   return summary;
 }
 
+function createLegacyNdiSummary(sourcePath, targetPath) {
+  return {
+    sourcePath,
+    targetPath,
+    attempted: false,
+    copiedFiles: 0,
+    skippedExisting: 0,
+    skippedSymlinks: 0,
+    skippedOther: 0,
+    deletedLegacy: false,
+    legacyDeleteSkippedReason: null,
+    errors: [],
+  };
+}
+
+function migrateLegacyNdiFolder(summary) {
+  const ndi = summary.legacyNdi;
+  if (!ndi || ndi.sourcePath === ndi.targetPath || !pathExists(ndi.sourcePath)) {
+    if (ndi && !pathExists(ndi.sourcePath)) {
+      ndi.deletedLegacy = true;
+      ndi.legacyDeleteSkippedReason = null;
+      ndi.errors = [];
+    }
+    return;
+  }
+
+  ndi.attempted = true;
+
+  try {
+    if (isNonEmptyDirectory(ndi.targetPath)) {
+      ndi.legacyDeleteSkippedReason = 'Correct NDI folder already exists; skipped legacy merge';
+      ndi.errors = [];
+      ndi.skippedSymlinks = 0;
+      ndi.skippedOther = 0;
+      deleteLegacyNdiFolder(ndi);
+      return;
+    }
+
+    fs.mkdirSync(ndi.targetPath, { recursive: true });
+    withAsarDisabled(() => {
+      copyMissingRecursive(ndi.sourcePath, ndi.targetPath, ndi);
+    });
+
+    if (isLegacyNdiMigrationComplete(ndi)) {
+      deleteLegacyNdiFolder(ndi);
+    } else if (!ndi.legacyDeleteSkippedReason) {
+      ndi.legacyDeleteSkippedReason = 'Legacy NDI migration did not complete cleanly';
+    }
+  } catch (error) {
+    ndi.errors.push({ path: ndi.targetPath, message: error.message });
+    if (!ndi.legacyDeleteSkippedReason) {
+      ndi.legacyDeleteSkippedReason = 'Legacy NDI migration failed';
+    }
+  }
+}
+
+function isNonEmptyDirectory(dirPath) {
+  try {
+    const stat = fs.statSync(dirPath);
+    if (!stat.isDirectory()) return false;
+    return fs.readdirSync(dirPath).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function isLegacyNdiMigrationComplete(ndi) {
+  return getLegacyNdiMigrationErrors(ndi).length === 0 &&
+    ndi.skippedSymlinks === 0 &&
+    ndi.skippedOther === 0;
+}
+
+function getLegacyNdiMigrationErrors(ndi) {
+  return ndi.errors.filter((error) => error?.path !== ndi.sourcePath);
+}
+
+function deleteLegacyNdiFolder(ndi) {
+  if (!isLegacyNdiMigrationComplete(ndi)) {
+    if (!ndi.legacyDeleteSkippedReason) {
+      ndi.legacyDeleteSkippedReason = 'Legacy NDI migration did not complete cleanly';
+    }
+    return;
+  }
+
+  try {
+    ndi.errors = getLegacyNdiMigrationErrors(ndi);
+    withAsarDisabled(() => {
+      fs.rmSync(ndi.sourcePath, { recursive: true, force: true });
+    });
+    ndi.deletedLegacy = !pathExists(ndi.sourcePath);
+    if (!ndi.deletedLegacy) {
+      ndi.legacyDeleteSkippedReason = 'Legacy NDI folder still exists after delete attempt';
+    } else {
+      ndi.legacyDeleteSkippedReason = null;
+    }
+  } catch (error) {
+    ndi.legacyDeleteSkippedReason = 'Failed to delete legacy NDI folder';
+    ndi.errors.push({ path: ndi.sourcePath, message: error.message });
+  }
+}
+
+function withAsarDisabled(callback) {
+  const previousNoAsar = process.noAsar;
+  process.noAsar = true;
+  try {
+    return callback();
+  } finally {
+    process.noAsar = previousNoAsar;
+  }
+}
+
 function isMigrationComplete(summary) {
-  return summary.errors.length === 0 &&
+  return getMigrationErrors(summary).length === 0 &&
     summary.skippedSymlinks === 0 &&
     summary.skippedOther === 0;
+}
+
+function getMigrationErrors(summary) {
+  return summary.errors.filter((error) => error?.path !== summary.sourcePath);
 }
 
 function applyExistingMarker(markerPath, summary) {
@@ -164,6 +304,19 @@ function applyExistingMarker(markerPath, summary) {
     summary.deletedLegacy = Boolean(marker.deletedLegacy);
     summary.legacyDeleteSkippedReason = marker.legacyDeleteSkippedReason || null;
     summary.errors = Array.isArray(marker.errors) ? marker.errors : [];
+    if (marker.legacyNdi && typeof marker.legacyNdi === 'object') {
+      summary.legacyNdi = {
+        ...summary.legacyNdi,
+        attempted: Boolean(marker.legacyNdi.attempted),
+        copiedFiles: Number(marker.legacyNdi.copiedFiles) || 0,
+        skippedExisting: Number(marker.legacyNdi.skippedExisting) || 0,
+        skippedSymlinks: Number(marker.legacyNdi.skippedSymlinks) || 0,
+        skippedOther: Number(marker.legacyNdi.skippedOther) || 0,
+        deletedLegacy: Boolean(marker.legacyNdi.deletedLegacy),
+        legacyDeleteSkippedReason: marker.legacyNdi.legacyDeleteSkippedReason || null,
+        errors: Array.isArray(marker.legacyNdi.errors) ? marker.legacyNdi.errors : [],
+      };
+    }
   } catch (error) {
     summary.errors.push({ path: markerPath, message: error.message });
     summary.legacyDeleteSkippedReason = 'Could not verify existing migration marker';
@@ -179,7 +332,10 @@ function deleteLegacyUserData(sourcePath, summary) {
   }
 
   try {
-    fs.rmSync(sourcePath, { recursive: true, force: true });
+    summary.errors = getMigrationErrors(summary);
+    withAsarDisabled(() => {
+      fs.rmSync(sourcePath, { recursive: true, force: true });
+    });
     summary.deletedLegacy = !pathExists(sourcePath);
     if (!summary.deletedLegacy) {
       summary.legacyDeleteSkippedReason = 'Legacy folder still exists after delete attempt';
@@ -206,6 +362,7 @@ function updateMigrationMarker(markerPath, summary) {
         skippedOther: summary.skippedOther,
         deletedLegacy: summary.deletedLegacy,
         legacyDeleteSkippedReason: summary.legacyDeleteSkippedReason,
+        legacyNdi: summary.legacyNdi,
         errors: summary.errors,
       }, null, 2),
       'utf8'

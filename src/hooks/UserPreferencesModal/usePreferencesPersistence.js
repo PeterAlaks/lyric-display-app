@@ -86,14 +86,14 @@ export const usePreferencesPersistence = ({ showToast }) => {
         savePreferences(newPreferences);
       }, 300);
 
-      if (category === 'parsing' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-        window.dispatchEvent(new CustomEvent('parsing-preferences-updated', {
-          detail: newPreferences.parsing || {}
-        }));
-      }
-
       return newPreferences;
     });
+
+    if (category === 'parsing' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('parsing-preferences-updated', {
+        detail: { [key]: value }
+      }));
+    }
   }, [savePreferences]);
 
   const updateNestedPreference = useCallback((category, subcategory, key, value) => {
