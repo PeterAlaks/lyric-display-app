@@ -40,13 +40,13 @@ export function AboutAppModal({ darkMode = false, onClose, version = '1.0.0' }) 
             'text-sm font-medium',
             darkMode ? 'text-gray-200' : 'text-gray-900'
           )}>
-            © {new Date().getFullYear()} LyricDisplay. All rights reserved.
+            © {new Date().getFullYear()} LyricDisplay.
           </p>
           <p className={cn(
             'text-sm',
             darkMode ? 'text-gray-400' : 'text-gray-600'
           )}>
-            Designed and developed by <span className="font-medium">Peter Alakembi</span> and <span className="font-medium">David Okaliwe</span>.
+            Designed and developed by <span className="font-medium">Peter Alakembi</span> and <span className="font-medium">David Okaliwe</span>, among other contributors.
           </p>
         </div>
       </div>

@@ -489,12 +489,12 @@ const MobileLayout = () => {
 
         {/* Fixed Footer */}
         <div
-          className={`px-4 py-3 text-center text-xs border-t flex-shrink-0 ${darkMode
+          className={`px-4 py-3 text-center text-xs border-t flex-shrink-0 whitespace-normal break-words ${darkMode
             ? 'text-gray-400 bg-gray-800 border-gray-700'
             : 'text-gray-600 bg-gray-50 border-gray-200'
             }`}
         >
-          © {new Date().getFullYear()} LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
+          © {new Date().getFullYear()} LyricDisplay. Designed and developed by Peter Alakembi and David Okaliwe, among other contributors.
         </div>
 
         {/* Setlist Modal */}
