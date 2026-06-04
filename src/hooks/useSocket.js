@@ -128,6 +128,24 @@ const useSocket = (role = 'output', options = {}) => {
     });
   }, [clientId]);
 
+  const disposeCurrentSocket = useCallback((socket, reason) => {
+    if (!socket || socketRef.current !== socket) {
+      return false;
+    }
+
+    socketRef.current = null;
+    stopHeartbeat();
+
+    try {
+      socket.removeAllListeners();
+      socket.disconnect();
+    } catch (error) {
+      logError(`Socket dispose error (${clientId}, ${reason}):`, error);
+    }
+
+    return true;
+  }, [clientId, stopHeartbeat]);
+
   const connectSocketInternal = useCallback(async () => {
     if (!enabled) {
       return;
@@ -235,7 +253,11 @@ const useSocket = (role = 'output', options = {}) => {
         const handleConnectError = (error) => {
           logError(`Socket connection error (${clientId}):`, error);
           connectionManager.recordConnectionFailure(clientId, error);
+          if (error?.message?.includes('Authentication') || error?.message?.includes('token')) {
+            handleAuthError(error.message, false);
+          }
           setConnectionStatus('error');
+          disposeCurrentSocket(socket, 'connect_error');
           scheduleRetry();
         };
 
@@ -245,6 +267,7 @@ const useSocket = (role = 'output', options = {}) => {
           stopHeartbeat();
 
           if (reason !== 'io client disconnect' && reason !== 'transport close') {
+            disposeCurrentSocket(socket, `disconnect:${reason}`);
             scheduleRetry();
           }
         };
@@ -285,6 +308,7 @@ const useSocket = (role = 'output', options = {}) => {
     setAuthStatus,
     setConnectionStatus,
     cleanupSocket,
+    disposeCurrentSocket,
     emitBackoffWarning,
     clearBackoffWarning,
     enabled

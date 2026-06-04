@@ -632,7 +632,6 @@ const useSocketEvents = (role) => {
     startHeartbeat,
     stopHeartbeat,
     setConnectionStatus,
-    requestReconnect,
     handleAuthError,
   }) => {
     setIsDesktopApp(isDesktopApp);
@@ -732,14 +731,6 @@ const useSocketEvents = (role) => {
       logDebug('Socket disconnected:', reason);
       setConnectionStatus('disconnected');
       stopHeartbeat();
-
-      if (reason !== 'io client disconnect') {
-        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = setTimeout(() => {
-          logDebug('Auto-reconnecting...');
-          requestReconnect();
-        }, 2000);
-      }
     });
 
     socket.on('connect_error', (error) => {
@@ -750,11 +741,6 @@ const useSocketEvents = (role) => {
         logDebug('Authentication error, clearing token and retrying...');
         handleAuthError(error.message, false);
       }
-
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        requestReconnect();
-      }, 3000);
     });
 
     socket.on('authError', (error) => {

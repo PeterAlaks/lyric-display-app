@@ -27,6 +27,16 @@ import { registerIntegrationRoutes } from './routes/integrations.js';
 
 dotenv.config();
 
+process.on('uncaughtException', (error) => {
+  console.error('Backend uncaught exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Backend unhandled rejection:', reason);
+  process.exit(1);
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

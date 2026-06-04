@@ -119,6 +119,26 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         });
     }, []);
 
+    const disposeCurrentSocket = useCallback((socket, reason) => {
+        if (!socket || socketRef.current !== socket) {
+            return false;
+        }
+
+        socketRef.current = null;
+        readyRef.current = false;
+        setReady(false);
+        stopHeartbeat();
+
+        try {
+            socket.removeAllListeners();
+            socket.disconnect();
+        } catch (error) {
+            logError(`Socket dispose error (${reason}):`, error);
+        }
+
+        return true;
+    }, [stopHeartbeat]);
+
     const connectSocketInternal = useCallback(async () => {
         const canConnect = connectionManager.canAttemptConnection(clientId.current);
 
@@ -214,9 +234,13 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 const handleConnectError = (error) => {
                     logError(`Control socket connection error:`, error);
                     connectionManager.recordConnectionFailure(clientId.current, error);
+                    if (error?.message?.includes('Authentication') || error?.message?.includes('token')) {
+                        handleAuthError(error.message, false);
+                    }
                     setConnectionStatus('error');
                     readyRef.current = false;
                     setReady(false);
+                    disposeCurrentSocket(socket, 'connect_error');
                     scheduleRetry();
                 };
 
@@ -228,6 +252,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                     stopHeartbeat();
 
                     if (reason !== 'io client disconnect' && reason !== 'transport close') {
+                        disposeCurrentSocket(socket, `disconnect:${reason}`);
                         scheduleRetry();
                     }
                 };
@@ -275,6 +300,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         startHeartbeat,
         stopHeartbeat,
         handleAuthError,
+        disposeCurrentSocket,
         setAuthStatus,
         setConnectionStatus,
         emitBackoffWarning,
