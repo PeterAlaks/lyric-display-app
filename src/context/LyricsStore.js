@@ -1,5 +1,6 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegistry.js';
 import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../../shared/setlistLimits.js';
 import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
@@ -289,8 +290,6 @@ export const createDefaultOutputSettings = (overrides = {}) => ({
   transitionSpeed: 150,
   ...overrides,
 });
-
-export const MAX_CUSTOM_OUTPUTS = 4;
 
 export const defaultOutput2Settings = {
   fontStyle: 'Bebas Neue',
@@ -643,14 +642,14 @@ const useLyricsStore = create(
 
       getAllOutputIds: () => {
         const state = get();
-        return ['output1', 'output2', ...state.customOutputIds];
+        return [...DEFAULT_OUTPUT_IDS, ...state.customOutputIds];
       },
 
       addCustomOutput: () => {
         const state = get();
         if (state.customOutputIds.length >= MAX_CUSTOM_OUTPUTS) return null;
 
-        const allIds = ['output1', 'output2', ...state.customOutputIds];
+        const allIds = [...DEFAULT_OUTPUT_IDS, ...state.customOutputIds];
         let nextNum = 3;
         while (allIds.includes(`output${nextNum}`)) nextNum++;
         const newId = `output${nextNum}`;
@@ -784,7 +783,7 @@ const useLyricsStore = create(
             displayUpdatedAt: Number.isFinite(Number(state.timerDisplaySettings?.displayUpdatedAt)) ? Number(state.timerDisplaySettings.displayUpdatedAt) : 0,
           };
           state.timerControlSettings = normalizeTimerControlSettings(state.timerControlSettings);
-          const allOutputIds = ['output1', 'output2', ...(state.customOutputIds || [])];
+          const allOutputIds = [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || [])];
           for (const id of allOutputIds) {
             if (state[`${id}Settings`]) {
               state[`${id}Settings`] = {

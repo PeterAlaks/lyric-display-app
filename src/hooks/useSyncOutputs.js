@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 import useLyricsStore from '../context/LyricsStore';
 
 export const useSyncOutputs = ({
@@ -39,7 +40,7 @@ export const useSyncOutputs = ({
         }
 
         // Dynamically sync all output settings from the store
-        const allOutputIds = ['output1', 'output2', ...(useLyricsStore.getState().customOutputIds || [])];
+        const allOutputIds = [...DEFAULT_OUTPUT_IDS, ...(useLyricsStore.getState().customOutputIds || [])];
         for (const outputId of allOutputIds) {
           const settings = storeState[`${outputId}Settings`];
           if (settings && emitStyleUpdate) {

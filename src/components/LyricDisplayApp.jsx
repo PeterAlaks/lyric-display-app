@@ -20,7 +20,7 @@ import useSetlistActions from '../hooks/LyricDisplayApp/useSetlistActions';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { MAX_CUSTOM_OUTPUTS } from '../context/LyricsStore';
+import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegistry.js';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
 import { useSyncOutputs } from '../hooks/useSyncOutputs';
 import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
@@ -512,7 +512,7 @@ const LyricDisplayApp = () => {
                     </TabsTrigger>
                   );
                 })}
-                {allOutputIds.length < 2 + MAX_CUSTOM_OUTPUTS && (
+                {allOutputIds.length < DEFAULT_OUTPUT_IDS.length + MAX_CUSTOM_OUTPUTS && (
                   <Tooltip content="Add a new output" side="bottom">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAddOutput(); }}

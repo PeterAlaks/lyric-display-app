@@ -5,6 +5,7 @@ import useToast from '@/hooks/useToast';
 import useLyricsStore from '@/context/LyricsStore';
 import { formatOutputLabel } from '@/utils/outputLabels';
 import { cn } from '@/lib/utils';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 
 const DESKTOP_TARGET = 'desktop';
 
@@ -62,7 +63,7 @@ const ProjectOutputModal = ({
   const customOutputIds = useLyricsStore((state) => state.customOutputIds || []);
 
   const outputOptions = React.useMemo(() => {
-    const options = ['output1', 'output2', ...customOutputIds, 'stage', 'time'];
+    const options = [...DEFAULT_OUTPUT_IDS, ...customOutputIds, 'stage', 'time'];
     return options.map((value) => ({ value, label: formatOutputLabel(value) }));
   }, [customOutputIds]);
 

@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import useLyricsStore from '../context/LyricsStore';
 
@@ -83,7 +84,7 @@ export const useCustomOutputIds = () =>
 export const useAllOutputIds = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
-        (state) => ['output1', 'output2', ...(state.customOutputIds || [])],
+        (state) => [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || [])],
         shallow
     );
 

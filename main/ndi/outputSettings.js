@@ -1,4 +1,5 @@
 import http from 'http';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 
 function normalizeOutputList(outputs = []) {
   if (!Array.isArray(outputs)) return [];
@@ -75,7 +76,7 @@ function createOutputSettingsManager({ ndiStore, backendHost, backendPort }) {
     const customOutputs = normalizeOutputList(registry?.outputs || []);
     if (customOutputs.length === 0) return;
 
-    const registered = new Set(['output1', 'output2', ...customOutputs]);
+    const registered = new Set([...DEFAULT_OUTPUT_IDS, ...customOutputs]);
 
     for (const outputKey of registered) {
       ensureOutputSettings(outputKey);

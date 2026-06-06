@@ -9,6 +9,7 @@ import DesktopShell from './components/WindowChrome/DesktopShell';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import PreferencesLoaderBridge from './components/bridges/PreferencesLoaderBridge';
 import { REQUEST_MODAL_CLOSE_EVENT } from './constants/modalEvents';
+import { getCustomOutputRouteIds } from '../shared/outputRegistry.js';
 
 const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
 
@@ -31,6 +32,7 @@ const ShortcutsHelpBridge = React.lazy(() => import('./components/bridges/Shortc
 const SupportDevelopmentBridge = React.lazy(() => import('./components/bridges/SupportDevelopmentBridge'));
 const UpdaterBridge = React.lazy(() => import('./components/bridges/UpdaterBridge'));
 const WelcomeSplashBridge = React.lazy(() => import('./components/bridges/WelcomeSplashBridge'));
+const CUSTOM_OUTPUT_ROUTE_IDS = getCustomOutputRouteIds();
 
 function ConditionalDesktopShell({ children }) {
   const isDesktopApp = useIsDesktopApp();
@@ -76,10 +78,9 @@ function AppRoutes() {
           } />
           <Route path="/output1" element={<Output1 />} />
           <Route path="/output2" element={<Output2 />} />
-          <Route path="/output3" element={<OutputPage outputId="output3" />} />
-          <Route path="/output4" element={<OutputPage outputId="output4" />} />
-          <Route path="/output5" element={<OutputPage outputId="output5" />} />
-          <Route path="/output6" element={<OutputPage outputId="output6" />} />
+          {CUSTOM_OUTPUT_ROUTE_IDS.map((outputId) => (
+            <Route key={outputId} path={`/${outputId}`} element={<OutputPage outputId={outputId} />} />
+          ))}
           <Route path="/stage" element={<Stage />} />
           <Route path="/time" element={<TimeDisplay />} />
           <Route path="/obs-setup" element={

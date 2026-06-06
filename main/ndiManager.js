@@ -17,6 +17,7 @@ import { spawn } from 'child_process';
 import { createNdiIpcClient } from './ndi/ipcClient.js';
 import { createOutputSettingsManager } from './ndi/outputSettings.js';
 import { createNdiInstaller } from './ndi/installer.js';
+import { DEFAULT_OUTPUT_IDS } from '../shared/outputRegistry.js';
 
 const isDev = !app.isPackaged;
 
@@ -661,7 +662,7 @@ export function registerNdiIpcHandlers() {
 
   ipcMain.handle('ndi:register-outputs', async (_, { outputs }) => {
     const customOutputs = normalizeOutputList(outputs);
-    const registered = new Set(['output1', 'output2', ...customOutputs]);
+    const registered = new Set([...DEFAULT_OUTPUT_IDS, ...customOutputs]);
 
     for (const outputKey of registered) {
       ensureOutputSettings(outputKey);
