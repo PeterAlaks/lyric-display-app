@@ -1,5 +1,41 @@
+import DOMPurify from 'dompurify';
+
 const BLOCK_TAG_PATTERN = /^<(h[1-6]|p|ul|ol|li|pre|code|blockquote|hr|table|thead|tbody|tr|td|th|div|section|article|aside|header|footer)/i;
 const HTML_TAG_PATTERN = /<\/?[a-z][\s\S]*>/i;
+const ALLOWED_RELEASE_NOTE_TAGS = [
+  'a',
+  'blockquote',
+  'br',
+  'code',
+  'div',
+  'em',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'hr',
+  'li',
+  'ol',
+  'p',
+  'pre',
+  'span',
+  'strong',
+  'table',
+  'tbody',
+  'td',
+  'th',
+  'thead',
+  'tr',
+  'ul',
+];
+const ALLOWED_RELEASE_NOTE_ATTRS = [
+  'class',
+  'href',
+  'rel',
+  'target',
+];
 
 function isLikelyHtml(content) {
   return HTML_TAG_PATTERN.test(content);
@@ -7,13 +43,14 @@ function isLikelyHtml(content) {
 
 function sanitizeHtml(html) {
   if (!html) return '';
-  let safe = String(html);
-
-  safe = safe.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
-  safe = safe.replace(/\son\w+="[^"]*"/gi, '');
-  safe = safe.replace(/\son\w+='[^']*'/gi, '');
-  safe = safe.replace(/javascript:/gi, '');
-  return safe;
+  return DOMPurify.sanitize(String(html), {
+    ALLOWED_TAGS: ALLOWED_RELEASE_NOTE_TAGS,
+    ALLOWED_ATTR: ALLOWED_RELEASE_NOTE_ATTRS,
+    ALLOW_DATA_ATTR: false,
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    FORBID_TAGS: ['iframe', 'img', 'math', 'object', 'script', 'svg'],
+    FORBID_ATTR: ['formaction'],
+  });
 }
 
 function applyDefaultHtmlStyling(html) {

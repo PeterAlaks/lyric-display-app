@@ -1,5 +1,33 @@
 import { ipcMain, dialog } from 'electron';
 import { exportSetlistToPDF, exportSetlistToTXT } from '../setlistExport.js';
+import {
+  MAX_SETLIST_FILE_BYTES,
+  hasSetlistExtension,
+  normalizeSetlistPath,
+  sanitizeSetlistDefaultName,
+  validateSetlistData,
+} from '../setlistValidation.js';
+
+async function readValidatedSetlistFile(fs, filePath) {
+  const normalizedPath = normalizeSetlistPath(filePath);
+  if (!normalizedPath || !hasSetlistExtension(normalizedPath)) {
+    return { success: false, error: 'Only .ldset files can be loaded as setlists' };
+  }
+
+  const stats = await fs.stat(normalizedPath);
+  if (stats.size > MAX_SETLIST_FILE_BYTES) {
+    return { success: false, error: 'Setlist file is too large' };
+  }
+
+  const content = await fs.readFile(normalizedPath, 'utf8');
+  const setlistData = JSON.parse(content);
+  const validation = validateSetlistData(setlistData);
+  if (!validation.valid) {
+    return { success: false, error: validation.error };
+  }
+
+  return { success: true, setlistData, filePath: normalizedPath };
+}
 
 /**
  * Register setlist IPC handlers
@@ -25,9 +53,10 @@ export function registerSetlistHandlers({ getMainWindow }) {
         console.warn('Could not create setlist directory:', err);
       }
 
+      const safeDefaultName = sanitizeSetlistDefaultName(defaultName);
       const result = await dialog.showSaveDialog(win || undefined, {
         title: 'Save Setlist',
-        defaultPath: path.join(defaultPath, defaultName || 'Setlist.ldset'),
+        defaultPath: path.join(defaultPath, safeDefaultName),
         filters: [
           { name: 'LyricDisplay Setlist', extensions: ['ldset'] }
         ],
@@ -38,11 +67,25 @@ export function registerSetlistHandlers({ getMainWindow }) {
         return { success: false, canceled: true };
       }
 
-      const jsonContent = JSON.stringify(setlistData, null, 2);
-      await fs.writeFile(result.filePath, jsonContent, 'utf8');
+      const normalizedPath = normalizeSetlistPath(result.filePath);
+      if (!normalizedPath || !hasSetlistExtension(normalizedPath)) {
+        return { success: false, error: 'Setlists must be saved as .ldset files' };
+      }
 
-      console.log('[Setlist] Saved setlist to:', result.filePath);
-      return { success: true, filePath: result.filePath };
+      const validation = validateSetlistData(setlistData);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const jsonContent = JSON.stringify(setlistData, null, 2);
+      if (Buffer.byteLength(jsonContent, 'utf8') > MAX_SETLIST_FILE_BYTES) {
+        return { success: false, error: 'Setlist file is too large' };
+      }
+
+      await fs.writeFile(normalizedPath, jsonContent, 'utf8');
+
+      console.log('[Setlist] Saved setlist to:', normalizedPath);
+      return { success: true, filePath: normalizedPath };
     } catch (error) {
       console.error('[Setlist] Error saving setlist:', error);
       return { success: false, error: error.message };
@@ -75,11 +118,13 @@ export function registerSetlistHandlers({ getMainWindow }) {
 
       const filePath = result.filePaths[0];
       const fs = await import('fs/promises');
-      const content = await fs.readFile(filePath, 'utf8');
-      const setlistData = JSON.parse(content);
+      const loaded = await readValidatedSetlistFile(fs, filePath);
+      if (!loaded.success) {
+        return loaded;
+      }
 
-      console.log('[Setlist] Loaded setlist from:', filePath);
-      return { success: true, setlistData, filePath };
+      console.log('[Setlist] Loaded setlist from:', loaded.filePath);
+      return loaded;
     } catch (error) {
       console.error('[Setlist] Error loading setlist:', error);
       return { success: false, error: error.message };
@@ -89,11 +134,13 @@ export function registerSetlistHandlers({ getMainWindow }) {
   ipcMain.handle('setlist:load-from-path', async (_event, { filePath }) => {
     try {
       const fs = await import('fs/promises');
-      const content = await fs.readFile(filePath, 'utf8');
-      const setlistData = JSON.parse(content);
+      const loaded = await readValidatedSetlistFile(fs, filePath);
+      if (!loaded.success) {
+        return loaded;
+      }
 
-      console.log('[Setlist] Loaded setlist from path:', filePath);
-      return { success: true, setlistData, filePath };
+      console.log('[Setlist] Loaded setlist from path:', loaded.filePath);
+      return loaded;
     } catch (error) {
       console.error('[Setlist] Error loading setlist from path:', error);
       return { success: false, error: error.message };

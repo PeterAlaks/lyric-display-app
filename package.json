@@ -21,6 +21,7 @@
     "postinstall": "electron-builder install-app-deps",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "audit:server": "npm --prefix server audit --omit=dev --audit-level=moderate",
+    "test:security": "node --test tests/security-hardening.test.js",
     "version": "node scripts/update-version.js && git add README.md \"INSTALLATION.md\"",
     "release": "node scripts/release.js"
   },
@@ -40,6 +41,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
+    "dompurify": "^3.4.8",
     "dotenv": "^17.2.1",
     "electron-store": "^10.1.0",
     "electron-updater": "^6.6.2",

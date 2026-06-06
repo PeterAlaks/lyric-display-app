@@ -1,8 +1,58 @@
 import { ipcMain, dialog } from 'electron';
 import { readFile, writeFile } from 'fs/promises';
+import path from 'path';
 import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
 import { addRecent } from '../recents.js';
 import * as userPreferences from '../userPreferences.js';
+
+const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc']);
+const MAX_WRITE_CONTENT_BYTES = 10 * 1024 * 1024;
+const writeGrantPaths = new Set();
+
+function normalizeFilePath(filePath) {
+  if (typeof filePath !== 'string' || !filePath.trim()) {
+    return null;
+  }
+  const resolved = path.resolve(filePath);
+  if (!path.isAbsolute(resolved)) {
+    return null;
+  }
+  return resolved;
+}
+
+function grantWritePath(filePath) {
+  const normalized = normalizeFilePath(filePath);
+  if (normalized) {
+    writeGrantPaths.add(normalized);
+  }
+  return normalized;
+}
+
+function validateLyricWrite(filePath, content) {
+  const normalized = normalizeFilePath(filePath);
+  if (!normalized) {
+    return { valid: false, error: 'Invalid file path' };
+  }
+
+  const extension = path.extname(normalized).toLowerCase();
+  if (!ALLOWED_WRITE_EXTENSIONS.has(extension)) {
+    return { valid: false, error: 'Only .txt and .lrc lyric files can be written here' };
+  }
+
+  if (!writeGrantPaths.has(normalized)) {
+    return { valid: false, error: 'File write was not granted by a LyricDisplay file workflow' };
+  }
+
+  if (typeof content !== 'string') {
+    return { valid: false, error: 'File content must be text' };
+  }
+
+  if (Buffer.byteLength(content, 'utf8') > MAX_WRITE_CONTENT_BYTES) {
+    return { valid: false, error: 'File content is too large' };
+  }
+
+  return { valid: true, normalized };
+}
 
 /**
  * Register file operation IPC handlers
@@ -13,11 +63,19 @@ export function registerFileHandlers({ getMainWindow }) {
   ipcMain.handle('show-save-dialog', async (_event, options) => {
     const win = getMainWindow?.();
     const result = await dialog.showSaveDialog(win || undefined, options);
+    if (!result.canceled && result.filePath) {
+      grantWritePath(result.filePath);
+    }
     return result;
   });
 
   ipcMain.handle('write-file', async (_event, filePath, content) => {
-    await writeFile(filePath, content, 'utf8');
+    const validation = validateLyricWrite(filePath, content);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+
+    await writeFile(validation.normalized, content, 'utf8');
     return { success: true };
   });
 
@@ -52,6 +110,7 @@ export function registerFileHandlers({ getMainWindow }) {
         const filePath = result.filePaths[0];
         const content = await readFile(filePath, 'utf8');
         const fileName = filePath.split(/[\\/]/).pop();
+        grantWritePath(filePath);
         try {
           await addRecent(filePath);
         } catch { }
@@ -68,9 +127,11 @@ export function registerFileHandlers({ getMainWindow }) {
     try {
       const { fileType = 'txt', path: filePath, rawText } = payload || {};
       let content = typeof rawText === 'string' ? rawText : null;
+      let readFromPath = false;
 
       if (!content && filePath) {
         content = await readFile(filePath, 'utf8');
+        readFromPath = true;
       }
 
       if (typeof content !== 'string') {
@@ -99,6 +160,9 @@ export function registerFileHandlers({ getMainWindow }) {
 
       const parser = fileType === 'lrc' ? parseLrcContent : parseTxtContent;
       const result = parser(content, parsingOptions);
+      if (readFromPath && filePath) {
+        grantWritePath(filePath);
+      }
 
       return { success: true, payload: result };
     } catch (error) {

@@ -1,6 +1,8 @@
 import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
 import { state } from '../state.js';
 
+const MAX_SETLIST_ITEMS = 100;
+
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
   socket.on('requestSetlist', () => {
     if (!hasPermission(socket, 'setlist:read')) {
@@ -26,9 +28,9 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       }
 
       const totalAfterAdd = state.setlistFiles.length + files.length;
-      if (totalAfterAdd > 50) {
-        console.error('setlistAdd: Would exceed 50 file limit');
-        socket.emit('setlistError', `Cannot add ${files.length} files. Maximum 50 files allowed.`);
+      if (totalAfterAdd > MAX_SETLIST_ITEMS) {
+        console.error(`setlistAdd: Would exceed ${MAX_SETLIST_ITEMS} file limit`);
+        socket.emit('setlistError', `Cannot add ${files.length} files. Maximum ${MAX_SETLIST_ITEMS} files allowed.`);
         return;
       }
 
