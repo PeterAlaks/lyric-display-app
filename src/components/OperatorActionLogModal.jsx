@@ -72,10 +72,45 @@ export default function OperatorActionLogModal({ darkMode }) {
   const { showModal } = useModal();
   const { actionLog, requestActionLog, clearActionLog, ready, isAuthenticated } = useActionLogBridge();
   const [filter, setFilter] = React.useState('secondary');
+  const filtersContainerRef = React.useRef(null);
+  const filtersScrollerRef = React.useRef(null);
 
   React.useEffect(() => {
     requestActionLog();
   }, [requestActionLog]);
+
+  const handleFiltersWheel = React.useCallback((event) => {
+    const scroller = filtersScrollerRef.current;
+    if (!scroller) return;
+
+    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
+    if (maxScrollLeft <= 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+
+    const wheelDelta = event.deltaX + event.deltaY;
+    if (wheelDelta === 0) return;
+
+    scroller.scrollLeft = Math.min(
+      maxScrollLeft,
+      Math.max(0, scroller.scrollLeft + wheelDelta)
+    );
+  }, []);
+
+  React.useEffect(() => {
+    const container = filtersContainerRef.current;
+    const scroller = filtersScrollerRef.current;
+    if (!container || !scroller) return;
+
+    const handleNativeWheel = (event) => handleFiltersWheel(event);
+    container.addEventListener('wheel', handleNativeWheel, { passive: false, capture: true });
+
+    return () => {
+      container.removeEventListener('wheel', handleNativeWheel, { capture: true });
+    };
+  }, [handleFiltersWheel]);
 
   const filteredEntries = React.useMemo(() => {
     const entries = [...actionLog].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -197,23 +232,34 @@ export default function OperatorActionLogModal({ darkMode }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 px-5 py-3 dark:border-gray-700">
-        {FILTERS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setFilter(item.id)}
-            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${filter === item.id
-              ? darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-900 bg-gray-900 text-white'
-              : darkMode ? 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="relative border-b border-gray-200 dark:border-gray-700" ref={filtersContainerRef}>
+        <div
+          ref={filtersScrollerRef}
+          className="flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap overscroll-contain px-5 py-3"
+        >
+          {FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setFilter(item.id)}
+              className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${filter === item.id
+                ? darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-900 bg-gray-900 text-white'
+                : darkMode ? 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div
+          className={`pointer-events-none absolute inset-y-0 right-0 w-12 ${darkMode
+            ? 'bg-gradient-to-l from-gray-900 via-gray-900/85 to-transparent'
+            : 'bg-gradient-to-l from-white via-white/85 to-transparent'
+            }`}
+        />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-24">
+      <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-32">
         {filteredEntries.length === 0 ? (
           <div className={`flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center ${darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-300 text-gray-500'}`}>
             <FileText className="mb-3 h-8 w-8 opacity-70" />

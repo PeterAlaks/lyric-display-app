@@ -6,10 +6,11 @@ import {
 } from '../state.js';
 import { getPrimaryOutputInstance, isOutputClientType, isOutputDiscoveryClientType, isPlainObject } from '../utils.js';
 
-export function registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId }) {
+export function registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId, isPreview = false }) {
   console.log(`Authenticated user connected: ${clientType} (${deviceId}) - Socket: ${socket.id}`);
 
   const isOutputClient = isOutputClientType(clientType) && !isOutputDiscoveryClientType(clientType);
+  const tracksOutputPresence = isOutputClient && !isPreview;
 
   if (isOutputClient) {
     if (!state.registeredOutputs.has(clientType)) {
@@ -29,7 +30,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     connectedAt: socket.userData.connectedAt
   });
 
-  if (isOutputClient) {
+  if (tracksOutputPresence) {
     const connectedAt = Date.now();
     state.outputInstances.get(clientType).set(socket.id, {
       socketId: socket.id,
@@ -72,7 +73,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     console.log(`Authenticated user disconnected: ${clientType} (${deviceId}) - Reason: ${reason}`);
     state.connectedClients.delete(socket.id);
 
-    if (isOutputClientType(clientType) && state.outputInstances.has(clientType)) {
+    if (tracksOutputPresence && state.outputInstances.has(clientType)) {
       state.outputInstances.get(clientType).delete(socket.id);
 
       const remainingInstances = Array.from(state.outputInstances.get(clientType).values());

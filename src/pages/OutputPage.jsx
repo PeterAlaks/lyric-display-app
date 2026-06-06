@@ -24,6 +24,9 @@ const OutputPage = ({ outputId }) => {
   const customOutputIds = useCustomOutputIds();
   const isOutputAvailable = isDefaultOutput || customOutputIds.includes(outputId);
   const discoveryEnabled = !isDefaultOutput && !isOutputAvailable;
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
+  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
 
   useSocket('output-discovery', {
     enabled: discoveryEnabled,
@@ -31,15 +34,12 @@ const OutputPage = ({ outputId }) => {
 
   const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket(outputId, {
     enabled: isOutputAvailable,
+    preview: isPreviewMode,
   });
   const { settings: outputSettings, updateSettings: updateOutputSettings } = useOutputSettings(outputId);
   const outputEnabled = useOutputEnabled(outputId);
   const { lyrics, selectedLine } = useLyricsState();
   const { isOutputOn } = useOutputState();
-
-  const searchParams = new URLSearchParams(location.search);
-  const isPreviewMode = searchParams.get('preview') === 'true';
-  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
 
   const [adjustedFontSize, setAdjustedFontSize] = useState(null);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -485,7 +485,7 @@ const OutputPage = ({ outputId }) => {
       }
       updateOutputSettings({ autosizerActive: false });
 
-      if (emitOutputMetrics && isConnected && isAuthenticated) {
+      if (!isPreviewMode && emitOutputMetrics && isConnected && isAuthenticated) {
         try {
           emitOutputMetrics(outputId, {
             adjustedFontSize: null,
@@ -531,7 +531,7 @@ const OutputPage = ({ outputId }) => {
 
       updateOutputSettings({ autosizerActive });
 
-      if (emitOutputMetrics && isConnected && isAuthenticated) {
+      if (!isPreviewMode && emitOutputMetrics && isConnected && isAuthenticated) {
         try {
           emitOutputMetrics(outputId, {
             adjustedFontSize: safeAdjusted,
@@ -558,7 +558,8 @@ const OutputPage = ({ outputId }) => {
     allCaps,
     letterSpacing,
     isVisible,
-    adjustedFontSize
+    adjustedFontSize,
+    isPreviewMode
   ]);
 
   const renderContent = () => {

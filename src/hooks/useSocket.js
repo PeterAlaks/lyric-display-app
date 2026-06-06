@@ -10,7 +10,7 @@ import { logDebug, logError, logWarn } from '../utils/logger';
 const LONG_BACKOFF_WARNING_MS = 4000;
 
 const useSocket = (role = 'output', options = {}) => {
-  const { enabled = true } = options;
+  const { enabled = true, preview = false } = options;
   const socketRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
@@ -232,7 +232,7 @@ const useSocket = (role = 'output', options = {}) => {
         timeout: settings.connectionTimeout,
         reconnection: false,
         forceNew: true,
-        auth: { token },
+        auth: { token, preview: Boolean(preview) },
       };
 
       socketRef.current = io(socketUrl, socketOptions);
@@ -311,7 +311,8 @@ const useSocket = (role = 'output', options = {}) => {
     disposeCurrentSocket,
     emitBackoffWarning,
     clearBackoffWarning,
-    enabled
+    enabled,
+    preview
   ]);
 
   const scheduleRetry = useCallback(() => {

@@ -7,6 +7,7 @@ import {
   rehydrateOutputState,
 } from '../src/context/lyricsStore/outputSlice.js';
 import { registerConnectionHandlers } from '../server/realtime/handlers/connectionHandlers.js';
+import { registerOutputHandlers } from '../server/realtime/handlers/outputHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
 import { state } from '../server/realtime/state.js';
 
@@ -320,6 +321,131 @@ test('output connection immediately broadcasts an active instance', () => {
     state.connectedClients = previousConnectedClients;
     state.outputInstances = previousOutputInstances;
     state.registeredOutputs = previousRegisteredOutputs;
+    state.outputSettings = previousOutputSettings;
+    state.outputEnabled = previousOutputEnabled;
+  }
+});
+
+test('preview output connection does not broadcast production readiness presence', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousOutputInstances = state.outputInstances;
+  const previousRegisteredOutputs = state.registeredOutputs;
+  const previousOutputSettings = state.outputSettings;
+  const previousOutputEnabled = state.outputEnabled;
+
+  state.connectedClients = new Map();
+  state.outputInstances = new Map([['output1', new Map()]]);
+  state.registeredOutputs = new Set(['output1', 'output2']);
+  state.outputSettings = new Map([['output1', {}]]);
+  state.outputEnabled = new Map([['output1', true]]);
+
+  try {
+    const handlers = new Map();
+    const ioEvents = [];
+    const socketEvents = [];
+    const socket = {
+      id: 'socket-preview-output',
+      connected: true,
+      userData: {
+        permissions: ['lyrics:read'],
+        connectedAt: Date.now(),
+      },
+      broadcast: {
+        emit(eventName, payload) {
+          socketEvents.push({ eventName, payload });
+        },
+      },
+      on(eventName, handler) {
+        if (!handlers.has(eventName)) handlers.set(eventName, []);
+        handlers.get(eventName).push(handler);
+      },
+      emit(eventName, payload) {
+        socketEvents.push({ eventName, payload });
+      },
+      disconnect() {},
+    };
+    const io = {
+      emit(eventName, payload) {
+        ioEvents.push({ eventName, payload });
+      },
+    };
+
+    const connected = registerConnectionHandlers({
+      io,
+      socket,
+      clientType: 'output1',
+      deviceId: 'preview-device',
+      sessionId: 'preview-session',
+      isPreview: true,
+    });
+
+    assert.equal(connected, true);
+    assert.equal(ioEvents.some((event) => event.eventName === 'outputMetrics'), false);
+    assert.equal(state.outputInstances.get('output1').size, 0);
+
+    handlers.get('disconnect')?.forEach((handler) => handler('test cleanup'));
+    assert.equal(ioEvents.some((event) => event.eventName === 'outputMetrics'), false);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.outputInstances = previousOutputInstances;
+    state.registeredOutputs = previousRegisteredOutputs;
+    state.outputSettings = previousOutputSettings;
+    state.outputEnabled = previousOutputEnabled;
+  }
+});
+
+test('preview output metrics are ignored by production readiness tracking', () => {
+  const previousOutputInstances = state.outputInstances;
+  const previousOutputSettings = state.outputSettings;
+  const previousOutputEnabled = state.outputEnabled;
+
+  state.outputInstances = new Map([['output1', new Map()]]);
+  state.outputSettings = new Map([['output1', {}]]);
+  state.outputEnabled = new Map([['output1', true]]);
+
+  try {
+    const handlers = new Map();
+    const ioEvents = [];
+    const socketEvents = [];
+    const socket = {
+      id: 'socket-preview-output',
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        socketEvents.push({ eventName, payload });
+      },
+    };
+    const io = {
+      emit(eventName, payload) {
+        ioEvents.push({ eventName, payload });
+      },
+    };
+
+    registerOutputHandlers({
+      io,
+      socket,
+      hasPermission: () => true,
+      clientType: 'output1',
+      deviceId: 'preview-device',
+      sessionId: 'preview-session',
+      isPreview: true,
+    });
+
+    handlers.get('outputMetrics')?.({
+      output: 'output1',
+      metrics: {
+        autosizerActive: false,
+        viewportWidth: 800,
+        viewportHeight: 450,
+      },
+    });
+
+    assert.equal(ioEvents.length, 0);
+    assert.equal(socketEvents.length, 0);
+    assert.equal(state.outputInstances.get('output1').size, 0);
+  } finally {
+    state.outputInstances = previousOutputInstances;
     state.outputSettings = previousOutputSettings;
     state.outputEnabled = previousOutputEnabled;
   }

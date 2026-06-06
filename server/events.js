@@ -16,8 +16,8 @@ export { getOutputRegistry, hasOutput };
 
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
-    const { clientType, deviceId, sessionId } = socket.userData;
-    const connected = registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId });
+    const { clientType, deviceId, sessionId, isPreview } = socket.userData;
+    const connected = registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId, isPreview });
 
     if (!connected) {
       return;
@@ -30,6 +30,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
       clientType,
       deviceId,
       sessionId,
+      isPreview,
     };
 
     registerCurrentStateHandler(context);

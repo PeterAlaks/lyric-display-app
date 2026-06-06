@@ -22,7 +22,7 @@ const getChangedSettingKeys = (currentSettings = {}, nextSettings = {}) => {
   return Object.keys(nextSettings).filter((key) => !areSettingValuesEqual(currentSettings?.[key], nextSettings[key]));
 };
 
-export function registerOutputHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
+export function registerOutputHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId, isPreview = false }) {
   const actor = { clientType, deviceId, sessionId };
 
   socket.on('outputToggle', (nextState) => {
@@ -207,6 +207,10 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
   });
 
   socket.on('outputMetrics', (payload) => {
+    if (isPreview) {
+      return;
+    }
+
     if (!isOutputClientType(clientType)) {
       socket.emit('permissionError', 'Insufficient permissions to publish metrics');
       return;
