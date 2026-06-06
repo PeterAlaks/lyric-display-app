@@ -17,6 +17,7 @@ import { createStageSlice } from './lyricsStore/stageSlice.js';
 import { createTimerSlice } from './lyricsStore/timerSlice.js';
 
 export { createDefaultOutputSettings, defaultOutput1Settings, defaultOutput2Settings } from './lyricsStore/outputSlice.js';
+export { defaultStageSettings } from './lyricsStore/stageSlice.js';
 
 const normalizePaintSettingUpdates = (settings = {}) => {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return {};
@@ -130,61 +131,6 @@ export async function loadPreferencesIntoStore(store) {
   }
 }
 
-export const defaultStageSettings = {
-  fontStyle: 'Bebas Neue',
-  backgroundColor: '#000000',
-  backgroundPaint: { type: 'solid', color: '#000000' },
-  liveFontSize: 120,
-  liveColor: '#FFFFFF',
-  liveBold: true,
-  liveItalic: false,
-  liveUnderline: false,
-  liveAllCaps: false,
-  liveAlign: 'left',
-  liveLetterSpacing: 0,
-  liveLineSpacing: 1,
-  nextFontSize: 72,
-  nextColor: '#808080',
-  nextBold: false,
-  nextItalic: false,
-  nextUnderline: false,
-  nextAllCaps: false,
-  nextAlign: 'left',
-  nextLetterSpacing: 0,
-  nextLineSpacing: 1,
-  showNextLine: true,
-  showNextArrow: true,
-  nextArrowColor: '#FFA500',
-  prevFontSize: 28,
-  prevColor: '#404040',
-  prevBold: false,
-  prevItalic: false,
-  prevUnderline: false,
-  prevAllCaps: false,
-  prevAlign: 'left',
-  prevLetterSpacing: 0,
-  prevLineSpacing: 1,
-  showPrevLine: true,
-  currentSongColor: '#FFFFFF',
-  currentSongSize: 24,
-  upcomingSongColor: '#808080',
-  upcomingSongSize: 18,
-  upcomingSongMode: 'automatic',
-  upcomingSongFullScreen: false,
-  timerFullScreen: false,
-  customMessagesFullScreen: false,
-  showTime: true,
-  messageScrollSpeed: 3000,
-  bottomBarColor: '#FFFFFF',
-  bottomBarSize: 20,
-  translationLineColor: '#FBBF24',
-  maxLinesEnabled: false,
-  maxLines: 3,
-  minFontSize: 24,
-  transitionAnimation: 'slide',
-  transitionSpeed: 300
-};
-
 const useLyricsStore = create(
   persist(
     (set, get) => ({
@@ -193,7 +139,7 @@ const useLyricsStore = create(
       ...createAutoplaySlice(set),
       ...createPreferencesSlice(set),
       ...createSetlistSlice(set, get),
-      ...createStageSlice(set, defaultStageSettings),
+      ...createStageSlice(set),
       ...createTimerSlice(set, normalizePaintSettingUpdates),
       ...createOutputSlice(set, get, normalizePaintSettingUpdates),
     }),
