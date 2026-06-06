@@ -10,6 +10,7 @@ import { registerOutputHandlers } from './realtime/handlers/outputHandlers.js';
 import { registerStageHandlers } from './realtime/handlers/stageHandlers.js';
 import { registerDraftHandlers } from './realtime/handlers/draftHandlers.js';
 import { registerLiveSafetyHandlers } from './realtime/handlers/liveSafetyHandlers.js';
+import { registerActionLogHandlers } from './realtime/handlers/actionLogHandlers.js';
 
 export { getOutputRegistry, hasOutput };
 
@@ -38,6 +39,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
     registerStageHandlers(context);
     registerDraftHandlers(context);
     registerLiveSafetyHandlers(context);
+    registerActionLogHandlers(context);
   });
 
   startConnectionStatsLogger();

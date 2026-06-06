@@ -30,6 +30,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const [ready, setReady] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [liveSafety, setLiveSafety] = useState({ enabled: false, updatedAt: null, updatedBy: null });
+    const [actionLog, setActionLog] = useState([]);
 
     const {
         authStatus,
@@ -294,6 +295,18 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                     }));
                 });
 
+                socket.on('actionLogSnapshot', (entries) => {
+                    if (Array.isArray(entries)) {
+                        setActionLog(entries);
+                    }
+                });
+
+                socket.on('actionLogUpdate', (entry) => {
+                    if (entry && typeof entry === 'object') {
+                        setActionLog((prev) => [...prev, entry].slice(-750));
+                    }
+                });
+
                 registerAuthenticatedHandlers({
                     socket,
                     clientType,
@@ -406,6 +419,12 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const emitLiveSafetySet = useCallback((enabled) => {
         return createEmitFunction('liveSafetySet')({ enabled: Boolean(enabled) });
     }, [createEmitFunction]);
+    const emitRequestActionLog = useCallback((payload = {}) => {
+        return createEmitFunction('requestActionLog')(payload);
+    }, [createEmitFunction]);
+    const emitActionLogClear = useCallback(() => {
+        return createEmitFunction('actionLogClear')();
+    }, [createEmitFunction]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -422,6 +441,19 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     }, [authStatus, connectionStatus, lastSyncTime, liveSafety, ready]);
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const snapshot = {
+            actionLog,
+            ready,
+            authStatus,
+            connectionStatus,
+        };
+        window.__lyricDisplayActionLogState = snapshot;
+        window.dispatchEvent(new CustomEvent('action-log-state-updated', { detail: snapshot }));
+    }, [actionLog, authStatus, connectionStatus, ready]);
+
+    useEffect(() => {
         if (typeof window === 'undefined') return undefined;
 
         const handleSetLiveSafety = (event) => {
@@ -434,6 +466,24 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         window.addEventListener('live-safety-set-requested', handleSetLiveSafety);
         return () => window.removeEventListener('live-safety-set-requested', handleSetLiveSafety);
     }, [emitLiveSafetySet]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const handleRequestActionLog = (event) => {
+            emitRequestActionLog(event?.detail || {});
+        };
+        const handleClearActionLog = () => {
+            emitActionLogClear();
+        };
+
+        window.addEventListener('action-log-requested', handleRequestActionLog);
+        window.addEventListener('action-log-clear-requested', handleClearActionLog);
+        return () => {
+            window.removeEventListener('action-log-requested', handleRequestActionLog);
+            window.removeEventListener('action-log-clear-requested', handleClearActionLog);
+        };
+    }, [emitActionLogClear, emitRequestActionLog]);
 
     useEffect(() => {
         if (!ready || authStatus !== 'authenticated' || !window.electronAPI?.preferences?.get) return;
@@ -552,6 +602,8 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         emitOutputRemove,
         emitOutputsRegister,
         emitLiveSafetySet,
+        emitRequestActionLog,
+        emitActionLogClear,
         connectionStatus,
         authStatus,
         forceReconnect,
@@ -561,6 +613,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         ready,
         lastSyncTime,
         liveSafety,
+        actionLog,
         getConnectionDiagnostics,
     };
 

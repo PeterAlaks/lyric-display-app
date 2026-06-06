@@ -922,6 +922,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             securityRotating={securityRotating}
             securityStatus={securityStatus}
             setNumberInputDraft={setNumberInputDraft}
+            showModal={showModal}
             showToast={showToast}
             updatePreference={updatePreference}
           />

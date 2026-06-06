@@ -409,7 +409,7 @@ const useSocketEvents = (role) => {
             primaryViewportWidth: metrics?.viewportWidth ?? null,
             primaryViewportHeight: metrics?.viewportHeight ?? null,
             allInstances: allInstances || null,
-            instanceCount: instanceCount || 1,
+            instanceCount: Number.isFinite(instanceCount) ? instanceCount : 1,
           };
 
           if (typeof output === 'string' && output.startsWith('output')) {

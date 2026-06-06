@@ -1,9 +1,12 @@
 import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
 import { MAX_SETLIST_ITEMS } from '../../../shared/setlistLimits.js';
+import { appendActionLog } from '../actionLog.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { state } from '../state.js';
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
+  const actor = { clientType, deviceId, sessionId };
+
   socket.on('requestSetlist', () => {
     if (!hasPermission(socket, 'setlist:read')) {
       socket.emit('permissionError', 'Insufficient permissions to access setlist');
@@ -15,7 +18,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistAdd', (files) => {
-    if (blockIfLiveSafety({ socket, clientType, action: 'setlistAdd' })) {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistAdd' })) {
       return;
     }
 
@@ -76,6 +79,18 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
       state.setlistFiles.push(...newFiles);
       console.log(`${clientType} client added ${newFiles.length} files to setlist. Total: ${state.setlistFiles.length}`);
+      appendActionLog(io, {
+        type: 'setlist',
+        label: 'Setlist songs added',
+        detail: `${newFiles.length} song${newFiles.length === 1 ? '' : 's'} added to setlist`,
+        actor,
+        target: 'setlist',
+        metadata: {
+          added: newFiles.length,
+          total: state.setlistFiles.length,
+          songs: newFiles.map((file) => file.displayName),
+        },
+      });
 
       io.emit('setlistUpdate', state.setlistFiles);
       socket.emit('setlistAddSuccess', {
@@ -90,7 +105,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistRemove', (fileId) => {
-    if (blockIfLiveSafety({ socket, clientType, action: 'setlistRemove' })) {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistRemove' })) {
       return;
     }
 
@@ -113,6 +128,14 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
       if (state.setlistFiles.length < initialCount) {
         console.log(`${clientType} client removed file ${fileId} from setlist. Remaining: ${state.setlistFiles.length}`);
+        appendActionLog(io, {
+          type: 'setlist',
+          label: 'Setlist song removed',
+          detail: `Removed "${fileToRemove?.displayName || fileToRemove?.originalName || fileId}" from setlist`,
+          actor,
+          target: fileToRemove?.displayName || fileId,
+          metadata: { total: state.setlistFiles.length },
+        });
         io.emit('setlistUpdate', state.setlistFiles);
         socket.emit('setlistRemoveSuccess', fileId);
       } else {
@@ -125,7 +148,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistLoad', (fileId) => {
-    if (blockIfLiveSafety({ socket, clientType, action: 'setlistLoad' })) {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistLoad' })) {
       return;
     }
 
@@ -174,6 +197,18 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       state.currentLineToSection = lineToSection;
 
       console.log(`${clientType} client loaded "${cleanDisplayName}" from setlist (${processedLines.length} lines, ${timestamps.length} timestamps)`);
+      appendActionLog(io, {
+        type: 'setlist',
+        label: 'Setlist song loaded',
+        detail: `Loaded "${cleanDisplayName}" from setlist`,
+        actor,
+        target: cleanDisplayName,
+        metadata: {
+          lines: processedLines.length,
+          timestamps: timestamps.length,
+          fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
+        },
+      });
 
       io.emit('lyricsLoad', processedLines);
       io.emit('lyricsTimestampsUpdate', timestamps);
@@ -200,7 +235,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistClear', () => {
-    if (blockIfLiveSafety({ socket, clientType, action: 'setlistClear' })) {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistClear' })) {
       return;
     }
 
@@ -209,14 +244,23 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       return;
     }
 
+    const previousCount = state.setlistFiles.length;
     state.setlistFiles = [];
     console.log(`Setlist cleared by ${clientType} client`);
+    appendActionLog(io, {
+      type: 'setlist',
+      label: 'Setlist cleared',
+      detail: `Cleared ${previousCount} song${previousCount === 1 ? '' : 's'} from setlist`,
+      actor,
+      target: 'setlist',
+      metadata: { previousCount },
+    });
     io.emit('setlistUpdate', state.setlistFiles);
     socket.emit('setlistClearSuccess');
   });
 
   socket.on('setlistReorder', (payload) => {
-    if (blockIfLiveSafety({ socket, clientType, action: 'setlistReorder' })) {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistReorder' })) {
       return;
     }
 
@@ -261,6 +305,14 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
     state.setlistFiles = reordered;
     console.log(`${clientType} client reordered setlist (${state.setlistFiles.length} items)`);
+    appendActionLog(io, {
+      type: 'setlist',
+      label: 'Setlist reordered',
+      detail: `Reordered ${state.setlistFiles.length} setlist song${state.setlistFiles.length === 1 ? '' : 's'}`,
+      actor,
+      target: 'setlist',
+      metadata: { total: state.setlistFiles.length },
+    });
 
     io.emit('setlistUpdate', state.setlistFiles);
     socket.emit('setlistReorderSuccess', {

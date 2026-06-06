@@ -1,7 +1,10 @@
 import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { appendActionLog } from '../actionLog.js';
 import { state } from '../state.js';
 
 export function registerDraftHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
+  const actor = { clientType, deviceId, sessionId };
+
   socket.on('lyricsDraftSubmit', ({ title, rawText, processedLines }) => {
     if (!hasPermission(socket, 'lyrics:draft')) {
       socket.emit('permissionError', 'Insufficient permissions to submit drafts');
@@ -9,6 +12,14 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
     }
 
     console.log(`Lyrics draft submitted by ${clientType} client: "${title}" (${processedLines?.length || 0} lines)`);
+    appendActionLog(io, {
+      type: 'draft',
+      label: 'Lyrics draft submitted',
+      detail: `"${title || 'Untitled'}" submitted for desktop approval`,
+      actor,
+      target: title || 'draft',
+      metadata: { lines: processedLines?.length || 0 },
+    });
 
     const desktopClients = Array.from(state.connectedClients.values()).filter(c => c.type === 'desktop');
 
@@ -67,6 +78,14 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
     state.currentLineToSection = derived.lineToSection || {};
 
     console.log(`Desktop client approved draft: "${title}" (${processedLines?.length || 0} lines)`);
+    appendActionLog(io, {
+      type: 'draft',
+      label: 'Lyrics draft approved',
+      detail: `"${title || 'Untitled'}" approved and loaded`,
+      actor,
+      target: title || 'draft',
+      metadata: { draftId, lines: processedLines?.length || 0 },
+    });
 
     io.emit('lyricsLoad', state.currentLyrics);
     io.emit('fileNameUpdate', state.currentLyricsFileName);
@@ -108,6 +127,14 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
     }
 
     console.log(`Desktop client rejected draft "${title}": ${reason || 'No reason provided'}`);
+    appendActionLog(io, {
+      type: 'draft',
+      label: 'Lyrics draft rejected',
+      detail: `"${title || 'Untitled'}" rejected${reason ? `: ${reason}` : ''}`,
+      actor,
+      target: title || 'draft',
+      metadata: { draftId },
+    });
 
     if (draftId && state.pendingDrafts.has(draftId)) {
       const draftInfo = state.pendingDrafts.get(draftId);
@@ -134,4 +161,3 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
     }
   });
 }
-

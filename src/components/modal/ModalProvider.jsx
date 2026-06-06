@@ -19,6 +19,7 @@ import UserPreferencesModal from '../UserPreferencesModal';
 import NdiOutputSettingsModal from '../NdiOutputSettingsModal';
 import UserMediaModal from '../UserMediaModal';
 import PreServiceHealthModal from '../PreServiceHealthModal';
+import OperatorActionLogModal from '../OperatorActionLogModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
@@ -702,6 +703,9 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'PreServiceHealth' && (
                         <PreServiceHealthModal darkMode={isDark} />
+                      )}
+                      {modal.component === 'OperatorActionLog' && (
+                        <OperatorActionLogModal darkMode={isDark} />
                       )}
 
                       {/* Render standard description/body modals */}

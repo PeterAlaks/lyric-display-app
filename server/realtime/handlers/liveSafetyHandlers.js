@@ -1,3 +1,4 @@
+import { appendActionLog } from '../actionLog.js';
 import { getLiveSafetySnapshot, setLiveSafety } from '../liveSafety.js';
 
 export function registerLiveSafetyHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
@@ -15,6 +16,14 @@ export function registerLiveSafetyHandlers({ io, socket, hasPermission, clientTy
 
     const snapshot = setLiveSafety(enabled, { clientType, deviceId, sessionId });
     console.log(`Live safety mode ${enabled ? 'enabled' : 'disabled'} by ${clientType} client`);
+    appendActionLog(io, {
+      type: 'safety',
+      label: 'Live safety changed',
+      detail: `Live safety mode ${enabled ? 'enabled' : 'disabled'}`,
+      actor: { clientType, deviceId, sessionId },
+      target: 'live safety',
+      metadata: { enabled },
+    });
     io.emit('liveSafetyUpdate', snapshot);
   });
 
@@ -22,4 +31,3 @@ export function registerLiveSafetyHandlers({ io, socket, hasPermission, clientTy
     socket.emit('liveSafetyUpdate', getLiveSafetySnapshot());
   });
 }
-

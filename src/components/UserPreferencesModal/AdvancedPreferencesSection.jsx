@@ -1,4 +1,4 @@
-import { AlertTriangle, Loader2, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, FileText, Loader2, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -21,6 +21,7 @@ const AdvancedPreferencesSection = ({
   securityRotating,
   securityStatus,
   setNumberInputDraft,
+  showModal,
   showToast,
   updatePreference,
 }) => (
@@ -107,6 +108,36 @@ const AdvancedPreferencesSection = ({
         {securityRotating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
         Rotate and Restart App
       </Button>
+    </div>
+
+    <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <FileText className={`w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
+            <label className={`text-sm font-medium ${labelClass}`}>Operator Action Log</label>
+          </div>
+          <p className={`mt-1 text-xs ${mutedClass}`}>
+            Review recent line, setlist, output, stage, safety, and remote controller actions.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => showModal?.({
+            title: 'Operator Action Log',
+            headerDescription: 'Review recent live-control actions and export a text copy',
+            component: 'OperatorActionLog',
+            variant: 'info',
+            size: 'lg',
+            customLayout: true,
+            actions: [{ label: 'Close', variant: 'outline' }],
+          })}
+          className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
+        >
+          View Log
+        </Button>
+      </div>
     </div>
 
     <div className="flex items-center justify-between">

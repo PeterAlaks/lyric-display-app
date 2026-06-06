@@ -6,6 +6,7 @@ import {
   partializeOutputState,
   rehydrateOutputState,
 } from '../src/context/lyricsStore/outputSlice.js';
+import { registerConnectionHandlers } from '../server/realtime/handlers/connectionHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
 import { state } from '../server/realtime/state.js';
 
@@ -86,7 +87,9 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     assert.deepEqual(state.currentLyricsTimestamps, [500, 1000, 2000]);
     assert.equal(state.currentLyricsFileName, 'Service Song');
 
-    assert.deepEqual(ioEvents.map((event) => event.eventName), [
+    assert.deepEqual(ioEvents
+      .map((event) => event.eventName)
+      .filter((eventName) => eventName !== 'actionLogUpdate'), [
       'lyricsLoad',
       'lyricsTimestampsUpdate',
       'lyricsSectionsUpdate',
@@ -162,4 +165,162 @@ test('output persistence includes custom outputs and rehydration clears stale ru
   persisted.customOutputIds = [];
   rehydrateOutputState(persisted);
   assert.equal(persisted.previewCustomOutputId, null);
+});
+
+test('last output disconnect broadcasts zero active instances', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousOutputInstances = state.outputInstances;
+  const previousRegisteredOutputs = state.registeredOutputs;
+  const previousOutputSettings = state.outputSettings;
+  const previousOutputEnabled = state.outputEnabled;
+
+  state.connectedClients = new Map();
+  state.outputInstances = new Map([
+    ['output1', new Map([
+      ['socket-output', {
+        socketId: 'socket-output',
+        viewportWidth: 1280,
+        viewportHeight: 720,
+        autosizerActive: false,
+        lastUpdate: Date.now(),
+      }],
+    ])],
+  ]);
+  state.registeredOutputs = new Set(['output1', 'output2']);
+  state.outputSettings = new Map([['output1', {}]]);
+  state.outputEnabled = new Map([['output1', true]]);
+
+  try {
+    const handlers = new Map();
+    const ioEvents = [];
+    const socketEvents = [];
+    const socket = {
+      id: 'socket-output',
+      connected: true,
+      userData: {
+        permissions: ['lyrics:read'],
+        connectedAt: Date.now(),
+      },
+      broadcast: {
+        emit(eventName, payload) {
+          socketEvents.push({ eventName, payload });
+        },
+      },
+      on(eventName, handler) {
+        if (!handlers.has(eventName)) handlers.set(eventName, []);
+        handlers.get(eventName).push(handler);
+      },
+      emit(eventName, payload) {
+        socketEvents.push({ eventName, payload });
+      },
+      disconnect() {},
+    };
+    const io = {
+      emit(eventName, payload) {
+        ioEvents.push({ eventName, payload });
+      },
+    };
+
+    const connected = registerConnectionHandlers({
+      io,
+      socket,
+      clientType: 'output1',
+      deviceId: 'output-device',
+      sessionId: 'output-session',
+    });
+
+    assert.equal(connected, true);
+    handlers.get('disconnect')?.forEach((handler) => handler('transport close'));
+
+    const metricsEvent = ioEvents.find((event) => (
+      event.eventName === 'outputMetrics' &&
+      event.payload?.output === 'output1' &&
+      event.payload?.instanceCount === 0
+    ));
+    assert.deepEqual(metricsEvent, {
+      eventName: 'outputMetrics',
+      payload: {
+        output: 'output1',
+        metrics: {},
+        allInstances: [],
+        instanceCount: 0,
+      },
+    });
+    assert.equal(state.outputInstances.has('output1'), false);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.outputInstances = previousOutputInstances;
+    state.registeredOutputs = previousRegisteredOutputs;
+    state.outputSettings = previousOutputSettings;
+    state.outputEnabled = previousOutputEnabled;
+  }
+});
+
+test('output connection immediately broadcasts an active instance', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousOutputInstances = state.outputInstances;
+  const previousRegisteredOutputs = state.registeredOutputs;
+  const previousOutputSettings = state.outputSettings;
+  const previousOutputEnabled = state.outputEnabled;
+
+  state.connectedClients = new Map();
+  state.outputInstances = new Map([['output1', new Map()]]);
+  state.registeredOutputs = new Set(['output1', 'output2']);
+  state.outputSettings = new Map([['output1', {}]]);
+  state.outputEnabled = new Map([['output1', true]]);
+
+  try {
+    const handlers = new Map();
+    const ioEvents = [];
+    const socketEvents = [];
+    const socket = {
+      id: 'socket-output',
+      connected: true,
+      userData: {
+        permissions: ['lyrics:read'],
+        connectedAt: Date.now(),
+      },
+      broadcast: {
+        emit(eventName, payload) {
+          socketEvents.push({ eventName, payload });
+        },
+      },
+      on(eventName, handler) {
+        if (!handlers.has(eventName)) handlers.set(eventName, []);
+        handlers.get(eventName).push(handler);
+      },
+      emit(eventName, payload) {
+        socketEvents.push({ eventName, payload });
+      },
+      disconnect() {},
+    };
+    const io = {
+      emit(eventName, payload) {
+        ioEvents.push({ eventName, payload });
+      },
+    };
+
+    const connected = registerConnectionHandlers({
+      io,
+      socket,
+      clientType: 'output1',
+      deviceId: 'output-device',
+      sessionId: 'output-session',
+    });
+
+    assert.equal(connected, true);
+    const metricsEvent = ioEvents.find((event) => event.eventName === 'outputMetrics');
+    assert.equal(metricsEvent.payload.output, 'output1');
+    assert.equal(metricsEvent.payload.instanceCount, 1);
+    assert.equal(metricsEvent.payload.allInstances.length, 1);
+    assert.equal(metricsEvent.payload.allInstances[0].socketId, 'socket-output');
+
+    handlers.get('disconnect')?.forEach((handler) => handler('test cleanup'));
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.outputInstances = previousOutputInstances;
+    state.registeredOutputs = previousRegisteredOutputs;
+    state.outputSettings = previousOutputSettings;
+    state.outputEnabled = previousOutputEnabled;
+  }
 });
