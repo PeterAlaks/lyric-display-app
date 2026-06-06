@@ -47,6 +47,7 @@ const UserMediaModal = ({
   const { ensureValidToken } = useAuth();
   const { showToast } = useToast();
   const { showModal } = useModal();
+  const canSelectMedia = typeof onSelect === 'function';
 
   const selectedMedia = React.useMemo(
     () => media.find((item) => item.id === selectedId) || null,
@@ -256,8 +257,8 @@ const UserMediaModal = ({
   };
 
   const proceed = () => {
-    if (!selectedMedia) return;
-    onSelect?.(selectedMedia);
+    if (!canSelectMedia || !selectedMedia) return;
+    onSelect(selectedMedia);
     onClose?.({ action: 'selected', media: selectedMedia });
   };
 
@@ -407,7 +408,9 @@ const UserMediaModal = ({
 
       <div className={cn('flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4', darkMode ? 'border-gray-800' : 'border-gray-200')}>
         <p className={cn('min-w-0 flex-1 basis-[180px] truncate text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-          {selectedMedia ? selectedMedia.name : 'Select a media item to continue.'}
+          {canSelectMedia
+            ? (selectedMedia ? selectedMedia.name : 'Select a media item to continue.')
+            : `${visibleMedia.length} ${activeTab === 'image' ? 'image' : 'video'}${visibleMedia.length === 1 ? '' : 's'} in library.`}
         </p>
         <div className="flex shrink-0 items-center gap-3">
           <Button
@@ -416,11 +419,13 @@ const UserMediaModal = ({
             onClick={() => onClose?.({ dismissed: true })}
             className={darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : ''}
           >
-            Cancel
+            {canSelectMedia ? 'Cancel' : 'Close'}
           </Button>
-          <Button type="button" onClick={proceed} disabled={!selectedMedia || busy}>
-            Use Selected Media
-          </Button>
+          {canSelectMedia && (
+            <Button type="button" onClick={proceed} disabled={!selectedMedia || busy}>
+              Use Selected Media
+            </Button>
+          )}
         </div>
       </div>
     </div>

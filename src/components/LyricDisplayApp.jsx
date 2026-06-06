@@ -326,6 +326,20 @@ const LyricDisplayApp = () => {
     });
   }, [showModal]);
 
+  React.useEffect(() => {
+    window.addEventListener('open-setlist-modal', handleOpenSetlist);
+    window.addEventListener('open-online-lyrics-search', handleOpenOnlineLyricsSearch);
+    window.addEventListener('sync-outputs-from-menu', handleSyncOutputs);
+    window.addEventListener('open-user-preferences', handleOpenPreferences);
+
+    return () => {
+      window.removeEventListener('open-setlist-modal', handleOpenSetlist);
+      window.removeEventListener('open-online-lyrics-search', handleOpenOnlineLyricsSearch);
+      window.removeEventListener('sync-outputs-from-menu', handleSyncOutputs);
+      window.removeEventListener('open-user-preferences', handleOpenPreferences);
+    };
+  }, [handleOpenOnlineLyricsSearch, handleOpenPreferences, handleOpenSetlist, handleSyncOutputs]);
+
   useKeyboardShortcuts({
     hasLyrics,
     lyrics,
