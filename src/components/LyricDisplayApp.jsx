@@ -143,6 +143,8 @@ const LyricDisplayApp = () => {
     remoteAutoplayActive,
     handleAutoplayToggle,
     handleIntelligentAutoplayToggle,
+    handleIntelligentAutoplayStart,
+    handleIntelligentAutoplayStop,
     handleOpenAutoplaySettings
   } = useAutoplayManager({
     lyrics,
@@ -355,6 +357,7 @@ const LyricDisplayApp = () => {
     selectedLine,
     isOutputOn,
     autoplayActive,
+    intelligentAutoplayActive,
     selectLine,
     setIsOutputOn,
     emitLineUpdate,
@@ -363,6 +366,9 @@ const LyricDisplayApp = () => {
     emitOutput2Toggle: (enabled) => emitIndividualOutputToggle({ output: 'output2', enabled }),
     emitStageToggle: (enabled) => emitIndividualOutputToggle({ output: 'stage', enabled }),
     handleAutoplayToggle,
+    handleIntelligentAutoplayToggle,
+    handleIntelligentAutoplayStart,
+    handleIntelligentAutoplayStop,
     handleSetlistNext: handleNavigateSetlistNext,
     handleSetlistPrev: handleNavigateSetlistPrevious,
     handleSyncOutputs,

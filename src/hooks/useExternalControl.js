@@ -12,6 +12,7 @@ import { useEffect, useCallback, useRef } from 'react';
  * @param {number|null} options.selectedLine - Currently selected line index
  * @param {boolean} options.isOutputOn - Whether output is enabled
  * @param {boolean} options.autoplayActive - Whether autoplay is active
+ * @param {boolean} options.intelligentAutoplayActive - Whether timestamp-based autoplay is active
  * @param {Function} options.selectLine - Function to select a line
  * @param {Function} options.setIsOutputOn - Function to toggle output
  * @param {Function} options.emitLineUpdate - Function to emit line update via socket
@@ -20,6 +21,9 @@ import { useEffect, useCallback, useRef } from 'react';
  * @param {Function} options.emitOutput2Toggle - Function to emit output 2 toggle via socket (optional)
  * @param {Function} options.emitStageToggle - Function to emit stage toggle via socket (optional)
  * @param {Function} options.handleAutoplayToggle - Function to toggle autoplay
+ * @param {Function} options.handleIntelligentAutoplayToggle - Function to toggle timestamp-based autoplay
+ * @param {Function} options.handleIntelligentAutoplayStart - Function to start timestamp-based autoplay
+ * @param {Function} options.handleIntelligentAutoplayStop - Function to stop timestamp-based autoplay
  * @param {Function} options.handleSetlistNext - Function to go to next song in setlist
  * @param {Function} options.handleSetlistPrev - Function to go to previous song in setlist
  * @param {Function} options.handleSyncOutputs - Function to sync all outputs
@@ -32,6 +36,7 @@ export function useExternalControl({
   selectedLine,
   isOutputOn,
   autoplayActive,
+  intelligentAutoplayActive,
   selectLine,
   setIsOutputOn,
   emitLineUpdate,
@@ -40,6 +45,9 @@ export function useExternalControl({
   emitOutput2Toggle,
   emitStageToggle,
   handleAutoplayToggle,
+  handleIntelligentAutoplayToggle,
+  handleIntelligentAutoplayStart,
+  handleIntelligentAutoplayStop,
   handleSetlistNext,
   handleSetlistPrev,
   handleSyncOutputs,
@@ -51,12 +59,14 @@ export function useExternalControl({
   const selectedLineRef = useRef(selectedLine);
   const isOutputOnRef = useRef(isOutputOn);
   const autoplayActiveRef = useRef(autoplayActive);
+  const intelligentAutoplayActiveRef = useRef(intelligentAutoplayActive);
 
   // Keep refs updated
   useEffect(() => { lyricsRef.current = lyrics; }, [lyrics]);
   useEffect(() => { selectedLineRef.current = selectedLine; }, [selectedLine]);
   useEffect(() => { isOutputOnRef.current = isOutputOn; }, [isOutputOn]);
   useEffect(() => { autoplayActiveRef.current = autoplayActive; }, [autoplayActive]);
+  useEffect(() => { intelligentAutoplayActiveRef.current = intelligentAutoplayActive; }, [intelligentAutoplayActive]);
 
   /**
    * Handle line selection with bounds checking
@@ -193,6 +203,24 @@ export function useExternalControl({
         }
         break;
 
+      case 'toggle-intelligent-autoplay':
+        if (typeof handleIntelligentAutoplayToggle === 'function') {
+          handleIntelligentAutoplayToggle();
+        }
+        break;
+
+      case 'intelligent-autoplay-start':
+        if (typeof handleIntelligentAutoplayStart === 'function' && !intelligentAutoplayActiveRef.current) {
+          handleIntelligentAutoplayStart();
+        }
+        break;
+
+      case 'intelligent-autoplay-stop':
+        if (typeof handleIntelligentAutoplayStop === 'function' && intelligentAutoplayActiveRef.current) {
+          handleIntelligentAutoplayStop();
+        }
+        break;
+
       case 'next-song':
         if (typeof handleSetlistNext === 'function') {
           handleSetlistNext();
@@ -287,6 +315,9 @@ export function useExternalControl({
     handleSetOutput,
     handleClearOutput,
     handleAutoplayToggle,
+    handleIntelligentAutoplayToggle,
+    handleIntelligentAutoplayStart,
+    handleIntelligentAutoplayStop,
     handleSetlistNext,
     handleSetlistPrev,
     handleSyncOutputs,
@@ -329,9 +360,10 @@ export function useExternalControl({
       output: isOutputOn,
       songName: songName || '',
       lineCount: lyrics?.length || 0,
-      autoplay: autoplayActive || false
+      autoplay: autoplayActive || false,
+      intelligentAutoplay: intelligentAutoplayActive || false
     });
-  }, [enabled, selectedLine, isOutputOn, songName, lyrics?.length, autoplayActive]);
+  }, [enabled, selectedLine, isOutputOn, songName, lyrics?.length, autoplayActive, intelligentAutoplayActive]);
 
   return {
     processAction,
