@@ -102,6 +102,16 @@ export const useDarkModeState = () =>
         shallow
     );
 
+export const useKeyboardNavigationPreferences = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            skipSectionTitlesOnKeyboard: state.skipSectionTitlesOnKeyboard,
+            setSkipSectionTitlesOnKeyboard: state.setSkipSectionTitlesOnKeyboard,
+        }),
+        shallow
+    );
+
 export const useSetlistState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,

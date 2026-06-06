@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useMultipleFileUpload from '../hooks/useMultipleFileUpload';
@@ -58,6 +58,7 @@ const LyricDisplayApp = () => {
   const maxSetlistFiles = getMaxSetlistFiles();
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
+  const { skipSectionTitlesOnKeyboard } = useKeyboardNavigationPreferences();
 
   useDarkModeSync(darkMode, setDarkMode);
 
@@ -349,7 +350,8 @@ const LyricDisplayApp = () => {
     handleNavigateSetlistPrevious,
     handleNavigateSetlistNext,
     handleOpenPreferences,
-    availableOutputIds: allOutputIds
+    availableOutputIds: allOutputIds,
+    skipSectionTitlesOnKeyboard
   });
 
   useExternalControl({

@@ -87,7 +87,7 @@ const TimeDisplay = () => {
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
   useSocket('stage');
-  const { timerState, displayValue, intensity, now } = useSharedTimer({ controller: false });
+  const { timerState, displayValue, intensity, now, progress } = useSharedTimer({ controller: false });
   const { settings: timerDisplaySettings } = useTimerDisplaySettings();
 
   const display = React.useMemo(() => {
@@ -214,6 +214,25 @@ const TimeDisplay = () => {
             </div>
           )}
         </div>
+
+        {display.showProgress !== false && hasActiveTimer && (
+          <div
+            className="mx-auto mt-4 rounded-full overflow-hidden"
+            style={{
+              width: 'min(82vw, 1400px)',
+              height: 'clamp(8px, 1.2vh, 18px)',
+              backgroundColor: 'rgba(255,255,255,0.16)',
+            }}
+          >
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.max(0, Math.min(1, progress)) * 100}%`,
+                backgroundColor: accentColor,
+              }}
+            />
+          </div>
+        )}
 
         {showSecondaryText && hasActiveTimer && timerState.sets?.length > 1 && (
           <div className="mt-8 flex justify-center">

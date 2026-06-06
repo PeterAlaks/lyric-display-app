@@ -18,6 +18,7 @@ const preferencesStore = new Store({
       confirmOnClose: true,
       liveSafetyMode: false,
       toastSoundsMuted: false,
+      skipSectionTitlesOnKeyboard: true,
       startMinimized: false,
       minimizeToTray: false,
     },

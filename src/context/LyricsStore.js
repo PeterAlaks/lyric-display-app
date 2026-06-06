@@ -83,6 +83,13 @@ export async function loadPreferencesIntoStore(store) {
       }
     }
 
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('general.skipSectionTitlesOnKeyboard');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setSkipSectionTitlesOnKeyboard(result.value);
+      }
+    }
+
     // Load formatting preferences
     if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('formatting.enableCleanupOnPaste');
@@ -157,6 +164,7 @@ const useLyricsStore = create(
           stageEnabled: state.stageEnabled,
           darkMode: state.darkMode,
           themeMode: state.themeMode,
+          skipSectionTitlesOnKeyboard: state.skipSectionTitlesOnKeyboard,
           hasSeenWelcome: state.hasSeenWelcome,
           stageSettings: state.stageSettings,
           timerControlSettings: state.timerControlSettings,

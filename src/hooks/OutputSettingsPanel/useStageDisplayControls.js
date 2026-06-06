@@ -96,6 +96,37 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     update(`${type}FullScreen`, false);
   };
 
+  const getStoredTimerState = useCallback(() => {
+    try {
+      const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
+      return raw ? normalizeTimerState(JSON.parse(raw)) : normalizeTimerState({});
+    } catch {
+      return normalizeTimerState({});
+    }
+  }, []);
+
+  const publishTimerState = useCallback((updates) => {
+    const normalized = normalizeTimerState({
+      ...getStoredTimerState(),
+      ...updates,
+      updatedAt: Date.now(),
+    });
+
+    try {
+      window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(normalized));
+      window.dispatchEvent(new CustomEvent('shared-timer-state', { detail: normalized }));
+      window.dispatchEvent(new CustomEvent('stage-timer-update', { detail: normalized }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('stage-timer-update', { detail: normalized }));
+    }
+
+    if (emitStageTimerUpdate) {
+      emitStageTimerUpdate(normalized);
+    }
+
+    return normalized;
+  }, [emitStageTimerUpdate, getStoredTimerState]);
+
   useEffect(() => {
     const stored = sessionStorage.getItem(STORAGE_KEYS.customMessages);
     if (stored) {
@@ -413,21 +444,29 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
         sessionStorage.removeItem(STORAGE_KEYS.timerRemainingMs);
         sessionStorage.removeItem(STORAGE_KEYS.timerRunning);
         sessionStorage.removeItem(STORAGE_KEYS.timerPaused);
-        if (emitStageTimerUpdate) {
-          emitStageTimerUpdate({ running: false, paused: false, endTime: null, remaining: null });
-        }
+        publishTimerState({
+          status: 'finished',
+          running: false,
+          paused: false,
+          finished: true,
+          endTime: null,
+          pausedRemainingMs: null,
+          remaining: '0:00',
+        });
       }
     };
 
     finishTimerIfExpired();
     const interval = setInterval(finishTimerIfExpired, 1000);
     return () => clearInterval(interval);
-  }, [emitStageTimerUpdate, timerEndTime, timerPaused, timerRunning]);
+  }, [publishTimerState, timerEndTime, timerPaused, timerRunning]);
 
   const handleStartTimer = () => {
     if (timerDuration <= 0) return;
 
-    const endTime = Date.now() + (timerDuration * 60000);
+    const startTime = Date.now();
+    const durationMs = timerDuration * 60000;
+    const endTime = startTime + durationMs;
     setTimerEndTime(endTime);
     setTimerRunning(true);
     setTimerPaused(false);
@@ -439,9 +478,24 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     sessionStorage.setItem(STORAGE_KEYS.timerRunning, 'true');
     sessionStorage.setItem(STORAGE_KEYS.timerPaused, 'false');
 
-    if (emitStageTimerUpdate) {
-      emitStageTimerUpdate({ running: true, paused: false, endTime, remaining: null });
-    }
+    publishTimerState({
+      status: 'running',
+      running: true,
+      paused: false,
+      finished: false,
+      mode: 'countdown',
+      phase: 'timer',
+      durationMs,
+      startTime,
+      endTime,
+      targetTime: null,
+      elapsedBeforePauseMs: 0,
+      pausedRemainingMs: null,
+      remaining: null,
+      overrunStartedAt: null,
+      sets: [],
+      activeSetIndex: 0,
+    });
   };
 
   const handlePauseTimer = () => {
@@ -462,9 +516,17 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     sessionStorage.setItem(STORAGE_KEYS.timerRemainingMs, Math.floor(remainingMs).toString());
     sessionStorage.setItem(STORAGE_KEYS.timerPaused, 'true');
 
-    if (emitStageTimerUpdate) {
-      emitStageTimerUpdate({ running: true, paused: true, endTime: null, remaining: formattedRemaining });
-    }
+    const currentTimer = getStoredTimerState();
+    publishTimerState({
+      status: 'paused',
+      running: true,
+      paused: true,
+      finished: false,
+      endTime: null,
+      elapsedBeforePauseMs: Math.max(0, (currentTimer.durationMs || 0) - remainingMs),
+      pausedRemainingMs: remainingMs,
+      remaining: formattedRemaining,
+    });
   };
 
   const handleResumeTimer = () => {
@@ -485,9 +547,16 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     sessionStorage.removeItem(STORAGE_KEYS.timerRemainingMs);
     sessionStorage.setItem(STORAGE_KEYS.timerPaused, 'false');
 
-    if (emitStageTimerUpdate) {
-      emitStageTimerUpdate({ running: true, paused: false, endTime: resumedEndTime, remaining: null });
-    }
+    publishTimerState({
+      status: 'running',
+      running: true,
+      paused: false,
+      finished: false,
+      startTime: Date.now(),
+      endTime: resumedEndTime,
+      pausedRemainingMs: null,
+      remaining: null,
+    });
   };
 
   const handleStopTimer = () => {
@@ -502,9 +571,23 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     sessionStorage.removeItem(STORAGE_KEYS.timerRunning);
     sessionStorage.removeItem(STORAGE_KEYS.timerPaused);
 
-    if (emitStageTimerUpdate) {
-      emitStageTimerUpdate({ running: false, paused: false, endTime: null, remaining: null });
-    }
+    publishTimerState({
+      status: 'idle',
+      running: false,
+      paused: false,
+      finished: false,
+      phase: 'timer',
+      durationMs: 0,
+      startTime: null,
+      endTime: null,
+      targetTime: null,
+      elapsedBeforePauseMs: 0,
+      pausedRemainingMs: null,
+      remaining: null,
+      overrunStartedAt: null,
+      sets: [],
+      activeSetIndex: 0,
+    });
   };
 
   const handleTimerDurationChange = (value) => {

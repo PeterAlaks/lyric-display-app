@@ -143,6 +143,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
   const panelBg = darkMode ? 'bg-gray-800' : 'bg-gray-50';
   const activeCategoryBg = darkMode ? 'bg-gray-700' : 'bg-white';
+  const preferenceToggleRowClass = "flex items-center justify-between gap-6 [&>button]:shrink-0";
+  const preferenceToggleTextClass = "min-w-0 flex-1";
 
   // Render category content
   const renderCategoryContent = () => {
@@ -152,8 +154,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'general':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Live Safety Mode</label>
                 <p className={`text-xs ${mutedClass}`}>Limit secondary controllers to line navigation during service</p>
               </div>
@@ -169,8 +171,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Confirm on Close</label>
                 <p className={`text-xs ${mutedClass}`}>Show confirmation when closing with unsaved changes</p>
               </div>
@@ -185,8 +187,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Auto-check for updates on startup</label>
                 <p className={`text-xs ${mutedClass}`}>Automatically check for all available updates</p>
               </div>
@@ -201,8 +203,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Toast Sounds</label>
                 <p className={`text-xs ${mutedClass}`}>Play notification sounds when toast messages appear</p>
               </div>
@@ -213,6 +215,25 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('general', 'toastSoundsMuted', muted);
 
                   useLyricsStore.getState().setToastSoundsMuted(muted);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
+                <label className={`text-sm font-medium ${labelClass}`}>Skip Section Titles with Arrow Keys</label>
+                <p className={`text-xs ${mutedClass}`}>Move between lyric lines while keeping section headers available in the editor</p>
+              </div>
+              <Switch
+                checked={preferences.general?.skipSectionTitlesOnKeyboard ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('general', 'skipSectionTitlesOnKeyboard', checked);
+                  useLyricsStore.getState().setSkipSectionTitlesOnKeyboard(checked);
                 }}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
