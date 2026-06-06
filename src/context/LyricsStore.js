@@ -1,11 +1,11 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegistry.js';
-import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../../shared/setlistLimits.js';
+import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
+import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 
-let maxSetlistFilesLimit = DEFAULT_SETLIST_ITEMS;
 let maxFileSizeLimit = 2;
 
 const settingsChanged = (current = {}, next = {}) => {
@@ -446,9 +446,7 @@ const useLyricsStore = create(
       darkMode: false,
       themeMode: 'light',
       hasSeenWelcome: false,
-      setlistFiles: [],
       isDesktopApp: false,
-      setlistModalOpen: false,
       songMetadata: {
         title: '',
         artists: [],
@@ -482,8 +480,7 @@ const useLyricsStore = create(
       formattingNormalizeTypographicChars: true,
       pendingSavedVersion: null,
       maxFileSizeLimit: 2,
-      maxSetlistFilesLimit: DEFAULT_SETLIST_ITEMS,
-      maxSetlistFilesVersion: 0,
+      ...createSetlistSlice(set, get),
 
       setLyrics: (lines) => set({ lyrics: lines }),
       setLyricsSections: (sections) => set({ lyricsSections: Array.isArray(sections) ? sections : [] }),
@@ -505,9 +502,7 @@ const useLyricsStore = create(
       setDarkMode: (mode) => set({ darkMode: mode }),
       setThemeMode: (mode) => set({ themeMode: mode }),
       setHasSeenWelcome: (seen) => set({ hasSeenWelcome: seen }),
-      setSetlistFiles: (files) => set({ setlistFiles: files }),
       setIsDesktopApp: (isDesktop) => set({ isDesktopApp: isDesktop }),
-      setSetlistModalOpen: (open) => set({ setlistModalOpen: open }),
       setSongMetadata: (metadata) => set({ songMetadata: metadata }),
       setLyricsSource: (source) => set({
         lyricsSource: {
@@ -582,40 +577,7 @@ const useLyricsStore = create(
       setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
-      addSetlistFiles: (newFiles) => set((state) => ({
-        setlistFiles: [...state.setlistFiles, ...newFiles]
-      })),
-      removeSetlistFile: (fileId) => set((state) => ({
-        setlistFiles: state.setlistFiles.filter(file => file.id !== fileId)
-      })),
-      clearSetlist: () => set({ setlistFiles: [] }),
-
-      getSetlistFile: (fileId) => {
-        const state = get();
-        return state.setlistFiles.find(file => file.id === fileId);
-      },
-
-      isSetlistFull: () => {
-        const state = get();
-        return state.setlistFiles.length >= maxSetlistFilesLimit;
-      },
-
-      getAvailableSetlistSlots: () => {
-        const state = get();
-        return Math.max(0, maxSetlistFilesLimit - state.setlistFiles.length);
-      },
-
-      getMaxSetlistFiles: () => maxSetlistFilesLimit,
       getMaxFileSize: () => maxFileSizeLimit,
-
-      updateMaxSetlistFiles: (newLimit) => {
-        const normalized = normalizeSetlistItemLimit(newLimit);
-        maxSetlistFilesLimit = normalized;
-        set((state) => ({
-          maxSetlistFilesLimit: normalized,
-          maxSetlistFilesVersion: state.maxSetlistFilesVersion + 1
-        }));
-      },
 
       updateMaxFileSize: (newLimit) => {
         const normalized = Number.isFinite(Number(newLimit)) ? Number(newLimit) : 2;
