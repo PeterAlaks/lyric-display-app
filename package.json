@@ -21,6 +21,8 @@
     "postinstall": "electron-builder install-app-deps",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "audit:server": "npm --prefix server audit --omit=dev --audit-level=moderate",
+    "check:static": "node scripts/check-static.js",
+    "test:unit": "node --test tests/*.test.js",
     "test:security": "node --test tests/security-hardening.test.js",
     "version": "node scripts/update-version.js && git add README.md \"INSTALLATION.md\"",
     "release": "node scripts/release.js"
