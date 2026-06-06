@@ -4,6 +4,8 @@ import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegis
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
+import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
+import { createAutoplaySlice } from './lyricsStore/autoplaySlice.js';
 import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 
@@ -442,10 +444,6 @@ const useLyricsStore = create(
       stageEnabled: true,
       customOutputIds: [],
       previewCustomOutputId: null,
-      darkMode: false,
-      themeMode: 'light',
-      hasSeenWelcome: false,
-      isDesktopApp: false,
       songMetadata: {
         title: '',
         artists: [],
@@ -460,17 +458,12 @@ const useLyricsStore = create(
         filePath: null,
         fileName: '',
       },
-      autoplaySettings: {
-        interval: 5,
-        loop: true,
-        startFromFirst: true,
-        skipBlankLines: true,
-      },
       timerControlSettings: { ...DEFAULT_TIMER_CONTROL_SETTINGS },
       timerDisplaySettings: { ...DEFAULT_TIMER_DISPLAY },
       lyricsTimestamps: [],
-      hasSeenIntelligentAutoplayInfo: false,
       pendingSavedVersion: null,
+      ...createAppShellSlice(set),
+      ...createAutoplaySlice(set),
       ...createPreferencesSlice(set),
       ...createSetlistSlice(set, get),
 
@@ -491,10 +484,6 @@ const useLyricsStore = create(
           if (!state.customOutputIds.includes(outputId)) return {};
           return { previewCustomOutputId: outputId };
         }),
-      setDarkMode: (mode) => set({ darkMode: mode }),
-      setThemeMode: (mode) => set({ themeMode: mode }),
-      setHasSeenWelcome: (seen) => set({ hasSeenWelcome: seen }),
-      setIsDesktopApp: (isDesktop) => set({ isDesktopApp: isDesktop }),
       setSongMetadata: (metadata) => set({ songMetadata: metadata }),
       setLyricsSource: (source) => set({
         lyricsSource: {
@@ -504,7 +493,6 @@ const useLyricsStore = create(
           fileName: source?.fileName || '',
         }
       }),
-      setAutoplaySettings: (settings) => set({ autoplaySettings: settings }),
       updateTimerControlSettings: (settings, options = {}) => set((state) => {
         const incomingSettings = settings && typeof settings === 'object' ? settings : {};
         const currentSettings = normalizeTimerControlSettings(state.timerControlSettings);
@@ -559,7 +547,6 @@ const useLyricsStore = create(
         };
       }),
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
-      setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
 
