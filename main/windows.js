@@ -379,6 +379,7 @@ export function createWindow(route = '/', options = {}) {
     minWidth = 1000,
     minHeight = 650,
     title = null,
+    projectionFocusable = false,
   } = options;
   const isTimerControlWindow = route.startsWith('/timer-control');
   const isObsSetupWindow = route.startsWith('/obs-setup');
@@ -407,7 +408,7 @@ export function createWindow(route = '/', options = {}) {
     thickFrame: true,
     autoHideMenuBar: true,
     skipTaskbar: projection,
-    focusable: projection ? false : true,
+    focusable: projection ? Boolean(projectionFocusable) : true,
     movable: projection ? false : true,
     resizable: projection ? false : true,
     title: windowTitle,
@@ -425,6 +426,7 @@ export function createWindow(route = '/', options = {}) {
       win.setIgnoreMouseEvents(true, { forward: true });
       win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true });
       win.setFullScreenable(true);
+      win.setFocusable(Boolean(projectionFocusable));
     } catch { }
   }
 

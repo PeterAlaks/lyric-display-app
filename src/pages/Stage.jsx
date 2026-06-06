@@ -9,6 +9,7 @@ import { ChevronRight } from 'lucide-react';
 import { normalizeStageMessages } from '../utils/stageMessages';
 import { getTimerDisplay, getTimerIntensity } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
+import ProjectionExitHint from '../components/ProjectionExitHint';
 
 const pulseAnimation = `
 @keyframes pulse {
@@ -560,6 +561,7 @@ const Stage = () => {
         fontFamily: fontStyle,
       }}
     >
+      <ProjectionExitHint visible={isProjectionMode} />
       {/* Top Bar - Song Names */}
       <div className="flex-shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center">
         <div

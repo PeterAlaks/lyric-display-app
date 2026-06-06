@@ -1,9 +1,11 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
 import useSharedTimer from '../hooks/useSharedTimer';
 import { formatGlobalClock, splitClockPeriod } from '../utils/timerUtils';
 import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import { paintToCss } from '../utils/paint';
+import ProjectionExitHint from '../components/ProjectionExitHint';
 
 const PERIOD_STYLE = {
   fontSize: '0.38em',
@@ -79,6 +81,10 @@ const useAutoFitText = (text, enabled = true) => {
 };
 
 const TimeDisplay = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+
   useSocket('stage');
   const { timerState, displayValue, intensity, now } = useSharedTimer({ controller: false });
   const { settings: timerDisplaySettings } = useTimerDisplaySettings();
@@ -136,6 +142,7 @@ const TimeDisplay = () => {
         fontFamily: otherItemsFontFamily,
       }}
     >
+      <ProjectionExitHint visible={isProjectionMode} />
       {label && (
       <div className="absolute inset-x-0 top-[7vh] flex justify-center px-[1vw]">
         <div

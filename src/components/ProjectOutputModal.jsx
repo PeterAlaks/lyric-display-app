@@ -129,7 +129,7 @@ const ProjectOutputModal = ({
     const base = [{
       value: DESKTOP_TARGET,
       label: 'This Monitor',
-      sub: 'Fullscreen behind windows',
+      sub: 'Fullscreen projection; press Esc to exit',
       icon: Monitor,
     }];
     externalDisplays.forEach((display, index) => {

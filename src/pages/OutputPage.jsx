@@ -8,6 +8,7 @@ import { logDebug, logError } from '../utils/logger';
 import { resolveBackendUrl } from '../utils/network';
 import { calculateOptimalFontSize } from '../utils/maxLinesCalculator';
 import { paintToCss } from '../utils/paint';
+import ProjectionExitHint from '../components/ProjectionExitHint';
 
 /**
  * Generic output page component. Renders lyrics with full styling support.
@@ -675,6 +676,7 @@ const OutputPage = ({ outputId }) => {
     >
       {renderFullScreenMedia()}
       {renderFullScreenElement()}
+      <ProjectionExitHint visible={isProjectionMode} />
       <div
         className="relative z-10 flex w-full h-full"
         style={{
