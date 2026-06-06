@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import useLyricsStore, { loadPreferencesIntoStore } from '../../context/LyricsStore';
 import { loadAdvancedSettings } from '../../utils/connectionManager';
 import { loadDebugLoggingPreference } from '../../utils/logger';
+import { LIVE_SAFETY_PREFERENCE_EVENT } from '../useLiveSafetyBridge';
 
 export const usePreferencesPersistence = ({ showToast }) => {
   const [preferences, setPreferences] = useState(null);
@@ -138,6 +139,27 @@ export const usePreferencesPersistence = ({ showToast }) => {
     } catch (error) {
       console.error('Failed to reset category:', error);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleLiveSafetyPreferenceUpdated = (event) => {
+      const enabled = event?.detail?.enabled;
+      if (typeof enabled !== 'boolean') return;
+
+      setPreferences((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          general: {
+            ...prev.general,
+            liveSafetyMode: enabled,
+          },
+        };
+      });
+    };
+
+    window.addEventListener(LIVE_SAFETY_PREFERENCE_EVENT, handleLiveSafetyPreferenceUpdated);
+    return () => window.removeEventListener(LIVE_SAFETY_PREFERENCE_EVENT, handleLiveSafetyPreferenceUpdated);
   }, []);
 
   useEffect(() => {

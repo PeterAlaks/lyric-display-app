@@ -1,5 +1,6 @@
 import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
 import { MAX_SETLIST_ITEMS } from '../../../shared/setlistLimits.js';
+import { blockIfLiveSafety } from '../liveSafety.js';
 import { state } from '../state.js';
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
@@ -14,6 +15,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistAdd', (files) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'setlistAdd' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify setlist');
       return;
@@ -85,6 +90,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistRemove', (fileId) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'setlistRemove' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify setlist');
       return;
@@ -116,6 +125,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistLoad', (fileId) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'setlistLoad' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'lyrics:write')) {
       socket.emit('permissionError', 'Insufficient permissions to load setlist items into live lyrics');
       return;
@@ -187,6 +200,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistClear', () => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'setlistClear' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:delete')) {
       socket.emit('permissionError', 'Insufficient permissions to clear setlist');
       return;
@@ -199,6 +216,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistReorder', (payload) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'setlistReorder' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify setlist ordering');
       return;

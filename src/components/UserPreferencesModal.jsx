@@ -17,6 +17,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
 import useModal from '../hooks/useModal';
+import { useLiveSafetyBridge } from '../hooks/useLiveSafetyBridge';
 import {
   DEFAULT_SETLIST_ITEMS,
   MAX_SETLIST_ITEMS,
@@ -52,6 +53,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
   const { showToast } = useToast();
   const { showModal } = useModal();
+  const { liveSafety, setLiveSafetyEnabled, isAuthenticated, ready } = useLiveSafetyBridge();
   const {
     handleBrowseDefaultPath,
     handleResetCategory,
@@ -150,6 +152,23 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'general':
         return (
           <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Live Safety Mode</label>
+                <p className={`text-xs ${mutedClass}`}>Limit secondary controllers to line navigation during service</p>
+              </div>
+              <Switch
+                checked={Boolean(liveSafety?.enabled)}
+                disabled={!isAuthenticated || !ready}
+                onCheckedChange={(checked) => setLiveSafetyEnabled(checked)}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Confirm on Close</label>

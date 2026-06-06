@@ -110,6 +110,20 @@ const MobileLayout = () => {
     };
   }, [showModal]);
 
+  React.useEffect(() => {
+    const handleLiveSafetyBlocked = (event) => {
+      showToast({
+        title: 'Live safety mode',
+        message: event?.detail?.reason || 'The desktop controller has limited secondary controllers to line navigation during service.',
+        variant: 'warn',
+        duration: 5000,
+      });
+    };
+
+    window.addEventListener('live-safety-blocked', handleLiveSafetyBlocked);
+    return () => window.removeEventListener('live-safety-blocked', handleLiveSafetyBlocked);
+  }, [showToast]);
+
   const handleLineSelect = (index) => {
     if (!isAuthenticated || !ready) {
       return;

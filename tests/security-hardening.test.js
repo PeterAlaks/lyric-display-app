@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MAX_SETLIST_ITEMS } from '../shared/setlistLimits.js';
 import { localhostOnly } from '../server/middleware/localhostOnly.js';
+import { registerLiveSafetyHandlers } from '../server/realtime/handlers/liveSafetyHandlers.js';
+import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
 import { state } from '../server/realtime/state.js';
 import {
@@ -199,4 +201,129 @@ test('setlistAdd allows setlists above the old 50 item cap', () => {
 test('setlist default names are sanitized and forced to .ldset', () => {
   assert.equal(sanitizeSetlistDefaultName('../Bad:Name'), 'BadName.ldset');
   assert.equal(sanitizeSetlistDefaultName('Service.ldset'), 'Service.ldset');
+});
+
+test('live safety mode blocks secondary setlist loads while allowing line navigation', () => {
+  const previousLiveSafety = state.liveSafety;
+  const previousSelectedLine = state.currentSelectedLine;
+  const previousLyrics = state.currentLyrics;
+
+  state.liveSafety = { enabled: true, updatedAt: Date.now(), updatedBy: { clientType: 'desktop' } };
+  state.currentLyrics = ['Line 1', 'Line 2'];
+  state.currentSelectedLine = null;
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const ioEvents = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+    };
+
+    const context = {
+      io: { emit: (eventName, payload) => ioEvents.push({ eventName, payload }) },
+      socket,
+      hasPermission: () => true,
+      clientType: 'mobile',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    };
+
+    registerSetlistHandlers(context);
+    registerLyricsHandlers(context);
+
+    handlers.get('setlistLoad')?.('setlist_1');
+    assert.equal(emitted.at(-1).eventName, 'liveSafetyBlocked');
+    assert.equal(emitted.at(-1).payload.action, 'setlistLoad');
+
+    handlers.get('lineUpdate')?.({ index: 1 });
+    assert.equal(state.currentSelectedLine, 1);
+    assert.deepEqual(ioEvents.at(-1), { eventName: 'lineUpdate', payload: { index: 1 } });
+  } finally {
+    state.liveSafety = previousLiveSafety;
+    state.currentSelectedLine = previousSelectedLine;
+    state.currentLyrics = previousLyrics;
+  }
+});
+
+test('live safety mode blocks secondary group splitting', () => {
+  const previousLiveSafety = state.liveSafety;
+  const previousLyrics = state.currentLyrics;
+
+  state.liveSafety = { enabled: true, updatedAt: Date.now(), updatedBy: { clientType: 'desktop' } };
+  state.currentLyrics = [{
+    type: 'normal-group',
+    lines: ['Line 1', 'Line 2'],
+    displayText: 'Line 1\nLine 2',
+  }];
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+    };
+
+    registerLyricsHandlers({
+      io: { emit() {} },
+      socket,
+      hasPermission: () => true,
+      clientType: 'web',
+      deviceId: 'device-test',
+    });
+
+    handlers.get('splitNormalGroup')?.({ index: 0 });
+
+    assert.equal(emitted.at(-1).eventName, 'liveSafetyBlocked');
+    assert.equal(emitted.at(-1).payload.action, 'splitNormalGroup');
+    assert.equal(state.currentLyrics.length, 1);
+  } finally {
+    state.liveSafety = previousLiveSafety;
+    state.currentLyrics = previousLyrics;
+  }
+});
+
+test('live safety mode can be changed by desktop admin clients', () => {
+  const previousLiveSafety = state.liveSafety;
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const ioEvents = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+    };
+
+    registerLiveSafetyHandlers({
+      io: { emit: (eventName, payload) => ioEvents.push({ eventName, payload }) },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'admin:full',
+      clientType: 'desktop',
+      deviceId: 'desktop-device',
+      sessionId: 'desktop-session',
+    });
+
+    handlers.get('liveSafetySet')?.({ enabled: true });
+
+    assert.equal(state.liveSafety.enabled, true);
+    assert.equal(ioEvents.at(-1).eventName, 'liveSafetyUpdate');
+    assert.equal(ioEvents.at(-1).payload.enabled, true);
+  } finally {
+    state.liveSafety = previousLiveSafety;
+  }
 });

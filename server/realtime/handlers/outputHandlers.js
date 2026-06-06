@@ -5,10 +5,15 @@ import {
   registerOutputs,
   state
 } from '../state.js';
+import { blockIfLiveSafety } from '../liveSafety.js';
 import { getPrimaryOutputInstance, isOutputClientType, isPlainObject } from '../utils.js';
 
 export function registerOutputHandlers({ io, socket, hasPermission, clientType }) {
   socket.on('outputToggle', (nextState) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'outputToggle' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to control output');
       return;
@@ -25,6 +30,10 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
   });
 
   socket.on('individualOutputToggle', (payload) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'individualOutputToggle' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to control individual outputs');
       return;
@@ -52,6 +61,10 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
   });
 
   socket.on('styleUpdate', (payload) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'styleUpdate' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'settings:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify settings');
       return;
@@ -77,6 +90,10 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
   });
 
   socket.on('outputRemove', (payload) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'outputRemove' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'settings:write')) {
       socket.emit('permissionError', 'Insufficient permissions to remove outputs');
       return;
@@ -109,6 +126,10 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
   });
 
   socket.on('outputsRegister', (payload) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'outputsRegister' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'settings:write')) {
       socket.emit('permissionError', 'Insufficient permissions to register outputs');
       return;
@@ -167,4 +188,3 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
     });
   });
 }
-

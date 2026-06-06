@@ -331,10 +331,28 @@ const useMenuHandlers = (closeMenu) => {
     closeMenu();
     showModal({
       title: 'Connection Diagnostics',
+      headerDescription: 'Inspect connected clients, sync state, and retry health',
       component: 'ConnectionDiagnostics',
       variant: 'info',
       size: 'large',
-      dismissLabel: 'Close'
+      actions: [
+        { label: 'Close', variant: 'outline' },
+        {
+          label: 'Production Readiness',
+          variant: 'default',
+          onSelect: () => {
+            showModal({
+              title: 'Production Readiness Check',
+              headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+              component: 'PreServiceHealth',
+              variant: 'info',
+              size: 'lg',
+              customLayout: true,
+              actions: [{ label: 'Close', variant: 'outline' }],
+            });
+          },
+        },
+      ],
     });
   }, [closeMenu, showModal]);
 

@@ -24,10 +24,12 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const heartbeatIntervalRef = useRef(null);
     const clientId = useRef(`control_${Date.now()}`);
     const readyRef = useRef(false);
+    const appliedSavedLiveSafetyRef = useRef(false);
 
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [ready, setReady] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
+    const [liveSafety, setLiveSafety] = useState({ enabled: false, updatedAt: null, updatedBy: null });
 
     const {
         authStatus,
@@ -261,14 +263,35 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 socket.on('connect_error', handleConnectError);
                 socket.on('disconnect', handleDisconnect);
 
-                socket.on('currentState', () => {
+                socket.on('currentState', (state) => {
                     const syncTime = Date.now();
                     setLastSyncTime(syncTime);
+                    if (state?.liveSafety && typeof state.liveSafety.enabled === 'boolean') {
+                        setLiveSafety(state.liveSafety);
+                    }
                     try {
                         localStorage.setItem('lastSyncTime', syncTime.toString());
                     } catch (err) {
                         console.warn('Failed to store lastSyncTime:', err);
                     }
+                });
+
+                socket.on('periodicStateSync', (state) => {
+                    if (state?.liveSafety && typeof state.liveSafety.enabled === 'boolean') {
+                        setLiveSafety(state.liveSafety);
+                    }
+                });
+
+                socket.on('liveSafetyUpdate', (nextLiveSafety) => {
+                    if (nextLiveSafety && typeof nextLiveSafety.enabled === 'boolean') {
+                        setLiveSafety(nextLiveSafety);
+                    }
+                });
+
+                socket.on('liveSafetyBlocked', (payload) => {
+                    window.dispatchEvent(new CustomEvent('live-safety-blocked', {
+                        detail: payload,
+                    }));
                 });
 
                 registerAuthenticatedHandlers({
@@ -380,6 +403,59 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const emitAutoplayStateUpdate = useCallback(createEmitFunction('autoplayStateUpdate'), [createEmitFunction]);
     const emitOutputRemove = useCallback(createEmitFunction('outputRemove'), [createEmitFunction]);
     const emitOutputsRegister = useCallback(createEmitFunction('outputsRegister'), [createEmitFunction]);
+    const emitLiveSafetySet = useCallback((enabled) => {
+        return createEmitFunction('liveSafetySet')({ enabled: Boolean(enabled) });
+    }, [createEmitFunction]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const snapshot = {
+            connectionStatus,
+            authStatus,
+            ready,
+            lastSyncTime,
+            liveSafety,
+        };
+        window.__lyricDisplayControlSocketState = snapshot;
+        window.dispatchEvent(new CustomEvent('control-socket-state-updated', { detail: snapshot }));
+    }, [authStatus, connectionStatus, lastSyncTime, liveSafety, ready]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const handleSetLiveSafety = (event) => {
+            const enabled = event?.detail?.enabled;
+            if (typeof enabled === 'boolean') {
+                emitLiveSafetySet(enabled);
+            }
+        };
+
+        window.addEventListener('live-safety-set-requested', handleSetLiveSafety);
+        return () => window.removeEventListener('live-safety-set-requested', handleSetLiveSafety);
+    }, [emitLiveSafetySet]);
+
+    useEffect(() => {
+        if (!ready || authStatus !== 'authenticated' || !window.electronAPI?.preferences?.get) return;
+        if (appliedSavedLiveSafetyRef.current) return;
+        appliedSavedLiveSafetyRef.current = true;
+
+        let cancelled = false;
+        window.electronAPI.preferences.get('general.liveSafetyMode')
+            .then((result) => {
+                if (cancelled || result?.success === false || typeof result?.value !== 'boolean') return;
+                if (result.value !== Boolean(liveSafety?.enabled)) {
+                    emitLiveSafetySet(result.value);
+                }
+            })
+            .catch((error) => {
+                console.warn('[LiveSafety] Failed to load saved preference:', error);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [authStatus, emitLiveSafetySet, liveSafety?.enabled, ready]);
 
     const forceReconnect = useCallback(() => {
         logDebug('Force reconnecting control socket...');
@@ -475,6 +551,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         emitAutoplayStateUpdate,
         emitOutputRemove,
         emitOutputsRegister,
+        emitLiveSafetySet,
         connectionStatus,
         authStatus,
         forceReconnect,
@@ -483,6 +560,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         isAuthenticated: authStatus === 'authenticated',
         ready,
         lastSyncTime,
+        liveSafety,
         getConnectionDiagnostics,
     };
 

@@ -1,4 +1,5 @@
 import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { blockIfLiveSafety } from '../liveSafety.js';
 import { state } from '../state.js';
 import { isPlainObject, isValidLineIndex } from '../utils.js';
 
@@ -21,6 +22,10 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
   });
 
   socket.on('lyricsLoad', (payload) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'lyricsLoad' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'lyrics:write')) {
       socket.emit('permissionError', 'Insufficient permissions to load lyrics');
       return;
@@ -44,6 +49,10 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
   });
 
   socket.on('lyricsTimestampsUpdate', (timestamps) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'lyricsTimestampsUpdate' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'lyrics:write')) {
       socket.emit('permissionError', 'Insufficient permissions to update timestamps');
       return;
@@ -55,6 +64,10 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
   });
 
   socket.on('splitNormalGroup', (payload = {}) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'splitNormalGroup' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to split groups');
       return;
@@ -108,6 +121,10 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
   });
 
   socket.on('fileNameUpdate', (fileName) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'fileNameUpdate' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'lyrics:write')) {
       socket.emit('permissionError', 'Insufficient permissions to update filename');
       return;
@@ -119,6 +136,10 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
   });
 
   socket.on('autoplayStateUpdate', ({ isActive, clientType: autoplayClientType }) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'autoplayStateUpdate' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to update autoplay state');
       return;
@@ -128,4 +149,3 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     socket.broadcast.emit('autoplayStateUpdate', { isActive, clientType: autoplayClientType });
   });
 }
-

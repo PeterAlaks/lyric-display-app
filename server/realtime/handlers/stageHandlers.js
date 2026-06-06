@@ -1,7 +1,12 @@
+import { blockIfLiveSafety } from '../liveSafety.js';
 import { state } from '../state.js';
 
 export function registerStageHandlers({ io, socket, hasPermission, clientType }) {
   socket.on('stageTimerUpdate', (timerData) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'stageTimerUpdate' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to control stage timer');
       return;
@@ -26,6 +31,10 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType })
   });
 
   socket.on('stageMessagesUpdate', (messages) => {
+    if (blockIfLiveSafety({ socket, clientType, action: 'stageMessagesUpdate' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to update stage messages');
       return;
@@ -36,4 +45,3 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType })
     io.emit('stageMessagesUpdate', messages);
   });
 }
-

@@ -237,18 +237,22 @@ class SimpleSecretManager {
     }
   }
 
-  async loadSecrets() {
+  async loadSecrets(options = {}) {
+    const refreshKeytarBackup = options.refreshKeytarBackup !== false;
+
     try {
       const keytarData = await this._readFromKeytar();
       if (keytarData) {
         try {
           const parsed = JSON.parse(keytarData);
           const normalized = this._normalizeSecrets(parsed);
-          const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
-          if (backupResult.success) {
-            console.log('Secrets loaded from keytar; encrypted backup refreshed');
-          } else {
-            console.warn('Secrets loaded from keytar but encrypted backup refresh failed');
+          if (refreshKeytarBackup) {
+            const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
+            if (backupResult.success) {
+              console.log('Secrets loaded from keytar; encrypted backup refreshed');
+            } else {
+              console.warn('Secrets loaded from keytar but encrypted backup refresh failed');
+            }
           }
           return normalized;
         } catch (e) {
@@ -398,7 +402,7 @@ class SimpleSecretManager {
 
   async getSecretsStatus() {
     try {
-      const secrets = await this.loadSecrets();
+      const secrets = await this.loadSecrets({ refreshKeytarBackup: false });
       const rotationStatus = this._getRotationStatusForSecrets(secrets);
 
       const backend = keytar ? 'keytar+encrypted-file' : 'encrypted-file';

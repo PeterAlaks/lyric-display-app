@@ -29,6 +29,11 @@ export const state = {
   currentStageMessages: [],
   pendingDrafts: new Map(),
   registeredOutputs: new Set(DEFAULT_OUTPUT_IDS),
+  liveSafety: {
+    enabled: false,
+    updatedAt: null,
+    updatedBy: null,
+  },
 };
 
 export const ensureOutputExists = (outputId) => {
@@ -114,6 +119,7 @@ export function buildCurrentState(clientInfo) {
     lyricsFileName: state.currentLyricsFileName || '',
     isDesktopClient: clientInfo?.type === 'desktop',
     clientPermissions: clientInfo?.permissions || [],
+    liveSafety: state.liveSafety,
     timestamp,
     syncTimestamp: timestamp,
   };

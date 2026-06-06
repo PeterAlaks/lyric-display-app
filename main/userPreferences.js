@@ -16,6 +16,7 @@ const preferencesStore = new Store({
     general: {
       autoCheckForUpdates: true,
       confirmOnClose: true,
+      liveSafetyMode: false,
       toastSoundsMuted: false,
       startMinimized: false,
       minimizeToTray: false,

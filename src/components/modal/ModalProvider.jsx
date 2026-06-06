@@ -18,6 +18,7 @@ import SetlistExportModal from '../SetlistExportModal';
 import UserPreferencesModal from '../UserPreferencesModal';
 import NdiOutputSettingsModal from '../NdiOutputSettingsModal';
 import UserMediaModal from '../UserMediaModal';
+import PreServiceHealthModal from '../PreServiceHealthModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
@@ -698,6 +699,9 @@ export function ModalProvider({ children, isDark = false }) {
                           onSelect={modal.onSelect}
                           onClose={(result) => closeModal(modal.id, result || { dismissed: true })}
                         />
+                      )}
+                      {modal.component === 'PreServiceHealth' && (
+                        <PreServiceHealthModal darkMode={isDark} />
                       )}
 
                       {/* Render standard description/body modals */}
