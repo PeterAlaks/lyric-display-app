@@ -115,8 +115,8 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistLoad', (fileId) => {
-    if (!hasPermission(socket, 'setlist:read')) {
-      socket.emit('permissionError', 'Insufficient permissions to read setlist');
+    if (!hasPermission(socket, 'lyrics:write')) {
+      socket.emit('permissionError', 'Insufficient permissions to load setlist items into live lyrics');
       return;
     }
 
@@ -247,4 +247,3 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
     });
   });
 }
-

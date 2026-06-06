@@ -3,7 +3,6 @@ import { Shield, ShieldAlert, ShieldCheck, RefreshCw, Copy } from 'lucide-react'
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { resolveBackendUrl } from '../utils/network';
 
 const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshToken, darkMode = false, compact = false, className = '' }) => {
   const { showToast } = useToast();
@@ -15,22 +14,14 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     try {
       if (window.electronAPI?.getJoinCode) {
         const code = await window.electronAPI.getJoinCode();
-        if (code) {
-          setJoinCode(code);
-          return;
-        }
+        setJoinCode(code || null);
+        return;
       }
-
-      const response = await fetch(resolveBackendUrl('/api/auth/join-code'));
-      if (!response.ok) {
-        throw new Error(`Failed to fetch join code: ${response.status}`);
-      }
-      const payload = await response.json();
-      setJoinCode(payload?.joinCode || null);
+      setJoinCode(null);
     } catch (error) {
       console.warn('Failed to load join code', error);
     }
-  }, [resolveBackendUrl]);
+  }, []);
 
   useEffect(() => {
     refreshJoinCode();

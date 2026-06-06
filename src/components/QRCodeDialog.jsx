@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react'
 import QRCode from 'qrcode';
 import { X, Smartphone, Wifi } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { resolveBackendUrl } from "../utils/network";
 import useToast from '../hooks/useToast';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 
@@ -29,22 +28,14 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
     try {
       if (window.electronAPI?.getJoinCode) {
         const code = await window.electronAPI.getJoinCode();
-        if (code) {
-          setJoinCode(code);
-          return;
-        }
+        setJoinCode(code || null);
+        return;
       }
-
-      const response = await fetch(resolveBackendUrl('/api/auth/join-code'));
-      if (!response.ok) {
-        throw new Error(`Failed to fetch join code: ${response.status}`);
-      }
-      const payload = await response.json();
-      setJoinCode(payload?.joinCode || null);
+      setJoinCode(null);
     } catch (error) {
       console.warn('Failed to load join code for QR dialog', error);
     }
-  }, [resolveBackendUrl]);
+  }, []);
   useEffect(() => {
     if (isOpen) {
       refreshJoinCode();

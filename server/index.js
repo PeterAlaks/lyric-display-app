@@ -96,7 +96,7 @@ app.use('/api/auth', tokenRateLimit);
 
 registerOutputRoutes(app, { getOutputRegistry, hasOutput });
 registerIntegrationRoutes(app, { getOutputRegistry, port: PORT });
-registerAuthRoutes(app, { secrets, tokenService });
+registerAuthRoutes(app, { secrets, tokenService, localhostOnly });
 registerConnectionRoutes(app, { authenticateRequest });
 registerMediaRoutes(app, {
   authenticateRequest,
