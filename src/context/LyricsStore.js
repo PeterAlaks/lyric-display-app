@@ -2,12 +2,14 @@
 import { persist } from 'zustand/middleware';
 import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegistry.js';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
-import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
+import { DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
 import { createAutoplaySlice } from './lyricsStore/autoplaySlice.js';
 import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
+import { createStageSlice } from './lyricsStore/stageSlice.js';
+import { createTimerSlice } from './lyricsStore/timerSlice.js';
 
 const settingsChanged = (current = {}, next = {}) => {
   if (!next || typeof next !== 'object' || Array.isArray(next)) return false;
@@ -441,7 +443,6 @@ const useLyricsStore = create(
       isOutputOn: true,
       output1Enabled: true,
       output2Enabled: true,
-      stageEnabled: true,
       customOutputIds: [],
       previewCustomOutputId: null,
       songMetadata: {
@@ -458,14 +459,14 @@ const useLyricsStore = create(
         filePath: null,
         fileName: '',
       },
-      timerControlSettings: { ...DEFAULT_TIMER_CONTROL_SETTINGS },
-      timerDisplaySettings: { ...DEFAULT_TIMER_DISPLAY },
       lyricsTimestamps: [],
       pendingSavedVersion: null,
       ...createAppShellSlice(set),
       ...createAutoplaySlice(set),
       ...createPreferencesSlice(set),
       ...createSetlistSlice(set, get),
+      ...createStageSlice(set, defaultStageSettings),
+      ...createTimerSlice(set, normalizePaintSettingUpdates),
 
       setLyrics: (lines) => set({ lyrics: lines }),
       setLyricsSections: (sections) => set({ lyricsSections: Array.isArray(sections) ? sections : [] }),
@@ -476,7 +477,6 @@ const useLyricsStore = create(
       setIsOutputOn: (state) => set({ isOutputOn: state }),
       setOutput1Enabled: (enabled) => set({ output1Enabled: enabled }),
       setOutput2Enabled: (enabled) => set({ output2Enabled: enabled }),
-      setStageEnabled: (enabled) => set({ stageEnabled: enabled }),
       setPreviewCustomOutputId: (outputId) =>
         set((state) => {
           if (outputId === null) return { previewCustomOutputId: null };
@@ -493,66 +493,12 @@ const useLyricsStore = create(
           fileName: source?.fileName || '',
         }
       }),
-      updateTimerControlSettings: (settings, options = {}) => set((state) => {
-        const incomingSettings = settings && typeof settings === 'object' ? settings : {};
-        const currentSettings = normalizeTimerControlSettings(state.timerControlSettings);
-        const currentUpdatedAt = Number(currentSettings.settingsUpdatedAt) || 0;
-        const incomingUpdatedAt = Number(incomingSettings.settingsUpdatedAt) || 0;
-
-        if (options?.touch === false && incomingUpdatedAt > 0 && currentUpdatedAt > incomingUpdatedAt) {
-          return {};
-        }
-        if (options?.touch === false && incomingUpdatedAt === 0 && currentUpdatedAt > 0) {
-          return {};
-        }
-
-        const nextSettings = normalizeTimerControlSettings({
-          ...currentSettings,
-          ...incomingSettings,
-          settingsUpdatedAt: options?.touch === false
-            ? (incomingUpdatedAt || currentUpdatedAt)
-            : Date.now(),
-        });
-
-        if (JSON.stringify(currentSettings) === JSON.stringify(nextSettings)) {
-          return {};
-        }
-
-        return {
-          timerControlSettings: nextSettings,
-        };
-      }),
-      updateTimerDisplaySettings: (settings, options = {}) => set((state) => {
-        const incomingSettings = settings && typeof settings === 'object'
-          ? normalizePaintSettingUpdates(settings)
-          : {};
-        const currentUpdatedAt = Number(state.timerDisplaySettings?.displayUpdatedAt) || 0;
-        const incomingUpdatedAt = Number(incomingSettings.displayUpdatedAt) || 0;
-
-        if (incomingUpdatedAt > 0 && currentUpdatedAt > incomingUpdatedAt) {
-          return {};
-        }
-        if (options?.touch === false && incomingUpdatedAt === 0 && currentUpdatedAt > 0) {
-          return {};
-        }
-
-        const shouldTouch = options?.touch !== false && incomingUpdatedAt === 0;
-
-        return {
-          timerDisplaySettings: {
-            ...state.timerDisplaySettings,
-            ...incomingSettings,
-            displayUpdatedAt: incomingUpdatedAt || (shouldTouch ? Date.now() : currentUpdatedAt),
-          }
-        };
-      }),
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
 
       output1Settings: defaultOutput1Settings,
       output2Settings: defaultOutput2Settings,
-      stageSettings: defaultStageSettings,
       updateOutputSettings: (output, newSettings) =>
         set((state) => {
           const key = `${output}Settings`;
