@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getLineDisplayText } from '../utils/parseLyrics';
-import { calculateTimestampDelay, hasValidTimestamps } from '../utils/timestampHelpers';
+import { getNextIntelligentAutoplayStep, hasValidTimestamps } from '../utils/timestampHelpers';
 import { STRUCTURE_TAG_PATTERNS } from '../../shared/lyricsParsing.js';
 
 export const useAutoplayManager = ({
@@ -136,30 +136,28 @@ export const useAutoplayManager = ({
 
     if (!intelligentAutoplayActive || !hasLyrics) return;
 
-    const scheduleNextLine = () => {
+    const scheduleNextLine = (displayedIndex) => {
       const currentLyrics = lyricsRef.current;
       const currentTimestamps = lyricsTimestampsRef.current;
-      const currentSelectedLine = selectedLineRef.current;
       const currentSettings = autoplaySettingsRef.current;
       const currentSelectLine = selectLineRef.current;
       const currentEmitLineUpdate = emitLineUpdateRef.current;
       const currentShowToast = showToastRef.current;
 
-      if (!currentLyrics || currentLyrics.length === 0) {
+      const step = getNextIntelligentAutoplayStep({
+        lyrics: currentLyrics,
+        timestamps: currentTimestamps,
+        currentIndex: displayedIndex,
+        settings: currentSettings,
+        isLineBlank
+      });
+
+      if (step.status === 'empty') {
         setIntelligentAutoplayActive(false);
         return;
       }
 
-      const currentIndex = currentSelectedLine ?? -1;
-      let nextIndex = currentIndex + 1;
-
-      if (currentSettings.skipBlankLines) {
-        while (nextIndex < currentLyrics.length && isLineBlank(currentLyrics[nextIndex])) {
-          nextIndex++;
-        }
-      }
-
-      if (nextIndex >= currentLyrics.length) {
+      if (step.status === 'complete') {
         setIntelligentAutoplayActive(false);
         currentShowToast({
           title: 'Intelligent Autoplay Complete',
@@ -169,20 +167,18 @@ export const useAutoplayManager = ({
         return;
       }
 
-      const delay = calculateTimestampDelay(currentTimestamps, currentIndex, nextIndex);
-      const finalDelay = delay !== null ? delay : (currentSettings.interval * 1000);
-
       intelligentAutoplayTimeoutRef.current = setTimeout(() => {
-        currentSelectLine(nextIndex);
-        currentEmitLineUpdate(nextIndex);
+        selectedLineRef.current = step.nextIndex;
+        currentSelectLine(step.nextIndex);
+        currentEmitLineUpdate(step.nextIndex);
         window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-          detail: { lineIndex: nextIndex }
+          detail: { lineIndex: step.nextIndex }
         }));
-        scheduleNextLine();
-      }, finalDelay);
+        scheduleNextLine(step.nextIndex);
+      }, step.delayMs);
     };
 
-    scheduleNextLine();
+    scheduleNextLine(selectedLineRef.current ?? -1);
 
     return () => {
       if (intelligentAutoplayTimeoutRef.current) {
@@ -241,6 +237,7 @@ export const useAutoplayManager = ({
       return;
     }
     selectLine(startIndex);
+    selectedLineRef.current = startIndex;
     emitLineUpdate(startIndex);
     window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
       detail: { lineIndex: startIndex }
