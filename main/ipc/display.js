@@ -22,6 +22,10 @@ const shouldMakeDesktopProjectionFocusable = (targetType) => (
   targetType === 'desktop' && process.platform !== 'win32'
 );
 
+const buildProjectionRoute = (route, { escapeHint = false } = {}) => (
+  `${route}?projection=1${escapeHint ? '&escapeHint=1' : ''}`
+);
+
 const isPlainEscapeKeyDown = (input) => (
   input?.type === 'keyDown' &&
   input.key === 'Escape' &&
@@ -363,6 +367,7 @@ export function registerDisplayHandlers({ getMainWindow }) {
       if (!route) {
         return { success: false, error: 'Invalid output key' };
       }
+      const projectionRoute = buildProjectionRoute(route, { escapeHint: keyboardFocusable });
 
       if (targetType === 'display' && (displayId === null || typeof displayId === 'undefined')) {
         return { success: false, error: 'Display ID is required for external projection' };
@@ -389,13 +394,13 @@ export function registerDisplayHandlers({ getMainWindow }) {
       }
 
       if (!projectionWindow || projectionWindow.isDestroyed()) {
-        projectionWindow = createWindow(`${route}?projection=1`, {
+        projectionWindow = createWindow(projectionRoute, {
           projection: true,
           backgroundColor: '#000000',
           projectionFocusable: keyboardFocusable,
         });
       } else if (!isProjectionUrl(projectionWindow.webContents.getURL())) {
-        projectionWindow.loadURL(projectionWindow.webContents.getURL().replace(route, `${route}?projection=1`));
+        projectionWindow.loadURL(projectionWindow.webContents.getURL().replace(route, projectionRoute));
       }
 
       await waitForWindowLoad(projectionWindow);

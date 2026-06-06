@@ -128,6 +128,7 @@ const Stage = () => {
   const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
   useSocket('stage');
   const { lyrics, selectedLine, lyricsFileName } = useLyricsState();
@@ -561,7 +562,7 @@ const Stage = () => {
         fontFamily: fontStyle,
       }}
     >
-      <ProjectionExitHint visible={isProjectionMode} />
+      <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       {/* Top Bar - Song Names */}
       <div className="flex-shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center">
         <div

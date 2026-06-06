@@ -84,6 +84,7 @@ const TimeDisplay = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
   useSocket('stage');
   const { timerState, displayValue, intensity, now } = useSharedTimer({ controller: false });
@@ -142,7 +143,7 @@ const TimeDisplay = () => {
         fontFamily: otherItemsFontFamily,
       }}
     >
-      <ProjectionExitHint visible={isProjectionMode} />
+      <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       {label && (
       <div className="absolute inset-x-0 top-[7vh] flex justify-center px-[1vw]">
         <div

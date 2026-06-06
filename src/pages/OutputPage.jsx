@@ -28,6 +28,7 @@ const OutputPage = ({ outputId }) => {
   const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
   useSocket('output-discovery', {
     enabled: discoveryEnabled,
@@ -676,7 +677,7 @@ const OutputPage = ({ outputId }) => {
     >
       {renderFullScreenMedia()}
       {renderFullScreenElement()}
-      <ProjectionExitHint visible={isProjectionMode} />
+      <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       <div
         className="relative z-10 flex w-full h-full"
         style={{
