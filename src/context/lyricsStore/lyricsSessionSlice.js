@@ -1,0 +1,43 @@
+export const createLyricsSessionSlice = (set) => ({
+  lyrics: [],
+  rawLyricsContent: '',
+  selectedLine: null,
+  lyricsFileName: '',
+  lyricsSections: [],
+  lineToSection: {},
+  songMetadata: {
+    title: '',
+    artists: [],
+    album: '',
+    year: null,
+    origin: '',
+    filePath: '',
+  },
+  lyricsSource: {
+    content: '',
+    fileType: 'txt',
+    filePath: null,
+    fileName: '',
+  },
+  lyricsTimestamps: [],
+  pendingSavedVersion: null,
+
+  setLyrics: (lines) => set({ lyrics: lines }),
+  setLyricsSections: (sections) => set({ lyricsSections: Array.isArray(sections) ? sections : [] }),
+  setLineToSection: (mapping) => set({ lineToSection: mapping && typeof mapping === 'object' ? mapping : {} }),
+  setRawLyricsContent: (content) => set({ rawLyricsContent: content }),
+  setLyricsFileName: (name) => set({ lyricsFileName: name }),
+  selectLine: (index) => set({ selectedLine: index }),
+  setSongMetadata: (metadata) => set({ songMetadata: metadata }),
+  setLyricsSource: (source) => set({
+    lyricsSource: {
+      content: source?.content || '',
+      fileType: source?.fileType || 'txt',
+      filePath: source?.filePath || null,
+      fileName: source?.fileName || '',
+    },
+  }),
+  setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
+  setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
+  clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
+});

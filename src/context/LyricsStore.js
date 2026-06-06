@@ -6,6 +6,7 @@ import { DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/t
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
 import { createAutoplaySlice } from './lyricsStore/autoplaySlice.js';
+import { createLyricsSessionSlice } from './lyricsStore/lyricsSessionSlice.js';
 import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 import { createStageSlice } from './lyricsStore/stageSlice.js';
@@ -434,33 +435,12 @@ export const defaultStageSettings = {
 const useLyricsStore = create(
   persist(
     (set, get) => ({
-      lyrics: [],
-      rawLyricsContent: '',
-      selectedLine: null,
-      lyricsFileName: '',
-      lyricsSections: [],
-      lineToSection: {},
       isOutputOn: true,
       output1Enabled: true,
       output2Enabled: true,
       customOutputIds: [],
       previewCustomOutputId: null,
-      songMetadata: {
-        title: '',
-        artists: [],
-        album: '',
-        year: null,
-        origin: '',
-        filePath: '',
-      },
-      lyricsSource: {
-        content: '',
-        fileType: 'txt',
-        filePath: null,
-        fileName: '',
-      },
-      lyricsTimestamps: [],
-      pendingSavedVersion: null,
+      ...createLyricsSessionSlice(set),
       ...createAppShellSlice(set),
       ...createAutoplaySlice(set),
       ...createPreferencesSlice(set),
@@ -468,12 +448,6 @@ const useLyricsStore = create(
       ...createStageSlice(set, defaultStageSettings),
       ...createTimerSlice(set, normalizePaintSettingUpdates),
 
-      setLyrics: (lines) => set({ lyrics: lines }),
-      setLyricsSections: (sections) => set({ lyricsSections: Array.isArray(sections) ? sections : [] }),
-      setLineToSection: (mapping) => set({ lineToSection: mapping && typeof mapping === 'object' ? mapping : {} }),
-      setRawLyricsContent: (content) => set({ rawLyricsContent: content }),
-      setLyricsFileName: (name) => set({ lyricsFileName: name }),
-      selectLine: (index) => set({ selectedLine: index }),
       setIsOutputOn: (state) => set({ isOutputOn: state }),
       setOutput1Enabled: (enabled) => set({ output1Enabled: enabled }),
       setOutput2Enabled: (enabled) => set({ output2Enabled: enabled }),
@@ -484,18 +458,6 @@ const useLyricsStore = create(
           if (!state.customOutputIds.includes(outputId)) return {};
           return { previewCustomOutputId: outputId };
         }),
-      setSongMetadata: (metadata) => set({ songMetadata: metadata }),
-      setLyricsSource: (source) => set({
-        lyricsSource: {
-          content: source?.content || '',
-          fileType: source?.fileType || 'txt',
-          filePath: source?.filePath || null,
-          fileName: source?.fileName || '',
-        }
-      }),
-      setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
-      setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
-      clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
 
       output1Settings: defaultOutput1Settings,
       output2Settings: defaultOutput2Settings,
