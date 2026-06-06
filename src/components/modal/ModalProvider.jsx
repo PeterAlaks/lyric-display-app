@@ -7,28 +7,94 @@ import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 
 export const ModalContext = createContext(null);
 
-const ConnectionDiagnosticsModal = React.lazy(() => import('../ConnectionDiagnosticsModal'));
-const PreviewOutputsModal = React.lazy(() => import('../PreviewOutputsModal'));
-const ControlPanelHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.ControlPanelHelp })));
-const OutputSettingsHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.OutputSettingsHelp })));
-const SongCanvasHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.SongCanvasHelp })));
-const StageDisplayHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.StageDisplayHelp })));
-const MobileControllerHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.MobileControllerHelp })));
-const ObsWebSocketHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.ObsWebSocketHelp })));
-const WelcomeSplash = React.lazy(() => import('../WelcomeSplash').then((mod) => ({ default: mod.WelcomeSplash })));
-const IntegrationInstructions = React.lazy(() => import('../IntegrationInstructions').then((mod) => ({ default: mod.IntegrationInstructions })));
-const SongInfoModal = React.lazy(() => import('../SongInfoModal'));
-const ProjectOutputModal = React.lazy(() => import('../ProjectOutputModal'));
-const AutoplaySettings = React.lazy(() => import('../AutoplaySettings'));
-const IntelligentAutoplayInfo = React.lazy(() => import('../IntelligentAutoplayInfo'));
-const OutputTemplatesModal = React.lazy(() => import('../OutputTemplatesModal'));
-const StageTemplatesModal = React.lazy(() => import('../StageTemplatesModal'));
-const SaveTemplateModal = React.lazy(() => import('../SaveTemplateModal'));
-const AboutAppModal = React.lazy(() => import('../AboutAppModal'));
-const SetlistExportModal = React.lazy(() => import('../SetlistExportModal'));
-const UserPreferencesModal = React.lazy(() => import('../UserPreferencesModal'));
-const NdiOutputSettingsModal = React.lazy(() => import('../NdiOutputSettingsModal'));
-const UserMediaModal = React.lazy(() => import('../UserMediaModal'));
+const modalComponentLoaders = {
+  ConnectionDiagnostics: () => import('../ConnectionDiagnosticsModal'),
+  PreviewOutputs: () => import('../PreviewOutputsModal'),
+  ControlPanelHelp: () => import('../HelpContent').then((mod) => ({ default: mod.ControlPanelHelp })),
+  OutputSettingsHelp: () => import('../HelpContent').then((mod) => ({ default: mod.OutputSettingsHelp })),
+  SongCanvasHelp: () => import('../HelpContent').then((mod) => ({ default: mod.SongCanvasHelp })),
+  StageDisplayHelp: () => import('../HelpContent').then((mod) => ({ default: mod.StageDisplayHelp })),
+  MobileControllerHelp: () => import('../HelpContent').then((mod) => ({ default: mod.MobileControllerHelp })),
+  ObsWebSocketHelp: () => import('../HelpContent').then((mod) => ({ default: mod.ObsWebSocketHelp })),
+  WelcomeSplash: () => import('../WelcomeSplash').then((mod) => ({ default: mod.WelcomeSplash })),
+  IntegrationInstructions: () => import('../IntegrationInstructions').then((mod) => ({ default: mod.IntegrationInstructions })),
+  SongInfoModal: () => import('../SongInfoModal'),
+  ProjectOutput: () => import('../ProjectOutputModal'),
+  AutoplaySettings: () => import('../AutoplaySettings'),
+  IntelligentAutoplayInfo: () => import('../IntelligentAutoplayInfo'),
+  OutputTemplates: () => import('../OutputTemplatesModal'),
+  StageTemplates: () => import('../StageTemplatesModal'),
+  SaveTemplate: () => import('../SaveTemplateModal'),
+  AboutApp: () => import('../AboutAppModal'),
+  SetlistExport: () => import('../SetlistExportModal'),
+  UserPreferences: () => import('../UserPreferencesModal'),
+  NdiOutputSettings: () => import('../NdiOutputSettingsModal'),
+  UserMedia: () => import('../UserMediaModal'),
+};
+
+const loadedModalComponents = new Map();
+const modalComponentPromises = new Map();
+
+const loadModalComponent = (component) => {
+  const loader = modalComponentLoaders[component];
+  if (!loader) return null;
+  if (loadedModalComponents.has(component)) {
+    return Promise.resolve(loadedModalComponents.get(component));
+  }
+  if (modalComponentPromises.has(component)) {
+    return modalComponentPromises.get(component);
+  }
+
+  const promise = loader().then((mod) => {
+    const LoadedComponent = mod.default;
+    loadedModalComponents.set(component, LoadedComponent);
+    modalComponentPromises.delete(component);
+    return LoadedComponent;
+  });
+  modalComponentPromises.set(component, promise);
+  return promise;
+};
+
+const createModalComponent = (component) => {
+  function PreloadedModalComponent(props) {
+    const LoadedComponent = loadedModalComponents.get(component);
+    if (LoadedComponent) {
+      return <LoadedComponent {...props} />;
+    }
+
+    throw loadModalComponent(component);
+  }
+
+  PreloadedModalComponent.displayName = `Preloaded${component}Modal`;
+  return PreloadedModalComponent;
+};
+
+const ConnectionDiagnosticsModal = createModalComponent('ConnectionDiagnostics');
+const PreviewOutputsModal = createModalComponent('PreviewOutputs');
+const ControlPanelHelp = createModalComponent('ControlPanelHelp');
+const OutputSettingsHelp = createModalComponent('OutputSettingsHelp');
+const SongCanvasHelp = createModalComponent('SongCanvasHelp');
+const StageDisplayHelp = createModalComponent('StageDisplayHelp');
+const MobileControllerHelp = createModalComponent('MobileControllerHelp');
+const ObsWebSocketHelp = createModalComponent('ObsWebSocketHelp');
+const WelcomeSplash = createModalComponent('WelcomeSplash');
+const IntegrationInstructions = createModalComponent('IntegrationInstructions');
+const SongInfoModal = createModalComponent('SongInfoModal');
+const ProjectOutputModal = createModalComponent('ProjectOutput');
+const AutoplaySettings = createModalComponent('AutoplaySettings');
+const IntelligentAutoplayInfo = createModalComponent('IntelligentAutoplayInfo');
+const OutputTemplatesModal = createModalComponent('OutputTemplates');
+const StageTemplatesModal = createModalComponent('StageTemplates');
+const SaveTemplateModal = createModalComponent('SaveTemplate');
+const AboutAppModal = createModalComponent('AboutApp');
+const SetlistExportModal = createModalComponent('SetlistExport');
+const UserPreferencesModal = createModalComponent('UserPreferences');
+const NdiOutputSettingsModal = createModalComponent('NdiOutputSettings');
+const UserMediaModal = createModalComponent('UserMedia');
+
+const preloadModalComponent = (component) => {
+  return loadModalComponent(component);
+};
 
 let modalIdSeq = 1;
 const animationDuration = 220;
@@ -252,6 +318,8 @@ export function ModalProvider({ children, isDark = false }) {
   const removalTimers = useRef(new Map());
   const modalsRef = useRef([]);
   const queuedModals = useRef([]);
+  const pendingModals = useRef([]);
+  const mountedRef = useRef(true);
   const bodyOverflowRef = useRef(null);
   const topMenuHeight = useMemo(() => {
     if (typeof document === 'undefined') return '0px';
@@ -309,8 +377,29 @@ export function ModalProvider({ children, isDark = false }) {
       return modalPromises.current.get(queuedEntry.modal.id) || null;
     }
 
+    const pendingEntry = pendingModals.current.find((entry) => (
+      entry.modal.dedupeKey === dedupeKey
+    ));
+
+    if (pendingEntry) {
+      pendingEntry.modal = mergeDuplicateModal(pendingEntry.modal, config);
+      return modalPromises.current.get(pendingEntry.modal.id) || null;
+    }
+
     return null;
   }, [setModalStack]);
+
+  const openPreparedModal = useCallback((modal) => {
+    if (!mountedRef.current) return;
+
+    if (modalsRef.current.length >= MAX_OPEN_GLOBAL_MODALS) {
+      queuedModals.current.push({ modal });
+      return;
+    }
+
+    setModalStack([...modalsRef.current, modal]);
+    scheduleEnterAnimation(modal.id);
+  }, [scheduleEnterAnimation, setModalStack]);
 
   const showModal = useCallback((config = {}) => {
     const dedupeKey = resolveModalDedupeKey(config);
@@ -329,15 +418,25 @@ export function ModalProvider({ children, isDark = false }) {
     resolverMap.current.set(id, resolveModal);
     modalPromises.current.set(id, promise);
 
-    if (modalsRef.current.length >= MAX_OPEN_GLOBAL_MODALS) {
-      queuedModals.current.push({ modal });
+    const preloadPromise = preloadModalComponent(modal.component);
+    if (preloadPromise) {
+      pendingModals.current.push({ modal });
+      preloadPromise
+        .catch((error) => {
+          console.error('Failed to preload modal component:', modal.component, error);
+        })
+        .then(() => {
+          const index = pendingModals.current.findIndex((entry) => entry.modal.id === id);
+          if (index === -1) return;
+          const [entry] = pendingModals.current.splice(index, 1);
+          openPreparedModal(entry.modal);
+        });
       return promise;
     }
 
-    setModalStack([...modalsRef.current, modal]);
-    scheduleEnterAnimation(id);
+    openPreparedModal(modal);
     return promise;
-  }, [scheduleEnterAnimation, setModalStack, updateDuplicateModal]);
+  }, [openPreparedModal, updateDuplicateModal]);
 
   const finalizeRemoval = useCallback((id) => {
     setModalStack(modalsRef.current.filter((m) => m.id !== id));
@@ -371,11 +470,13 @@ export function ModalProvider({ children, isDark = false }) {
   }, [finalizeRemoval, setModalStack]);
 
   useEffect(() => () => {
+    mountedRef.current = false;
     removalTimers.current.forEach((timer) => clearTimeout(timer));
     removalTimers.current.clear();
     resolverMap.current.clear();
     modalPromises.current.clear();
     queuedModals.current = [];
+    pendingModals.current = [];
   }, []);
 
   useEffect(() => {
