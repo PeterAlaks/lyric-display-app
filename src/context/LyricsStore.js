@@ -4,9 +4,8 @@ import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegis
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
+import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
-
-let maxFileSizeLimit = 2;
 
 const settingsChanged = (current = {}, next = {}) => {
   if (!next || typeof next !== 'object' || Array.isArray(next)) return false;
@@ -471,15 +470,8 @@ const useLyricsStore = create(
       timerDisplaySettings: { ...DEFAULT_TIMER_DISPLAY },
       lyricsTimestamps: [],
       hasSeenIntelligentAutoplayInfo: false,
-      showTooltips: true,
-      showTutorialPopovers: true,
-      toastSoundsMuted: false,
-      canvasCleanupOnPaste: true,
-      formattingCapitalizeFirstLetter: true,
-      formattingCapitalizeReligiousTerms: true,
-      formattingNormalizeTypographicChars: true,
       pendingSavedVersion: null,
-      maxFileSizeLimit: 2,
+      ...createPreferencesSlice(set),
       ...createSetlistSlice(set, get),
 
       setLyrics: (lines) => set({ lyrics: lines }),
@@ -567,23 +559,9 @@ const useLyricsStore = create(
         };
       }),
       setLyricsTimestamps: (timestamps) => set({ lyricsTimestamps: timestamps }),
-      setShowTooltips: (show) => set({ showTooltips: show }),
-      setShowTutorialPopovers: (show) => set({ showTutorialPopovers: show }),
-      setToastSoundsMuted: (muted) => set({ toastSoundsMuted: muted }),
-      setCanvasCleanupOnPaste: (enabled) => set({ canvasCleanupOnPaste: enabled }),
-      setFormattingCapitalizeFirstLetter: (enabled) => set({ formattingCapitalizeFirstLetter: enabled }),
-      setFormattingCapitalizeReligiousTerms: (enabled) => set({ formattingCapitalizeReligiousTerms: enabled }),
-      setFormattingNormalizeTypographicChars: (enabled) => set({ formattingNormalizeTypographicChars: enabled }),
       setHasSeenIntelligentAutoplayInfo: (seen) => set({ hasSeenIntelligentAutoplayInfo: seen }),
       setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
       clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
-      getMaxFileSize: () => maxFileSizeLimit,
-
-      updateMaxFileSize: (newLimit) => {
-        const normalized = Number.isFinite(Number(newLimit)) ? Number(newLimit) : 2;
-        maxFileSizeLimit = normalized;
-        set({ maxFileSizeLimit: normalized });
-      },
 
       output1Settings: defaultOutput1Settings,
       output2Settings: defaultOutput2Settings,
