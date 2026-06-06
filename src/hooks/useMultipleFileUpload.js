@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSetlistState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -10,7 +11,7 @@ const useMultipleFileUpload = () => {
   const { emitSetlistAdd } = useControlSocket();
   const { showToast } = useToast();
   const maxFileSize = maxFileSizeLimit ?? 2;
-  const maxSetlistFiles = maxSetlistFilesLimit ?? 50;
+  const maxSetlistFiles = maxSetlistFilesLimit ?? DEFAULT_SETLIST_ITEMS;
 
   const MAX_FILE_SIZE_BYTES = maxFileSize * 1024 * 1024;
 

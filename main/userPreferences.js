@@ -7,6 +7,7 @@ import Store from 'electron-store';
 import { app } from 'electron';
 import path from 'path';
 import './appIdentity.js';
+import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setlistLimits.js';
 
 const preferencesStore = new Store({
   name: 'user-preferences',
@@ -77,7 +78,7 @@ const preferencesStore = new Store({
       rememberLastOpenedPath: true,
       maxRecentFiles: 10,
       maxFileSize: 2, // MB
-      maxSetlistFiles: 50,
+      maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
     },
 
     // Appearance Settings
@@ -348,14 +349,14 @@ export function getFileHandlingSettings() {
     return {
       maxRecentFiles: fileHandling?.maxRecentFiles ?? 10,
       maxFileSize: fileHandling?.maxFileSize ?? 2,
-      maxSetlistFiles: fileHandling?.maxSetlistFiles ?? 50,
+      maxSetlistFiles: normalizeSetlistItemLimit(fileHandling?.maxSetlistFiles),
     };
   } catch (error) {
     console.error('[UserPreferences] Failed to get file handling settings:', error);
     return {
       maxRecentFiles: 10,
       maxFileSize: 2,
-      maxSetlistFiles: 50,
+      maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
     };
   }
 }

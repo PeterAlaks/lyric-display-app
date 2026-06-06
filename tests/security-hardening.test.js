@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { MAX_SETLIST_ITEMS } from '../shared/setlistLimits.js';
 import { localhostOnly } from '../server/middleware/localhostOnly.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
+import { state } from '../server/realtime/state.js';
 import {
   sanitizeSetlistDefaultName,
   validateSetlistData,
@@ -127,7 +129,7 @@ test('setlist validation rejects unsupported item file types', () => {
 
 test('setlist validation enforces item limits', () => {
   const result = validateSetlistData({
-    items: Array.from({ length: 101 }, (_, index) => ({
+    items: Array.from({ length: MAX_SETLIST_ITEMS + 1 }, (_, index) => ({
       displayName: `Song ${index + 1}`,
       originalName: `Song ${index + 1}.txt`,
       content: 'Lyrics',
@@ -136,7 +138,62 @@ test('setlist validation enforces item limits', () => {
   });
 
   assert.equal(result.valid, false);
-  assert.match(result.error, /more than 100/i);
+  assert.match(result.error, new RegExp(`more than ${MAX_SETLIST_ITEMS}`, 'i'));
+});
+
+test('setlist validation accepts the configured maximum item count', () => {
+  const result = validateSetlistData({
+    items: Array.from({ length: MAX_SETLIST_ITEMS }, (_, index) => ({
+      displayName: `Song ${index + 1}`,
+      originalName: `Song ${index + 1}.txt`,
+      content: 'Lyrics',
+      fileType: 'txt',
+    })),
+  });
+
+  assert.equal(result.valid, true);
+});
+
+test('setlistAdd allows setlists above the old 50 item cap', () => {
+  const handlers = new Map();
+  const emitted = [];
+  const socket = {
+    on(eventName, handler) {
+      handlers.set(eventName, handler);
+    },
+    emit(eventName, payload) {
+      emitted.push({ eventName, payload });
+    },
+  };
+
+  state.setlistFiles = [];
+
+  registerSetlistHandlers({
+    io: { emit() {} },
+    socket,
+    hasPermission: (_socket, permission) => permission === 'setlist:write',
+    clientType: 'desktop',
+    deviceId: 'device-test',
+    sessionId: 'session-test',
+  });
+
+  handlers.get('setlistAdd')?.(
+    Array.from({ length: 60 }, (_, index) => ({
+      name: `Song ${index + 1}.txt`,
+      content: 'Lyrics',
+    })),
+  );
+
+  assert.equal(state.setlistFiles.length, 60);
+  assert.deepEqual(emitted.at(-1), {
+    eventName: 'setlistAddSuccess',
+    payload: {
+      addedCount: 60,
+      totalCount: 60,
+    },
+  });
+
+  state.setlistFiles = [];
 });
 
 test('setlist default names are sanitized and forced to .ldset', () => {

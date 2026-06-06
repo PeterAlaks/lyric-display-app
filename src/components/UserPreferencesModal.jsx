@@ -17,6 +17,12 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import useToast from '../hooks/useToast';
 import useLyricsStore from '../context/LyricsStore';
 import useModal from '../hooks/useModal';
+import {
+  DEFAULT_SETLIST_ITEMS,
+  MAX_SETLIST_ITEMS,
+  MIN_SETLIST_ITEMS,
+  SETLIST_PERFORMANCE_WARNING_ITEMS,
+} from '../../shared/setlistLimits.js';
 import { useMidiPreferences } from '../hooks/UserPreferencesModal/useMidiPreferences';
 import { useNdiPreferences } from '../hooks/UserPreferencesModal/useNdiPreferences';
 import { useNumberPreferenceDrafts } from '../hooks/UserPreferencesModal/useNumberPreferenceDrafts';
@@ -684,23 +690,23 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <label className={`text-sm font-medium ${labelClass}`}>Max Setlist Files</label>
               <Input
                 type="number"
-                min="10"
-                max="100"
-                value={getNumberInputValue('fileHandling', 'maxSetlistFiles', 50)}
+                min={MIN_SETLIST_ITEMS}
+                max={MAX_SETLIST_ITEMS}
+                value={getNumberInputValue('fileHandling', 'maxSetlistFiles', DEFAULT_SETLIST_ITEMS)}
                 onChange={(e) => setNumberInputDraft('fileHandling', 'maxSetlistFiles', e.target.value)}
                 onBlur={() => commitNumberPreference('fileHandling', 'maxSetlistFiles', {
-                  min: 10,
-                  max: 100,
-                  fallbackValue: 50,
+                  min: MIN_SETLIST_ITEMS,
+                  max: MAX_SETLIST_ITEMS,
+                  fallbackValue: DEFAULT_SETLIST_ITEMS,
                   parse: 'int',
                 })}
                 onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Maximum number of songs allowed in a setlist (10-100)
+                Maximum number of songs allowed in a setlist ({MIN_SETLIST_ITEMS}-{MAX_SETLIST_ITEMS})
               </p>
-              {(preferences.fileHandling?.maxSetlistFiles ?? 50) > 75 && (
+              {(preferences.fileHandling?.maxSetlistFiles ?? DEFAULT_SETLIST_ITEMS) > SETLIST_PERFORMANCE_WARNING_ITEMS && (
                 <div className={`flex items-start gap-2 p-2 rounded ${darkMode ? 'bg-yellow-900/20 border border-yellow-600/30' : 'bg-yellow-50 border border-yellow-200'}`}>
                   <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                   <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>

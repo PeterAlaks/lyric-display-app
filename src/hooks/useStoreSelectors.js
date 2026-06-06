@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import useLyricsStore from '../context/LyricsStore';
 
 export const useLyricsState = () =>
@@ -140,7 +141,7 @@ export const useCanAddToSetlist = () =>
     useLyricsStore(
         (state) =>
             state.isDesktopApp &&
-            state.setlistFiles.length < 50 &&
+            state.setlistFiles.length < (state.maxSetlistFilesLimit ?? DEFAULT_SETLIST_ITEMS) &&
             state.lyricsFileName != null &&
             state.lyrics != null &&
             state.lyrics.length > 0

@@ -30,7 +30,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
         <HelpSection
             icon={List}
             title="Setlist Manager"
-            description="Build and organize your service setlist. Add up to 50 songs, reorder with drag-and-drop, and load lyrics instantly during live events. Perfect for planning your worship services."
+            description="Build and organize your service setlist. Add songs up to your configured limit, reorder with drag-and-drop, and load lyrics instantly during live events. Perfect for planning your worship services."
             darkMode={darkMode}
         />
 

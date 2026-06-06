@@ -1,7 +1,6 @@
 import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { MAX_SETLIST_ITEMS } from '../../../shared/setlistLimits.js';
 import { state } from '../state.js';
-
-const MAX_SETLIST_ITEMS = 100;
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
   socket.on('requestSetlist', () => {

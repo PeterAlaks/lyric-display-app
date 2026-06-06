@@ -1,9 +1,10 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../../shared/setlistLimits.js';
 import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 
-let maxSetlistFilesLimit = 50;
+let maxSetlistFilesLimit = DEFAULT_SETLIST_ITEMS;
 let maxFileSizeLimit = 2;
 
 const settingsChanged = (current = {}, next = {}) => {
@@ -50,7 +51,7 @@ export async function loadPreferencesIntoStore(store) {
       const result = await window.electronAPI.preferences.getFileHandling();
       if (result.success && result.settings) {
         store.getState().updateMaxFileSize(result.settings.maxFileSize ?? 2);
-        store.getState().updateMaxSetlistFiles(result.settings.maxSetlistFiles ?? 50);
+        store.getState().updateMaxSetlistFiles(result.settings.maxSetlistFiles ?? DEFAULT_SETLIST_ITEMS);
       }
     }
 
@@ -482,7 +483,7 @@ const useLyricsStore = create(
       formattingNormalizeTypographicChars: true,
       pendingSavedVersion: null,
       maxFileSizeLimit: 2,
-      maxSetlistFilesLimit: 50,
+      maxSetlistFilesLimit: DEFAULT_SETLIST_ITEMS,
       maxSetlistFilesVersion: 0,
 
       setLyrics: (lines) => set({ lyrics: lines }),
@@ -609,7 +610,7 @@ const useLyricsStore = create(
       getMaxFileSize: () => maxFileSizeLimit,
 
       updateMaxSetlistFiles: (newLimit) => {
-        const normalized = Number.isFinite(Number(newLimit)) ? Number(newLimit) : 50;
+        const normalized = normalizeSetlistItemLimit(newLimit);
         maxSetlistFilesLimit = normalized;
         set((state) => ({
           maxSetlistFilesLimit: normalized,
