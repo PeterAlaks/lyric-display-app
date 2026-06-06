@@ -1,28 +1,34 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
-import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
-import PreviewOutputsModal from '../PreviewOutputsModal';
-import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp } from '../HelpContent';
-import { WelcomeSplash } from '../WelcomeSplash';
-import { IntegrationInstructions } from '../IntegrationInstructions';
-import SongInfoModal from '../SongInfoModal';
-import ProjectOutputModal from '../ProjectOutputModal';
-import AutoplaySettings from '../AutoplaySettings';
-import IntelligentAutoplayInfo from '../IntelligentAutoplayInfo';
-import OutputTemplatesModal from '../OutputTemplatesModal';
-import StageTemplatesModal from '../StageTemplatesModal';
-import SaveTemplateModal from '../SaveTemplateModal';
-import AboutAppModal from '../AboutAppModal';
-import SetlistExportModal from '../SetlistExportModal';
-import UserPreferencesModal from '../UserPreferencesModal';
-import NdiOutputSettingsModal from '../NdiOutputSettingsModal';
-import UserMediaModal from '../UserMediaModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 
 export const ModalContext = createContext(null);
+
+const ConnectionDiagnosticsModal = React.lazy(() => import('../ConnectionDiagnosticsModal'));
+const PreviewOutputsModal = React.lazy(() => import('../PreviewOutputsModal'));
+const ControlPanelHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.ControlPanelHelp })));
+const OutputSettingsHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.OutputSettingsHelp })));
+const SongCanvasHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.SongCanvasHelp })));
+const StageDisplayHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.StageDisplayHelp })));
+const MobileControllerHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.MobileControllerHelp })));
+const ObsWebSocketHelp = React.lazy(() => import('../HelpContent').then((mod) => ({ default: mod.ObsWebSocketHelp })));
+const WelcomeSplash = React.lazy(() => import('../WelcomeSplash').then((mod) => ({ default: mod.WelcomeSplash })));
+const IntegrationInstructions = React.lazy(() => import('../IntegrationInstructions').then((mod) => ({ default: mod.IntegrationInstructions })));
+const SongInfoModal = React.lazy(() => import('../SongInfoModal'));
+const ProjectOutputModal = React.lazy(() => import('../ProjectOutputModal'));
+const AutoplaySettings = React.lazy(() => import('../AutoplaySettings'));
+const IntelligentAutoplayInfo = React.lazy(() => import('../IntelligentAutoplayInfo'));
+const OutputTemplatesModal = React.lazy(() => import('../OutputTemplatesModal'));
+const StageTemplatesModal = React.lazy(() => import('../StageTemplatesModal'));
+const SaveTemplateModal = React.lazy(() => import('../SaveTemplateModal'));
+const AboutAppModal = React.lazy(() => import('../AboutAppModal'));
+const SetlistExportModal = React.lazy(() => import('../SetlistExportModal'));
+const UserPreferencesModal = React.lazy(() => import('../UserPreferencesModal'));
+const NdiOutputSettingsModal = React.lazy(() => import('../NdiOutputSettingsModal'));
+const UserMediaModal = React.lazy(() => import('../UserMediaModal'));
 
 let modalIdSeq = 1;
 const animationDuration = 220;
@@ -555,165 +561,167 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                     >
                       {/* Render component-based modals */}
-                      {modal.component === 'ConnectionDiagnostics' && (
-                        <ConnectionDiagnosticsModal darkMode={isDark} />
-                      )}
-                      {modal.component === 'PreviewOutputs' && (
-                        <PreviewOutputsModal darkMode={isDark} />
-                      )}
-                      {modal.component === 'ControlPanelHelp' && (
-                        <ControlPanelHelp darkMode={isDark} />
-                      )}
-                      {modal.component === 'OutputSettingsHelp' && (
-                        <OutputSettingsHelp darkMode={isDark} />
-                      )}
-                      {modal.component === 'SongCanvasHelp' && (
-                        <SongCanvasHelp darkMode={isDark} />
-                      )}
-                      {modal.component === 'StageDisplayHelp' && (
-                        <StageDisplayHelp darkMode={isDark} />
-                      )}
-                      {modal.component === 'MobileControllerHelp' && (
-                        <MobileControllerHelp darkMode={isDark} />
-                      )}
-                      {modal.component === 'ObsWebSocketHelp' && (
-                        <ObsWebSocketHelp darkMode={isDark} />
-                      )}
-                      {modal.component === 'WelcomeSplash' && (
-                        <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />
-                      )}
-                      {modal.component === 'IntegrationInstructions' && (
-                        <IntegrationInstructions
-                          darkMode={isDark}
-                          onRequestClose={() => closeModal(modal.id, { action: 'open-obs-source-creator' })}
-                        />
-                      )}
-                      {modal.component === 'SongInfoModal' && (
-                        <SongInfoModal darkMode={isDark} />
-                      )}
-                      {modal.component === 'ProjectOutput' && (
-                        <ProjectOutputModal
-                          darkMode={isDark}
-                          preferredDisplayId={modal.preferredDisplayId}
-                          triggerSource={modal.triggerSource || 'manual'}
-                          detectedDisplays={modal.detectedDisplays || modal.displays || []}
-                          onOpenIntegrationGuide={() => {
-                            closeModal(modal.id, { action: 'open-integration-guide' });
-                            showModal({
-                              title: 'Streaming Software Integration',
-                              headerDescription: 'Connect LyricDisplay to OBS, vMix, Wirecast and more',
-                              component: 'IntegrationInstructions',
-                              variant: 'info',
-                              size: 'lg',
-                              dismissLabel: 'Close'
-                            });
-                          }}
-                          onClose={(result) => closeModal(modal.id, result || { dismissed: true })}
-                        />
-                      )}
-                      {modal.component === 'AutoplaySettings' && (
-                        <AutoplaySettings
-                          darkMode={isDark}
-                          settings={modal.settings}
-                          onSave={modal.onSave}
-                          close={(value) => closeModal(modal.id, value)}
-                        />
-                      )}
-                      {modal.component === 'IntelligentAutoplayInfo' && (
-                        <IntelligentAutoplayInfo
-                          darkMode={isDark}
-                          onStart={() => {
-                            if (modal.onStart) modal.onStart();
-                            closeModal(modal.id, { action: 'start' });
-                          }}
-                          onClose={() => closeModal(modal.id, { dismissed: true })}
-                          dontShowAgain={modal.dontShowAgain || false}
-                          setDontShowAgain={modal.setDontShowAgain}
-                        />
-                      )}
-                      {modal.component === 'OutputTemplates' && (
-                        <OutputTemplatesModal
-                          darkMode={isDark}
-                          onApplyTemplate={(template) => {
-                            if (modal.onApplyTemplate) modal.onApplyTemplate(template);
-                            closeModal(modal.id, { action: 'applied', template });
-                          }}
-                          onClose={() => closeModal(modal.id, { dismissed: true })}
-                        />
-                      )}
-                      {modal.component === 'StageTemplates' && (
-                        <StageTemplatesModal
-                          darkMode={isDark}
-                          onApplyTemplate={(template) => {
-                            if (modal.onApplyTemplate) modal.onApplyTemplate(template);
-                            closeModal(modal.id, { action: 'applied', template });
-                          }}
-                          onClose={() => closeModal(modal.id, { dismissed: true })}
-                        />
-                      )}
-                      {modal.component === 'SaveTemplate' && (
-                        <SaveTemplateModal
-                          darkMode={isDark}
-                          templateType={modal.templateType}
-                          settings={modal.settings}
-                          onSave={modal.onSave}
-                          close={(value) => closeModal(modal.id, value)}
-                        />
-                      )}
-                      {modal.component === 'AboutApp' && (
-                        <AboutAppModal
-                          darkMode={isDark}
-                          version={modal.version}
-                          onClose={(result) => closeModal(modal.id, result)}
-                        />
-                      )}
-                      {modal.component === 'SetlistExport' && (
-                        <SetlistExportModal
-                          darkMode={isDark}
-                          onExport={modal.onExport}
-                          defaultTitle={modal.defaultTitle || 'Setlist'}
-                          setExportState={modal.setExportState}
-                        />
-                      )}
-                      {modal.component === 'UserPreferences' && (
-                        <UserPreferencesModal
-                          darkMode={isDark}
-                          initialCategory={modal.initialCategory}
-                          onClose={() => closeModal(modal.id, { dismissed: true })}
-                        />
-                      )}
-                      {modal.component === 'NdiOutputSettings' && (
-                        <NdiOutputSettingsModal
-                          darkMode={isDark}
-                          outputKey={modal.outputKey}
-                          onClose={() => closeModal(modal.id, { dismissed: true })}
-                        />
-                      )}
-                      {modal.component === 'UserMedia' && (
-                        <UserMediaModal
-                          darkMode={isDark}
-                          allowedTypes={modal.allowedTypes}
-                          initialTab={modal.initialTab}
-                          description={modal.mediaDescription}
-                          onSelect={modal.onSelect}
-                          onClose={(result) => closeModal(modal.id, result || { dismissed: true })}
-                        />
-                      )}
+                      <React.Suspense fallback={null}>
+                        {modal.component === 'ConnectionDiagnostics' && (
+                          <ConnectionDiagnosticsModal darkMode={isDark} />
+                        )}
+                        {modal.component === 'PreviewOutputs' && (
+                          <PreviewOutputsModal darkMode={isDark} />
+                        )}
+                        {modal.component === 'ControlPanelHelp' && (
+                          <ControlPanelHelp darkMode={isDark} />
+                        )}
+                        {modal.component === 'OutputSettingsHelp' && (
+                          <OutputSettingsHelp darkMode={isDark} />
+                        )}
+                        {modal.component === 'SongCanvasHelp' && (
+                          <SongCanvasHelp darkMode={isDark} />
+                        )}
+                        {modal.component === 'StageDisplayHelp' && (
+                          <StageDisplayHelp darkMode={isDark} />
+                        )}
+                        {modal.component === 'MobileControllerHelp' && (
+                          <MobileControllerHelp darkMode={isDark} />
+                        )}
+                        {modal.component === 'ObsWebSocketHelp' && (
+                          <ObsWebSocketHelp darkMode={isDark} />
+                        )}
+                        {modal.component === 'WelcomeSplash' && (
+                          <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />
+                        )}
+                        {modal.component === 'IntegrationInstructions' && (
+                          <IntegrationInstructions
+                            darkMode={isDark}
+                            onRequestClose={() => closeModal(modal.id, { action: 'open-obs-source-creator' })}
+                          />
+                        )}
+                        {modal.component === 'SongInfoModal' && (
+                          <SongInfoModal darkMode={isDark} />
+                        )}
+                        {modal.component === 'ProjectOutput' && (
+                          <ProjectOutputModal
+                            darkMode={isDark}
+                            preferredDisplayId={modal.preferredDisplayId}
+                            triggerSource={modal.triggerSource || 'manual'}
+                            detectedDisplays={modal.detectedDisplays || modal.displays || []}
+                            onOpenIntegrationGuide={() => {
+                              closeModal(modal.id, { action: 'open-integration-guide' });
+                              showModal({
+                                title: 'Streaming Software Integration',
+                                headerDescription: 'Connect LyricDisplay to OBS, vMix, Wirecast and more',
+                                component: 'IntegrationInstructions',
+                                variant: 'info',
+                                size: 'lg',
+                                dismissLabel: 'Close'
+                              });
+                            }}
+                            onClose={(result) => closeModal(modal.id, result || { dismissed: true })}
+                          />
+                        )}
+                        {modal.component === 'AutoplaySettings' && (
+                          <AutoplaySettings
+                            darkMode={isDark}
+                            settings={modal.settings}
+                            onSave={modal.onSave}
+                            close={(value) => closeModal(modal.id, value)}
+                          />
+                        )}
+                        {modal.component === 'IntelligentAutoplayInfo' && (
+                          <IntelligentAutoplayInfo
+                            darkMode={isDark}
+                            onStart={() => {
+                              if (modal.onStart) modal.onStart();
+                              closeModal(modal.id, { action: 'start' });
+                            }}
+                            onClose={() => closeModal(modal.id, { dismissed: true })}
+                            dontShowAgain={modal.dontShowAgain || false}
+                            setDontShowAgain={modal.setDontShowAgain}
+                          />
+                        )}
+                        {modal.component === 'OutputTemplates' && (
+                          <OutputTemplatesModal
+                            darkMode={isDark}
+                            onApplyTemplate={(template) => {
+                              if (modal.onApplyTemplate) modal.onApplyTemplate(template);
+                              closeModal(modal.id, { action: 'applied', template });
+                            }}
+                            onClose={() => closeModal(modal.id, { dismissed: true })}
+                          />
+                        )}
+                        {modal.component === 'StageTemplates' && (
+                          <StageTemplatesModal
+                            darkMode={isDark}
+                            onApplyTemplate={(template) => {
+                              if (modal.onApplyTemplate) modal.onApplyTemplate(template);
+                              closeModal(modal.id, { action: 'applied', template });
+                            }}
+                            onClose={() => closeModal(modal.id, { dismissed: true })}
+                          />
+                        )}
+                        {modal.component === 'SaveTemplate' && (
+                          <SaveTemplateModal
+                            darkMode={isDark}
+                            templateType={modal.templateType}
+                            settings={modal.settings}
+                            onSave={modal.onSave}
+                            close={(value) => closeModal(modal.id, value)}
+                          />
+                        )}
+                        {modal.component === 'AboutApp' && (
+                          <AboutAppModal
+                            darkMode={isDark}
+                            version={modal.version}
+                            onClose={(result) => closeModal(modal.id, result)}
+                          />
+                        )}
+                        {modal.component === 'SetlistExport' && (
+                          <SetlistExportModal
+                            darkMode={isDark}
+                            onExport={modal.onExport}
+                            defaultTitle={modal.defaultTitle || 'Setlist'}
+                            setExportState={modal.setExportState}
+                          />
+                        )}
+                        {modal.component === 'UserPreferences' && (
+                          <UserPreferencesModal
+                            darkMode={isDark}
+                            initialCategory={modal.initialCategory}
+                            onClose={() => closeModal(modal.id, { dismissed: true })}
+                          />
+                        )}
+                        {modal.component === 'NdiOutputSettings' && (
+                          <NdiOutputSettingsModal
+                            darkMode={isDark}
+                            outputKey={modal.outputKey}
+                            onClose={() => closeModal(modal.id, { dismissed: true })}
+                          />
+                        )}
+                        {modal.component === 'UserMedia' && (
+                          <UserMediaModal
+                            darkMode={isDark}
+                            allowedTypes={modal.allowedTypes}
+                            initialTab={modal.initialTab}
+                            description={modal.mediaDescription}
+                            onSelect={modal.onSelect}
+                            onClose={(result) => closeModal(modal.id, result || { dismissed: true })}
+                          />
+                        )}
 
-                      {/* Render standard description/body modals */}
-                      {!modal.component && modal.description && (
-                        <p className="whitespace-pre-wrap font-semibold">{modal.description}</p>
-                      )}
-                      {!modal.component && modal.body && (
-                        <div
-                          className={cn("text-sm text-gray-500 dark:text-gray-300", modal.description && "mt-3")}
-                          style={typeof modal.body === 'string' ? { whiteSpace: 'pre-wrap' } : undefined}
-                        >
-                          {typeof modal.body === 'function'
-                            ? modal.body({ close: (value) => closeModal(modal.id, value), isDark })
-                            : modal.body}
-                        </div>
-                      )}
+                        {/* Render standard description/body modals */}
+                        {!modal.component && modal.description && (
+                          <p className="whitespace-pre-wrap font-semibold">{modal.description}</p>
+                        )}
+                        {!modal.component && modal.body && (
+                          <div
+                            className={cn("text-sm text-gray-500 dark:text-gray-300", modal.description && "mt-3")}
+                            style={typeof modal.body === 'string' ? { whiteSpace: 'pre-wrap' } : undefined}
+                          >
+                            {typeof modal.body === 'function'
+                              ? modal.body({ close: (value) => closeModal(modal.id, value), isDark })
+                              : modal.body}
+                          </div>
+                        )}
+                      </React.Suspense>
                     </div>
                   )}
                 </div>

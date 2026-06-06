@@ -5,7 +5,6 @@ import { useLyricsState, useOutputState, useDarkModeState, useSetlistState, useA
 import { useControlSocket } from '../context/ControlSocketProvider';
 import LyricsList from './LyricsList';
 import ConnectionBackoffBanner from './ConnectionBackoffBanner';
-import SetlistModal from './SetlistModal';
 import { Switch } from "@/components/ui/switch";
 import useSearch from '../hooks/useSearch';
 import SearchBar from './SearchBar';
@@ -15,6 +14,8 @@ import useModal from '../hooks/useModal';
 import { hasValidTimestamps } from '../utils/timestampHelpers';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
 import { useSyncOutputs } from '../hooks/useSyncOutputs';
+
+const SetlistModal = React.lazy(() => import('./SetlistModal'));
 
 const MobileLayout = () => {
   const { isOutputOn, setIsOutputOn } = useOutputState();
@@ -498,7 +499,11 @@ const MobileLayout = () => {
         </div>
 
         {/* Setlist Modal */}
-        <SetlistModal />
+        {setlistModalOpen && (
+          <React.Suspense fallback={null}>
+            <SetlistModal />
+          </React.Suspense>
+        )}
       </div >
     </>
   );

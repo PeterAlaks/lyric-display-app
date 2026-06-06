@@ -1,8 +1,10 @@
 import React from 'react';
-import EasyWorshipImportModal from '../EasyWorshipImportModal';
-import OnlineLyricsSearchModal from '../OnlineLyricsSearchModal';
-import PresentationImportModal from '../PresentationImportModal';
-import SetlistModal from '../SetlistModal';
+import { useSetlistState } from '@/hooks/useStoreSelectors';
+
+const EasyWorshipImportModal = React.lazy(() => import('../EasyWorshipImportModal'));
+const OnlineLyricsSearchModal = React.lazy(() => import('../OnlineLyricsSearchModal'));
+const PresentationImportModal = React.lazy(() => import('../PresentationImportModal'));
+const SetlistModal = React.lazy(() => import('../SetlistModal'));
 
 export default function ControlPanelModals({
   darkMode,
@@ -14,28 +16,36 @@ export default function ControlPanelModals({
   setEasyWorshipModalOpen,
   setPresentationModalOpen,
 }) {
+  const { setlistModalOpen } = useSetlistState();
+
   return (
-    <>
-      <SetlistModal />
+    <React.Suspense fallback={null}>
+      {setlistModalOpen && <SetlistModal />}
 
-      <OnlineLyricsSearchModal
-        isOpen={onlineLyricsModalOpen}
-        onClose={handleCloseOnlineLyricsSearch}
-        darkMode={darkMode}
-        onImportLyrics={handleImportFromLibrary}
-      />
+      {onlineLyricsModalOpen && (
+        <OnlineLyricsSearchModal
+          isOpen={onlineLyricsModalOpen}
+          onClose={handleCloseOnlineLyricsSearch}
+          darkMode={darkMode}
+          onImportLyrics={handleImportFromLibrary}
+        />
+      )}
 
-      <EasyWorshipImportModal
-        isOpen={easyWorshipModalOpen}
-        onClose={() => setEasyWorshipModalOpen(false)}
-        darkMode={darkMode}
-      />
+      {easyWorshipModalOpen && (
+        <EasyWorshipImportModal
+          isOpen={easyWorshipModalOpen}
+          onClose={() => setEasyWorshipModalOpen(false)}
+          darkMode={darkMode}
+        />
+      )}
 
-      <PresentationImportModal
-        isOpen={presentationModalOpen}
-        onClose={() => setPresentationModalOpen(false)}
-        darkMode={darkMode}
-      />
-    </>
+      {presentationModalOpen && (
+        <PresentationImportModal
+          isOpen={presentationModalOpen}
+          onClose={() => setPresentationModalOpen(false)}
+          darkMode={darkMode}
+        />
+      )}
+    </React.Suspense>
   );
 }
