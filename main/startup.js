@@ -1,4 +1,5 @@
 import { BrowserWindow, nativeTheme, dialog, app } from 'electron';
+import { registerKaraokeMediaProtocol } from './karaokeMediaProtocol.js';
 import { prewarmCredentials } from './providerCredentials.js';
 import { isDev } from './paths.js';
 import { startBackend } from './backend.js';
@@ -147,6 +148,7 @@ export async function handleBackendStartupError(error, requestRendererModal) {
  * @returns {Promise<BrowserWindow>} - The main window instance
  */
 export async function performStartupSequence({ menuAPI, requestRendererModal, handleDisplayChange }) {
+  registerKaraokeMediaProtocol();
   try {
     updateLoadingStatus('Starting backend server');
     await startBackend();

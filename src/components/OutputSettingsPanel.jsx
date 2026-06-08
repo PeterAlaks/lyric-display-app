@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDarkModeState, useOutput1Settings, useOutput2Settings, useOutputSettings as useOutputSettingsSelector, useStageSettings, useIndividualOutputState, useOutputEnabled, useSetOutputEnabledAction } from '../hooks/useStoreSelectors';
-import { useControlSocket } from '../context/ControlSocketProvider';
+import { useOptionalControlSocket } from '../context/ControlSocketProvider';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from '@/components/ui/tooltip';
@@ -249,10 +249,21 @@ const MarginsSection = ({ darkMode, settings, update }) => (
   </SettingRow>
 );
 
-const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
+const noop = () => {};
+
+const OutputSettingsPanel = ({
+  outputKey,
+  onDeleteOutput,
+  settings: controlledSettings,
+  onSettingsChange,
+  localMode = false,
+  title,
+}) => {
   const { darkMode } = useDarkModeState();
   const globalSetOutputEnabled = useSetOutputEnabledAction();
-  const { emitStyleUpdate, emitIndividualOutputToggle } = useControlSocket();
+  const controlSocket = useOptionalControlSocket();
+  const emitStyleUpdate = controlSocket?.emitStyleUpdate || noop;
+  const emitIndividualOutputToggle = controlSocket?.emitIndividualOutputToggle || noop;
   const { showToast } = useToast();
   const { showModal } = useModal();
 
@@ -261,10 +272,13 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
   const stageSettingsHook = useStageSettings();
   const genericOutputHook = useOutputSettingsSelector(outputKey);
 
-  const { settings, updateSettings } =
+  const storeBackedSettingsHook =
     outputKey === 'stage'
       ? stageSettingsHook
       : genericOutputHook;
+
+  const settings = controlledSettings || storeBackedSettingsHook.settings;
+  const updateSettings = onSettingsChange || storeBackedSettingsHook.updateSettings;
 
   const outputEnabledFromStore = useOutputEnabled(outputKey);
 
@@ -310,8 +324,10 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
   const applySettings = React.useCallback((partial) => {
     const newSettings = { ...settings, ...partial };
     updateSettings(partial);
-    emitStyleUpdate(outputKey, newSettings);
-  }, [settings, updateSettings, emitStyleUpdate, outputKey]);
+    if (!localMode) {
+      emitStyleUpdate(outputKey, newSettings);
+    }
+  }, [settings, updateSettings, emitStyleUpdate, outputKey, localMode]);
 
   const update = React.useCallback((key, value) => {
     applySettings({ [key]: value });
@@ -431,10 +447,12 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput }) => {
       <PanelHeaderActions
         applySettings={applySettings}
         darkMode={darkMode}
+        hideLiveActions={localMode}
         handleToggleOutput={handleToggleOutput}
         isOutputEnabled={isOutputEnabled}
         onDeleteOutput={onDeleteOutput}
         outputKey={outputKey}
+        title={title}
         settings={settings}
         showModal={showModal}
         showToast={showToast}

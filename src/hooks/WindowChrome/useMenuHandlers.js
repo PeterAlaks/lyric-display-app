@@ -245,6 +245,11 @@ const useMenuHandlers = (closeMenu) => {
     navigate('/timer-control');
   }, [closeMenu, navigate]);
 
+  const handleOpenKaraokeStudio = useCallback(() => {
+    closeMenu();
+    navigate('/karaoke-studio');
+  }, [closeMenu, navigate]);
+
   const handleNdiPreferences = useCallback(() => {
     closeMenu();
     showModal({
@@ -511,6 +516,7 @@ const useMenuHandlers = (closeMenu) => {
     handlePreviewOutputs,
     handleSyncOutputs,
     handleOpenTimerControl,
+    handleOpenKaraokeStudio,
     handleNdiPreferences,
     handleUserMedia,
     handleQuit,

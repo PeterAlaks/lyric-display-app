@@ -16,6 +16,8 @@ export const useControlSocket = () => {
     return context;
 };
 
+export const useOptionalControlSocket = () => useContext(ControlSocketContext);
+
 const LONG_BACKOFF_WARNING_MS = 4000;
 
 export const ControlSocketProvider = ({ children, role = 'control' }) => {

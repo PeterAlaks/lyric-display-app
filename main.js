@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron';
 import './main/appIdentity.js';
+import { registerKaraokeMediaScheme } from './main/karaokeMediaProtocol.js';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';
@@ -52,6 +53,7 @@ if (!hasLock) {
 }
 
 initFileLogging();
+registerKaraokeMediaScheme();
 
 if (process.platform === 'win32' && process.argv.length >= 2) {
   const filePath = extractFilePathFromArgs(process.argv);

@@ -20,6 +20,8 @@ const Stage = React.lazy(() => import('./pages/Stage'));
 const TimeDisplay = React.lazy(() => import('./pages/TimeDisplay'));
 const OutputPage = React.lazy(() => import('./pages/OutputPage'));
 const ObsSetup = React.lazy(() => import('./pages/ObsSetup'));
+const KaraokeStudio = React.lazy(() => import('./pages/KaraokeStudio'));
+const KaraokeExportFrame = React.lazy(() => import('./pages/KaraokeExportFrame'));
 const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
 const TimerControlModule = React.lazy(() => import('./components/TimerControlModule'));
 
@@ -88,6 +90,12 @@ function AppRoutes() {
               <ObsSetup />
             </ConditionalDesktopShell>
           } />
+          <Route path="/karaoke-studio" element={
+            <ConditionalDesktopShell>
+              <KaraokeStudio />
+            </ConditionalDesktopShell>
+          } />
+          <Route path="/karaoke-export-frame" element={<KaraokeExportFrame />} />
           <Route path="/new-song" element={
             <ConditionalDesktopShell>
               <ControlSocketProvider>
