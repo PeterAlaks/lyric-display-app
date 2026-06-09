@@ -179,4 +179,4 @@ For technical support, feature requests, or bug reports:
 
 - [Website](https://lyricdisplay.app)
 - [Developer Portfolio](https://linktr.ee/peteralaks)
-- [Support Development](https://buymeacoffee.com/lyricdisplay)
+- [Support Development](https://lyricdisplay.app/donate)
