@@ -26,11 +26,23 @@ import { useEffect, useCallback, useRef } from 'react';
  * @param {Function} options.handleIntelligentAutoplayStop - Function to stop timestamp-based autoplay
  * @param {Function} options.handleSetlistNext - Function to go to next song in setlist
  * @param {Function} options.handleSetlistPrev - Function to go to previous song in setlist
+ * @param {Array} options.setlistFiles - Current setlist items
+ * @param {Function} options.emitSetlistLoad - Function to load a setlist item by id
  * @param {Function} options.handleSyncOutputs - Function to sync all outputs
  * @param {Function} options.showToast - Function to show toast notifications
  * @param {string} options.songName - Current song/file name for OSC feedback
  * @param {boolean} options.enabled - Whether external control is enabled
  */
+export function resolveSetlistItemIdByIndex(setlistFiles, index) {
+  if (!Array.isArray(setlistFiles)) return null;
+  if (!Number.isFinite(index)) return null;
+
+  const itemIndex = Math.floor(index);
+  if (itemIndex < 0 || itemIndex >= setlistFiles.length) return null;
+
+  return setlistFiles[itemIndex]?.id || null;
+}
+
 export function useExternalControl({
   lyrics = [],
   selectedLine,
@@ -50,6 +62,8 @@ export function useExternalControl({
   handleIntelligentAutoplayStop,
   handleSetlistNext,
   handleSetlistPrev,
+  setlistFiles = [],
+  emitSetlistLoad,
   handleSyncOutputs,
   showToast,
   songName = '',
@@ -60,6 +74,7 @@ export function useExternalControl({
   const isOutputOnRef = useRef(isOutputOn);
   const autoplayActiveRef = useRef(autoplayActive);
   const intelligentAutoplayActiveRef = useRef(intelligentAutoplayActive);
+  const setlistFilesRef = useRef(setlistFiles);
 
   // Keep refs updated
   useEffect(() => { lyricsRef.current = lyrics; }, [lyrics]);
@@ -67,6 +82,7 @@ export function useExternalControl({
   useEffect(() => { isOutputOnRef.current = isOutputOn; }, [isOutputOn]);
   useEffect(() => { autoplayActiveRef.current = autoplayActive; }, [autoplayActive]);
   useEffect(() => { intelligentAutoplayActiveRef.current = intelligentAutoplayActive; }, [intelligentAutoplayActive]);
+  useEffect(() => { setlistFilesRef.current = setlistFiles; }, [setlistFiles]);
 
   /**
    * Handle line selection with bounds checking
@@ -147,6 +163,26 @@ export function useExternalControl({
     const lineIndex = Math.floor(percentage * (currentLyrics.length - 1));
     handleSelectLine(lineIndex);
   }, [handleSelectLine]);
+
+  /**
+   * Handle setlist item selection by zero-based index.
+   */
+  const handleLoadSetlistItem = useCallback((index) => {
+    const fileId = resolveSetlistItemIdByIndex(setlistFilesRef.current, index);
+
+    if (fileId && typeof emitSetlistLoad === 'function') {
+      emitSetlistLoad(fileId);
+      return;
+    }
+
+    if (typeof showToast === 'function') {
+      showToast({
+        title: 'Setlist item not found',
+        message: `No setlist item exists at index ${index}`,
+        variant: 'info'
+      });
+    }
+  }, [emitSetlistLoad, showToast]);
 
   /**
    * Process incoming external control action
@@ -234,8 +270,10 @@ export function useExternalControl({
         break;
 
       case 'load-setlist-item':
-        // This would need to be implemented with setlist loading logic
         console.log('[ExternalControl] Load setlist item:', action.index);
+        if (typeof action.index === 'number') {
+          handleLoadSetlistItem(action.index);
+        }
         break;
 
       case 'sync-outputs':
@@ -320,6 +358,7 @@ export function useExternalControl({
     handleIntelligentAutoplayStop,
     handleSetlistNext,
     handleSetlistPrev,
+    handleLoadSetlistItem,
     handleSyncOutputs,
     handleScrollLines,
     emitOutput1Toggle,

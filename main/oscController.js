@@ -598,7 +598,7 @@ class OSCController extends EventEmitter {
       { address: `${prefix}/autoplay/intelligent/stop`, args: '', description: 'Stop timestamp-based intelligent autoplay' },
       { address: `${prefix}/setlist/next`, args: '', description: 'Load next song in setlist' },
       { address: `${prefix}/setlist/prev`, args: '', description: 'Load previous song in setlist' },
-      { address: `${prefix}/setlist/load`, args: '[int]', description: 'Load setlist item by index' },
+      { address: `${prefix}/setlist/load`, args: '[int]', description: 'Load setlist item by zero-based index' },
       { address: `${prefix}/clear`, args: '', description: 'Clear output (deselect line)' },
       { address: `${prefix}/sync`, args: '', description: 'Force sync all outputs' }
     ];

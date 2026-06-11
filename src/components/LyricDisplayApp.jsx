@@ -387,6 +387,8 @@ const LyricDisplayApp = () => {
     handleIntelligentAutoplayStop,
     handleSetlistNext: handleNavigateSetlistNext,
     handleSetlistPrev: handleNavigateSetlistPrevious,
+    setlistFiles,
+    emitSetlistLoad,
     handleSyncOutputs,
     showToast,
     songName: lyricsFileName,
