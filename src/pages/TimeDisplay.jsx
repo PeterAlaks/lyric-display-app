@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
 import useSharedTimer from '../hooks/useSharedTimer';
-import { formatGlobalClock, splitClockPeriod } from '../utils/timerUtils';
+import { formatGlobalClock, isTimerVisiblyActive, splitClockPeriod } from '../utils/timerUtils';
 import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import { paintToCss } from '../utils/paint';
 import ProjectionExitHint from '../components/ProjectionExitHint';
@@ -97,7 +97,7 @@ const TimeDisplay = () => {
       ? { ...localDisplay, ...stateDisplay }
       : { ...stateDisplay, ...localDisplay };
   }, [timerDisplaySettings, timerState.display]);
-  const hasActiveTimer = timerState.running || timerState.paused;
+  const hasActiveTimer = isTimerVisiblyActive(timerState, now);
   const shouldShowClock = !hasActiveTimer && display.showClockWhenIdle !== false;
   const clockValue = React.useMemo(() => formatGlobalClock(now, display), [display, now]);
   const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);

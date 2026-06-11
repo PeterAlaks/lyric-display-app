@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTimerProgress } from '../src/utils/timerUtils.js';
+import { getTimerProgress, isTimerVisiblyActive } from '../src/utils/timerUtils.js';
 
 test('timer progress advances for normalized stage panel countdown state', () => {
   const startTime = 1_000_000;
@@ -29,4 +29,68 @@ test('timer progress is zero for legacy stage payload without duration', () => {
     endTime: now + 60_000,
     remaining: null,
   }, now), 0);
+});
+
+test('expired terminal countdown is not visibly active', () => {
+  const startTime = 1_000_000;
+  const durationMs = 60_000;
+  assert.equal(isTimerVisiblyActive({
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+    overrunMode: false,
+    sets: [],
+  }, startTime + durationMs + 1), false);
+});
+
+test('expired countdown remains visibly active when a next set should auto-start', () => {
+  const startTime = 1_000_000;
+  const durationMs = 60_000;
+  assert.equal(isTimerVisiblyActive({
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+    activeSetIndex: 0,
+    autoStartNext: true,
+    sets: [
+      { id: 'set-1', label: 'Timer 1', durationMs },
+      { id: 'set-2', label: 'Timer 2', durationMs },
+    ],
+  }, startTime + durationMs + 1), true);
+});
+
+test('overrun and paused timers remain visibly active', () => {
+  const startTime = 1_000_000;
+  const durationMs = 60_000;
+  const expired = {
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+  };
+
+  assert.equal(isTimerVisiblyActive({
+    ...expired,
+    overrunMode: true,
+  }, startTime + durationMs + 1), true);
+
+  assert.equal(isTimerVisiblyActive({
+    ...expired,
+    paused: true,
+    pausedRemainingMs: 10_000,
+  }, startTime + durationMs + 1), true);
 });

@@ -300,6 +300,21 @@ export const getTimerProgress = (timerState, now = Date.now()) => {
   return Math.min(1, Math.max(0, 1 - (Math.max(0, remainingMs) / duration)));
 };
 
+export const isTimerVisiblyActive = (timerState, now = Date.now()) => {
+  const state = normalizeTimerState(timerState);
+  if (state.paused) return true;
+  if (!state.running) return false;
+  if (state.mode === 'countup' || state.overrunMode) return true;
+
+  const remainingMs = getRemainingMs(state, now);
+  if (!Number.isFinite(remainingMs) || remainingMs > 0) return true;
+
+  const nextIndex = state.activeSetIndex + 1;
+  const hasNextSet = Boolean(state.sets?.[nextIndex]);
+  if (state.phase === 'indicator') return hasNextSet;
+  return hasNextSet && state.autoStartNext;
+};
+
 export const formatGlobalClock = (dateOrMs = Date.now(), options = {}) => {
   const date = dateOrMs instanceof Date ? dateOrMs : new Date(dateOrMs);
   const hour12 = Boolean(options.clockHour12);

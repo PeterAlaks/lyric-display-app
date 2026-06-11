@@ -8,7 +8,7 @@ import { findNavigableLyricLineIndex, isStructureTagLyricLine } from '../utils/l
 import { logDebug } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
 import { normalizeStageMessages } from '../utils/stageMessages';
-import { getTimerDisplay, getTimerIntensity } from '../utils/timerUtils';
+import { getTimerDisplay, getTimerIntensity, isTimerVisiblyActive } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
 import ProjectionExitHint from '../components/ProjectionExitHint';
 
@@ -502,7 +502,7 @@ const Stage = () => {
   const upcomingSong = `Upcoming Song: ${upcomingSongName}`;
   const currentMessage = customMessages.length > 0 ? customMessages[currentMessageIndex] : null;
   const currentMessageText = currentMessage?.text || currentMessage || '';
-  const hasTimerCountdown = Boolean(timerDisplay) && (timerState.running || timerState.paused);
+  const hasTimerCountdown = Boolean(timerDisplay) && isTimerVisiblyActive(timerState, currentTime.getTime());
   const shouldShowTimerFallbackTime = !hasTimerCountdown && Boolean(showTime);
   const shouldShowTimerFullScreen = Boolean(timerFullScreen) && (hasTimerCountdown || shouldShowTimerFallbackTime);
   const fullScreenTimerLabel = hasTimerCountdown ? (timerState.label || timerState.display?.label || 'Time Left:') : 'Current Time';
