@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTimerProgress, isTimerVisiblyActive } from '../src/utils/timerUtils.js';
+import { getTimerProgress, isTimerVisiblyActive, normalizeTimerDisplaySettings, normalizeTimerState } from '../src/utils/timerUtils.js';
 
 test('timer progress advances for normalized stage panel countdown state', () => {
   const startTime = 1_000_000;
@@ -93,4 +93,46 @@ test('overrun and paused timers remain visibly active', () => {
     paused: true,
     pausedRemainingMs: 10_000,
   }, startTime + durationMs + 1), true);
+});
+
+test('timer display defaults use smaller secondary item scale', () => {
+  const settings = normalizeTimerDisplaySettings({});
+
+  assert.equal(settings.otherItemsScale, 0.1);
+  assert.equal(settings.globalClockScale, 0.1);
+});
+
+test('untouched legacy timer display scale migrates to smaller default', () => {
+  const settings = normalizeTimerDisplaySettings({
+    otherItemsScale: 0.15,
+    globalClockScale: 0.15,
+    displayUpdatedAt: 0,
+  });
+
+  assert.equal(settings.otherItemsScale, 0.1);
+  assert.equal(settings.globalClockScale, 0.1);
+});
+
+test('custom legacy-sized timer display scale is preserved', () => {
+  const settings = normalizeTimerDisplaySettings({
+    otherItemsScale: 0.15,
+    globalClockScale: 0.15,
+    displayUpdatedAt: 1_000_000,
+  });
+
+  assert.equal(settings.otherItemsScale, 0.15);
+  assert.equal(settings.globalClockScale, 0.15);
+});
+
+test('timer state display normalization migrates untouched legacy scale', () => {
+  const state = normalizeTimerState({
+    display: {
+      otherItemsScale: 0.15,
+      globalClockScale: 0.15,
+      displayUpdatedAt: 0,
+    },
+  });
+
+  assert.equal(state.display.otherItemsScale, 0.1);
+  assert.equal(state.display.globalClockScale, 0.1);
 });

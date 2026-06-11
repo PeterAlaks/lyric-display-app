@@ -1,7 +1,7 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
-import { DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../utils/timerUtils';
+import { normalizeTimerControlSettings, normalizeTimerDisplaySettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
 import { createAutoplaySlice } from './lyricsStore/autoplaySlice.js';
@@ -180,12 +180,7 @@ const useLyricsStore = create(
       onRehydrateStorage: () => (state) => {
         if (state) {
           rehydrateOutputState(state);
-          state.timerDisplaySettings = {
-            ...DEFAULT_TIMER_DISPLAY,
-            ...(state.timerDisplaySettings || {}),
-            otherItemsScale: state.timerDisplaySettings?.otherItemsScale ?? state.timerDisplaySettings?.globalClockScale ?? DEFAULT_TIMER_DISPLAY.otherItemsScale,
-            displayUpdatedAt: Number.isFinite(Number(state.timerDisplaySettings?.displayUpdatedAt)) ? Number(state.timerDisplaySettings.displayUpdatedAt) : 0,
-          };
+          state.timerDisplaySettings = normalizeTimerDisplaySettings(state.timerDisplaySettings);
           state.timerControlSettings = normalizeTimerControlSettings(state.timerControlSettings);
         }
       },

@@ -126,7 +126,7 @@ const TimeDisplay = () => {
   const autoFitEnabled = timerFontSizeMode !== 'manual';
   const { containerRef, textRef, fontSize: autoFontSize } = useAutoFitText(value, autoFitEnabled);
   const mainFontSize = autoFitEnabled ? (autoFontSize || 220) : (Number(display.timerFontSize) || 180);
-  const otherItemsScale = Math.min(2, Math.max(0.08, Number(display.otherItemsScale ?? display.globalClockScale) || 0.15));
+  const otherItemsScale = Math.min(2, Math.max(0.08, Number(display.otherItemsScale ?? display.globalClockScale) || 0.1));
   const otherItemsFontSize = Math.max(16, mainFontSize * otherItemsScale);
   const otherItemsFontFamily = display.fontFamily || 'Bebas Neue';
   const alignItems = display.timerAlign === 'left'

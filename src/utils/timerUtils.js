@@ -47,11 +47,38 @@ export const DEFAULT_TIMER_DISPLAY = {
   showProgress: true,
   showClockWhenIdle: true,
   showGlobalClock: true,
-  otherItemsScale: 0.15,
-  globalClockScale: 0.15,
+  otherItemsScale: 0.1,
+  globalClockScale: 0.1,
   clockHour12: false,
   clockShowSeconds: false,
   clockShowPeriod: true,
+};
+
+const LEGACY_DEFAULT_OTHER_ITEMS_SCALE = 0.15;
+
+export const normalizeTimerDisplaySettings = (raw) => {
+  const settings = raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? raw
+    : {};
+  const displayUpdatedAt = Number.isFinite(Number(settings.displayUpdatedAt)) ? Number(settings.displayUpdatedAt) : 0;
+  const rawScale = settings.otherItemsScale ?? settings.globalClockScale;
+  const numericScale = Number(rawScale);
+  const shouldMigrateLegacyScale = displayUpdatedAt <= 0
+    && Number.isFinite(numericScale)
+    && numericScale === LEGACY_DEFAULT_OTHER_ITEMS_SCALE;
+  const otherItemsScale = shouldMigrateLegacyScale
+    ? DEFAULT_TIMER_DISPLAY.otherItemsScale
+    : (rawScale ?? DEFAULT_TIMER_DISPLAY.otherItemsScale);
+
+  return {
+    ...DEFAULT_TIMER_DISPLAY,
+    ...settings,
+    otherItemsScale,
+    globalClockScale: shouldMigrateLegacyScale
+      ? DEFAULT_TIMER_DISPLAY.globalClockScale
+      : (settings.globalClockScale ?? otherItemsScale),
+    displayUpdatedAt,
+  };
 };
 
 export const createIdleTimerState = () => ({
@@ -206,12 +233,7 @@ export const normalizeTimerState = (raw) => {
     indicatorEnabled: Boolean(raw.indicatorEnabled),
     indicatorDurationMs: clampNumber(raw.indicatorDurationMs, 10000, 0),
     indicatorLabel: String(raw.indicatorLabel || 'Next timer starts in'),
-    display: {
-      ...DEFAULT_TIMER_DISPLAY,
-      ...(raw.display && typeof raw.display === 'object' ? raw.display : {}),
-      otherItemsScale: raw.display?.otherItemsScale ?? raw.display?.globalClockScale ?? DEFAULT_TIMER_DISPLAY.otherItemsScale,
-      displayUpdatedAt: Number.isFinite(Number(raw.display?.displayUpdatedAt)) ? Number(raw.display.displayUpdatedAt) : 0,
-    },
+    display: normalizeTimerDisplaySettings(raw.display),
     updatedAt: Number.isFinite(Number(raw.updatedAt)) ? Number(raw.updatedAt) : Date.now(),
   };
 };
