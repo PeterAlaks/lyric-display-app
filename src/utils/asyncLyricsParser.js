@@ -83,11 +83,30 @@ const sendToWorker = (payload) => {
   });
 };
 
+const readRawTextFromFile = async (file) => {
+  if (!file) return null;
+
+  if (typeof file.text === 'function') {
+    return file.text();
+  }
+
+  if (typeof file.arrayBuffer === 'function') {
+    const buffer = await file.arrayBuffer();
+    return new TextDecoder('utf-8').decode(buffer);
+  }
+
+  return null;
+};
+
 const parseViaElectronIPC = async (file, options) => {
   if (!isElectron() || !window.electronAPI?.parseLyricsFile) return null;
   const fileType = options.fileType || 'txt';
   const filePath = file?.path || options.path || options.filePath || null;
-  const rawText = typeof options.rawText === 'string' ? options.rawText : null;
+  let rawText = typeof options.rawText === 'string' ? options.rawText : null;
+
+  if (!filePath && rawText === null) {
+    rawText = await readRawTextFromFile(file);
+  }
 
   if (!filePath && rawText === null) {
     return null;
@@ -122,6 +141,9 @@ const parseViaWorker = (file, options) => {
       fileType: options.fileType,
       file: file ?? null,
       content: options.rawText ?? null,
+      enableSplitting: options.enableSplitting,
+      splitConfig: options.splitConfig,
+      groupingConfig: options.groupingConfig,
     },
   });
 
@@ -129,16 +151,22 @@ const parseViaWorker = (file, options) => {
 };
 
 const parseSynchronously = async (file, options) => {
-  if (options.rawText) {
+  const parserOptions = {
+    enableSplitting: options.enableSplitting,
+    splitConfig: options.splitConfig,
+    groupingConfig: options.groupingConfig,
+  };
+
+  if (typeof options.rawText === 'string') {
     return options.fileType === 'lrc'
-      ? parseLrcContent(options.rawText)
-      : parseTxtContent(options.rawText);
+      ? parseLrcContent(options.rawText, parserOptions)
+      : parseTxtContent(options.rawText, parserOptions);
   }
 
   if (options.fileType === 'lrc') {
-    return parseLrc(file);
+    return parseLrc(file, parserOptions);
   }
-  return parseLyrics(file);
+  return parseLyrics(file, parserOptions);
 };
 
 const detectFileType = (file, explicitType) => {

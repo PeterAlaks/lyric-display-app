@@ -143,6 +143,7 @@ app.whenReady().then(async () => {
             allowBackdropClose: false
           },
           {
+            timeout: false,
             fallback: async () => {
               const fallbackChoice = await dialog.showMessageBox(mainWindow, {
                 type: 'question',

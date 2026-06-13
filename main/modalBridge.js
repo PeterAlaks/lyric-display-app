@@ -70,14 +70,15 @@ export function requestRendererModal(config = {}, options = {}) {
   const requestId = config.id || randomUUID();
 
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
+    const timeoutMs = options.timeout === false ? null : (options.timeout ?? 15000);
+    const timeout = timeoutMs == null ? null : setTimeout(() => {
       pending.delete(requestId);
       if (typeof fallback === 'function') {
         Promise.resolve().then(() => fallback()).then(resolve).catch(reject);
       } else {
         reject(new Error('Timed out waiting for renderer modal response'));
       }
-    }, options.timeout ?? 15000);
+    }, timeoutMs);
 
     pending.set(requestId, {
       resolve: (result) => {
@@ -100,7 +101,7 @@ export function requestRendererModal(config = {}, options = {}) {
       }
       webContents.send('modal-bridge:request', { ...config, id: requestId });
     } catch (err) {
-      clearTimeout(timeout);
+      if (timeout) clearTimeout(timeout);
       pending.delete(requestId);
       if (typeof fallback === 'function') {
         Promise.resolve().then(() => fallback()).then(resolve).catch(reject);

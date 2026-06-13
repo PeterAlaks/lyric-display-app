@@ -30,21 +30,22 @@ self.addEventListener('message', async (event) => {
   }
 
   try {
-    const { fileType = 'txt', content, enableSplitting, splitConfig } = payload || {};
+    const { fileType = 'txt', content, enableSplitting, splitConfig, groupingConfig } = payload || {};
+    const parseOptions = { enableSplitting, splitConfig, groupingConfig };
     let result;
 
     if (content) {
       if (fileType === 'lrc') {
-        result = parseLrcContent(content, { enableSplitting, splitConfig });
+        result = parseLrcContent(content, parseOptions);
       } else {
-        result = parseTxtContent(content, { enableSplitting, splitConfig });
+        result = parseTxtContent(content, parseOptions);
       }
     } else {
       const rawText = await getRawTextFromPayload(payload);
       if (fileType === 'lrc') {
-        result = parseLrcContent(rawText, { enableSplitting, splitConfig });
+        result = parseLrcContent(rawText, parseOptions);
       } else {
-        result = parseTxtContent(rawText, { enableSplitting, splitConfig });
+        result = parseTxtContent(rawText, parseOptions);
       }
     }
 
