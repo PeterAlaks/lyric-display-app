@@ -12,8 +12,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "express": "^4.22.2",
-    "express-rate-limit": "^7.5.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "keytar": "^7.9.0",
     "multer": "^2.1.1",
