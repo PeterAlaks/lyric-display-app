@@ -95,6 +95,7 @@
     "files": [
       "dist/**/*",
       "server/**/*",
+      "!server/node_modules/**/*",
       "shared/**/*",
       "main/**/*",
       "public/**/*",
