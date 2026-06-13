@@ -1,7 +1,7 @@
 import { appendActionLog } from './actionLog.js';
 import { state } from './state.js';
 
-const LIVE_SAFETY_BLOCK_REASON = 'Live safety mode is active. Secondary controllers can only change lyric lines during service.';
+const LIVE_SAFETY_BLOCK_REASON = 'Live safety mode is active. Secondary controllers can only change lyric lines.';
 
 export function getLiveSafetySnapshot() {
   return {

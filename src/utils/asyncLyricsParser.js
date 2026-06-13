@@ -1,5 +1,5 @@
-import { parseLyrics } from './parseLyrics';
-import { parseLrc } from './parseLrc';
+import { parseLyrics } from './parseLyrics.js';
+import { parseLrc } from './parseLrc.js';
 import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
 
 let workerInstance = null;
@@ -86,11 +86,18 @@ const sendToWorker = (payload) => {
 const parseViaElectronIPC = async (file, options) => {
   if (!isElectron() || !window.electronAPI?.parseLyricsFile) return null;
   const fileType = options.fileType || 'txt';
+  const filePath = file?.path || options.path || options.filePath || null;
+  const rawText = typeof options.rawText === 'string' ? options.rawText : null;
+
+  if (!filePath && rawText === null) {
+    return null;
+  }
+
   const payload = {
     fileType,
     name: options.name || file?.name || '',
-    path: file?.path || options.path || null,
-    rawText: options.rawText || null,
+    path: filePath,
+    rawText,
   };
 
   try {

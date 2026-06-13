@@ -34,22 +34,17 @@ self.addEventListener('message', async (event) => {
     let result;
 
     if (content) {
-
       if (fileType === 'lrc') {
-        const mod = await import('../../shared/lyricsParsing.js');
-        result = mod.parseLrcContent(content, { enableSplitting, splitConfig });
+        result = parseLrcContent(content, { enableSplitting, splitConfig });
       } else {
-        const mod = await import('../../shared/lyricsParsing.js');
-        result = mod.parseTxtContent(content, { enableSplitting, splitConfig });
+        result = parseTxtContent(content, { enableSplitting, splitConfig });
       }
     } else {
-
       const rawText = await getRawTextFromPayload(payload);
-      const mod = await import('../../shared/lyricsParsing.js');
       if (fileType === 'lrc') {
-        result = mod.parseLrcContent(rawText, { enableSplitting, splitConfig });
+        result = parseLrcContent(rawText, { enableSplitting, splitConfig });
       } else {
-        result = mod.parseTxtContent(rawText, { enableSplitting, splitConfig });
+        result = parseTxtContent(rawText, { enableSplitting, splitConfig });
       }
     }
 

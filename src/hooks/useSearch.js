@@ -22,7 +22,7 @@ const useSearch = (lyrics) => {
 
   const scrollToLine = React.useCallback((lineIndex) => {
     window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-      detail: { lineIndex }
+      detail: { lineIndex, align: 'center', behavior: 'auto', source: 'search' }
     }));
   }, []);
 
