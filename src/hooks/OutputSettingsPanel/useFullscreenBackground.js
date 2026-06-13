@@ -36,6 +36,7 @@ const useFullscreenBackground = ({
         name: media.name,
         size: media.size,
         uploadedAt: media.uploadedAt ?? Date.now(),
+        bundled: media.bundled === true,
       },
       fullScreenBackgroundMediaName: media.name,
     });
