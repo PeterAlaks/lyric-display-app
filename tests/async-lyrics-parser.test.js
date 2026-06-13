@@ -31,13 +31,21 @@ test.afterEach(() => {
   }
 });
 
-test('dropped Electron File without path skips IPC and parses locally', async () => {
+test('dropped Electron File without path sends raw text through IPC', async () => {
   let ipcCalls = 0;
+  let payload;
   globalThis.window = {
     electronAPI: {
-      parseLyricsFile: async () => {
+      parseLyricsFile: async (nextPayload) => {
         ipcCalls += 1;
-        return { success: false, error: 'No lyric content available for parsing' };
+        payload = nextPayload;
+        return {
+          success: true,
+          payload: {
+            rawText: nextPayload.rawText,
+            processedLines: [{ displayText: 'First line\nSecond line' }],
+          },
+        };
       },
     },
   };
@@ -46,7 +54,9 @@ test('dropped Electron File without path skips IPC and parses locally', async ()
   const file = new File(['First line\nSecond line'], 'song.txt', { type: 'text/plain' });
   const parsed = await parseLyricsFileAsync(file, { fileType: 'txt' });
 
-  assert.equal(ipcCalls, 0);
+  assert.equal(ipcCalls, 1);
+  assert.equal(payload.path, null);
+  assert.equal(payload.rawText, 'First line\nSecond line');
   assert.equal(parsed.rawText, 'First line\nSecond line');
   assert.equal(parsed.processedLines.length, 1);
   assert.equal(parsed.processedLines[0].displayText, 'First line\nSecond line');
