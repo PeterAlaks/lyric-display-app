@@ -13,6 +13,8 @@ function createNdiInstaller({
   githubRepo,
   notifyAllWindows,
   getInstallPath,
+  getResolvedInstallPath = getInstallPath,
+  getLegacyInstallPaths = () => [],
   getCompanionEntryPath,
   getPlatformAssetName,
   stopCompanion,
@@ -44,36 +46,43 @@ function createNdiInstaller({
 
   function checkInstalled() {
     const entryPath = getCompanionEntryPath();
+    const resolvedInstallPath = getResolvedInstallPath();
 
     if (isDev) {
       const installed = fs.existsSync(entryPath);
       let version = ndiStore.get('version') || '';
       if (installed) {
         try {
-          const companionPkg = JSON.parse(fs.readFileSync(path.join(getInstallPath(), 'package.json'), 'utf8'));
+          const companionPkg = JSON.parse(fs.readFileSync(path.join(resolvedInstallPath, 'package.json'), 'utf8'));
           if (companionPkg.version) version = companionPkg.version;
         } catch { /* fallback to store value */ }
       }
       return {
         installed,
         version,
-        installPath: getInstallPath(),
+        installPath: resolvedInstallPath,
         companionPath: entryPath,
       };
     }
 
     const installed = fs.existsSync(entryPath);
     if (installed) {
+      ndiStore.set('installed', true);
+      ndiStore.set('installPath', resolvedInstallPath);
+
       return {
         installed: true,
         version: ndiStore.get('version') || '',
-        installPath: getInstallPath(),
+        installPath: resolvedInstallPath,
         companionPath: entryPath,
       };
     }
 
     if (ndiStore.get('installed')) {
       ndiStore.set('installed', false);
+    }
+    if (ndiStore.get('installPath')) {
+      ndiStore.set('installPath', '');
     }
 
     return {
@@ -306,6 +315,20 @@ function createNdiInstaller({
     }
   }
 
+  function removeLegacyInstallPaths() {
+    for (const legacyInstallPath of getLegacyInstallPaths()) {
+      if (!legacyInstallPath || legacyInstallPath === getInstallPath()) continue;
+      try {
+        if (fs.existsSync(legacyInstallPath)) {
+          fs.rmSync(legacyInstallPath, { recursive: true, force: true });
+          console.log('[NDI] Removed legacy companion install directory:', legacyInstallPath);
+        }
+      } catch (error) {
+        console.warn('[NDI] Failed to remove legacy companion install directory:', legacyInstallPath, error.message);
+      }
+    }
+  }
+
   async function downloadCompanion(updateInfo = null) {
     if (activeDownloadOperation) {
       console.warn('[NDI] Download already in progress, returning existing operation');
@@ -347,6 +370,7 @@ function createNdiInstaller({
 
         stopCompanion();
         await extractZip(zipPath, installPath);
+        removeLegacyInstallPaths();
         try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
 
         if (!resolvedVersion) {
@@ -378,7 +402,13 @@ function createNdiInstaller({
 
         resetUpdateCache();
 
-        const result = { success: true, version: resolvedVersion, path: installPath };
+        const result = {
+          success: true,
+          version: resolvedVersion,
+          path: installPath,
+          installPath,
+          companionPath: getCompanionEntryPath(),
+        };
         console.log(`[NDI] Companion installed: v${resolvedVersion} at ${installPath}`);
         notifyAllWindows('ndi:download-complete', result);
         return result;
@@ -417,7 +447,7 @@ function createNdiInstaller({
 
   function uninstallCompanion() {
     stopCompanion();
-    const installPath = getInstallPath();
+    const installPaths = [getInstallPath(), ...getLegacyInstallPaths()];
 
     if (isDev) {
       console.warn('[NDI] Cannot uninstall in dev mode (source directory)');
@@ -425,8 +455,10 @@ function createNdiInstaller({
     }
 
     try {
-      if (fs.existsSync(installPath)) {
-        fs.rmSync(installPath, { recursive: true, force: true });
+      for (const installPath of installPaths) {
+        if (fs.existsSync(installPath)) {
+          fs.rmSync(installPath, { recursive: true, force: true });
+        }
       }
     } catch (error) {
       console.error('[NDI] Error removing companion files:', error);
@@ -484,21 +516,24 @@ function createNdiInstaller({
 
   function cleanupStaleArtifacts() {
     try {
-      const installPath = getInstallPath();
-      const parentDir = path.dirname(installPath);
-      const baseName = path.basename(installPath);
+      const installPaths = [getInstallPath(), ...getLegacyInstallPaths()];
 
-      if (!fs.existsSync(parentDir)) return;
+      for (const installPath of installPaths) {
+        const parentDir = path.dirname(installPath);
+        const baseName = path.basename(installPath);
 
-      const entries = fs.readdirSync(parentDir);
-      for (const entry of entries) {
-        if (entry.startsWith(baseName + '-extracting-')) {
-          const fullPath = path.join(parentDir, entry);
-          try {
-            fs.rmSync(fullPath, { recursive: true, force: true });
-            console.log('[NDI] Cleaned up stale extraction directory:', fullPath);
-          } catch (err) {
-            console.warn('[NDI] Failed to clean up stale directory:', fullPath, err.message);
+        if (!fs.existsSync(parentDir)) continue;
+
+        const entries = fs.readdirSync(parentDir);
+        for (const entry of entries) {
+          if (entry.startsWith(baseName + '-extracting-')) {
+            const fullPath = path.join(parentDir, entry);
+            try {
+              fs.rmSync(fullPath, { recursive: true, force: true });
+              console.log('[NDI] Cleaned up stale extraction directory:', fullPath);
+            } catch (err) {
+              console.warn('[NDI] Failed to clean up stale directory:', fullPath, err.message);
+            }
           }
         }
       }

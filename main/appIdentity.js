@@ -4,7 +4,8 @@ import path from 'path';
 
 export const APP_NAME = 'LyricDisplay';
 export const LEGACY_APP_NAME = 'lyric-display-app';
-export const NDI_FOLDER_NAME = 'lyricdisplay-ndi';
+export const NDI_FOLDER_NAME = 'NDI';
+export const LEGACY_NDI_FOLDER_NAME = 'lyricdisplay-ndi';
 
 const MIGRATION_MARKER = 'user-data-migration.json';
 
@@ -96,7 +97,8 @@ function migrateUserData(appDataPath) {
   const sourcePath = path.join(appDataPath, LEGACY_APP_NAME);
   const targetPath = path.join(appDataPath, APP_NAME);
   const markerPath = path.join(targetPath, MIGRATION_MARKER);
-  const legacyNdiPath = path.join(appDataPath, NDI_FOLDER_NAME);
+  const legacyNdiPath = path.join(appDataPath, LEGACY_NDI_FOLDER_NAME);
+  const legacyUserDataNdiPath = path.join(targetPath, LEGACY_NDI_FOLDER_NAME);
   const targetNdiPath = path.join(targetPath, NDI_FOLDER_NAME);
 
   const summary = {
@@ -111,11 +113,12 @@ function migrateUserData(appDataPath) {
     deletedLegacy: false,
     legacyDeleteSkippedReason: null,
     legacyNdi: createLegacyNdiSummary(legacyNdiPath, targetNdiPath),
+    legacyUserDataNdi: createLegacyNdiSummary(legacyUserDataNdiPath, targetNdiPath),
     errors: [],
   };
 
   if (sourcePath === targetPath) {
-    migrateLegacyNdiFolder(summary);
+    migrateLegacyNdiFolders(summary);
     return summary;
   }
 
@@ -126,7 +129,7 @@ function migrateUserData(appDataPath) {
       summary.legacyDeleteSkippedReason = null;
       summary.errors = getMigrationErrors(summary);
     }
-    migrateLegacyNdiFolder(summary);
+    migrateLegacyNdiFolders(summary);
     if (pathExists(markerPath)) {
       updateMigrationMarker(markerPath, summary);
     }
@@ -141,7 +144,7 @@ function migrateUserData(appDataPath) {
     }
     deleteLegacyUserData(sourcePath, summary);
     updateMigrationMarker(markerPath, summary);
-    migrateLegacyNdiFolder(summary);
+    migrateLegacyNdiFolders(summary);
     updateMigrationMarker(markerPath, summary);
     return summary;
   }
@@ -170,7 +173,7 @@ function migrateUserData(appDataPath) {
         'utf8'
       );
       deleteLegacyUserData(sourcePath, summary);
-      migrateLegacyNdiFolder(summary);
+      migrateLegacyNdiFolders(summary);
       updateMigrationMarker(markerPath, summary);
     } else if (!summary.legacyDeleteSkippedReason) {
       summary.legacyDeleteSkippedReason = 'Migration did not complete cleanly';
@@ -200,8 +203,12 @@ function createLegacyNdiSummary(sourcePath, targetPath) {
   };
 }
 
-function migrateLegacyNdiFolder(summary) {
-  const ndi = summary.legacyNdi;
+function migrateLegacyNdiFolders(summary) {
+  migrateLegacyNdiFolder(summary.legacyNdi);
+  migrateLegacyNdiFolder(summary.legacyUserDataNdi);
+}
+
+function migrateLegacyNdiFolder(ndi) {
   if (!ndi || ndi.sourcePath === ndi.targetPath || !pathExists(ndi.sourcePath)) {
     if (ndi && !pathExists(ndi.sourcePath)) {
       ndi.deletedLegacy = true;
@@ -214,15 +221,6 @@ function migrateLegacyNdiFolder(summary) {
   ndi.attempted = true;
 
   try {
-    if (isNonEmptyDirectory(ndi.targetPath)) {
-      ndi.legacyDeleteSkippedReason = 'Correct NDI folder already exists; skipped legacy merge';
-      ndi.errors = [];
-      ndi.skippedSymlinks = 0;
-      ndi.skippedOther = 0;
-      deleteLegacyNdiFolder(ndi);
-      return;
-    }
-
     fs.mkdirSync(ndi.targetPath, { recursive: true });
     withAsarDisabled(() => {
       copyMissingRecursive(ndi.sourcePath, ndi.targetPath, ndi);
@@ -238,16 +236,6 @@ function migrateLegacyNdiFolder(summary) {
     if (!ndi.legacyDeleteSkippedReason) {
       ndi.legacyDeleteSkippedReason = 'Legacy NDI migration failed';
     }
-  }
-}
-
-function isNonEmptyDirectory(dirPath) {
-  try {
-    const stat = fs.statSync(dirPath);
-    if (!stat.isDirectory()) return false;
-    return fs.readdirSync(dirPath).length > 0;
-  } catch {
-    return false;
   }
 }
 
@@ -317,22 +305,26 @@ function applyExistingMarker(markerPath, summary) {
     summary.legacyDeleteSkippedReason = marker.legacyDeleteSkippedReason || null;
     summary.errors = Array.isArray(marker.errors) ? marker.errors : [];
     if (marker.legacyNdi && typeof marker.legacyNdi === 'object') {
-      summary.legacyNdi = {
-        ...summary.legacyNdi,
-        attempted: Boolean(marker.legacyNdi.attempted),
-        copiedFiles: Number(marker.legacyNdi.copiedFiles) || 0,
-        skippedExisting: Number(marker.legacyNdi.skippedExisting) || 0,
-        skippedSymlinks: Number(marker.legacyNdi.skippedSymlinks) || 0,
-        skippedOther: Number(marker.legacyNdi.skippedOther) || 0,
-        deletedLegacy: Boolean(marker.legacyNdi.deletedLegacy),
-        legacyDeleteSkippedReason: marker.legacyNdi.legacyDeleteSkippedReason || null,
-        errors: Array.isArray(marker.legacyNdi.errors) ? marker.legacyNdi.errors : [],
-      };
+      applyLegacyNdiMarker(summary.legacyNdi, marker.legacyNdi);
+    }
+    if (marker.legacyUserDataNdi && typeof marker.legacyUserDataNdi === 'object') {
+      applyLegacyNdiMarker(summary.legacyUserDataNdi, marker.legacyUserDataNdi);
     }
   } catch (error) {
     summary.errors.push({ path: markerPath, message: error.message });
     summary.legacyDeleteSkippedReason = 'Could not verify existing migration marker';
   }
+}
+
+function applyLegacyNdiMarker(targetSummary, marker) {
+  targetSummary.attempted = Boolean(marker.attempted);
+  targetSummary.copiedFiles = Number(marker.copiedFiles) || 0;
+  targetSummary.skippedExisting = Number(marker.skippedExisting) || 0;
+  targetSummary.skippedSymlinks = Number(marker.skippedSymlinks) || 0;
+  targetSummary.skippedOther = Number(marker.skippedOther) || 0;
+  targetSummary.deletedLegacy = Boolean(marker.deletedLegacy);
+  targetSummary.legacyDeleteSkippedReason = marker.legacyDeleteSkippedReason || null;
+  targetSummary.errors = Array.isArray(marker.errors) ? marker.errors : [];
 }
 
 function deleteLegacyUserData(sourcePath, summary) {
@@ -375,6 +367,7 @@ function updateMigrationMarker(markerPath, summary) {
         deletedLegacy: summary.deletedLegacy,
         legacyDeleteSkippedReason: summary.legacyDeleteSkippedReason,
         legacyNdi: summary.legacyNdi,
+        legacyUserDataNdi: summary.legacyUserDataNdi,
         errors: summary.errors,
       }, null, 2),
       'utf8'

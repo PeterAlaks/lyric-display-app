@@ -9,7 +9,7 @@
 
 import { app, ipcMain, BrowserWindow } from 'electron';
 import Store from 'electron-store';
-import './appIdentity.js';
+import { NDI_FOLDER_NAME, LEGACY_NDI_FOLDER_NAME } from './appIdentity.js';
 import path from 'path';
 import fs from 'fs';
 import * as userPreferences from './userPreferences.js';
@@ -115,6 +115,8 @@ const installer = createNdiInstaller({
   githubRepo: GITHUB_REPO,
   notifyAllWindows,
   getInstallPath,
+  getResolvedInstallPath,
+  getLegacyInstallPaths,
   getCompanionEntryPath,
   getPlatformAssetName,
   stopCompanion,
@@ -140,10 +142,15 @@ function destroyPersistentSocket() {
 
 function getInstallPath() {
   if (isDev) {
-    return path.join(app.getAppPath(), 'lyricdisplay-ndi');
+    return path.join(app.getAppPath(), LEGACY_NDI_FOLDER_NAME);
   }
 
-  return path.join(app.getPath('userData'), 'lyricdisplay-ndi');
+  return path.join(app.getPath('userData'), NDI_FOLDER_NAME);
+}
+
+function getLegacyInstallPaths() {
+  if (isDev) return [];
+  return [path.join(app.getPath('userData'), LEGACY_NDI_FOLDER_NAME)];
 }
 
 function getCompanionBinaryName() {
@@ -153,12 +160,42 @@ function getCompanionBinaryName() {
 }
 
 function getCompanionEntryPath() {
-  const binary = getCompanionBinaryName();
   const installPath = getInstallPath();
 
   if (isDev) {
     return path.join(installPath, 'src', 'main.js');
   }
+
+  const currentEntryPath = findCompanionEntryPath(installPath);
+  if (fs.existsSync(currentEntryPath)) return currentEntryPath;
+
+  for (const legacyInstallPath of getLegacyInstallPaths()) {
+    const legacyEntryPath = findCompanionEntryPath(legacyInstallPath);
+    if (fs.existsSync(legacyEntryPath)) return legacyEntryPath;
+  }
+
+  return currentEntryPath;
+}
+
+function getResolvedInstallPath() {
+  const installPath = getInstallPath();
+  if (isDev) return installPath;
+
+  if (fs.existsSync(findCompanionEntryPath(installPath))) {
+    return installPath;
+  }
+
+  for (const legacyInstallPath of getLegacyInstallPaths()) {
+    if (fs.existsSync(findCompanionEntryPath(legacyInstallPath))) {
+      return legacyInstallPath;
+    }
+  }
+
+  return installPath;
+}
+
+function findCompanionEntryPath(installPath) {
+  const binary = getCompanionBinaryName();
 
   // electron-builder zip archives may extract with the binary at the
   // top level or inside a subfolder.  On macOS the .app bundle may also
