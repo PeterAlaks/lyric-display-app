@@ -266,7 +266,7 @@ const useSocket = (role = 'output', options = {}) => {
           setConnectionStatus('disconnected');
           stopHeartbeat();
 
-          if (reason !== 'io client disconnect' && reason !== 'transport close') {
+          if (reason !== 'io client disconnect') {
             disposeCurrentSocket(socket, `disconnect:${reason}`);
             scheduleRetry();
           }

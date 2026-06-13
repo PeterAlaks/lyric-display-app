@@ -254,7 +254,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                     setReady(false);
                     stopHeartbeat();
 
-                    if (reason !== 'io client disconnect' && reason !== 'transport close') {
+                    if (reason !== 'io client disconnect') {
                         disposeCurrentSocket(socket, `disconnect:${reason}`);
                         scheduleRetry();
                     }

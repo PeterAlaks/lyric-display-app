@@ -682,7 +682,7 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('tools', 2, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu === 'tools' && activeIndex === 2} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('tools', 3, el)} label="Connection Diagnostics" onClick={menuHandlers.handleConnectionDiagnostics} active={openMenu === 'tools' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('tools', 4, el)} label="Pre-Service Health Check" onClick={menuHandlers.handlePreServiceHealth} active={openMenu === 'tools' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('tools', 4, el)} label="Production Readiness" onClick={menuHandlers.handlePreServiceHealth} active={openMenu === 'tools' && activeIndex === 4} />
                 <MenuItem ref={(el) => registerItemRef('tools', 5, el)} label="Operator Action Log" onClick={menuHandlers.handleOperatorActionLog} active={openMenu === 'tools' && activeIndex === 5} />
               </div>
             )}
