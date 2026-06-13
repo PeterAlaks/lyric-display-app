@@ -38,7 +38,7 @@ export default function LyricRow({
   getNormalGroupLines,
 }) {
   const currentLine = line ?? lyrics?.[index];
-  if (currentLine == null || (virtualized && !currentLine)) return null;
+  if (currentLine == null) return null;
 
   const sectionId = sectionStartLookup.get(index);
   const sectionLabel = sectionId ? sectionById.get(sectionId)?.label : null;

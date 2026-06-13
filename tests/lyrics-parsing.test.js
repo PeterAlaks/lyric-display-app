@@ -20,6 +20,24 @@ test('LRC parsing sorts timestamps, strips metadata, and deduplicates repeated t
   assert.equal(parsed.rawText, 'First line\nSecond line\nUntimed refrain');
 });
 
+test('LRC parsing preserves blank timestamped lines without visible placeholders', () => {
+  const parsed = parseLrcContent([
+    '[00:01.00]',
+    '[00:02.00]First line',
+    '[00:03.00]   ',
+    '[00:04.00]Second line',
+  ].join('\n'));
+
+  assert.deepEqual(parsed.processedLines, [
+    '',
+    'First line',
+    '',
+    'Second line',
+  ]);
+  assert.deepEqual(parsed.timestamps, [100, 200, 300, 400]);
+  assert.equal(parsed.rawText, '\nFirst line\n\nSecond line');
+});
+
 test('plain text parsing keeps section metadata aligned with processed lines', () => {
   const parsed = parseTxtContent([
     '[Verse 1]',
