@@ -453,7 +453,7 @@ export function ModalProvider({ children, isDark = false }) {
         const panelStateClass = modal.entering || modal.exiting
           ? 'translate-y-8 opacity-0 scale-95'
           : isTopModal
-            ? 'translate-y-0 opacity-100 scale-100'
+            ? 'opacity-100'
             : 'translate-y-2 opacity-90 scale-[0.98]';
 
         return (
@@ -485,7 +485,7 @@ export function ModalProvider({ children, isDark = false }) {
               className="pointer-events-none relative flex h-full items-center justify-center px-4 py-10">
               <div
                 className={cn(
-                  'pointer-events-auto transform rounded-2xl border ring-1 transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
+                  'pointer-events-auto rounded-2xl border ring-1 transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
                   isDark ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200',
                   palette.ring,
                   isTopModal ? 'shadow-2xl' : 'shadow-xl',
@@ -494,6 +494,7 @@ export function ModalProvider({ children, isDark = false }) {
                   sizeClass,
                   modal.className
                 )}
+                data-modal-root="true"
                 style={{ maxHeight: modalMaxHeight }}
               >
                 {/* Fixed Header */}

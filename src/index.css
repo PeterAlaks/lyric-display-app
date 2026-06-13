@@ -157,3 +157,10 @@
 .dark * {
   scrollbar-color: rgba(75, 85, 99, 0.6) transparent;
 }
+
+[data-modal-root="true"] .overflow-y-auto,
+[data-modal-root="true"] .overflow-y-scroll {
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+}
