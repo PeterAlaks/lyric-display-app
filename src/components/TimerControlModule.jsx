@@ -256,7 +256,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
   return (
     <>
       <div
-        className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
+        className="rounded-lg min-h-63.75 flex flex-col items-center justify-center px-6"
         style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
       >
         {showSecondaryText && (
