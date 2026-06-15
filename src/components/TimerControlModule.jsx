@@ -25,10 +25,13 @@ import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } fr
 import FontSelect from './FontSelect';
 
 const QUICK_MINUTES = [1, 3, 5, 10, 15, 30];
-const TARGET_HOURS = Array.from({ length: 12 }, (_, index) => String(index + 1));
-const TARGET_24_HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'));
-const TARGET_MINUTES = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
 const TARGET_PERIODS = ['AM', 'PM'];
+const TARGET_12_HOUR_MIN = 1;
+const TARGET_12_HOUR_MAX = 12;
+const TARGET_24_HOUR_MIN = 0;
+const TARGET_24_HOUR_MAX = 24;
+const TARGET_MINUTE_MIN = 0;
+const TARGET_MINUTE_MAX = 60;
 const PERIOD_STYLE = {
   fontSize: '0.42em',
   marginLeft: '0.12em',
@@ -72,20 +75,33 @@ const getCurrentTargetTimeParts = (hourFormat = '12') => {
 };
 
 const fromTargetTimeParts = ({ hour, minute, period }, hourFormat = '12') => {
-  const hourNumber = Number(hour);
-  const minuteNumber = Number(minute);
-  if (!Number.isFinite(hourNumber) || !Number.isFinite(minuteNumber)) {
+  const hourNumber = Math.trunc(Number(hour));
+  const minuteNumber = Math.trunc(Number(minute));
+  if (!Number.isFinite(hourNumber)
+    || !Number.isFinite(minuteNumber)
+    || minuteNumber < TARGET_MINUTE_MIN
+    || minuteNumber > TARGET_MINUTE_MAX) {
     return '';
   }
+
+  const formatTotalMinutes = (totalMinutes) => {
+    const normalizedTotalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+    const normalizedHour = Math.floor(normalizedTotalMinutes / 60);
+    const normalizedMinute = normalizedTotalMinutes % 60;
+    return `${String(normalizedHour).padStart(2, '0')}:${String(normalizedMinute).padStart(2, '0')}`;
+  };
+
   if (hourFormat === '24') {
-    return `${String(hourNumber).padStart(2, '0')}:${String(minuteNumber).padStart(2, '0')}`;
+    if (hourNumber < TARGET_24_HOUR_MIN || hourNumber > TARGET_24_HOUR_MAX) return '';
+    return formatTotalMinutes((hourNumber * 60) + minuteNumber);
   }
+  if (hourNumber < TARGET_12_HOUR_MIN || hourNumber > TARGET_12_HOUR_MAX) return '';
   if (!period) return '';
-  const hour24 = period === 'PM' ? (hourNumber % 12) + 12 : hourNumber % 12;
-  return `${String(hour24).padStart(2, '0')}:${String(minuteNumber).padStart(2, '0')}`;
+  const baseHour = period === 'PM' ? (hourNumber % 12) + 12 : hourNumber % 12;
+  return formatTotalMinutes((baseHour * 60) + minuteNumber);
 };
 
-const formatTargetTimePreview = (value) => {
+const formatTargetTimePreview = (value, hourFormat = '12') => {
   if (!value) return '';
   const [hours, minutes] = value.split(':').map((part) => Number(part));
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return '';
@@ -95,16 +111,49 @@ const formatTargetTimePreview = (value) => {
   if (dayLabel === 'Tomorrow') {
     next.setDate(next.getDate() + 1);
   }
-  return `${dayLabel} at ${next.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  return `${dayLabel} at ${next.toLocaleTimeString([], {
+    hour: hourFormat === '24' ? '2-digit' : 'numeric',
+    minute: '2-digit',
+    hour12: hourFormat !== '24',
+  })}`;
 };
+
+const clampTargetPart = (value, min, max) => {
+  if (value === '') return '';
+  const number = Math.trunc(Number(value));
+  if (!Number.isFinite(number)) return '';
+  return String(Math.min(max, Math.max(min, number)));
+};
+
+const TargetNumberInput = ({ value, onChange, min, max, placeholder, ariaLabel, disabled, inputClass }) => (
+  <Input
+    type="number"
+    min={min}
+    max={max}
+    step="1"
+    inputMode="numeric"
+    value={value}
+    onChange={(event) => onChange(clampTargetPart(event.target.value, min, max))}
+    placeholder={placeholder}
+    aria-label={ariaLabel}
+    disabled={disabled}
+    className={`${inputClass} text-center tabular-nums`}
+  />
+);
 
 const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, darkMode, hourFormat, onHourFormatChange }) => {
   const parts = React.useMemo(() => toTargetTimeParts(value, hourFormat), [hourFormat, value]);
-  const preview = React.useMemo(() => formatTargetTimePreview(value), [value]);
+  const preview = React.useMemo(() => formatTargetTimePreview(value, hourFormat), [hourFormat, value]);
   const selectContentClass = darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : undefined;
-  const hourOptions = hourFormat === '24' ? TARGET_24_HOURS : TARGET_HOURS;
+  const hourMin = hourFormat === '24' ? TARGET_24_HOUR_MIN : TARGET_12_HOUR_MIN;
+  const hourMax = hourFormat === '24' ? TARGET_24_HOUR_MAX : TARGET_12_HOUR_MAX;
 
   const updatePart = (part, partValue) => {
+    if (partValue === '') {
+      onChange('');
+      return;
+    }
+
     const fallback = getCurrentTargetTimeParts(hourFormat);
     const nextParts = {
       hour: parts.hour || fallback.hour,
@@ -127,26 +176,26 @@ const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, da
         </SelectContent>
       </Select>
       <div className={`grid gap-2 ${hourFormat === '24' ? 'grid-cols-[1fr_1fr]' : 'grid-cols-[1fr_1fr_1fr]'}`}>
-        <Select value={parts.hour || undefined} onValueChange={(nextHour) => updatePart('hour', nextHour)} disabled={disabled}>
-          <SelectTrigger className={inputClass}>
-            <SelectValue placeholder="HH" />
-          </SelectTrigger>
-          <SelectContent className={selectContentClass}>
-            {hourOptions.map((hour) => (
-              <SelectItem key={hour} value={hour}>{hour}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={parts.minute || undefined} onValueChange={(nextMinute) => updatePart('minute', nextMinute)} disabled={disabled}>
-          <SelectTrigger className={inputClass}>
-            <SelectValue placeholder="MM" />
-          </SelectTrigger>
-          <SelectContent className={selectContentClass}>
-            {TARGET_MINUTES.map((minute) => (
-              <SelectItem key={minute} value={minute}>{minute}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TargetNumberInput
+          value={parts.hour}
+          onChange={(nextHour) => updatePart('hour', nextHour)}
+          min={hourMin}
+          max={hourMax}
+          placeholder="HH"
+          ariaLabel="Target hour"
+          disabled={disabled}
+          inputClass={inputClass}
+        />
+        <TargetNumberInput
+          value={parts.minute}
+          onChange={(nextMinute) => updatePart('minute', nextMinute)}
+          min={TARGET_MINUTE_MIN}
+          max={TARGET_MINUTE_MAX}
+          placeholder="MM"
+          ariaLabel="Target minute"
+          disabled={disabled}
+          inputClass={inputClass}
+        />
         {hourFormat === '12' && (
           <Select value={parts.period || undefined} onValueChange={(nextPeriod) => updatePart('period', nextPeriod)} disabled={disabled}>
             <SelectTrigger className={inputClass}>
