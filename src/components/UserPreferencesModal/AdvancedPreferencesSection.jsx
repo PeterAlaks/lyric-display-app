@@ -16,6 +16,7 @@ const AdvancedPreferencesSection = ({
   labelClass,
   loadSecurityStatus,
   mutedClass,
+  preferenceFieldLabelClass,
   preferences,
   securityLoading,
   securityRotating,
@@ -193,7 +194,7 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className="space-y-2">
-      <label className={`text-sm font-medium ${labelClass}`}>Connection Timeout (ms)</label>
+      <label className={preferenceFieldLabelClass}>Connection Timeout (ms)</label>
       <Input
         type="number"
         min="5000"
@@ -213,7 +214,7 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className="space-y-2">
-      <label className={`text-sm font-medium ${labelClass}`}>Heartbeat Interval (ms)</label>
+      <label className={preferenceFieldLabelClass}>Heartbeat Interval (ms)</label>
       <Input
         type="number"
         min="10000"
@@ -233,7 +234,7 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className="space-y-2">
-      <label className={`text-sm font-medium ${labelClass}`}>Max Connection Attempts</label>
+      <label className={preferenceFieldLabelClass}>Max Connection Attempts</label>
       <Input
         type="number"
         min="3"

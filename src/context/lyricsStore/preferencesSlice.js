@@ -3,6 +3,7 @@ let maxFileSizeLimit = 2;
 export const createPreferencesSlice = (set) => ({
   showTooltips: true,
   showTutorialPopovers: true,
+  showCanvasFloatingToolbar: true,
   toastSoundsMuted: false,
   skipSectionTitlesOnKeyboard: true,
   canvasCleanupOnPaste: true,
@@ -13,6 +14,7 @@ export const createPreferencesSlice = (set) => ({
 
   setShowTooltips: (show) => set({ showTooltips: show }),
   setShowTutorialPopovers: (show) => set({ showTutorialPopovers: show }),
+  setShowCanvasFloatingToolbar: (show) => set({ showCanvasFloatingToolbar: show }),
   setToastSoundsMuted: (muted) => set({ toastSoundsMuted: muted }),
   setSkipSectionTitlesOnKeyboard: (enabled) => set({ skipSectionTitlesOnKeyboard: enabled }),
   setCanvasCleanupOnPaste: (enabled) => set({ canvasCleanupOnPaste: enabled }),

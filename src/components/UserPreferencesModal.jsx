@@ -143,6 +143,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
   const panelBg = darkMode ? 'bg-gray-800' : 'bg-gray-50';
   const activeCategoryBg = darkMode ? 'bg-gray-700' : 'bg-white';
+  const preferenceFieldLabelClass = `block mb-1.5 text-sm font-medium ${labelClass}`;
   const preferenceToggleRowClass = "flex items-center justify-between gap-6 [&>button]:shrink-0";
   const preferenceToggleTextClass = "min-w-0 flex-1";
 
@@ -278,7 +279,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>App Theme</label>
+              <label className={preferenceFieldLabelClass}>App Theme</label>
               <Select
                 value={currentThemeMode}
                 onValueChange={handleThemeModeChange}
@@ -345,6 +346,25 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
               />
             </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Show Canvas Quick Actions</label>
+                <p className={`text-xs ${mutedClass}`}>Show Add Translation and Add Timestamp buttons near the cursor in the song editor</p>
+              </div>
+              <Switch
+                checked={preferences.appearance?.showCanvasFloatingToolbar ?? true}
+                onCheckedChange={(checked) => {
+                  updatePreference('appearance', 'showCanvasFloatingToolbar', checked);
+                  useLyricsStore.getState().setShowCanvasFloatingToolbar(checked);
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
           </div>
         );
       }
@@ -370,7 +390,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             {(preferences.parsing?.enableAutoLineGrouping ?? true) && (
               <div className="space-y-2">
-                <label className={`text-sm font-medium ${labelClass}`}>Maximum Number of Lines to Group</label>
+                <label className={preferenceFieldLabelClass}>Maximum Number of Lines to Group</label>
                 <Input
                   type="number"
                   min="2"
@@ -409,7 +429,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Max Line Length for Grouping</label>
+              <label className={preferenceFieldLabelClass}>Max Line Length for Grouping</label>
               <Input
                 type="number"
                 min="20"
@@ -447,7 +467,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Structure Tag Handling</label>
+              <label className={preferenceFieldLabelClass}>Structure Tag Handling</label>
               <Select
                 value={preferences.parsing?.structureTagMode ?? 'isolate'}
                 onValueChange={(val) => updatePreference('parsing', 'structureTagMode', val)}
@@ -569,7 +589,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Target Line Length</label>
+              <label className={preferenceFieldLabelClass}>Target Line Length</label>
               <Input
                 type="number"
                 min="30"
@@ -592,7 +612,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Minimum Line Length</label>
+              <label className={preferenceFieldLabelClass}>Minimum Line Length</label>
               <Input
                 type="number"
                 min="20"
@@ -615,7 +635,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Maximum Line Length</label>
+              <label className={preferenceFieldLabelClass}>Maximum Line Length</label>
               <Input
                 type="number"
                 min="50"
@@ -638,7 +658,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Overflow Tolerance</label>
+              <label className={preferenceFieldLabelClass}>Overflow Tolerance</label>
               <Input
                 type="number"
                 min="5"
@@ -682,7 +702,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Default Lyrics Folder</label>
+              <label className={preferenceFieldLabelClass}>Default Lyrics Folder</label>
               <div className="flex gap-2">
                 <Input
                   value={preferences.fileHandling?.defaultLyricsPath || ''}
@@ -705,7 +725,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               </p>
             </div>
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Max Recent Files</label>
+              <label className={preferenceFieldLabelClass}>Max Recent Files</label>
               <Input
                 type="number"
                 min="5"
@@ -727,7 +747,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Max Setlist Files</label>
+              <label className={preferenceFieldLabelClass}>Max Setlist Files</label>
               <Input
                 type="number"
                 min={MIN_SETLIST_ITEMS}
@@ -757,7 +777,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Max File Size (MB)</label>
+              <label className={preferenceFieldLabelClass}>Max File Size (MB)</label>
               <Input
                 type="number"
                 min="1"
@@ -805,6 +825,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             midiStatus={midiStatus}
             mutedClass={mutedClass}
             oscStatus={oscStatus}
+            preferenceFieldLabelClass={preferenceFieldLabelClass}
             setMidiMappingsExpanded={setMidiMappingsExpanded}
           />
         );
@@ -827,6 +848,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             ndiTelemetry={ndiTelemetry}
             ndiUpdateInfo={ndiUpdateInfo}
             ndiUpdating={ndiUpdating}
+            preferenceFieldLabelClass={preferenceFieldLabelClass}
           />
         );
       case 'autoplay':
@@ -853,7 +875,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Default Interval (seconds)</label>
+              <label className={preferenceFieldLabelClass}>Default Interval (seconds)</label>
               <Input
                 type="number"
                 min="1"
@@ -938,6 +960,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             labelClass={labelClass}
             loadSecurityStatus={loadSecurityStatus}
             mutedClass={mutedClass}
+            preferenceFieldLabelClass={preferenceFieldLabelClass}
             preferences={preferences}
             securityLoading={securityLoading}
             securityRotating={securityRotating}

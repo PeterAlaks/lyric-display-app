@@ -77,6 +77,13 @@ export async function loadPreferencesIntoStore(store) {
     }
 
     if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('appearance.showCanvasFloatingToolbar');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setShowCanvasFloatingToolbar(result.value);
+      }
+    }
+
+    if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('general.toastSoundsMuted');
       if (result.success && typeof result.value === 'boolean') {
         store.getState().setToastSoundsMuted(result.value);

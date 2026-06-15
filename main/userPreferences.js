@@ -88,6 +88,7 @@ const preferencesStore = new Store({
       themeMode: 'light', // 'light', 'dark', 'system'
       showTooltips: true,
       showTutorialPopovers: true,
+      showCanvasFloatingToolbar: true,
     },
 
     // Advanced Settings

@@ -27,6 +27,7 @@ const ExternalControlPreferencesSection = ({
   midiStatus,
   mutedClass,
   oscStatus,
+  preferenceFieldLabelClass,
   setMidiMappingsExpanded,
 }) => {
   const noteEntries = Object.entries(midiStatus?.mappings?.notes || {})
@@ -81,7 +82,7 @@ const ExternalControlPreferencesSection = ({
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="mb-1.5 flex items-center justify-between">
                 <label className={`text-sm font-medium ${labelClass}`}>MIDI Input Device</label>
                 <Button
                   variant="ghost"
@@ -282,7 +283,7 @@ const ExternalControlPreferencesSection = ({
             </div>
 
             <div className="space-y-2">
-              <label className={`text-sm font-medium ${labelClass}`}>Listening Port</label>
+              <label className={preferenceFieldLabelClass}>Listening Port</label>
               <Input
                 type="number"
                 value={oscStatus?.port || 8000}
@@ -312,7 +313,7 @@ const ExternalControlPreferencesSection = ({
 
             {oscStatus?.feedbackEnabled && (
               <div className="space-y-2">
-                <label className={`text-sm font-medium ${labelClass}`}>Feedback Port</label>
+                <label className={preferenceFieldLabelClass}>Feedback Port</label>
                 <Input
                   type="number"
                   value={oscStatus?.feedbackPort || 9000}

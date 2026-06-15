@@ -112,6 +112,9 @@ export const useKeyboardNavigationPreferences = () =>
         shallow
     );
 
+export const useCanvasFloatingToolbarPreference = () =>
+    useLyricsStore((state) => state.showCanvasFloatingToolbar);
+
 export const useSetlistState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,

@@ -532,7 +532,7 @@ const SetlistModal = () => {
           ${darkMode ? 'border-gray-800' : 'border-gray-200'}
         `}>
           <div>
-            <h2 className="text-xl font-bold">Setlist Songs</h2>
+            <h2 className="text-xl font-bold">Setlist Manager</h2>
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               Add up to {maxSetlistFiles} lyric files to setlist ({setlistFiles.length}/{maxSetlistFiles})
             </p>
