@@ -1,6 +1,8 @@
-import { app } from 'electron';
+import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
+
+const { app } = typeof electron === 'object' && electron ? electron : {};
 
 export const APP_NAME = 'LyricDisplay';
 export const LEGACY_APP_NAME = 'lyric-display-app';
@@ -380,6 +382,19 @@ function updateMigrationMarker(markerPath, summary) {
 export function configureAppIdentity() {
   if (configured) return migrationResult;
   configured = true;
+
+  if (!app?.setName || !app?.getPath || !app?.setPath) {
+    migrationResult = {
+      attempted: false,
+      copiedFiles: 0,
+      skippedExisting: 0,
+      skippedSymlinks: 0,
+      skippedOther: 0,
+      skippedReason: 'Electron app API is unavailable.',
+      errors: [],
+    };
+    return migrationResult;
+  }
 
   app.setName(APP_NAME);
 

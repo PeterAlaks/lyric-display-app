@@ -1,11 +1,76 @@
 import { BookOpen, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+const VERSION_LABELS = [
+  { key: 'live', label: 'Live', pattern: /\blive\b|\bconcert\b|\bsession\b/i },
+  { key: 'acoustic', label: 'Acoustic', pattern: /\bacoustic\b|\bstripped\b|\bunplugged\b/i },
+  { key: 'remix', label: 'Remix', pattern: /\bremix\b|\bmix\b/i },
+  { key: 'instrumental', label: 'Instrumental', pattern: /\binstrumental\b|\bkaraoke\b/i },
+  { key: 'radio', label: 'Radio edit', pattern: /\bradio edit\b|\bedit\b/i },
+  { key: 'cover', label: 'Cover', pattern: /\bcover\b/i },
+  { key: 'demo', label: 'Demo', pattern: /\bdemo\b/i },
+];
+
+const formatDuration = (duration) => {
+  const numeric = Number(duration);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  const minutes = Math.floor(numeric / 60);
+  const seconds = Math.round(numeric % 60);
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
+
+const getResultBadges = (item) => {
+  const badges = [];
+  const versionText = `${item?.title || ''} ${item?.album || ''} ${item?.snippet || ''}`;
+
+  VERSION_LABELS.forEach(({ key, label, pattern }) => {
+    if (badges.some((badge) => badge.key === key)) return;
+    if (pattern.test(versionText) || (key === 'instrumental' && item?.metadata?.instrumental)) {
+      badges.push({ key, label });
+    }
+  });
+
+  if (item?.metadata?.hasSyncedLyrics) {
+    badges.push({ key: 'synced', label: 'Synced' });
+  }
+
+  const duration = formatDuration(item?.metadata?.duration ?? item?.payload?.duration);
+  if (duration) {
+    badges.push({ key: 'duration', label: duration });
+  }
+
+  if (item?.album) {
+    badges.push({ key: 'album', label: item.album });
+  }
+
+  return badges.slice(0, 5);
+};
+
+const ResultBadges = ({ darkMode, item }) => {
+  const badges = getResultBadges(item);
+  if (!badges.length) return null;
+
+  return (
+    <div className="mt-1 flex min-w-0 flex-wrap gap-1.5">
+      {badges.map((badge) => (
+        <span
+          key={badge.key}
+          className={`max-w-[13rem] truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${darkMode ? 'bg-gray-700/70 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
+          title={badge.label}
+        >
+          {badge.label}
+        </span>
+      ))}
+    </div>
+  );
+};
+
 export const SuggestionsList = ({
   darkMode,
   handleSelectResult,
   isSearchFocused,
   items,
+  popover = false,
   providerMap,
   query,
   selectionIndex,
@@ -16,13 +81,17 @@ export const SuggestionsList = ({
 }) => {
   if (!isSearchFocused) return null;
 
+  const containerClassName = popover
+    ? `absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-md border shadow-2xl backdrop-blur-md ${darkMode ? 'border-gray-700/80 bg-gray-900/88 ring-1 ring-black/40' : 'border-gray-200/90 bg-white/88 ring-1 ring-black/5'}`
+    : `mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-white'}`;
+
   if (!items?.length) {
     if (!query.trim()) return null;
 
     return (
-      <div className={`mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-white'}`}>
+      <div className={containerClassName}>
         <p className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-          No suggestions yet. Press Enter to run a full catalog search.
+          No suggestions yet.
         </p>
       </div>
     );
@@ -31,7 +100,7 @@ export const SuggestionsList = ({
   return (
     <div
       ref={suggestionListRef}
-      className={`mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-56 overflow-y-auto`}
+      className={`${containerClassName} max-h-64 overflow-y-auto ${popover ? (darkMode ? 'bg-[linear-gradient(135deg,rgba(255,255,255,0.035)_0,rgba(255,255,255,0)_36%)]' : 'bg-[linear-gradient(135deg,rgba(15,23,42,0.035)_0,rgba(15,23,42,0)_36%)]') : ''}`}
     >
       {items.map((item, index) => {
         const providerName = providerMap.get(item.provider)?.displayName || item.provider;
@@ -54,9 +123,10 @@ export const SuggestionsList = ({
             <div className="min-w-0">
               <p className={`truncate text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{item.title}</p>
               <p className={`truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{item.artist || 'Unknown artist'}</p>
+              <ResultBadges darkMode={darkMode} item={item} />
             </div>
             <div className="flex items-center gap-3">
-              <span className={`whitespace-nowrap text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <span className={`whitespace-nowrap uppercase tracking-wide ${popover ? 'text-[10px]' : 'text-xs'} ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {providerName}
               </span>
               {isLoading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
@@ -123,7 +193,7 @@ export const FullResultsList = ({
   return (
     <div
       ref={fullResultsRef}
-      className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} max-h-72 overflow-y-auto`}
+      className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} overflow-y-auto`}
     >
       {items.map((item, index) => {
         const provider = providerMap.get(item.provider);
@@ -147,6 +217,7 @@ export const FullResultsList = ({
               <div className="min-w-0 space-y-1">
                 <p className={`truncate text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{item.title}</p>
                 <p className={`truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{item.artist || 'Unknown artist'}</p>
+                <ResultBadges darkMode={darkMode} item={item} />
                 {item.snippet && (
                   <p className={`line-clamp-2 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                     {item.snippet}

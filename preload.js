@@ -212,11 +212,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveProviderKey: (providerId, key) => ipcRenderer.invoke('lyrics:providers:key:set', { providerId, key }),
     deleteProviderKey: (providerId) => ipcRenderer.invoke('lyrics:providers:key:delete', { providerId }),
     search: (payload) => ipcRenderer.invoke('lyrics:search', payload),
+    cancelSearch: (requestId) => ipcRenderer.invoke('lyrics:search:cancel', { requestId }),
     fetch: (payload) => ipcRenderer.invoke('lyrics:fetch', payload),
     onPartialResults: (callback) => {
-      ipcRenderer.removeAllListeners('lyrics:search:partial');
-      ipcRenderer.on('lyrics:search:partial', (_event, payload) => callback(payload));
-      return () => ipcRenderer.removeAllListeners('lyrics:search:partial');
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on('lyrics:search:partial', listener);
+      return () => ipcRenderer.removeListener('lyrics:search:partial', listener);
     }
   },
   easyWorship: {

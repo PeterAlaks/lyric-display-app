@@ -23,6 +23,7 @@
     "audit:server": "npm --prefix server audit --omit=dev --audit-level=moderate",
     "check:static": "node scripts/check-static.js",
     "test:unit": "node --test tests/*.test.js",
+    "test:lyrics-canary": "node --test tests/*.canary.js",
     "test:security": "node --test tests/security-hardening.test.js",
     "test:platform-builds": "gh workflow run test-platform-builds.yml",
     "version": "node scripts/update-version.js && git add README.md \"INSTALLATION.md\"",

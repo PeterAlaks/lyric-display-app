@@ -27,6 +27,22 @@ let fuse = null;
 const normalizeText = (text) => (text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 const splitWords = (text) => normalizeText(text).split(/\s+/).filter(Boolean);
 
+const buildSearchHaystack = (entry) => normalizeText([
+  entry?.title,
+  entry?.author,
+  Array.isArray(entry?.topics) ? entry.topics.join(' ') : '',
+].filter(Boolean).join(' '));
+
+const isAcceptableSpecificMatch = ({ item, score }, normalizedQuery, queryWords) => {
+  if (normalizedQuery.length < 4 || queryWords.length > 2) return true;
+
+  const haystack = buildSearchHaystack(item);
+  if (haystack.includes(normalizedQuery)) return true;
+  if (queryWords.some((word) => word.length >= 4 && haystack.split(/\s+/).includes(word))) return true;
+
+  return Number(score) <= 0.2;
+};
+
 export const loadDataset = async () => {
   const overridePath = process.env.OPEN_HYMNAL_DATA_PATH || process.env.LYRICDISPLAY_OPEN_HYMNAL_PATH || null;
   let targetPath = overridePath ? path.resolve(overridePath) : DEFAULT_DATA_PATH;
@@ -127,12 +143,15 @@ export async function search(query, { limit = 10 } = {}) {
     return { results: [], errors: ['Open Hymnal dataset is unavailable.'] };
   }
 
-  const results = fuse.search(query, { limit: Math.max(limit, 20) }).map((result) => result.item);
+  const normalizedQuery = normalizeText(query);
+  const queryWords = splitWords(query);
+  const results = fuse
+    .search(query, { limit: Math.max(limit, 20) })
+    .filter((result) => isAcceptableSpecificMatch(result, normalizedQuery, queryWords))
+    .map((result) => result.item);
   const normalizedResults = results.map(normalizeEntry);
 
   // Fallback lyric-line matching for common queries (e.g., famous opening lines)
-  const normalizedQuery = normalizeText(query);
-  const queryWords = splitWords(query);
   const existingIds = new Set(normalizedResults.map((r) => r.id));
   const scoredFallbacks = [];
 

@@ -21,7 +21,7 @@ const normalizeTrack = (item) => {
     const artist = item?.artistName || 'Unknown Artist';
     const title = item?.trackName || 'Untitled';
     const album = item?.albumName || '';
-    const duration = item?.duration ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(2, '0')}` : '';
+    const duration = item?.duration ? `${Math.floor(item.duration / 60)}:${String(Math.round(item.duration % 60)).padStart(2, '0')}` : '';
 
     return {
         id: `${definition.id}:${item?.id ?? `${artist}:${title}`}`,
@@ -29,7 +29,7 @@ const normalizeTrack = (item) => {
         title,
         artist,
         album,
-        snippet: album ? `${album}${duration ? ` • ${duration}` : ''}` : duration,
+        snippet: album ? `${album}${duration ? ` - ${duration}` : ''}` : duration,
         payload: {
             artist,
             title,
@@ -44,7 +44,7 @@ const normalizeTrack = (item) => {
     };
 };
 
-export async function search(query, { limit = 10, signal, fetchImpl = fetch } = {}) {
+export async function search(query, { limit = 10, signal, timeoutMs = 15000, fetchImpl = fetch } = {}) {
     if (!query || !query.trim()) {
         return { results: [], errors: [] };
     }
@@ -54,7 +54,9 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
     const url = `${BASE_URL}/search?q=${encodeURIComponent(trimmed)}`;
 
     try {
-        const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
+        const fetchFn = fetchImpl === fetch
+            ? (requestUrl, options) => fetchWithTimeout(requestUrl, options, timeoutMs + 1000)
+            : fetchImpl;
         const resp = await fetchFn(url, {
             signal,
             headers: {
@@ -81,41 +83,59 @@ export async function search(query, { limit = 10, signal, fetchImpl = fetch } = 
 }
 
 export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {}) {
-    if (!payload?.artist || !payload?.title) {
-        throw new Error('LRCLIB requires artist and title');
+    if (!payload?.lrcId && (!payload?.artist || !payload?.title)) {
+        throw new Error('LRCLIB requires a lyrics id or artist and title');
     }
-
-    const params = new URLSearchParams({
-        track_name: payload.title,
-        artist_name: payload.artist,
-    });
-
-    if (payload.album) {
-        params.set('album_name', payload.album);
-    }
-    if (payload.duration) {
-        params.set('duration', payload.duration);
-    }
-
-    const url = `${BASE_URL}/get?${params.toString()}`;
 
     const fetchFn = fetchImpl === fetch ? fetchWithTimeout : fetchImpl;
-    const resp = await fetchFn(url, {
-        signal,
-        headers: {
-            'User-Agent': LYRICS_PROVIDER_USER_AGENT,
-        },
-    });
 
-    if (!resp.ok) {
-        if (resp.status === 404) {
-            throw new Error('LRCLIB could not find lyrics for this song.');
+    const fetchJson = async (url) => {
+        const resp = await fetchFn(url, {
+            signal,
+            headers: {
+                'User-Agent': LYRICS_PROVIDER_USER_AGENT,
+            },
+        });
+
+        if (!resp.ok) {
+            if (resp.status === 404) {
+                throw new Error('LRCLIB could not find lyrics for this song.');
+            }
+            const body = await resp.text();
+            throw new Error(`LRCLIB lyrics request failed: ${resp.status} ${body}`);
         }
-        const body = await resp.text();
-        throw new Error(`LRCLIB lyrics request failed: ${resp.status} ${body}`);
+
+        return resp.json();
+    };
+
+    let json = null;
+
+    if (payload?.lrcId) {
+        try {
+            json = await fetchJson(`${BASE_URL}/get/${encodeURIComponent(payload.lrcId)}`);
+        } catch (error) {
+            if (!payload?.artist || !payload?.title) {
+                throw error;
+            }
+            console.warn('[LRCLIB] id lookup failed, falling back to artist/title lookup:', error?.message || error);
+        }
     }
 
-    const json = await resp.json();
+    if (!json) {
+        const params = new URLSearchParams({
+            track_name: payload.title,
+            artist_name: payload.artist,
+        });
+
+        if (payload.album) {
+            params.set('album_name', payload.album);
+        }
+        if (payload.duration) {
+            params.set('duration', payload.duration);
+        }
+
+        json = await fetchJson(`${BASE_URL}/get?${params.toString()}`);
+    }
 
     const syncedLyrics = json?.syncedLyrics?.trim();
     const plainLyrics = json?.plainLyrics?.trim();
@@ -125,13 +145,15 @@ export async function getLyrics({ payload }, { signal, fetchImpl = fetch } = {})
     }
 
     const content = syncedLyrics || plainLyrics;
+    const resultTitle = json?.trackName || payload.title || 'Untitled';
+    const resultArtist = json?.artistName || payload.artist || 'Unknown Artist';
 
     return {
         provider: definition.id,
-        title: json?.trackName || payload.title,
-        artist: json?.artistName || payload.artist,
+        title: resultTitle,
+        artist: resultArtist,
         content,
-        sourceUrl: `https://lrclib.net/search?track_name=${encodeURIComponent(payload.title)}&artist_name=${encodeURIComponent(payload.artist)}`,
+        sourceUrl: `https://lrclib.net/search?track_name=${encodeURIComponent(resultTitle)}&artist_name=${encodeURIComponent(resultArtist)}`,
         credits: json?.instrumental ? 'Instrumental' : null,
         metadata: {
             hasSyncedLyrics: Boolean(syncedLyrics),
