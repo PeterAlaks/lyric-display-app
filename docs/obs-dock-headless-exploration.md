@@ -38,13 +38,16 @@ The launcher was updated to attempt protocol launch off-page, but OBS may still 
 
 The practical design is now:
 
-- The dock can opportunistically try to start LyricDisplay.
-- The reliable production path is to start LyricDisplay headless through an OS-level helper command, then let OBS connect to it.
+- The dock landing page starts LyricDisplay through the registered app protocol, then opens the controller when the backend is ready.
+- The OS-level helper command remains a fallback/debug tool, not the primary user flow.
 
 ## New Files
 
 - `public/obs-dock.html`
   Static launcher page intended for OBS Custom Browser Docks. It checks the local backend, attempts optional protocol startup, and redirects to the dock controller route when ready.
+
+- `public/obs-dock-dev.html`
+  Static development launcher page intended for OBS Custom Browser Docks or a browser opened from the repo. It uses the dev-only `lyricdisplay-dev://` protocol and can ask Electron to start Vite for the dock UI.
 
 - `src/components/ObsDockLayout.jsx`
   Compact OBS dock controller UI.
@@ -56,7 +59,7 @@ The practical design is now:
   Short-lived, one-time pairing token registry for protocol-based OBS dock pairing attempts.
 
 - `build/Start LyricDisplay Headless.cmd`
-  Windows production helper copied beside `LyricDisplay.exe`. It starts LyricDisplay in headless mode with local OBS dock authentication enabled.
+  Windows fallback helper copied beside `LyricDisplay.exe`. It starts LyricDisplay in headless mode with local OBS dock authentication enabled.
 
 ## Packaging Changes
 
@@ -167,23 +170,16 @@ It is intentionally not a desktop/admin client.
 
 ## Production User Flow
 
-The reliable production flow is:
+The production flow is:
 
 1. Install LyricDisplay.
-2. Open the installation folder.
-3. Run:
-
-```text
-Start LyricDisplay Headless.cmd
-```
-
-4. In OBS, open:
+2. In OBS, open:
 
 ```text
 Docks > Custom Browser Docks
 ```
 
-5. Add a dock pointing to:
+3. Add a dock pointing to the installed local launcher file:
 
 ```text
 file:///C:/Program Files/LyricDisplay/obs-dock.html
@@ -191,51 +187,65 @@ file:///C:/Program Files/LyricDisplay/obs-dock.html
 
 Adjust the path if LyricDisplay was installed elsewhere.
 
-6. The launcher checks:
+4. The launcher opens as the dock home screen.
+5. Click:
+
+```text
+Start Headless and Open Dock
+```
+
+6. The launcher requests:
+
+```text
+lyricdisplay://start-headless?obsPairingToken=...
+```
+
+7. Electron starts the backend without creating the main app window, registers the short-lived OBS dock pairing token, and initializes the headless runtime.
+8. The launcher checks:
 
 ```text
 http://127.0.0.1:4000/api/health/ready
 ```
 
-7. If ready, it redirects to:
+9. If ready, it redirects to:
 
 ```text
 http://127.0.0.1:4000/#/obs-dock
 ```
 
-8. The dock authenticates through local headless OBS dock auth and connects as `obsDock`.
+10. The dock exchanges the pairing token for a limited `obsDock` JWT and connects as `obsDock`.
 
-No desktop window or join code should be required in this production headless path.
+No desktop window or join code should be required when the app protocol handoff succeeds. If OBS or the OS blocks protocol handoff, `Start LyricDisplay Headless.cmd` remains a fallback startup tool.
 
 ## Dev Testing Flow
 
-Use the dedicated dev command to run Vite and Electron with headless OBS dock auth enabled:
-
-```bash
-npm run electron-dev:headless
-```
-
-Then open:
+Use the local development launcher file as the OBS custom dock URL:
 
 ```text
-http://localhost:5173/obs-dock.html
+file:///D:/path/to/lyric-display-app/public/obs-dock-dev.html
 ```
 
-For explicit protocol-pairing testing, you can still pass a deterministic token manually:
-
-```powershell
-$env:LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-$env:LYRICDISPLAY_HEADLESS="1"
-npm run electron-dev
-```
-
-Then open the OBS dock at:
+Click:
 
 ```text
-http://localhost:5173/obs-dock.html?obsPairingToken=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+Start Dev Headless and Open Dock
 ```
 
-Do not assume `lyricdisplay://start-headless` will work from OBS in dev. OBS may block it just as it does in production.
+The dev launcher requests:
+
+```text
+lyricdisplay-dev://start-headless?startDevServer=1&obsPairingToken=...
+```
+
+When handled by Electron in dev, this starts the backend headlessly and starts Vite if it is not already running. The launcher then redirects to:
+
+```text
+http://localhost:5173/obs-dock?obsPairingToken=...
+```
+
+If the dev protocol has not been registered on the machine yet, run `npm run electron-dev:headless` once, quit it, then retry the local `obs-dock-dev.html` launcher.
+
+Do not assume custom protocol handoff will work in every OBS/browser environment. The launcher is the intended user flow, but protocol handoff is still an OS/browser capability.
 
 ## UI State
 
@@ -256,7 +266,7 @@ The setlist was moved out of the main dock surface into an overlay to preserve v
 
 - OBS may block or ignore `lyricdisplay://` custom protocol links.
 - A web-only OBS dock cannot reliably start a native desktop process by itself.
-- The current reliable production startup requires running `Start LyricDisplay Headless.cmd`.
+- If OBS or the OS blocks custom protocol handoff, the fallback production startup is `Start LyricDisplay Headless.cmd`.
 - The OBS dock is not yet a full desktop replacement. Some workflows may still require opening the full desktop app.
 - The local headless auth path should remain limited to `obsDock`; it must not grant desktop/admin permissions.
 
@@ -265,7 +275,7 @@ The setlist was moved out of the main dock surface into an overlay to preserve v
 1. Rebuild and reinstall the Windows package.
 2. Confirm `obs-dock.html`, `LyricDisplay-icon.png`, and `Start LyricDisplay Headless.cmd` appear beside `LyricDisplay.exe`.
 3. Test the production flow from OBS using the root installed `obs-dock.html`.
-4. Confirm that the dock authenticates without join code after launching through `Start LyricDisplay Headless.cmd`.
+4. Confirm that clicking `Start Headless and Open Dock` launches the backend without creating the main window.
 5. Decide whether to add installer-created shortcuts for:
 
 ```text

@@ -16,8 +16,11 @@ import { createLoadingWindow } from './main/loadingWindow.js';
 import { registerObsDockPairingToken } from './main/backend.js';
 import * as userPreferences from './main/userPreferences.js';
 import { initFileLogging } from './main/logging.js';
+import { ensureObsDockDevServer } from './main/devServer.js';
 
 const APP_PROTOCOL = 'lyricdisplay';
+const DEV_APP_PROTOCOL = 'lyricdisplay-dev';
+const APP_PROTOCOLS = [APP_PROTOCOL, DEV_APP_PROTOCOL];
 
 if (!isDev && process.env.FORCE_COMPATIBILITY) {
   app.commandLine.appendSwitch('--disable-gpu-sandbox');
@@ -35,7 +38,10 @@ let menuAPI = null;
 const closeConfirmationAttached = new WeakSet();
 
 const extractProtocolUrlFromArgs = (args = []) => (
-  args.find((arg) => typeof arg === 'string' && arg.toLowerCase().startsWith(`${APP_PROTOCOL}://`)) || null
+  args.find((arg) => (
+    typeof arg === 'string' &&
+    APP_PROTOCOLS.some((protocol) => arg.toLowerCase().startsWith(`${protocol}://`))
+  )) || null
 );
 
 const getProtocolAction = (protocolUrl) => {
@@ -60,18 +66,30 @@ const getProtocolSearchParam = (protocolUrl, name) => {
 
 const initialProtocolUrl = extractProtocolUrlFromArgs(process.argv);
 const initialObsDockPairingToken = getProtocolSearchParam(initialProtocolUrl, 'obsPairingToken');
+const shouldStartViteForDevProtocol = (protocolUrl) => (
+  isDev &&
+  protocolUrl?.toLowerCase().startsWith(`${DEV_APP_PROTOCOL}://`) &&
+  getProtocolSearchParam(protocolUrl, 'startDevServer') === '1'
+);
 const isHeadlessMode = process.env.LYRICDISPLAY_HEADLESS === '1' ||
   process.argv.includes('--headless') ||
   getProtocolAction(initialProtocolUrl) === 'start-headless';
 
-try {
-  if (process.defaultApp && process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(APP_PROTOCOL, process.execPath, [process.argv[1]]);
-  } else {
-    app.setAsDefaultProtocolClient(APP_PROTOCOL);
+const registerProtocolClient = (protocol) => {
+  try {
+    if (process.defaultApp && process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(protocol, process.execPath, [process.argv[1]]);
+    } else {
+      app.setAsDefaultProtocolClient(protocol);
+    }
+  } catch (error) {
+    console.warn(`[Main] Failed to register ${protocol} protocol:`, error);
   }
-} catch (error) {
-  console.warn('[Main] Failed to register app protocol:', error);
+};
+
+registerProtocolClient(APP_PROTOCOL);
+if (isDev) {
+  registerProtocolClient(DEV_APP_PROTOCOL);
 }
 
 function attachMainWindowLifecycle(win) {
@@ -198,6 +216,12 @@ const handleProtocolLaunch = (protocolUrl) => {
   const action = getProtocolAction(protocolUrl);
   if (!action) return false;
 
+  if (shouldStartViteForDevProtocol(protocolUrl)) {
+    ensureObsDockDevServer().catch((error) => {
+      console.warn('[Main] Failed to start OBS dock dev server:', error);
+    });
+  }
+
   if (action === 'start-headless') {
     console.log('[Main] Headless start requested by protocol');
     const obsDockPairingToken = getProtocolSearchParam(protocolUrl, 'obsPairingToken');
@@ -282,6 +306,12 @@ app.whenReady().then(async () => {
   try { Menu.setApplicationMenu(null); } catch { }
   if (!isHeadlessMode) {
     createLoadingWindow();
+  }
+
+  if (shouldStartViteForDevProtocol(initialProtocolUrl)) {
+    ensureObsDockDevServer().catch((error) => {
+      console.warn('[Main] Failed to start OBS dock dev server:', error);
+    });
   }
 
   mainWindow = await performStartupSequence({

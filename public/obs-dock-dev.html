@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LyricDisplay OBS Dock</title>
+    <title>LyricDisplay OBS Dock Dev</title>
     <style>
       :root {
         color-scheme: dark;
@@ -124,20 +124,20 @@
       <div class="brand">
         <img src="./LyricDisplay-icon.png" alt="" />
         <div>
-          <h1>LyricDisplay OBS Dock</h1>
-          <p>Start LyricDisplay in the background and open the dock controller.</p>
+          <h1>LyricDisplay OBS Dock Dev</h1>
+          <p>Start the development backend and Vite dock UI without opening the main app window.</p>
         </div>
       </div>
 
-      <div id="status" class="status">Checking whether LyricDisplay is already running...</div>
+      <div id="status" class="status">Checking local LyricDisplay dev services...</div>
 
       <div class="actions">
-        <button id="startButton" type="button">Start Headless and Open Dock</button>
-        <a id="dockLink" class="button secondary" href="http://127.0.0.1:4000/#/obs-dock">Open Dock Controller</a>
-        <button id="openDesktopButton" class="secondary" type="button">Open Desktop App</button>
+        <button id="startButton" type="button">Start Dev Headless and Open Dock</button>
+        <a id="dockLink" class="button secondary" href="http://localhost:5173/obs-dock">Open Dev Dock Controller</a>
+        <button id="openDesktopButton" class="secondary" type="button">Open Dev Desktop App</button>
       </div>
 
-      <p>Dock URL: <code id="dockUrlLabel">http://127.0.0.1:4000/#/obs-dock</code></p>
+      <p>Dock URL: <code id="dockUrlLabel">http://localhost:5173/obs-dock</code></p>
       <iframe id="protocolFrame" class="hidden-frame" title=""></iframe>
     </main>
 
@@ -145,8 +145,8 @@
       const statusEl = document.getElementById('status');
       const startButton = document.getElementById('startButton');
       const protocolFrame = document.getElementById('protocolFrame');
-      const isViteDev = window.location.protocol.startsWith('http') && window.location.port === '5173';
       const pageParams = new URLSearchParams(window.location.search || '');
+
       const createPairingToken = () => {
         const bytes = new Uint8Array(32);
         if (window.crypto && window.crypto.getRandomValues) {
@@ -163,10 +163,11 @@
       const pairingToken = requestedPairingToken && requestedPairingToken.trim().length >= 32
         ? requestedPairingToken.trim()
         : createPairingToken();
-      const dockUrl = isViteDev
-        ? `${window.location.origin}/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`
-        : `http://127.0.0.1:4000/#/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`;
-      const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
+
+      const dockUrl = `http://localhost:5173/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`;
+      const backendReadyUrl = 'http://127.0.0.1:4000/api/health/ready';
+      const viteReadyUrl = 'http://localhost:5173/obs-dock.html';
+
       document.getElementById('dockLink').href = dockUrl;
       document.getElementById('dockUrlLabel').textContent = dockUrl;
 
@@ -185,27 +186,45 @@
         }
       };
 
-      const checkReady = async () => {
+      const canFetch = async (url, predicate = null) => {
         try {
-          const response = await fetch(readyUrl, { cache: 'no-store' });
+          const response = await fetch(url, { cache: 'no-store' });
           if (!response.ok) return false;
+          if (!predicate) return true;
           const payload = await response.json();
-          return payload && payload.status === 'ready' && payload.serverListening;
+          return predicate(payload);
         } catch {
           return false;
         }
       };
 
-      const pollReady = async ({ navigate = false, attempts = 40, pendingMessage = 'Waiting for LyricDisplay to become ready...' } = {}) => {
+      const checkBackendReady = () => canFetch(
+        backendReadyUrl,
+        (payload) => payload && payload.status === 'ready' && payload.serverListening
+      );
+
+      const checkViteReady = () => canFetch(viteReadyUrl);
+
+      const checkReady = async () => {
+        const backendReady = await checkBackendReady();
+        const viteReady = await checkViteReady();
+        return { backendReady, viteReady, ready: backendReady && viteReady };
+      };
+
+      const pollReady = async ({ navigate = false, attempts = 60, pendingMessage = 'Waiting for dev services...' } = {}) => {
         for (let attempt = 0; attempt < attempts; attempt += 1) {
-          const ready = await checkReady();
-          if (ready) {
-            setStatus(navigate ? 'LyricDisplay is running. Opening dock controller...' : 'LyricDisplay is running.', 'ready');
+          const state = await checkReady();
+          if (state.ready) {
+            setStatus(navigate ? 'Dev services are ready. Opening dock controller...' : 'Dev services are ready.', 'ready');
             if (navigate) window.location.href = dockUrl;
             return true;
           }
           if (attempt === 0) {
             setStatus(pendingMessage);
+          } else if (state.backendReady && !state.viteReady) {
+            setStatus('Backend is ready. Waiting for Vite dev UI...');
+          } else if (!state.backendReady && state.viteReady) {
+            setStatus('Vite is ready. Waiting for LyricDisplay backend...');
           }
           await new Promise((resolve) => setTimeout(resolve, 750));
         }
@@ -214,23 +233,24 @@
       };
 
       const launchHeadlessAndPair = async () => {
-        if (await checkReady()) {
-          setStatus('LyricDisplay is already running. Opening dock controller...', 'ready');
+        const state = await checkReady();
+        if (state.ready) {
+          setStatus('Dev services are already running. Opening dock controller...', 'ready');
           window.location.href = dockUrl;
           return;
         }
 
-        setStatus('Requesting LyricDisplay headless startup...');
-        requestProtocolLaunch(`lyricdisplay://start-headless?obsPairingToken=${encodeURIComponent(pairingToken)}`);
+        setStatus('Requesting LyricDisplay dev headless startup...');
+        requestProtocolLaunch(`lyricdisplay-dev://start-headless?startDevServer=1&obsPairingToken=${encodeURIComponent(pairingToken)}`);
         window.setTimeout(async () => {
           const ready = await pollReady({
             navigate: true,
-            attempts: 40,
-            pendingMessage: 'Waiting for LyricDisplay to start...'
+            attempts: 80,
+            pendingMessage: 'Waiting for LyricDisplay dev services to start...'
           });
 
           if (!ready) {
-            setStatus('The app link did not start LyricDisplay. Make sure LyricDisplay is installed and that this dock page was opened from the install folder, then click Start Headless and Open Dock again.', 'error');
+            setStatus('The dev app link did not start LyricDisplay. Run npm run electron-dev:headless once to register or start the dev runtime, then click Open Dev Dock Controller.', 'error');
           }
         }, 1200);
       };
@@ -238,19 +258,19 @@
       startButton.addEventListener('click', launchHeadlessAndPair);
       document.getElementById('dockLink').addEventListener('click', async (event) => {
         event.preventDefault();
-        if (await checkReady()) {
+        if ((await checkReady()).ready) {
           window.location.href = dockUrl;
           return;
         }
         launchHeadlessAndPair();
       });
       document.getElementById('openDesktopButton').addEventListener('click', () => {
-        requestProtocolLaunch('lyricdisplay://open');
+        requestProtocolLaunch('lyricdisplay-dev://open?startDevServer=1');
       });
 
-      pollReady({ navigate: true, attempts: 4, pendingMessage: 'Checking local LyricDisplay service...' }).then((ready) => {
+      pollReady({ navigate: true, attempts: 4, pendingMessage: 'Checking local LyricDisplay dev services...' }).then((ready) => {
         if (!ready) {
-          setStatus('LyricDisplay is not running. Click Start Headless and Open Dock.', '');
+          setStatus('LyricDisplay dev services are not running. Click Start Dev Headless and Open Dock.', '');
         }
       });
     </script>

@@ -122,15 +122,21 @@ Add a Web Browser input and use the same output URL format as OBS.
 
 LyricDisplay also includes a compact OBS custom dock for basic control on lower-powered streaming machines.
 
-On Windows packaged installs, run `Start LyricDisplay Headless.cmd` from the LyricDisplay install folder, then add `obs-dock.html` from that same folder as an OBS Custom Browser Dock. This starts the backend without opening the main desktop window, and the dock connects as a limited controller.
+On Windows packaged installs, add `obs-dock.html` from the LyricDisplay install folder as an OBS Custom Browser Dock:
 
-During development, run Electron with headless OBS dock auth enabled:
-
-```bash
-npm run electron-dev:headless
+```text
+file:///C:/Program Files/LyricDisplay/obs-dock.html
 ```
 
-Then load `http://localhost:5173/obs-dock.html` in a browser or OBS dock.
+The page opens as the dock home screen. Click `Start Headless and Open Dock` to start LyricDisplay in the background and load the dock controller without opening the main desktop window.
+
+During development, add the local dev launcher file as an OBS dock:
+
+```text
+file:///D:/path/to/lyric-display-app/public/obs-dock-dev.html
+```
+
+Click `Start Dev Headless and Open Dock`. If the dev protocol has not been registered on the machine yet, run `npm run electron-dev:headless` once, then use the local dev launcher again.
 
 ## Development
 
