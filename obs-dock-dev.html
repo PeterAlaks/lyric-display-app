@@ -146,6 +146,7 @@
       const startButton = document.getElementById('startButton');
       const protocolFrame = document.getElementById('protocolFrame');
       const pageParams = new URLSearchParams(window.location.search || '');
+      let launchInProgress = false;
 
       const createPairingToken = () => {
         const bytes = new Uint8Array(32);
@@ -233,6 +234,14 @@
       };
 
       const launchHeadlessAndPair = async () => {
+        if (launchInProgress) {
+          setStatus('Startup request is already in progress...');
+          return;
+        }
+
+        launchInProgress = true;
+        startButton.disabled = true;
+
         const state = await checkReady();
         if (state.ready) {
           setStatus('Dev services are already running. Opening dock controller...', 'ready');
@@ -250,7 +259,9 @@
           });
 
           if (!ready) {
-            setStatus('The dev app link did not start LyricDisplay. Run npm run electron-dev:headless once to register or start the dev runtime, then click Open Dev Dock Controller.', 'error');
+            setStatus('The dev app link did not start LyricDisplay. Run npm run electron-dev:headless once so Windows registers lyricdisplay-dev:// to this repo, then use this launcher again.', 'error');
+            launchInProgress = false;
+            startButton.disabled = false;
           }
         }, 1200);
       };

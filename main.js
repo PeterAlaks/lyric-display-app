@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron';
 import './main/appIdentity.js';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
-import { isDev } from './main/paths.js';
+import { appRoot, isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';
 import { checkForUpdates } from './main/updater.js';
 import { registerIpcHandlers } from './main/ipc.js';
@@ -78,7 +78,7 @@ const isHeadlessMode = process.env.LYRICDISPLAY_HEADLESS === '1' ||
 const registerProtocolClient = (protocol) => {
   try {
     if (process.defaultApp && process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient(protocol, process.execPath, [process.argv[1]]);
+      app.setAsDefaultProtocolClient(protocol, process.execPath, [appRoot]);
     } else {
       app.setAsDefaultProtocolClient(protocol);
     }
@@ -87,9 +87,10 @@ const registerProtocolClient = (protocol) => {
   }
 };
 
-registerProtocolClient(APP_PROTOCOL);
 if (isDev) {
   registerProtocolClient(DEV_APP_PROTOCOL);
+} else {
+  registerProtocolClient(APP_PROTOCOL);
 }
 
 function attachMainWindowLifecycle(win) {
