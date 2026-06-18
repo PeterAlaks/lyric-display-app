@@ -177,6 +177,12 @@
       };
 
       const requestProtocolLaunch = (url) => {
+        try {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } catch {
+          // Some OBS browser builds reject custom schemes from window.open().
+        }
+
         protocolFrame.src = 'about:blank';
         window.setTimeout(() => {
           protocolFrame.src = url;
@@ -194,7 +200,7 @@
         }
       };
 
-      const pollReady = async ({ navigate = false, attempts = 40, pendingMessage = 'Waiting for LyricDisplay to become ready...' } = {}) => {
+      const pollReady = async ({ navigate = false, attempts = 20, delayMs = 2000, pendingMessage = 'Waiting for LyricDisplay to become ready...' } = {}) => {
         for (let attempt = 0; attempt < attempts; attempt += 1) {
           const ready = await checkReady();
           if (ready) {
@@ -205,7 +211,7 @@
           if (attempt === 0) {
             setStatus(pendingMessage);
           }
-          await new Promise((resolve) => setTimeout(resolve, 750));
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
 
         return false;
@@ -225,16 +231,17 @@
         window.setTimeout(async () => {
           const ready = await pollReady({
             navigate: true,
-            attempts: 40,
+            attempts: 18,
+            delayMs: 2000,
             pendingMessage: 'Waiting for LyricDisplay to start...'
           });
 
           if (!ready) {
-            setStatus('The app link did not start LyricDisplay. Make sure LyricDisplay is installed and that this dock page was opened from the install folder, then click Start Headless and Open Dock again.', 'error');
+            setStatus('OBS did not hand the app link to Windows. Make sure LyricDisplay is installed and registered, then try opening this launcher in your regular browser.', 'error');
             launchInProgress = false;
             startButton.disabled = false;
           }
-        }, 1200);
+        }, 4000);
       };
 
       startButton.addEventListener('click', launchHeadlessAndPair);

@@ -178,6 +178,12 @@
       };
 
       const requestProtocolLaunch = (url) => {
+        try {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } catch {
+          // Some OBS browser builds reject custom schemes from window.open().
+        }
+
         protocolFrame.src = 'about:blank';
         window.setTimeout(() => {
           protocolFrame.src = url;
@@ -209,7 +215,7 @@
         return { backendReady, viteReady, ready: backendReady && viteReady };
       };
 
-      const pollReady = async ({ navigate = false, attempts = 60, pendingMessage = 'Waiting for dev services...' } = {}) => {
+      const pollReady = async ({ navigate = false, attempts = 20, delayMs = 2000, pendingMessage = 'Waiting for dev services...' } = {}) => {
         for (let attempt = 0; attempt < attempts; attempt += 1) {
           const state = await checkReady();
           if (state.ready) {
@@ -224,7 +230,7 @@
           } else if (!state.backendReady && state.viteReady) {
             setStatus('Vite is ready. Waiting for LyricDisplay backend...');
           }
-          await new Promise((resolve) => setTimeout(resolve, 750));
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
 
         return false;
@@ -244,16 +250,17 @@
         window.setTimeout(async () => {
           const ready = await pollReady({
             navigate: true,
-            attempts: 80,
+            attempts: 18,
+            delayMs: 2000,
             pendingMessage: 'Waiting for LyricDisplay dev services to start...'
           });
 
           if (!ready) {
-            setStatus('The dev app link did not start LyricDisplay. Run npm run dev:register-protocol once so Windows registers lyricdisplay-dev:// to this repo, then use this launcher again.', 'error');
+            setStatus('OBS did not hand the dev app link to Windows. The protocol is registered, but this OBS browser dock is blocking lyricdisplay-dev:// startup.', 'error');
             launchInProgress = false;
             startButton.disabled = false;
           }
-        }, 1200);
+        }, 4000);
       };
 
       startButton.addEventListener('click', launchHeadlessAndPair);
