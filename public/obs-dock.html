@@ -177,16 +177,10 @@
       };
 
       const requestProtocolLaunch = (url) => {
-        try {
-          const link = document.createElement('a');
-          link.href = url;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          window.setTimeout(() => link.remove(), 1000);
-        } catch {
+        protocolFrame.src = 'about:blank';
+        window.setTimeout(() => {
           protocolFrame.src = url;
-        }
+        }, 0);
       };
 
       const checkReady = async () => {
