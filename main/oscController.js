@@ -6,6 +6,7 @@
 import { EventEmitter } from 'events';
 import Store from 'electron-store';
 import dgram from 'dgram';
+import './appIdentity.js';
 
 // OSC message types
 const OSC_TYPE_INT = 'i';
@@ -177,7 +178,8 @@ class OSCController extends EventEmitter {
       stage: false,
       songName: '',
       lineCount: 0,
-      autoplay: false
+      autoplay: false,
+      intelligentAutoplay: false
     };
 
     this.addressHandlers = this.createAddressHandlers();
@@ -196,6 +198,9 @@ class OSCController extends EventEmitter {
       [`${prefix}/autoplay`]: this.handleAutoplayToggle.bind(this),
       [`${prefix}/autoplay/start`]: this.handleAutoplayStart.bind(this),
       [`${prefix}/autoplay/stop`]: this.handleAutoplayStop.bind(this),
+      [`${prefix}/autoplay/intelligent`]: this.handleIntelligentAutoplayToggle.bind(this),
+      [`${prefix}/autoplay/intelligent/start`]: this.handleIntelligentAutoplayStart.bind(this),
+      [`${prefix}/autoplay/intelligent/stop`]: this.handleIntelligentAutoplayStop.bind(this),
       [`${prefix}/setlist/next`]: this.handleNextSong.bind(this),
       [`${prefix}/setlist/prev`]: this.handlePrevSong.bind(this),
       [`${prefix}/setlist/load`]: this.handleLoadSetlistItem.bind(this),
@@ -363,6 +368,23 @@ class OSCController extends EventEmitter {
     this.emitAction('autoplay-stop');
   }
 
+  handleIntelligentAutoplayToggle(args) {
+    const state = args[0]?.value;
+    if (typeof state === 'number' || typeof state === 'boolean') {
+      this.emitAction(state ? 'intelligent-autoplay-start' : 'intelligent-autoplay-stop');
+    } else {
+      this.emitAction('toggle-intelligent-autoplay');
+    }
+  }
+
+  handleIntelligentAutoplayStart() {
+    this.emitAction('intelligent-autoplay-start');
+  }
+
+  handleIntelligentAutoplayStop() {
+    this.emitAction('intelligent-autoplay-stop');
+  }
+
   handleNextSong() {
     this.emitAction('next-song');
   }
@@ -427,7 +449,8 @@ class OSCController extends EventEmitter {
       { address: `${prefix}/state/stage`, args: [this.currentState.stage ? 1 : 0] },
       { address: `${prefix}/state/songname`, args: [this.currentState.songName || ''] },
       { address: `${prefix}/state/linecount`, args: [this.currentState.lineCount || 0] },
-      { address: `${prefix}/state/autoplay`, args: [this.currentState.autoplay ? 1 : 0] }
+      { address: `${prefix}/state/autoplay`, args: [this.currentState.autoplay ? 1 : 0] },
+      { address: `${prefix}/state/autoplay/intelligent`, args: [this.currentState.intelligentAutoplay ? 1 : 0] }
     ];
 
     // Clean up old clients (older than 5 minutes)
@@ -570,9 +593,12 @@ class OSCController extends EventEmitter {
       { address: `${prefix}/autoplay`, args: '[0|1]', description: 'Toggle or set autoplay' },
       { address: `${prefix}/autoplay/start`, args: '', description: 'Start autoplay' },
       { address: `${prefix}/autoplay/stop`, args: '', description: 'Stop autoplay' },
+      { address: `${prefix}/autoplay/intelligent`, args: '[0|1]', description: 'Toggle or set timestamp-based intelligent autoplay' },
+      { address: `${prefix}/autoplay/intelligent/start`, args: '', description: 'Start timestamp-based intelligent autoplay' },
+      { address: `${prefix}/autoplay/intelligent/stop`, args: '', description: 'Stop timestamp-based intelligent autoplay' },
       { address: `${prefix}/setlist/next`, args: '', description: 'Load next song in setlist' },
       { address: `${prefix}/setlist/prev`, args: '', description: 'Load previous song in setlist' },
-      { address: `${prefix}/setlist/load`, args: '[int]', description: 'Load setlist item by index' },
+      { address: `${prefix}/setlist/load`, args: '[int]', description: 'Load setlist item by zero-based index' },
       { address: `${prefix}/clear`, args: '', description: 'Clear output (deselect line)' },
       { address: `${prefix}/sync`, args: '', description: 'Force sync all outputs' }
     ];

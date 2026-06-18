@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Monitor, Video, Cast, Check, Network, Copy, ExternalLink } from 'lucide-react';
 import { createRoutePath, createRouteUrl } from '@/integrations/sourceUrls';
+import { getAllRoutableOutputIds } from '../../shared/outputRegistry.js';
 
 /**
  * Detect the current platform.
@@ -269,6 +270,8 @@ function CompactFirewallSteps({ darkMode, platform }) {
 // ─── OBS Instructions ────────────────────────────────────────────────────────
 
 function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
+    const routableOutputs = getAllRoutableOutputIds();
+    const lastOutputId = routableOutputs[routableOutputs.length - 1];
     const modKey = platform === 'darwin' ? '⌘' : 'Ctrl';
 
     return (
@@ -391,7 +394,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
             </TipBox>
 
             <TipBox darkMode={darkMode} type="info">
-                <Strong>For Additional Outputs:</Strong> Add more browser sources and change the URL suffix to <InlineCode darkMode={darkMode}>#/output2</InlineCode> through <InlineCode darkMode={darkMode}>#/output6</InlineCode> as needed.
+                <Strong>For Additional Outputs:</Strong> Add more browser sources and change the URL suffix to <InlineCode darkMode={darkMode}>#/output2</InlineCode> through <InlineCode darkMode={darkMode}>#/{lastOutputId}</InlineCode> as needed.
             </TipBox>
         </div>
     );

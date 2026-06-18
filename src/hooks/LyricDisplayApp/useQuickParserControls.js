@@ -73,11 +73,12 @@ export const useQuickParserControls = ({
   }, [clampGroupSize]);
 
   const updateQuickParserSetting = React.useCallback(async (key, value) => {
-    setQuickParserSettings((prev) => {
-      const next = { ...prev, [key]: value };
-      window.dispatchEvent(new CustomEvent('parsing-preferences-updated', { detail: next }));
-      return next;
-    });
+    setQuickParserSettings((prev) => ({ ...prev, [key]: value }));
+
+    window.dispatchEvent(new CustomEvent('parsing-preferences-updated', {
+      detail: { [key]: value }
+    }));
+
     try {
       if (window.electronAPI?.preferences?.set) {
         await window.electronAPI.preferences.set(`parsing.${key}`, value);

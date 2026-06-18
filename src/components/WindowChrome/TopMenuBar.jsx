@@ -10,6 +10,18 @@ import useMenuHandlers from '@/hooks/WindowChrome/useMenuHandlers';
 const dragRegion = { WebkitAppRegion: 'drag' };
 const noDrag = { WebkitAppRegion: 'no-drag' };
 
+const TOP_MENU_ORDER = ['file', 'edit', 'view', 'output', 'tools', 'window', 'help'];
+
+const TOP_MENU_CONFIG = {
+  file: { count: 5, sub: [2, 3] },
+  edit: { count: 8, sub: [] },
+  view: { count: 7, sub: [] },
+  output: { count: 6, sub: [] },
+  tools: { count: 6, sub: [] },
+  window: { count: 3, sub: [] },
+  help: { count: 8, sub: [] },
+};
+
 const MenuItem = React.forwardRef(({ label, shortcut, onClick, disabled, active, ...rest }, ref) => (
   <button
     ref={ref}
@@ -62,7 +74,7 @@ const TopMenuBar = () => {
   const recentsCloseTimerRef = useRef(null);
   const importCloseTimerRef = useRef(null);
 
-  const topMenuOrder = ['file', 'edit', 'view', 'window', 'help'];
+  const topMenuOrder = TOP_MENU_ORDER;
 
   const {
     openMenu,
@@ -87,6 +99,7 @@ const TopMenuBar = () => {
   } = useTopMenuState({
     barRef,
     topMenuOrder,
+    menuConfig: TOP_MENU_CONFIG,
     keyHandlerLookup: (id) => {
       const baseId = id?.includes(':') ? id.split(':')[0] : id;
       return keyHandlersRef.current[id] || keyHandlersRef.current[baseId];
@@ -123,7 +136,7 @@ const TopMenuBar = () => {
     openMenu,
     setOpenMenu,
     topMenuOrder,
-    focusParentItem: () => focusIndex('file', 5),
+    focusParentItem: () => focusIndex('file', 3),
     setOpenReason: ensureReason,
   });
 
@@ -300,7 +313,7 @@ const TopMenuBar = () => {
         ? (index) => {
           if (index === 2) {
             openRecentsSubmenu(true, 'keyboard');
-          } else if (index === 4) {
+          } else if (index === 3) {
             openImportSubmenu(true, 'keyboard');
           }
         }
@@ -313,6 +326,8 @@ const TopMenuBar = () => {
       file: buildMenuHandler('file'),
       edit: buildMenuHandler('edit'),
       view: buildMenuHandler('view'),
+      output: buildMenuHandler('output'),
+      tools: buildMenuHandler('tools'),
       window: buildMenuHandler('window'),
       help: buildMenuHandler('help'),
       'file:recent': (event) => {
@@ -457,8 +472,6 @@ const TopMenuBar = () => {
                   )}
                 </div>
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('file', 3, el)} label="OBS Source Creator" onClick={menuHandlers.handleOpenObsSourceCreator} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 3} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
-                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 4} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <div
                   className="relative"
                   onMouseEnter={() => {
@@ -468,12 +481,12 @@ const TopMenuBar = () => {
                   onMouseLeave={closeImportAfterDelay}
                 >
                   <MenuItem
-                    ref={(el) => registerItemRef('file', 5, el)}
+                    ref={(el) => registerItemRef('file', 3, el)}
                     label="Import Lyrics"
                     shortcut=">"
                     onClick={() => { }}
                     disabled={isNewSongCanvas}
-                    active={openMenu?.startsWith('file') && activeIndex === 5}
+                    active={openMenu?.startsWith('file') && activeIndex === 3}
                     title={isNewSongCanvas ? 'Only available in Control Panel' : undefined}
                     onMouseEnter={() => {
                       if (isNewSongCanvas) return;
@@ -502,22 +515,27 @@ const TopMenuBar = () => {
                       {resetImportRefs()}
                       <MenuItem
                         ref={registerImportItemRef(0)}
-                        label="Import from EasyWorship"
+                        label="Search Online Lyrics"
                         active={openMenu === 'file:import' && importIndex === 0}
-                        onClick={menuHandlers.handleEasyWorship}
+                        onClick={menuHandlers.handleOpenOnlineLyricsSearch}
                       />
                       <MenuItem
                         ref={registerImportItemRef(1)}
-                        label="Import from PowerPoint"
+                        label="Import from EasyWorship"
                         active={openMenu === 'file:import' && importIndex === 1}
+                        onClick={menuHandlers.handleEasyWorship}
+                      />
+                      <MenuItem
+                        ref={registerImportItemRef(2)}
+                        label="Import from PowerPoint"
+                        active={openMenu === 'file:import' && importIndex === 2}
                         onClick={menuHandlers.handlePresentationImport}
                       />
                     </div>
                   )}
                 </div>
-                <MenuItem ref={(el) => registerItemRef('file', 6, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={isNewSongCanvas} active={openMenu?.startsWith('file') && activeIndex === 6} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('file', 7, el)} label="Quit" shortcut="Alt + F4" onClick={menuHandlers.handleQuit} active={openMenu?.startsWith('file') && activeIndex === 7} />
+                <MenuItem ref={(el) => registerItemRef('file', 4, el)} label="Quit" shortcut="Alt + F4" onClick={menuHandlers.handleQuit} active={openMenu?.startsWith('file') && activeIndex === 4} />
               </div>
             )}
           </div>
@@ -590,7 +608,7 @@ const TopMenuBar = () => {
                   onClick={menuHandlers.handleToggleDarkMode}
                   disabled={useLyricsStore.getState().themeMode === 'system'}
                   active={openMenu === 'view' && activeIndex === 0}
-                  title={useLyricsStore.getState().themeMode === 'system' ? 'Theme is managed by system preferences. Change in Preferences → Appearance.' : undefined}
+                  title={useLyricsStore.getState().themeMode === 'system' ? 'Theme is managed by system preferences. Change in Preferences -> Appearance.' : undefined}
                 />
                 <MenuItem ref={(el) => registerItemRef('view', 1, el)} label="Reload" shortcut="Ctrl/Cmd + R" onClick={menuHandlers.handleReload} active={openMenu === 'view' && activeIndex === 1} />
                 <MenuItem ref={(el) => registerItemRef('view', 2, el)} label="Toggle Developer Tools" shortcut="Ctrl/Cmd + Shift + I" onClick={menuHandlers.handleToggleDevTools} active={openMenu === 'view' && activeIndex === 2} />
@@ -600,6 +618,72 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('view', 5, el)} label="Reset Zoom" shortcut="Ctrl/Cmd 0" onClick={() => menuHandlers.handleZoom('reset')} active={openMenu === 'view' && activeIndex === 5} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('view', 6, el)} label="Toggle Fullscreen" shortcut="F11" onClick={handleFullscreenToggle} active={openMenu === 'view' && activeIndex === 6} />
+              </div>
+            )}
+          </div>
+
+          <div
+            className="relative"
+            onMouseEnter={() => { clearCloseTimer(); if (openMenu) openMenuAndFocus('output', openReason || 'hover'); }}
+            onMouseLeave={() => { if (openMenu === 'output') scheduleCloseMenu('output'); }}>
+            <button
+              type="button"
+              onClick={() => toggleMenu('output')}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md transition ${openMenu === 'output' ? (darkMode ? 'bg-slate-800' : 'bg-slate-200') : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/80'
+                }`}
+              style={noDrag}
+            >
+              Output
+            </button>
+            {openMenu === 'output' && (
+              <div className={`absolute left-0 top-full mt-0 w-72 rounded-xl border shadow-xl z-50 p-1 ${menuBg} ${menuPanelExtra}`}
+                role="menu"
+                tabIndex={0}
+                ref={(el) => { menuContainerRefs.current['output'] = el; }}
+                onMouseEnter={clearCloseTimer}
+                onMouseLeave={() => scheduleCloseMenu('output')}
+                onKeyDown={getMenuKeyDown('output')}
+              >
+                <MenuItem ref={(el) => registerItemRef('output', 0, el)} label="Project to Display" onClick={menuHandlers.handleDisplaySettings} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 0} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 1, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 1} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 2, el)} label="Sync Outputs" onClick={menuHandlers.handleSyncOutputs} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 2} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <Separator />
+                <MenuItem ref={(el) => registerItemRef('output', 3, el)} label="OBS Source Creator" onClick={menuHandlers.handleOpenObsSourceCreator} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 3} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 4, el)} label="NDI Preferences" onClick={menuHandlers.handleNdiPreferences} active={openMenu === 'output' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('output', 5, el)} label="User Media Library" onClick={menuHandlers.handleUserMedia} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 5} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+              </div>
+            )}
+          </div>
+
+          <div
+            className="relative"
+            onMouseEnter={() => { clearCloseTimer(); if (openMenu) openMenuAndFocus('tools', openReason || 'hover'); }}
+            onMouseLeave={() => { if (openMenu === 'tools') scheduleCloseMenu('tools'); }}>
+            <button
+              type="button"
+              onClick={() => toggleMenu('tools')}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md transition ${openMenu === 'tools' ? (darkMode ? 'bg-slate-800' : 'bg-slate-200') : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/80'
+                }`}
+              style={noDrag}
+            >
+              Tools
+            </button>
+            {openMenu === 'tools' && (
+              <div className={`absolute left-0 top-full mt-0 w-72 rounded-xl border shadow-xl z-50 p-1 ${menuBg} ${menuPanelExtra}`}
+                role="menu"
+                tabIndex={0}
+                ref={(el) => { menuContainerRefs.current['tools'] = el; }}
+                onMouseEnter={clearCloseTimer}
+                onMouseLeave={() => scheduleCloseMenu('tools')}
+                onKeyDown={getMenuKeyDown('tools')}
+              >
+                <MenuItem ref={(el) => registerItemRef('tools', 0, el)} label="Setlist Manager" shortcut="Ctrl/Cmd + Shift + S" onClick={menuHandlers.handleOpenSetlist} disabled={isNewSongCanvas} active={openMenu === 'tools' && activeIndex === 0} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('tools', 1, el)} label="Timer Control" onClick={menuHandlers.handleOpenTimerControl} active={openMenu === 'tools' && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('tools', 2, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu === 'tools' && activeIndex === 2} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <Separator />
+                <MenuItem ref={(el) => registerItemRef('tools', 3, el)} label="Connection Diagnostics" onClick={menuHandlers.handleConnectionDiagnostics} active={openMenu === 'tools' && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('tools', 4, el)} label="Production Readiness" onClick={menuHandlers.handlePreServiceHealth} active={openMenu === 'tools' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('tools', 5, el)} label="Operator Action Log" onClick={menuHandlers.handleOperatorActionLog} active={openMenu === 'tools' && activeIndex === 5} />
               </div>
             )}
           </div>
@@ -629,9 +713,6 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('window', 0, el)} label="Minimize" onClick={menuHandlers.handleMinimize} active={openMenu === 'window' && activeIndex === 0} />
                 <MenuItem ref={(el) => registerItemRef('window', 1, el)} label={isMaxOrFull ? 'Restore' : 'Maximize'} onClick={handleMaximizeToggle} active={openMenu === 'window' && activeIndex === 1} />
                 <MenuItem ref={(el) => registerItemRef('window', 2, el)} label="Close" onClick={menuHandlers.handleQuit} active={openMenu === 'window' && activeIndex === 2} />
-                <Separator />
-                <MenuItem ref={(el) => registerItemRef('window', 3, el)} label="Keyboard Shortcuts" onClick={menuHandlers.handleShortcuts} active={openMenu === 'window' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('window', 4, el)} label="Project to Display" onClick={menuHandlers.handleDisplaySettings} active={openMenu === 'window' && activeIndex === 4} />
               </div>
             )}
           </div>
@@ -659,9 +740,9 @@ const TopMenuBar = () => {
                 onKeyDown={getMenuKeyDown('help')}
               >
                 <MenuItem ref={(el) => registerItemRef('help', 0, el)} label="Documentation" onClick={menuHandlers.handleDocs} active={openMenu === 'help' && activeIndex === 0} />
-                <MenuItem ref={(el) => registerItemRef('help', 1, el)} label="GitHub Repository" onClick={menuHandlers.handleRepo} active={openMenu === 'help' && activeIndex === 1} />
-                <MenuItem ref={(el) => registerItemRef('help', 2, el)} label="Connection Diagnostics" onClick={menuHandlers.handleConnectionDiagnostics} active={openMenu === 'help' && activeIndex === 2} />
-                <MenuItem ref={(el) => registerItemRef('help', 3, el)} label="Integration Guide" onClick={menuHandlers.handleIntegrationGuide} active={openMenu === 'help' && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('help', 1, el)} label="Integration Guide" onClick={menuHandlers.handleIntegrationGuide} active={openMenu === 'help' && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('help', 2, el)} label="Keyboard Shortcuts" onClick={menuHandlers.handleShortcuts} active={openMenu === 'help' && activeIndex === 2} />
+                <MenuItem ref={(el) => registerItemRef('help', 3, el)} label="GitHub Repository" onClick={menuHandlers.handleRepo} active={openMenu === 'help' && activeIndex === 3} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('help', 4, el)} label="More About Author" onClick={() => window.open('https://linktr.ee/peteralaks', '_blank', 'noopener,noreferrer')} active={openMenu === 'help' && activeIndex === 4} />
                 <MenuItem ref={(el) => registerItemRef('help', 5, el)} label="About LyricDisplay" onClick={handleAbout} active={openMenu === 'help' && activeIndex === 5} />

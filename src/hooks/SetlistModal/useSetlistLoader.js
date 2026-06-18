@@ -1,10 +1,14 @@
 import { useCallback } from 'react';
 import useToast from '../useToast';
 import useModal from '../useModal';
+import useLyricsStore from '../../context/LyricsStore';
+import { normalizeSetlistItemLimit } from '../../../shared/setlistLimits.js';
 
 const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear }) => {
   const { showToast } = useToast();
   const { showModal } = useModal();
+  const configuredMaxSetlistFiles = useLyricsStore((state) => state.maxSetlistFilesLimit);
+  const maxSetlistFiles = normalizeSetlistItemLimit(configuredMaxSetlistFiles);
 
   const loadSetlist = useCallback(async (file) => {
     if (!window?.electronAPI?.setlist?.loadFromPath) {
@@ -65,10 +69,10 @@ const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitS
         return false;
       }
 
-      if (items.length > 50) {
+      if (items.length > maxSetlistFiles) {
         showToast({
           title: 'Setlist too large',
-          message: `Setlist contains ${items.length} songs. Maximum is 50.`,
+          message: `Setlist contains ${items.length} songs. Maximum is ${maxSetlistFiles}.`,
           variant: 'error',
         });
         return false;
@@ -110,7 +114,7 @@ const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitS
       });
       return false;
     }
-  }, [setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear, showModal, showToast]);
+  }, [setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear, showModal, showToast, maxSetlistFiles]);
 
   return loadSetlist;
 };

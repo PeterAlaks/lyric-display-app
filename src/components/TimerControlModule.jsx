@@ -5,17 +5,33 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ColorPicker } from '@/components/ui/color-picker';
+import { PaintPicker } from '@/components/ui/paint-picker';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useSharedTimer from '../hooks/useSharedTimer';
-import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, formatGlobalClock, minutesToMs, msToMinutesInput, secondsToMs, splitClockPeriod } from '../utils/timerUtils';
+import {
+  DEFAULT_TIMER_CONTROL_SETTINGS,
+  DEFAULT_TIMER_DISPLAY,
+  formatGlobalClock,
+  getTimerDisplay,
+  getTimerIntensity,
+  getTimerProgress,
+  minutesToMs,
+  msToMinutesInput,
+  secondsToMs,
+  splitClockPeriod,
+} from '../utils/timerUtils';
+import { paintToCss } from '../utils/paint';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import FontSelect from './FontSelect';
 
 const QUICK_MINUTES = [1, 3, 5, 10, 15, 30];
-const TARGET_HOURS = Array.from({ length: 12 }, (_, index) => String(index + 1));
-const TARGET_24_HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'));
-const TARGET_MINUTES = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
 const TARGET_PERIODS = ['AM', 'PM'];
+const TARGET_12_HOUR_MIN = 1;
+const TARGET_12_HOUR_MAX = 12;
+const TARGET_24_HOUR_MIN = 0;
+const TARGET_24_HOUR_MAX = 24;
+const TARGET_MINUTE_MIN = 0;
+const TARGET_MINUTE_MAX = 60;
 const PERIOD_STYLE = {
   fontSize: '0.42em',
   marginLeft: '0.12em',
@@ -59,20 +75,33 @@ const getCurrentTargetTimeParts = (hourFormat = '12') => {
 };
 
 const fromTargetTimeParts = ({ hour, minute, period }, hourFormat = '12') => {
-  const hourNumber = Number(hour);
-  const minuteNumber = Number(minute);
-  if (!Number.isFinite(hourNumber) || !Number.isFinite(minuteNumber)) {
+  const hourNumber = Math.trunc(Number(hour));
+  const minuteNumber = Math.trunc(Number(minute));
+  if (!Number.isFinite(hourNumber)
+    || !Number.isFinite(minuteNumber)
+    || minuteNumber < TARGET_MINUTE_MIN
+    || minuteNumber > TARGET_MINUTE_MAX) {
     return '';
   }
+
+  const formatTotalMinutes = (totalMinutes) => {
+    const normalizedTotalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+    const normalizedHour = Math.floor(normalizedTotalMinutes / 60);
+    const normalizedMinute = normalizedTotalMinutes % 60;
+    return `${String(normalizedHour).padStart(2, '0')}:${String(normalizedMinute).padStart(2, '0')}`;
+  };
+
   if (hourFormat === '24') {
-    return `${String(hourNumber).padStart(2, '0')}:${String(minuteNumber).padStart(2, '0')}`;
+    if (hourNumber < TARGET_24_HOUR_MIN || hourNumber > TARGET_24_HOUR_MAX) return '';
+    return formatTotalMinutes((hourNumber * 60) + minuteNumber);
   }
+  if (hourNumber < TARGET_12_HOUR_MIN || hourNumber > TARGET_12_HOUR_MAX) return '';
   if (!period) return '';
-  const hour24 = period === 'PM' ? (hourNumber % 12) + 12 : hourNumber % 12;
-  return `${String(hour24).padStart(2, '0')}:${String(minuteNumber).padStart(2, '0')}`;
+  const baseHour = period === 'PM' ? (hourNumber % 12) + 12 : hourNumber % 12;
+  return formatTotalMinutes((baseHour * 60) + minuteNumber);
 };
 
-const formatTargetTimePreview = (value) => {
+const formatTargetTimePreview = (value, hourFormat = '12') => {
   if (!value) return '';
   const [hours, minutes] = value.split(':').map((part) => Number(part));
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return '';
@@ -82,16 +111,49 @@ const formatTargetTimePreview = (value) => {
   if (dayLabel === 'Tomorrow') {
     next.setDate(next.getDate() + 1);
   }
-  return `${dayLabel} at ${next.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  return `${dayLabel} at ${next.toLocaleTimeString([], {
+    hour: hourFormat === '24' ? '2-digit' : 'numeric',
+    minute: '2-digit',
+    hour12: hourFormat !== '24',
+  })}`;
 };
+
+const clampTargetPart = (value, min, max) => {
+  if (value === '') return '';
+  const number = Math.trunc(Number(value));
+  if (!Number.isFinite(number)) return '';
+  return String(Math.min(max, Math.max(min, number)));
+};
+
+const TargetNumberInput = ({ value, onChange, min, max, placeholder, ariaLabel, disabled, inputClass }) => (
+  <Input
+    type="number"
+    min={min}
+    max={max}
+    step="1"
+    inputMode="numeric"
+    value={value}
+    onChange={(event) => onChange(clampTargetPart(event.target.value, min, max))}
+    placeholder={placeholder}
+    aria-label={ariaLabel}
+    disabled={disabled}
+    className={`${inputClass} text-center tabular-nums`}
+  />
+);
 
 const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, darkMode, hourFormat, onHourFormatChange }) => {
   const parts = React.useMemo(() => toTargetTimeParts(value, hourFormat), [hourFormat, value]);
-  const preview = React.useMemo(() => formatTargetTimePreview(value), [value]);
+  const preview = React.useMemo(() => formatTargetTimePreview(value, hourFormat), [hourFormat, value]);
   const selectContentClass = darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : undefined;
-  const hourOptions = hourFormat === '24' ? TARGET_24_HOURS : TARGET_HOURS;
+  const hourMin = hourFormat === '24' ? TARGET_24_HOUR_MIN : TARGET_12_HOUR_MIN;
+  const hourMax = hourFormat === '24' ? TARGET_24_HOUR_MAX : TARGET_12_HOUR_MAX;
 
   const updatePart = (part, partValue) => {
+    if (partValue === '') {
+      onChange('');
+      return;
+    }
+
     const fallback = getCurrentTargetTimeParts(hourFormat);
     const nextParts = {
       hour: parts.hour || fallback.hour,
@@ -114,26 +176,26 @@ const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, da
         </SelectContent>
       </Select>
       <div className={`grid gap-2 ${hourFormat === '24' ? 'grid-cols-[1fr_1fr]' : 'grid-cols-[1fr_1fr_1fr]'}`}>
-        <Select value={parts.hour || undefined} onValueChange={(nextHour) => updatePart('hour', nextHour)} disabled={disabled}>
-          <SelectTrigger className={inputClass}>
-            <SelectValue placeholder="HH" />
-          </SelectTrigger>
-          <SelectContent className={selectContentClass}>
-            {hourOptions.map((hour) => (
-              <SelectItem key={hour} value={hour}>{hour}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={parts.minute || undefined} onValueChange={(nextMinute) => updatePart('minute', nextMinute)} disabled={disabled}>
-          <SelectTrigger className={inputClass}>
-            <SelectValue placeholder="MM" />
-          </SelectTrigger>
-          <SelectContent className={selectContentClass}>
-            {TARGET_MINUTES.map((minute) => (
-              <SelectItem key={minute} value={minute}>{minute}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TargetNumberInput
+          value={parts.hour}
+          onChange={(nextHour) => updatePart('hour', nextHour)}
+          min={hourMin}
+          max={hourMax}
+          placeholder="HH"
+          ariaLabel="Target hour"
+          disabled={disabled}
+          inputClass={inputClass}
+        />
+        <TargetNumberInput
+          value={parts.minute}
+          onChange={(nextMinute) => updatePart('minute', nextMinute)}
+          min={TARGET_MINUTE_MIN}
+          max={TARGET_MINUTE_MAX}
+          placeholder="MM"
+          ariaLabel="Target minute"
+          disabled={disabled}
+          inputClass={inputClass}
+        />
         {hourFormat === '12' && (
           <Select value={parts.period || undefined} onValueChange={(nextPeriod) => updatePart('period', nextPeriod)} disabled={disabled}>
             <SelectTrigger className={inputClass}>
@@ -163,14 +225,111 @@ const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, da
   );
 };
 
+const usePreviewClock = (enabled, intervalMs = 1000) => {
+  const [now, setNow] = React.useState(Date.now());
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    setNow(Date.now());
+    const interval = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(interval);
+  }, [enabled, intervalMs]);
+
+  return now;
+};
+
+const TimerPreview = React.memo(({ timerState, displaySettings }) => {
+  const showSecondaryText = displaySettings.showSecondaryText !== false;
+  const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
+  const now = usePreviewClock(needsClock, 1000);
+  const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
+  const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
+  const progress = React.useMemo(() => getTimerProgress(timerState, now), [timerState, now]);
+  const accent = intensity === 'critical' ? '#EF4444' : intensity === 'warning' ? '#F59E0B' : displaySettings.accentColor;
+  const globalClockValue = React.useMemo(() => formatGlobalClock(now, {
+    clockHour12: displaySettings.clockHour12,
+    clockShowSeconds: displaySettings.clockShowSeconds,
+    clockShowPeriod: displaySettings.clockShowPeriod,
+  }), [displaySettings.clockHour12, displaySettings.clockShowPeriod, displaySettings.clockShowSeconds, now]);
+  const globalClockParts = React.useMemo(() => splitClockPeriod(globalClockValue), [globalClockValue]);
+
+  return (
+    <>
+      <div
+        className="rounded-lg min-h-63.75 flex flex-col items-center justify-center px-6"
+        style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
+      >
+        {showSecondaryText && (
+          <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
+            {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
+          </div>
+        )}
+        <div
+          className="leading-none max-w-full"
+          style={{
+            color: intensity === 'critical' ? '#EF4444' : displaySettings.textColor,
+            fontFamily: displaySettings.timerFontFamily,
+            fontSize: displaySettings.timerFontSizeMode === 'manual' ? `${displaySettings.timerFontSize}px` : 'clamp(4rem, 12vw, 10rem)',
+            fontWeight: displaySettings.timerBold ? 700 : 400,
+            fontStyle: displaySettings.timerItalic ? 'italic' : 'normal',
+            textDecoration: displaySettings.timerUnderline ? 'underline' : 'none',
+            textAlign: displaySettings.timerAlign,
+            fontVariantNumeric: 'tabular-nums',
+            fontFeatureSettings: '"tnum" 1, "lnum" 1',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {displayValue}
+        </div>
+        {showSecondaryText && timerState.sets?.length > 1 && (
+          <div className="mt-4 text-xs text-white/70">
+            {timerState.activeSetIndex + 1} of {timerState.sets.length}
+          </div>
+        )}
+        {displaySettings.showProgress && (
+          <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
+          </div>
+        )}
+      </div>
+
+      {showSecondaryText && displaySettings.showGlobalClock && (
+        <div
+          className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
+          style={{
+            background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000'),
+            borderColor: 'rgba(255,255,255,0.14)',
+          }}
+        >
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Global Time</span>
+          <span
+            className="font-mono text-2xl font-semibold text-white/80"
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              fontFeatureSettings: '"tnum" 1, "lnum" 1',
+            }}
+          >
+            {globalClockParts.time}
+            {globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
+          </span>
+        </div>
+      )}
+    </>
+  );
+});
+
+TimerPreview.displayName = 'TimerPreview';
+
 const TimerControlModule = () => {
   const { emitStageTimerUpdate } = useControlSocket();
   const { darkMode } = useDarkModeState();
   const { settings: timerControlSettings, updateSettings: updateTimerControlSettings } = useTimerControlSettings();
   const { settings: timerDisplaySettings, updateSettings: updateTimerDisplaySettings } = useTimerDisplaySettings();
-  const { timerState, now, displayValue, intensity, progress, actions } = useSharedTimer({
+  const { timerState, actions } = useSharedTimer({
     emitTimerUpdate: emitStageTimerUpdate,
     controller: true,
+    tickIntervalMs: 1000,
+    renderTickIntervalMs: null,
   });
   const { commitTimerState } = actions;
   const latestTimerStateRef = React.useRef(timerState);
@@ -253,14 +412,7 @@ const TimerControlModule = () => {
   const active = timerState.running || timerState.paused;
   const activeTimerUsesSets = active && Array.isArray(timerState.sets) && timerState.sets.length > 0;
   const setRuntimeOptionsEnabled = useSets || activeTimerUsesSets;
-  const accent = intensity === 'critical' ? '#EF4444' : intensity === 'warning' ? '#F59E0B' : displaySettings.accentColor;
   const showSecondaryText = displaySettings.showSecondaryText !== false;
-  const globalClockValue = React.useMemo(() => formatGlobalClock(now, {
-    clockHour12: displaySettings.clockHour12,
-    clockShowSeconds: displaySettings.clockShowSeconds,
-    clockShowPeriod: displaySettings.clockShowPeriod,
-  }), [displaySettings.clockHour12, displaySettings.clockShowPeriod, displaySettings.clockShowSeconds, now]);
-  const globalClockParts = React.useMemo(() => splitClockPeriod(globalClockValue), [globalClockValue]);
 
   React.useEffect(() => {
     latestTimerStateRef.current = timerState;
@@ -514,65 +666,7 @@ const TimerControlModule = () => {
           </section>
 
           <section className={`rounded-lg border p-4 flex flex-col ${panelClass}`}>
-            <div
-              className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
-              style={{ backgroundColor: displaySettings.backgroundColor }}
-            >
-              {showSecondaryText && (
-                <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
-                  {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
-                </div>
-              )}
-              <div
-                className="leading-none max-w-full"
-                style={{
-                  color: intensity === 'critical' ? '#EF4444' : displaySettings.textColor,
-                  fontFamily: displaySettings.timerFontFamily,
-                  fontSize: displaySettings.timerFontSizeMode === 'manual' ? `${displaySettings.timerFontSize}px` : 'clamp(4rem, 12vw, 10rem)',
-                  fontWeight: displaySettings.timerBold ? 700 : 400,
-                  fontStyle: displaySettings.timerItalic ? 'italic' : 'normal',
-                  textDecoration: displaySettings.timerUnderline ? 'underline' : 'none',
-                  textAlign: displaySettings.timerAlign,
-                  fontVariantNumeric: 'tabular-nums',
-                  fontFeatureSettings: '"tnum" 1, "lnum" 1',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {displayValue}
-              </div>
-              {showSecondaryText && timerState.sets?.length > 1 && (
-                <div className="mt-4 text-xs text-white/70">
-                  {timerState.activeSetIndex + 1} of {timerState.sets.length}
-                </div>
-              )}
-              {displaySettings.showProgress && (
-                <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
-                </div>
-              )}
-            </div>
-
-            {showSecondaryText && displaySettings.showGlobalClock && (
-              <div
-                className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
-                style={{
-                  backgroundColor: displaySettings.backgroundColor,
-                  borderColor: 'rgba(255,255,255,0.14)',
-                }}
-              >
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Global Time</span>
-                <span
-                  className="font-mono text-2xl font-semibold text-white/80"
-                  style={{
-                    fontVariantNumeric: 'tabular-nums',
-                    fontFeatureSettings: '"tnum" 1, "lnum" 1',
-                  }}
-                >
-                  {globalClockParts.time}
-                  {globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
-                </span>
-              </div>
-            )}
+            <TimerPreview timerState={timerState} displaySettings={displaySettings} />
 
             <div className="mt-4 space-y-2">
               <div className="grid grid-cols-2 gap-2">
@@ -633,11 +727,15 @@ const TimerControlModule = () => {
                   </div>
                   <div className="space-y-2 min-w-0">
                     <label className="block text-xs font-medium truncate">Background</label>
-                    <ColorPicker
-                      value={displaySettings.backgroundColor}
-                      onChange={(value) => applyTimerDisplaySettings({ backgroundColor: value })}
+                    <PaintPicker
+                      value={displaySettings.backgroundPaint}
+                      fallbackColor={displaySettings.backgroundColor || '#000000'}
+                      onChange={(value) => applyTimerDisplaySettings({
+                        backgroundPaint: value,
+                        ...(value?.type === 'solid' ? { backgroundColor: value.color } : {}),
+                      })}
                       darkMode={darkMode}
-                      showHex
+                      showValue
                       className={inputClass}
                     />
                   </div>

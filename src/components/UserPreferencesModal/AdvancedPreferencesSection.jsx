@@ -1,7 +1,8 @@
-import { AlertTriangle, Loader2, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, FileText, Loader2, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { setDebugLogging } from '../../utils/logger';
 
 const AdvancedPreferencesSection = ({
   commitNumberPreference,
@@ -15,11 +16,13 @@ const AdvancedPreferencesSection = ({
   labelClass,
   loadSecurityStatus,
   mutedClass,
+  preferenceFieldLabelClass,
   preferences,
   securityLoading,
   securityRotating,
   securityStatus,
   setNumberInputDraft,
+  showModal,
   showToast,
   updatePreference,
 }) => (
@@ -108,6 +111,36 @@ const AdvancedPreferencesSection = ({
       </Button>
     </div>
 
+    <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <FileText className={`w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
+            <label className={`text-sm font-medium ${labelClass}`}>Operator Action Log</label>
+          </div>
+          <p className={`mt-1 text-xs ${mutedClass}`}>
+            Review recent line, setlist, output, stage, safety, and remote controller actions.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => showModal?.({
+            title: 'Operator Action Log',
+            headerDescription: 'Review recent live-control actions and export a text copy',
+            component: 'OperatorActionLog',
+            variant: 'info',
+            size: 'lg',
+            customLayout: true,
+            actions: [{ label: 'Close', variant: 'outline' }],
+          })}
+          className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
+        >
+          View Log
+        </Button>
+      </div>
+    </div>
+
     <div className="flex items-center justify-between">
       <div>
         <label className={`text-sm font-medium ${labelClass}`}>Debug Logging</label>
@@ -115,7 +148,10 @@ const AdvancedPreferencesSection = ({
       </div>
       <Switch
         checked={preferences.advanced?.enableDebugLogging ?? false}
-        onCheckedChange={(checked) => updatePreference('advanced', 'enableDebugLogging', checked)}
+        onCheckedChange={(checked) => {
+          updatePreference('advanced', 'enableDebugLogging', checked);
+          setDebugLogging(checked);
+        }}
         className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
           ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
           : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -158,7 +194,7 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className="space-y-2">
-      <label className={`text-sm font-medium ${labelClass}`}>Connection Timeout (ms)</label>
+      <label className={preferenceFieldLabelClass}>Connection Timeout (ms)</label>
       <Input
         type="number"
         min="5000"
@@ -178,7 +214,7 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className="space-y-2">
-      <label className={`text-sm font-medium ${labelClass}`}>Heartbeat Interval (ms)</label>
+      <label className={preferenceFieldLabelClass}>Heartbeat Interval (ms)</label>
       <Input
         type="number"
         min="10000"
@@ -198,7 +234,7 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className="space-y-2">
-      <label className={`text-sm font-medium ${labelClass}`}>Max Connection Attempts</label>
+      <label className={preferenceFieldLabelClass}>Max Connection Attempts</label>
       <Input
         type="number"
         min="3"

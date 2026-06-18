@@ -221,7 +221,6 @@ export default function LyricsList({
   } = useSectionNavigation({
     listRef,
     useVirtualized,
-    lyricsLength: lyrics.length,
     onLineSelect: handleLineClickPlain,
   });
 

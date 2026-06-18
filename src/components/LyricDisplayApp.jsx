@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useMultipleFileUpload from '../hooks/useMultipleFileUpload';
@@ -20,7 +20,7 @@ import useSetlistActions from '../hooks/LyricDisplayApp/useSetlistActions';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { MAX_CUSTOM_OUTPUTS } from '../context/LyricsStore';
+import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegistry.js';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
 import { useSyncOutputs } from '../hooks/useSyncOutputs';
 import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
@@ -58,6 +58,7 @@ const LyricDisplayApp = () => {
   const maxSetlistFiles = getMaxSetlistFiles();
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
+  const { skipSectionTitlesOnKeyboard } = useKeyboardNavigationPreferences();
 
   useDarkModeSync(darkMode, setDarkMode);
 
@@ -88,7 +89,11 @@ const LyricDisplayApp = () => {
 
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch: baseHandleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
 
-  const trackAction = React.useCallback(() => { }, []);
+  const trackAction = React.useCallback((actionType) => {
+    window.dispatchEvent(new CustomEvent('support-dev:track-action', {
+      detail: { actionType }
+    }));
+  }, []);
   const { showToast } = useToast();
   const { showModal } = useModal();
 
@@ -139,6 +144,8 @@ const LyricDisplayApp = () => {
     remoteAutoplayActive,
     handleAutoplayToggle,
     handleIntelligentAutoplayToggle,
+    handleIntelligentAutoplayStart,
+    handleIntelligentAutoplayStop,
     handleOpenAutoplaySettings
   } = useAutoplayManager({
     lyrics,
@@ -319,6 +326,20 @@ const LyricDisplayApp = () => {
     });
   }, [showModal]);
 
+  React.useEffect(() => {
+    window.addEventListener('open-setlist-modal', handleOpenSetlist);
+    window.addEventListener('open-online-lyrics-search', handleOpenOnlineLyricsSearch);
+    window.addEventListener('sync-outputs-from-menu', handleSyncOutputs);
+    window.addEventListener('open-user-preferences', handleOpenPreferences);
+
+    return () => {
+      window.removeEventListener('open-setlist-modal', handleOpenSetlist);
+      window.removeEventListener('open-online-lyrics-search', handleOpenOnlineLyricsSearch);
+      window.removeEventListener('sync-outputs-from-menu', handleSyncOutputs);
+      window.removeEventListener('open-user-preferences', handleOpenPreferences);
+    };
+  }, [handleOpenOnlineLyricsSearch, handleOpenPreferences, handleOpenSetlist, handleSyncOutputs]);
+
   useKeyboardShortcuts({
     hasLyrics,
     lyrics,
@@ -343,7 +364,8 @@ const LyricDisplayApp = () => {
     handleNavigateSetlistPrevious,
     handleNavigateSetlistNext,
     handleOpenPreferences,
-    availableOutputIds: allOutputIds
+    availableOutputIds: allOutputIds,
+    skipSectionTitlesOnKeyboard
   });
 
   useExternalControl({
@@ -351,6 +373,7 @@ const LyricDisplayApp = () => {
     selectedLine,
     isOutputOn,
     autoplayActive,
+    intelligentAutoplayActive,
     selectLine,
     setIsOutputOn,
     emitLineUpdate,
@@ -359,8 +382,13 @@ const LyricDisplayApp = () => {
     emitOutput2Toggle: (enabled) => emitIndividualOutputToggle({ output: 'output2', enabled }),
     emitStageToggle: (enabled) => emitIndividualOutputToggle({ output: 'stage', enabled }),
     handleAutoplayToggle,
+    handleIntelligentAutoplayToggle,
+    handleIntelligentAutoplayStart,
+    handleIntelligentAutoplayStop,
     handleSetlistNext: handleNavigateSetlistNext,
     handleSetlistPrev: handleNavigateSetlistPrevious,
+    setlistFiles,
+    emitSetlistLoad,
     handleSyncOutputs,
     showToast,
     songName: lyricsFileName,
@@ -508,7 +536,7 @@ const LyricDisplayApp = () => {
                     </TabsTrigger>
                   );
                 })}
-                {allOutputIds.length < 2 + MAX_CUSTOM_OUTPUTS && (
+                {allOutputIds.length < DEFAULT_OUTPUT_IDS.length + MAX_CUSTOM_OUTPUTS && (
                   <Tooltip content="Add a new output" side="bottom">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAddOutput(); }}

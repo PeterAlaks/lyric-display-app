@@ -10,7 +10,7 @@ import { logDebug, logError, logWarn } from '../utils/logger';
 const LONG_BACKOFF_WARNING_MS = 4000;
 
 const useSocket = (role = 'output', options = {}) => {
-  const { enabled = true } = options;
+  const { enabled = true, preview = false } = options;
   const socketRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
@@ -128,6 +128,24 @@ const useSocket = (role = 'output', options = {}) => {
     });
   }, [clientId]);
 
+  const disposeCurrentSocket = useCallback((socket, reason) => {
+    if (!socket || socketRef.current !== socket) {
+      return false;
+    }
+
+    socketRef.current = null;
+    stopHeartbeat();
+
+    try {
+      socket.removeAllListeners();
+      socket.disconnect();
+    } catch (error) {
+      logError(`Socket dispose error (${clientId}, ${reason}):`, error);
+    }
+
+    return true;
+  }, [clientId, stopHeartbeat]);
+
   const connectSocketInternal = useCallback(async () => {
     if (!enabled) {
       return;
@@ -214,7 +232,7 @@ const useSocket = (role = 'output', options = {}) => {
         timeout: settings.connectionTimeout,
         reconnection: false,
         forceNew: true,
-        auth: { token },
+        auth: { token, preview: Boolean(preview) },
       };
 
       socketRef.current = io(socketUrl, socketOptions);
@@ -235,7 +253,11 @@ const useSocket = (role = 'output', options = {}) => {
         const handleConnectError = (error) => {
           logError(`Socket connection error (${clientId}):`, error);
           connectionManager.recordConnectionFailure(clientId, error);
+          if (error?.message?.includes('Authentication') || error?.message?.includes('token')) {
+            handleAuthError(error.message, false);
+          }
           setConnectionStatus('error');
+          disposeCurrentSocket(socket, 'connect_error');
           scheduleRetry();
         };
 
@@ -244,7 +266,8 @@ const useSocket = (role = 'output', options = {}) => {
           setConnectionStatus('disconnected');
           stopHeartbeat();
 
-          if (reason !== 'io client disconnect' && reason !== 'transport close') {
+          if (reason !== 'io client disconnect') {
+            disposeCurrentSocket(socket, `disconnect:${reason}`);
             scheduleRetry();
           }
         };
@@ -285,9 +308,11 @@ const useSocket = (role = 'output', options = {}) => {
     setAuthStatus,
     setConnectionStatus,
     cleanupSocket,
+    disposeCurrentSocket,
     emitBackoffWarning,
     clearBackoffWarning,
-    enabled
+    enabled,
+    preview
   ]);
 
   const scheduleRetry = useCallback(() => {

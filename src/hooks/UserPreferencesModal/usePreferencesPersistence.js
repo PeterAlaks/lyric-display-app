@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useLyricsStore, { loadPreferencesIntoStore } from '../../context/LyricsStore';
+import { loadAdvancedSettings } from '../../utils/connectionManager';
+import { loadDebugLoggingPreference } from '../../utils/logger';
+import { LIVE_SAFETY_PREFERENCE_EVENT } from '../useLiveSafetyBridge';
 
 export const usePreferencesPersistence = ({ showToast }) => {
   const [preferences, setPreferences] = useState(null);
@@ -53,6 +56,8 @@ export const usePreferencesPersistence = ({ showToast }) => {
           setLastSaved(new Date());
 
           await loadPreferencesIntoStore(useLyricsStore);
+          await loadAdvancedSettings();
+          await loadDebugLoggingPreference();
 
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {
@@ -82,14 +87,14 @@ export const usePreferencesPersistence = ({ showToast }) => {
         savePreferences(newPreferences);
       }, 300);
 
-      if (category === 'parsing' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-        window.dispatchEvent(new CustomEvent('parsing-preferences-updated', {
-          detail: newPreferences.parsing || {}
-        }));
-      }
-
       return newPreferences;
     });
+
+    if (category === 'parsing' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('parsing-preferences-updated', {
+        detail: { [key]: value }
+      }));
+    }
   }, [savePreferences]);
 
   const updateNestedPreference = useCallback((category, subcategory, key, value) => {
@@ -121,6 +126,9 @@ export const usePreferencesPersistence = ({ showToast }) => {
         const result = await window.electronAPI.preferences.getAll();
         if (result.success) {
           setPreferences(result.preferences);
+          await loadPreferencesIntoStore(useLyricsStore);
+          await loadAdvancedSettings();
+          await loadDebugLoggingPreference();
           setLastSaved(new Date());
           if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
           confirmationTimeoutRef.current = setTimeout(() => {
@@ -131,6 +139,27 @@ export const usePreferencesPersistence = ({ showToast }) => {
     } catch (error) {
       console.error('Failed to reset category:', error);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleLiveSafetyPreferenceUpdated = (event) => {
+      const enabled = event?.detail?.enabled;
+      if (typeof enabled !== 'boolean') return;
+
+      setPreferences((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          general: {
+            ...prev.general,
+            liveSafetyMode: enabled,
+          },
+        };
+      });
+    };
+
+    window.addEventListener(LIVE_SAFETY_PREFERENCE_EVENT, handleLiveSafetyPreferenceUpdated);
+    return () => window.removeEventListener(LIVE_SAFETY_PREFERENCE_EVENT, handleLiveSafetyPreferenceUpdated);
   }, []);
 
   useEffect(() => {

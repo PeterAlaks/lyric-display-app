@@ -18,6 +18,23 @@ const isProjectionUrl = (url) => /[?&]projection=(1|true)\b/i.test(String(url ||
 
 const normalizeOutputKey = (value) => (typeof value === 'string' ? value.toLowerCase() : '');
 
+const shouldMakeDesktopProjectionFocusable = (targetType) => (
+  targetType === 'desktop' && process.platform !== 'win32'
+);
+
+const buildProjectionRoute = (route, { escapeHint = false } = {}) => (
+  `${route}?projection=1${escapeHint ? '&escapeHint=1' : ''}`
+);
+
+const isPlainEscapeKeyDown = (input) => (
+  input?.type === 'keyDown' &&
+  input.key === 'Escape' &&
+  !input.control &&
+  !input.meta &&
+  !input.alt &&
+  !input.shift
+);
+
 const normalizeDisplayId = (value) => {
   if (value === null || typeof value === 'undefined' || value === '') return null;
   const numeric = Number(value);
@@ -60,6 +77,42 @@ const waitForProjectionWindowClosed = async (win) => {
       console.warn('[IPC] Failed to close projection window:', error);
       finish();
     }
+  });
+};
+
+const stopProjectionForWindow = async (win, reason = 'unknown') => {
+  if (!win || win.isDestroyed() || win.__projectionClosePending) return false;
+
+  win.__projectionClosePending = true;
+
+  try {
+    const outputKey = resolveOutputKeyFromUrl(win.webContents.getURL());
+    if (outputKey) {
+      displayManager.removeAssignmentsByOutput(outputKey);
+    }
+
+    await waitForProjectionWindowClosed(win);
+    console.log('[IPC] Projection window closed:', { outputKey, reason });
+    return true;
+  } catch (error) {
+    console.warn('[IPC] Failed to stop projection window:', error);
+    return false;
+  } finally {
+    if (win && !win.isDestroyed()) {
+      win.__projectionClosePending = false;
+    }
+  }
+};
+
+const attachProjectionEscapeHandler = (win) => {
+  if (!win || win.isDestroyed() || win.__projectionEscapeHandlerAttached) return;
+  win.__projectionEscapeHandlerAttached = true;
+
+  win.webContents.on('before-input-event', (event, input) => {
+    if (!isPlainEscapeKeyDown(input)) return;
+
+    event.preventDefault();
+    stopProjectionForWindow(win, 'escape-key');
   });
 };
 
@@ -107,18 +160,31 @@ const waitForWindowLoad = async (win) => {
   });
 };
 
-const applyProjectionWindowBehavior = (win) => {
+const applyProjectionWindowBehavior = (win, { keyboardFocusable = false } = {}) => {
   if (!win || win.isDestroyed()) return;
 
   try { win.setMenuBarVisibility(false); } catch { }
   try { win.setBackgroundColor('#000000'); } catch { }
   try { win.setAlwaysOnTop(false); } catch { }
   try { win.setSkipTaskbar(true); } catch { }
-  try { win.setFocusable(false); } catch { }
+  try { win.setFocusable(Boolean(keyboardFocusable)); } catch { }
   try { win.setIgnoreMouseEvents(true, { forward: true }); } catch { }
   try { win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true }); } catch { }
   try { win.setFullScreenable(true); } catch { }
   try { win.setResizable(false); } catch { }
+  attachProjectionEscapeHandler(win);
+};
+
+const focusProjectionForEscape = (win) => {
+  if (!win || win.isDestroyed()) return;
+
+  setTimeout(() => {
+    if (!win || win.isDestroyed()) return;
+    try {
+      win.setFocusable(true);
+      win.focus();
+    } catch { }
+  }, 100);
 };
 
 const moveProjectionToPrimaryDisplay = (win) => {
@@ -295,11 +361,13 @@ export function registerDisplayHandlers({ getMainWindow }) {
       const outputKey = normalizeOutputKey(payload?.outputKey);
       const targetType = payload?.targetType === 'display' ? 'display' : 'desktop';
       const displayId = normalizeDisplayId(payload?.displayId);
+      const keyboardFocusable = shouldMakeDesktopProjectionFocusable(targetType);
 
       const route = resolveOutputRoute(outputKey);
       if (!route) {
         return { success: false, error: 'Invalid output key' };
       }
+      const projectionRoute = buildProjectionRoute(route, { escapeHint: keyboardFocusable });
 
       if (targetType === 'display' && (displayId === null || typeof displayId === 'undefined')) {
         return { success: false, error: 'Display ID is required for external projection' };
@@ -326,16 +394,17 @@ export function registerDisplayHandlers({ getMainWindow }) {
       }
 
       if (!projectionWindow || projectionWindow.isDestroyed()) {
-        projectionWindow = createWindow(`${route}?projection=1`, {
+        projectionWindow = createWindow(projectionRoute, {
           projection: true,
           backgroundColor: '#000000',
+          projectionFocusable: keyboardFocusable,
         });
       } else if (!isProjectionUrl(projectionWindow.webContents.getURL())) {
-        projectionWindow.loadURL(projectionWindow.webContents.getURL().replace(route, `${route}?projection=1`));
+        projectionWindow.loadURL(projectionWindow.webContents.getURL().replace(route, projectionRoute));
       }
 
       await waitForWindowLoad(projectionWindow);
-      applyProjectionWindowBehavior(projectionWindow);
+      applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable });
 
       const currentProjections = collectProjectionState();
       const targetLocationKey = targetType === 'desktop'
@@ -374,7 +443,9 @@ export function registerDisplayHandlers({ getMainWindow }) {
         }
       } catch { }
 
-      if (targetType === 'desktop') {
+      if (keyboardFocusable) {
+        focusProjectionForEscape(projectionWindow);
+      } else if (targetType === 'desktop') {
         const mainWindow = getMainWindow?.();
         if (mainWindow && !mainWindow.isDestroyed()) {
           setTimeout(() => {

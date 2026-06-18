@@ -9,13 +9,15 @@ import { registerLyricsHandlers } from './realtime/handlers/lyricsHandlers.js';
 import { registerOutputHandlers } from './realtime/handlers/outputHandlers.js';
 import { registerStageHandlers } from './realtime/handlers/stageHandlers.js';
 import { registerDraftHandlers } from './realtime/handlers/draftHandlers.js';
+import { registerLiveSafetyHandlers } from './realtime/handlers/liveSafetyHandlers.js';
+import { registerActionLogHandlers } from './realtime/handlers/actionLogHandlers.js';
 
 export { getOutputRegistry, hasOutput };
 
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
-    const { clientType, deviceId, sessionId } = socket.userData;
-    const connected = registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId });
+    const { clientType, deviceId, sessionId, isPreview } = socket.userData;
+    const connected = registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId, isPreview });
 
     if (!connected) {
       return;
@@ -28,6 +30,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
       clientType,
       deviceId,
       sessionId,
+      isPreview,
     };
 
     registerCurrentStateHandler(context);
@@ -36,8 +39,9 @@ export default function registerSocketEvents(io, { hasPermission }) {
     registerOutputHandlers(context);
     registerStageHandlers(context);
     registerDraftHandlers(context);
+    registerLiveSafetyHandlers(context);
+    registerActionLogHandlers(context);
   });
 
   startConnectionStatsLogger();
 }
-

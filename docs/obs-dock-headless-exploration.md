@@ -209,33 +209,30 @@ No desktop window or join code should be required in this production headless pa
 
 ## Dev Testing Flow
 
-The most reliable dev test is to provide the same pairing/auth context manually.
+Use the dedicated dev command to run Vite and Electron with headless OBS dock auth enabled:
 
-One option:
-
-```powershell
-$env:LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-npm run electron -- --headless
-```
-
-Then open the OBS dock at:
-
-```text
-http://localhost:5173/obs-dock.html?obsPairingToken=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-```
-
-Another option is to test local headless auth:
-
-```powershell
-$env:LYRICDISPLAY_HEADLESS="1"
-$env:LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH="1"
-npm run electron -- --headless
+```bash
+npm run electron-dev:headless
 ```
 
 Then open:
 
 ```text
 http://localhost:5173/obs-dock.html
+```
+
+For explicit protocol-pairing testing, you can still pass a deterministic token manually:
+
+```powershell
+$env:LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+$env:LYRICDISPLAY_HEADLESS="1"
+npm run electron-dev
+```
+
+Then open the OBS dock at:
+
+```text
+http://localhost:5173/obs-dock.html?obsPairingToken=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 ```
 
 Do not assume `lyricdisplay://start-headless` will work from OBS in dev. OBS may block it just as it does in production.

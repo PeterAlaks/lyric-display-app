@@ -30,7 +30,10 @@ function applyIntelligentSplittingWithTimestamps(entries = [], options = {}) {
     if (!entry || typeof entry.text !== 'string') continue;
 
     const trimmed = entry.text.trim();
-    if (!trimmed) continue;
+    if (!trimmed) {
+      result.push({ text: '', t: entry.t });
+      continue;
+    }
 
     if (isTranslationLine(trimmed)) {
       result.push({ text: trimmed, t: entry.t });
@@ -89,11 +92,7 @@ export function parseLrcContent(rawText = '', options = {}) {
       let text = line.replace(TIME_TAG_REGEX, '').trim();
       text = preprocessText(text);
 
-      if (!text && times.length > 0) {
-        text = 'â™ª';
-      }
-
-      if (!text) continue;
+      if (!text && times.length === 0) continue;
 
       if (times.length === 0) {
         entries.push({ t: null, text });

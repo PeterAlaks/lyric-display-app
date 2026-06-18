@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron';
+import './main/appIdentity.js';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';
@@ -14,6 +15,7 @@ import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
 import { registerObsDockPairingToken } from './main/backend.js';
 import * as userPreferences from './main/userPreferences.js';
+import { initFileLogging } from './main/logging.js';
 
 const APP_PROTOCOL = 'lyricdisplay';
 
@@ -125,6 +127,7 @@ function attachMainWindowLifecycle(win) {
             allowBackdropClose: false
           },
           {
+            timeout: false,
             fallback: async () => {
               const fallbackChoice = await dialog.showMessageBox(win, {
                 type: 'question',
@@ -240,6 +243,8 @@ const hasLock = setupSingleInstanceLock((commandLine) => {
 if (!hasLock) {
   process.exit(0);
 }
+
+initFileLogging();
 
 if (process.platform === 'win32' && process.argv.length >= 2) {
   const filePath = extractFilePathFromArgs(process.argv);

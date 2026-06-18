@@ -15,7 +15,6 @@ const isLoopbackRequest = (req) => {
     req.ip,
     req.socket?.remoteAddress,
     req.connection?.remoteAddress,
-    req.hostname,
   ];
 
   return candidates.some((candidate) => LOOPBACK_HOSTS.has(normalizeLoopbackCandidate(candidate)));
@@ -25,4 +24,3 @@ export const localhostOnly = (req, res, next) => {
   if (isLoopbackRequest(req)) return next();
   return res.status(403).json({ error: 'Local access only' });
 };
-

@@ -35,6 +35,7 @@ export const DEFAULT_TIMER_DISPLAY = {
   warningColor: '#F59E0B',
   criticalColor: '#EF4444',
   backgroundColor: '#000000',
+  backgroundPaint: { type: 'solid', color: '#000000' },
   timerFontFamily: 'Bebas Neue',
   timerFontSizeMode: 'auto',
   timerFontSize: 180,
@@ -46,11 +47,38 @@ export const DEFAULT_TIMER_DISPLAY = {
   showProgress: true,
   showClockWhenIdle: true,
   showGlobalClock: true,
-  otherItemsScale: 0.15,
-  globalClockScale: 0.15,
+  otherItemsScale: 0.1,
+  globalClockScale: 0.1,
   clockHour12: false,
   clockShowSeconds: false,
   clockShowPeriod: true,
+};
+
+const LEGACY_DEFAULT_OTHER_ITEMS_SCALE = 0.15;
+
+export const normalizeTimerDisplaySettings = (raw) => {
+  const settings = raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? raw
+    : {};
+  const displayUpdatedAt = Number.isFinite(Number(settings.displayUpdatedAt)) ? Number(settings.displayUpdatedAt) : 0;
+  const rawScale = settings.otherItemsScale ?? settings.globalClockScale;
+  const numericScale = Number(rawScale);
+  const shouldMigrateLegacyScale = displayUpdatedAt <= 0
+    && Number.isFinite(numericScale)
+    && numericScale === LEGACY_DEFAULT_OTHER_ITEMS_SCALE;
+  const otherItemsScale = shouldMigrateLegacyScale
+    ? DEFAULT_TIMER_DISPLAY.otherItemsScale
+    : (rawScale ?? DEFAULT_TIMER_DISPLAY.otherItemsScale);
+
+  return {
+    ...DEFAULT_TIMER_DISPLAY,
+    ...settings,
+    otherItemsScale,
+    globalClockScale: shouldMigrateLegacyScale
+      ? DEFAULT_TIMER_DISPLAY.globalClockScale
+      : (settings.globalClockScale ?? otherItemsScale),
+    displayUpdatedAt,
+  };
 };
 
 export const createIdleTimerState = () => ({
@@ -154,6 +182,7 @@ export const normalizeTimerControlSettings = (raw) => {
     indicatorEnabled: settings.indicatorEnabled !== false,
     indicatorSeconds: normalizeTimerNumberInput(settings.indicatorSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds, 0, 86400),
     indicatorLabel: typeof settings.indicatorLabel === 'string' ? settings.indicatorLabel : DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+    settingsUpdatedAt: Number.isFinite(Number(settings.settingsUpdatedAt)) ? Number(settings.settingsUpdatedAt) : 0,
   };
 };
 
@@ -204,12 +233,7 @@ export const normalizeTimerState = (raw) => {
     indicatorEnabled: Boolean(raw.indicatorEnabled),
     indicatorDurationMs: clampNumber(raw.indicatorDurationMs, 10000, 0),
     indicatorLabel: String(raw.indicatorLabel || 'Next timer starts in'),
-    display: {
-      ...DEFAULT_TIMER_DISPLAY,
-      ...(raw.display && typeof raw.display === 'object' ? raw.display : {}),
-      otherItemsScale: raw.display?.otherItemsScale ?? raw.display?.globalClockScale ?? DEFAULT_TIMER_DISPLAY.otherItemsScale,
-      displayUpdatedAt: Number.isFinite(Number(raw.display?.displayUpdatedAt)) ? Number(raw.display.displayUpdatedAt) : 0,
-    },
+    display: normalizeTimerDisplaySettings(raw.display),
     updatedAt: Number.isFinite(Number(raw.updatedAt)) ? Number(raw.updatedAt) : Date.now(),
   };
 };
@@ -296,6 +320,21 @@ export const getTimerProgress = (timerState, now = Date.now()) => {
   const duration = state.phase === 'indicator' ? state.indicatorDurationMs : state.durationMs;
   if (!Number.isFinite(remainingMs) || duration <= 0) return 0;
   return Math.min(1, Math.max(0, 1 - (Math.max(0, remainingMs) / duration)));
+};
+
+export const isTimerVisiblyActive = (timerState, now = Date.now()) => {
+  const state = normalizeTimerState(timerState);
+  if (state.paused) return true;
+  if (!state.running) return false;
+  if (state.mode === 'countup' || state.overrunMode) return true;
+
+  const remainingMs = getRemainingMs(state, now);
+  if (!Number.isFinite(remainingMs) || remainingMs > 0) return true;
+
+  const nextIndex = state.activeSetIndex + 1;
+  const hasNextSet = Boolean(state.sets?.[nextIndex]);
+  if (state.phase === 'indicator') return hasNextSet;
+  return hasNextSet && state.autoStartNext;
 };
 
 export const formatGlobalClock = (dateOrMs = Date.now(), options = {}) => {

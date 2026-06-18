@@ -110,6 +110,20 @@ const MobileLayout = () => {
     };
   }, [showModal]);
 
+  React.useEffect(() => {
+    const handleLiveSafetyBlocked = (event) => {
+      showToast({
+        title: 'Live safety mode',
+        message: event?.detail?.reason || 'The desktop controller has limited secondary controllers to line navigation during service.',
+        variant: 'warn',
+        duration: 5000,
+      });
+    };
+
+    window.addEventListener('live-safety-blocked', handleLiveSafetyBlocked);
+    return () => window.removeEventListener('live-safety-blocked', handleLiveSafetyBlocked);
+  }, [showToast]);
+
   const handleLineSelect = (index) => {
     if (!isAuthenticated || !ready) {
       return;
@@ -489,12 +503,12 @@ const MobileLayout = () => {
 
         {/* Fixed Footer */}
         <div
-          className={`px-4 py-3 text-center text-xs border-t flex-shrink-0 ${darkMode
+          className={`px-4 py-3 text-center text-xs border-t flex-shrink-0 whitespace-normal break-words ${darkMode
             ? 'text-gray-400 bg-gray-800 border-gray-700'
             : 'text-gray-600 bg-gray-50 border-gray-200'
             }`}
         >
-          © {new Date().getFullYear()} LyricDisplay. All rights reserved. Designed and developed by Peter Alakembi and David Okaliwe.
+          © {new Date().getFullYear()} LyricDisplay. Designed and developed by Peter Alakembi and David Okaliwe, among other contributors.
         </div>
 
         {/* Setlist Modal */}

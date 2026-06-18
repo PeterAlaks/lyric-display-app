@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, ExternalLink, Globe } from 'lucide-react';
+import { ExternalLink, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -31,62 +31,50 @@ export function AboutAppModal({ darkMode = false, onClose, version = '1.0.0' }) 
       </div>
 
       {/* Copyright & Credits */}
-      <div className={cn(
-        'rounded-xl p-4 space-y-3',
-        darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
-      )}>
-        <div className="space-y-2">
-          <p className={cn(
-            'text-sm font-medium',
-            darkMode ? 'text-gray-200' : 'text-gray-900'
-          )}>
-            © {new Date().getFullYear()} LyricDisplay. All rights reserved.
-          </p>
-          <p className={cn(
-            'text-sm',
-            darkMode ? 'text-gray-400' : 'text-gray-600'
-          )}>
-            Designed and developed by <span className="font-medium">Peter Alakembi</span> and <span className="font-medium">David Okaliwe</span>.
-          </p>
-        </div>
+      <div className="space-y-2">
+        <p className={cn(
+          'text-sm font-medium',
+          darkMode ? 'text-gray-200' : 'text-gray-900'
+        )}>
+          &copy; {new Date().getFullYear()} LyricDisplay.
+        </p>
+        <p className={cn(
+          'text-sm',
+          darkMode ? 'text-gray-400' : 'text-gray-600'
+        )}>
+          Designed and developed by <span className="font-medium">Peter Alakembi</span> and <span className="font-medium">David Okaliwe</span>, among other contributors.
+        </p>
       </div>
 
       {/* Lyrics Provider Disclaimer */}
-      <div className={cn(
-        'rounded-xl p-4 space-y-3 border',
-        darkMode
-          ? 'bg-gray-800/30 border-gray-700'
-          : 'bg-gray-50 border-gray-200'
-      )}>
-        <div className="space-y-2">
-          <h4 className={cn(
-            'text-sm font-semibold',
-            darkMode ? 'text-gray-200' : 'text-gray-900'
-          )}>
-            Lyrics Provider Credits & Disclaimer
-          </h4>
-          <p className={cn(
-            'text-xs leading-relaxed',
-            darkMode ? 'text-gray-400' : 'text-gray-600'
-          )}>
-            This application integrates optional online lyrics search features. All lyrics, metadata,
-            and content obtained through these services remain the property of their respective copyright holders.
-          </p>
-          <p className={cn(
-            'text-xs leading-relaxed',
-            darkMode ? 'text-gray-400' : 'text-gray-600'
-          )}>
-            Logos and brand marks of providers are used for identification and attribution only and
-            do not imply endorsement or affiliation.
-          </p>
-          <p className={cn(
-            'text-xs leading-relaxed',
-            darkMode ? 'text-gray-400' : 'text-gray-600'
-          )}>
-            This feature is offered "as is" for convenience and educational purposes. LyricDisplay
-            and its developers are not affiliated with these content providers.
-          </p>
-        </div>
+      <div className="space-y-2">
+        <h4 className={cn(
+          'text-sm font-semibold',
+          darkMode ? 'text-gray-200' : 'text-gray-900'
+        )}>
+          Lyrics Provider Credits & Disclaimer
+        </h4>
+        <p className={cn(
+          'text-xs leading-relaxed',
+          darkMode ? 'text-gray-400' : 'text-gray-600'
+        )}>
+          This application integrates optional online lyrics search features. All lyrics, metadata,
+          and content obtained through these services remain the property of their respective copyright holders.
+        </p>
+        <p className={cn(
+          'text-xs leading-relaxed',
+          darkMode ? 'text-gray-400' : 'text-gray-600'
+        )}>
+          Logos and brand marks of providers are used for identification and attribution only and
+          do not imply endorsement or affiliation.
+        </p>
+        <p className={cn(
+          'text-xs leading-relaxed',
+          darkMode ? 'text-gray-400' : 'text-gray-600'
+        )}>
+          This feature is offered "as is" for convenience and educational purposes. LyricDisplay
+          and its developers are not affiliated with these content providers.
+        </p>
       </div>
 
       {/* Action Buttons */}

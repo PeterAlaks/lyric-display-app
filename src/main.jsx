@@ -2,8 +2,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './styles/fonts.css';
 import './index.css';
 import useLyricsStore from './context/LyricsStore';
+import { registerChunkLoadRecovery } from './utils/chunkLoadRecovery';
+
+registerChunkLoadRecovery();
 
 if (typeof window !== 'undefined' && window.electronAPI) {
   try {

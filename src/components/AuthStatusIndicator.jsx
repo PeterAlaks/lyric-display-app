@@ -1,9 +1,35 @@
 import React, { useCallback, useEffect } from 'react';
-import { Shield, ShieldAlert, ShieldCheck, RefreshCw, Copy } from 'lucide-react';
+import { Activity, Shield, ShieldAlert, ShieldCheck, RefreshCw, Copy } from 'lucide-react';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { resolveBackendUrl } from '../utils/network';
+import { Switch } from '@/components/ui/switch';
+import { useLiveSafetyBridge } from '../hooks/useLiveSafetyBridge';
+
+function LiveSafetyStatusCell({ darkMode }) {
+  const { liveSafety, setLiveSafetyEnabled, isAuthenticated, ready } = useLiveSafetyBridge();
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Live Safety</p>
+      <div className="flex items-center gap-3">
+        <Switch
+          checked={Boolean(liveSafety?.enabled)}
+          disabled={!isAuthenticated || !ready}
+          onCheckedChange={(checked) => setLiveSafetyEnabled(checked)}
+          className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+            ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+            : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+            }`}
+          thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+        />
+        <p className={`text-sm font-bold ${liveSafety?.enabled ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+          {liveSafety?.enabled ? 'On' : 'Off'}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshToken, darkMode = false, compact = false, className = '' }) => {
   const { showToast } = useToast();
@@ -15,22 +41,14 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     try {
       if (window.electronAPI?.getJoinCode) {
         const code = await window.electronAPI.getJoinCode();
-        if (code) {
-          setJoinCode(code);
-          return;
-        }
+        setJoinCode(code || null);
+        return;
       }
-
-      const response = await fetch(resolveBackendUrl('/api/auth/join-code'));
-      if (!response.ok) {
-        throw new Error(`Failed to fetch join code: ${response.status}`);
-      }
-      const payload = await response.json();
-      setJoinCode(payload?.joinCode || null);
+      setJoinCode(null);
     } catch (error) {
       console.warn('Failed to load join code', error);
     }
-  }, [resolveBackendUrl]);
+  }, []);
 
   useEffect(() => {
     refreshJoinCode();
@@ -162,7 +180,6 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
 
   const showAuthModal = () => {
     refreshJoinCode();
-    const showRetryButton = authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error';
     const showRefreshButton = authStatus === 'authenticated' && connectionStatus === 'connected';
 
     const statusDetails = getStatusDetails();
@@ -182,31 +199,46 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
 
     const actions = [];
 
-    if (showRetryButton) {
-      actions.push({
-        label: 'Retry Connection',
-        variant: 'primary',
-        onClick: () => {
-          onRetry();
-          return true;
-        }
-      });
-    }
-
-    if (showRefreshButton) {
-      actions.push({
-        label: 'Refresh Token',
-        variant: 'secondary',
-        onClick: () => {
-          onRefreshToken();
-          return true;
-        }
-      });
-    }
+    actions.push({
+      label: 'Connection Diagnostics',
+      variant: 'default',
+      onSelect: () => {
+        showModal({
+          title: 'Connection Diagnostics',
+          headerDescription: 'Inspect connected clients, sync state, and retry health',
+          component: 'ConnectionDiagnostics',
+          variant: 'info',
+          size: 'lg',
+          actions: [
+            { label: 'Close', variant: 'outline' },
+            {
+              label: 'Production Readiness',
+              variant: 'default',
+              onSelect: () => {
+                showModal({
+                  title: 'Production Readiness Check',
+                  headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+                  component: 'PreServiceHealth',
+                  variant: 'info',
+                  size: 'lg',
+                  customLayout: true,
+                  actions: [{ label: 'Close', variant: 'outline' }],
+                });
+              },
+            },
+          ],
+        });
+      },
+    });
 
     actions.push({
-      label: 'Close',
-      variant: 'secondary'
+      label: 'Refresh Token',
+      variant: 'outline',
+      disabled: !showRefreshButton,
+      onSelect: () => {
+        onRefreshToken();
+        return true;
+      }
     });
 
     const statusBody = (
@@ -219,7 +251,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border">
+        <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border">
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Connection</p>
             <p className="text-lg font-bold text-green-600 dark:text-green-400">{statusDetails.connection}</p>
@@ -228,6 +260,7 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Authentication</p>
             <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{statusDetails.auth}</p>
           </div>
+          <LiveSafetyStatusCell darkMode={darkMode} />
         </div>
 
         {subtext && (
@@ -257,6 +290,18 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
       }
     };
 
+    const handleOpenPreServiceHealth = () => {
+      showModal({
+        title: 'Production Readiness Check',
+        headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+        component: 'PreServiceHealth',
+        variant: 'info',
+        size: 'lg',
+        customLayout: true,
+        actions: [{ label: 'Close', variant: 'outline' }],
+      });
+    };
+
     const modalBody = joinCode ? (
       <>
         {statusBody}
@@ -274,6 +319,13 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
             >
               <Copy className="w-3 h-3" />
               Copy
+            </button>
+            <button
+              onClick={handleOpenPreServiceHealth}
+              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 border hover:shadow-sm hover:scale-[1.02] ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'}`}
+            >
+              <Activity className="w-3 h-3" />
+              Production Readiness
             </button>
           </div>
         </div>

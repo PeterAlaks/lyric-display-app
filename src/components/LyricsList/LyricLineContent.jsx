@@ -28,7 +28,7 @@ export default function LyricLineContent({
   isStructureTagLine,
   getNormalGroupLines,
 }) {
-  if (!line) return null;
+  if (line == null) return null;
 
   if (isStructureTagLine(line)) {
     return <div className="h-1" aria-hidden="true" />;

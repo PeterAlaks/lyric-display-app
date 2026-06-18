@@ -1,8 +1,11 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
 import useSharedTimer from '../hooks/useSharedTimer';
-import { formatGlobalClock, splitClockPeriod } from '../utils/timerUtils';
+import { formatGlobalClock, isTimerVisiblyActive, splitClockPeriod } from '../utils/timerUtils';
 import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
+import { paintToCss } from '../utils/paint';
+import ProjectionExitHint from '../components/ProjectionExitHint';
 
 const PERIOD_STYLE = {
   fontSize: '0.38em',
@@ -78,8 +81,13 @@ const useAutoFitText = (text, enabled = true) => {
 };
 
 const TimeDisplay = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
+
   useSocket('stage');
-  const { timerState, displayValue, intensity, now } = useSharedTimer({ controller: false });
+  const { timerState, displayValue, intensity, now, progress } = useSharedTimer({ controller: false });
   const { settings: timerDisplaySettings } = useTimerDisplaySettings();
 
   const display = React.useMemo(() => {
@@ -89,7 +97,7 @@ const TimeDisplay = () => {
       ? { ...localDisplay, ...stateDisplay }
       : { ...stateDisplay, ...localDisplay };
   }, [timerDisplaySettings, timerState.display]);
-  const hasActiveTimer = timerState.running || timerState.paused;
+  const hasActiveTimer = isTimerVisiblyActive(timerState, now);
   const shouldShowClock = !hasActiveTimer && display.showClockWhenIdle !== false;
   const clockValue = React.useMemo(() => formatGlobalClock(now, display), [display, now]);
   const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);
@@ -118,7 +126,7 @@ const TimeDisplay = () => {
   const autoFitEnabled = timerFontSizeMode !== 'manual';
   const { containerRef, textRef, fontSize: autoFontSize } = useAutoFitText(value, autoFitEnabled);
   const mainFontSize = autoFitEnabled ? (autoFontSize || 220) : (Number(display.timerFontSize) || 180);
-  const otherItemsScale = Math.min(2, Math.max(0.08, Number(display.otherItemsScale ?? display.globalClockScale) || 0.15));
+  const otherItemsScale = Math.min(2, Math.max(0.08, Number(display.otherItemsScale ?? display.globalClockScale) || 0.1));
   const otherItemsFontSize = Math.max(16, mainFontSize * otherItemsScale);
   const otherItemsFontFamily = display.fontFamily || 'Bebas Neue';
   const alignItems = display.timerAlign === 'left'
@@ -131,12 +139,13 @@ const TimeDisplay = () => {
     <div
       className="relative w-screen h-screen overflow-hidden flex items-center justify-center"
       style={{
-        backgroundColor: display.backgroundColor || '#000000',
+        background: paintToCss(display.backgroundPaint, display.backgroundColor || '#000000'),
         fontFamily: otherItemsFontFamily,
       }}
     >
+      <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       {label && (
-      <div className="absolute inset-x-0 top-[1.5vh] flex justify-center px-[1vw]">
+      <div className="absolute inset-x-0 top-[7vh] flex justify-center px-[1vw]">
         <div
           className="font-bold leading-none text-center"
           style={{
@@ -205,6 +214,25 @@ const TimeDisplay = () => {
             </div>
           )}
         </div>
+
+        {display.showProgress !== false && hasActiveTimer && (
+          <div
+            className="mx-auto mt-4 rounded-full overflow-hidden"
+            style={{
+              width: 'min(82vw, 1400px)',
+              height: 'clamp(8px, 1.2vh, 18px)',
+              backgroundColor: 'rgba(255,255,255,0.16)',
+            }}
+          >
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.max(0, Math.min(1, progress)) * 100}%`,
+                backgroundColor: accentColor,
+              }}
+            />
+          </div>
+        )}
 
         {showSecondaryText && hasActiveTimer && timerState.sets?.length > 1 && (
           <div className="mt-8 flex justify-center">

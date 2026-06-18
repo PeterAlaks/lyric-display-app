@@ -28,11 +28,11 @@ export function createSocketAuthenticator({ verifyToken }) {
       deviceId: decoded.deviceId,
       sessionId: decoded.sessionId,
       permissions: decoded.permissions,
-      connectedAt: Date.now()
+      connectedAt: Date.now(),
+      isPreview: socket.handshake.auth?.preview === true
     };
 
     console.log('Socket authenticated:', decoded.clientType, '(' + decoded.deviceId + ')');
     return next();
   };
 }
-

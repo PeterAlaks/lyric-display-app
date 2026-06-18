@@ -9,6 +9,7 @@
 
 import { app, ipcMain, BrowserWindow } from 'electron';
 import Store from 'electron-store';
+import { NDI_FOLDER_NAME, LEGACY_NDI_FOLDER_NAME } from './appIdentity.js';
 import path from 'path';
 import fs from 'fs';
 import * as userPreferences from './userPreferences.js';
@@ -16,6 +17,7 @@ import { spawn } from 'child_process';
 import { createNdiIpcClient } from './ndi/ipcClient.js';
 import { createOutputSettingsManager } from './ndi/outputSettings.js';
 import { createNdiInstaller } from './ndi/installer.js';
+import { DEFAULT_OUTPUT_IDS } from '../shared/outputRegistry.js';
 
 const isDev = !app.isPackaged;
 
@@ -113,6 +115,8 @@ const installer = createNdiInstaller({
   githubRepo: GITHUB_REPO,
   notifyAllWindows,
   getInstallPath,
+  getResolvedInstallPath,
+  getLegacyInstallPaths,
   getCompanionEntryPath,
   getPlatformAssetName,
   stopCompanion,
@@ -138,10 +142,15 @@ function destroyPersistentSocket() {
 
 function getInstallPath() {
   if (isDev) {
-    return path.join(app.getAppPath(), 'lyricdisplay-ndi');
+    return path.join(app.getAppPath(), LEGACY_NDI_FOLDER_NAME);
   }
 
-  return path.join(app.getPath('userData'), 'lyricdisplay-ndi');
+  return path.join(app.getPath('userData'), NDI_FOLDER_NAME);
+}
+
+function getLegacyInstallPaths() {
+  if (isDev) return [];
+  return [path.join(app.getPath('userData'), LEGACY_NDI_FOLDER_NAME)];
 }
 
 function getCompanionBinaryName() {
@@ -151,12 +160,42 @@ function getCompanionBinaryName() {
 }
 
 function getCompanionEntryPath() {
-  const binary = getCompanionBinaryName();
   const installPath = getInstallPath();
 
   if (isDev) {
     return path.join(installPath, 'src', 'main.js');
   }
+
+  const currentEntryPath = findCompanionEntryPath(installPath);
+  if (fs.existsSync(currentEntryPath)) return currentEntryPath;
+
+  for (const legacyInstallPath of getLegacyInstallPaths()) {
+    const legacyEntryPath = findCompanionEntryPath(legacyInstallPath);
+    if (fs.existsSync(legacyEntryPath)) return legacyEntryPath;
+  }
+
+  return currentEntryPath;
+}
+
+function getResolvedInstallPath() {
+  const installPath = getInstallPath();
+  if (isDev) return installPath;
+
+  if (fs.existsSync(findCompanionEntryPath(installPath))) {
+    return installPath;
+  }
+
+  for (const legacyInstallPath of getLegacyInstallPaths()) {
+    if (fs.existsSync(findCompanionEntryPath(legacyInstallPath))) {
+      return legacyInstallPath;
+    }
+  }
+
+  return installPath;
+}
+
+function findCompanionEntryPath(installPath) {
+  const binary = getCompanionBinaryName();
 
   // electron-builder zip archives may extract with the binary at the
   // top level or inside a subfolder.  On macOS the .app bundle may also
@@ -660,7 +699,7 @@ export function registerNdiIpcHandlers() {
 
   ipcMain.handle('ndi:register-outputs', async (_, { outputs }) => {
     const customOutputs = normalizeOutputList(outputs);
-    const registered = new Set(['output1', 'output2', ...customOutputs]);
+    const registered = new Set([...DEFAULT_OUTPUT_IDS, ...customOutputs]);
 
     for (const outputKey of registered) {
       ensureOutputSettings(outputKey);

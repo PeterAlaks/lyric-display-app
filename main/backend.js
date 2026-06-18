@@ -2,8 +2,68 @@ import path from 'path';
 import { fork } from 'child_process';
 import { resolveProductionPath } from './paths.js';
 import { app } from 'electron';
+import { mirrorStreamToLog } from './logging.js';
 
 let backendProcess = null;
+let backendStopRequested = false;
+let backendRestartTimer = null;
+let lastStartOptions = {};
+
+const BACKEND_TAIL_LIMIT = 64 * 1024;
+const BACKEND_RESTART_WINDOW_MS = 5 * 60_000;
+const BACKEND_SOFT_STARTUP_TIMEOUT_MS = 30_000;
+const BACKEND_HARD_STARTUP_TIMEOUT_MS = 120_000;
+const MAX_BACKEND_RESTARTS = 3;
+let backendRestartAttempts = [];
+
+function appendTail(current, chunk) {
+  const next = `${current}${Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk)}`;
+  return next.length > BACKEND_TAIL_LIMIT ? next.slice(-BACKEND_TAIL_LIMIT) : next;
+}
+
+function getRecentRestartAttempts() {
+  const now = Date.now();
+  backendRestartAttempts = backendRestartAttempts.filter((timestamp) => now - timestamp < BACKEND_RESTART_WINDOW_MS);
+  return backendRestartAttempts;
+}
+
+function scheduleBackendRestart(reason) {
+  if (backendStopRequested || backendRestartTimer) {
+    return;
+  }
+
+  const attempts = getRecentRestartAttempts();
+  if (attempts.length >= MAX_BACKEND_RESTARTS) {
+    console.error('[Backend] Restart limit reached; backend will remain stopped until app restart', {
+      reason,
+      attempts: attempts.length,
+      windowMs: BACKEND_RESTART_WINDOW_MS,
+    });
+    return;
+  }
+
+  const delayMs = 2000;
+  backendRestartAttempts.push(Date.now());
+  console.warn('[Backend] Scheduling runtime restart after unexpected exit', {
+    reason,
+    delayMs,
+    attempt: backendRestartAttempts.length,
+    maxAttempts: MAX_BACKEND_RESTARTS,
+    windowMs: BACKEND_RESTART_WINDOW_MS,
+  });
+
+  backendRestartTimer = setTimeout(() => {
+    backendRestartTimer = null;
+    if (backendStopRequested || backendProcess) {
+      return;
+    }
+
+    startBackend(lastStartOptions).catch((error) => {
+      console.error('[Backend] Runtime restart failed:', error);
+    });
+  }, delayMs);
+  backendRestartTimer.unref?.();
+}
 
 async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
   let attempts = 0;
@@ -37,10 +97,28 @@ async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
 
 export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false } = {}) {
   return new Promise((resolve, reject) => {
+    if (backendProcess && !backendProcess.killed) {
+      if (obsDockPairingToken) {
+        registerObsDockPairingToken(obsDockPairingToken);
+      }
+      if (allowLocalObsDockAuth) {
+        lastStartOptions = { ...lastStartOptions, allowLocalObsDockAuth: true };
+      }
+      resolve();
+      return;
+    }
+
+    lastStartOptions = { allowLocalObsDockAuth };
+    backendStopRequested = false;
+    if (backendRestartTimer) {
+      clearTimeout(backendRestartTimer);
+      backendRestartTimer = null;
+    }
+
     const serverPath = resolveProductionPath('server', 'index.js');
     const backendDataDir = path.join(app.getPath('userData'), 'backend');
 
-    backendProcess = fork(serverPath, [], {
+    const child = fork(serverPath, [], {
       cwd: path.dirname(serverPath),
       env: {
         ...process.env,
@@ -49,53 +127,134 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
         LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },
-      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+    });
+
+    backendProcess = child;
+
+    let stdoutTail = '';
+    let stderrTail = '';
+
+    mirrorStreamToLog(child.stdout, 'BACKEND', process.stdout);
+    mirrorStreamToLog(child.stderr, 'BACKEND_ERROR', process.stderr);
+    child.stdout?.on('data', (chunk) => {
+      stdoutTail = appendTail(stdoutTail, chunk);
+    });
+    child.stderr?.on('data', (chunk) => {
+      stderrTail = appendTail(stderrTail, chunk);
     });
 
     let isResolved = false;
+    let softStartupTimeout = null;
+    let hardStartupTimeout = null;
 
-    const timeout = setTimeout(async () => {
-      if (!isResolved) {
-        console.log('Backend process timeout, attempting health check...');
-
-        const isHealthy = await waitForBackendHealth(10, 1000);
-
-        if (isHealthy) {
-          console.log('Backend is healthy despite missing ready signal');
-          isResolved = true;
-          resolve();
-        } else {
-          console.error('Backend failed to become ready within timeout');
-          isResolved = true;
-          reject(new Error('Backend startup timeout'));
-        }
+    const clearStartupTimers = () => {
+      if (softStartupTimeout) {
+        clearTimeout(softStartupTimeout);
+        softStartupTimeout = null;
       }
-    }, 30000);
+      if (hardStartupTimeout) {
+        clearTimeout(hardStartupTimeout);
+        hardStartupTimeout = null;
+      }
+    };
 
-    backendProcess.on('error', (err) => {
+    const resolveStartup = () => {
+      if (isResolved) {
+        return false;
+      }
+      isResolved = true;
+      clearStartupTimers();
+      resolve();
+      return true;
+    };
+
+    const rejectStartup = (error) => {
+      if (isResolved) {
+        return false;
+      }
+      isResolved = true;
+      clearStartupTimers();
+      reject(error);
+      return true;
+    };
+
+    softStartupTimeout = setTimeout(async () => {
+      if (isResolved) return;
+
+      console.log('Backend process soft timeout, attempting health check...');
+
+      const isHealthy = await waitForBackendHealth(10, 1000);
+
+      if (isHealthy) {
+        console.log('Backend is healthy despite missing ready signal');
+        resolveStartup();
+      } else {
+        console.warn('Backend still not ready after soft timeout; continuing to wait for ready signal');
+      }
+    }, BACKEND_SOFT_STARTUP_TIMEOUT_MS);
+
+    hardStartupTimeout = setTimeout(async () => {
+      if (isResolved) return;
+
+      console.error('Backend startup hard timeout, performing final health check...');
+
+      const isHealthy = await waitForBackendHealth(10, 1000);
+
+      if (isHealthy) {
+        console.log('Backend is healthy after extended startup wait');
+        resolveStartup();
+      } else {
+        console.error('Backend failed to become ready within extended timeout');
+        rejectStartup(new Error('Backend startup timeout'));
+      }
+    }, BACKEND_HARD_STARTUP_TIMEOUT_MS);
+
+    child.on('error', (err) => {
       console.error('Backend process error:', err);
+      if (backendProcess === child) {
+        backendProcess = null;
+      }
       if (!isResolved) {
-        isResolved = true;
-        clearTimeout(timeout);
-        reject(err);
+        rejectStartup(err);
+      } else {
+        scheduleBackendRestart(err?.message || 'process error');
       }
     });
 
-    backendProcess.on('exit', (code, signal) => {
-      console.log(`Backend process exited with code ${code}, signal: ${signal}`);
-      if (!isResolved && code !== 0) {
-        isResolved = true;
-        clearTimeout(timeout);
-        reject(new Error(`Backend process exited with code ${code}`));
+    child.on('exit', (code, signal) => {
+      if (backendProcess === child) {
+        backendProcess = null;
+      }
+      const unexpectedExit = !backendStopRequested && (isResolved || code !== 0 || signal);
+      const exitContext = {
+        code,
+        signal,
+        stopRequested: backendStopRequested,
+        stdoutTail: stdoutTail.trim().slice(-4000),
+        stderrTail: stderrTail.trim().slice(-4000),
+      };
+
+      if (unexpectedExit) {
+        console.error('Backend process exited unexpectedly:', exitContext);
+      } else {
+        console.log(`Backend process exited with code ${code}, signal: ${signal}`);
+      }
+
+      if (!isResolved) {
+        rejectStartup(new Error(`Backend process exited before ready with code ${code}, signal ${signal}`));
+        return;
+      }
+
+      if (isResolved && unexpectedExit) {
+        scheduleBackendRestart(`exit code ${code}, signal ${signal}`);
       }
     });
 
-    backendProcess.on('message', async (msg) => {
+    child.on('message', async (msg) => {
       if (msg?.status === 'error' && msg?.error === 'EADDRINUSE' && !isResolved) {
         console.error(`Backend failed: Port ${msg.port} is already in use`);
-        isResolved = true;
-        clearTimeout(timeout);
-        reject(new Error('PORT_IN_USE'));
+        rejectStartup(new Error('PORT_IN_USE'));
         return;
       }
 
@@ -106,9 +265,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
 
         if (isHealthy) {
           console.log('Backend startup completed successfully');
-          isResolved = true;
-          clearTimeout(timeout);
-          resolve();
+          resolveStartup();
         } else {
           console.warn('Backend reported ready but health check failed, retrying...');
         }
@@ -122,9 +279,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
 
         if (isHealthy) {
           console.log('Early health check succeeded');
-          isResolved = true;
-          clearTimeout(timeout);
-          resolve();
+          resolveStartup();
         }
       }
     }, 3000);
@@ -144,6 +299,12 @@ export function registerObsDockPairingToken(token) {
 }
 
 export function stopBackend() {
+  backendStopRequested = true;
+  if (backendRestartTimer) {
+    clearTimeout(backendRestartTimer);
+    backendRestartTimer = null;
+  }
+
   if (backendProcess) {
     console.log('[Backend] Stopping backend process...');
     try {

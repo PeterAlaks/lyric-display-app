@@ -48,6 +48,46 @@ const useSocketEvents = (role) => {
   const pendingRegisteredOutputsRef = useRef(null);
 
   const setupApplicationEventHandlers = useCallback((socket, clientType, isDesktopApp) => {
+    if (role === 'timer-control') {
+      const applyTimerSnapshot = (state, source) => {
+        if (!isPlainObject(state)) {
+          logWarn(`Ignoring invalid ${source} payload`);
+          return;
+        }
+
+        if (window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('sync-completed'));
+        }
+
+        if (state.stageTimerState) {
+          window.dispatchEvent(new CustomEvent('stage-timer-update', {
+            detail: state.stageTimerState,
+          }));
+        }
+      };
+
+      socket.on('currentState', (state) => {
+        applyTimerSnapshot(state, 'currentState');
+      });
+
+      socket.on('periodicStateSync', (state) => {
+        applyTimerSnapshot(state, 'periodicStateSync');
+      });
+
+      socket.on('stageTimerUpdate', (timerData) => {
+        logDebug('Received stage timer update:', timerData);
+        window.dispatchEvent(new CustomEvent('stage-timer-update', {
+          detail: timerData,
+        }));
+      });
+
+      socket.on('heartbeat_ack', ({ timestamp }) => {
+        logDebug('Heartbeat acknowledged, server time:', new Date(timestamp));
+      });
+
+      return;
+    }
+
     const applySections = (sections, lineToSection, fallbackLyrics) => {
       let targetSections = Array.isArray(sections) ? sections : null;
       let targetLineToSection = (lineToSection && typeof lineToSection === 'object') ? lineToSection : null;
@@ -369,7 +409,7 @@ const useSocketEvents = (role) => {
             primaryViewportWidth: metrics?.viewportWidth ?? null,
             primaryViewportHeight: metrics?.viewportHeight ?? null,
             allInstances: allInstances || null,
-            instanceCount: instanceCount || 1,
+            instanceCount: Number.isFinite(instanceCount) ? instanceCount : 1,
           };
 
           if (typeof output === 'string' && output.startsWith('output')) {
@@ -592,7 +632,6 @@ const useSocketEvents = (role) => {
     startHeartbeat,
     stopHeartbeat,
     setConnectionStatus,
-    requestReconnect,
     handleAuthError,
   }) => {
     setIsDesktopApp(isDesktopApp);
@@ -614,7 +653,7 @@ const useSocketEvents = (role) => {
       }, 500);
 
       const isOutputRole = typeof role === 'string' && role.startsWith('output');
-      const shouldSyncOutputSettings = !isOutputRole && role !== 'stage';
+      const shouldSyncOutputSettings = !isOutputRole && role !== 'stage' && role !== 'timer-control';
 
       if (shouldSyncOutputSettings && clientType === 'desktop') {
         const syncOutputSettingsFromStore = () => {
@@ -659,7 +698,7 @@ const useSocketEvents = (role) => {
         pendingRegisteredOutputsRef.current = null;
       }
 
-      if (isDesktopApp) {
+      if (isDesktopApp && role !== 'timer-control') {
         setTimeout(() => {
           const currentState = useLyricsStore.getState();
 
@@ -692,14 +731,6 @@ const useSocketEvents = (role) => {
       logDebug('Socket disconnected:', reason);
       setConnectionStatus('disconnected');
       stopHeartbeat();
-
-      if (reason !== 'io client disconnect') {
-        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = setTimeout(() => {
-          logDebug('Auto-reconnecting...');
-          requestReconnect();
-        }, 2000);
-      }
     });
 
     socket.on('connect_error', (error) => {
@@ -710,11 +741,6 @@ const useSocketEvents = (role) => {
         logDebug('Authentication error, clearing token and retrying...');
         handleAuthError(error.message, false);
       }
-
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        requestReconnect();
-      }, 3000);
     });
 
     socket.on('authError', (error) => {

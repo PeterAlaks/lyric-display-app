@@ -58,7 +58,7 @@ export function SupportDevelopmentModal({ isOpen, onClose, isDark = false }) {
   }, [handleClose, isOpen]);
 
   const handleDonate = () => {
-    window.open('https://buymeacoffee.com/lyricdisplay', '_blank');
+    window.open('https://lyricdisplay.app/donate', '_blank');
   };
 
   if (!isOpen) return null;

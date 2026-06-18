@@ -305,7 +305,7 @@ export default function ObsDockLayout() {
           <input ref={setlistInputRef} type="file" accept=".txt,.lrc" multiple className="hidden" onChange={handleSetlistFilesInput} />
           <div className={`truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             {lyricsFileName || 'No lyrics loaded'}
-            {typeof selectedLine === 'number' && hasLyrics ? ` · Line ${selectedLine + 1}/${lyrics.length}` : ''}
+            {typeof selectedLine === 'number' && hasLyrics ? ` - Line ${selectedLine + 1}/${lyrics.length}` : ''}
           </div>
         </section>
 

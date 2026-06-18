@@ -88,25 +88,28 @@ function updateGitHubReleaseLinks(version) {
   if (fs.existsSync(guidePath)) {
     let content = fs.readFileSync(guidePath, 'utf8');
 
-    content = content.replace(
-      /(\[.*?download for Windows.*?\]\()([^\)]+)(\))/i,
-      `$1${githubLinks.windows}$3`
-    );
+    const releaseAssetPatterns = [
+      {
+        pattern: /https:\/\/github\.com\/PeterAlaks\/lyric-display-app\/releases\/download\/v[\d.]+\/LyricDisplay-[\d.]+-Windows-Setup\.exe/g,
+        replacement: githubLinks.windows,
+      },
+      {
+        pattern: /https:\/\/github\.com\/PeterAlaks\/lyric-display-app\/releases\/download\/v[\d.]+\/LyricDisplay-[\d.]+-macOS-arm64\.dmg/g,
+        replacement: githubLinks.macosArm,
+      },
+      {
+        pattern: /https:\/\/github\.com\/PeterAlaks\/lyric-display-app\/releases\/download\/v[\d.]+\/LyricDisplay-[\d.]+-macOS-x64\.dmg/g,
+        replacement: githubLinks.macosIntel,
+      },
+      {
+        pattern: /https:\/\/github\.com\/PeterAlaks\/lyric-display-app\/releases\/download\/v[\d.]+\/LyricDisplay-[\d.]+-Linux\.AppImage/g,
+        replacement: githubLinks.linux,
+      },
+    ];
 
-    content = content.replace(
-      /(\[.*?download for Apple Silicon.*?\]\()([^\)]+)(\))/i,
-      `$1${githubLinks.macosArm}$3`
-    );
-
-    content = content.replace(
-      /(\[.*?download for Intel Mac.*?\]\()([^\)]+)(\))/i,
-      `$1${githubLinks.macosIntel}$3`
-    );
-
-    content = content.replace(
-      /(\[.*?download for Linux.*?\]\()([^\)]+)(\))/i,
-      `$1${githubLinks.linux}$3`
-    );
+    for (const { pattern, replacement } of releaseAssetPatterns) {
+      content = content.replace(pattern, replacement);
+    }
 
     fs.writeFileSync(guidePath, content);
     console.log(`Updated Installation Guide with links for v${version}`);

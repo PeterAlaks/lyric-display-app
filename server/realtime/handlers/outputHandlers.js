@@ -5,10 +5,31 @@ import {
   registerOutputs,
   state
 } from '../state.js';
+import { appendActionLog } from '../actionLog.js';
+import { blockIfLiveSafety } from '../liveSafety.js';
 import { getPrimaryOutputInstance, isOutputClientType, isPlainObject } from '../utils.js';
 
-export function registerOutputHandlers({ io, socket, hasPermission, clientType }) {
+const areSettingValuesEqual = (left, right) => {
+  if (Object.is(left, right)) return true;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+};
+
+const getChangedSettingKeys = (currentSettings = {}, nextSettings = {}) => {
+  return Object.keys(nextSettings).filter((key) => !areSettingValuesEqual(currentSettings?.[key], nextSettings[key]));
+};
+
+export function registerOutputHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId, isPreview = false }) {
+  const actor = { clientType, deviceId, sessionId };
+
   socket.on('outputToggle', (nextState) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'outputToggle' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to control output');
       return;
@@ -21,10 +42,22 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
 
     state.currentIsOutputOn = nextState;
     console.log(`Output toggled to ${nextState} by ${clientType} client`);
+    appendActionLog(io, {
+      type: 'output',
+      label: 'All outputs toggled',
+      detail: `All outputs turned ${nextState ? 'on' : 'off'}`,
+      actor,
+      target: 'all outputs',
+      metadata: { enabled: nextState },
+    });
     io.emit('outputToggle', nextState);
   });
 
   socket.on('individualOutputToggle', (payload) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'individualOutputToggle' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'output:control')) {
       socket.emit('permissionError', 'Insufficient permissions to control individual outputs');
       return;
@@ -48,10 +81,22 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
     }
 
     console.log(`Individual output ${output} toggled to ${enabled} by ${clientType} client`);
+    appendActionLog(io, {
+      type: 'output',
+      label: 'Output toggled',
+      detail: `${output} turned ${enabled ? 'on' : 'off'}`,
+      actor,
+      target: output,
+      metadata: { enabled },
+    });
     io.emit('individualOutputToggle', { output, enabled });
   });
 
   socket.on('styleUpdate', (payload) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'styleUpdate' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'settings:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify settings');
       return;
@@ -63,20 +108,38 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
     }
 
     const { output, settings } = payload;
+    let changedKeys = [];
     if (isOutputClientType(output)) {
       if (!state.registeredOutputs.has(output)) {
         return;
       }
       ensureOutputExists(output);
-      state.outputSettings.set(output, { ...state.outputSettings.get(output), ...settings });
+      const currentSettings = state.outputSettings.get(output) || {};
+      changedKeys = getChangedSettingKeys(currentSettings, settings);
+      state.outputSettings.set(output, { ...currentSettings, ...settings });
     } else if (output === 'stage') {
+      changedKeys = getChangedSettingKeys(state.currentStageSettings || {}, settings);
       state.currentStageSettings = { ...state.currentStageSettings, ...settings };
     }
     console.log(`Style updated for ${output} by ${clientType} client`);
+    if (changedKeys.length > 0) {
+      appendActionLog(io, {
+        type: 'output',
+        label: 'Output style updated',
+        detail: `${output} style settings changed`,
+        actor,
+        target: output,
+        metadata: { keys: changedKeys.slice(0, 12) },
+      });
+    }
     io.emit('styleUpdate', { output, settings });
   });
 
   socket.on('outputRemove', (payload) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'outputRemove' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'settings:write')) {
       socket.emit('permissionError', 'Insufficient permissions to remove outputs');
       return;
@@ -104,11 +167,22 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
     }
 
     console.log(`Output ${output} removed by ${clientType} client`);
+    appendActionLog(io, {
+      type: 'output',
+      label: 'Output removed',
+      detail: `${output} removed`,
+      actor,
+      target: output,
+    });
     io.emit('outputRemoved', { output });
     io.emit('outputsRegistry', { outputs: buildOutputList() });
   });
 
   socket.on('outputsRegister', (payload) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'outputsRegister' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'settings:write')) {
       socket.emit('permissionError', 'Insufficient permissions to register outputs');
       return;
@@ -121,10 +195,22 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
 
     const outputs = payload.outputs.filter((id) => typeof id === 'string');
     registerOutputs(outputs);
+    appendActionLog(io, {
+      type: 'output',
+      label: 'Custom outputs registered',
+      detail: `${outputs.length} custom output${outputs.length === 1 ? '' : 's'} registered`,
+      actor,
+      target: 'outputs',
+      metadata: { outputs },
+    });
     io.emit('outputsRegistry', { outputs: buildOutputList() });
   });
 
   socket.on('outputMetrics', (payload) => {
+    if (isPreview) {
+      return;
+    }
+
     if (!isOutputClientType(clientType)) {
       socket.emit('permissionError', 'Insufficient permissions to publish metrics');
       return;
@@ -167,4 +253,3 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType }
     });
   });
 }
-

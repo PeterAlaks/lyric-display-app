@@ -21,7 +21,7 @@ const isAllowedObsDockOrigin = (origin) => {
 
 const isLocalObsDockAuthEnabled = () => process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1';
 
-export function registerAuthRoutes(app, { secrets, tokenService }) {
+export function registerAuthRoutes(app, { secrets, tokenService, localhostOnly }) {
   app.post('/api/auth/token', (req, res) => {
     const { clientType, deviceId, sessionId, adminKey, joinCode } = req.body;
 
@@ -107,7 +107,7 @@ export function registerAuthRoutes(app, { secrets, tokenService }) {
     }
   });
 
-  app.get('/api/auth/join-code', (req, res) => {
+  app.get('/api/auth/join-code', localhostOnly, (req, res) => {
     res.json({ joinCode: global.controllerJoinCode || null });
   });
 

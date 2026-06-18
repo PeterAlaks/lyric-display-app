@@ -6,6 +6,8 @@
 import Store from 'electron-store';
 import { app } from 'electron';
 import path from 'path';
+import './appIdentity.js';
+import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setlistLimits.js';
 
 const preferencesStore = new Store({
   name: 'user-preferences',
@@ -14,7 +16,9 @@ const preferencesStore = new Store({
     general: {
       autoCheckForUpdates: true,
       confirmOnClose: true,
+      liveSafetyMode: false,
       toastSoundsMuted: false,
+      skipSectionTitlesOnKeyboard: true,
       startMinimized: false,
       minimizeToTray: false,
     },
@@ -76,7 +80,7 @@ const preferencesStore = new Store({
       rememberLastOpenedPath: true,
       maxRecentFiles: 10,
       maxFileSize: 2, // MB
-      maxSetlistFiles: 50,
+      maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
     },
 
     // Appearance Settings
@@ -84,6 +88,7 @@ const preferencesStore = new Store({
       themeMode: 'light', // 'light', 'dark', 'system'
       showTooltips: true,
       showTutorialPopovers: true,
+      showCanvasFloatingToolbar: true,
     },
 
     // Advanced Settings
@@ -232,7 +237,7 @@ export function resetAllToDefaults() {
  */
 export function getDefaultLyricsPath() {
   try {
-    const savedPath = preferencesStore.get('general.defaultLyricsPath');
+    const savedPath = preferencesStore.get('fileHandling.defaultLyricsPath');
     if (savedPath && savedPath.trim()) {
       return savedPath;
     }
@@ -347,14 +352,14 @@ export function getFileHandlingSettings() {
     return {
       maxRecentFiles: fileHandling?.maxRecentFiles ?? 10,
       maxFileSize: fileHandling?.maxFileSize ?? 2,
-      maxSetlistFiles: fileHandling?.maxSetlistFiles ?? 50,
+      maxSetlistFiles: normalizeSetlistItemLimit(fileHandling?.maxSetlistFiles),
     };
   } catch (error) {
     console.error('[UserPreferences] Failed to get file handling settings:', error);
     return {
       maxRecentFiles: 10,
       maxFileSize: 2,
-      maxSetlistFiles: 50,
+      maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
     };
   }
 }

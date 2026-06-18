@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import useLyricsStore from '../context/LyricsStore';
 
 export const useLyricsState = () =>
@@ -82,7 +84,7 @@ export const useCustomOutputIds = () =>
 export const useAllOutputIds = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
-        (state) => ['output1', 'output2', ...(state.customOutputIds || [])],
+        (state) => [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || [])],
         shallow
     );
 
@@ -100,6 +102,19 @@ export const useDarkModeState = () =>
         shallow
     );
 
+export const useKeyboardNavigationPreferences = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            skipSectionTitlesOnKeyboard: state.skipSectionTitlesOnKeyboard,
+            setSkipSectionTitlesOnKeyboard: state.setSkipSectionTitlesOnKeyboard,
+        }),
+        shallow
+    );
+
+export const useCanvasFloatingToolbarPreference = () =>
+    useLyricsStore((state) => state.showCanvasFloatingToolbar);
+
 export const useSetlistState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
@@ -116,6 +131,8 @@ export const useSetlistState = () =>
             isSetlistFull: state.isSetlistFull,
             getAvailableSetlistSlots: state.getAvailableSetlistSlots,
             getMaxSetlistFiles: state.getMaxSetlistFiles,
+            maxSetlistFilesLimit: state.maxSetlistFilesLimit,
+            maxFileSizeLimit: state.maxFileSizeLimit,
         }),
         shallow
     );
@@ -138,7 +155,7 @@ export const useCanAddToSetlist = () =>
     useLyricsStore(
         (state) =>
             state.isDesktopApp &&
-            state.setlistFiles.length < 50 &&
+            state.setlistFiles.length < (state.maxSetlistFilesLimit ?? DEFAULT_SETLIST_ITEMS) &&
             state.lyricsFileName != null &&
             state.lyrics != null &&
             state.lyrics.length > 0

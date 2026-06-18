@@ -164,6 +164,14 @@ const useFileSave = ({
     }
   }, [baseContentRef, baseTitleRef, setFileName, setPendingSavedVersion, setSaveVersion, setTitle]);
 
+  const writeLyricsFile = useCallback(async (targetPath, payload) => {
+    const result = await window.electronAPI.writeFile(targetPath, payload);
+    if (result && result.success === false) {
+      throw new Error(result.error || 'File write failed');
+    }
+    return result;
+  }, []);
+
   const saveWithDialog = useCallback(async ({ payload, extension, baseName, defaultDir, notifyPendingReload, alsoLoad }) => {
     if (!window.electronAPI?.showSaveDialog) return null;
 
@@ -179,7 +187,7 @@ const useFileSave = ({
 
       if (result.canceled) return { canceled: true };
 
-      await window.electronAPI.writeFile(result.filePath, payload);
+      await writeLyricsFile(result.filePath, payload);
       const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
       if (alsoLoad) {
@@ -224,7 +232,7 @@ const useFileSave = ({
       });
       return { success: false };
     }
-  }, [handleFileUpload, markSaved, navigate, setRawLyricsContent, showModal]);
+  }, [handleFileUpload, markSaved, navigate, setRawLyricsContent, showModal, showToast, writeLyricsFile]);
 
   const tryDirectSaveToExistingPath = useCallback(async (payload, { alsoLoad = false } = {}) => {
     const target = getExistingTarget();
@@ -276,7 +284,7 @@ const useFileSave = ({
     if (action !== 'overwrite') return { canceled: true };
 
     try {
-      await window.electronAPI.writeFile(target.path, payload);
+      await writeLyricsFile(target.path, payload);
       const savedBaseName = target.path.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
       if (alsoLoad) {
@@ -319,7 +327,7 @@ const useFileSave = ({
       });
       return null;
     }
-  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, saveWithDialog, showToast, title, verifyExistingPath]);
+  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, saveWithDialog, showToast, title, verifyExistingPath, writeLyricsFile]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim() || !title.trim()) {
@@ -355,7 +363,7 @@ const useFileSave = ({
         });
 
         if (!result.canceled) {
-          await window.electronAPI.writeFile(result.filePath, payload);
+          await writeLyricsFile(result.filePath, payload);
           const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
           markSaved({
@@ -423,7 +431,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, showModal, showToast, title, tryDirectSaveToExistingPath]);
+  }, [content, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, showModal, showToast, title, tryDirectSaveToExistingPath, writeLyricsFile]);
 
   const handleSaveAndLoad = useCallback(async () => {
     if (!content.trim() || !title.trim()) {
@@ -459,7 +467,7 @@ const useFileSave = ({
         });
 
         if (!result.canceled) {
-          await window.electronAPI.writeFile(result.filePath, payload);
+          await writeLyricsFile(result.filePath, payload);
           const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
           const blob = new Blob([payload], { type: 'text/plain' });
@@ -529,7 +537,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, setRawLyricsContent, showModal, title, tryDirectSaveToExistingPath]);
+  }, [content, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, setRawLyricsContent, showModal, title, tryDirectSaveToExistingPath, writeLyricsFile]);
 
   return {
     handleSave,

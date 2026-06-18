@@ -35,6 +35,7 @@ const useFullscreenElementMedia = ({
         name: media.name,
         size: media.size,
         uploadedAt: media.uploadedAt ?? Date.now(),
+        bundled: media.bundled === true,
       },
       fullScreenElementMediaName: media.name,
       fullScreenElementScale: settings.fullScreenElementScale ?? 25,

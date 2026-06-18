@@ -1,3 +1,5 @@
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+
 export const state = {
   currentLyrics: [],
   currentLyricsTimestamps: [],
@@ -26,7 +28,12 @@ export const state = {
   currentStageTimerState: { running: false, paused: false, endTime: null, remaining: null },
   currentStageMessages: [],
   pendingDrafts: new Map(),
-  registeredOutputs: new Set(['output1', 'output2']),
+  registeredOutputs: new Set(DEFAULT_OUTPUT_IDS),
+  liveSafety: {
+    enabled: false,
+    updatedAt: null,
+    updatedBy: null,
+  },
 };
 
 export const ensureOutputExists = (outputId) => {
@@ -50,7 +57,7 @@ const normalizeCustomOutputs = (outputs = []) => {
 
 export const registerOutputs = (customOutputs = []) => {
   const normalized = normalizeCustomOutputs(customOutputs);
-  const next = new Set(['output1', 'output2', ...normalized]);
+  const next = new Set([...DEFAULT_OUTPUT_IDS, ...normalized]);
 
   for (const id of Array.from(state.registeredOutputs)) {
     if (id !== 'output1' && id !== 'output2' && !next.has(id)) {
@@ -79,7 +86,7 @@ export const buildOutputList = () => {
       return a.localeCompare(b);
     });
 
-  return ['output1', 'output2', ...custom];
+  return [...DEFAULT_OUTPUT_IDS, ...custom];
 };
 
 export const getOutputRegistry = () => ({
@@ -112,6 +119,7 @@ export function buildCurrentState(clientInfo) {
     lyricsFileName: state.currentLyricsFileName || '',
     isDesktopClient: clientInfo?.type === 'desktop',
     clientPermissions: clientInfo?.permissions || [],
+    liveSafety: state.liveSafety,
     timestamp,
     syncTimestamp: timestamp,
   };

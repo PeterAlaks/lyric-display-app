@@ -19,16 +19,19 @@ export const useControlSocket = () => {
 
 const LONG_BACKOFF_WARNING_MS = 4000;
 
-export const ControlSocketProvider = ({ children }) => {
+export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const socketRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
     const heartbeatIntervalRef = useRef(null);
     const clientId = useRef(`control_${Date.now()}`);
     const readyRef = useRef(false);
+    const appliedSavedLiveSafetyRef = useRef(false);
 
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [ready, setReady] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
+    const [liveSafety, setLiveSafety] = useState({ enabled: false, updatedAt: null, updatedBy: null });
+    const [actionLog, setActionLog] = useState([]);
 
     const {
         authStatus,
@@ -38,7 +41,7 @@ export const ControlSocketProvider = ({ children }) => {
         clearAuthToken,
     } = useAuth();
 
-    const { registerAuthenticatedHandlers } = useSocketEvents('control');
+    const { registerAuthenticatedHandlers } = useSocketEvents(role);
 
     const getClientType = useCallback(() => {
         if (window.electronAPI) return 'desktop';
@@ -121,6 +124,26 @@ export const ControlSocketProvider = ({ children }) => {
             }
         });
     }, []);
+
+    const disposeCurrentSocket = useCallback((socket, reason) => {
+        if (!socket || socketRef.current !== socket) {
+            return false;
+        }
+
+        socketRef.current = null;
+        readyRef.current = false;
+        setReady(false);
+        stopHeartbeat();
+
+        try {
+            socket.removeAllListeners();
+            socket.disconnect();
+        } catch (error) {
+            logError(`Socket dispose error (${reason}):`, error);
+        }
+
+        return true;
+    }, [stopHeartbeat]);
 
     const connectSocketInternal = useCallback(async () => {
         const canConnect = connectionManager.canAttemptConnection(clientId.current);
@@ -217,9 +240,13 @@ export const ControlSocketProvider = ({ children }) => {
                 const handleConnectError = (error) => {
                     logError(`Control socket connection error:`, error);
                     connectionManager.recordConnectionFailure(clientId.current, error);
+                    if (error?.message?.includes('Authentication') || error?.message?.includes('token')) {
+                        handleAuthError(error.message, false);
+                    }
                     setConnectionStatus('error');
                     readyRef.current = false;
                     setReady(false);
+                    disposeCurrentSocket(socket, 'connect_error');
                     scheduleRetry();
                 };
 
@@ -231,6 +258,7 @@ export const ControlSocketProvider = ({ children }) => {
                     stopHeartbeat();
 
                     if (reason !== 'io client disconnect') {
+                        disposeCurrentSocket(socket, `disconnect:${reason}`);
                         scheduleRetry();
                     }
                 };
@@ -239,13 +267,46 @@ export const ControlSocketProvider = ({ children }) => {
                 socket.on('connect_error', handleConnectError);
                 socket.on('disconnect', handleDisconnect);
 
-                socket.on('currentState', () => {
+                socket.on('currentState', (state) => {
                     const syncTime = Date.now();
                     setLastSyncTime(syncTime);
+                    if (state?.liveSafety && typeof state.liveSafety.enabled === 'boolean') {
+                        setLiveSafety(state.liveSafety);
+                    }
                     try {
                         localStorage.setItem('lastSyncTime', syncTime.toString());
                     } catch (err) {
                         console.warn('Failed to store lastSyncTime:', err);
+                    }
+                });
+
+                socket.on('periodicStateSync', (state) => {
+                    if (state?.liveSafety && typeof state.liveSafety.enabled === 'boolean') {
+                        setLiveSafety(state.liveSafety);
+                    }
+                });
+
+                socket.on('liveSafetyUpdate', (nextLiveSafety) => {
+                    if (nextLiveSafety && typeof nextLiveSafety.enabled === 'boolean') {
+                        setLiveSafety(nextLiveSafety);
+                    }
+                });
+
+                socket.on('liveSafetyBlocked', (payload) => {
+                    window.dispatchEvent(new CustomEvent('live-safety-blocked', {
+                        detail: payload,
+                    }));
+                });
+
+                socket.on('actionLogSnapshot', (entries) => {
+                    if (Array.isArray(entries)) {
+                        setActionLog(entries);
+                    }
+                });
+
+                socket.on('actionLogUpdate', (entry) => {
+                    if (entry && typeof entry === 'object') {
+                        setActionLog((prev) => [...prev, entry].slice(-750));
                     }
                 });
 
@@ -278,6 +339,7 @@ export const ControlSocketProvider = ({ children }) => {
         startHeartbeat,
         stopHeartbeat,
         handleAuthError,
+        disposeCurrentSocket,
         setAuthStatus,
         setConnectionStatus,
         emitBackoffWarning,
@@ -357,6 +419,96 @@ export const ControlSocketProvider = ({ children }) => {
     const emitAutoplayStateUpdate = useCallback(createEmitFunction('autoplayStateUpdate'), [createEmitFunction]);
     const emitOutputRemove = useCallback(createEmitFunction('outputRemove'), [createEmitFunction]);
     const emitOutputsRegister = useCallback(createEmitFunction('outputsRegister'), [createEmitFunction]);
+    const emitLiveSafetySet = useCallback((enabled) => {
+        return createEmitFunction('liveSafetySet')({ enabled: Boolean(enabled) });
+    }, [createEmitFunction]);
+    const emitRequestActionLog = useCallback((payload = {}) => {
+        return createEmitFunction('requestActionLog')(payload);
+    }, [createEmitFunction]);
+    const emitActionLogClear = useCallback(() => {
+        return createEmitFunction('actionLogClear')();
+    }, [createEmitFunction]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const snapshot = {
+            connectionStatus,
+            authStatus,
+            ready,
+            lastSyncTime,
+            liveSafety,
+        };
+        window.__lyricDisplayControlSocketState = snapshot;
+        window.dispatchEvent(new CustomEvent('control-socket-state-updated', { detail: snapshot }));
+    }, [authStatus, connectionStatus, lastSyncTime, liveSafety, ready]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const snapshot = {
+            actionLog,
+            ready,
+            authStatus,
+            connectionStatus,
+        };
+        window.__lyricDisplayActionLogState = snapshot;
+        window.dispatchEvent(new CustomEvent('action-log-state-updated', { detail: snapshot }));
+    }, [actionLog, authStatus, connectionStatus, ready]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const handleSetLiveSafety = (event) => {
+            const enabled = event?.detail?.enabled;
+            if (typeof enabled === 'boolean') {
+                emitLiveSafetySet(enabled);
+            }
+        };
+
+        window.addEventListener('live-safety-set-requested', handleSetLiveSafety);
+        return () => window.removeEventListener('live-safety-set-requested', handleSetLiveSafety);
+    }, [emitLiveSafetySet]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const handleRequestActionLog = (event) => {
+            emitRequestActionLog(event?.detail || {});
+        };
+        const handleClearActionLog = () => {
+            emitActionLogClear();
+        };
+
+        window.addEventListener('action-log-requested', handleRequestActionLog);
+        window.addEventListener('action-log-clear-requested', handleClearActionLog);
+        return () => {
+            window.removeEventListener('action-log-requested', handleRequestActionLog);
+            window.removeEventListener('action-log-clear-requested', handleClearActionLog);
+        };
+    }, [emitActionLogClear, emitRequestActionLog]);
+
+    useEffect(() => {
+        if (!ready || authStatus !== 'authenticated' || !window.electronAPI?.preferences?.get) return;
+        if (appliedSavedLiveSafetyRef.current) return;
+        appliedSavedLiveSafetyRef.current = true;
+
+        let cancelled = false;
+        window.electronAPI.preferences.get('general.liveSafetyMode')
+            .then((result) => {
+                if (cancelled || result?.success === false || typeof result?.value !== 'boolean') return;
+                if (result.value !== Boolean(liveSafety?.enabled)) {
+                    emitLiveSafetySet(result.value);
+                }
+            })
+            .catch((error) => {
+                console.warn('[LiveSafety] Failed to load saved preference:', error);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [authStatus, emitLiveSafetySet, liveSafety?.enabled, ready]);
 
     const forceReconnect = useCallback(() => {
         logDebug('Force reconnecting control socket...');
@@ -452,6 +604,9 @@ export const ControlSocketProvider = ({ children }) => {
         emitAutoplayStateUpdate,
         emitOutputRemove,
         emitOutputsRegister,
+        emitLiveSafetySet,
+        emitRequestActionLog,
+        emitActionLogClear,
         connectionStatus,
         authStatus,
         forceReconnect,
@@ -460,6 +615,8 @@ export const ControlSocketProvider = ({ children }) => {
         isAuthenticated: authStatus === 'authenticated',
         ready,
         lastSyncTime,
+        liveSafety,
+        actionLog,
         getConnectionDiagnostics,
     };
 

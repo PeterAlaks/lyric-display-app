@@ -1,0 +1,138 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { getTimerProgress, isTimerVisiblyActive, normalizeTimerDisplaySettings, normalizeTimerState } from '../src/utils/timerUtils.js';
+
+test('timer progress advances for normalized stage panel countdown state', () => {
+  const startTime = 1_000_000;
+  const durationMs = 5 * 60_000;
+  const timerState = {
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+  };
+
+  assert.equal(getTimerProgress(timerState, startTime), 0);
+  assert.equal(getTimerProgress(timerState, startTime + (durationMs / 2)), 0.5);
+  assert.equal(getTimerProgress(timerState, startTime + durationMs), 1);
+});
+
+test('timer progress is zero for legacy stage payload without duration', () => {
+  const now = 1_000_000;
+  assert.equal(getTimerProgress({
+    running: true,
+    paused: false,
+    endTime: now + 60_000,
+    remaining: null,
+  }, now), 0);
+});
+
+test('expired terminal countdown is not visibly active', () => {
+  const startTime = 1_000_000;
+  const durationMs = 60_000;
+  assert.equal(isTimerVisiblyActive({
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+    overrunMode: false,
+    sets: [],
+  }, startTime + durationMs + 1), false);
+});
+
+test('expired countdown remains visibly active when a next set should auto-start', () => {
+  const startTime = 1_000_000;
+  const durationMs = 60_000;
+  assert.equal(isTimerVisiblyActive({
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+    activeSetIndex: 0,
+    autoStartNext: true,
+    sets: [
+      { id: 'set-1', label: 'Timer 1', durationMs },
+      { id: 'set-2', label: 'Timer 2', durationMs },
+    ],
+  }, startTime + durationMs + 1), true);
+});
+
+test('overrun and paused timers remain visibly active', () => {
+  const startTime = 1_000_000;
+  const durationMs = 60_000;
+  const expired = {
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+  };
+
+  assert.equal(isTimerVisiblyActive({
+    ...expired,
+    overrunMode: true,
+  }, startTime + durationMs + 1), true);
+
+  assert.equal(isTimerVisiblyActive({
+    ...expired,
+    paused: true,
+    pausedRemainingMs: 10_000,
+  }, startTime + durationMs + 1), true);
+});
+
+test('timer display defaults use smaller secondary item scale', () => {
+  const settings = normalizeTimerDisplaySettings({});
+
+  assert.equal(settings.otherItemsScale, 0.1);
+  assert.equal(settings.globalClockScale, 0.1);
+});
+
+test('untouched legacy timer display scale migrates to smaller default', () => {
+  const settings = normalizeTimerDisplaySettings({
+    otherItemsScale: 0.15,
+    globalClockScale: 0.15,
+    displayUpdatedAt: 0,
+  });
+
+  assert.equal(settings.otherItemsScale, 0.1);
+  assert.equal(settings.globalClockScale, 0.1);
+});
+
+test('custom legacy-sized timer display scale is preserved', () => {
+  const settings = normalizeTimerDisplaySettings({
+    otherItemsScale: 0.15,
+    globalClockScale: 0.15,
+    displayUpdatedAt: 1_000_000,
+  });
+
+  assert.equal(settings.otherItemsScale, 0.15);
+  assert.equal(settings.globalClockScale, 0.15);
+});
+
+test('timer state display normalization migrates untouched legacy scale', () => {
+  const state = normalizeTimerState({
+    display: {
+      otherItemsScale: 0.15,
+      globalClockScale: 0.15,
+      displayUpdatedAt: 0,
+    },
+  });
+
+  assert.equal(state.display.otherItemsScale, 0.1);
+  assert.equal(state.display.globalClockScale, 0.1);
+});

@@ -1,4 +1,5 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback } from 'react';
+import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import { parseLyricsFileAsync } from '../utils/asyncLyricsParser';
 import { useSetlistState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -6,28 +7,11 @@ import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 
 const useMultipleFileUpload = () => {
-  const { setlistFiles, isSetlistFull, getAvailableSetlistSlots, getMaxSetlistFiles } = useSetlistState();
+  const { getAvailableSetlistSlots, maxFileSizeLimit, maxSetlistFilesLimit } = useSetlistState();
   const { emitSetlistAdd } = useControlSocket();
   const { showToast } = useToast();
-
-  const [maxFileSize, setMaxFileSize] = useState(2);
-  const maxSetlistFiles = getMaxSetlistFiles();
-
-  useEffect(() => {
-    const loadMaxFileSize = async () => {
-      try {
-        if (window.electronAPI?.preferences?.getFileHandling) {
-          const result = await window.electronAPI.preferences.getFileHandling();
-          if (result.success && result.settings) {
-            setMaxFileSize(result.settings.maxFileSize ?? 2);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load max file size preference:', error);
-      }
-    };
-    loadMaxFileSize();
-  }, []);
+  const maxFileSize = maxFileSizeLimit ?? 2;
+  const maxSetlistFiles = maxSetlistFilesLimit ?? DEFAULT_SETLIST_ITEMS;
 
   const MAX_FILE_SIZE_BYTES = maxFileSize * 1024 * 1024;
 
@@ -191,7 +175,7 @@ const useMultipleFileUpload = () => {
       });
       return false;
     }
-  }, [emitSetlistAdd, getAvailableSetlistSlots, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
+  }, [emitSetlistAdd, getAvailableSetlistSlots, showToast, maxFileSize, maxSetlistFiles, MAX_FILE_SIZE_BYTES]);
 
   return handleMultipleFileUpload;
 };

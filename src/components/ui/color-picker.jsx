@@ -94,12 +94,34 @@ const ColorPicker = React.forwardRef(({
   const [open, setOpen] = React.useState(false)
   const [color, setColor] = React.useState(value || "#000000")
   const [format, setFormat] = React.useState("hex")
+  const contentRef = React.useRef(null)
 
   React.useEffect(() => {
     if (value) {
       setColor(value)
     }
   }, [value])
+
+  React.useEffect(() => {
+    if (!open) return undefined
+
+    const blockOutsideScroll = (event) => {
+      const target = event.target
+      if (contentRef.current?.contains(target)) return
+      if (target instanceof Element && target.closest('[data-popover-scroll-lock-allow="true"]')) return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    const opts = { passive: false, capture: true }
+    window.addEventListener('wheel', blockOutsideScroll, opts)
+    window.addEventListener('touchmove', blockOutsideScroll, opts)
+
+    return () => {
+      window.removeEventListener('wheel', blockOutsideScroll, opts)
+      window.removeEventListener('touchmove', blockOutsideScroll, opts)
+    }
+  }, [open])
 
   const handleColorChange = (newColor) => {
     setColor(newColor)
@@ -148,7 +170,12 @@ const ColorPicker = React.forwardRef(({
           {showHex && <span className="flex-1 text-left font-mono text-xs">{color.toUpperCase()}</span>}
         </button>
       </PopoverTrigger>
-      <PopoverContent className={`w-[224px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`} align="start">
+      <PopoverContent
+        ref={contentRef}
+        data-popover-scroll-lock-allow="true"
+        className={`w-[224px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+        align="start"
+      >
         <div className="space-y-3">
           <HexColorPicker color={color} onChange={handleColorChange} />
 

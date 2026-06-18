@@ -20,6 +20,7 @@ const NdiPreferencesSection = ({
   ndiTelemetry,
   ndiUpdateInfo,
   ndiUpdating,
+  preferenceFieldLabelClass,
 }) => {
   const stats = ndiTelemetry?.stats || null;
   const health = ndiTelemetry?.health || null;
@@ -46,7 +47,13 @@ const NdiPreferencesSection = ({
           {ndiStatus.installed ? 'Installed' : 'Not Installed'}
         </span>
         {ndiStatus.installed && ndiStatus.version && (
-          <span className={`text-xs ${mutedClass}`}>v{ndiStatus.version}</span>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${darkMode
+            ? 'bg-gray-700 text-gray-300'
+            : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            v{ndiStatus.version}
+          </span>
         )}
         {ndiStatus.installed && (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionRunning
@@ -195,7 +202,7 @@ const NdiPreferencesSection = ({
       ) : (
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className={`text-sm font-medium ${labelClass}`}>Install Location</label>
+            <label className={preferenceFieldLabelClass}>Install Location</label>
             <Input
               value={ndiStatus.installPath || ''}
               readOnly

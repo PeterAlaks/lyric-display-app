@@ -1,7 +1,12 @@
 import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { MAX_SETLIST_ITEMS } from '../../../shared/setlistLimits.js';
+import { appendActionLog } from '../actionLog.js';
+import { blockIfLiveSafety } from '../liveSafety.js';
 import { state } from '../state.js';
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
+  const actor = { clientType, deviceId, sessionId };
+
   socket.on('requestSetlist', () => {
     if (!hasPermission(socket, 'setlist:read')) {
       socket.emit('permissionError', 'Insufficient permissions to access setlist');
@@ -13,6 +18,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistAdd', (files) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistAdd' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify setlist');
       return;
@@ -26,9 +35,9 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       }
 
       const totalAfterAdd = state.setlistFiles.length + files.length;
-      if (totalAfterAdd > 50) {
-        console.error('setlistAdd: Would exceed 50 file limit');
-        socket.emit('setlistError', `Cannot add ${files.length} files. Maximum 50 files allowed.`);
+      if (totalAfterAdd > MAX_SETLIST_ITEMS) {
+        console.error(`setlistAdd: Would exceed ${MAX_SETLIST_ITEMS} file limit`);
+        socket.emit('setlistError', `Cannot add ${files.length} files. Maximum ${MAX_SETLIST_ITEMS} files allowed.`);
         return;
       }
 
@@ -70,6 +79,18 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
       state.setlistFiles.push(...newFiles);
       console.log(`${clientType} client added ${newFiles.length} files to setlist. Total: ${state.setlistFiles.length}`);
+      appendActionLog(io, {
+        type: 'setlist',
+        label: 'Setlist songs added',
+        detail: `${newFiles.length} song${newFiles.length === 1 ? '' : 's'} added to setlist`,
+        actor,
+        target: 'setlist',
+        metadata: {
+          added: newFiles.length,
+          total: state.setlistFiles.length,
+          songs: newFiles.map((file) => file.displayName),
+        },
+      });
 
       io.emit('setlistUpdate', state.setlistFiles);
       socket.emit('setlistAddSuccess', {
@@ -84,6 +105,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistRemove', (fileId) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistRemove' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify setlist');
       return;
@@ -103,6 +128,14 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
       if (state.setlistFiles.length < initialCount) {
         console.log(`${clientType} client removed file ${fileId} from setlist. Remaining: ${state.setlistFiles.length}`);
+        appendActionLog(io, {
+          type: 'setlist',
+          label: 'Setlist song removed',
+          detail: `Removed "${fileToRemove?.displayName || fileToRemove?.originalName || fileId}" from setlist`,
+          actor,
+          target: fileToRemove?.displayName || fileId,
+          metadata: { total: state.setlistFiles.length },
+        });
         io.emit('setlistUpdate', state.setlistFiles);
         socket.emit('setlistRemoveSuccess', fileId);
       } else {
@@ -115,8 +148,12 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistLoad', (fileId) => {
-    if (!hasPermission(socket, 'setlist:read')) {
-      socket.emit('permissionError', 'Insufficient permissions to read setlist');
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistLoad' })) {
+      return;
+    }
+
+    if (!hasPermission(socket, 'lyrics:write')) {
+      socket.emit('permissionError', 'Insufficient permissions to load setlist items into live lyrics');
       return;
     }
 
@@ -160,6 +197,18 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       state.currentLineToSection = lineToSection;
 
       console.log(`${clientType} client loaded "${cleanDisplayName}" from setlist (${processedLines.length} lines, ${timestamps.length} timestamps)`);
+      appendActionLog(io, {
+        type: 'setlist',
+        label: 'Setlist song loaded',
+        detail: `Loaded "${cleanDisplayName}" from setlist`,
+        actor,
+        target: cleanDisplayName,
+        metadata: {
+          lines: processedLines.length,
+          timestamps: timestamps.length,
+          fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
+        },
+      });
 
       io.emit('lyricsLoad', processedLines);
       io.emit('lyricsTimestampsUpdate', timestamps);
@@ -186,18 +235,35 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
   });
 
   socket.on('setlistClear', () => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistClear' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:delete')) {
       socket.emit('permissionError', 'Insufficient permissions to clear setlist');
       return;
     }
 
+    const previousCount = state.setlistFiles.length;
     state.setlistFiles = [];
     console.log(`Setlist cleared by ${clientType} client`);
+    appendActionLog(io, {
+      type: 'setlist',
+      label: 'Setlist cleared',
+      detail: `Cleared ${previousCount} song${previousCount === 1 ? '' : 's'} from setlist`,
+      actor,
+      target: 'setlist',
+      metadata: { previousCount },
+    });
     io.emit('setlistUpdate', state.setlistFiles);
     socket.emit('setlistClearSuccess');
   });
 
   socket.on('setlistReorder', (payload) => {
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistReorder' })) {
+      return;
+    }
+
     if (!hasPermission(socket, 'setlist:write')) {
       socket.emit('permissionError', 'Insufficient permissions to modify setlist ordering');
       return;
@@ -239,6 +305,14 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
     state.setlistFiles = reordered;
     console.log(`${clientType} client reordered setlist (${state.setlistFiles.length} items)`);
+    appendActionLog(io, {
+      type: 'setlist',
+      label: 'Setlist reordered',
+      detail: `Reordered ${state.setlistFiles.length} setlist song${state.setlistFiles.length === 1 ? '' : 's'}`,
+      actor,
+      target: 'setlist',
+      metadata: { total: state.setlistFiles.length },
+    });
 
     io.emit('setlistUpdate', state.setlistFiles);
     socket.emit('setlistReorderSuccess', {
@@ -247,4 +321,3 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
     });
   });
 }
-

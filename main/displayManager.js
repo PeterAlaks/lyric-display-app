@@ -1,5 +1,6 @@
 import { screen, BrowserWindow, app } from 'electron';
 import Store from 'electron-store';
+import './appIdentity.js';
 
 let store = null;
 let displayChangeCallback = null;

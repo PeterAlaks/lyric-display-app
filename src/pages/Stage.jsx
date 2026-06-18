@@ -1,12 +1,16 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useLyricsState, useOutputState, useStageSettings, useSetlistState, useIndividualOutputState } from '../hooks/useStoreSelectors';
+import { useLocation } from 'react-router-dom';
+import { useLyricsState, useOutputState, useStageSettings, useSetlistState, useIndividualOutputState, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
+import { findNavigableLyricLineIndex, isStructureTagLyricLine } from '../utils/lyricLineNavigation';
 import { logDebug } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
 import { normalizeStageMessages } from '../utils/stageMessages';
-import { getTimerDisplay, getTimerIntensity } from '../utils/timerUtils';
+import { getTimerDisplay, getTimerIntensity, isTimerVisiblyActive } from '../utils/timerUtils';
+import { paintToCss } from '../utils/paint';
+import ProjectionExitHint from '../components/ProjectionExitHint';
 
 const pulseAnimation = `
 @keyframes pulse {
@@ -121,8 +125,11 @@ const useAutoFitText = (text, options = {}) => {
 };
 
 const Stage = () => {
-  const searchParams = new URLSearchParams(window.location.search);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
   useSocket('stage');
   const { lyrics, selectedLine, lyricsFileName } = useLyricsState();
@@ -130,6 +137,7 @@ const Stage = () => {
   const { settings: stageSettings } = useStageSettings();
   const { setlistFiles } = useSetlistState();
   const { stageEnabled } = useIndividualOutputState();
+  const { skipSectionTitlesOnKeyboard } = useKeyboardNavigationPreferences();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
@@ -204,6 +212,7 @@ const Stage = () => {
   const {
     fontStyle = 'Bebas Neue',
     backgroundColor = '#000000',
+    backgroundPaint,
 
     liveFontSize = 120,
     liveColor = '#FFFFFF',
@@ -328,7 +337,7 @@ const Stage = () => {
     });
   };
 
-  const renderLineContent = (text, color, fontSize, lineType = 'live') => {
+  const renderLineContent = (text, color, fontSize, lineType = 'live', sourceLineIndex = null) => {
 
     const getEmphasisStyles = () => {
       const styles = {};
@@ -367,7 +376,7 @@ const Stage = () => {
     if (text.includes('\n')) {
       const lines = text.split('\n');
 
-      const lineIndex = lineType === 'live' ? currentLine :
+      const lineIndex = sourceLineIndex !== null ? sourceLineIndex : lineType === 'live' ? effectiveCurrentLine :
         lineType === 'next' ? currentLine + 1 :
           currentLine - 1;
       const lineObj = (lineIndex >= 0 && lineIndex < lyrics.length) ? lyrics[lineIndex] : null;
@@ -443,7 +452,20 @@ const Stage = () => {
   const responsiveBottomBarSize = bottomBarSize * scaleFactor;
 
   const currentLine = selectedLine !== null && selectedLine !== undefined ? selectedLine : null;
-  const isVisible = Boolean(isOutputOn && stageEnabled && currentLine !== null && lyrics.length > 0);
+  const effectiveCurrentLine = (() => {
+    if (currentLine === null || currentLine === undefined) return null;
+    if (!skipSectionTitlesOnKeyboard || !isStructureTagLyricLine(lyrics[currentLine])) return currentLine;
+
+    return findNavigableLyricLineIndex(lyrics, currentLine + 1, 1, { skipSectionTitles: true })
+      ?? findNavigableLyricLineIndex(lyrics, currentLine - 1, -1, { skipSectionTitles: true });
+  })();
+  const previousLine = effectiveCurrentLine !== null
+    ? findNavigableLyricLineIndex(lyrics, effectiveCurrentLine - 1, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard })
+    : null;
+  const nextLine = effectiveCurrentLine !== null
+    ? findNavigableLyricLineIndex(lyrics, effectiveCurrentLine + 1, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard })
+    : null;
+  const isVisible = Boolean((isPreviewMode || (isOutputOn && stageEnabled)) && effectiveCurrentLine !== null && lyrics.length > 0);
 
   const getUpcomingSongName = useCallback(() => {
 
@@ -480,7 +502,7 @@ const Stage = () => {
   const upcomingSong = `Upcoming Song: ${upcomingSongName}`;
   const currentMessage = customMessages.length > 0 ? customMessages[currentMessageIndex] : null;
   const currentMessageText = currentMessage?.text || currentMessage || '';
-  const hasTimerCountdown = Boolean(timerDisplay) && (timerState.running || timerState.paused);
+  const hasTimerCountdown = Boolean(timerDisplay) && isTimerVisiblyActive(timerState, currentTime.getTime());
   const shouldShowTimerFallbackTime = !hasTimerCountdown && Boolean(showTime);
   const shouldShowTimerFullScreen = Boolean(timerFullScreen) && (hasTimerCountdown || shouldShowTimerFallbackTime);
   const fullScreenTimerLabel = hasTimerCountdown ? (timerState.label || timerState.display?.label || 'Time Left:') : 'Current Time';
@@ -521,12 +543,12 @@ const Stage = () => {
     }
   );
 
-  const currentLineText = getLineText(currentLine);
+  const currentLineText = getLineText(effectiveCurrentLine);
   const isCurrentLineLong = currentLineText.length > 65;
   const nextLineEnabled = showNextLine ?? true;
   const prevLineEnabled = showPrevLine ?? true;
-  const shouldShowPrevLine = prevLineEnabled && currentLine > 0 && !isCurrentLineLong;
-  const shouldShowNextLine = nextLineEnabled && currentLine < lyrics.length - 1;
+  const shouldShowPrevLine = prevLineEnabled && previousLine !== null && !isCurrentLineLong;
+  const shouldShowNextLine = nextLineEnabled && nextLine !== null;
   const shouldExpandCurrentLine = !nextLineEnabled || !prevLineEnabled;
 
   const getTextAlign = (align) => {
@@ -544,17 +566,18 @@ const Stage = () => {
   const prevLineRef = useRef(currentLine);
 
   useEffect(() => {
-    prevLineRef.current = currentLine;
-  }, [currentLine]);
+    prevLineRef.current = effectiveCurrentLine;
+  }, [effectiveCurrentLine]);
 
   return (
     <div
       className="relative w-screen h-screen overflow-hidden flex flex-col"
       style={{
-        backgroundColor: isProjectionMode ? '#000000' : backgroundColor,
+        background: isProjectionMode ? '#000000' : paintToCss(backgroundPaint, backgroundColor),
         fontFamily: fontStyle,
       }}
     >
+      <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       {/* Top Bar - Song Names */}
       <div className="flex-shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center">
         <div
@@ -709,11 +732,11 @@ const Stage = () => {
         ) : isVisible ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 sm:px-12 md:px-16">
             <motion.div
-              key={currentLine}
+              key={effectiveCurrentLine}
               className={`w-full flex flex-col items-stretch ${shouldExpandCurrentLine ? 'h-full' : 'gap-4 sm:gap-6 md:gap-8'}`}
               initial={
                 transitionAnimation === 'slide'
-                  ? { y: prevLineRef.current !== null && prevLineRef.current < currentLine ? 100 : -100 }
+                  ? { y: prevLineRef.current !== null && prevLineRef.current < effectiveCurrentLine ? 100 : -100 }
                   : transitionAnimation === 'fade'
                     ? { opacity: 0 }
                     : {}
@@ -727,7 +750,7 @@ const Stage = () => {
               }
               exit={
                 transitionAnimation === 'slide'
-                  ? { y: prevLineRef.current !== null && prevLineRef.current < currentLine ? -100 : 100 }
+                  ? { y: prevLineRef.current !== null && prevLineRef.current < effectiveCurrentLine ? -100 : 100 }
                   : transitionAnimation === 'fade'
                     ? { opacity: 0 }
                     : {}
@@ -792,7 +815,7 @@ const Stage = () => {
                         lineHeight: prevLineSpacing ?? 1,
                       }}
                     >
-                      {renderLineContent(getLineText(currentLine - 1), prevColor, responsivePrevFontSize, 'prev')}
+                      {renderLineContent(getLineText(previousLine), prevColor, responsivePrevFontSize, 'prev', previousLine)}
                     </motion.div>
                   )}
                 </div>
@@ -826,7 +849,7 @@ const Stage = () => {
                     lineHeight: liveLineSpacing ?? 1,
                   }}
                 >
-                  {renderLineContent(getLineText(currentLine), liveColor, responsiveLiveFontSize, 'live')}
+                  {renderLineContent(getLineText(effectiveCurrentLine), liveColor, responsiveLiveFontSize, 'live', effectiveCurrentLine)}
                 </motion.div>
               </div>
 
@@ -891,7 +914,7 @@ const Stage = () => {
                           lineHeight: nextLineSpacing ?? 1,
                         }}
                       >
-                        {renderLineContent(getLineText(currentLine + 1), nextColor, responsiveNextFontSize, 'next')}
+                        {renderLineContent(getLineText(nextLine), nextColor, responsiveNextFontSize, 'next', nextLine)}
                       </motion.div>
                     </>
                   )}

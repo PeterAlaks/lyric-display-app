@@ -1,4 +1,5 @@
 import Store from 'electron-store';
+import './appIdentity.js';
 
 const themeStore = new Store({
   name: 'preferences',

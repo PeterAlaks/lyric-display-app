@@ -1,4 +1,6 @@
-import { app } from 'electron';
+import electron from 'electron';
+
+const { app } = electron || {};
 
 const APP_NAME = 'LyricDisplay';
 const APP_WEBSITE = 'https://lyricdisplay.app';

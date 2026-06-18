@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
+import { useCanvasFloatingToolbarPreference, useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useDarkModeSync from '../hooks/useDarkModeSync';
@@ -45,6 +45,7 @@ const NewSongCanvas = () => {
   const composeMode = mode === "compose";
 
   const { darkMode, setDarkMode } = useDarkModeState();
+  const showCanvasFloatingToolbar = useCanvasFloatingToolbarPreference();
   const { lyrics, lyricsFileName, rawLyricsContent, songMetadata, setRawLyricsContent, setSongMetadata, setPendingSavedVersion } = useLyricsState();
 
   const { emitLyricsDraftSubmit } = useControlSocket();
@@ -609,18 +610,20 @@ const NewSongCanvas = () => {
               />
             )}
 
-            <CanvasFloatingToolbar
-              canAddTranslationOnSelectedLine={canAddTranslationOnSelectedLine}
-              darkMode={darkMode}
-              handleAddTranslation={handleAddTranslation}
-              insertStandardTimestampAtLine={insertStandardTimestampAtLine}
-              selectedLineIndex={selectedLineIndex}
-              selectedMetric={selectedMetric}
-              toolbarLeft={toolbarLeft}
-              toolbarRef={toolbarRef}
-              toolbarTop={toolbarTop}
-              toolbarVisible={toolbarVisible}
-            />
+            {showCanvasFloatingToolbar && (
+              <CanvasFloatingToolbar
+                canAddTranslationOnSelectedLine={canAddTranslationOnSelectedLine}
+                darkMode={darkMode}
+                handleAddTranslation={handleAddTranslation}
+                insertStandardTimestampAtLine={insertStandardTimestampAtLine}
+                selectedLineIndex={selectedLineIndex}
+                selectedMetric={selectedMetric}
+                toolbarLeft={toolbarLeft}
+                toolbarRef={toolbarRef}
+                toolbarTop={toolbarTop}
+                toolbarVisible={toolbarVisible}
+              />
+            )}
 
             <CanvasContextMenu
               activeSubmenu={activeSubmenu}

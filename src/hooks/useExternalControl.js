@@ -12,6 +12,7 @@ import { useEffect, useCallback, useRef } from 'react';
  * @param {number|null} options.selectedLine - Currently selected line index
  * @param {boolean} options.isOutputOn - Whether output is enabled
  * @param {boolean} options.autoplayActive - Whether autoplay is active
+ * @param {boolean} options.intelligentAutoplayActive - Whether timestamp-based autoplay is active
  * @param {Function} options.selectLine - Function to select a line
  * @param {Function} options.setIsOutputOn - Function to toggle output
  * @param {Function} options.emitLineUpdate - Function to emit line update via socket
@@ -20,18 +21,34 @@ import { useEffect, useCallback, useRef } from 'react';
  * @param {Function} options.emitOutput2Toggle - Function to emit output 2 toggle via socket (optional)
  * @param {Function} options.emitStageToggle - Function to emit stage toggle via socket (optional)
  * @param {Function} options.handleAutoplayToggle - Function to toggle autoplay
+ * @param {Function} options.handleIntelligentAutoplayToggle - Function to toggle timestamp-based autoplay
+ * @param {Function} options.handleIntelligentAutoplayStart - Function to start timestamp-based autoplay
+ * @param {Function} options.handleIntelligentAutoplayStop - Function to stop timestamp-based autoplay
  * @param {Function} options.handleSetlistNext - Function to go to next song in setlist
  * @param {Function} options.handleSetlistPrev - Function to go to previous song in setlist
+ * @param {Array} options.setlistFiles - Current setlist items
+ * @param {Function} options.emitSetlistLoad - Function to load a setlist item by id
  * @param {Function} options.handleSyncOutputs - Function to sync all outputs
  * @param {Function} options.showToast - Function to show toast notifications
  * @param {string} options.songName - Current song/file name for OSC feedback
  * @param {boolean} options.enabled - Whether external control is enabled
  */
+export function resolveSetlistItemIdByIndex(setlistFiles, index) {
+  if (!Array.isArray(setlistFiles)) return null;
+  if (!Number.isFinite(index)) return null;
+
+  const itemIndex = Math.floor(index);
+  if (itemIndex < 0 || itemIndex >= setlistFiles.length) return null;
+
+  return setlistFiles[itemIndex]?.id || null;
+}
+
 export function useExternalControl({
   lyrics = [],
   selectedLine,
   isOutputOn,
   autoplayActive,
+  intelligentAutoplayActive,
   selectLine,
   setIsOutputOn,
   emitLineUpdate,
@@ -40,8 +57,13 @@ export function useExternalControl({
   emitOutput2Toggle,
   emitStageToggle,
   handleAutoplayToggle,
+  handleIntelligentAutoplayToggle,
+  handleIntelligentAutoplayStart,
+  handleIntelligentAutoplayStop,
   handleSetlistNext,
   handleSetlistPrev,
+  setlistFiles = [],
+  emitSetlistLoad,
   handleSyncOutputs,
   showToast,
   songName = '',
@@ -51,12 +73,16 @@ export function useExternalControl({
   const selectedLineRef = useRef(selectedLine);
   const isOutputOnRef = useRef(isOutputOn);
   const autoplayActiveRef = useRef(autoplayActive);
+  const intelligentAutoplayActiveRef = useRef(intelligentAutoplayActive);
+  const setlistFilesRef = useRef(setlistFiles);
 
   // Keep refs updated
   useEffect(() => { lyricsRef.current = lyrics; }, [lyrics]);
   useEffect(() => { selectedLineRef.current = selectedLine; }, [selectedLine]);
   useEffect(() => { isOutputOnRef.current = isOutputOn; }, [isOutputOn]);
   useEffect(() => { autoplayActiveRef.current = autoplayActive; }, [autoplayActive]);
+  useEffect(() => { intelligentAutoplayActiveRef.current = intelligentAutoplayActive; }, [intelligentAutoplayActive]);
+  useEffect(() => { setlistFilesRef.current = setlistFiles; }, [setlistFiles]);
 
   /**
    * Handle line selection with bounds checking
@@ -139,6 +165,26 @@ export function useExternalControl({
   }, [handleSelectLine]);
 
   /**
+   * Handle setlist item selection by zero-based index.
+   */
+  const handleLoadSetlistItem = useCallback((index) => {
+    const fileId = resolveSetlistItemIdByIndex(setlistFilesRef.current, index);
+
+    if (fileId && typeof emitSetlistLoad === 'function') {
+      emitSetlistLoad(fileId);
+      return;
+    }
+
+    if (typeof showToast === 'function') {
+      showToast({
+        title: 'Setlist item not found',
+        message: `No setlist item exists at index ${index}`,
+        variant: 'info'
+      });
+    }
+  }, [emitSetlistLoad, showToast]);
+
+  /**
    * Process incoming external control action
    */
   const processAction = useCallback((action) => {
@@ -193,6 +239,24 @@ export function useExternalControl({
         }
         break;
 
+      case 'toggle-intelligent-autoplay':
+        if (typeof handleIntelligentAutoplayToggle === 'function') {
+          handleIntelligentAutoplayToggle();
+        }
+        break;
+
+      case 'intelligent-autoplay-start':
+        if (typeof handleIntelligentAutoplayStart === 'function' && !intelligentAutoplayActiveRef.current) {
+          handleIntelligentAutoplayStart();
+        }
+        break;
+
+      case 'intelligent-autoplay-stop':
+        if (typeof handleIntelligentAutoplayStop === 'function' && intelligentAutoplayActiveRef.current) {
+          handleIntelligentAutoplayStop();
+        }
+        break;
+
       case 'next-song':
         if (typeof handleSetlistNext === 'function') {
           handleSetlistNext();
@@ -206,8 +270,10 @@ export function useExternalControl({
         break;
 
       case 'load-setlist-item':
-        // This would need to be implemented with setlist loading logic
         console.log('[ExternalControl] Load setlist item:', action.index);
+        if (typeof action.index === 'number') {
+          handleLoadSetlistItem(action.index);
+        }
         break;
 
       case 'sync-outputs':
@@ -287,8 +353,12 @@ export function useExternalControl({
     handleSetOutput,
     handleClearOutput,
     handleAutoplayToggle,
+    handleIntelligentAutoplayToggle,
+    handleIntelligentAutoplayStart,
+    handleIntelligentAutoplayStop,
     handleSetlistNext,
     handleSetlistPrev,
+    handleLoadSetlistItem,
     handleSyncOutputs,
     handleScrollLines,
     emitOutput1Toggle,
@@ -329,9 +399,10 @@ export function useExternalControl({
       output: isOutputOn,
       songName: songName || '',
       lineCount: lyrics?.length || 0,
-      autoplay: autoplayActive || false
+      autoplay: autoplayActive || false,
+      intelligentAutoplay: intelligentAutoplayActive || false
     });
-  }, [enabled, selectedLine, isOutputOn, songName, lyrics?.length, autoplayActive]);
+  }, [enabled, selectedLine, isOutputOn, songName, lyrics?.length, autoplayActive, intelligentAutoplayActive]);
 
   return {
     processAction,

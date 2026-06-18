@@ -1,10 +1,9 @@
 /* File: src/index.css */
 
-@import './styles/fonts.css';
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
+@source "../index.html";
+@source "./**/*.{js,jsx}";
 
 /* ==== Colour & Theme Variables ==== */
 @layer base {
@@ -99,6 +98,27 @@
     -moz-user-select: text;
     -ms-user-select: text;
   }
+
+  :where(
+    button,
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"],
+    a[href],
+    summary,
+    label[for],
+    select,
+    input[type="button"],
+    input[type="checkbox"],
+    input[type="color"],
+    input[type="file"],
+    input[type="radio"],
+    input[type="range"],
+    input[type="reset"],
+    input[type="submit"]
+  ):not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    cursor: pointer;
+  }
 }
 
 /* ==== Scrollbar Styles ==== */
@@ -136,4 +156,11 @@
 
 .dark * {
   scrollbar-color: rgba(75, 85, 99, 0.6) transparent;
+}
+
+[data-modal-root="true"] .overflow-y-auto,
+[data-modal-root="true"] .overflow-y-scroll {
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
 }

@@ -55,6 +55,49 @@ export function calculateTimestampDelay(timestamps, currentIndex, nextIndex) {
 }
 
 /**
+ * Get the next intelligent autoplay step from a displayed lyric index.
+ * @param {Object} options
+ * @param {Array} options.lyrics - Current lyric lines
+ * @param {Array<number | null>} options.timestamps - Timestamp array in centiseconds
+ * @param {number} options.currentIndex - Currently displayed line index
+ * @param {Object} options.settings - Autoplay settings
+ * @param {Function} options.isLineBlank - Blank-line predicate
+ * @returns {Object} Step status and next line timing
+ */
+export function getNextIntelligentAutoplayStep({
+  lyrics,
+  timestamps,
+  currentIndex,
+  settings,
+  isLineBlank
+}) {
+  if (!Array.isArray(lyrics) || lyrics.length === 0) {
+    return { status: 'empty' };
+  }
+
+  let nextIndex = (currentIndex ?? -1) + 1;
+
+  if (settings?.skipBlankLines) {
+    while (nextIndex < lyrics.length && isLineBlank(lyrics[nextIndex])) {
+      nextIndex++;
+    }
+  }
+
+  if (nextIndex >= lyrics.length) {
+    return { status: 'complete' };
+  }
+
+  const delay = calculateTimestampDelay(timestamps, currentIndex, nextIndex);
+  const fallbackDelay = (settings?.interval ?? 5) * 1000;
+
+  return {
+    status: 'next',
+    nextIndex,
+    delayMs: delay !== null ? delay : fallbackDelay
+  };
+}
+
+/**
  * Find the next valid timestamp index starting from a given index
  * @param {Array<number | null>} timestamps - Array of timestamps
  * @param {number} startIndex - Index to start searching from

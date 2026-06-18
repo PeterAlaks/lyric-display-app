@@ -202,6 +202,16 @@ const useMenuHandlers = (closeMenu) => {
     window.dispatchEvent(new Event('open-presentation-import'));
   }, [closeMenu]);
 
+  const handleOpenOnlineLyricsSearch = useCallback(() => {
+    closeMenu();
+    window.dispatchEvent(new Event('open-online-lyrics-search'));
+  }, [closeMenu]);
+
+  const handleOpenSetlist = useCallback(() => {
+    closeMenu();
+    window.dispatchEvent(new Event('open-setlist-modal'));
+  }, [closeMenu]);
+
   const handlePreviewOutputs = useCallback(() => {
     closeMenu();
     showModal({
@@ -212,6 +222,56 @@ const useMenuHandlers = (closeMenu) => {
       size: 'large',
       dismissLabel: 'Close',
       className: 'max-w-4xl'
+    });
+  }, [closeMenu, showModal]);
+
+  const handleSyncOutputs = useCallback(() => {
+    closeMenu();
+    window.dispatchEvent(new Event('sync-outputs-from-menu'));
+  }, [closeMenu]);
+
+  const handleOpenTimerControl = useCallback(async () => {
+    closeMenu();
+
+    try {
+      if (window?.electronAPI?.display?.openTimerControlWindow) {
+        await window.electronAPI.display.openTimerControlWindow();
+        return;
+      }
+    } catch (error) {
+      console.warn('Failed to open timer control window:', error);
+    }
+
+    navigate('/timer-control');
+  }, [closeMenu, navigate]);
+
+  const handleNdiPreferences = useCallback(() => {
+    closeMenu();
+    showModal({
+      title: 'Preferences',
+      component: 'UserPreferences',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      initialCategory: 'ndi',
+      actions: [],
+      allowBackdropClose: false,
+    });
+  }, [closeMenu, showModal]);
+
+  const handleUserMedia = useCallback(() => {
+    closeMenu();
+    showModal({
+      title: 'User Media',
+      headerDescription: 'Browse uploaded images and video assets.',
+      component: 'UserMedia',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      scrollBehavior: 'none',
+      actions: [],
+      allowedTypes: ['image', 'video'],
+      initialTab: 'image',
     });
   }, [closeMenu, showModal]);
 
@@ -317,6 +377,32 @@ const useMenuHandlers = (closeMenu) => {
     });
   }, [closeMenu, showModal]);
 
+  const handlePreServiceHealth = useCallback(() => {
+    closeMenu();
+    showModal({
+      title: 'Production Readiness Check',
+      headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+      component: 'PreServiceHealth',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      actions: [{ label: 'Close', variant: 'outline' }],
+    });
+  }, [closeMenu, showModal]);
+
+  const handleOperatorActionLog = useCallback(() => {
+    closeMenu();
+    showModal({
+      title: 'Operator Action Log',
+      headerDescription: 'Review recent live control actions and export the log if needed',
+      component: 'OperatorActionLog',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      actions: [{ label: 'Close', variant: 'outline' }],
+    });
+  }, [closeMenu, showModal]);
+
   const handleDocs = useCallback(() => {
     closeMenu();
     window.open('https://lyricdisplay.app/documentation', '_blank', 'noopener,noreferrer');
@@ -331,10 +417,28 @@ const useMenuHandlers = (closeMenu) => {
     closeMenu();
     showModal({
       title: 'Connection Diagnostics',
+      headerDescription: 'Inspect connected clients, sync state, and retry health',
       component: 'ConnectionDiagnostics',
       variant: 'info',
       size: 'large',
-      dismissLabel: 'Close'
+      actions: [
+        { label: 'Close', variant: 'outline' },
+        {
+          label: 'Production Readiness',
+          variant: 'default',
+          onSelect: () => {
+            showModal({
+              title: 'Production Readiness Check',
+              headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+              component: 'PreServiceHealth',
+              variant: 'info',
+              size: 'lg',
+              customLayout: true,
+              actions: [{ label: 'Close', variant: 'outline' }],
+            });
+          },
+        },
+      ],
     });
   }, [closeMenu, showModal]);
 
@@ -402,7 +506,13 @@ const useMenuHandlers = (closeMenu) => {
     handleOpenObsSourceCreator,
     handleEasyWorship,
     handlePresentationImport,
+    handleOpenOnlineLyricsSearch,
+    handleOpenSetlist,
     handlePreviewOutputs,
+    handleSyncOutputs,
+    handleOpenTimerControl,
+    handleNdiPreferences,
+    handleUserMedia,
     handleQuit,
 
     handleUndo,
@@ -420,6 +530,8 @@ const useMenuHandlers = (closeMenu) => {
     handleMaximizeToggle,
     handleShortcuts,
     handleDisplaySettings,
+    handlePreServiceHealth,
+    handleOperatorActionLog,
 
     handleDocs,
     handleRepo,

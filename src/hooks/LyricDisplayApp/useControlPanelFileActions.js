@@ -28,13 +28,14 @@ export const useControlPanelFileActions = ({
         if (result && result.success && result.content) {
           const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath };
           window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
+          trackAction('song_loaded');
           return;
         }
         if (result && result.canceled) return;
       }
     } catch { }
     fileInputRef.current?.click();
-  }, [fileInputRef, isAuthenticated, showToast]);
+  }, [fileInputRef, isAuthenticated, showToast, trackAction]);
 
   const handleCreateNewSong = useCallback(() => {
     navigate('/new-song?mode=new');

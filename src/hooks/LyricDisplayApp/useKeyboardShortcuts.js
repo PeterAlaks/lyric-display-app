@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
+import { findNavigableLyricLineIndex } from '../../utils/lyricLineNavigation';
 
 export const useKeyboardShortcuts = ({
   hasLyrics,
@@ -25,7 +26,8 @@ export const useKeyboardShortcuts = ({
   handleNavigateSetlistPrevious,
   handleNavigateSetlistNext,
   handleOpenPreferences,
-  availableOutputIds
+  availableOutputIds,
+  skipSectionTitlesOnKeyboard = true
 }) => {
 
   useEffect(() => {
@@ -200,16 +202,18 @@ export const useKeyboardShortcuts = ({
         let newIndex;
 
         if (isHome) {
-          newIndex = 0;
+          newIndex = findNavigableLyricLineIndex(lyrics, 0, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
         } else if (isEnd) {
-          newIndex = lyrics.length - 1;
+          newIndex = findNavigableLyricLineIndex(lyrics, lyrics.length - 1, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
         } else if (isUpArrow) {
-          newIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+          const startIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
         } else {
-          newIndex = currentIndex < lyrics.length - 1 ? currentIndex + 1 : lyrics.length - 1;
+          const startIndex = currentIndex < lyrics.length - 1 ? currentIndex + 1 : lyrics.length - 1;
+          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
         }
 
-        if (newIndex !== currentIndex) {
+        if (newIndex !== null && newIndex !== currentIndex) {
           handleLineSelect(newIndex);
           window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
             detail: { lineIndex: newIndex }
@@ -237,6 +241,7 @@ export const useKeyboardShortcuts = ({
     highlightedLineIndex,
     handleOpenSetlist,
     handleOpenOnlineLyricsSearch,
-    availableOutputIds
+    availableOutputIds,
+    skipSectionTitlesOnKeyboard
   ]);
 };

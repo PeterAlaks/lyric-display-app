@@ -5,6 +5,7 @@ import useToast from '@/hooks/useToast';
 import useLyricsStore from '@/context/LyricsStore';
 import { formatOutputLabel } from '@/utils/outputLabels';
 import { cn } from '@/lib/utils';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 
 const DESKTOP_TARGET = 'desktop';
 
@@ -62,7 +63,7 @@ const ProjectOutputModal = ({
   const customOutputIds = useLyricsStore((state) => state.customOutputIds || []);
 
   const outputOptions = React.useMemo(() => {
-    const options = ['output1', 'output2', ...customOutputIds, 'stage', 'time'];
+    const options = [...DEFAULT_OUTPUT_IDS, ...customOutputIds, 'stage', 'time'];
     return options.map((value) => ({ value, label: formatOutputLabel(value) }));
   }, [customOutputIds]);
 
@@ -128,7 +129,7 @@ const ProjectOutputModal = ({
     const base = [{
       value: DESKTOP_TARGET,
       label: 'This Monitor',
-      sub: 'Fullscreen behind windows',
+      sub: 'Fullscreen projection; press Esc to exit',
       icon: Monitor,
     }];
     externalDisplays.forEach((display, index) => {
@@ -240,9 +241,9 @@ const ProjectOutputModal = ({
   const dark = darkMode;
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-b-2xl" style={{ height: 560 }}>
+    <div className="flex h-[560px] max-h-full min-h-0 flex-col overflow-hidden rounded-b-2xl">
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
         {/* Detection banner */}
         {detectionBanner && (

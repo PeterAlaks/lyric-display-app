@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { resolveBackendUrl } from '../utils/network';
+import { outputTemplates } from '../utils/outputTemplates';
 import useAuth from '../hooks/useAuth';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
@@ -23,6 +24,25 @@ const formatFileSize = (bytes) => {
 };
 
 const getClientType = () => (typeof window !== 'undefined' && window.electronAPI ? 'desktop' : 'web');
+
+const bundledTemplateMedia = outputTemplates
+  .map((template) => {
+    const media = template.settings?.fullScreenBackgroundMedia;
+    if (!media?.bundled || !media.url) return null;
+
+    return {
+      id: `bundled:${media.url}`,
+      type: 'image',
+      name: template.settings?.fullScreenBackgroundMediaName || media.name || template.title,
+      filename: media.name || media.url.split('/').pop() || template.id,
+      url: media.url,
+      mimeType: media.mimeType || 'image/jpeg',
+      size: media.size || 0,
+      uploadedAt: media.uploadedAt || 0,
+      bundled: true,
+    };
+  })
+  .filter(Boolean);
 
 const UserMediaModal = ({
   darkMode,
@@ -47,6 +67,7 @@ const UserMediaModal = ({
   const { ensureValidToken } = useAuth();
   const { showToast } = useToast();
   const { showModal } = useModal();
+  const canSelectMedia = typeof onSelect === 'function';
 
   const selectedMedia = React.useMemo(
     () => media.find((item) => item.id === selectedId) || null,
@@ -56,6 +77,11 @@ const UserMediaModal = ({
   const visibleMedia = React.useMemo(
     () => media.filter((item) => item.type === activeTab),
     [activeTab, media]
+  );
+
+  const deletableVisibleMedia = React.useMemo(
+    () => visibleMedia.filter((item) => !item.bundled),
+    [visibleMedia]
   );
 
   const request = React.useCallback(async (path, options = {}) => {
@@ -86,8 +112,11 @@ const UserMediaModal = ({
     try {
       const typeParam = normalizedAllowedTypes.length === 1 ? normalizedAllowedTypes[0] : 'all';
       const payload = await request(`/api/user-media?type=${encodeURIComponent(typeParam)}`);
-      setMedia(Array.isArray(payload.media) ? payload.media : []);
+      const userMedia = Array.isArray(payload.media) ? payload.media : [];
+      const bundledMedia = normalizedAllowedTypes.includes('image') ? bundledTemplateMedia : [];
+      setMedia([...bundledMedia, ...userMedia]);
     } catch (error) {
+      setMedia(normalizedAllowedTypes.includes('image') ? bundledTemplateMedia : []);
       showToast({
         title: 'Could not load media',
         message: error?.message || 'The media library could not be loaded.',
@@ -190,6 +219,7 @@ const UserMediaModal = ({
 
   const deleteMedia = async (item) => {
     if (!item || busy) return;
+    if (item.bundled) return;
     const confirmed = await confirmDelete({
       title: 'Delete Media',
       message: `Delete "${item.name}" from the media library? This removes it from disk.`,
@@ -221,10 +251,12 @@ const UserMediaModal = ({
   };
 
   const deleteAll = async () => {
-    if (visibleMedia.length === 0 || busy) return;
+    if (deletableVisibleMedia.length === 0 || busy) return;
     const confirmed = await confirmDelete({
       title: `Delete All ${activeTab === 'image' ? 'Images' : 'Videos'}`,
-      message: `Delete all ${activeTab} media from the library? This removes the files from disk.`,
+      message: activeTab === 'image'
+        ? 'Delete all uploaded image media from the library? Bundled template images will remain available.'
+        : 'Delete all uploaded video media from the library? This removes the files from disk.',
       confirmLabel: 'Delete All',
     });
     if (!confirmed) return;
@@ -234,14 +266,14 @@ const UserMediaModal = ({
       await request(`/api/user-media?type=${encodeURIComponent(activeTab)}`, {
         method: 'DELETE',
       });
-      setMedia((current) => current.filter((item) => item.type !== activeTab));
+      setMedia((current) => current.filter((item) => item.type !== activeTab || item.bundled));
       setSelectedId((current) => {
         const selected = media.find((item) => item.id === current);
-        return selected?.type === activeTab ? null : current;
+        return selected?.type === activeTab && !selected.bundled ? null : current;
       });
       showToast({
         title: 'Media cleared',
-        message: `All ${activeTab} media was removed.`,
+        message: `Uploaded ${activeTab} media was removed.`,
         variant: 'success',
       });
     } catch (error) {
@@ -255,9 +287,13 @@ const UserMediaModal = ({
     }
   };
 
+  const resolveMediaSource = (item) => (
+    item?.bundled ? item.url : resolveBackendUrl(item?.url)
+  );
+
   const proceed = () => {
-    if (!selectedMedia) return;
-    onSelect?.(selectedMedia);
+    if (!canSelectMedia || !selectedMedia) return;
+    onSelect(selectedMedia);
     onClose?.({ action: 'selected', media: selectedMedia });
   };
 
@@ -312,7 +348,7 @@ const UserMediaModal = ({
               type="button"
               variant="outline"
               onClick={deleteAll}
-              disabled={busy || visibleMedia.length === 0}
+              disabled={busy || deletableVisibleMedia.length === 0}
               className={cn(
                 darkMode
                   ? 'bg-red-950/60 border-red-700 text-red-100 hover:bg-red-900 hover:text-white hover:border-red-500'
@@ -351,7 +387,7 @@ const UserMediaModal = ({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {visibleMedia.map((item) => {
               const selected = selectedId === item.id;
-              const source = resolveBackendUrl(item.url);
+              const source = resolveMediaSource(item);
               return (
                 <div
                   key={item.id}
@@ -380,24 +416,26 @@ const UserMediaModal = ({
                         {item.name}
                       </p>
                       <p className={cn('mt-0.5 text-[11px]', darkMode ? 'text-gray-500' : 'text-gray-500')}>
-                        {formatFileSize(item.size)}
+                        {item.bundled ? 'Bundled template image' : formatFileSize(item.size)}
                       </p>
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteMedia(item);
-                    }}
-                    className={cn(
-                      'absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md opacity-0 shadow transition group-hover:opacity-100',
-                      darkMode ? 'bg-gray-950/90 text-red-200 hover:bg-red-950' : 'bg-white/95 text-red-600 hover:bg-red-50'
-                    )}
-                    aria-label={`Delete ${item.name}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {!item.bundled && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteMedia(item);
+                      }}
+                      className={cn(
+                        'absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md opacity-0 shadow transition group-hover:opacity-100',
+                        darkMode ? 'bg-gray-950/90 text-red-200 hover:bg-red-950' : 'bg-white/95 text-red-600 hover:bg-red-50'
+                      )}
+                      aria-label={`Delete ${item.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -407,7 +445,9 @@ const UserMediaModal = ({
 
       <div className={cn('flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4', darkMode ? 'border-gray-800' : 'border-gray-200')}>
         <p className={cn('min-w-0 flex-1 basis-[180px] truncate text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-          {selectedMedia ? selectedMedia.name : 'Select a media item to continue.'}
+          {canSelectMedia
+            ? (selectedMedia ? selectedMedia.name : 'Select a media item to continue.')
+            : `${visibleMedia.length} ${activeTab === 'image' ? 'image' : 'video'}${visibleMedia.length === 1 ? '' : 's'} in library.`}
         </p>
         <div className="flex shrink-0 items-center gap-3">
           <Button
@@ -416,11 +456,13 @@ const UserMediaModal = ({
             onClick={() => onClose?.({ dismissed: true })}
             className={darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : ''}
           >
-            Cancel
+            {canSelectMedia ? 'Cancel' : 'Close'}
           </Button>
-          <Button type="button" onClick={proceed} disabled={!selectedMedia || busy}>
-            Use Selected Media
-          </Button>
+          {canSelectMedia && (
+            <Button type="button" onClick={proceed} disabled={!selectedMedia || busy}>
+              Use Selected Media
+            </Button>
+          )}
         </div>
       </div>
     </div>

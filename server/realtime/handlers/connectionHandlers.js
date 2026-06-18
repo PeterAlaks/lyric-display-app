@@ -6,10 +6,13 @@ import {
 } from '../state.js';
 import { getPrimaryOutputInstance, isOutputClientType, isOutputDiscoveryClientType, isPlainObject } from '../utils.js';
 
-export function registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId }) {
+export function registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId, isPreview = false }) {
   console.log(`Authenticated user connected: ${clientType} (${deviceId}) - Socket: ${socket.id}`);
 
-  if (isOutputClientType(clientType) && !isOutputDiscoveryClientType(clientType)) {
+  const isOutputClient = isOutputClientType(clientType) && !isOutputDiscoveryClientType(clientType);
+  const tracksOutputPresence = isOutputClient && !isPreview;
+
+  if (isOutputClient) {
     if (!state.registeredOutputs.has(clientType)) {
       socket.emit('outputUnavailable', { output: clientType });
       socket.disconnect(true);
@@ -26,6 +29,24 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     permissions: socket.userData.permissions,
     connectedAt: socket.userData.connectedAt
   });
+
+  if (tracksOutputPresence) {
+    const connectedAt = Date.now();
+    state.outputInstances.get(clientType).set(socket.id, {
+      socketId: socket.id,
+      connectedAt,
+      lastUpdate: connectedAt
+    });
+
+    const allInstances = Array.from(state.outputInstances.get(clientType).values());
+    const primaryInstance = getPrimaryOutputInstance(allInstances);
+    io.emit('outputMetrics', {
+      output: clientType,
+      metrics: primaryInstance || {},
+      allInstances,
+      instanceCount: allInstances.length
+    });
+  }
 
   socket.on('clientConnect', (payload) => {
     if (!isPlainObject(payload) || typeof payload.type !== 'string') {
@@ -52,7 +73,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     console.log(`Authenticated user disconnected: ${clientType} (${deviceId}) - Reason: ${reason}`);
     state.connectedClients.delete(socket.id);
 
-    if (isOutputClientType(clientType) && state.outputInstances.has(clientType)) {
+    if (tracksOutputPresence && state.outputInstances.has(clientType)) {
       state.outputInstances.get(clientType).delete(socket.id);
 
       const remainingInstances = Array.from(state.outputInstances.get(clientType).values());
@@ -64,6 +85,14 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
           metrics: primaryInstance,
           allInstances: remainingInstances,
           instanceCount: remainingInstances.length
+        });
+      } else {
+        state.outputInstances.delete(clientType);
+        io.emit('outputMetrics', {
+          output: clientType,
+          metrics: {},
+          allInstances: [],
+          instanceCount: 0
         });
       }
     }
@@ -128,4 +157,3 @@ export function startConnectionStatsLogger() {
     console.log('Connection statistics:', stats);
   }, 5 * 60 * 1000);
 }
-

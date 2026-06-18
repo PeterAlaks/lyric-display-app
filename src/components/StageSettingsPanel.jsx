@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
+import { PaintPicker } from "@/components/ui/paint-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
 import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge, Save, BetweenVerticalEnd, ListIndentIncrease, Eye } from 'lucide-react';
 import FontSelect from './FontSelect';
@@ -13,6 +14,37 @@ import { Slider } from '@/components/ui/slider';
 import useToast from '../hooks/useToast';
 import { sanitizeIntegerInput } from '../utils/numberInput';
 import { MAX_STAGE_MESSAGES, MAX_STAGE_MESSAGE_LENGTH } from '../utils/stageMessages';
+
+const formatTimerValue = (remainingMs) => {
+  const safeRemaining = Math.max(0, Number(remainingMs) || 0);
+  const totalSeconds = Math.ceil(safeRemaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const StageTimerValue = React.memo(({ timerRunning, timerPaused, timerEndTime, pausedRemainingMs, timeRemaining }) => {
+  const [now, setNow] = React.useState(Date.now());
+
+  React.useEffect(() => {
+    if (!timerRunning || timerPaused || !timerEndTime) return;
+    setNow(Date.now());
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [timerEndTime, timerPaused, timerRunning]);
+
+  if (timerRunning && timerPaused && Number.isFinite(pausedRemainingMs)) {
+    return formatTimerValue(pausedRemainingMs);
+  }
+
+  if (timerRunning && timerEndTime) {
+    return formatTimerValue(timerEndTime - now);
+  }
+
+  return timeRemaining || '0:00';
+});
+
+StageTimerValue.displayName = 'StageTimerValue';
 
 const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showModal, isOutputEnabled, handleToggleOutput }) => {
   const { showToast } = useToast();
@@ -30,6 +62,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
     timerPaused,
     timerEndTime,
     timeRemaining,
+    pausedRemainingMs,
     customUpcomingSongName,
     upcomingSongAdvancedExpanded,
     hasUnsavedUpcomingSongName,
@@ -533,14 +566,20 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         />
       </div>
 
-      {/* Background Color */}
+      {/* Background */}
       <div className="flex items-center justify-between gap-4">
-        <Tooltip content="Set background color for stage display" side="right">
+        <Tooltip content="Set background color or gradient for stage display" side="right">
           <LabelWithIcon icon={Square} text="Background" darkMode={darkMode} />
         </Tooltip>
-        <ColorPicker
-          value={settings.backgroundColor}
-          onChange={(val) => update('backgroundColor', val)}
+        <PaintPicker
+          value={settings.backgroundPaint}
+          fallbackColor={settings.backgroundColor ?? '#000000'}
+          onChange={(val) => {
+            applySettings({
+              backgroundPaint: val,
+              ...(val?.type === 'solid' ? { backgroundColor: val.color } : {}),
+            });
+          }}
           darkMode={darkMode}
           className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
         />
@@ -737,7 +776,13 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         {/* Left: Timer Display */}
         <div className={`flex items-center justify-center px-4 py-2 rounded-lg min-w-[120px] ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
           <div className={`text-xl font-mono font-bold ${timerRunning && !timerPaused ? (darkMode ? 'text-green-400' : 'text-green-600') : (darkMode ? 'text-gray-400' : 'text-gray-500')}`}>
-            {timeRemaining || '0:00'}
+            <StageTimerValue
+              timerRunning={timerRunning}
+              timerPaused={timerPaused}
+              timerEndTime={timerEndTime}
+              pausedRemainingMs={pausedRemainingMs}
+              timeRemaining={timeRemaining}
+            />
           </div>
         </div>
 

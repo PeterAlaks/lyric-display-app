@@ -13,16 +13,16 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -34,6 +34,11 @@ jobs:
           cd server
           npm ci
 
+      - name: Audit production dependencies
+        run: |
+          npm run audit:prod
+          npm run audit:server
+
       - name: Rebuild native modules for Windows
         run: |
           npm rebuild better-sqlite3 --build-from-source
@@ -42,13 +47,11 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build and publish Windows installer
-        run: npx electron-builder --win --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Windows installer
+        run: npx electron-builder --win --publish never
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: |
@@ -60,16 +63,16 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -81,6 +84,11 @@ jobs:
           cd server
           npm ci
 
+      - name: Audit production dependencies
+        run: |
+          npm run audit:prod
+          npm run audit:server
+
       - name: Rebuild native modules for macOS
         run: |
           npm rebuild better-sqlite3 --build-from-source
@@ -89,14 +97,13 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build and publish macOS installers
-        run: npx electron-builder --mac --publish always
+      - name: Build macOS installers
+        run: npx electron-builder --mac --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-installer
           path: |
@@ -109,16 +116,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -135,6 +142,11 @@ jobs:
           cd server
           npm ci
 
+      - name: Audit production dependencies
+        run: |
+          npm run audit:prod
+          npm run audit:server
+
       - name: Rebuild native modules for Linux
         run: |
           npm rebuild better-sqlite3 --build-from-source
@@ -143,13 +155,11 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
-      - name: Build and publish Linux installers
-        run: npx electron-builder --linux --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Linux installers
+        run: npx electron-builder --linux --publish never
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-installer
           path: |
@@ -166,10 +176,10 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist-artifacts
 
@@ -198,7 +208,7 @@ jobs:
           rm -f commit_msg.txt
 
       - name: Create or update release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: v${{ steps.get_version.outputs.VERSION }}

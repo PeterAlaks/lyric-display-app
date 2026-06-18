@@ -4,6 +4,25 @@ import useModal from '@/hooks/useModal';
 import useNdiStore from '../../context/NdiStore';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from '../../utils/markdownParser';
 
+const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const normalizeVersionText = (value = '') => String(value).trim().toLowerCase().replace(/^v/, '');
+
+const isDuplicateVersionLabel = (label, version) => {
+  if (!label || !version) return false;
+
+  const normalizedVersion = normalizeVersionText(version);
+  const normalizedLabel = normalizeVersionText(label);
+  if (normalizedLabel === normalizedVersion) return true;
+
+  const versionPattern = new RegExp(`\\bv?${escapeRegExp(normalizedVersion)}\\b`, 'gi');
+  const remaining = normalizedLabel
+    .replace(versionPattern, '')
+    .replace(/\b(ndi|companion|release|version|update|available)\b/g, '')
+    .replace(/[-_:()[\]\s.]+/g, '');
+
+  return remaining.length === 0;
+};
+
 export default function NdiUpdaterBridge() {
   const { showToast } = useToast();
   const { showModal } = useModal();
@@ -32,11 +51,11 @@ export default function NdiUpdaterBridge() {
 
       const descriptionParts = [];
       if (latestVersion) {
-        descriptionParts.push(`Version ${latestVersion} is available (you have v${currentVersion}).`);
+        descriptionParts.push(`NDI Companion v${normalizeVersionText(latestVersion)} is available.`);
       } else {
         descriptionParts.push('A new version of the NDI companion is available.');
       }
-      if (releaseName && releaseName !== `v${latestVersion}`) {
+      if (releaseName && !isDuplicateVersionLabel(releaseName, latestVersion)) {
         descriptionParts.push(releaseName);
       }
       if (releaseDate) {

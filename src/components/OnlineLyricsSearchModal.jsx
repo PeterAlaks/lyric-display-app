@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Search, X, ExternalLink, Loader2, Globe2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Globe2, HelpCircle, Library, Search, Wifi, WifiOff, X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
 import useToast from '../hooks/useToast';
 import OnlineLyricsWelcomeSplash from './OnlineLyricsWelcomeSplash';
@@ -43,7 +42,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
   const [lastError, setLastError] = useState(null);
-  const [retrying, setRetrying] = useState(false);
+  const [, setRetrying] = useState(false);
   const [advancedExpanded, setAdvancedExpanded] = useState(false);
   const isOnline = useNetworkStatus();
 
@@ -52,6 +51,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const fullSearchRequestRef = useRef(0);
   const hasElectronBridge = useMemo(() => isElectronBridgeAvailable(), []);
   const abortControllerRef = useRef(null);
+  const activeSuggestionSearchRequestIdRef = useRef(null);
+  const activeFullSearchRequestIdRef = useRef(null);
   const partialResultsCleanupRef = useRef(null);
   const hasCheckedWelcome = useRef(false);
   const {
@@ -65,6 +66,26 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     savingKey,
     setKeyInputValue,
   } = useLyricsProviderKeys({ hasElectronBridge, isOpen, showToast });
+
+  const cancelLyricsSearch = useCallback((requestId) => {
+    if (!requestId || !window?.electronAPI?.lyrics?.cancelSearch) return;
+    window.electronAPI.lyrics.cancelSearch(requestId).catch((error) => {
+      console.warn('Failed to cancel lyrics search:', error);
+    });
+  }, []);
+
+  const cancelActiveSearches = useCallback(() => {
+    cancelLyricsSearch(activeSuggestionSearchRequestIdRef.current);
+    cancelLyricsSearch(activeFullSearchRequestIdRef.current);
+    activeSuggestionSearchRequestIdRef.current = null;
+    activeFullSearchRequestIdRef.current = null;
+  }, [cancelLyricsSearch]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      cancelActiveSearches();
+    }
+  }, [cancelActiveSearches, isOpen]);
 
   useEffect(() => {
     if (!isOpen || !visible || hasCheckedWelcome.current) return;
@@ -100,7 +121,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         variant: 'success',
       });
     }
-  }, [isOnline, lastError]);
+  }, [isOnline, lastError, showToast]);
 
   useEffect(() => {
     if (!isOpen || !visible) return;
@@ -139,22 +160,24 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       setFullResults(INITIAL_STATE.fullResults);
       setLowQualityResults([]);
       setShowingLowQuality(false);
-    setShowFullResults(false);
-    setSelectionLoadingId(null);
-    setActiveTab(DEFAULT_TAB);
-    resetKeyEditor();
-    setLoadingSuggestions(false);
-    setLoadingFullResults(false);
-    setLastError(null);
+      setShowFullResults(false);
+      setSelectionLoadingId(null);
+      setActiveTab(DEFAULT_TAB);
+      resetKeyEditor();
+      setLoadingSuggestions(false);
+      setLoadingFullResults(false);
+      setLastError(null);
       setRetrying(false);
     }
-  }, [isOpen, visible]);
+  }, [isOpen, resetKeyEditor, visible]);
 
   const resetState = () => {
     setQuery(INITIAL_STATE.query);
     setSuggestionResults(INITIAL_STATE.suggestionResults);
     setProviderStatuses(INITIAL_STATE.providerStatuses);
     setFullResults(INITIAL_STATE.fullResults);
+    setLowQualityResults([]);
+    setShowingLowQuality(false);
     setShowFullResults(false);
     setSelectionLoadingId(null);
     setSelectionIndex(-1);
@@ -165,14 +188,17 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   };
 
   const handleCloseModal = useCallback(() => {
+    cancelActiveSearches();
     resetState();
     onClose?.();
-  }, [onClose, resetState]);
+  }, [cancelActiveSearches, onClose, resetState]);
 
   useEffect(() => {
     if (!isOpen || activeTab !== 'libraries' || !hasElectronBridge || !isSearchFocused) return;
     const trimmed = query.trim();
     if (!trimmed) {
+      cancelLyricsSearch(activeSuggestionSearchRequestIdRef.current);
+      activeSuggestionSearchRequestIdRef.current = null;
       setSuggestionResults([]);
       setLoadingSuggestions(false);
       setLowQualityResults([]);
@@ -183,19 +209,24 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    cancelLyricsSearch(activeSuggestionSearchRequestIdRef.current);
+    activeSuggestionSearchRequestIdRef.current = null;
     if (partialResultsCleanupRef.current) {
       partialResultsCleanupRef.current();
       partialResultsCleanupRef.current = null;
     }
 
     abortControllerRef.current = new AbortController();
-    const requestId = ++suggestionsRequestRef.current;
+    const requestSequence = ++suggestionsRequestRef.current;
+    const searchRequestId = `suggestions-${requestSequence}-${Date.now()}`;
+    activeSuggestionSearchRequestIdRef.current = searchRequestId;
     setLoadingSuggestions(true);
 
     const timer = setTimeout(async () => {
       try {
         const cleanup = window.electronAPI.lyrics.onPartialResults((partialPayload) => {
-          if (requestId !== suggestionsRequestRef.current) return;
+          if (partialPayload?.requestId !== searchRequestId) return;
+          if (requestSequence !== suggestionsRequestRef.current) return;
           if (partialPayload?.results) {
             setSuggestionResults(partialPayload.results);
             setProviderStatuses(partialPayload.meta?.providers || []);
@@ -205,9 +236,15 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         });
         partialResultsCleanupRef.current = cleanup;
 
-        const response = await window.electronAPI.lyrics.search({ query: trimmed, limit: 10 });
+        const response = await window.electronAPI.lyrics.search({
+          query: trimmed,
+          limit: 10,
+          mode: 'suggestions',
+          requestId: searchRequestId,
+        });
 
-        if (requestId !== suggestionsRequestRef.current) return;
+        if (requestSequence !== suggestionsRequestRef.current) return;
+        if (response?.cancelled) return;
         setLoadingSuggestions(false);
 
         if (response?.success) {
@@ -220,9 +257,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
         if (cleanup) cleanup();
         partialResultsCleanupRef.current = null;
+        if (activeSuggestionSearchRequestIdRef.current === searchRequestId) {
+          activeSuggestionSearchRequestIdRef.current = null;
+        }
       } catch (error) {
         if (error.name === 'AbortError') return;
-        if (requestId !== suggestionsRequestRef.current) return;
+        if (requestSequence !== suggestionsRequestRef.current) return;
         setLoadingSuggestions(false);
         setSuggestionResults([]);
         const classified = classifyError(error);
@@ -245,17 +285,20 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      cancelLyricsSearch(searchRequestId);
+      if (activeSuggestionSearchRequestIdRef.current === searchRequestId) {
+        activeSuggestionSearchRequestIdRef.current = null;
+      }
       if (partialResultsCleanupRef.current) {
         partialResultsCleanupRef.current();
         partialResultsCleanupRef.current = null;
       }
     };
-  }, [query, activeTab, isOpen, hasElectronBridge, isSearchFocused]);
+  }, [query, activeTab, isOpen, hasElectronBridge, isSearchFocused, cancelLyricsSearch, showToast]);
 
   useEffect(() => {
     setSelectionIndex(-1);
   }, [suggestionResults, fullResults, showFullResults, isOpen]);
-
 
   const providerMap = useMemo(() => {
     const map = new Map();
@@ -290,13 +333,19 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       return;
     }
     const trimmed = query.trim();
-    const requestId = ++fullSearchRequestRef.current;
+    cancelLyricsSearch(activeFullSearchRequestIdRef.current);
+    activeFullSearchRequestIdRef.current = null;
+    const requestSequence = ++fullSearchRequestRef.current;
+    const searchRequestId = `full-${requestSequence}-${Date.now()}`;
+    activeFullSearchRequestIdRef.current = searchRequestId;
     setLoadingFullResults(true);
     setShowFullResults(true);
 
+    let cleanup = null;
     try {
-      const cleanup = window.electronAPI.lyrics.onPartialResults((partialPayload) => {
-        if (requestId !== fullSearchRequestRef.current) return;
+      cleanup = window.electronAPI.lyrics.onPartialResults((partialPayload) => {
+        if (partialPayload?.requestId !== searchRequestId) return;
+        if (requestSequence !== fullSearchRequestRef.current) return;
         if (partialPayload?.results) {
           setFullResults(partialPayload.results);
           setProviderStatuses(partialPayload.meta?.providers || []);
@@ -308,10 +357,13 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       const response = await window.electronAPI.lyrics.search({
         query: trimmed,
         limit: 25,
-        skipCache: true
+        skipCache: true,
+        mode: 'full',
+        requestId: searchRequestId,
       });
 
-      if (requestId !== fullSearchRequestRef.current) return;
+      if (requestSequence !== fullSearchRequestRef.current) return;
+      if (response?.cancelled) return;
       setLoadingFullResults(false);
 
       if (response?.success) {
@@ -323,10 +375,8 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         setFullResults([]);
         throw new Error(response?.error || 'No results found.');
       }
-
-      cleanup();
     } catch (error) {
-      if (requestId !== fullSearchRequestRef.current) return;
+      if (requestSequence !== fullSearchRequestRef.current) return;
       setLoadingFullResults(false);
       setFullResults([]);
       setLowQualityResults([]);
@@ -338,6 +388,11 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         message: classified.message,
         variant: classified.type === 'not_found' ? 'warning' : 'error',
       });
+    } finally {
+      if (cleanup) cleanup();
+      if (activeFullSearchRequestIdRef.current === searchRequestId) {
+        activeFullSearchRequestIdRef.current = null;
+      }
     }
   };
 
@@ -414,9 +469,45 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
   if (!visible) return null;
 
+  const isLibrariesMode = activeTab === 'libraries';
+  const sourceModeClasses = (mode) => [
+    'inline-flex h-9 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+    activeTab === mode
+      ? (darkMode ? 'bg-gray-100 text-gray-900 shadow-sm' : 'bg-gray-900 text-white shadow-sm')
+      : (darkMode ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-100'),
+  ].join(' ');
+  const inputClasses = darkMode
+    ? 'h-10 border-gray-700 bg-gray-950 text-white placeholder-gray-500 pr-10'
+    : 'h-10 pr-10';
+  const clearSearch = () => {
+    setQuery('');
+    setShowFullResults(false);
+    setSuggestionResults([]);
+    setFullResults([]);
+    setLowQualityResults([]);
+    setShowingLowQuality(false);
+    setIsSearchFocused(false);
+    setLastError(null);
+  };
+  const handlePrimarySearch = () => {
+    if (isLibrariesMode) {
+      performFullSearch();
+    } else {
+      handleGoogleSearch();
+    }
+  };
+  const setSearchMode = (mode) => {
+    setActiveTab(mode);
+    setIsSearchFocused(false);
+    setSuggestionResults([]);
+    setSelectionIndex(-1);
+  };
+  const primarySearchDisabled = !query.trim()
+    || (isLibrariesMode && (!hasElectronBridge || !isOnline || loadingFullResults));
+
   const modalClasses = [
-    'rounded-2xl border shadow-2xl ring-1 w-[90vw] max-w-2xl mx-4',
-    'flex flex-col h-[650px]',
+    'rounded-xl border shadow-2xl ring-1 w-[94vw] max-w-5xl mx-4',
+    'flex max-h-[calc(100vh-2rem)] h-[min(86vh,760px)] flex-col overflow-hidden sm:min-h-[620px]',
     darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20',
     'transition-all duration-200 ease-out',
     (exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100',
@@ -435,233 +526,172 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         onClick={handleCloseModal}
       />
       <div className={modalClasses}>
-        <div className={`flex items-center justify-between border-b px-6 py-4 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-          <div>
-            <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Online Lyrics Search</h2>
-            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Search Google or browse connected lyric libraries directly inside LyricDisplay.
-            </p>
+        <div className={`flex items-center justify-between border-b px-5 py-4 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <div className="min-w-0">
+            <h2 className={`truncate text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Online Lyrics Search</h2>
+            <div className={`mt-1 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              {isOnline ? <Wifi className="h-3.5 w-3.5 text-green-500" /> : <WifiOff className="h-3.5 w-3.5 text-red-500" />}
+              <span>{isOnline ? 'Online' : 'Offline'}</span>
+              {hasElectronBridge && <span className={darkMode ? 'text-gray-600' : 'text-gray-300'}>|</span>}
+              {hasElectronBridge && <span>{providerDefinitions.length} providers</span>}
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Network Status Indicator */}
-            <Tooltip content={isOnline ? 'Connected to the internet' : 'No internet connection'}>
-              <div
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-colors ${isOnline
-                  ? (darkMode ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700')
-                  : (darkMode ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse' : 'bg-red-50 border-red-200 text-red-700 animate-pulse')
-                  }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-[10px] font-semibold uppercase tracking-wide">
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
-              </div>
-            </Tooltip>
-            {/* Help Button */}
-            <Tooltip content="How to use Online Lyrics Search">
+            <Tooltip content="Open help">
               <button
                 onClick={() => setShowWelcomeSplash(true)}
-                className={`p-1.5 rounded-md transition-colors ${darkMode
-                  ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
+                className={`rounded-md p-2 transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                aria-label="Open help"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <HelpCircle className="h-5 w-5" />
               </button>
             </Tooltip>
-
-            {/* Close Button */}
-            <button
-              onClick={handleCloseModal}
-              className={`p-1.5 rounded-md transition-colors ${darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <Tooltip content="Close">
+              <button
+                onClick={handleCloseModal}
+                className={`rounded-md p-2 transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </Tooltip>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-scroll px-6 py-5">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex items-center gap-2">
-              <TabsList className={darkMode ? 'bg-gray-800 text-gray-300' : undefined}>
-                <TabsTrigger value="google" className={darkMode
-                  ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900'
-                  : 'data-[state=active]:bg-white data-[state=active]:text-gray-900'}
-                >Google Search</TabsTrigger>
-                <TabsTrigger value="libraries" className={darkMode
-                  ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900'
-                  : 'data-[state=active]:bg-white data-[state=active]:text-gray-900'}
-                >Online Song Libraries</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="google" className="animate-in slide-in-from-left-8 duration-300">
-              <div className="mt-4 space-y-4">
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    autoFocus={activeTab === 'google'}
-                    placeholder="Enter song title and artist"
-                    className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10 h-10' : 'pr-10 h-10'}
-                  />
-                  {query && (
-                    <button
-                      onClick={() => setQuery('')}
-                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${darkMode
-                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
-                      aria-label="Clear search"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1fr)_18rem]">
+          <section className={`flex min-h-0 flex-col ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+            <div className={`border-b p-4 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className={`inline-flex w-fit rounded-lg p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                  <button type="button" onClick={() => setSearchMode('libraries')} className={sourceModeClasses('libraries')}>
+                    <Library className="h-4 w-4" />
+                    Libraries
+                  </button>
+                  <button type="button" onClick={() => setSearchMode('google')} className={sourceModeClasses('google')}>
+                    <Globe2 className="h-4 w-4" />
+                    Web
+                  </button>
                 </div>
-                <Button
-                  onClick={handleGoogleSearch}
-                  disabled={!query.trim()}
-                  className="w-full h-10"
-                >
-                  <Search className="w-4 h-4" />
-                  Open Google Search
-                </Button>
-
-                {/* Google Search Info Section */}
-                <div className={`mt-8 rounded-lg border p-6 text-center ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                  <div className="flex justify-center mb-4">
-                    <img
-                      src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
-                      alt="Google"
-                      className="w-32 h-auto"
+                <div className="flex min-w-0 flex-1 gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Input
+                      type="text"
+                      value={query}
+                      onChange={(event) => {
+                        setQuery(event.target.value);
+                        setShowFullResults(false);
+                        setShowingLowQuality(false);
+                        setLastError(null);
+                      }}
+                      onFocus={() => {
+                        if (isLibrariesMode) setIsSearchFocused(true);
+                      }}
+                      onBlur={() => {
+                        if (!isLibrariesMode) return;
+                        setIsSearchFocused(false);
+                        setSuggestionResults([]);
+                        setLoadingSuggestions(false);
+                        setSelectionIndex(-1);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                          event.preventDefault();
+                          handlePrimarySearch();
+                        }
+                      }}
+                      autoFocus
+                      placeholder={isLibrariesMode ? 'Song title, artist, hymn' : 'Song title and artist'}
+                      className={inputClasses}
                     />
+                    {query && (
+                      <button
+                        onClick={clearSearch}
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors ${darkMode
+                          ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                          }`}
+                        aria-label="Clear search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                    {isLibrariesMode && hasElectronBridge && !showFullResults && (
+                      <SuggestionsList
+                        darkMode={darkMode}
+                        handleSelectResult={handleSelectResult}
+                        isSearchFocused={isSearchFocused}
+                        items={suggestionResults}
+                        popover
+                        providerMap={providerMap}
+                        query={query}
+                        selectionIndex={selectionIndex}
+                        selectionLoadingId={selectionLoadingId}
+                        setSelectionIndex={setSelectionIndex}
+                        showFullResults={showFullResults}
+                        suggestionListRef={suggestionListRef}
+                      />
+                    )}
                   </div>
-                  <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Search the Web for Lyrics
-                  </h3>
-                  <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Opens an in-app browser with Google search results. Perfect for finding lyrics from any website, copying them and pasting into LyricDisplay.
-                  </p>
-                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${darkMode ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
-                    <Globe2 className="w-3.5 h-3.5" />
-                    Browse any lyrics website
-                  </div>
-                </div>
-
-                {/* Quick Tips */}
-                <div className={`rounded-lg border p-4 ${darkMode ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'}`}>
-                  <p className={`text-xs font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    💡 Quick Tips
-                  </p>
-                  <ul className="space-y-2">
-                    <li className={`text-xs flex items-start gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      <span className={`mt-0.5 w-1 h-1 rounded-full flex-shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'}`}></span>
-                      <span>Enter song title and artist for best results</span>
-                    </li>
-                    <li className={`text-xs flex items-start gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      <span className={`mt-0.5 w-1 h-1 rounded-full flex-shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'}`}></span>
-                      <span>The browser stays open while you copy lyrics. You can only copy with Ctrl/Cmd + C key action.</span>
-                    </li>
-                    <li className={`text-xs flex items-start gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      <span className={`mt-0.5 w-1 h-1 rounded-full flex-shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'}`}></span>
-                      <span>Use "Online Song Libraries" for one-click imports</span>
-                    </li>
-                  </ul>
+                  <Button
+                    onClick={handlePrimarySearch}
+                    disabled={primarySearchDisabled}
+                    className="h-10 w-24 shrink-0 justify-center"
+                  >
+                    {isLibrariesMode ? <Search className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                    {isLibrariesMode ? 'Search' : 'Open'}
+                  </Button>
                 </div>
               </div>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="libraries" className="animate-in slide-in-from-right-8 duration-300">
-              {/* Offline Banner */}
-              {!isOnline && (
-                <div className={`mt-4 rounded-lg border-2 px-4 py-3 ${darkMode ? 'border-red-500/50 bg-red-500/10' : 'border-red-200 bg-red-50'}`}>
+            <div
+              className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5"
+              style={{ scrollbarGutter: 'stable' }}
+            >
+              {isLibrariesMode && !isOnline && (
+                <div className={`rounded-md border px-4 py-3 ${darkMode ? 'border-red-500/40 bg-red-500/10' : 'border-red-200 bg-red-50'}`}>
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
+                    <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
                     <div>
-                      <p className={`text-sm font-semibold ${darkMode ? 'text-red-300' : 'text-red-900'}`}>
-                        No internet connection
-                      </p>
-                      <p className={`text-xs mt-1 ${darkMode ? 'text-red-400' : 'text-red-700'}`}>
-                        Online library search requires an active internet connection. Please check your network and try again.
-                      </p>
+                      <p className={`text-sm font-semibold ${darkMode ? 'text-red-300' : 'text-red-900'}`}>No internet connection</p>
+                      <p className={`mt-1 text-xs ${darkMode ? 'text-red-400' : 'text-red-700'}`}>Online library search is unavailable.</p>
                     </div>
                   </div>
                 </div>
               )}
-              {!hasElectronBridge ? (
-                <div className={`mt-6 rounded-md border px-4 py-6 text-center ${darkMode ? 'border-gray-700 bg-gray-800 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600'}`}>
-                  <p className="text-sm">
-                    Online libraries require the desktop app. Connect through Electron to search and import lyrics directly.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="mt-4 space-y-3">
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        value={query}
-                        onChange={(event) => { setQuery(event.target.value); setShowFullResults(false); setShowingLowQuality(false); }}
-                        onFocus={() => setIsSearchFocused(true)}
-                        onBlur={() => {
-                          setIsSearchFocused(false);
-                          setSuggestionResults([]);
-                          setLoadingSuggestions(false);
-                          setSelectionIndex(-1);
-                        }}
-                        autoFocus={activeTab === 'libraries'}
-                        placeholder="Search for song titles, artists or hymns"
-                        className={darkMode ? 'border-gray-700 bg-gray-800 text-white placeholder-gray-500 pr-10 h-10' : 'pr-10 h-10'}
-                      />
-                      {query && (
-                        <button
-                          onClick={() => {
-                            setQuery('');
-                            setShowFullResults(false);
-                            setSuggestionResults([]);
-                            setFullResults([]);
-                            setLowQualityResults([]);
-                            setShowingLowQuality(false);
-                            setIsSearchFocused(false);
-                          }}
-                          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${darkMode
-                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                            }`}
-                          aria-label="Clear search"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <Button
-                        onClick={performFullSearch}
-                        disabled={!query.trim() || loadingFullResults}
-                        className="flex-1 h-10"
-                      >
-                        <Search className="w-4 h-4" />
-                        Search Libraries
-                      </Button>
-                    </div>
-                  </div>
 
-                  {/* Error State with Retry */}
+              {isLibrariesMode && !hasElectronBridge && (
+                <div className={`rounded-md border px-4 py-6 text-center ${darkMode ? 'border-gray-700 bg-gray-800 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600'}`}>
+                  <p className="text-sm">Online libraries require the desktop app.</p>
+                </div>
+              )}
+
+              {!isLibrariesMode && (
+                <div className={`rounded-md border p-6 ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
+                  <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <img
+                      src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+                      alt="Google"
+                      className="h-auto w-32"
+                    />
+                    <Button onClick={handleGoogleSearch} disabled={!query.trim()} className="h-10">
+                      <ExternalLink className="h-4 w-4" />
+                      Open Google Results
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {isLibrariesMode && hasElectronBridge && (
+                <>
                   {lastError && lastError.context === 'suggestions' && !loadingSuggestions && (
-                    <div className={`mt-3 rounded-md border px-4 py-3 ${darkMode ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-yellow-200 bg-yellow-50'}`}>
+                    <div className={`mb-3 rounded-md border px-4 py-3 ${darkMode ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-yellow-200 bg-yellow-50'}`}>
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-2 flex-1">
-                          <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                        <div className="flex min-w-0 flex-1 items-start gap-2">
+                          <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                           <div className="min-w-0">
-                            <p className={`text-sm font-medium ${darkMode ? 'text-yellow-300' : 'text-yellow-900'}`}>
-                              {lastError.title}
-                            </p>
-                            <p className={`text-xs mt-1 ${darkMode ? 'text-yellow-400/80' : 'text-yellow-700'}`}>
-                              {lastError.message}
-                            </p>
+                            <p className={`text-sm font-medium ${darkMode ? 'text-yellow-300' : 'text-yellow-900'}`}>{lastError.title}</p>
+                            <p className={`mt-1 text-xs ${darkMode ? 'text-yellow-400/80' : 'text-yellow-700'}`}>{lastError.message}</p>
                           </div>
                         </div>
                         {lastError.retryable && (
@@ -684,21 +714,6 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     </div>
                   )}
 
-                  {!showFullResults && (
-                    <SuggestionsList
-                      darkMode={darkMode}
-                      handleSelectResult={handleSelectResult}
-                      isSearchFocused={isSearchFocused}
-                      items={suggestionResults}
-                      providerMap={providerMap}
-                      query={query}
-                      selectionIndex={selectionIndex}
-                      selectionLoadingId={selectionLoadingId}
-                      setSelectionIndex={setSelectionIndex}
-                      showFullResults={showFullResults}
-                      suggestionListRef={suggestionListRef}
-                    />
-                  )}
                   {showFullResults && (
                     <FullResultsList
                       darkMode={darkMode}
@@ -718,29 +733,35 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                       showingLowQuality={showingLowQuality}
                     />
                   )}
-
-                  <ProviderAdvancedPanel
-                    advancedExpanded={advancedExpanded}
-                    darkMode={darkMode}
-                    handleDeleteKey={handleDeleteKey}
-                    handleSaveKey={handleSaveKey}
-                    keyEditor={keyEditor}
-                    keyInputValue={keyInputValue}
-                    openKeyEditor={openKeyEditor}
-                    providerDefinitions={providerDefinitions}
-                    providerStatuses={providerStatuses}
-                    resetKeyEditor={resetKeyEditor}
-                    savingKey={savingKey}
-                    setAdvancedExpanded={setAdvancedExpanded}
-                    setKeyInputValue={setKeyInputValue}
-                  />                </>
+                </>
               )}
-            </TabsContent>
-          </Tabs>
+            </div>
+          </section>
+
+          <aside
+            className={`min-h-0 overflow-y-auto border-t p-4 md:border-l md:border-t-0 ${darkMode ? 'border-gray-800 bg-gray-950/60' : 'border-gray-200 bg-gray-50'}`}
+            style={{ scrollbarGutter: 'stable' }}
+          >
+            <ProviderAdvancedPanel
+              advancedExpanded={advancedExpanded}
+              compact
+              darkMode={darkMode}
+              handleDeleteKey={handleDeleteKey}
+              handleSaveKey={handleSaveKey}
+              keyEditor={keyEditor}
+              keyInputValue={keyInputValue}
+              openKeyEditor={openKeyEditor}
+              providerDefinitions={providerDefinitions}
+              providerStatuses={providerStatuses}
+              resetKeyEditor={resetKeyEditor}
+              savingKey={savingKey}
+              setAdvancedExpanded={setAdvancedExpanded}
+              setKeyInputValue={setKeyInputValue}
+            />
+          </aside>
         </div>
       </div>
 
-      {/* Welcome Splash Overlay */}
       <OnlineLyricsWelcomeSplash
         isOpen={showWelcomeSplash}
         onClose={() => setShowWelcomeSplash(false)}
