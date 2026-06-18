@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { registerDevProtocol } from './register-dev-protocol.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
@@ -20,6 +21,8 @@ const childEnv = {
   LYRICDISPLAY_HEADLESS: '1',
   LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: '1',
 };
+
+registerDevProtocol();
 
 function spawnChild(command, args, label) {
   const child = spawn(command, args, {

@@ -16,6 +16,7 @@
     "server": "node server/index.js",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron-dev:headless": "node scripts/electron-dev-headless.js",
+    "dev:register-protocol": "node scripts/register-dev-protocol.js",
     "electron": "electron .",
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run build && electron-builder",

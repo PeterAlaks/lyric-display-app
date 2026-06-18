@@ -136,7 +136,7 @@ During development, add the local dev launcher file as an OBS dock:
 file:///D:/path/to/lyric-display-app/obs-dock-dev.html
 ```
 
-Click `Start Dev Headless and Open Dock`. If the dev protocol has not been registered on the machine yet, run `npm run electron-dev:headless` once, then use the local dev launcher again.
+Click `Start Dev Headless and Open Dock`. If the dev protocol has not been registered on the machine yet, run `npm run dev:register-protocol` once, then use the local dev launcher again.
 
 ## Development
 
@@ -157,6 +157,7 @@ npm run dev              # Vite development server
 npm run server           # Backend server only
 npm run electron-dev     # Full Electron development
 npm run electron-dev:headless # Electron development without the main app window
+npm run dev:register-protocol # Register lyricdisplay-dev:// for the local repo
 npm run build            # Production build
 npm run electron-pack    # Package Electron app
 ```

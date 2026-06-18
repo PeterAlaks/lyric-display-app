@@ -129,7 +129,7 @@
         </div>
       </div>
 
-      <div id="status" class="status">Checking whether LyricDisplay is already running...</div>
+      <div id="status" class="status">Click Start Headless and Open Dock.</div>
 
       <div class="actions">
         <button id="startButton" type="button">Start Headless and Open Dock</button>
@@ -147,6 +147,7 @@
       const protocolFrame = document.getElementById('protocolFrame');
       const isViteDev = window.location.protocol.startsWith('http') && window.location.port === '5173';
       const pageParams = new URLSearchParams(window.location.search || '');
+      let launchInProgress = false;
       const createPairingToken = () => {
         const bytes = new Uint8Array(32);
         if (window.crypto && window.crypto.getRandomValues) {
@@ -177,11 +178,14 @@
 
       const requestProtocolLaunch = (url) => {
         try {
-          protocolFrame.src = 'about:blank';
-          window.setTimeout(() => {
-            protocolFrame.src = url;
-          }, 0);
+          const link = document.createElement('a');
+          link.href = url;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          window.setTimeout(() => link.remove(), 1000);
         } catch {
+          protocolFrame.src = url;
         }
       };
 
@@ -213,12 +217,14 @@
         return false;
       };
 
-      const launchHeadlessAndPair = async () => {
-        if (await checkReady()) {
-          setStatus('LyricDisplay is already running. Opening dock controller...', 'ready');
-          window.location.href = dockUrl;
+      const launchHeadlessAndPair = () => {
+        if (launchInProgress) {
+          setStatus('Startup request is already in progress...');
           return;
         }
+
+        launchInProgress = true;
+        startButton.disabled = true;
 
         setStatus('Requesting LyricDisplay headless startup...');
         requestProtocolLaunch(`lyricdisplay://start-headless?obsPairingToken=${encodeURIComponent(pairingToken)}`);
@@ -231,28 +237,22 @@
 
           if (!ready) {
             setStatus('The app link did not start LyricDisplay. Make sure LyricDisplay is installed and that this dock page was opened from the install folder, then click Start Headless and Open Dock again.', 'error');
+            launchInProgress = false;
+            startButton.disabled = false;
           }
         }, 1200);
       };
 
       startButton.addEventListener('click', launchHeadlessAndPair);
-      document.getElementById('dockLink').addEventListener('click', async (event) => {
+      document.getElementById('dockLink').addEventListener('click', (event) => {
         event.preventDefault();
-        if (await checkReady()) {
-          window.location.href = dockUrl;
-          return;
-        }
         launchHeadlessAndPair();
       });
       document.getElementById('openDesktopButton').addEventListener('click', () => {
         requestProtocolLaunch('lyricdisplay://open');
       });
 
-      pollReady({ navigate: true, attempts: 4, pendingMessage: 'Checking local LyricDisplay service...' }).then((ready) => {
-        if (!ready) {
-          setStatus('LyricDisplay is not running. Click Start Headless and Open Dock.', '');
-        }
-      });
+      setStatus('Click Start Headless and Open Dock.');
     </script>
   </body>
 </html>

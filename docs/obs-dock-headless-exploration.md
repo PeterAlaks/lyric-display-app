@@ -243,7 +243,7 @@ When handled by Electron in dev, this starts the backend headlessly and starts V
 http://localhost:5173/obs-dock?obsPairingToken=...
 ```
 
-If the dev protocol has not been registered on the machine yet, run `npm run electron-dev:headless` once, quit it, then retry the local `obs-dock-dev.html` launcher.
+If the dev protocol has not been registered on the machine yet, run `npm run dev:register-protocol` once, then retry the local `obs-dock-dev.html` launcher.
 
 Do not assume custom protocol handoff will work in every OBS/browser environment. The launcher is the intended user flow, but protocol handoff is still an OS/browser capability.
 

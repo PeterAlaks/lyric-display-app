@@ -129,7 +129,7 @@
         </div>
       </div>
 
-      <div id="status" class="status">Checking local LyricDisplay dev services...</div>
+      <div id="status" class="status">Click Start Dev Headless and Open Dock.</div>
 
       <div class="actions">
         <button id="startButton" type="button">Start Dev Headless and Open Dock</button>
@@ -179,11 +179,14 @@
 
       const requestProtocolLaunch = (url) => {
         try {
-          protocolFrame.src = 'about:blank';
-          window.setTimeout(() => {
-            protocolFrame.src = url;
-          }, 0);
+          const link = document.createElement('a');
+          link.href = url;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          window.setTimeout(() => link.remove(), 1000);
         } catch {
+          protocolFrame.src = url;
         }
       };
 
@@ -233,7 +236,7 @@
         return false;
       };
 
-      const launchHeadlessAndPair = async () => {
+      const launchHeadlessAndPair = () => {
         if (launchInProgress) {
           setStatus('Startup request is already in progress...');
           return;
@@ -241,13 +244,6 @@
 
         launchInProgress = true;
         startButton.disabled = true;
-
-        const state = await checkReady();
-        if (state.ready) {
-          setStatus('Dev services are already running. Opening dock controller...', 'ready');
-          window.location.href = dockUrl;
-          return;
-        }
 
         setStatus('Requesting LyricDisplay dev headless startup...');
         requestProtocolLaunch(`lyricdisplay-dev://start-headless?startDevServer=1&obsPairingToken=${encodeURIComponent(pairingToken)}`);
@@ -259,7 +255,7 @@
           });
 
           if (!ready) {
-            setStatus('The dev app link did not start LyricDisplay. Run npm run electron-dev:headless once so Windows registers lyricdisplay-dev:// to this repo, then use this launcher again.', 'error');
+            setStatus('The dev app link did not start LyricDisplay. Run npm run dev:register-protocol once so Windows registers lyricdisplay-dev:// to this repo, then use this launcher again.', 'error');
             launchInProgress = false;
             startButton.disabled = false;
           }
@@ -267,23 +263,15 @@
       };
 
       startButton.addEventListener('click', launchHeadlessAndPair);
-      document.getElementById('dockLink').addEventListener('click', async (event) => {
+      document.getElementById('dockLink').addEventListener('click', (event) => {
         event.preventDefault();
-        if ((await checkReady()).ready) {
-          window.location.href = dockUrl;
-          return;
-        }
         launchHeadlessAndPair();
       });
       document.getElementById('openDesktopButton').addEventListener('click', () => {
         requestProtocolLaunch('lyricdisplay-dev://open?startDevServer=1');
       });
 
-      pollReady({ navigate: true, attempts: 4, pendingMessage: 'Checking local LyricDisplay dev services...' }).then((ready) => {
-        if (!ready) {
-          setStatus('LyricDisplay dev services are not running. Click Start Dev Headless and Open Dock.', '');
-        }
-      });
+      setStatus('Click Start Dev Headless and Open Dock.');
     </script>
   </body>
 </html>
