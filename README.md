@@ -133,7 +133,7 @@ The page opens as the dock home screen. Click `Start Headless and Open Dock` to 
 During development, add the local dev launcher file as an OBS dock:
 
 ```text
-file:///D:/path/to/lyric-display-app/public/obs-dock-dev.html
+file:///D:/path/to/lyric-display-app/obs-dock-dev.html
 ```
 
 Click `Start Dev Headless and Open Dock`. If the dev protocol has not been registered on the machine yet, run `npm run electron-dev:headless` once, then use the local dev launcher again.

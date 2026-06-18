@@ -46,8 +46,8 @@ The practical design is now:
 - `public/obs-dock.html`
   Static launcher page intended for OBS Custom Browser Docks. It checks the local backend, attempts optional protocol startup, and redirects to the dock controller route when ready.
 
-- `public/obs-dock-dev.html`
-  Static development launcher page intended for OBS Custom Browser Docks or a browser opened from the repo. It uses the dev-only `lyricdisplay-dev://` protocol and can ask Electron to start Vite for the dock UI.
+- `obs-dock-dev.html`
+  Root-level static development launcher page intended for OBS Custom Browser Docks or a browser opened from the repo. It uses the dev-only `lyricdisplay-dev://` protocol and can ask Electron to start Vite for the dock UI.
 
 - `src/components/ObsDockLayout.jsx`
   Compact OBS dock controller UI.
@@ -222,7 +222,7 @@ No desktop window or join code should be required when the app protocol handoff 
 Use the local development launcher file as the OBS custom dock URL:
 
 ```text
-file:///D:/path/to/lyric-display-app/public/obs-dock-dev.html
+file:///D:/path/to/lyric-display-app/obs-dock-dev.html
 ```
 
 Click:
