@@ -25,6 +25,7 @@ import { registerMediaRoutes } from './routes/media.js';
 import { registerAdminSecretRoutes } from './routes/adminSecrets.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerIntegrationRoutes } from './routes/integrations.js';
+import { registerAppControlRoutes } from './routes/appControl.js';
 
 dotenv.config();
 
@@ -101,6 +102,7 @@ app.use('/api/auth', tokenRateLimit);
 
 registerOutputRoutes(app, { getOutputRegistry, hasOutput });
 registerIntegrationRoutes(app, { getOutputRegistry, port: PORT });
+registerAppControlRoutes(app, { localhostOnly });
 registerAuthRoutes(app, { secrets, tokenService, localhostOnly });
 registerConnectionRoutes(app, { authenticateRequest });
 registerMediaRoutes(app, {
@@ -138,6 +140,11 @@ process.on('message', (message) => {
     if (registered) {
       console.log('Registered temporary OBS dock pairing token');
     }
+    return;
+  }
+
+  if (message?.type === 'obs-dock-local-auth') {
+    process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH = message.enabled ? '1' : '';
   }
 });
 

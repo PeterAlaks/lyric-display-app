@@ -128,7 +128,7 @@ On Windows packaged installs, add `obs-dock.html` from the LyricDisplay install 
 file:///C:/Program Files/LyricDisplay/obs-dock.html
 ```
 
-The page opens as the dock home screen. Click `Start Headless and Open Dock` to start LyricDisplay in the background and load the dock controller without opening the main desktop window.
+For the most reliable OBS flow, open LyricDisplay once and enable `OBS Dock Background Mode` in Advanced Settings. LyricDisplay will then start headless when you sign in, so the OBS dock can connect without opening the main desktop window. The dock home screen opens the controller when the local background runtime is ready.
 
 During development, add the local dev launcher file as an OBS dock:
 
@@ -136,7 +136,7 @@ During development, add the local dev launcher file as an OBS dock:
 file:///D:/path/to/lyric-display-app/obs-dock-dev.html
 ```
 
-Click `Start Dev Headless and Open Dock`. If the dev protocol has not been registered on the machine yet, run `npm run dev:register-protocol` once, then use the local dev launcher again.
+Run `npm run electron-dev:headless`, then click `Open Dev Dock Controller` in the local dev launcher.
 
 ## Development
 
@@ -157,7 +157,6 @@ npm run dev              # Vite development server
 npm run server           # Backend server only
 npm run electron-dev     # Full Electron development
 npm run electron-dev:headless # Electron development without the main app window
-npm run dev:register-protocol # Register lyricdisplay-dev:// for the local repo
 npm run build            # Production build
 npm run electron-pack    # Package Electron app
 ```

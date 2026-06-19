@@ -13,7 +13,7 @@ import { handleDisplayChange } from './main/displayDetection.js';
 import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
-import { registerObsDockPairingToken } from './main/backend.js';
+import { registerObsDockPairingToken, setBackendMessageHandler } from './main/backend.js';
 import * as userPreferences from './main/userPreferences.js';
 import { initFileLogging } from './main/logging.js';
 import { ensureObsDockDevServer } from './main/devServer.js';
@@ -73,6 +73,7 @@ const shouldStartViteForDevProtocol = (protocolUrl) => (
 );
 const isHeadlessMode = process.env.LYRICDISPLAY_HEADLESS === '1' ||
   process.argv.includes('--headless') ||
+  process.argv.includes('--obs-dock') ||
   getProtocolAction(initialProtocolUrl) === 'start-headless';
 
 const registerProtocolClient = (protocol) => {
@@ -302,6 +303,12 @@ registerIpcHandlers({
   requestRendererModal
 });
 registerInAppBrowserIpc();
+
+setBackendMessageHandler((message) => {
+  if (message?.type === 'open-main-window') {
+    openMainWindow();
+  }
+});
 
 app.whenReady().then(async () => {
   try { Menu.setApplicationMenu(null); } catch { }

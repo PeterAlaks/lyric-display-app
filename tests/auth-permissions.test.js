@@ -5,6 +5,7 @@ import { registerObsDockPairingToken } from '../server/auth/obsDockPairing.js';
 import { getClientPermissions, hasPermission } from '../server/auth/permissions.js';
 import { createTokenService } from '../server/auth/tokens.js';
 import { localhostOnly } from '../server/middleware/localhostOnly.js';
+import { registerAppControlRoutes } from '../server/routes/appControl.js';
 import { registerAuthRoutes } from '../server/routes/auth.js';
 
 function createResponse() {
@@ -35,6 +36,21 @@ function createObsDockTokenRoute({ tokenService }) {
 
   const route = routes.find((candidate) => candidate.path === '/api/auth/obs-dock/token');
   assert.ok(route, 'OBS dock token route should be registered');
+  return route.handlers;
+}
+
+function createOpenMainWindowRoute() {
+  const routes = [];
+  const app = {
+    post(path, ...handlers) {
+      routes.push({ method: 'POST', path, handlers });
+    },
+  };
+
+  registerAppControlRoutes(app, { localhostOnly });
+
+  const route = routes.find((candidate) => candidate.path === '/api/app/open-main-window');
+  assert.ok(route, 'open main window route should be registered');
   return route.handlers;
 }
 
@@ -249,6 +265,53 @@ test('OBS dock pairing tokens are one-time credentials', async () => {
       delete process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH;
     } else {
       process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH = previous;
+    }
+  }
+});
+
+test('local app-control route asks Electron to open the main window', async () => {
+  const previousSend = process.send;
+  const messages = [];
+  process.send = (message) => {
+    messages.push(message);
+    return true;
+  };
+
+  try {
+    const handlers = createOpenMainWindowRoute();
+    const res = await invokeRoute(handlers, createLocalRequest({
+      origin: 'null',
+    }));
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body, { success: true });
+    assert.deepEqual(messages, [{ type: 'open-main-window', source: 'obs-dock' }]);
+  } finally {
+    if (previousSend === undefined) {
+      delete process.send;
+    } else {
+      process.send = previousSend;
+    }
+  }
+});
+
+test('local app-control route rejects non-local browser origins', async () => {
+  const previousSend = process.send;
+  process.send = () => true;
+
+  try {
+    const handlers = createOpenMainWindowRoute();
+    const res = await invokeRoute(handlers, createLocalRequest({
+      origin: 'https://example.com',
+    }));
+
+    assert.equal(res.statusCode, 403);
+    assert.match(res.body.error, /local dock page/i);
+  } finally {
+    if (previousSend === undefined) {
+      delete process.send;
+    } else {
+      process.send = previousSend;
     }
   }
 });

@@ -9,9 +9,10 @@ info:
     API documentation for the LyricDisplay App's Express REST API. JWTs minted here
     are required for Socket.IO connections (`auth.token`). Desktop tokens in production
     require the admin key; web/mobile controller tokens require the 6-digit join code
-    and are rate-limited. OBS dock controllers can also authenticate through the
-    local-only temporary pairing exchange used by protocol startup, or through
-    local-only dock auth when LyricDisplay was intentionally started headless.
+    and are rate-limited. OBS dock controllers can authenticate through
+    local-only dock auth when LyricDisplay was intentionally started headless,
+    with protocol pairing retained as a fallback for browser hosts that can hand
+    custom app protocols to the operating system.
 
 servers:
   - url: http://localhost:4000
@@ -94,11 +95,11 @@ paths:
     post:
       summary: Exchange OBS dock local startup proof for an obsDock JWT
       description: >
-        Local-only endpoint used by the bundled OBS dock launcher after it starts
-        LyricDisplay through the lyricdisplay://start-headless protocol. The
-        pairing token is short-lived and consumed on successful exchange. If
-        LyricDisplay was started in headless mode with local OBS dock auth enabled,
-        the endpoint may also mint a limited obsDock token without a pairing token.
+        Local-only endpoint used by the bundled OBS dock after LyricDisplay has
+        started in headless OBS background mode. When local OBS dock auth is
+        enabled, the endpoint may mint a limited obsDock token without a pairing
+        token. Protocol pairing tokens are still accepted as a fallback and are
+        short-lived, one-time credentials.
       security: []
       requestBody:
         required: true
@@ -201,6 +202,30 @@ paths:
           description: Missing token
         '401':
           description: Invalid token
+
+  /api/app/open-main-window:
+    post:
+      summary: Ask Electron to open or focus the main desktop window
+      description: >
+        Local-only endpoint used by the OBS dock when LyricDisplay is already
+        running in headless/background mode. The backend forwards the request to
+        Electron over IPC. Browser origins must be local (`file://`/`null`,
+        `localhost`, or `127.0.0.1`).
+      security: []
+      responses:
+        '200':
+          description: Main window open request accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '403':
+          description: Request did not come from a local dock page
+        '503':
+          description: Backend is not running under Electron
 
   /api/connection/clients:
     get:

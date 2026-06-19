@@ -163,7 +163,12 @@ export default function ObsDockLayout() {
   const panelClasses = darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white';
 
   const openDesktopApp = React.useCallback(() => {
-    window.location.href = 'lyricdisplay://open';
+    fetch('http://127.0.0.1:4000/api/app/open-main-window', {
+      method: 'POST',
+      cache: 'no-store',
+    }).catch((error) => {
+      console.warn('Failed to request desktop app window:', error);
+    });
   }, []);
 
   const handleLineSelect = React.useCallback((index) => {

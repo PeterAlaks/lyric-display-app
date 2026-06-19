@@ -8,6 +8,7 @@ let backendProcess = null;
 let backendStopRequested = false;
 let backendRestartTimer = null;
 let lastStartOptions = {};
+let backendMessageHandler = null;
 
 const BACKEND_TAIL_LIMIT = 64 * 1024;
 const BACKEND_RESTART_WINDOW_MS = 5 * 60_000;
@@ -103,6 +104,11 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       }
       if (allowLocalObsDockAuth) {
         lastStartOptions = { ...lastStartOptions, allowLocalObsDockAuth: true };
+        try {
+          backendProcess.send({ type: 'obs-dock-local-auth', enabled: true });
+        } catch (error) {
+          console.warn('[Backend] Failed to enable OBS dock local auth:', error);
+        }
       }
       resolve();
       return;
@@ -252,6 +258,14 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     });
 
     child.on('message', async (msg) => {
+      if (backendMessageHandler) {
+        try {
+          backendMessageHandler(msg);
+        } catch (error) {
+          console.warn('[Backend] Message handler failed:', error);
+        }
+      }
+
       if (msg?.status === 'error' && msg?.error === 'EADDRINUSE' && !isResolved) {
         console.error(`Backend failed: Port ${msg.port} is already in use`);
         rejectStartup(new Error('PORT_IN_USE'));
@@ -296,6 +310,10 @@ export function registerObsDockPairingToken(token) {
     console.warn('[Backend] Failed to send OBS dock pairing token:', error);
     return false;
   }
+}
+
+export function setBackendMessageHandler(handler) {
+  backendMessageHandler = typeof handler === 'function' ? handler : null;
 }
 
 export function stopBackend() {

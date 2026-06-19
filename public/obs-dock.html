@@ -112,11 +112,6 @@
         font-size: 12px;
       }
 
-      .hidden-frame {
-        display: none;
-        height: 0;
-        width: 0;
-      }
     </style>
   </head>
   <body>
@@ -125,48 +120,29 @@
         <img src="./LyricDisplay-icon.png" alt="" />
         <div>
           <h1>LyricDisplay OBS Dock</h1>
-          <p>Start LyricDisplay in the background and open the dock controller.</p>
+          <p>Connect to the LyricDisplay background runtime and open the dock controller.</p>
         </div>
       </div>
 
-      <div id="status" class="status">Click Start Headless and Open Dock.</div>
+      <div id="status" class="status">Enable OBS Dock Background Mode in LyricDisplay, then open the dock controller.</div>
 
       <div class="actions">
-        <button id="startButton" type="button">Start Headless and Open Dock</button>
+        <button id="startButton" type="button">Open Dock Controller</button>
         <a id="dockLink" class="button secondary" href="http://127.0.0.1:4000/#/obs-dock">Open Dock Controller</a>
         <button id="openDesktopButton" class="secondary" type="button">Open Desktop App</button>
       </div>
 
       <p>Dock URL: <code id="dockUrlLabel">http://127.0.0.1:4000/#/obs-dock</code></p>
-      <iframe id="protocolFrame" class="hidden-frame" title=""></iframe>
     </main>
 
     <script>
       const statusEl = document.getElementById('status');
       const startButton = document.getElementById('startButton');
-      const protocolFrame = document.getElementById('protocolFrame');
       const isViteDev = window.location.protocol.startsWith('http') && window.location.port === '5173';
-      const pageParams = new URLSearchParams(window.location.search || '');
       let launchInProgress = false;
-      const createPairingToken = () => {
-        const bytes = new Uint8Array(32);
-        if (window.crypto && window.crypto.getRandomValues) {
-          window.crypto.getRandomValues(bytes);
-        } else {
-          for (let index = 0; index < bytes.length; index += 1) {
-            bytes[index] = Math.floor(Math.random() * 256);
-          }
-        }
-        return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-      };
-
-      const requestedPairingToken = pageParams.get('obsPairingToken');
-      const pairingToken = requestedPairingToken && requestedPairingToken.trim().length >= 32
-        ? requestedPairingToken.trim()
-        : createPairingToken();
       const dockUrl = isViteDev
-        ? `${window.location.origin}/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`
-        : `http://127.0.0.1:4000/#/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`;
+        ? `${window.location.origin}/obs-dock`
+        : 'http://127.0.0.1:4000/#/obs-dock';
       const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
       document.getElementById('dockLink').href = dockUrl;
       document.getElementById('dockUrlLabel').textContent = dockUrl;
@@ -174,19 +150,6 @@
       const setStatus = (message, className = '') => {
         statusEl.className = `status ${className}`.trim();
         statusEl.textContent = message;
-      };
-
-      const requestProtocolLaunch = (url) => {
-        try {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        } catch {
-          // Some OBS browser builds reject custom schemes from window.open().
-        }
-
-        protocolFrame.src = 'about:blank';
-        window.setTimeout(() => {
-          protocolFrame.src = url;
-        }, 0);
       };
 
       const checkReady = async () => {
@@ -200,60 +163,49 @@
         }
       };
 
-      const pollReady = async ({ navigate = false, attempts = 20, delayMs = 2000, pendingMessage = 'Waiting for LyricDisplay to become ready...' } = {}) => {
-        for (let attempt = 0; attempt < attempts; attempt += 1) {
-          const ready = await checkReady();
-          if (ready) {
-            setStatus(navigate ? 'LyricDisplay is running. Opening dock controller...' : 'LyricDisplay is running.', 'ready');
-            if (navigate) window.location.href = dockUrl;
-            return true;
-          }
-          if (attempt === 0) {
-            setStatus(pendingMessage);
-          }
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-
-        return false;
-      };
-
-      const launchHeadlessAndPair = () => {
+      const openDockController = async () => {
         if (launchInProgress) {
-          setStatus('Startup request is already in progress...');
+          setStatus('Connection check is already in progress...');
           return;
         }
 
         launchInProgress = true;
         startButton.disabled = true;
 
-        setStatus('Requesting LyricDisplay headless startup...');
-        requestProtocolLaunch(`lyricdisplay://start-headless?obsPairingToken=${encodeURIComponent(pairingToken)}`);
-        window.setTimeout(async () => {
-          const ready = await pollReady({
-            navigate: true,
-            attempts: 18,
-            delayMs: 2000,
-            pendingMessage: 'Waiting for LyricDisplay to start...'
-          });
+        setStatus('Checking LyricDisplay background runtime...');
+        if (await checkReady()) {
+          setStatus('LyricDisplay is running. Opening dock controller...', 'ready');
+          window.location.href = dockUrl;
+          return;
+        }
 
-          if (!ready) {
-            setStatus('OBS did not hand the app link to Windows. Make sure LyricDisplay is installed and registered, then try opening this launcher in your regular browser.', 'error');
-            launchInProgress = false;
-            startButton.disabled = false;
-          }
-        }, 4000);
+        setStatus('LyricDisplay background mode is not running. Open LyricDisplay once, enable OBS Dock Background Mode in Advanced Settings, then sign out/in or start LyricDisplay headless.', 'error');
+        launchInProgress = false;
+        startButton.disabled = false;
       };
 
-      startButton.addEventListener('click', launchHeadlessAndPair);
+      const openDesktopApp = async () => {
+        setStatus('Requesting the desktop window...');
+        try {
+          const response = await fetch('http://127.0.0.1:4000/api/app/open-main-window', {
+            method: 'POST',
+            cache: 'no-store'
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          setStatus('Requested the desktop window.', 'ready');
+        } catch {
+          setStatus('LyricDisplay background mode is not running. Start LyricDisplay first.', 'error');
+        }
+      };
+
+      startButton.addEventListener('click', openDockController);
       document.getElementById('dockLink').addEventListener('click', (event) => {
         event.preventDefault();
-        launchHeadlessAndPair();
+        openDockController();
       });
-      document.getElementById('openDesktopButton').addEventListener('click', () => {
-        requestProtocolLaunch('lyricdisplay://open');
-      });
+      document.getElementById('openDesktopButton').addEventListener('click', openDesktopApp);
 
-      setStatus('Click Start Headless and Open Dock.');
+      setStatus('Enable OBS Dock Background Mode in LyricDisplay, then open the dock controller.');
     </script>
   </body>
 </html>

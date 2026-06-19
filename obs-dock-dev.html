@@ -112,11 +112,6 @@
         font-size: 12px;
       }
 
-      .hidden-frame {
-        display: none;
-        height: 0;
-        width: 0;
-      }
     </style>
   </head>
   <body>
@@ -125,47 +120,27 @@
         <img src="./public/LyricDisplay-icon.png" alt="" />
         <div>
           <h1>LyricDisplay OBS Dock Dev</h1>
-          <p>Start the development backend and Vite dock UI without opening the main app window.</p>
+          <p>Connect to the development headless runtime without opening the main app window.</p>
         </div>
       </div>
 
-      <div id="status" class="status">Click Start Dev Headless and Open Dock.</div>
+      <div id="status" class="status">Run npm run electron-dev:headless, then open the dock controller.</div>
 
       <div class="actions">
-        <button id="startButton" type="button">Start Dev Headless and Open Dock</button>
+        <button id="startButton" type="button">Open Dev Dock Controller</button>
         <a id="dockLink" class="button secondary" href="http://localhost:5173/obs-dock">Open Dev Dock Controller</a>
         <button id="openDesktopButton" class="secondary" type="button">Open Dev Desktop App</button>
       </div>
 
       <p>Dock URL: <code id="dockUrlLabel">http://localhost:5173/obs-dock</code></p>
-      <iframe id="protocolFrame" class="hidden-frame" title=""></iframe>
     </main>
 
     <script>
       const statusEl = document.getElementById('status');
       const startButton = document.getElementById('startButton');
-      const protocolFrame = document.getElementById('protocolFrame');
-      const pageParams = new URLSearchParams(window.location.search || '');
       let launchInProgress = false;
 
-      const createPairingToken = () => {
-        const bytes = new Uint8Array(32);
-        if (window.crypto && window.crypto.getRandomValues) {
-          window.crypto.getRandomValues(bytes);
-        } else {
-          for (let index = 0; index < bytes.length; index += 1) {
-            bytes[index] = Math.floor(Math.random() * 256);
-          }
-        }
-        return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-      };
-
-      const requestedPairingToken = pageParams.get('obsPairingToken');
-      const pairingToken = requestedPairingToken && requestedPairingToken.trim().length >= 32
-        ? requestedPairingToken.trim()
-        : createPairingToken();
-
-      const dockUrl = `http://localhost:5173/obs-dock?obsPairingToken=${encodeURIComponent(pairingToken)}`;
+      const dockUrl = 'http://localhost:5173/obs-dock';
       const backendReadyUrl = 'http://127.0.0.1:4000/api/health/ready';
       const viteReadyUrl = 'http://localhost:5173/obs-dock.html';
 
@@ -175,19 +150,6 @@
       const setStatus = (message, className = '') => {
         statusEl.className = `status ${className}`.trim();
         statusEl.textContent = message;
-      };
-
-      const requestProtocolLaunch = (url) => {
-        try {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        } catch {
-          // Some OBS browser builds reject custom schemes from window.open().
-        }
-
-        protocolFrame.src = 'about:blank';
-        window.setTimeout(() => {
-          protocolFrame.src = url;
-        }, 0);
       };
 
       const canFetch = async (url, predicate = null) => {
@@ -215,64 +177,58 @@
         return { backendReady, viteReady, ready: backendReady && viteReady };
       };
 
-      const pollReady = async ({ navigate = false, attempts = 20, delayMs = 2000, pendingMessage = 'Waiting for dev services...' } = {}) => {
-        for (let attempt = 0; attempt < attempts; attempt += 1) {
-          const state = await checkReady();
-          if (state.ready) {
-            setStatus(navigate ? 'Dev services are ready. Opening dock controller...' : 'Dev services are ready.', 'ready');
-            if (navigate) window.location.href = dockUrl;
-            return true;
-          }
-          if (attempt === 0) {
-            setStatus(pendingMessage);
-          } else if (state.backendReady && !state.viteReady) {
-            setStatus('Backend is ready. Waiting for Vite dev UI...');
-          } else if (!state.backendReady && state.viteReady) {
-            setStatus('Vite is ready. Waiting for LyricDisplay backend...');
-          }
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-
-        return false;
-      };
-
-      const launchHeadlessAndPair = () => {
+      const openDockController = async () => {
         if (launchInProgress) {
-          setStatus('Startup request is already in progress...');
+          setStatus('Connection check is already in progress...');
           return;
         }
 
         launchInProgress = true;
         startButton.disabled = true;
 
-        setStatus('Requesting LyricDisplay dev headless startup...');
-        requestProtocolLaunch(`lyricdisplay-dev://start-headless?startDevServer=1&obsPairingToken=${encodeURIComponent(pairingToken)}`);
-        window.setTimeout(async () => {
-          const ready = await pollReady({
-            navigate: true,
-            attempts: 18,
-            delayMs: 2000,
-            pendingMessage: 'Waiting for LyricDisplay dev services to start...'
-          });
+        setStatus('Checking LyricDisplay dev services...');
+        const state = await checkReady();
 
-          if (!ready) {
-            setStatus('OBS did not hand the dev app link to Windows. The protocol is registered, but this OBS browser dock is blocking lyricdisplay-dev:// startup.', 'error');
-            launchInProgress = false;
-            startButton.disabled = false;
-          }
-        }, 4000);
+        if (state.ready) {
+          setStatus('Dev services are ready. Opening dock controller...', 'ready');
+          window.location.href = dockUrl;
+          return;
+        }
+
+        if (state.backendReady && !state.viteReady) {
+          setStatus('Backend is running, but Vite is not ready. Start Vite or run npm run electron-dev:headless.', 'error');
+        } else if (!state.backendReady && state.viteReady) {
+          setStatus('Vite is running, but the LyricDisplay backend is not ready. Run npm run electron-dev:headless.', 'error');
+        } else {
+          setStatus('LyricDisplay dev headless is not running. Run npm run electron-dev:headless, then click Open Dev Dock Controller.', 'error');
+        }
+
+        launchInProgress = false;
+        startButton.disabled = false;
       };
 
-      startButton.addEventListener('click', launchHeadlessAndPair);
+      const openDesktopApp = async () => {
+        setStatus('Requesting the dev desktop window...');
+        try {
+          const response = await fetch('http://127.0.0.1:4000/api/app/open-main-window', {
+            method: 'POST',
+            cache: 'no-store'
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          setStatus('Requested the dev desktop window.', 'ready');
+        } catch {
+          setStatus('LyricDisplay dev headless is not running. Run npm run electron-dev:headless first.', 'error');
+        }
+      };
+
+      startButton.addEventListener('click', openDockController);
       document.getElementById('dockLink').addEventListener('click', (event) => {
         event.preventDefault();
-        launchHeadlessAndPair();
+        openDockController();
       });
-      document.getElementById('openDesktopButton').addEventListener('click', () => {
-        requestProtocolLaunch('lyricdisplay-dev://open?startDevServer=1');
-      });
+      document.getElementById('openDesktopButton').addEventListener('click', openDesktopApp);
 
-      setStatus('Click Start Dev Headless and Open Dock.');
+      setStatus('Run npm run electron-dev:headless, then open the dock controller.');
     </script>
   </body>
 </html>

@@ -1,4 +1,5 @@
-import { AlertTriangle, FileText, Loader2, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, FileText, Loader2, Monitor, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -25,8 +26,49 @@ const AdvancedPreferencesSection = ({
   showModal,
   showToast,
   updatePreference,
-}) => (
-  <div className="space-y-6">
+}) => {
+  const [obsDockStartup, setObsDockStartup] = useState(null);
+  const [obsDockStartupSaving, setObsDockStartupSaving] = useState(false);
+
+  const loadObsDockStartup = async () => {
+    if (!window.electronAPI?.obsDockStartup?.get) return;
+    const status = await window.electronAPI.obsDockStartup.get();
+    setObsDockStartup(status);
+  };
+
+  useEffect(() => {
+    loadObsDockStartup().catch((error) => {
+      console.warn('Failed to load OBS dock startup status:', error);
+    });
+  }, []);
+
+  const handleObsDockStartupToggle = async (checked) => {
+    if (!window.electronAPI?.obsDockStartup?.set) return;
+
+    setObsDockStartupSaving(true);
+    try {
+      const status = await window.electronAPI.obsDockStartup.set(checked);
+      setObsDockStartup(status);
+      showToast?.({
+        title: checked ? 'OBS Dock Background Mode Enabled' : 'OBS Dock Background Mode Disabled',
+        message: checked
+          ? 'LyricDisplay will start headless when you sign in, so the OBS dock can connect without opening the main window.'
+          : 'LyricDisplay will no longer start headless when you sign in.',
+        variant: status?.success === false ? 'error' : 'success',
+      });
+    } catch (error) {
+      showToast?.({
+        title: 'Startup Setting Failed',
+        message: error.message || 'Could not update OBS dock background startup.',
+        variant: 'error',
+      });
+    } finally {
+      setObsDockStartupSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-yellow-600/50 bg-yellow-900/20' : 'border-yellow-400 bg-yellow-50'}`}>
       <div className="flex items-center gap-2 mb-2">
         <AlertTriangle className={`w-4 h-4 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
@@ -37,6 +79,38 @@ const AdvancedPreferencesSection = ({
       <p className={`text-xs ${darkMode ? 'text-yellow-300/80' : 'text-yellow-700'}`}>
         These settings are for advanced users. Changing them may affect application stability.
       </p>
+    </div>
+
+    <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Monitor className={`w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
+            <label className={`text-sm font-medium ${labelClass}`}>OBS Dock Background Mode</label>
+          </div>
+          <p className={`mt-1 text-xs ${mutedClass}`}>
+            Start LyricDisplay headless when you sign in so OBS docks can connect without opening the main app window.
+          </p>
+          {obsDockStartup?.success === false && (
+            <p className={`mt-2 text-xs ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
+              {obsDockStartup.error || 'Startup registration is not available on this system.'}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {obsDockStartupSaving && <Loader2 className={`h-4 w-4 animate-spin ${mutedClass}`} />}
+          <Switch
+            checked={obsDockStartup?.enabled ?? false}
+            disabled={obsDockStartupSaving || obsDockStartup?.supported === false}
+            onCheckedChange={handleObsDockStartupToggle}
+            className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+              ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+              : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+              }`}
+            thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+          />
+        </div>
+      </div>
     </div>
 
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
@@ -261,6 +335,7 @@ const AdvancedPreferencesSection = ({
       Reset Advanced Settings to Defaults
     </Button>
   </div>
-);
+  );
+};
 
 export default AdvancedPreferencesSection;
