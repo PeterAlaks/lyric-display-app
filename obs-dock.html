@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LyricDisplay OBS Dock Dev</title>
+    <title>LyricDisplay Dock</title>
     <style>
       :root {
         color-scheme: dark;
@@ -81,8 +81,7 @@
         gap: 10px;
       }
 
-      button,
-      a.button {
+      button {
         display: inline-flex;
         min-height: 42px;
         width: 100%;
@@ -96,20 +95,17 @@
         font: inherit;
         font-size: 14px;
         font-weight: 700;
-        text-decoration: none;
       }
 
-      button.secondary,
-      a.button.secondary {
+      button.secondary {
         border: 1px solid #374151;
         background: #111827;
         color: #e5e7eb;
       }
 
-      code {
-        overflow-wrap: anywhere;
-        color: #bfdbfe;
-        font-size: 12px;
+      button:disabled {
+        cursor: wait;
+        opacity: 0.75;
       }
 
     </style>
@@ -117,31 +113,43 @@
   <body>
     <main>
       <div class="brand">
-        <img src="./public/LyricDisplay-icon.png" alt="" />
+        <img id="appIcon" src="./LyricDisplay-icon.png" alt="" />
         <div>
-          <h1>LyricDisplay OBS Dock Dev</h1>
-          <p>Connect to the development headless runtime and load the controller in this dock.</p>
+          <h1>LyricDisplay Dock</h1>
+          <p>Connect to LyricDisplay and load the controller in this dock.</p>
         </div>
       </div>
 
-      <div id="status" class="status">Run npm run electron-dev:headless, then start this dock.</div>
+      <div id="status" class="status">Start LyricDisplay in dock mode, then start this dock.</div>
 
       <div class="actions">
-        <button id="startButton" type="button">Start OBS Dock</button>
-        <button id="openDesktopButton" class="secondary" type="button">Open Dev Desktop App</button>
+        <button id="startButton" type="button">Start LyricDisplay Dock</button>
+        <button id="openDesktopButton" class="secondary" type="button">Open Desktop App</button>
       </div>
 
-      <p>This page will load the dev dock controller here after LyricDisplay is running.</p>
+      <p>This page will load the LyricDisplay controller here after the background runtime is ready.</p>
     </main>
 
     <script>
       const statusEl = document.getElementById('status');
       const startButton = document.getElementById('startButton');
+      const iconEl = document.getElementById('appIcon');
+      const params = new URLSearchParams(window.location.search);
+      const mode = params.get('mode');
+      const isHttpVitePage = window.location.protocol.startsWith('http') && window.location.port === '5173';
+      const isDevMode = mode === 'dev' || isHttpVitePage;
+      const devOrigin = 'http://127.0.0.1:5173';
+      const productionDockUrl = 'http://127.0.0.1:4000/#/obs-dock';
+      const devDockUrl = `${devOrigin}/obs-dock`;
+      const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
+      const devReadyUrl = `${devOrigin}/obs-dock`;
       let launchInProgress = false;
 
-      const dockUrl = 'http://localhost:5173/obs-dock';
-      const backendReadyUrl = 'http://127.0.0.1:4000/api/health/ready';
-      const viteReadyUrl = 'http://localhost:5173/obs-dock.html';
+      iconEl.addEventListener('error', () => {
+        if (!iconEl.src.endsWith('/public/LyricDisplay-icon.png')) {
+          iconEl.src = './public/LyricDisplay-icon.png';
+        }
+      });
 
       const setStatus = (message, className = '') => {
         statusEl.className = `status ${className}`.trim();
@@ -161,17 +169,11 @@
       };
 
       const checkBackendReady = () => canFetch(
-        backendReadyUrl,
+        readyUrl,
         (payload) => payload && payload.status === 'ready' && payload.serverListening
       );
 
-      const checkViteReady = () => canFetch(viteReadyUrl);
-
-      const checkReady = async () => {
-        const backendReady = await checkBackendReady();
-        const viteReady = await checkViteReady();
-        return { backendReady, viteReady, ready: backendReady && viteReady };
-      };
+      const checkDevReady = () => canFetch(devReadyUrl);
 
       const openDockController = async () => {
         if (launchInProgress) {
@@ -182,45 +184,63 @@
         launchInProgress = true;
         startButton.disabled = true;
 
-        setStatus('Checking LyricDisplay dev services...');
-        const state = await checkReady();
+        setStatus(isDevMode ? 'Checking LyricDisplay dev services...' : 'Checking LyricDisplay background runtime...');
 
-        if (state.ready) {
-          setStatus('Dev services are ready. Opening dock controller...', 'ready');
-          window.location.href = dockUrl;
+        const backendReady = await checkBackendReady();
+        const devReady = isDevMode ? await checkDevReady() : false;
+
+        if (isDevMode) {
+          if (backendReady && devReady) {
+            setStatus('LyricDisplay dev services are ready. Loading dock controller...', 'ready');
+            window.location.href = devDockUrl;
+            return;
+          }
+
+          if (backendReady && !devReady) {
+            setStatus('Backend is running, but Vite is not ready at 127.0.0.1:5173. Keep npm run electron-dev:headless running, then try again.', 'error');
+          } else if (!backendReady && devReady) {
+            setStatus('Vite is running, but the LyricDisplay backend is not ready. Keep npm run electron-dev:headless running, then try again.', 'error');
+          } else {
+            setStatus('LyricDisplay dev headless is not running. Run npm run electron-dev:headless, then click Start LyricDisplay Dock.', 'error');
+          }
+
+          launchInProgress = false;
+          startButton.disabled = false;
           return;
         }
 
-        if (state.backendReady && !state.viteReady) {
-          setStatus('Backend is running, but Vite is not ready. Start Vite or run npm run electron-dev:headless.', 'error');
-        } else if (!state.backendReady && state.viteReady) {
-          setStatus('Vite is running, but the LyricDisplay backend is not ready. Run npm run electron-dev:headless.', 'error');
-        } else {
-          setStatus('LyricDisplay dev headless is not running. Run npm run electron-dev:headless, then click Start OBS Dock.', 'error');
+        if (backendReady) {
+          setStatus('LyricDisplay is running. Loading dock controller...', 'ready');
+          window.location.href = productionDockUrl;
+          return;
         }
 
+        setStatus('LyricDisplay background mode is not running. Open LyricDisplay once, enable OBS Dock Background Mode in Advanced Settings, then start LyricDisplay headless.', 'error');
         launchInProgress = false;
         startButton.disabled = false;
       };
 
       const openDesktopApp = async () => {
-        setStatus('Requesting the dev desktop window...');
+        setStatus('Requesting the desktop window...');
         try {
           const response = await fetch('http://127.0.0.1:4000/api/app/open-main-window', {
             method: 'POST',
             cache: 'no-store'
           });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          setStatus('Requested the dev desktop window.', 'ready');
+          setStatus('Requested the desktop window.', 'ready');
         } catch {
-          setStatus('LyricDisplay dev headless is not running. Run npm run electron-dev:headless first.', 'error');
+          setStatus('LyricDisplay background mode is not running. Start LyricDisplay first.', 'error');
         }
       };
 
       startButton.addEventListener('click', openDockController);
       document.getElementById('openDesktopButton').addEventListener('click', openDesktopApp);
 
-      setStatus('Run npm run electron-dev:headless, then start this dock.');
+      setStatus(isDevMode
+        ? 'Run npm run electron-dev:headless, then start this dock.'
+        : 'Enable OBS Dock Background Mode in LyricDisplay, then start this dock.'
+      );
     </script>
   </body>
 </html>

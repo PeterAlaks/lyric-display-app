@@ -4,7 +4,7 @@ import { appRoot, isDev } from './paths.js';
 
 let obsDockDevServerProcess = null;
 
-const VITE_READY_URL = 'http://127.0.0.1:5173/obs-dock.html';
+const VITE_READY_URL = 'http://127.0.0.1:5173/obs-dock';
 
 async function canReachViteDevServer() {
   const controller = new AbortController();

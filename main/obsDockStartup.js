@@ -7,10 +7,15 @@ const OBS_DOCK_LOGIN_ARGS = ['--headless', '--obs-dock'];
 
 function getDockFilePath() {
   if (isDev) {
-    return path.join(appRoot, 'obs-dock-dev.html');
+    return path.join(appRoot, 'obs-dock.html');
   }
 
   return path.join(path.dirname(process.execPath), 'obs-dock.html');
+}
+
+function getDockFileUrl(dockFilePath) {
+  const dockFileUrl = pathToFileURL(dockFilePath).href;
+  return isDev ? `${dockFileUrl}?mode=dev` : dockFileUrl;
 }
 
 function getRelaunchArgs() {
@@ -74,9 +79,9 @@ export function getObsDockSetupInfo() {
     success: true,
     isDev,
     dockFilePath,
-    dockFileUrl: pathToFileURL(dockFilePath).href,
+    dockFileUrl: getDockFileUrl(dockFilePath),
     controllerUrl: isDev
-      ? 'http://localhost:5173/obs-dock'
+      ? 'http://127.0.0.1:5173/obs-dock'
       : 'http://127.0.0.1:4000/#/obs-dock',
     headlessCommand: isDev
       ? 'npm run electron-dev:headless'

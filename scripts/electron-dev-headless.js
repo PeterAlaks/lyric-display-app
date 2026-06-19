@@ -10,7 +10,7 @@ const viteBin = path.join(projectRoot, 'node_modules', 'vite', 'bin', 'vite.js')
 const electronCommand = isWindows
   ? path.join(projectRoot, 'node_modules', 'electron', 'dist', 'electron.exe')
   : path.join(projectRoot, 'node_modules', '.bin', 'electron');
-const readyUrl = 'http://127.0.0.1:5173/obs-dock.html';
+const readyUrl = 'http://127.0.0.1:5173/obs-dock';
 
 let viteProcess = null;
 let electronProcess = null;

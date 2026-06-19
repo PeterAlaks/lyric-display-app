@@ -25,7 +25,7 @@ import SearchBar from './SearchBar';
 import OutputSettingsPanel from './OutputSettingsPanel';
 
 const CLIENT_URL = import.meta.env.MODE === 'development'
-  ? 'http://localhost:5173/obs-dock'
+  ? 'http://127.0.0.1:5173/obs-dock'
   : 'http://127.0.0.1:4000/#/obs-dock';
 
 const outputLabel = (outputId) => {

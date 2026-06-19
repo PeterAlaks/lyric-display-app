@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 const fallbackInfo = {
   isDev: import.meta.env.MODE === 'development',
   dockFileUrl: import.meta.env.MODE === 'development'
-    ? 'file:///D:/path/to/lyric-display-app/obs-dock-dev.html'
+    ? 'file:///D:/path/to/lyric-display-app/obs-dock.html?mode=dev'
     : 'file:///C:/Program Files/LyricDisplay/obs-dock.html',
   headlessCommand: import.meta.env.MODE === 'development'
     ? 'npm run electron-dev:headless'
@@ -118,7 +118,7 @@ export default function ObsDockInfoModal({ darkMode }) {
                 <li>Run the dev headless command from the repo root.</li>
                 <li>In OBS, open Docks, then Custom Browser Docks.</li>
                 <li>Paste the OBS Custom Browser Dock URL above.</li>
-                <li>Click Start OBS Dock in the loaded dock page. The controller opens in that same dock.</li>
+                <li>Click Start LyricDisplay Dock in the loaded dock page. The controller opens in that same dock.</li>
               </>
             ) : (
               <>
@@ -126,7 +126,7 @@ export default function ObsDockInfoModal({ darkMode }) {
                 <li>Use Start Headless Now when you want to switch the current session into headless mode.</li>
                 <li>In OBS, open Docks, then Custom Browser Docks.</li>
                 <li>Paste the OBS Custom Browser Dock URL above.</li>
-                <li>Click Start OBS Dock in the loaded dock page. The controller opens in that same dock.</li>
+                <li>Click Start LyricDisplay Dock in the loaded dock page. The controller opens in that same dock.</li>
               </>
             )}
           </ol>

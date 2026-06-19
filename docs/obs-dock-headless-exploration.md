@@ -84,7 +84,7 @@ The packaged `Start LyricDisplay Headless.cmd` remains a fallback/debug tool, bu
 Use the local development launcher file as the OBS custom dock URL:
 
 ```text
-file:///D:/path/to/lyric-display-app/obs-dock-dev.html
+file:///D:/path/to/lyric-display-app/obs-dock.html?mode=dev
 ```
 
 Start the dev headless runtime explicitly:
@@ -93,10 +93,10 @@ Start the dev headless runtime explicitly:
 npm run electron-dev:headless
 ```
 
-Then click `Start OBS Dock` in the dock home screen. The launcher checks the backend and Vite, then the same OBS dock redirects to:
+Then click `Start LyricDisplay Dock` in the dock home screen. The launcher checks the backend and Vite, then the same OBS dock redirects to:
 
 ```text
-http://localhost:5173/obs-dock
+http://127.0.0.1:5173/obs-dock
 ```
 
 This avoids relying on custom protocol handoff from OBS during development.
@@ -156,7 +156,7 @@ C:\Program Files\LyricDisplay\LyricDisplay-icon.png
 5. Click `Start Headless Now`, confirm the warning, and verify the app relaunches without the main window.
 6. Enable `Start at Sign In` and confirm the login item is registered with `--headless --obs-dock`.
 7. Test the production OBS dock using the installed `obs-dock.html`.
-8. Confirm `Start OBS Dock` connects without creating the main window and loads the controller in the same OBS dock.
+8. Confirm `Start LyricDisplay Dock` connects without creating the main window and loads the controller in the same OBS dock.
 9. Confirm the OBS dock `Open desktop app` action opens/focuses the main window.
 
 ## Security Notes
