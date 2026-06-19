@@ -120,19 +120,18 @@
         <img src="./public/LyricDisplay-icon.png" alt="" />
         <div>
           <h1>LyricDisplay OBS Dock Dev</h1>
-          <p>Connect to the development headless runtime without opening the main app window.</p>
+          <p>Connect to the development headless runtime and load the controller in this dock.</p>
         </div>
       </div>
 
-      <div id="status" class="status">Run npm run electron-dev:headless, then open the dock controller.</div>
+      <div id="status" class="status">Run npm run electron-dev:headless, then start this dock.</div>
 
       <div class="actions">
-        <button id="startButton" type="button">Open Dev Dock Controller</button>
-        <a id="dockLink" class="button secondary" href="http://localhost:5173/obs-dock">Open Dev Dock Controller</a>
+        <button id="startButton" type="button">Start OBS Dock</button>
         <button id="openDesktopButton" class="secondary" type="button">Open Dev Desktop App</button>
       </div>
 
-      <p>Dock URL: <code id="dockUrlLabel">http://localhost:5173/obs-dock</code></p>
+      <p>This page will load the dev dock controller here after LyricDisplay is running.</p>
     </main>
 
     <script>
@@ -143,9 +142,6 @@
       const dockUrl = 'http://localhost:5173/obs-dock';
       const backendReadyUrl = 'http://127.0.0.1:4000/api/health/ready';
       const viteReadyUrl = 'http://localhost:5173/obs-dock.html';
-
-      document.getElementById('dockLink').href = dockUrl;
-      document.getElementById('dockUrlLabel').textContent = dockUrl;
 
       const setStatus = (message, className = '') => {
         statusEl.className = `status ${className}`.trim();
@@ -200,7 +196,7 @@
         } else if (!state.backendReady && state.viteReady) {
           setStatus('Vite is running, but the LyricDisplay backend is not ready. Run npm run electron-dev:headless.', 'error');
         } else {
-          setStatus('LyricDisplay dev headless is not running. Run npm run electron-dev:headless, then click Open Dev Dock Controller.', 'error');
+          setStatus('LyricDisplay dev headless is not running. Run npm run electron-dev:headless, then click Start OBS Dock.', 'error');
         }
 
         launchInProgress = false;
@@ -222,13 +218,9 @@
       };
 
       startButton.addEventListener('click', openDockController);
-      document.getElementById('dockLink').addEventListener('click', (event) => {
-        event.preventDefault();
-        openDockController();
-      });
       document.getElementById('openDesktopButton').addEventListener('click', openDesktopApp);
 
-      setStatus('Run npm run electron-dev:headless, then open the dock controller.');
+      setStatus('Run npm run electron-dev:headless, then start this dock.');
     </script>
   </body>
 </html>

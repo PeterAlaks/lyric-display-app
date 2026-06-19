@@ -120,19 +120,18 @@
         <img src="./LyricDisplay-icon.png" alt="" />
         <div>
           <h1>LyricDisplay OBS Dock</h1>
-          <p>Connect to the LyricDisplay background runtime and open the dock controller.</p>
+          <p>Connect to the LyricDisplay background runtime and load the controller in this dock.</p>
         </div>
       </div>
 
-      <div id="status" class="status">Enable OBS Dock Background Mode in LyricDisplay, then open the dock controller.</div>
+      <div id="status" class="status">Enable OBS Dock Background Mode in LyricDisplay, then start this dock.</div>
 
       <div class="actions">
-        <button id="startButton" type="button">Open Dock Controller</button>
-        <a id="dockLink" class="button secondary" href="http://127.0.0.1:4000/#/obs-dock">Open Dock Controller</a>
+        <button id="startButton" type="button">Start OBS Dock</button>
         <button id="openDesktopButton" class="secondary" type="button">Open Desktop App</button>
       </div>
 
-      <p>Dock URL: <code id="dockUrlLabel">http://127.0.0.1:4000/#/obs-dock</code></p>
+      <p>This page will load the dock controller here after LyricDisplay is running.</p>
     </main>
 
     <script>
@@ -144,9 +143,6 @@
         ? `${window.location.origin}/obs-dock`
         : 'http://127.0.0.1:4000/#/obs-dock';
       const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
-      document.getElementById('dockLink').href = dockUrl;
-      document.getElementById('dockUrlLabel').textContent = dockUrl;
-
       const setStatus = (message, className = '') => {
         statusEl.className = `status ${className}`.trim();
         statusEl.textContent = message;
@@ -199,13 +195,9 @@
       };
 
       startButton.addEventListener('click', openDockController);
-      document.getElementById('dockLink').addEventListener('click', (event) => {
-        event.preventDefault();
-        openDockController();
-      });
       document.getElementById('openDesktopButton').addEventListener('click', openDesktopApp);
 
-      setStatus('Enable OBS Dock Background Mode in LyricDisplay, then open the dock controller.');
+      setStatus('Enable OBS Dock Background Mode in LyricDisplay, then start this dock.');
     </script>
   </body>
 </html>

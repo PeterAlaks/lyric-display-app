@@ -44,7 +44,7 @@ In headless mode:
 
 1. Install LyricDisplay.
 2. Open LyricDisplay once.
-3. In Advanced Settings, open `OBS Dock Setup` to copy the exact OBS dock URL for this install.
+3. In Advanced Settings, open `OBS Dock Setup` to copy the exact local HTML URL for this install. This is the only URL users should add as an OBS Custom Browser Dock.
 4. To avoid starting headless at every sign-in, click `Start Headless Now`. LyricDisplay warns that current app windows will close, then relaunches with:
 
 ```text
@@ -69,7 +69,7 @@ file:///C:/Program Files/LyricDisplay/obs-dock.html
 http://127.0.0.1:4000/api/health/ready
 ```
 
-8. If the background runtime is ready, it opens:
+8. If the background runtime is ready, the same OBS dock navigates itself to:
 
 ```text
 http://127.0.0.1:4000/#/obs-dock
@@ -93,7 +93,7 @@ Start the dev headless runtime explicitly:
 npm run electron-dev:headless
 ```
 
-Then click `Open Dev Dock Controller` in the dock home screen. The launcher checks the backend and Vite, then redirects to:
+Then click `Start OBS Dock` in the dock home screen. The launcher checks the backend and Vite, then the same OBS dock redirects to:
 
 ```text
 http://localhost:5173/obs-dock
@@ -152,11 +152,11 @@ C:\Program Files\LyricDisplay\LyricDisplay-icon.png
 1. Rebuild and reinstall the Windows package.
 2. Confirm `obs-dock.html`, `LyricDisplay-icon.png`, and `Start LyricDisplay Headless.cmd` appear beside `LyricDisplay.exe`.
 3. Open `OBS Dock Setup` from Advanced Settings and from Tools.
-4. Confirm it shows a copyable installed `obs-dock.html` file URL.
+4. Confirm it shows only the copyable installed `obs-dock.html` file URL as the OBS dock URL.
 5. Click `Start Headless Now`, confirm the warning, and verify the app relaunches without the main window.
 6. Enable `Start at Sign In` and confirm the login item is registered with `--headless --obs-dock`.
 7. Test the production OBS dock using the installed `obs-dock.html`.
-8. Confirm `Open Dock Controller` connects without creating the main window.
+8. Confirm `Start OBS Dock` connects without creating the main window and loads the controller in the same OBS dock.
 9. Confirm the OBS dock `Open desktop app` action opens/focuses the main window.
 
 ## Security Notes

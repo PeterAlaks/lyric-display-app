@@ -128,7 +128,7 @@ On Windows packaged installs, add `obs-dock.html` from the LyricDisplay install 
 file:///C:/Program Files/LyricDisplay/obs-dock.html
 ```
 
-For the most reliable OBS flow, open LyricDisplay once and use `OBS Dock / Headless Mode` in Advanced Settings. Use `Start Headless Now` for the current session, or enable `Start at Sign In` if you want LyricDisplay to start headless automatically. `OBS Dock Setup` shows the exact dock URL to paste into OBS.
+For the most reliable OBS flow, open LyricDisplay once and use `OBS Dock / Headless Mode` in Advanced Settings. `OBS Dock Setup` shows the one local HTML URL to paste into OBS. Use `Start Headless Now` for the current session, or enable `Start at Sign In` if you want LyricDisplay to start headless automatically. When you click `Start OBS Dock` inside OBS, that same dock loads the controller.
 
 During development, add the local dev launcher file as an OBS dock:
 
@@ -136,7 +136,7 @@ During development, add the local dev launcher file as an OBS dock:
 file:///D:/path/to/lyric-display-app/obs-dock-dev.html
 ```
 
-Run `npm run electron-dev:headless`, then click `Open Dev Dock Controller` in the local dev launcher.
+Run `npm run electron-dev:headless`, then click `Start OBS Dock` in the local dev launcher. The controller loads in that same OBS dock.
 
 ## Development
 
