@@ -9,7 +9,7 @@ info:
     API documentation for the LyricDisplay App's Express REST API. JWTs minted here
     are required for Socket.IO connections (`auth.token`). Desktop tokens in production
     require the admin key; web/mobile controller tokens require the 6-digit join code
-    and are rate-limited. OBS dock controllers can authenticate through
+    and are rate-limited. LyricDisplay Dock controllers can authenticate through
     local-only dock auth when LyricDisplay was intentionally started headless,
     with protocol pairing retained as a fallback for browser hosts that can hand
     custom app protocols to the operating system.
@@ -93,10 +93,10 @@ paths:
 
   /api/auth/obs-dock/token:
     post:
-      summary: Exchange OBS dock local startup proof for an obsDock JWT
+      summary: Exchange LyricDisplay Dock local startup proof for an obsDock JWT
       description: >
-        Local-only endpoint used by the bundled OBS dock after LyricDisplay has
-        started in headless OBS background mode. When local OBS dock auth is
+        Local-only endpoint used by LyricDisplay Dock after LyricDisplay has
+        started in LyricDisplay Dock headless mode. When local dock auth is
         enabled, the endpoint may mint a limited obsDock token without a pairing
         token. Protocol pairing tokens are still accepted as a fallback and are
         short-lived, one-time credentials.
@@ -117,10 +117,10 @@ paths:
                   type: string
                 pairingToken:
                   type: string
-                  description: Temporary token from the OBS dock launcher; optional when local headless OBS dock auth is enabled
+                  description: Temporary token from the LyricDisplay Dock launcher; optional when local headless dock auth is enabled
       responses:
         '200':
-          description: OBS dock token generated successfully
+          description: LyricDisplay Dock token generated successfully
           content:
             application/json:
               schema:
@@ -207,7 +207,7 @@ paths:
     post:
       summary: Ask Electron to open or focus the main desktop window
       description: >
-        Local-only endpoint used by the OBS dock when LyricDisplay is already
+        Local-only endpoint used by LyricDisplay Dock when LyricDisplay is already
         running in headless/background mode. The backend forwards the request to
         Electron over IPC. Browser origins must be local (`file://`/`null`,
         `localhost`, or `127.0.0.1`).

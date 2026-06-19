@@ -33,7 +33,7 @@ function CopyField({ label, value, darkMode }) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1400);
     } catch (error) {
-      console.warn('Failed to copy OBS dock value:', error);
+      console.warn('Failed to copy LyricDisplay Dock value:', error);
     }
   };
 
@@ -67,7 +67,7 @@ export default function ObsDockInfoModal({ darkMode }) {
         const result = await window.electronAPI?.obsDock?.getInfo?.();
         if (active) setInfo(result?.success === false ? fallbackInfo : (result || fallbackInfo));
       } catch (error) {
-        console.warn('Failed to load OBS dock setup info:', error);
+        console.warn('Failed to load LyricDisplay Dock setup info:', error);
         if (active) setInfo(fallbackInfo);
       } finally {
         if (active) setLoading(false);
@@ -98,16 +98,16 @@ export default function ObsDockInfoModal({ darkMode }) {
             <Monitor className={`mt-0.5 h-5 w-5 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
             <div>
               <div className={`text-sm font-semibold ${darkMode ? 'text-blue-100' : 'text-blue-900'}`}>
-                OBS Dock Mode: {modeLabel}
+                LyricDisplay Dock Mode: {modeLabel}
               </div>
               <p className={`mt-1 text-sm ${darkMode ? 'text-blue-100/80' : 'text-blue-900/75'}`}>
-                Add only the local HTML file below as an OBS Custom Browser Dock. After you click the button inside that dock, it loads the controller in the same dock.
+                Add only the local HTML file below as an OBS Custom Browser Dock. After you click the button inside that dock, LyricDisplay Dock loads the controller in the same dock.
               </p>
             </div>
           </div>
         </div>
 
-        <CopyField label="OBS Custom Browser Dock URL" value={info?.dockFileUrl} darkMode={darkMode} />
+        <CopyField label="LyricDisplay Dock URL" value={info?.dockFileUrl} darkMode={darkMode} />
         <CopyField label={info?.isDev ? 'Dev Headless Command' : 'Headless Command'} value={info?.headlessCommand} darkMode={darkMode} />
 
         <div className={`rounded-lg border p-4 text-sm ${darkMode ? 'border-gray-700 bg-gray-900 text-gray-200' : 'border-gray-200 bg-white text-gray-700'}`}>
@@ -117,15 +117,15 @@ export default function ObsDockInfoModal({ darkMode }) {
               <>
                 <li>Run the dev headless command from the repo root.</li>
                 <li>In OBS, open Docks, then Custom Browser Docks.</li>
-                <li>Paste the OBS Custom Browser Dock URL above.</li>
+                <li>Paste the LyricDisplay Dock URL above.</li>
                 <li>Click Start LyricDisplay Dock in the loaded dock page. The controller opens in that same dock.</li>
               </>
             ) : (
               <>
-                <li>Enable OBS Dock Background Mode if you want LyricDisplay to start headless when you sign in.</li>
-                <li>Use Start Headless Now when you want to switch the current session into headless mode.</li>
+                <li>Enable LyricDisplay Dock Background Mode if you want LyricDisplay to start headless when you sign in.</li>
+                <li>Use Launch Headless Mode when you want to switch the current session into headless mode.</li>
                 <li>In OBS, open Docks, then Custom Browser Docks.</li>
-                <li>Paste the OBS Custom Browser Dock URL above.</li>
+                <li>Paste the LyricDisplay Dock URL above.</li>
                 <li>Click Start LyricDisplay Dock in the loaded dock page. The controller opens in that same dock.</li>
               </>
             )}
@@ -135,7 +135,7 @@ export default function ObsDockInfoModal({ darkMode }) {
         <div className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${darkMode ? 'border-gray-700 bg-gray-950 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
           <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            Use one OBS dock entry only. The local file is the dock home page, and it navigates itself to the controller after LyricDisplay is running in headless mode.
+            Use one LyricDisplay Dock entry in OBS only. The local file is the dock home page, and it navigates itself to the controller after LyricDisplay is running in headless mode.
           </p>
         </div>
       </div>

@@ -78,7 +78,7 @@ export function performCleanup() {
   try {
     stopObsDockDevServer();
   } catch (error) {
-    console.error('[Cleanup] Error stopping OBS dock dev server:', error);
+    console.error('[Cleanup] Error stopping LyricDisplay Dock dev server:', error);
   }
 
   closeOutputWindows();

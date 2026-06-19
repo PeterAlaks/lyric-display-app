@@ -168,12 +168,21 @@
         }
       };
 
+      const canReachNoCors = async (url) => {
+        try {
+          await fetch(url, { cache: 'no-store', mode: 'no-cors' });
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
       const checkBackendReady = () => canFetch(
         readyUrl,
         (payload) => payload && payload.status === 'ready' && payload.serverListening
       );
 
-      const checkDevReady = () => canFetch(devReadyUrl);
+      const checkDevReady = () => canReachNoCors(devReadyUrl);
 
       const openDockController = async () => {
         if (launchInProgress) {
@@ -215,7 +224,7 @@
           return;
         }
 
-        setStatus('LyricDisplay background mode is not running. Open LyricDisplay once, enable OBS Dock Background Mode in Advanced Settings, then start LyricDisplay headless.', 'error');
+        setStatus('LyricDisplay Dock background mode is not running. Open LyricDisplay once, enable LyricDisplay Dock Background Mode in Advanced Settings, then launch headless mode.', 'error');
         launchInProgress = false;
         startButton.disabled = false;
       };
@@ -239,7 +248,7 @@
 
       setStatus(isDevMode
         ? 'Run npm run electron-dev:headless, then start this dock.'
-        : 'Enable OBS Dock Background Mode in LyricDisplay, then start this dock.'
+        : 'Enable LyricDisplay Dock Background Mode in LyricDisplay, then start this dock.'
       );
     </script>
   </body>

@@ -4,6 +4,7 @@ import useModal from '@/hooks/useModal';
 import useToast from '@/hooks/useToast';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useLyricsStore from '@/context/LyricsStore';
+import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '@/utils/lyricDisplayDock';
 
 const useMenuHandlers = (closeMenu) => {
   const navigate = useNavigate();
@@ -403,59 +404,21 @@ const useMenuHandlers = (closeMenu) => {
     });
   }, [closeMenu, showModal]);
 
-  const handleLaunchHeadlessMode = useCallback(async () => {
-    const confirmation = await showModal({
-      title: 'Start Headless Mode Now?',
-      description: 'LyricDisplay will close the current app windows and relaunch in OBS dock headless mode.',
-      body: 'Use this when you want the OBS dock to control LyricDisplay without keeping the main desktop window open. Unsaved work should be saved before continuing.',
-      variant: 'warn',
-      size: 'sm',
-      actions: [
-        { label: 'Cancel', value: 'cancel', variant: 'outline' },
-        { label: 'Launch Headless Mode', value: 'start', variant: 'destructive' },
-      ],
-    });
-
-    if (confirmation !== 'start') return;
-
-    try {
-      const result = await window.electronAPI?.obsDock?.startHeadlessNow?.();
-      if (result?.success === false) {
-        showToast({
-          title: 'Headless Start Failed',
-          message: result.error || 'Could not relaunch LyricDisplay in headless mode.',
-          variant: 'error',
-        });
-      }
-    } catch (error) {
-      showToast({
-        title: 'Headless Start Failed',
-        message: error.message || 'Could not relaunch LyricDisplay in headless mode.',
-        variant: 'error',
-      });
-    }
-  }, [showModal, showToast]);
+  const handleLaunchHeadlessMode = useCallback(
+    () => confirmAndLaunchHeadlessMode({ showModal, showToast }),
+    [showModal, showToast]
+  );
 
   const handleObsDockSetup = useCallback(() => {
     closeMenu();
     showModal({
-      title: 'OBS Dock Setup',
+      title: 'LyricDisplay Dock Setup',
       headerDescription: 'Copy the dock URL and review headless startup options',
       component: 'ObsDockInfo',
       variant: 'info',
       size: 'lg',
       customLayout: true,
-      actions: [
-        { label: 'Close', variant: 'outline' },
-        {
-          label: 'Launch Headless Mode',
-          variant: 'default',
-          autoFocus: true,
-          closeOnClick: false,
-          className: '!border-transparent !bg-blue-600 !text-white hover:!bg-blue-700',
-          onSelect: handleLaunchHeadlessMode,
-        },
-      ],
+      actions: createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
     });
   }, [closeMenu, handleLaunchHeadlessMode, showModal]);
 

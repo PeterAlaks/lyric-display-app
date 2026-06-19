@@ -1,4 +1,4 @@
-# OBS Dock Headless Exploration
+# LyricDisplay Dock Headless Exploration
 
 ## Purpose
 
@@ -13,7 +13,7 @@ LyricDisplay supports users who want basic control inside OBS without keeping th
 
 OBS Custom Browser Docks do not reliably hand custom app protocols such as `lyricdisplay://start-headless` to the operating system. In testing, OBS attempted to load the custom protocol as a page and showed `ERR_UNKNOWN_URL_SCHEME`.
 
-The production design therefore does not depend on OBS starting LyricDisplay. LyricDisplay is started outside OBS, preferably through an app-managed login item, and the OBS dock only connects to the already-running local background runtime.
+The production design therefore does not depend on OBS starting LyricDisplay. LyricDisplay is started outside OBS, preferably through an app-managed login item, and LyricDisplay Dock only connects to the already-running local background runtime.
 
 ## Runtime Modes
 
@@ -21,9 +21,9 @@ The production design therefore does not depend on OBS starting LyricDisplay. Ly
 
 The existing Electron startup creates the desktop UI. Desktop clients keep their existing privileged desktop authentication, while web/mobile controllers continue to use join-code auth.
 
-### Headless OBS Mode
+### LyricDisplay Dock Headless Mode
 
-Headless OBS mode can be triggered by:
+LyricDisplay Dock headless mode can be triggered by:
 
 ```text
 --headless
@@ -35,7 +35,7 @@ In headless mode:
 
 - no normal renderer window is created,
 - the backend is started,
-- local OBS dock auth is enabled,
+- local LyricDisplay Dock auth is enabled,
 - display, NDI, and related service infrastructure are initialized,
 - app activation does not automatically open a window,
 - the local backend can ask Electron to open the main desktop window through `/api/app/open-main-window`.
@@ -44,14 +44,14 @@ In headless mode:
 
 1. Install LyricDisplay.
 2. Open LyricDisplay once.
-3. In Advanced Settings, open `OBS Dock Setup` to copy the exact local HTML URL for this install. This is the only URL users should add as an OBS Custom Browser Dock.
-4. To avoid starting headless at every sign-in, click `Start Headless Now`. LyricDisplay warns that current app windows will close, then relaunches with:
+3. In Advanced Settings, open `LyricDisplay Dock Setup` to copy the exact local HTML URL for this install. This is the only URL users should add as an OBS Custom Browser Dock.
+4. To avoid starting headless at every sign-in, click `Launch Headless Mode`. LyricDisplay warns that current app windows will close, then relaunches with:
 
 ```text
 --headless --obs-dock
 ```
 
-5. If automatic startup is preferred, enable `Start at Sign In` in the same `OBS Dock / Headless Mode` section. LyricDisplay registers a login item that starts the app with:
+5. If automatic startup is preferred, enable `Start at Sign In` in the same `LyricDisplay Dock / Headless Mode` section. LyricDisplay registers a login item that starts the app with:
 
 ```text
 --headless --obs-dock
@@ -69,13 +69,13 @@ file:///C:/Program Files/LyricDisplay/obs-dock.html
 http://127.0.0.1:4000/api/health/ready
 ```
 
-8. If the background runtime is ready, the same OBS dock navigates itself to:
+8. If the background runtime is ready, the same LyricDisplay Dock page navigates itself to:
 
 ```text
 http://127.0.0.1:4000/#/obs-dock
 ```
 
-9. The dock obtains a limited local `obsDock` token and connects as the OBS dock controller.
+9. LyricDisplay Dock obtains a limited local `obsDock` token and connects as the dock controller.
 
 The packaged `Start LyricDisplay Headless.cmd` remains a fallback/debug tool, but it is no longer the intended primary user flow.
 
@@ -93,7 +93,7 @@ Start the dev headless runtime explicitly:
 npm run electron-dev:headless
 ```
 
-Then click `Start LyricDisplay Dock` in the dock home screen. The launcher checks the backend and Vite, then the same OBS dock redirects to:
+Then click `Start LyricDisplay Dock` in the dock home screen. The launcher checks the backend and Vite, then the same LyricDisplay Dock page redirects to:
 
 ```text
 http://127.0.0.1:5173/obs-dock
@@ -105,18 +105,18 @@ This avoids relying on custom protocol handoff from OBS during development.
 
 `web`, `mobile`, and ordinary controller clients still use the existing join-code path.
 
-Headless OBS mode enables local OBS dock auth. `/api/auth/obs-dock/token` can mint a limited `obsDock` JWT when all of the following are true:
+LyricDisplay Dock headless mode enables local dock auth. `/api/auth/obs-dock/token` can mint a limited `obsDock` JWT when all of the following are true:
 
 - the request is loopback-only,
 - the browser origin is local, including `file://`/`null`, `localhost`, or `127.0.0.1`,
-- headless local OBS dock auth is enabled,
+- headless local LyricDisplay Dock auth is enabled,
 - the token is for the `obsDock` client type, not desktop/admin.
 
-Protocol pairing tokens still exist as a fallback for browsers that can hand off `lyricdisplay://`, but OBS dock startup must not depend on them.
+Protocol pairing tokens still exist as a fallback for browsers that can hand off `lyricdisplay://`, but LyricDisplay Dock startup must not depend on them.
 
 ## Local App Control
 
-The OBS dock can ask a running headless Electron process to open the main app window:
+LyricDisplay Dock can ask a running headless Electron process to open the main app window:
 
 ```text
 POST http://127.0.0.1:4000/api/app/open-main-window
@@ -142,27 +142,27 @@ C:\Program Files\LyricDisplay\LyricDisplay-icon.png
 
 ## Known Limitations
 
-- A web-only OBS dock cannot reliably start a native desktop process by itself.
+- A web-only OBS Custom Browser Dock cannot reliably start a native desktop process by itself.
 - The background runtime must be started by the login item, normal app startup, or the fallback helper command.
-- The OBS dock is not a full desktop replacement.
+- LyricDisplay Dock is not a full desktop replacement.
 - The local headless auth path must remain limited to `obsDock`.
 
 ## Verification Checklist
 
 1. Rebuild and reinstall the Windows package.
 2. Confirm `obs-dock.html`, `LyricDisplay-icon.png`, and `Start LyricDisplay Headless.cmd` appear beside `LyricDisplay.exe`.
-3. Open `OBS Dock Setup` from Advanced Settings and from Tools.
-4. Confirm it shows only the copyable installed `obs-dock.html` file URL as the OBS dock URL.
-5. Click `Start Headless Now`, confirm the warning, and verify the app relaunches without the main window.
+3. Open `LyricDisplay Dock Setup` from Advanced Settings and from Tools.
+4. Confirm it shows only the copyable installed `obs-dock.html` file URL as the LyricDisplay Dock URL.
+5. Click `Launch Headless Mode`, confirm the warning, and verify the app relaunches without the main window.
 6. Enable `Start at Sign In` and confirm the login item is registered with `--headless --obs-dock`.
-7. Test the production OBS dock using the installed `obs-dock.html`.
-8. Confirm `Start LyricDisplay Dock` connects without creating the main window and loads the controller in the same OBS dock.
-9. Confirm the OBS dock `Open desktop app` action opens/focuses the main window.
+7. Test the production LyricDisplay Dock using the installed `obs-dock.html`.
+8. Confirm `Start LyricDisplay Dock` connects without creating the main window and loads the controller in the same dock.
+9. Confirm the LyricDisplay Dock `Open Desktop App` action opens/focuses the main window.
 
 ## Security Notes
 
 - Desktop/admin privileges stay inside Electron.
-- OBS dock receives only `obsDock` permissions.
+- LyricDisplay Dock receives only `obsDock` permissions.
 - Local headless auth is loopback/local-origin constrained.
 - Local app-control routes are loopback/local-origin constrained.
 - Join-code auth remains available for ordinary web/mobile controllers.

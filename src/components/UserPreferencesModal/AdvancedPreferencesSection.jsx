@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { setDebugLogging } from '../../utils/logger';
+import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '../../utils/lyricDisplayDock';
 
 const AdvancedPreferencesSection = ({
   commitNumberPreference,
@@ -38,7 +39,7 @@ const AdvancedPreferencesSection = ({
 
   useEffect(() => {
     loadObsDockStartup().catch((error) => {
-      console.warn('Failed to load OBS dock startup status:', error);
+      console.warn('Failed to load LyricDisplay Dock startup status:', error);
     });
   }, []);
 
@@ -50,16 +51,16 @@ const AdvancedPreferencesSection = ({
       const status = await window.electronAPI.obsDockStartup.set(checked);
       setObsDockStartup(status);
       showToast?.({
-        title: checked ? 'OBS Dock Background Mode Enabled' : 'OBS Dock Background Mode Disabled',
+        title: checked ? 'LyricDisplay Dock Background Mode Enabled' : 'LyricDisplay Dock Background Mode Disabled',
         message: checked
-          ? 'LyricDisplay will start headless when you sign in, so the OBS dock can connect without opening the main window.'
+          ? 'LyricDisplay will start headless when you sign in, so LyricDisplay Dock can connect without opening the main window.'
           : 'LyricDisplay will no longer start headless when you sign in.',
         variant: status?.success === false ? 'error' : 'success',
       });
     } catch (error) {
       showToast?.({
         title: 'Startup Setting Failed',
-        message: error.message || 'Could not update OBS dock background startup.',
+        message: error.message || 'Could not update LyricDisplay Dock background startup.',
         variant: 'error',
       });
     } finally {
@@ -67,58 +68,17 @@ const AdvancedPreferencesSection = ({
     }
   };
 
-  const handleStartHeadlessNow = async () => {
-    const confirmation = await showModal?.({
-      title: 'Start Headless Mode Now?',
-      description: 'LyricDisplay will close the current app windows and relaunch in OBS dock headless mode.',
-      body: 'Use this when you want the OBS dock to control LyricDisplay without keeping the main desktop window open. Unsaved work should be saved before continuing.',
-      variant: 'warn',
-      size: 'sm',
-      actions: [
-        { label: 'Cancel', value: 'cancel', variant: 'outline' },
-        { label: 'Launch Headless Mode', value: 'start', variant: 'destructive' },
-      ],
-    });
-
-    if (confirmation !== 'start') return;
-
-    try {
-      const result = await window.electronAPI?.obsDock?.startHeadlessNow?.();
-      if (result?.success === false) {
-        showToast?.({
-          title: 'Headless Start Failed',
-          message: result.error || 'Could not relaunch LyricDisplay in headless mode.',
-          variant: 'error',
-        });
-      }
-    } catch (error) {
-      showToast?.({
-        title: 'Headless Start Failed',
-        message: error.message || 'Could not relaunch LyricDisplay in headless mode.',
-        variant: 'error',
-      });
-    }
-  };
+  const handleLaunchHeadlessMode = () => confirmAndLaunchHeadlessMode({ showModal, showToast });
 
   const openObsDockInfo = () => {
     showModal?.({
-      title: 'OBS Dock Setup',
+      title: 'LyricDisplay Dock Setup',
       headerDescription: 'Copy the dock URL and review headless startup options',
       component: 'ObsDockInfo',
       variant: 'info',
       size: 'lg',
       customLayout: true,
-      actions: [
-        { label: 'Close', variant: 'outline' },
-        {
-          label: 'Launch Headless Mode',
-          variant: 'default',
-          autoFocus: true,
-          closeOnClick: false,
-          className: '!border-transparent !bg-blue-600 !text-white hover:!bg-blue-700',
-          onSelect: handleStartHeadlessNow,
-        },
-      ],
+      actions: createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
     });
   };
 
@@ -140,9 +100,9 @@ const AdvancedPreferencesSection = ({
       <div className="mb-4 flex items-start gap-3">
         <Monitor className={`mt-0.5 w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
         <div className="min-w-0">
-          <label className={`text-sm font-medium ${labelClass}`}>OBS Dock / Headless Mode</label>
+          <label className={`text-sm font-medium ${labelClass}`}>LyricDisplay Dock / Headless Mode</label>
           <p className={`mt-1 text-xs ${mutedClass}`}>
-            Run LyricDisplay without the main desktop window and control it from an OBS dock.
+            Run LyricDisplay without the main desktop window and control it from LyricDisplay Dock.
           </p>
         </div>
       </div>
@@ -152,7 +112,7 @@ const AdvancedPreferencesSection = ({
           <div className="min-w-0">
             <label className={`text-sm font-medium ${labelClass}`}>Start at Sign In</label>
             <p className={`mt-1 text-xs ${mutedClass}`}>
-              Start LyricDisplay headless when you sign in so OBS docks can connect automatically.
+              Start LyricDisplay headless when you sign in so LyricDisplay Dock can connect automatically.
             </p>
             {obsDockStartup?.success === false && (
               <p className={`mt-2 text-xs ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
@@ -179,11 +139,11 @@ const AdvancedPreferencesSection = ({
           <Button
             type="button"
             variant="outline"
-            onClick={handleStartHeadlessNow}
+            onClick={handleLaunchHeadlessMode}
             className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
           >
             <Play className="w-4 h-4 mr-2" />
-            Start Headless Now
+            Launch Headless Mode
           </Button>
           <Button
             type="button"
@@ -192,7 +152,7 @@ const AdvancedPreferencesSection = ({
             className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
           >
             <Info className="w-4 h-4 mr-2" />
-            OBS Dock Setup
+            LyricDisplay Dock Setup
           </Button>
         </div>
       </div>

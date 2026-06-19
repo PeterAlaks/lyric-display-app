@@ -267,7 +267,7 @@ export default function ObsDockLayout() {
           <button type="button" onClick={forceReconnect} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Reconnect">
             <RefreshCw className="h-4 w-4" />
           </button>
-          <button type="button" onClick={openDesktopApp} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Open desktop app">
+          <button type="button" onClick={openDesktopApp} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Open Desktop App">
             <ExternalLink className="h-4 w-4" />
           </button>
           <button type="button" onClick={() => handleOpenSettings(activeOutput)} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Output settings">

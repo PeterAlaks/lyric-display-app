@@ -107,7 +107,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         try {
           backendProcess.send({ type: 'obs-dock-local-auth', enabled: true });
         } catch (error) {
-          console.warn('[Backend] Failed to enable OBS dock local auth:', error);
+          console.warn('[Backend] Failed to enable LyricDisplay Dock local auth:', error);
         }
       }
       resolve();
@@ -307,7 +307,7 @@ export function registerObsDockPairingToken(token) {
     backendProcess.send({ type: 'obs-dock-pairing-token', token });
     return true;
   } catch (error) {
-    console.warn('[Backend] Failed to send OBS dock pairing token:', error);
+    console.warn('[Backend] Failed to send LyricDisplay Dock pairing token:', error);
     return false;
   }
 }

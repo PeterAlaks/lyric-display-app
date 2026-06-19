@@ -79,7 +79,9 @@ function shutdown(code = 0) {
 process.on('SIGINT', () => shutdown(130));
 process.on('SIGTERM', () => shutdown(143));
 
-viteProcess = spawnChild(process.execPath, [viteBin, '--host'], 'vite');
+if (!(await waitForReady(1000))) {
+  viteProcess = spawnChild(process.execPath, [viteBin, '--host'], 'vite');
+}
 
 const viteReady = await waitForReady();
 if (!viteReady) {

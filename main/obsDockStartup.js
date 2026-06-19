@@ -96,7 +96,7 @@ export function relaunchInObsDockHeadlessMode() {
     app.exit(0);
     return { success: true };
   } catch (error) {
-    console.warn('[OBSDockStartup] Failed to relaunch in OBS dock headless mode:', error);
+    console.warn('[OBSDockStartup] Failed to relaunch in LyricDisplay Dock headless mode:', error);
     return { success: false, error: error.message };
   }
 }

@@ -63,7 +63,7 @@ class AuthService {
         return token.trim();
       }
     } catch (error) {
-      logWarn('Failed to parse OBS dock pairing token from URL:', error);
+      logWarn('Failed to parse LyricDisplay Dock pairing token from URL:', error);
     }
 
     return null;
@@ -352,12 +352,12 @@ class AuthService {
         })
       });
     } catch (error) {
-      logWarn('OBS dock pairing token request failed:', error);
+      logWarn('LyricDisplay Dock pairing token request failed:', error);
       return null;
     }
 
     if (!response.ok) {
-      logWarn('OBS dock pairing token was rejected');
+      logWarn('LyricDisplay Dock pairing token was rejected');
       return null;
     }
 
@@ -373,7 +373,7 @@ class AuthService {
     });
     this.serverValidated = true;
     this.clearLockout();
-    logDebug('Authentication token obtained through OBS dock pairing');
+    logDebug('Authentication token obtained through LyricDisplay Dock pairing');
     return this.token;
   }
 
