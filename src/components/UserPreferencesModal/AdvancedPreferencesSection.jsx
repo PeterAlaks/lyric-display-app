@@ -67,18 +67,6 @@ const AdvancedPreferencesSection = ({
     }
   };
 
-  const openObsDockInfo = () => {
-    showModal?.({
-      title: 'OBS Dock Setup',
-      headerDescription: 'Copy the dock URL and review headless startup options',
-      component: 'ObsDockInfo',
-      variant: 'info',
-      size: 'lg',
-      customLayout: true,
-      actions: [{ label: 'Close', variant: 'outline' }],
-    });
-  };
-
   const handleStartHeadlessNow = async () => {
     const confirmation = await showModal?.({
       title: 'Start Headless Mode Now?',
@@ -88,7 +76,7 @@ const AdvancedPreferencesSection = ({
       size: 'sm',
       actions: [
         { label: 'Cancel', value: 'cancel', variant: 'outline' },
-        { label: 'Start Headless', value: 'start', variant: 'destructive' },
+        { label: 'Launch Headless Mode', value: 'start', variant: 'destructive' },
       ],
     });
 
@@ -110,6 +98,28 @@ const AdvancedPreferencesSection = ({
         variant: 'error',
       });
     }
+  };
+
+  const openObsDockInfo = () => {
+    showModal?.({
+      title: 'OBS Dock Setup',
+      headerDescription: 'Copy the dock URL and review headless startup options',
+      component: 'ObsDockInfo',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      actions: [
+        { label: 'Close', variant: 'outline' },
+        {
+          label: 'Launch Headless Mode',
+          variant: 'default',
+          autoFocus: true,
+          closeOnClick: false,
+          className: '!border-transparent !bg-blue-600 !text-white hover:!bg-blue-700',
+          onSelect: handleStartHeadlessNow,
+        },
+      ],
+    });
   };
 
   return (
