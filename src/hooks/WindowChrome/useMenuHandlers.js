@@ -403,6 +403,19 @@ const useMenuHandlers = (closeMenu) => {
     });
   }, [closeMenu, showModal]);
 
+  const handleObsDockSetup = useCallback(() => {
+    closeMenu();
+    showModal({
+      title: 'OBS Dock Setup',
+      headerDescription: 'Copy the dock URL and review headless startup options',
+      component: 'ObsDockInfo',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      actions: [{ label: 'Close', variant: 'outline' }],
+    });
+  }, [closeMenu, showModal]);
+
   const handleDocs = useCallback(() => {
     closeMenu();
     window.open('https://lyricdisplay.app/documentation', '_blank', 'noopener,noreferrer');
@@ -532,6 +545,7 @@ const useMenuHandlers = (closeMenu) => {
     handleDisplaySettings,
     handlePreServiceHealth,
     handleOperatorActionLog,
+    handleObsDockSetup,
 
     handleDocs,
     handleRepo,

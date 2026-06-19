@@ -1,7 +1,12 @@
 import { BrowserWindow, ipcMain, nativeTheme, app } from 'electron';
 import { saveDarkModePreference } from '../themePreferences.js';
 import { getLogPaths } from '../logging.js';
-import { getObsDockStartupStatus, setObsDockStartupEnabled } from '../obsDockStartup.js';
+import {
+  getObsDockSetupInfo,
+  getObsDockStartupStatus,
+  relaunchInObsDockHeadlessMode,
+  setObsDockStartupEnabled,
+} from '../obsDockStartup.js';
 
 /**
  * Register app-level IPC handlers
@@ -68,6 +73,10 @@ export function registerAppHandlers({ updateDarkModeMenu }) {
   ipcMain.handle('app:obs-dock-startup:set', (_event, { enabled } = {}) => (
     setObsDockStartupEnabled(Boolean(enabled))
   ));
+
+  ipcMain.handle('app:obs-dock:get-info', () => getObsDockSetupInfo());
+
+  ipcMain.handle('app:obs-dock:start-headless-now', () => relaunchInObsDockHeadlessMode());
 
   ipcMain.handle('app:relaunch', () => {
     try {

@@ -128,7 +128,7 @@ On Windows packaged installs, add `obs-dock.html` from the LyricDisplay install 
 file:///C:/Program Files/LyricDisplay/obs-dock.html
 ```
 
-For the most reliable OBS flow, open LyricDisplay once and enable `OBS Dock Background Mode` in Advanced Settings. LyricDisplay will then start headless when you sign in, so the OBS dock can connect without opening the main desktop window. The dock home screen opens the controller when the local background runtime is ready.
+For the most reliable OBS flow, open LyricDisplay once and use `OBS Dock / Headless Mode` in Advanced Settings. Use `Start Headless Now` for the current session, or enable `Start at Sign In` if you want LyricDisplay to start headless automatically. `OBS Dock Setup` shows the exact dock URL to paste into OBS.
 
 During development, add the local dev launcher file as an OBS dock:
 

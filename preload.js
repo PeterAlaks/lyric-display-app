@@ -31,6 +31,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     get: () => ipcRenderer.invoke('app:obs-dock-startup:get'),
     set: (enabled) => ipcRenderer.invoke('app:obs-dock-startup:set', { enabled }),
   },
+  obsDock: {
+    getInfo: () => ipcRenderer.invoke('app:obs-dock:get-info'),
+    startHeadlessNow: () => ipcRenderer.invoke('app:obs-dock:start-headless-now'),
+  },
   restartApp: () => ipcRenderer.invoke('app:relaunch'),
   windowControls: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

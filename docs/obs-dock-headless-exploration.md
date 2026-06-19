@@ -44,32 +44,38 @@ In headless mode:
 
 1. Install LyricDisplay.
 2. Open LyricDisplay once.
-3. In Advanced Settings, enable `OBS Dock Background Mode`.
-4. LyricDisplay registers a login item that starts the app with:
+3. In Advanced Settings, open `OBS Dock Setup` to copy the exact OBS dock URL for this install.
+4. To avoid starting headless at every sign-in, click `Start Headless Now`. LyricDisplay warns that current app windows will close, then relaunches with:
 
 ```text
 --headless --obs-dock
 ```
 
-5. In OBS, add a Custom Browser Dock pointing to the installed local file:
+5. If automatic startup is preferred, enable `Start at Sign In` in the same `OBS Dock / Headless Mode` section. LyricDisplay registers a login item that starts the app with:
+
+```text
+--headless --obs-dock
+```
+
+6. In OBS, add a Custom Browser Dock pointing to the installed local file:
 
 ```text
 file:///C:/Program Files/LyricDisplay/obs-dock.html
 ```
 
-6. The dock home screen checks:
+7. The dock home screen checks:
 
 ```text
 http://127.0.0.1:4000/api/health/ready
 ```
 
-7. If the background runtime is ready, it opens:
+8. If the background runtime is ready, it opens:
 
 ```text
 http://127.0.0.1:4000/#/obs-dock
 ```
 
-8. The dock obtains a limited local `obsDock` token and connects as the OBS dock controller.
+9. The dock obtains a limited local `obsDock` token and connects as the OBS dock controller.
 
 The packaged `Start LyricDisplay Headless.cmd` remains a fallback/debug tool, but it is no longer the intended primary user flow.
 
@@ -145,11 +151,13 @@ C:\Program Files\LyricDisplay\LyricDisplay-icon.png
 
 1. Rebuild and reinstall the Windows package.
 2. Confirm `obs-dock.html`, `LyricDisplay-icon.png`, and `Start LyricDisplay Headless.cmd` appear beside `LyricDisplay.exe`.
-3. Enable `OBS Dock Background Mode` from Advanced Settings.
-4. Confirm the login item is registered with `--headless --obs-dock`.
-5. Test the production OBS dock using the installed `obs-dock.html`.
-6. Confirm `Open Dock Controller` connects without creating the main window.
-7. Confirm the OBS dock `Open desktop app` action opens/focuses the main window.
+3. Open `OBS Dock Setup` from Advanced Settings and from Tools.
+4. Confirm it shows a copyable installed `obs-dock.html` file URL.
+5. Click `Start Headless Now`, confirm the warning, and verify the app relaunches without the main window.
+6. Enable `Start at Sign In` and confirm the login item is registered with `--headless --obs-dock`.
+7. Test the production OBS dock using the installed `obs-dock.html`.
+8. Confirm `Open Dock Controller` connects without creating the main window.
+9. Confirm the OBS dock `Open desktop app` action opens/focuses the main window.
 
 ## Security Notes
 

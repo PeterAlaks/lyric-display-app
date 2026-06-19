@@ -20,6 +20,7 @@ import NdiOutputSettingsModal from '../NdiOutputSettingsModal';
 import UserMediaModal from '../UserMediaModal';
 import PreServiceHealthModal from '../PreServiceHealthModal';
 import OperatorActionLogModal from '../OperatorActionLogModal';
+import ObsDockInfoModal from '../ObsDockInfoModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
@@ -707,6 +708,9 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'OperatorActionLog' && (
                         <OperatorActionLogModal darkMode={isDark} />
+                      )}
+                      {modal.component === 'ObsDockInfo' && (
+                        <ObsDockInfoModal darkMode={isDark} />
                       )}
 
                       {/* Render standard description/body modals */}

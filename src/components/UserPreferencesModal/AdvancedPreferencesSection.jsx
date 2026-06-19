@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, FileText, Loader2, Monitor, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, FileText, Info, Loader2, Monitor, Play, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -67,6 +67,51 @@ const AdvancedPreferencesSection = ({
     }
   };
 
+  const openObsDockInfo = () => {
+    showModal?.({
+      title: 'OBS Dock Setup',
+      headerDescription: 'Copy the dock URL and review headless startup options',
+      component: 'ObsDockInfo',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      actions: [{ label: 'Close', variant: 'outline' }],
+    });
+  };
+
+  const handleStartHeadlessNow = async () => {
+    const confirmation = await showModal?.({
+      title: 'Start Headless Mode Now?',
+      description: 'LyricDisplay will close the current app windows and relaunch in OBS dock headless mode.',
+      body: 'Use this when you want the OBS dock to control LyricDisplay without keeping the main desktop window open. Unsaved work should be saved before continuing.',
+      variant: 'warn',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Start Headless', value: 'start', variant: 'destructive' },
+      ],
+    });
+
+    if (confirmation !== 'start') return;
+
+    try {
+      const result = await window.electronAPI?.obsDock?.startHeadlessNow?.();
+      if (result?.success === false) {
+        showToast?.({
+          title: 'Headless Start Failed',
+          message: result.error || 'Could not relaunch LyricDisplay in headless mode.',
+          variant: 'error',
+        });
+      }
+    } catch (error) {
+      showToast?.({
+        title: 'Headless Start Failed',
+        message: error.message || 'Could not relaunch LyricDisplay in headless mode.',
+        variant: 'error',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-yellow-600/50 bg-yellow-900/20' : 'border-yellow-400 bg-yellow-50'}`}>
@@ -82,33 +127,63 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex items-start gap-3">
+        <Monitor className={`mt-0.5 w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Monitor className={`w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
-            <label className={`text-sm font-medium ${labelClass}`}>OBS Dock Background Mode</label>
-          </div>
+          <label className={`text-sm font-medium ${labelClass}`}>OBS Dock / Headless Mode</label>
           <p className={`mt-1 text-xs ${mutedClass}`}>
-            Start LyricDisplay headless when you sign in so OBS docks can connect without opening the main app window.
+            Run LyricDisplay without the main desktop window and control it from an OBS dock.
           </p>
-          {obsDockStartup?.success === false && (
-            <p className={`mt-2 text-xs ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
-              {obsDockStartup.error || 'Startup registration is not available on this system.'}
-            </p>
-          )}
         </div>
-        <div className="flex items-center gap-3">
-          {obsDockStartupSaving && <Loader2 className={`h-4 w-4 animate-spin ${mutedClass}`} />}
-          <Switch
-            checked={obsDockStartup?.enabled ?? false}
-            disabled={obsDockStartupSaving || obsDockStartup?.supported === false}
-            onCheckedChange={handleObsDockStartupToggle}
-            className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-              ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-              : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-              }`}
-            thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-          />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <label className={`text-sm font-medium ${labelClass}`}>Start at Sign In</label>
+            <p className={`mt-1 text-xs ${mutedClass}`}>
+              Start LyricDisplay headless when you sign in so OBS docks can connect automatically.
+            </p>
+            {obsDockStartup?.success === false && (
+              <p className={`mt-2 text-xs ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
+                {obsDockStartup.error || 'Startup registration is not available on this system.'}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {obsDockStartupSaving && <Loader2 className={`h-4 w-4 animate-spin ${mutedClass}`} />}
+            <Switch
+              checked={obsDockStartup?.enabled ?? false}
+              disabled={obsDockStartupSaving || obsDockStartup?.supported === false}
+              onCheckedChange={handleObsDockStartupToggle}
+              className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                }`}
+              thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleStartHeadlessNow}
+            className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Start Headless Now
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={openObsDockInfo}
+            className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
+          >
+            <Info className="w-4 h-4 mr-2" />
+            OBS Dock Setup
+          </Button>
         </div>
       </div>
     </div>
