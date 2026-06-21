@@ -127,8 +127,8 @@
         "to": "LyricDisplay-icon.png"
       },
       {
-        "from": "build/Start LyricDisplay Headless.cmd",
-        "to": "Start LyricDisplay Headless.cmd"
+        "from": "build/Start LyricDisplay Dock Mode.cmd",
+        "to": "Start LyricDisplay Dock Mode.cmd"
       }
     ],
     "win": {
@@ -171,6 +171,7 @@
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "public/favicon.ico",
       "uninstallerIcon": "public/favicon.ico",
+      "include": "build/installer.nsh",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "LyricDisplay"

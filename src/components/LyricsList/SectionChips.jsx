@@ -8,7 +8,9 @@ export default function SectionChips({
   onSectionJump,
   containerRef,
   scrollerRef,
+  density = 'default',
 }) {
+  const compact = density === 'dock' || density === 'compact';
   if (!sections?.length) return null;
 
   return (
@@ -16,7 +18,7 @@ export default function SectionChips({
       <div className="relative" ref={containerRef}>
         <div
           ref={scrollerRef}
-          className="px-4 py-3.5 flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap overscroll-contain"
+          className={`${compact ? 'px-2 py-1.5 gap-1.5' : 'px-4 py-3.5 gap-2'} flex flex-nowrap overflow-x-auto overflow-y-hidden whitespace-nowrap overscroll-contain`}
         >
           {sections.map((section) => {
             const isActive = section.id && section.id === activeSectionId;
@@ -24,7 +26,7 @@ export default function SectionChips({
               <button
                 key={section.id}
                 onClick={() => onSectionJump(section)}
-                className={`text-xs px-4 py-1 rounded-full border transition-colors shrink-0 ${isActive
+                className={`${compact ? 'text-[10px] px-2.5 py-0.5' : 'text-xs px-4 py-1'} rounded-full border transition-colors shrink-0 ${isActive
                   ? 'bg-blue-500 text-white border-blue-500'
                   : darkMode
                     ? 'bg-gray-800 text-gray-200 border-gray-700 hover:border-gray-500'

@@ -28,6 +28,7 @@ const AdvancedPreferencesSection = ({
   showToast,
   updatePreference,
 }) => {
+  const isDevMode = import.meta.env.MODE === 'development';
   const [obsDockStartup, setObsDockStartup] = useState(null);
   const [obsDockStartupSaving, setObsDockStartupSaving] = useState(false);
 
@@ -51,16 +52,16 @@ const AdvancedPreferencesSection = ({
       const status = await window.electronAPI.obsDockStartup.set(checked);
       setObsDockStartup(status);
       showToast?.({
-        title: checked ? 'LyricDisplay Dock Background Mode Enabled' : 'LyricDisplay Dock Background Mode Disabled',
+        title: checked ? 'Dock Mode Will Start at Sign-In' : 'Dock Mode Sign-In Start Disabled',
         message: checked
-          ? 'LyricDisplay will start headless when you sign in, so LyricDisplay Dock can connect without opening the main window.'
-          : 'LyricDisplay will no longer start headless when you sign in.',
+          ? 'LyricDisplay Dock will be ready after you sign in, without opening the desktop window.'
+          : 'LyricDisplay Dock will no longer start automatically when you sign in.',
         variant: status?.success === false ? 'error' : 'success',
       });
     } catch (error) {
       showToast?.({
         title: 'Startup Setting Failed',
-        message: error.message || 'Could not update LyricDisplay Dock background startup.',
+        message: error.message || 'Could not update Start at Sign-In for LyricDisplay Dock.',
         variant: 'error',
       });
     } finally {
@@ -73,12 +74,14 @@ const AdvancedPreferencesSection = ({
   const openObsDockInfo = () => {
     showModal?.({
       title: 'LyricDisplay Dock Setup',
-      headerDescription: 'Copy the dock URL and review headless startup options',
+      headerDescription: 'Copy the OBS dock URL and review Dock Mode startup options',
       component: 'ObsDockInfo',
       variant: 'info',
       size: 'lg',
-      customLayout: true,
-      actions: createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
+      scrollBehavior: 'scroll',
+      actions: isDevMode
+        ? [{ label: 'Close', variant: 'outline' }]
+        : createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
     });
   };
 
@@ -100,51 +103,55 @@ const AdvancedPreferencesSection = ({
       <div className="mb-4 flex items-start gap-3">
         <Monitor className={`mt-0.5 w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
         <div className="min-w-0">
-          <label className={`text-sm font-medium ${labelClass}`}>LyricDisplay Dock / Headless Mode</label>
+          <label className={`text-sm font-medium ${labelClass}`}>LyricDisplay Dock</label>
           <p className={`mt-1 text-xs ${mutedClass}`}>
-            Run LyricDisplay without the main desktop window and control it from LyricDisplay Dock.
+            Control LyricDisplay from an OBS dock while LyricDisplay runs quietly in the background.
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <label className={`text-sm font-medium ${labelClass}`}>Start at Sign In</label>
-            <p className={`mt-1 text-xs ${mutedClass}`}>
-              Start LyricDisplay headless when you sign in so LyricDisplay Dock can connect automatically.
-            </p>
-            {obsDockStartup?.success === false && (
-              <p className={`mt-2 text-xs ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
-                {obsDockStartup.error || 'Startup registration is not available on this system.'}
+        {!isDevMode && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <label className={`text-sm font-medium ${labelClass}`}>Start at Sign In</label>
+              <p className={`mt-1 text-xs ${mutedClass}`}>
+                Make LyricDisplay Dock ready automatically after you sign in.
               </p>
-            )}
+              {obsDockStartup?.success === false && (
+                <p className={`mt-2 text-xs ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
+                  {obsDockStartup.error || 'Startup registration is not available on this system.'}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {obsDockStartupSaving && <Loader2 className={`h-4 w-4 animate-spin ${mutedClass}`} />}
+              <Switch
+                checked={obsDockStartup?.enabled ?? false}
+                disabled={obsDockStartupSaving || obsDockStartup?.supported === false}
+                onCheckedChange={handleObsDockStartupToggle}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            {obsDockStartupSaving && <Loader2 className={`h-4 w-4 animate-spin ${mutedClass}`} />}
-            <Switch
-              checked={obsDockStartup?.enabled ?? false}
-              disabled={obsDockStartupSaving || obsDockStartup?.supported === false}
-              onCheckedChange={handleObsDockStartupToggle}
-              className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                }`}
-              thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-            />
-          </div>
-        </div>
+        )}
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleLaunchHeadlessMode}
-            className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
-          >
-            <Play className="w-4 h-4 mr-2" />
-            Launch Headless Mode
-          </Button>
+          {!isDevMode && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleLaunchHeadlessMode}
+              className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Switch to Dock Mode
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -155,6 +162,11 @@ const AdvancedPreferencesSection = ({
             LyricDisplay Dock Setup
           </Button>
         </div>
+        {isDevMode && (
+          <p className={`text-xs ${mutedClass}`}>
+            In development, start Dock Mode with npm run electron-dev:headless from the app folder.
+          </p>
+        )}
       </div>
     </div>
 

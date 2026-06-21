@@ -122,7 +122,8 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     }
 
     const serverPath = resolveProductionPath('server', 'index.js');
-    const backendDataDir = path.join(app.getPath('userData'), 'backend');
+    const userDataDir = app.getPath('userData');
+    const backendDataDir = path.join(userDataDir, 'backend');
 
     const child = fork(serverPath, [], {
       cwd: path.dirname(serverPath),
@@ -130,6 +131,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         ...process.env,
         NODE_ENV: app.isPackaged ? 'production' : 'development',
         LYRICDISPLAY_DATA_DIR: backendDataDir,
+        LYRICDISPLAY_USER_DATA_DIR: userDataDir,
         LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
         LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },

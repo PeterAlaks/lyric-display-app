@@ -2,14 +2,14 @@ export const launchHeadlessActionClass = '!border-transparent !bg-blue-600 !text
 
 export async function confirmAndLaunchHeadlessMode({ showModal, showToast } = {}) {
   const confirmation = await showModal?.({
-    title: 'Launch Headless Mode?',
-    description: 'LyricDisplay will close the current app windows and relaunch in LyricDisplay Dock headless mode.',
-    body: 'Use this when you want LyricDisplay Dock to control LyricDisplay without keeping the main desktop window open. Unsaved work should be saved before continuing.',
+    title: 'Switch to Dock Mode?',
+    description: 'LyricDisplay will keep running for the OBS dock without the desktop window.',
+    body: 'Save any unsaved work before continuing. After the switch, use LyricDisplay Dock in OBS to control lyrics and output settings.',
     variant: 'warn',
     size: 'sm',
     actions: [
       { label: 'Cancel', value: 'cancel', variant: 'outline' },
-      { label: 'Launch Headless Mode', value: 'start', variant: 'destructive' },
+      { label: 'Switch to Dock Mode', value: 'start', variant: 'destructive' },
     ],
   });
 
@@ -19,8 +19,8 @@ export async function confirmAndLaunchHeadlessMode({ showModal, showToast } = {}
     const result = await window.electronAPI?.obsDock?.startHeadlessNow?.();
     if (result?.success === false) {
       showToast?.({
-        title: 'Headless Launch Failed',
-        message: result.error || 'Could not relaunch LyricDisplay in headless mode.',
+        title: 'Dock Mode Could Not Start',
+        message: result.error || 'LyricDisplay could not switch to Dock Mode.',
         variant: 'error',
       });
       return false;
@@ -28,8 +28,8 @@ export async function confirmAndLaunchHeadlessMode({ showModal, showToast } = {}
     return true;
   } catch (error) {
     showToast?.({
-      title: 'Headless Launch Failed',
-      message: error.message || 'Could not relaunch LyricDisplay in headless mode.',
+      title: 'Dock Mode Could Not Start',
+      message: error.message || 'LyricDisplay could not switch to Dock Mode.',
       variant: 'error',
     });
     return false;
@@ -40,7 +40,7 @@ export function createLyricDisplayDockSetupActions(onLaunchHeadlessMode) {
   return [
     { label: 'Close', variant: 'outline' },
     {
-      label: 'Launch Headless Mode',
+      label: 'Switch to Dock Mode',
       variant: 'default',
       autoFocus: true,
       closeOnClick: false,

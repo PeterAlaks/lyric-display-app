@@ -81,7 +81,7 @@ export function getObsDockSetupInfo() {
     dockFilePath,
     dockFileUrl: getDockFileUrl(dockFilePath),
     controllerUrl: isDev
-      ? 'http://127.0.0.1:5173/obs-dock'
+      ? 'http://127.0.0.1:5173/?dock=obs&clientType=obsDock'
       : 'http://127.0.0.1:4000/#/obs-dock',
     headlessCommand: isDev
       ? 'npm run electron-dev:headless'

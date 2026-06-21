@@ -13,6 +13,7 @@ const useMenuHandlers = (closeMenu) => {
   const { showToast } = useToast();
   const { darkMode, setDarkMode } = useDarkModeState();
   const isNewSongCanvas = location.pathname === '/new-song';
+  const isDevMode = import.meta.env.MODE === 'development';
 
   const handleNewLyrics = useCallback(() => {
     closeMenu();
@@ -413,14 +414,16 @@ const useMenuHandlers = (closeMenu) => {
     closeMenu();
     showModal({
       title: 'LyricDisplay Dock Setup',
-      headerDescription: 'Copy the dock URL and review headless startup options',
+      headerDescription: 'Copy the OBS dock URL and review Dock Mode startup options',
       component: 'ObsDockInfo',
       variant: 'info',
       size: 'lg',
-      customLayout: true,
-      actions: createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
+      scrollBehavior: 'scroll',
+      actions: isDevMode
+        ? [{ label: 'Close', variant: 'outline' }]
+        : createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
     });
-  }, [closeMenu, handleLaunchHeadlessMode, showModal]);
+  }, [closeMenu, handleLaunchHeadlessMode, isDevMode, showModal]);
 
   const handleDocs = useCallback(() => {
     closeMenu();

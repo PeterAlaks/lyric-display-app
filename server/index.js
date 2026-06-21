@@ -26,6 +26,7 @@ import { registerAdminSecretRoutes } from './routes/adminSecrets.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerIntegrationRoutes } from './routes/integrations.js';
 import { registerAppControlRoutes } from './routes/appControl.js';
+import { registerTemplateRoutes } from './routes/templates.js';
 
 dotenv.config();
 
@@ -103,6 +104,7 @@ app.use('/api/auth', tokenRateLimit);
 registerOutputRoutes(app, { getOutputRegistry, hasOutput });
 registerIntegrationRoutes(app, { getOutputRegistry, port: PORT });
 registerAppControlRoutes(app, { localhostOnly });
+registerTemplateRoutes(app, { localhostOnly });
 registerAuthRoutes(app, { secrets, tokenService, localhostOnly });
 registerConnectionRoutes(app, { authenticateRequest });
 registerMediaRoutes(app, {

@@ -11,7 +11,9 @@ const SearchBar = ({
   onPrev,
   onNext,
   onClear,
+  density = 'default',
 }) => {
+  const compact = density === 'dock' || density === 'compact';
   return (
     <div className="w-full">
       <div className="relative">
@@ -21,7 +23,7 @@ const SearchBar = ({
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           data-search-input
-          className={`border rounded-md w-full pr-24 ${darkMode
+          className={`border rounded-md w-full pr-24 ${compact ? 'h-8 text-xs' : ''} ${darkMode
             ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
             : 'border-gray-300 bg-white'
             }`}
@@ -31,43 +33,43 @@ const SearchBar = ({
             <>
               <button
                 onClick={onPrev}
-                className={`p-1 rounded transition-colors ${darkMode
+                className={`${compact ? 'p-0.5' : 'p-1'} rounded transition-colors ${darkMode
                   ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                   }`}
                 title="Previous match (Shift+Up)"
               >
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
               </button>
               <button
                 onClick={onNext}
-                className={`p-1 rounded transition-colors ${darkMode
+                className={`${compact ? 'p-0.5' : 'p-1'} rounded transition-colors ${darkMode
                   ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                   }`}
                 title="Next match (Shift+Down)"
               >
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
               </button>
             </>
           )}
           {searchQuery && (
             <button
               onClick={onClear}
-              className={`p-1 rounded transition-colors ${darkMode
+              className={`${compact ? 'p-0.5' : 'p-1'} rounded transition-colors ${darkMode
                 ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                 }`}
               title="Clear search"
             >
-              <X className="w-4 h-4" />
+              <X className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
             </button>
           )}
         </div>
       </div>
 
       {searchQuery && (
-        <div className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        <div className={`${compact ? 'mt-1 text-[11px]' : 'mt-2 text-sm'} ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           {totalMatches > 0 ? (
             `Showing result ${currentMatchIndex + 1} of ${totalMatches} matches`
           ) : (

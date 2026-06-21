@@ -7,8 +7,9 @@ export const globalToastRef = { current: null };
 
 let idSeq = 1;
 
-export function ToastProvider({ children, position = 'bottom-right', offset = 20, max = 3, isDark = false }) {
+export function ToastProvider({ children, position = 'bottom-right', offset = 20, max = 3, isDark = false, density = 'default' }) {
   const muted = useLyricsStore((state) => state.toastSoundsMuted);
+  const compact = density === 'dock' || density === 'compact';
 
   const [toasts, setToasts] = useState([]);
   const removeTimer = useRef(new Map());
@@ -120,10 +121,10 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
               <div key={id}
                 style={{
                   pointerEvents: 'auto',
-                  minWidth: 280,
-                  maxWidth: 420,
-                  padding: '12px 14px',
-                  borderRadius: 10,
+                  minWidth: compact ? 180 : 280,
+                  maxWidth: compact ? 260 : 420,
+                  padding: compact ? '8px 10px' : '12px 14px',
+                  borderRadius: compact ? 8 : 10,
                   boxShadow: shadow,
                   background: bg,
                   color: textColor,
@@ -133,20 +134,20 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
                   transform: entering ? 'translateX(32px)' : (exiting ? 'translateX(120%)' : 'translateX(0)')
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'start', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'start', gap: compact ? 7 : 10 }}>
                   <div style={{ lineHeight: 1, marginTop: 2, color: accent, display: 'flex' }}>
-                    <Icon size={18} aria-hidden />
+                    <Icon size={compact ? 14 : 18} aria-hidden />
                   </div>
                   <div style={{ flex: 1 }}>
-                    {title && <div style={{ fontWeight: 700, marginBottom: 4 }}>{title}</div>}
-                    {message && <div style={{ opacity: 0.95, fontSize: 13, lineHeight: 1.4 }}>{message}</div>}
+                    {title && <div style={{ fontWeight: 700, marginBottom: compact ? 2 : 4, fontSize: compact ? 12 : undefined }}>{title}</div>}
+                    {message && <div style={{ opacity: 0.95, fontSize: compact ? 11 : 13, lineHeight: 1.35 }}>{message}</div>}
                   </div>
                   <button
                     aria-label="Dismiss notification"
                     onClick={(e) => { e.stopPropagation(); remove(id); }}
-                    style={{ background: 'transparent', border: 'none', color: textColor, cursor: 'pointer', opacity: 0.7, padding: 2, display: 'flex' }}
+                    style={{ background: 'transparent', border: 'none', color: textColor, cursor: 'pointer', opacity: 0.7, padding: compact ? 1 : 2, display: 'flex' }}
                   >
-                    <X size={16} aria-hidden />
+                    <X size={compact ? 13 : 16} aria-hidden />
                   </button>
                 </div>
                 {Array.isArray(actions) && actions.length > 0 && (
@@ -158,9 +159,9 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
                           border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
                           background: 'transparent',
                           color: textColor,
-                          padding: '6px 10px',
-                          fontSize: 12,
-                          borderRadius: 8,
+                          padding: compact ? '4px 8px' : '6px 10px',
+                          fontSize: compact ? 11 : 12,
+                          borderRadius: compact ? 6 : 8,
                           cursor: 'pointer'
                         }}
                       >{a.label}</button>

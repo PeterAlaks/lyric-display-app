@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Droplet, SquareDashed } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ const PaintPicker = React.forwardRef(({
   disabled,
   showValue = false,
   darkMode = false,
+  presentation = "default",
   ...props
 }, ref) => {
   const normalizedValue = React.useMemo(() => normalizePaint(value, fallbackColor), [fallbackColor, value]);
@@ -126,6 +128,104 @@ const PaintPicker = React.forwardRef(({
 
   const previewBackground = paintToCss(localPaint, fallbackColor);
 
+  const paintPanel = (
+    <div className={`${presentation === 'sheet' ? 'mx-auto max-w-sm' : ''} space-y-3`}>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setMode('solid')}
+          className={cn(localPaint.type === 'solid' ? activeButtonClass(darkMode) : inactiveButtonClass(darkMode))}
+        >
+          <Droplet className="mr-1.5 h-4 w-4" />
+          Solid
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setMode('linear')}
+          className={cn(localPaint.type === 'linear' ? activeButtonClass(darkMode) : inactiveButtonClass(darkMode))}
+        >
+          <SquareDashed className="mr-1.5 h-4 w-4" />
+          Gradient
+        </Button>
+      </div>
+
+      <div className="h-8 w-full rounded-md border border-border" style={{ background: previewBackground }} />
+
+      {localPaint.type === 'solid' && (
+        <div className="space-y-2">
+          <div className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Colour
+          </div>
+          <ColorPicker
+            value={localPaint.color}
+            onChange={updateSolidColor}
+            darkMode={darkMode}
+            showHex
+            presentation={presentation}
+            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+          />
+        </div>
+      )}
+
+      {localPaint.type === 'linear' && (
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <div className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Stops
+            </div>
+            {STOP_LABELS.map((label, index) => (
+              <div
+                key={label}
+                className={cn(
+                  "flex items-center justify-between gap-3 rounded-md border p-2",
+                  darkMode ? "border-gray-700 bg-gray-900/30" : "border-gray-200 bg-gray-50"
+                )}
+              >
+                <span className={`w-10 text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {label}
+                </span>
+                <ColorPicker
+                  value={localPaint.stops[index]?.color || fallbackColor}
+                  onChange={(color) => updateGradientStop(index, color)}
+                  darkMode={darkMode}
+                  showHex
+                  presentation={presentation}
+                  className={cn(
+                    "min-w-0 flex-1",
+                    darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium w-12 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Angle</span>
+            <Input
+              type="number"
+              value={localPaint.angle}
+              onChange={(event) => updateGradientAngle(event.target.value)}
+              min={0}
+              max={360}
+              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={reverseGradient}
+              className={darkMode ? inactiveButtonClass(darkMode) : ""}
+            >
+              Flip
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -157,108 +257,43 @@ const PaintPicker = React.forwardRef(({
         </button>
       </PopoverTrigger>
 
-      <PopoverContent
-        ref={contentRef}
-        data-popover-scroll-lock-allow="true"
-        className={`w-[272px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
-        align="start"
-        side="top"
-        avoidCollisions={false}
-      >
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setMode('solid')}
-              className={cn(localPaint.type === 'solid' ? activeButtonClass(darkMode) : inactiveButtonClass(darkMode))}
-            >
-              <Droplet className="mr-1.5 h-4 w-4" />
-              Solid
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setMode('linear')}
-              className={cn(localPaint.type === 'linear' ? activeButtonClass(darkMode) : inactiveButtonClass(darkMode))}
-            >
-              <SquareDashed className="mr-1.5 h-4 w-4" />
-              Gradient
-            </Button>
+      {presentation === 'sheet' && open && typeof document !== 'undefined' ? createPortal(
+        <div
+          className="fixed inset-0 z-[2350] bg-black/35 p-2"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setOpen(false);
+          }}
+        >
+          <div
+            ref={contentRef}
+            data-popover-scroll-lock-allow="true"
+            className={`h-full overflow-y-auto rounded-lg border p-4 shadow-2xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          >
+            <div className="mb-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${darkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-700' : 'border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+              >
+                Close
+              </button>
+            </div>
+            {paintPanel}
           </div>
-
-          <div className="h-8 w-full rounded-md border border-border" style={{ background: previewBackground }} />
-
-          {localPaint.type === 'solid' && (
-            <div className="space-y-2">
-              <div className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Colour
-              </div>
-              <ColorPicker
-                value={localPaint.color}
-                onChange={updateSolidColor}
-                darkMode={darkMode}
-                showHex
-                className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
-              />
-            </div>
-          )}
-
-          {localPaint.type === 'linear' && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <div className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Stops
-                </div>
-                {STOP_LABELS.map((label, index) => (
-                  <div
-                    key={label}
-                    className={cn(
-                      "flex items-center justify-between gap-3 rounded-md border p-2",
-                      darkMode ? "border-gray-700 bg-gray-900/30" : "border-gray-200 bg-gray-50"
-                    )}
-                  >
-                    <span className={`w-10 text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {label}
-                    </span>
-                    <ColorPicker
-                      value={localPaint.stops[index]?.color || fallbackColor}
-                      onChange={(color) => updateGradientStop(index, color)}
-                      darkMode={darkMode}
-                      showHex
-                      className={cn(
-                        "min-w-0 flex-1",
-                        darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'
-                      )}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium w-12 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Angle</span>
-                <Input
-                  type="number"
-                  value={localPaint.angle}
-                  onChange={(event) => updateGradientAngle(event.target.value)}
-                  min={0}
-                  max={360}
-                  className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={reverseGradient}
-                  className={darkMode ? inactiveButtonClass(darkMode) : ""}
-                >
-                  Flip
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
+        </div>,
+        document.body
+      ) : (
+        <PopoverContent
+          ref={contentRef}
+          data-popover-scroll-lock-allow="true"
+          className={`w-[272px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          align="start"
+          side="top"
+          avoidCollisions={false}
+        >
+          {paintPanel}
+        </PopoverContent>
+      )}
     </Popover>
   );
 });

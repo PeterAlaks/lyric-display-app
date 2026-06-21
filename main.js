@@ -14,9 +14,9 @@ import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
 import { registerObsDockPairingToken, setBackendMessageHandler } from './main/backend.js';
+import { relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
 import * as userPreferences from './main/userPreferences.js';
 import { initFileLogging } from './main/logging.js';
-import { ensureObsDockDevServer } from './main/devServer.js';
 
 const APP_PROTOCOL = 'lyricdisplay';
 const DEV_APP_PROTOCOL = 'lyricdisplay-dev';
@@ -35,6 +35,7 @@ if (disableHwAccel) {
 
 let mainWindow = null;
 let menuAPI = null;
+let headlessProtocolRelaunchInProgress = false;
 const closeConfirmationAttached = new WeakSet();
 
 const extractProtocolUrlFromArgs = (args = []) => (
@@ -66,11 +67,6 @@ const getProtocolSearchParam = (protocolUrl, name) => {
 
 const initialProtocolUrl = extractProtocolUrlFromArgs(process.argv);
 const initialObsDockPairingToken = getProtocolSearchParam(initialProtocolUrl, 'obsPairingToken');
-const shouldStartViteForDevProtocol = (protocolUrl) => (
-  isDev &&
-  protocolUrl?.toLowerCase().startsWith(`${DEV_APP_PROTOCOL}://`) &&
-  getProtocolSearchParam(protocolUrl, 'startDevServer') === '1'
-);
 const isHeadlessMode = process.env.LYRICDISPLAY_HEADLESS === '1' ||
   process.argv.includes('--headless') ||
   process.argv.includes('--obs-dock') ||
@@ -214,21 +210,70 @@ const openMainWindow = () => {
   return win;
 };
 
+const confirmHeadlessRelaunchFromProtocol = async () => {
+  if (isHeadlessMode || headlessProtocolRelaunchInProgress) {
+    return;
+  }
+
+  headlessProtocolRelaunchInProgress = true;
+
+  try {
+    const win = openMainWindow();
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+
+    const choice = await requestRendererModal({
+      title: 'Switch to Dock Mode?',
+      description: 'LyricDisplay Dock requested control from OBS.',
+      body: 'LyricDisplay will close the desktop window and continue running for the OBS dock. Save any unsaved work before continuing.',
+      variant: 'warn',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline', autoFocus: true },
+        { label: 'Switch to Dock Mode', value: 'start-headless', variant: 'destructive' },
+      ],
+    }, {
+      timeout: false,
+      fallback: async () => {
+        const fallbackChoice = await dialog.showMessageBox({
+          type: 'warning',
+          buttons: ['Cancel', 'Switch to Dock Mode'],
+          defaultId: 0,
+          cancelId: 0,
+          title: 'Switch to Dock Mode?',
+          message: 'LyricDisplay Dock requested control from OBS.',
+          detail: 'LyricDisplay will close the desktop window and continue running for the OBS dock. Save any unsaved work before continuing.',
+        });
+        return fallbackChoice.response === 1 ? 'start-headless' : 'cancel';
+      },
+    });
+
+    if (choice?.data === 'start-headless') {
+      relaunchInObsDockHeadlessMode();
+      return;
+    }
+  } catch (error) {
+    console.warn('[Main] Failed to handle LyricDisplay Dock headless protocol request:', error);
+  } finally {
+    headlessProtocolRelaunchInProgress = false;
+  }
+};
+
 const handleProtocolLaunch = (protocolUrl) => {
   const action = getProtocolAction(protocolUrl);
   if (!action) return false;
-
-  if (shouldStartViteForDevProtocol(protocolUrl)) {
-    ensureObsDockDevServer().catch((error) => {
-      console.warn('[Main] Failed to start OBS dock dev server:', error);
-    });
-  }
 
   if (action === 'start-headless') {
     console.log('[Main] Headless start requested by protocol');
     const obsDockPairingToken = getProtocolSearchParam(protocolUrl, 'obsPairingToken');
     if (obsDockPairingToken) {
       registerObsDockPairingToken(obsDockPairingToken);
+    }
+    if (!isHeadlessMode) {
+      confirmHeadlessRelaunchFromProtocol();
     }
     return true;
   }
@@ -307,6 +352,11 @@ registerInAppBrowserIpc();
 setBackendMessageHandler((message) => {
   if (message?.type === 'open-main-window') {
     openMainWindow();
+    return;
+  }
+
+  if (message?.type === 'switch-to-dock-mode') {
+    confirmHeadlessRelaunchFromProtocol();
   }
 });
 
@@ -314,12 +364,6 @@ app.whenReady().then(async () => {
   try { Menu.setApplicationMenu(null); } catch { }
   if (!isHeadlessMode) {
     createLoadingWindow();
-  }
-
-  if (shouldStartViteForDevProtocol(initialProtocolUrl)) {
-    ensureObsDockDevServer().catch((error) => {
-      console.warn('[Main] Failed to start OBS dock dev server:', error);
-    });
   }
 
   mainWindow = await performStartupSequence({

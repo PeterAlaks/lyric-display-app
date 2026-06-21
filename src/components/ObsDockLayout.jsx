@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useAllOutputIds, useDarkModeState, useLyricsState, useOutputState, useSetlistState } from '../hooks/useStoreSelectors';
+import { useAllOutputIds, useLyricsState, useOutputState, useSetlistState } from '../hooks/useStoreSelectors';
 import useLyricsStore from '../context/LyricsStore';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
@@ -24,10 +24,6 @@ import LyricsList from './LyricsList';
 import SearchBar from './SearchBar';
 import OutputSettingsPanel from './OutputSettingsPanel';
 
-const CLIENT_URL = import.meta.env.MODE === 'development'
-  ? 'http://127.0.0.1:5173/obs-dock'
-  : 'http://127.0.0.1:4000/#/obs-dock';
-
 const outputLabel = (outputId) => {
   if (outputId === 'stage') return 'Stage';
   if (typeof outputId === 'string' && outputId.startsWith('output')) {
@@ -37,7 +33,7 @@ const outputLabel = (outputId) => {
 };
 
 function OutputPill({ outputId, active, onSelect, onToggle, onSettings }) {
-  const darkMode = useLyricsStore((state) => state.darkMode);
+  const darkMode = true;
   const enabled = useLyricsStore((state) => (
     outputId === 'stage'
       ? state.stageEnabled
@@ -45,28 +41,28 @@ function OutputPill({ outputId, active, onSelect, onToggle, onSettings }) {
   ));
 
   return (
-    <div className={`flex items-center rounded-md border text-xs ${active
+    <div className={`flex h-8 shrink-0 items-center rounded-md border text-[11px] ${active
       ? darkMode ? 'border-blue-400 bg-blue-500/15 text-blue-100' : 'border-blue-500 bg-blue-50 text-blue-900'
-      : darkMode ? 'border-gray-700 bg-gray-900 text-gray-200' : 'border-gray-200 bg-white text-gray-800'
+      : darkMode ? 'border-gray-800 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-700'
       }`}>
-      <button type="button" onClick={onSelect} className="px-2.5 py-2 font-semibold">
+      <button type="button" onClick={onSelect} className="px-2 font-semibold">
         {outputLabel(outputId)}
       </button>
       <button
         type="button"
         onClick={() => onToggle(outputId, !enabled)}
-        className={`border-l px-2 py-2 ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${enabled ? 'text-green-500' : 'text-gray-400'}`}
+        className={`h-full border-l px-1.5 ${darkMode ? 'border-gray-800' : 'border-gray-200'} ${enabled ? 'text-green-500' : 'text-gray-400'}`}
         title={enabled ? 'Disable output' : 'Enable output'}
       >
-        <Power className="h-3.5 w-3.5" />
+        <Power className="h-3 w-3" />
       </button>
       <button
         type="button"
         onClick={() => onSettings(outputId)}
-        className={`border-l px-2 py-2 ${darkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-600'}`}
+        className={`h-full border-l px-1.5 ${darkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-500'}`}
         title="Open output settings"
       >
-        <Settings className="h-3.5 w-3.5" />
+        <Settings className="h-3 w-3" />
       </button>
     </div>
   );
@@ -114,7 +110,7 @@ function SetlistItem({ file, index, total, darkMode, onLoad, onRemove, onMove })
 }
 
 export default function ObsDockLayout() {
-  const { darkMode } = useDarkModeState();
+  const darkMode = true;
   const { lyrics, lyricsFileName, rawLyricsContent, songMetadata, lyricsTimestamps, selectedLine, selectLine } = useLyricsState();
   const { isOutputOn, setIsOutputOn } = useOutputState();
   const { setlistFiles, setSetlistFiles, isSetlistFull, getMaxSetlistFiles } = useSetlistState();
@@ -127,6 +123,7 @@ export default function ObsDockLayout() {
   const [activeOutput, setActiveOutput] = React.useState('output1');
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [setlistOpen, setSetlistOpen] = React.useState(false);
+  const [desktopControlAvailable, setDesktopControlAvailable] = React.useState(false);
 
   const {
     emitLineUpdate,
@@ -160,16 +157,55 @@ export default function ObsDockLayout() {
   const maxSetlistFiles = getMaxSetlistFiles();
   const canControl = isConnected && isAuthenticated && ready;
   const shellClasses = darkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-950';
-  const panelClasses = darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white';
+  const toolbarClasses = darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-white';
+  const currentLineText = hasLyrics && typeof selectedLine === 'number'
+    ? `${selectedLine + 1}/${lyrics.length}`
+    : hasLyrics ? `${lyrics.length} lines` : 'No lyrics';
 
-  const openDesktopApp = React.useCallback(() => {
-    fetch('http://127.0.0.1:4000/api/app/open-main-window', {
-      method: 'POST',
+  React.useEffect(() => {
+    let cancelled = false;
+
+    fetch('http://127.0.0.1:4000/api/app/capabilities', {
       cache: 'no-store',
-    }).catch((error) => {
-      console.warn('Failed to request desktop app window:', error);
-    });
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!cancelled) {
+          setDesktopControlAvailable(Boolean(payload?.openMainWindow));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDesktopControlAvailable(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const openDesktopApp = React.useCallback(async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:4000/api/app/open-main-window', {
+        method: 'POST',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        if (response.status === 503) {
+          setDesktopControlAvailable(false);
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      showToast({ title: 'Opening LyricDisplay', message: 'The desktop window is opening.' });
+    } catch (error) {
+      showToast({
+        title: 'Could Not Open LyricDisplay',
+        message: 'Start LyricDisplay Dock Mode, then try again.',
+        variant: 'warn'
+      });
+    }
+  }, [showToast]);
 
   const handleLineSelect = React.useCallback((index) => {
     if (!canControl) return;
@@ -248,15 +284,15 @@ export default function ObsDockLayout() {
 
   return (
     <div className={`flex h-screen min-h-0 flex-col overflow-hidden font-sans ${shellClasses}`}>
-      <header className={`flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-white'}`}>
+      <header className={`flex shrink-0 items-center justify-between gap-2 border-b px-2.5 py-2 ${toolbarClasses}`}>
         <div className="min-w-0">
-          <div className="truncate text-sm font-bold">LyricDisplay Dock</div>
-          <div className={`truncate text-[11px] ${canControl ? 'text-green-500' : darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-            {canControl ? 'Connected' : `${connectionStatus} / ${authStatus}`}
+          <div className="truncate text-[13px] font-bold">LyricDisplay Dock</div>
+          <div className={`truncate text-[10px] ${canControl ? 'text-green-500' : darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+            {canControl ? 'Connected' : `${connectionStatus} / ${authStatus}`} - {currentLineText}
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setSetlistOpen(true)} className={`relative rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Open setlist">
+          <button type="button" onClick={() => setSetlistOpen(true)} className={`relative rounded-md p-1.5 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Open setlist">
             <ListMusic className="h-4 w-4" />
             {setlistFiles.length > 0 && (
               <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-bold leading-4 text-white">
@@ -265,57 +301,43 @@ export default function ObsDockLayout() {
             )}
           </button>
           <button type="button" onClick={forceReconnect} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Reconnect">
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
-          <button type="button" onClick={openDesktopApp} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Open Desktop App">
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={() => handleOpenSettings(activeOutput)} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Output settings">
-            <Menu className="h-4 w-4" />
+          {desktopControlAvailable && (
+            <button type="button" onClick={openDesktopApp} className={`rounded-md p-1.5 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Open LyricDisplay">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button type="button" onClick={() => handleOpenSettings(activeOutput)} className={`rounded-md p-1.5 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Output settings">
+            <Menu className="h-3.5 w-3.5" />
           </button>
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2">
-        <section className={`shrink-0 rounded-lg border p-2 ${panelClasses}`}>
-          <div className="mb-2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              <FolderOpen className="h-4 w-4 shrink-0" />
-              <span className="truncate">Load Lyrics</span>
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className={`shrink-0 border-b px-2 py-1.5 ${toolbarClasses}`}>
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+              <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Load</span>
             </button>
-            <button
-              type="button"
-              onClick={handleAddCurrentToSetlist}
-              disabled={!hasLyrics || !canControl}
-              className={`rounded-md p-2 ${!hasLyrics || !canControl ? 'cursor-not-allowed opacity-45' : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
-              title="Add current song to setlist"
-            >
-              <FilePlus2 className="h-4 w-4" />
+            <button type="button" onClick={handleAddCurrentToSetlist} disabled={!hasLyrics || !canControl} className={`rounded-md px-2 py-1.5 text-xs font-semibold ${!hasLyrics || !canControl ? 'cursor-not-allowed opacity-45' : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`} title="Add current song to setlist">
+              <FilePlus2 className="h-3.5 w-3.5" />
             </button>
-            <button
-              type="button"
-              onClick={handleToggleOutput}
-              disabled={!canControl}
-              className={`rounded-md p-2 ${!canControl ? 'cursor-not-allowed opacity-45' : isOutputOn ? 'bg-green-600 text-white hover:bg-green-700' : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              title={isOutputOn ? 'Turn display output off' : 'Turn display output on'}
-            >
-              <Power className="h-4 w-4" />
+            <button type="button" onClick={handleToggleOutput} disabled={!canControl} className={`rounded-md px-2 py-1.5 text-xs font-semibold ${!canControl ? 'cursor-not-allowed opacity-45' : isOutputOn ? 'bg-green-600 text-white hover:bg-green-700' : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`} title={isOutputOn ? 'Turn display output off' : 'Turn display output on'}>
+              <Power className="h-3.5 w-3.5" />
             </button>
           </div>
           <input ref={fileInputRef} type="file" accept=".txt,.lrc" className="hidden" onChange={handleMainFileInput} />
           <input ref={setlistInputRef} type="file" accept=".txt,.lrc" multiple className="hidden" onChange={handleSetlistFilesInput} />
-          <div className={`truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`truncate text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             {lyricsFileName || 'No lyrics loaded'}
             {typeof selectedLine === 'number' && hasLyrics ? ` - Line ${selectedLine + 1}/${lyrics.length}` : ''}
           </div>
-        </section>
+        </div>
 
-        <section className={`shrink-0 rounded-lg border p-2 ${panelClasses}`}>
-          <div className="flex flex-wrap gap-1.5">
+        <div className={`shrink-0 border-b px-2 py-1.5 ${darkMode ? 'border-gray-800 bg-gray-950/95' : 'border-gray-200 bg-gray-50'}`}>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
             {[...allOutputIds, 'stage'].map((outputId) => (
               <OutputPill
                 key={outputId}
@@ -327,10 +349,10 @@ export default function ObsDockLayout() {
               />
             ))}
           </div>
-        </section>
+        </div>
 
-        <section className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border ${panelClasses}`}>
-          <div className={`shrink-0 border-b p-2 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+        <section className={`flex min-h-0 flex-1 flex-col overflow-hidden ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+          <div className={`shrink-0 border-b px-2 py-1.5 ${toolbarClasses}`}>
             <SearchBar
               darkMode={darkMode}
               searchQuery={searchQuery}
@@ -340,14 +362,16 @@ export default function ObsDockLayout() {
               onPrev={navigateToPreviousMatch}
               onNext={navigateToNextMatch}
               onClear={clearSearch}
+              density="dock"
             />
           </div>
-          <div ref={lyricsContainerRef} className="min-h-0 flex-1 overflow-y-auto px-2">
+          <div ref={lyricsContainerRef} className="min-h-0 flex-1 overflow-y-auto">
             {hasLyrics ? (
               <LyricsList
                 searchQuery={searchQuery}
                 highlightedLineIndex={highlightedLineIndex}
                 onSelectLine={handleLineSelect}
+                density="dock"
               />
             ) : (
               <div className={`flex h-full items-center justify-center p-6 text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
@@ -416,17 +440,16 @@ export default function ObsDockLayout() {
       {settingsOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black/45">
           <div className={`flex shrink-0 items-center justify-between border-b px-3 py-2 ${darkMode ? 'border-gray-800 bg-gray-950 text-gray-100' : 'border-gray-200 bg-white text-gray-950'}`}>
-            <div>
-              <div className="text-sm font-bold">{outputLabel(activeOutput)} Settings</div>
-              <div className={`text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{CLIENT_URL}</div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-bold">{outputLabel(activeOutput)} Settings</div>
             </div>
             <button type="button" onClick={() => setSettingsOpen(false)} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Close settings">
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className={`min-h-0 flex-1 overflow-y-auto p-4 ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-            <div className="mx-auto max-w-xl">
-              <OutputSettingsPanel outputKey={activeOutput} />
+          <div className={`min-h-0 flex-1 overflow-y-auto p-2 ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+            <div className="mx-auto max-w-sm">
+              <OutputSettingsPanel outputKey={activeOutput} compact />
             </div>
           </div>
         </div>
