@@ -52,7 +52,7 @@ In headless mode:
 file:///C:/Program Files/LyricDisplay/obs-dock.html
 ```
 
-5. Start Dock Mode from the app with `Switch to Dock Mode`, enable `Start at Sign-In`, or use the packaged `LyricDisplay Dock Mode` Start Menu shortcut.
+5. Start Dock Mode from the app with `Switch to Dock Mode`, enable `Start at Sign-In`, or, on Windows, use the packaged `LyricDisplay Dock Mode` Start Menu shortcut.
 6. Click `Open Controller` in the dock launcher. The launcher checks:
 
 ```text
@@ -79,7 +79,7 @@ http://127.0.0.1:4000/#/obs-dock
 
 10. LyricDisplay Dock obtains a limited local `obsDock` token and connects as the dock controller.
 
-The packaged `Start LyricDisplay Dock Mode.cmd` remains a manual fallback/debug tool. The Start Menu `LyricDisplay Dock Mode` shortcut is the intended user-facing cold-start option when Start at Sign-In is disabled.
+On Windows, the packaged `Start LyricDisplay Dock Mode.cmd` remains a manual fallback/debug tool. The Start Menu `LyricDisplay Dock Mode` shortcut is the intended user-facing cold-start option when Start at Sign-In is disabled.
 
 ## Development Flow
 
@@ -156,7 +156,7 @@ The backend route is loopback/local-origin constrained, then sends an IPC messag
 
 - `obs-dock.html`
 - `LyricDisplay-icon.png`
-- `Start LyricDisplay Dock Mode.cmd`
+- `Start LyricDisplay Dock Mode.cmd` on Windows
 
 On Windows, they should appear beside `LyricDisplay.exe`, for example:
 
@@ -171,7 +171,7 @@ The Windows installer also creates a Start Menu shortcut named `LyricDisplay Doc
 ## Known Limitations
 
 - A web-only OBS Custom Browser Dock cannot guarantee native process launch.
-- The launcher reports readiness and relies on explicit app, Start Menu shortcut, login-item, helper-command, or terminal startup flows.
+- The launcher reports readiness and relies on explicit app, login-item, terminal startup, or platform-specific shortcut/helper flows.
 - Dev headless startup is terminal-owned. The app does not offer dev relaunch controls.
 - LyricDisplay Dock is not a full desktop replacement.
 - The local headless auth path must remain limited to `obsDock`.

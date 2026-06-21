@@ -207,6 +207,7 @@
       const capabilitiesUrl = 'http://127.0.0.1:4000/api/app/capabilities';
       const switchToDockModeUrl = 'http://127.0.0.1:4000/api/app/switch-to-dock-mode';
       const devReadyUrl = devDockUrl;
+      const isWindowsPlatform = /win/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
 
       let checking = false;
       let controllerReady = false;
@@ -225,6 +226,9 @@
       };
 
       const getControllerUrl = () => devMode ? devDockUrl : productionDockUrl;
+      const getDockModeNotRunningMessage = () => isWindowsPlatform
+        ? 'Dock Mode is not running. Start LyricDisplay Dock Mode from the Start menu, open LyricDisplay and switch to Dock Mode, or enable Start at Sign-In.'
+        : 'Dock Mode is not running. Open LyricDisplay and switch to Dock Mode, or enable Start at Sign-In.';
 
       const setControllerLinkReady = (ready) => {
         controllerReady = Boolean(ready);
@@ -336,7 +340,7 @@
           startRuntimeButton.hidden = false;
           setStatus(result.backendReady && !result.dockAuthReady
             ? 'LyricDisplay is open normally. Click Switch to Dock Mode and confirm the switch in LyricDisplay.'
-            : 'Dock Mode is not running. Start LyricDisplay Dock Mode from the Start menu, open LyricDisplay and switch to Dock Mode, or enable Start at Sign-In.',
+            : getDockModeNotRunningMessage(),
             'error'
           );
           startRuntimeButton.disabled = false;
@@ -377,7 +381,7 @@
           setControllerLinkReady(false);
           startRuntimeButton.disabled = false;
           startRuntimeButton.textContent = 'Check Again';
-          setStatus('Dock Mode is not running. Start LyricDisplay Dock Mode from the Start menu, open LyricDisplay and switch to Dock Mode, or enable Start at Sign-In.', 'error');
+          setStatus(getDockModeNotRunningMessage(), 'error');
           return;
         }
 

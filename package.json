@@ -125,10 +125,6 @@
       {
         "from": "public/LyricDisplay-icon.png",
         "to": "LyricDisplay-icon.png"
-      },
-      {
-        "from": "build/Start LyricDisplay Dock Mode.cmd",
-        "to": "Start LyricDisplay Dock Mode.cmd"
       }
     ],
     "win": {
@@ -141,6 +137,12 @@
       "icon": "public/favicon.ico",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${productName}-${version}-Windows-Setup.${ext}",
+      "extraFiles": [
+        {
+          "from": "build/Start LyricDisplay Dock Mode.cmd",
+          "to": "Start LyricDisplay Dock Mode.cmd"
+        }
+      ],
       "fileAssociations": [
         {
           "ext": "lrc",

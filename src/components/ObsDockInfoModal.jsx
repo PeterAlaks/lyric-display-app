@@ -153,6 +153,10 @@ export default function ObsDockInfoModal({ darkMode }) {
   const dockFileUrl = info?.dockFileUrl || info?.dockFilePath || '';
   const dockFileDisplay = formatReadableUrl(dockFileUrl);
   const commandLabel = info?.isDev ? 'Development Command' : 'Dock Mode Command';
+  const isWindowsPlatform = /win/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
+  const productionStartStep = isWindowsPlatform
+    ? 'If Dock Mode is not already running, start LyricDisplay Dock Mode from the Start menu or switch from the desktop app.'
+    : 'If Dock Mode is not already running, open LyricDisplay and switch from the desktop app.';
 
   return (
     <div className="space-y-5">
@@ -194,7 +198,7 @@ export default function ObsDockInfoModal({ darkMode }) {
             <>
               <li>In OBS, open Docks, then Custom Browser Docks.</li>
               <li>Paste the LyricDisplay Dock URL above.</li>
-              <li>If Dock Mode is not already running, start LyricDisplay Dock Mode from the Start menu or switch from the desktop app.</li>
+              <li>{productionStartStep}</li>
               <li>Click Open Controller after the dock page says LyricDisplay is ready.</li>
               <li>Enable Start at Sign-In if you want LyricDisplay Dock to be ready automatically after signing in.</li>
             </>
