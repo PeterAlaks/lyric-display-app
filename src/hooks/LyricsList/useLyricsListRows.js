@@ -121,7 +121,20 @@ export default function useLyricsListRows({
   const getLineClassName = useCallback(
     (index, isVirtualized = false, isMultiSelected = false) => {
       const padding = compact ? 'px-2.5 py-2' : 'p-3';
-      let base = `${padding} ${compact ? 'rounded-md text-[13px] leading-snug' : 'rounded'} cursor-pointer transition-colors duration-150 select-none `;
+      let base = `${padding} ${compact ? 'rounded-md border text-[13px] leading-snug' : 'rounded'} cursor-pointer transition-colors duration-150 select-none `;
+
+      if (compact && darkMode) {
+        if (index === selectedLine) {
+          return `${base}border-blue-400 bg-blue-400 text-white shadow-sm`;
+        }
+        if (index === highlightedLineIndex && searchQuery) {
+          return `${base}border-amber-400/70 bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/25`;
+        }
+        if (isMultiSelected) {
+          return `${base}border-blue-400/70 bg-blue-900/35 text-blue-50 ring-1 ring-blue-400/40`;
+        }
+        return `${base}border-gray-800 bg-gray-900/80 text-gray-200 hover:border-gray-700 hover:bg-gray-800/90`;
+      }
 
       if (index === selectedLine) base += 'bg-blue-400 text-white';
       else if (index === highlightedLineIndex && searchQuery)

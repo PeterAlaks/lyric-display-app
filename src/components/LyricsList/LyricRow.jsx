@@ -68,9 +68,9 @@ export default function LyricRow({
       className={virtualized ? undefined : compact ? 'px-2' : 'px-4'}
     >
       {sectionLabel && (
-        <div className={`${compact ? 'text-[10px]' : 'text-xs'} font-semibold ${compact ? 'mb-1' : virtualized ? 'mb-3' : 'mb-2'} flex items-center gap-2 ${getSectionClassName(isActiveSection, darkMode, virtualized)}`}>
+        <div className={`${compact ? 'text-[10px]' : 'text-xs'} font-semibold ${compact ? 'mb-1' : virtualized ? 'mb-3' : 'mb-2'} flex items-center gap-2 ${getSectionClassName(isActiveSection, darkMode, virtualized, compact)}`}>
           <span className="uppercase tracking-wide">{sectionLabel.toUpperCase ? sectionLabel.toUpperCase() : sectionLabel}</span>
-          <span className="h-px flex-1 bg-gray-300 opacity-60" />
+          <span className={`h-px flex-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-300'} opacity-80`} />
         </div>
       )}
       <div
@@ -157,10 +157,12 @@ function getVirtualizedStyle(style) {
   };
 }
 
-function getSectionClassName(isActiveSection, darkMode, virtualized) {
+function getSectionClassName(isActiveSection, darkMode, virtualized, compact) {
   if (isActiveSection) {
+    if (darkMode && compact) return 'text-blue-300';
     return darkMode ? 'text-green-400' : virtualized ? 'text-green-600' : 'text-green-500';
   }
 
+  if (darkMode && compact) return 'text-gray-500';
   return darkMode ? 'text-gray-300' : 'text-gray-600';
 }

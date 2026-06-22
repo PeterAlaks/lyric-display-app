@@ -97,6 +97,7 @@ const ColorPicker = React.forwardRef(({
   const [color, setColor] = React.useState(value || "#000000")
   const [format, setFormat] = React.useState("hex")
   const contentRef = React.useRef(null)
+  const sheetMode = presentation === 'sheet'
 
   React.useEffect(() => {
     if (value) {
@@ -125,9 +126,23 @@ const ColorPicker = React.forwardRef(({
     }
   }, [open])
 
+  const handleOpenChange = (nextOpen) => {
+    setOpen(nextOpen)
+    if (nextOpen || sheetMode) {
+      setColor(value || "#000000")
+    }
+  }
+
   const handleColorChange = (newColor) => {
     setColor(newColor)
-    onChange?.(newColor)
+    if (!sheetMode) {
+      onChange?.(newColor)
+    }
+  }
+
+  const handleApply = () => {
+    onChange?.(color)
+    setOpen(false)
   }
 
   const rgb = hexToRgb(color)
@@ -297,7 +312,7 @@ const ColorPicker = React.forwardRef(({
   )
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           ref={ref}
@@ -320,28 +335,40 @@ const ColorPicker = React.forwardRef(({
           {showHex && <span className="flex-1 text-left font-mono text-xs">{color.toUpperCase()}</span>}
         </button>
       </PopoverTrigger>
-      {presentation === 'sheet' && open && typeof document !== 'undefined' ? createPortal(
+      {sheetMode && open && typeof document !== 'undefined' ? createPortal(
         <div
           className="fixed inset-0 z-[2400] bg-black/35 p-2"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false)
+            if (event.target === event.currentTarget) handleOpenChange(false)
           }}
         >
           <div
             ref={contentRef}
             data-popover-scroll-lock-allow="true"
-            className={`h-full overflow-y-auto rounded-lg border p-4 shadow-2xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+            className={`flex h-full flex-col overflow-hidden rounded-lg border shadow-2xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
           >
-            <div className="mb-3 flex justify-end">
+            <div className={`flex items-center justify-between border-b px-4 py-3 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Choose Colour</div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => handleOpenChange(false)}
                 className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${darkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-700' : 'border-gray-200 text-gray-700 hover:bg-gray-100'}`}
               >
                 Close
               </button>
             </div>
-            {pickerPanel}
+            <div className="flex-1 overflow-y-auto p-4">
+              {pickerPanel}
+            </div>
+            <div className={`border-t p-3 ${darkMode ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-gray-50'}`}>
+              <Button
+                type="button"
+                onClick={handleApply}
+                className="w-full bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Apply
+              </Button>
+            </div>
           </div>
         </div>,
         document.body

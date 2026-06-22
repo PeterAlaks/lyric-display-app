@@ -41,6 +41,7 @@ export const useLyricsLoader = ({
         name: finalFileName,
         path: filePath,
         enableSplitting,
+        groupingConfig: context.groupingConfig,
       });
 
       if (!parsed || !Array.isArray(parsed.processedLines)) {

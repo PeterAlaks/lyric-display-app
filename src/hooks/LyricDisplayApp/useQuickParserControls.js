@@ -133,6 +133,11 @@ export const useQuickParserControls = ({
           fallbackFileName: sourceFileName,
           toastTitle: 'Lyrics reloaded',
           toastMessage: 'Loaded lyrics were reparsed with updated parser settings.',
+          groupingConfig: {
+            enableAutoLineGrouping: quickParserSettings.enableAutoLineGrouping,
+            enableTranslationGrouping: quickParserSettings.enableTranslationGrouping,
+            maxLinesPerGroup: quickParserSettings.maxLinesPerGroup,
+          },
         }
       );
 
@@ -142,7 +147,7 @@ export const useQuickParserControls = ({
     } finally {
       setReloadingWithParser(false);
     }
-  }, [hasLyrics, lyricsFileName, lyricsSource, processLoadedLyrics, rawLyricsContent, reloadingWithParser, showToast, songFilePath]);
+  }, [hasLyrics, lyricsFileName, lyricsSource, processLoadedLyrics, quickParserSettings, rawLyricsContent, reloadingWithParser, showToast, songFilePath]);
 
   return {
     quickParserOpen,

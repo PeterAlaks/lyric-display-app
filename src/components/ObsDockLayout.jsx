@@ -20,9 +20,12 @@ import useFileUpload from '../hooks/useFileUpload';
 import useMultipleFileUpload from '../hooks/useMultipleFileUpload';
 import useSearch from '../hooks/useSearch';
 import useToast from '../hooks/useToast';
+import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
+import { useQuickParserControls } from '../hooks/LyricDisplayApp/useQuickParserControls';
 import LyricsList from './LyricsList';
 import SearchBar from './SearchBar';
 import OutputSettingsPanel from './OutputSettingsPanel';
+import QuickParserPopover from './LyricDisplayApp/QuickParserPopover';
 
 const outputLabel = (outputId) => {
   if (outputId === 'stage') return 'Stage';
@@ -111,7 +114,24 @@ function SetlistItem({ file, index, total, darkMode, onLoad, onRemove, onMove })
 
 export default function ObsDockLayout() {
   const darkMode = true;
-  const { lyrics, lyricsFileName, rawLyricsContent, songMetadata, lyricsTimestamps, selectedLine, selectLine } = useLyricsState();
+  const {
+    lyrics,
+    lyricsFileName,
+    lyricsSource,
+    rawLyricsContent,
+    songMetadata,
+    lyricsTimestamps,
+    selectedLine,
+    selectLine,
+    setLyrics,
+    setLyricsSections,
+    setLineToSection,
+    setRawLyricsContent,
+    setLyricsFileName,
+    setLyricsSource,
+    setSongMetadata,
+    setLyricsTimestamps,
+  } = useLyricsState();
   const { isOutputOn, setIsOutputOn } = useOutputState();
   const { setlistFiles, setSetlistFiles, isSetlistFull, getMaxSetlistFiles } = useSetlistState();
   const allOutputIds = useAllOutputIds();
@@ -127,6 +147,7 @@ export default function ObsDockLayout() {
 
   const {
     emitLineUpdate,
+    emitLyricsLoad,
     emitOutputToggle,
     emitIndividualOutputToggle,
     emitSetlistAdd,
@@ -139,6 +160,7 @@ export default function ObsDockLayout() {
     isConnected,
     isAuthenticated,
     ready,
+    socket,
   } = useControlSocket();
 
   const {
@@ -156,11 +178,47 @@ export default function ObsDockLayout() {
   const hasLyrics = Array.isArray(lyrics) && lyrics.length > 0;
   const maxSetlistFiles = getMaxSetlistFiles();
   const canControl = isConnected && isAuthenticated && ready;
+  const quickSwitchClassName = '!h-7 !w-14 !border-0 shadow-sm transition-colors data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600';
+  const quickSwitchThumbClassName = '!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1';
   const shellClasses = darkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-950';
   const toolbarClasses = darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-white';
   const currentLineText = hasLyrics && typeof selectedLine === 'number'
     ? `${selectedLine + 1}/${lyrics.length}`
     : hasLyrics ? `${lyrics.length} lines` : 'No lyrics';
+
+  const { processLoadedLyrics } = useLyricsLoader({
+    setLyrics,
+    setLyricsSections,
+    setLineToSection,
+    setRawLyricsContent,
+    setLyricsTimestamps,
+    selectLine,
+    setLyricsFileName,
+    setLyricsSource,
+    setSongMetadata,
+    emitLyricsLoad,
+    socket,
+    showToast,
+  });
+
+  const {
+    quickParserOpen,
+    setQuickParserOpen,
+    quickParserLoading,
+    reloadingWithParser,
+    quickParserSettings,
+    clampGroupSize,
+    updateQuickParserSetting,
+    handleReloadWithQuickParser,
+  } = useQuickParserControls({
+    hasLyrics,
+    lyricsSource,
+    songMetadata,
+    rawLyricsContent,
+    lyricsFileName,
+    processLoadedLyrics,
+    showToast,
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -317,7 +375,7 @@ export default function ObsDockLayout() {
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className={`shrink-0 border-b px-2 py-1.5 ${toolbarClasses}`}>
           <div className="mb-1.5 flex items-center gap-1.5">
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md bg-gradient-to-r from-blue-400 to-purple-600 px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:from-blue-500 hover:to-purple-700">
               <FolderOpen className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Load</span>
             </button>
@@ -353,17 +411,37 @@ export default function ObsDockLayout() {
 
         <section className={`flex min-h-0 flex-1 flex-col overflow-hidden ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
           <div className={`shrink-0 border-b px-2 py-1.5 ${toolbarClasses}`}>
-            <SearchBar
-              darkMode={darkMode}
-              searchQuery={searchQuery}
-              onSearch={handleSearch}
-              totalMatches={totalMatches}
-              currentMatchIndex={currentMatchIndex}
-              onPrev={navigateToPreviousMatch}
-              onNext={navigateToNextMatch}
-              onClear={clearSearch}
-              density="dock"
-            />
+            <div className="flex items-center gap-1.5">
+              <div className="min-w-0 flex-1">
+                <SearchBar
+                  darkMode={darkMode}
+                  searchQuery={searchQuery}
+                  onSearch={handleSearch}
+                  totalMatches={totalMatches}
+                  currentMatchIndex={currentMatchIndex}
+                  onPrev={navigateToPreviousMatch}
+                  onNext={navigateToNextMatch}
+                  onClear={clearSearch}
+                  density="dock"
+                />
+              </div>
+              {hasLyrics && (
+                <QuickParserPopover
+                  clampGroupSize={clampGroupSize}
+                  darkMode={darkMode}
+                  handleReloadWithQuickParser={handleReloadWithQuickParser}
+                  quickParserLoading={quickParserLoading}
+                  quickParserOpen={quickParserOpen}
+                  quickParserSettings={quickParserSettings}
+                  quickSwitchClassName={quickSwitchClassName}
+                  quickSwitchThumbClassName={quickSwitchThumbClassName}
+                  reloadingWithParser={reloadingWithParser}
+                  setQuickParserOpen={setQuickParserOpen}
+                  updateQuickParserSetting={updateQuickParserSetting}
+                  presentation="sheet"
+                />
+              )}
+            </div>
           </div>
           <div ref={lyricsContainerRef} className="min-h-0 flex-1 overflow-y-auto">
             {hasLyrics ? (
@@ -372,6 +450,7 @@ export default function ObsDockLayout() {
                 highlightedLineIndex={highlightedLineIndex}
                 onSelectLine={handleLineSelect}
                 density="dock"
+                maxLinesPerGroup={quickParserSettings.maxLinesPerGroup}
               />
             ) : (
               <div className={`flex h-full items-center justify-center p-6 text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>

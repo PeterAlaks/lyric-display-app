@@ -1,10 +1,10 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useDarkModeState, useOutput1Settings, useOutput2Settings, useOutputSettings as useOutputSettingsSelector, useStageSettings, useIndividualOutputState, useOutputEnabled, useSetOutputEnabledAction } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ColorPicker } from "@/components/ui/color-picker";
 import { PaintPicker } from "@/components/ui/paint-picker";
 import useToast from '../hooks/useToast';
@@ -16,7 +16,7 @@ import useTypographyAndBands from '../hooks/OutputSettingsPanel/useTypographyAnd
 import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenModeState';
 import useFullscreenElementMedia from '../hooks/OutputSettingsPanel/useFullscreenElementMedia';
 import useFullscreenAdvancedAutoExpand from '../hooks/OutputSettingsPanel/useFullscreenAdvancedAutoExpand';
-import { Clock, Sparkles, Type, PaintBucket, Square, Move, AlignVerticalSpaceAround, TextAlignJustify, SquareMenu, User } from 'lucide-react';
+import { Clock, Sparkles, Type, PaintBucket, Square, Move, AlignVerticalSpaceAround, TextAlignJustify, SquareMenu, User, X } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
 import BackgroundBandSettingsSection from './OutputSettingsPanel/BackgroundBandSettingsSection';
@@ -408,6 +408,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
                 value={settings.fontColor}
                 onChange={(val) => updateStage('fontColor', val)}
                 darkMode={darkMode}
+                presentation="sheet"
                 className={compactInputClass}
               />
             </CompactField>
@@ -669,6 +670,81 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
         </button>
       );
     };
+    const templateSheet = templatePopoverOpen && typeof document !== 'undefined' ? createPortal(
+      <div
+        className="fixed inset-0 z-[2350] bg-black/45 p-2"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setTemplatePopoverOpen(false);
+        }}
+      >
+        <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-800 bg-gray-950 text-gray-100 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">Output Templates</div>
+              <div className="text-[11px] text-gray-500">Apply saved or preset output settings.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTemplatePopoverOpen(false)}
+              className="ml-3 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-800 text-gray-300 hover:bg-gray-900"
+              aria-label="Close templates"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="border-b border-gray-800 p-3">
+            <div className="grid grid-cols-2 gap-1 rounded-md bg-gray-900 p-1">
+              <button
+                type="button"
+                onClick={() => setTemplateTab('presets')}
+                className={`flex items-center justify-center gap-1.5 rounded px-2 py-2 text-xs font-semibold ${templateTab === 'presets' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Presets
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplateTab('saved')}
+                className={`flex items-center justify-center gap-1.5 rounded px-2 py-2 text-xs font-semibold ${templateTab === 'saved' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+              >
+                <User className="h-3.5 w-3.5" />
+                My Templates
+                {userTemplates.length > 0 && (
+                  <span className="rounded-full bg-purple-500/25 px-1.5 text-[10px] text-purple-200">{userTemplates.length}</span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3">
+            {templateTab === 'presets' ? (
+              <div className="space-y-1.5">
+                {outputTemplates.map((template) => (
+                  <TemplateCard key={template.id} template={template} />
+                ))}
+              </div>
+            ) : userTemplatesLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-xs text-gray-400">
+                <Clock className="h-3.5 w-3.5 animate-pulse" />
+                Loading templates...
+              </div>
+            ) : userTemplates.length === 0 ? (
+              <div className="rounded-md border border-dashed border-gray-800 px-3 py-10 text-center text-xs text-gray-500">
+                Saved output templates will appear here.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {userTemplates.map((template) => (
+                  <TemplateCard key={template.id} template={template} saved />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>,
+      document.body
+    ) : null;
 
     return (
       <div className="space-y-3" onKeyDown={blurInputOnEnter}>
@@ -690,70 +766,15 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
         </div>
 
         <CompactSection title="Templates">
-          <Popover open={templatePopoverOpen} onOpenChange={setTemplatePopoverOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex h-8 w-full items-center justify-between rounded-md border border-gray-800 bg-gray-900 px-3 text-xs font-semibold text-gray-100 hover:bg-gray-800"
-              >
-                <span>Choose Template</span>
-                <Sparkles className="h-3.5 w-3.5 text-blue-300" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              sideOffset={8}
-              className="z-[2200] w-[min(340px,calc(100vw-1rem))] border-gray-800 bg-gray-950 p-0 text-gray-100 shadow-2xl"
-            >
-              <div className="border-b border-gray-800 p-2">
-                <div className="grid grid-cols-2 gap-1 rounded-md bg-gray-900 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setTemplateTab('presets')}
-                    className={`flex items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold ${templateTab === 'presets' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Presets
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTemplateTab('saved')}
-                    className={`flex items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold ${templateTab === 'saved' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-                  >
-                    <User className="h-3.5 w-3.5" />
-                    My Templates
-                    {userTemplates.length > 0 && (
-                      <span className="rounded-full bg-purple-500/25 px-1.5 text-[10px] text-purple-200">{userTemplates.length}</span>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="max-h-[min(420px,calc(100vh-8rem))] overflow-y-auto p-2">
-                {templateTab === 'presets' ? (
-                  <div className="space-y-1.5">
-                    {outputTemplates.map((template) => (
-                      <TemplateCard key={template.id} template={template} />
-                    ))}
-                  </div>
-                ) : userTemplatesLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-xs text-gray-400">
-                    <Clock className="h-3.5 w-3.5 animate-pulse" />
-                    Loading templates...
-                  </div>
-                ) : userTemplates.length === 0 ? (
-                  <div className="rounded-md border border-dashed border-gray-800 px-3 py-8 text-center text-xs text-gray-500">
-                    Saved output templates will appear here.
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {userTemplates.map((template) => (
-                      <TemplateCard key={template.id} template={template} saved />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <button
+            type="button"
+            onClick={() => setTemplatePopoverOpen(true)}
+            className="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-gray-800 bg-gray-900 px-3 text-xs font-semibold text-gray-100 transition-colors hover:bg-gray-800"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-blue-300" />
+            Load Template
+          </button>
+          {templateSheet}
         </CompactSection>
 
         <CompactSection title="Typography">

@@ -129,18 +129,6 @@
         opacity: 0.75;
       }
 
-      .fallback-link {
-        display: none;
-        color: #93c5fd;
-        font-size: 12px;
-        line-height: 1.5;
-        word-break: break-all;
-      }
-
-      .fallback-link.visible {
-        display: block;
-      }
-
       .dev-panel {
         display: none;
         padding: 10px 12px;
@@ -186,8 +174,6 @@
         <button id="openDesktopButton" class="secondary" type="button">Open LyricDisplay</button>
       </div>
 
-      <a id="fallbackLink" class="fallback-link" href="#">Open controller directly</a>
-
     </main>
 
     <script>
@@ -195,7 +181,6 @@
       const startLink = document.getElementById('startLink');
       const startRuntimeButton = document.getElementById('startRuntimeButton');
       const openDesktopButton = document.getElementById('openDesktopButton');
-      const fallbackLink = document.getElementById('fallbackLink');
       const iconEl = document.getElementById('appIcon');
       const params = new URLSearchParams(window.location.search);
 
@@ -235,8 +220,6 @@
         const url = getControllerUrl();
         startLink.href = controllerReady ? url : '#';
         startLink.setAttribute('aria-disabled', controllerReady ? 'false' : 'true');
-        fallbackLink.href = url;
-        fallbackLink.classList.toggle('visible', controllerReady);
         startRuntimeButton.hidden = devMode || controllerReady;
         startRuntimeButton.disabled = false;
         startRuntimeButton.textContent = 'Switch to Dock Mode';

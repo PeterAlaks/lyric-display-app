@@ -27,6 +27,7 @@ export default function LyricsList({
   density = 'default',
 }) {
   const compact = density === 'dock' || density === 'compact';
+  const forceDarkMode = density === 'dock';
   const listRef = useListRef();
   const {
     lyrics = [],
@@ -39,7 +40,8 @@ export default function LyricsList({
     setLyrics,
     setLyricsTimestamps
   } = useLyricsState();
-  const { darkMode } = useDarkModeState();
+  const { darkMode: storedDarkMode } = useDarkModeState();
+  const darkMode = forceDarkMode ? true : storedDarkMode;
   const isDesktopApp = useIsDesktopApp();
   const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup } = useControlSocket();
   const { showToast } = useToast();
