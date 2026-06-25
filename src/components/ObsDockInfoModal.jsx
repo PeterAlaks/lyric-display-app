@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Copy, ExternalLink, Loader2, Monitor } from 'lucide-react';
+import { Check, Copy, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const fallbackInfo = {
@@ -149,7 +149,6 @@ export default function ObsDockInfoModal({ darkMode }) {
     );
   }
 
-  const modeLabel = info?.isDev ? 'Development' : 'Production';
   const dockFileUrl = info?.dockFileUrl || info?.dockFilePath || '';
   const dockFileDisplay = formatReadableUrl(dockFileUrl);
   const commandLabel = info?.isDev ? 'Development Command' : 'Dock Mode Command';
@@ -160,20 +159,6 @@ export default function ObsDockInfoModal({ darkMode }) {
 
   return (
     <div className="space-y-5">
-      <div className={`rounded-lg border p-4 ${darkMode ? 'border-blue-500/30 bg-blue-950/20' : 'border-blue-200 bg-blue-50'}`}>
-        <div className="flex items-start gap-3">
-          <Monitor className={`mt-0.5 h-5 w-5 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
-          <div>
-            <div className={`text-sm font-semibold ${darkMode ? 'text-blue-100' : 'text-blue-900'}`}>
-              LyricDisplay Dock Setup: {modeLabel}
-            </div>
-            <p className={`mt-1 text-sm ${darkMode ? 'text-blue-100/80' : 'text-blue-900/75'}`}>
-              Add this local page as an OBS Custom Browser Dock. It checks Dock Mode readiness and opens the controller in the same dock.
-            </p>
-          </div>
-        </div>
-      </div>
-
       <CopyDisplayField
         label="LyricDisplay Dock URL"
         displayValue={dockFileDisplay}

@@ -60,16 +60,27 @@ const useAutoFitText = (text, enabled = true) => {
       setFontSize(best);
     };
 
-    const frame = window.requestAnimationFrame(fit);
-    const observer = new ResizeObserver(fit);
+    let frame = null;
+    const scheduleFit = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        fit();
+      });
+    };
+
+    frame = window.requestAnimationFrame(() => {
+      frame = null;
+      fit();
+    });
+    const observer = new ResizeObserver(scheduleFit);
     observer.observe(containerEl);
-    observer.observe(textEl);
-    window.addEventListener('resize', fit);
+    window.addEventListener('resize', scheduleFit);
 
     return () => {
-      window.cancelAnimationFrame(frame);
+      if (frame) window.cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener('resize', fit);
+      window.removeEventListener('resize', scheduleFit);
     };
   }, [containerEl, textEl, text, enabled]);
 
@@ -83,10 +94,11 @@ const useAutoFitText = (text, enabled = true) => {
 const TimeDisplay = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
-  useSocket('stage');
+  useSocket('stage', { preview: isPreviewMode });
   const { timerState, displayValue, intensity, now, progress } = useSharedTimer({ controller: false });
   const { settings: timerDisplaySettings } = useTimerDisplaySettings();
 

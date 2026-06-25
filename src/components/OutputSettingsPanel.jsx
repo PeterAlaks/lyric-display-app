@@ -397,7 +397,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
               <Input
                 type="number"
                 min="12"
-                max="200"
+                max="300"
                 value={settings.fontSize ?? 48}
                 onChange={(e) => updateStage('fontSize', sanitizeIntegerInput(e.target.value, settings.fontSize ?? 48, { min: 12, max: 200, clampMin: false }))}
                 className={compactInputClass}
@@ -806,7 +806,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
                 min="12"
                 max="200"
                 value={currentFontSize}
-                onChange={(e) => update('fontSize', sanitizeIntegerInput(e.target.value, currentFontSize ?? 48, { min: 12, max: 200, clampMin: false }))}
+                onChange={(e) => update('fontSize', sanitizeIntegerInput(e.target.value, currentFontSize ?? 48, { min: 12, max: 300, clampMin: false }))}
                 className={compactInputClass}
               />
             </CompactField>

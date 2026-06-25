@@ -130,7 +130,7 @@ const FontSizeSettingsSection = ({
   return (
     <>
       <div className="flex items-center justify-between gap-4">
-        <Tooltip content="Adjust text size in pixels (24-100)" side="right">
+        <Tooltip content="Adjust text size in pixels (24-300)" side="right">
           <LabelWithIcon icon={TextCursorInput} text="Font Size" darkMode={darkMode} />
         </Tooltip>
         <div className="flex items-center gap-2 justify-end w-full">
@@ -168,12 +168,12 @@ const FontSizeSettingsSection = ({
                     const next = sanitizeIntegerInput(
                       e.target.value,
                       settings.fontSize ?? 24,
-                      { min: 24, max: 100, clampMin: false }
+                      { min: 24, max: 300, clampMin: false }
                     );
                     update('fontSize', next);
                   }}
                   min="24"
-                  max="100"
+                  max="300"
                   disabled={primaryInstanceResizing}
                   className={`w-24 ${innerClassBase} ${primaryInstanceResizing ? 'opacity-80 cursor-not-allowed' : ''}`}
                   title={tooltipText}

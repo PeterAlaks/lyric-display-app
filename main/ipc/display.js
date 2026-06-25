@@ -373,6 +373,19 @@ export function registerDisplayHandlers({ getMainWindow }) {
         return { success: false, error: 'Display ID is required for external projection' };
       }
 
+      const targetLocationKey = targetType === 'desktop'
+        ? 'desktop'
+        : `display:${String(displayId)}`;
+      const currentProjections = collectProjectionState();
+      const conflictingProjection = currentProjections.find((entry) => (
+        entry.outputKey !== outputKey && getProjectionLocationKey(entry) === targetLocationKey
+      )) || null;
+
+      if (conflictingProjection?.outputKey) {
+        await closeProjectionWindowsByOutput(conflictingProjection.outputKey);
+        displayManager.removeAssignmentsByOutput(conflictingProjection.outputKey);
+      }
+
       const windows = BrowserWindow.getAllWindows();
       let projectionWindow = null;
 
@@ -405,20 +418,6 @@ export function registerDisplayHandlers({ getMainWindow }) {
 
       await waitForWindowLoad(projectionWindow);
       applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable });
-
-      const currentProjections = collectProjectionState();
-      const targetLocationKey = targetType === 'desktop'
-        ? 'desktop'
-        : `display:${String(displayId)}`;
-
-      const conflictingProjection = currentProjections.find((entry) => (
-        entry.outputKey !== outputKey && getProjectionLocationKey(entry) === targetLocationKey
-      )) || null;
-
-      if (conflictingProjection?.outputKey) {
-        await closeProjectionWindowsByOutput(conflictingProjection.outputKey);
-        displayManager.removeAssignmentsByOutput(conflictingProjection.outputKey);
-      }
 
       displayManager.removeAssignmentsByOutput(outputKey);
 

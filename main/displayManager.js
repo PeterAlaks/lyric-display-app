@@ -286,6 +286,12 @@ export function moveWindowToDisplay(window, displayId, fullscreen = true) {
   try {
     const { x, y, width, height } = display.bounds;
 
+    if (fullscreen) {
+      try {
+        window.setFullScreen(false);
+      } catch { }
+    }
+
     window.setBounds({
       x: x,
       y: y,
