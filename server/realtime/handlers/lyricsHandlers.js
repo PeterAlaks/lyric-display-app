@@ -1,6 +1,7 @@
 import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
 import { appendActionLog } from '../actionLog.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
+import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { state } from '../state.js';
 import { isPlainObject, isValidLineIndex } from '../utils.js';
 
@@ -21,6 +22,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     const { index } = payload;
     const changed = state.currentSelectedLine !== index;
     state.currentSelectedLine = index;
+    schedulePersistSessionState();
     console.log(`Line updated to ${index} by ${clientType} client`);
     if (changed) {
       appendActionLog(io, {
@@ -45,16 +47,41 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
       return;
     }
 
-    const lyrics = Array.isArray(payload) ? payload : payload?.lyrics || [];
-    const fileName = typeof payload === 'object' ? (payload.fileName || '') : '';
+    const payloadObject = isPlainObject(payload) ? payload : null;
+    const lyrics = Array.isArray(payload) ? payload : payloadObject?.lyrics || [];
+    const fileName = payloadObject ? (payloadObject.fileName || '') : '';
+    const incomingTimestamps = Array.isArray(payloadObject?.lyricsTimestamps) ? payloadObject.lyricsTimestamps : [];
+    const incomingSections = Array.isArray(payloadObject?.sections) ? payloadObject.sections : null;
+    const incomingLineToSection = isPlainObject(payloadObject?.lineToSection) ? payloadObject.lineToSection : null;
 
     state.currentLyrics = lyrics;
-    state.currentLyricsTimestamps = [];
-    const derived = deriveSectionsFromProcessedLines(state.currentLyrics);
-    state.currentLyricsSections = derived.sections || [];
-    state.currentLineToSection = derived.lineToSection || {};
+    state.currentLyricsTimestamps = incomingTimestamps;
+    const derived = incomingSections ? null : deriveSectionsFromProcessedLines(state.currentLyrics);
+    state.currentLyricsSections = incomingSections || derived?.sections || [];
+    state.currentLineToSection = incomingLineToSection || derived?.lineToSection || {};
     state.currentSelectedLine = null;
     state.currentLyricsFileName = fileName;
+    state.currentRawLyricsContent = typeof payloadObject?.rawLyricsContent === 'string' ? payloadObject.rawLyricsContent : '';
+    state.currentLyricsSource = isPlainObject(payloadObject?.lyricsSource)
+      ? payloadObject.lyricsSource
+      : {
+        content: state.currentRawLyricsContent,
+        fileType: Array.isArray(incomingTimestamps) && incomingTimestamps.length > 0 ? 'lrc' : 'txt',
+        filePath: null,
+        fileName,
+      };
+    state.currentSongMetadata = isPlainObject(payloadObject?.songMetadata)
+      ? payloadObject.songMetadata
+      : {
+        title: fileName || '',
+        artists: [],
+        album: null,
+        year: null,
+        origin: '',
+        filePath: null,
+        lyricLines: lyrics.length,
+      };
+    schedulePersistSessionState();
     console.log(`Lyrics loaded by ${clientType} client:`, lyrics.length, 'lines', fileName ? `(filename: "${fileName}")` : '');
     appendActionLog(io, {
       type: 'lyrics',
@@ -64,7 +91,16 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
       target: fileName || 'lyrics',
       metadata: { lines: lyrics.length },
     });
-    io.emit('lyricsLoad', lyrics);
+    io.emit('lyricsLoad', {
+      lyrics,
+      fileName: state.currentLyricsFileName,
+      rawLyricsContent: state.currentRawLyricsContent,
+      lyricsSource: state.currentLyricsSource,
+      songMetadata: state.currentSongMetadata,
+      lyricsTimestamps: state.currentLyricsTimestamps,
+      sections: state.currentLyricsSections,
+      lineToSection: state.currentLineToSection,
+    });
     io.emit('lyricsTimestampsUpdate', state.currentLyricsTimestamps);
     io.emit('lyricsSectionsUpdate', { sections: state.currentLyricsSections, lineToSection: state.currentLineToSection });
     io.emit('fileNameUpdate', state.currentLyricsFileName);
@@ -81,6 +117,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     }
 
     state.currentLyricsTimestamps = timestamps || [];
+    schedulePersistSessionState();
     console.log(`Lyrics timestamps updated by ${clientType} client:`, timestamps?.length, 'timestamps');
     appendActionLog(io, {
       type: 'lyrics',
@@ -131,6 +168,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     const derived = deriveSectionsFromProcessedLines(state.currentLyrics);
     state.currentLyricsSections = derived.sections || [];
     state.currentLineToSection = derived.lineToSection || {};
+    schedulePersistSessionState();
 
     if (typeof state.currentSelectedLine === 'number') {
       if (state.currentSelectedLine > index) {
@@ -147,7 +185,16 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
       target: state.currentLyricsFileName || 'lyrics',
       metadata: { index, lines: groupLines.length },
     });
-    io.emit('lyricsLoad', state.currentLyrics);
+    io.emit('lyricsLoad', {
+      lyrics: state.currentLyrics,
+      fileName: state.currentLyricsFileName,
+      rawLyricsContent: state.currentRawLyricsContent,
+      lyricsSource: state.currentLyricsSource,
+      songMetadata: state.currentSongMetadata,
+      lyricsTimestamps: state.currentLyricsTimestamps,
+      sections: state.currentLyricsSections,
+      lineToSection: state.currentLineToSection,
+    });
     io.emit('lyricsTimestampsUpdate', state.currentLyricsTimestamps);
     io.emit('lyricsSectionsUpdate', { sections: state.currentLyricsSections, lineToSection: state.currentLineToSection });
 
@@ -170,6 +217,14 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
 
     const changed = state.currentLyricsFileName !== fileName;
     state.currentLyricsFileName = fileName;
+    state.currentLyricsSource = {
+      ...(state.currentLyricsSource || {}),
+      fileName: state.currentLyricsSource?.fileName || fileName || '',
+    };
+    if (state.currentSongMetadata && typeof state.currentSongMetadata === 'object' && !state.currentSongMetadata.title) {
+      state.currentSongMetadata = { ...state.currentSongMetadata, title: fileName || '' };
+    }
+    schedulePersistSessionState();
     console.log(`Filename updated to "${fileName}" by ${clientType} client`);
     if (changed) {
       appendActionLog(io, {

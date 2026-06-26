@@ -165,6 +165,7 @@ const useLyricsStore = create(
           rawLyricsContent: state.rawLyricsContent,
           selectedLine: state.selectedLine,
           lyricsFileName: state.lyricsFileName,
+          lyricsSource: state.lyricsSource,
           songMetadata: state.songMetadata,
           lyricsSections: state.lyricsSections,
           lineToSection: state.lineToSection,

@@ -55,6 +55,9 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
   const previousLyrics = state.currentLyrics;
   const previousTimestamps = state.currentLyricsTimestamps;
   const previousFileName = state.currentLyricsFileName;
+  const previousRawLyricsContent = state.currentRawLyricsContent;
+  const previousLyricsSource = state.currentLyricsSource;
+  const previousSongMetadata = state.currentSongMetadata;
   const previousSections = state.currentLyricsSections;
   const previousLineToSection = state.currentLineToSection;
 
@@ -87,6 +90,15 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     assert.deepEqual(state.currentLyrics, ['[Verse 1]', 'First line', 'Second line']);
     assert.deepEqual(state.currentLyricsTimestamps, [500, 1000, 2000]);
     assert.equal(state.currentLyricsFileName, 'Service Song');
+    assert.equal(state.currentRawLyricsContent, '[Verse 1]\nFirst line\nSecond line');
+    assert.deepEqual(state.currentLyricsSource, {
+      content: state.setlistFiles[0].content,
+      fileType: 'lrc',
+      filePath: null,
+      fileName: 'Service Song.lrc',
+    });
+    assert.equal(state.currentSongMetadata.title, 'Service Song');
+    assert.equal(state.currentSongMetadata.source, 'test');
 
     assert.deepEqual(ioEvents
       .map((event) => event.eventName)
@@ -98,6 +110,12 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     ]);
 
     const success = ioEvents.find((event) => event.eventName === 'setlistLoadSuccess')?.payload;
+    const load = ioEvents.find((event) => event.eventName === 'lyricsLoad')?.payload;
+    assert.equal(load.fileName, 'Service Song');
+    assert.equal(load.rawLyricsContent, '[Verse 1]\nFirst line\nSecond line');
+    assert.deepEqual(load.lyricsTimestamps, [500, 1000, 2000]);
+    assert.equal(load.lyricsSource.fileName, 'Service Song.lrc');
+    assert.equal(load.songMetadata.title, 'Service Song');
     assert.equal(success.fileName, 'Service Song');
     assert.equal(success.rawContent, '[Verse 1]\nFirst line\nSecond line');
     assert.equal(success.linesCount, 3);
@@ -108,6 +126,9 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     state.currentLyrics = previousLyrics;
     state.currentLyricsTimestamps = previousTimestamps;
     state.currentLyricsFileName = previousFileName;
+    state.currentRawLyricsContent = previousRawLyricsContent;
+    state.currentLyricsSource = previousLyricsSource;
+    state.currentSongMetadata = previousSongMetadata;
     state.currentLyricsSections = previousSections;
     state.currentLineToSection = previousLineToSection;
   }

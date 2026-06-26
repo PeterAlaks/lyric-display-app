@@ -116,6 +116,14 @@ function formatReadableUrl(value) {
   }
 }
 
+function BetaBadge({ darkMode }) {
+  return (
+    <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none ${darkMode ? 'border-blue-400/40 bg-blue-500/15 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
+      Beta
+    </span>
+  );
+}
+
 export default function ObsDockInfoModal({ darkMode }) {
   const [info, setInfo] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -159,6 +167,10 @@ export default function ObsDockInfoModal({ darkMode }) {
 
   return (
     <div className="space-y-5">
+      <div className="flex items-center gap-2">
+        <span className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>LyricDisplay Dock</span>
+        <BetaBadge darkMode={darkMode} />
+      </div>
       <CopyDisplayField
         label="LyricDisplay Dock URL"
         displayValue={dockFileDisplay}

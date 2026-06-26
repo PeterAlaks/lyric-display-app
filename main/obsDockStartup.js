@@ -26,6 +26,20 @@ function getRelaunchArgs() {
   return [...OBS_DOCK_LOGIN_ARGS];
 }
 
+function getDesktopRelaunchArgs() {
+  if (isDev) {
+    return [appRoot];
+  }
+
+  return [];
+}
+
+function clearHeadlessEnvironment() {
+  delete process.env.LYRICDISPLAY_HEADLESS;
+  delete process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH;
+  delete process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN;
+}
+
 export function getObsDockStartupStatus() {
   try {
     const settings = app.getLoginItemSettings({
@@ -97,6 +111,23 @@ export function relaunchInObsDockHeadlessMode() {
     return { success: true };
   } catch (error) {
     console.warn('[OBSDockStartup] Failed to relaunch in LyricDisplay Dock headless mode:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export function relaunchInDesktopMode() {
+  try {
+    clearHeadlessEnvironment();
+    app.isQuitting = true;
+    app.relaunch({ args: getDesktopRelaunchArgs() });
+    app.quit();
+    return { success: true };
+  } catch (error) {
+    console.warn('[OBSDockStartup] Failed to relaunch LyricDisplay desktop mode:', error);
+    try {
+      app.exit(1);
+    } catch {
+    }
     return { success: false, error: error.message };
   }
 }

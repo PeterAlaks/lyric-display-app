@@ -27,6 +27,7 @@ import { registerHealthRoutes } from './routes/health.js';
 import { registerIntegrationRoutes } from './routes/integrations.js';
 import { registerAppControlRoutes } from './routes/appControl.js';
 import { registerTemplateRoutes } from './routes/templates.js';
+import { loadPersistedSessionState } from './realtime/sessionPersistence.js';
 
 dotenv.config();
 
@@ -96,6 +97,8 @@ const uploadMiddleware = createUploadMiddleware({
   ...mediaPaths,
   getMediaDirectory: userMediaService.getMediaDirectory,
 });
+
+await loadPersistedSessionState({ dataRoot });
 
 app.use(corsMiddleware);
 app.use(express.json());

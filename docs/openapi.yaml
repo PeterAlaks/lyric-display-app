@@ -203,18 +203,19 @@ paths:
         '401':
           description: Invalid token
 
-  /api/app/open-main-window:
+  /api/app/switch-to-desktop-mode:
     post:
-      summary: Ask Electron to open or focus the main desktop window
+      summary: Ask Electron to restart Dock Mode as the desktop app
       description: >
         Local-only endpoint used by LyricDisplay Dock when LyricDisplay is already
         running in headless/background mode. The backend forwards the request to
-        Electron over IPC. Browser origins must be local (`file://`/`null`,
-        `localhost`, or `127.0.0.1`).
+        Electron over IPC. Electron acknowledges the request, then relaunches
+        without Dock Mode arguments. Browser origins must be local
+        (`file://`/`null`, `localhost`, or `127.0.0.1`).
       security: []
       responses:
         '200':
-          description: Main window open request accepted
+          description: Desktop mode switch accepted
           content:
             application/json:
               schema:
@@ -224,6 +225,31 @@ paths:
                     type: boolean
         '403':
           description: Request did not come from a local dock page
+        '503':
+          description: Backend is not running under Electron
+
+  /api/app/quit:
+    post:
+      summary: Ask Electron to quit Dock Mode
+      description: >
+        Local-only endpoint used by the native tray helper when LyricDisplay is
+        running in Dock Mode. The backend forwards the request to Electron over
+        IPC. Electron acknowledges the request, then quits. Origins must be
+        local or absent because the Windows tray helper does not send a browser
+        Origin header.
+      security: []
+      responses:
+        '200':
+          description: Quit request accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '403':
+          description: Request did not come from a local page or helper
         '503':
           description: Backend is not running under Electron
 

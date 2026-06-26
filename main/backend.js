@@ -262,9 +262,33 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     child.on('message', async (msg) => {
       if (backendMessageHandler) {
         try {
-          backendMessageHandler(msg);
+          const result = await backendMessageHandler(msg);
+          if (msg?.requestId) {
+            try {
+              child.send({
+                type: 'app-control-response',
+                requestId: msg.requestId,
+                success: result?.success !== false,
+                error: result?.error || null,
+              });
+            } catch (error) {
+              console.warn('[Backend] Failed to send app-control response:', error);
+            }
+          }
         } catch (error) {
           console.warn('[Backend] Message handler failed:', error);
+          if (msg?.requestId) {
+            try {
+              child.send({
+                type: 'app-control-response',
+                requestId: msg.requestId,
+                success: false,
+                error: error?.message || 'Main process failed to handle request',
+              });
+            } catch (sendError) {
+              console.warn('[Backend] Failed to send app-control error response:', sendError);
+            }
+          }
         }
       }
 

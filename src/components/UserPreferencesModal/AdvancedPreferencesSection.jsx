@@ -103,7 +103,12 @@ const AdvancedPreferencesSection = ({
       <div className="mb-4 flex items-start gap-3">
         <Monitor className={`mt-0.5 w-4 h-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
         <div className="min-w-0">
-          <label className={`text-sm font-medium ${labelClass}`}>LyricDisplay Dock</label>
+          <div className="flex items-center gap-2">
+            <label className={`text-sm font-medium ${labelClass}`}>LyricDisplay Dock</label>
+            <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none ${darkMode ? 'border-blue-400/40 bg-blue-500/15 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
+              Beta
+            </span>
+          </div>
           <p className={`mt-1 text-xs ${mutedClass}`}>
             Control LyricDisplay from an OBS dock while LyricDisplay runs quietly in the background.
           </p>

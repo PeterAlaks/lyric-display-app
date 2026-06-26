@@ -7,6 +7,7 @@ import {
 } from '../state.js';
 import { appendActionLog } from '../actionLog.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
+import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { getPrimaryOutputInstance, isOutputClientType, isPlainObject } from '../utils.js';
 
 const areSettingValuesEqual = (left, right) => {
@@ -41,6 +42,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     }
 
     state.currentIsOutputOn = nextState;
+    schedulePersistSessionState();
     console.log(`Output toggled to ${nextState} by ${clientType} client`);
     appendActionLog(io, {
       type: 'output',
@@ -80,6 +82,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       state.currentStageEnabled = enabled;
     }
 
+    schedulePersistSessionState();
     console.log(`Individual output ${output} toggled to ${enabled} by ${clientType} client`);
     appendActionLog(io, {
       type: 'output',
@@ -120,6 +123,9 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     } else if (output === 'stage') {
       changedKeys = getChangedSettingKeys(state.currentStageSettings || {}, settings);
       state.currentStageSettings = { ...state.currentStageSettings, ...settings };
+    }
+    if (changedKeys.length > 0) {
+      schedulePersistSessionState();
     }
     console.log(`Style updated for ${output} by ${clientType} client`);
     if (changedKeys.length > 0) {
@@ -166,6 +172,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       state.registeredOutputs.delete(output);
     }
 
+    schedulePersistSessionState();
     console.log(`Output ${output} removed by ${clientType} client`);
     appendActionLog(io, {
       type: 'output',
@@ -195,6 +202,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
 
     const outputs = payload.outputs.filter((id) => typeof id === 'string');
     registerOutputs(outputs);
+    schedulePersistSessionState();
     appendActionLog(io, {
       type: 'output',
       label: 'Custom outputs registered',

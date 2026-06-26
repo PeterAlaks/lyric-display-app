@@ -43,7 +43,7 @@ function createObsDockTokenRoute({ tokenService }) {
   return route.handlers;
 }
 
-function createAppControlRoute(routePath) {
+function createAppControlRoute(routePath, options = {}) {
   const routes = [];
   const app = {
     get(path, ...handlers) {
@@ -54,19 +54,19 @@ function createAppControlRoute(routePath) {
     },
   };
 
-  registerAppControlRoutes(app, { localhostOnly });
+  registerAppControlRoutes(app, { localhostOnly, ...options });
 
   const route = routes.find((candidate) => candidate.path === routePath);
   assert.ok(route, `${routePath} route should be registered`);
   return route.handlers;
 }
 
-function createOpenMainWindowRoute() {
-  return createAppControlRoute('/api/app/open-main-window');
-}
-
 function createSwitchToDockModeRoute() {
   return createAppControlRoute('/api/app/switch-to-dock-mode');
+}
+
+function createSwitchToDesktopModeRoute() {
+  return createAppControlRoute('/api/app/switch-to-desktop-mode');
 }
 
 function createTemplateRoute(routePath = '/api/templates/:type') {
@@ -307,7 +307,7 @@ test('OBS dock pairing tokens are one-time credentials', async () => {
   }
 });
 
-test('local app-control route asks Electron to open the main window', async () => {
+test('local app-control desktop mode switch reports Electron acknowledgement timeout', async () => {
   const previousSend = process.send;
   const messages = [];
   process.send = (message) => {
@@ -316,14 +316,52 @@ test('local app-control route asks Electron to open the main window', async () =
   };
 
   try {
-    const handlers = createOpenMainWindowRoute();
+    const handlers = createAppControlRoute('/api/app/switch-to-desktop-mode', { appControlTimeoutMs: 10 });
+    const res = await invokeRoute(handlers, createLocalRequest({
+      origin: 'null',
+    }));
+
+    assert.equal(res.statusCode, 504);
+    assert.match(res.body.error, /timed out/i);
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].type, 'switch-to-desktop-mode');
+    assert.match(messages[0].requestId, /^app_control_/);
+  } finally {
+    if (previousSend === undefined) {
+      delete process.send;
+    } else {
+      process.send = previousSend;
+    }
+  }
+});
+
+test('local app-control route asks Electron to switch to desktop mode', async () => {
+  const previousSend = process.send;
+  const messages = [];
+  process.send = (message) => {
+    messages.push(message);
+    setImmediate(() => {
+      process.emit('message', {
+        type: 'app-control-response',
+        requestId: message.requestId,
+        success: true,
+      });
+    });
+    return true;
+  };
+
+  try {
+    const handlers = createSwitchToDesktopModeRoute();
     const res = await invokeRoute(handlers, createLocalRequest({
       origin: 'null',
     }));
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, { success: true });
-    assert.deepEqual(messages, [{ type: 'open-main-window', source: 'obs-dock' }]);
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].type, 'switch-to-desktop-mode');
+    assert.equal(messages[0].source, 'obs-dock');
+    assert.match(messages[0].requestId, /^app_control_/);
   } finally {
     if (previousSend === undefined) {
       delete process.send;
@@ -394,7 +432,7 @@ test('local app-control capabilities report dock headless auth state', async () 
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, {
-      openMainWindow: true,
+      switchToDesktopMode: true,
       obsDockLocalAuth: true,
     });
   } finally {
@@ -416,7 +454,7 @@ test('local app-control route rejects non-local browser origins', async () => {
   process.send = () => true;
 
   try {
-    const handlers = createOpenMainWindowRoute();
+    const handlers = createSwitchToDesktopModeRoute();
     const res = await invokeRoute(handlers, createLocalRequest({
       origin: 'https://example.com',
     }));

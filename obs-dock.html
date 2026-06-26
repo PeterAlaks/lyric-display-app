@@ -49,6 +49,21 @@
         line-height: 1.2;
       }
 
+      .beta-label {
+        display: inline-flex;
+        transform: translateY(-1px);
+        border: 1px solid rgba(96, 165, 250, 0.45);
+        border-radius: 999px;
+        background: rgba(59, 130, 246, 0.16);
+        color: #bfdbfe;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
       p {
         margin: 0;
         color: #9ca3af;
@@ -154,7 +169,7 @@
       <div class="brand">
         <img id="appIcon" src="./LyricDisplay-icon.png" alt="" />
         <div>
-          <h1>LyricDisplay Dock</h1>
+          <h1>LyricDisplay Dock <span class="beta-label">Beta</span></h1>
           <p>Open the controller when Dock Mode is ready.</p>
         </div>
       </div>
@@ -171,7 +186,7 @@
       <div class="actions">
         <a id="startLink" class="button-link" href="#" aria-disabled="true">Open Controller</a>
         <button id="startRuntimeButton" class="secondary" type="button" hidden>Switch to Dock Mode</button>
-        <button id="openDesktopButton" class="secondary" type="button">Open LyricDisplay</button>
+        <button id="openDesktopButton" class="secondary" type="button" hidden>Switch to Desktop Mode</button>
       </div>
 
     </main>
@@ -191,6 +206,7 @@
       const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
       const capabilitiesUrl = 'http://127.0.0.1:4000/api/app/capabilities';
       const switchToDockModeUrl = 'http://127.0.0.1:4000/api/app/switch-to-dock-mode';
+      const switchToDesktopModeUrl = 'http://127.0.0.1:4000/api/app/switch-to-desktop-mode';
       const devReadyUrl = devDockUrl;
       const isWindowsPlatform = /win/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
 
@@ -289,7 +305,8 @@
         const capabilities = backendReady ? await getBackendCapabilities() : null;
         const dockAuthReady = Boolean(capabilities?.obsDockLocalAuth);
         const devReady = devMode ? await canReachNoCors(devReadyUrl) : true;
-        return { ready: backendReady && dockAuthReady && devReady, backendReady, dockAuthReady, devReady };
+        const desktopSwitchAvailable = Boolean(capabilities?.switchToDesktopMode);
+        return { ready: backendReady && dockAuthReady && devReady, backendReady, dockAuthReady, devReady, desktopSwitchAvailable };
       };
 
       const refreshControllerReadiness = async () => {
@@ -300,6 +317,7 @@
         setStatus(devMode ? 'Checking the development session...' : 'Checking Dock Mode...', 'pending');
 
         const result = await checkRuntimeReady();
+        openDesktopButton.hidden = !(result.backendReady && result.dockAuthReady && result.desktopSwitchAvailable);
 
         if (result.ready) {
           setControllerLinkReady(true);
@@ -335,16 +353,16 @@
       };
 
       const openDesktopApp = async () => {
-        setStatus('Opening LyricDisplay...', 'pending');
+        setStatus('Switching to desktop mode...', 'pending');
         try {
-          const response = await fetch('http://127.0.0.1:4000/api/app/open-main-window', {
+          const response = await fetch(switchToDesktopModeUrl, {
             method: 'POST',
             cache: 'no-store'
           });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          setStatus('LyricDisplay is opening.', 'ready');
+          setStatus('LyricDisplay is restarting in desktop mode.', 'ready');
         } catch {
-          setStatus('LyricDisplay is not running in Dock Mode yet.', 'error');
+          setStatus('Could not switch to desktop mode. Use the LyricDisplay tray menu to open or quit Dock Mode.', 'error');
         }
       };
 

@@ -83,7 +83,21 @@ const useFileUpload = () => {
       };
       setSongMetadata(metadata);
 
-      emitLyricsLoad(parsed.processedLines);
+      emitLyricsLoad({
+        lyrics: parsed.processedLines,
+        fileName: baseName,
+        rawLyricsContent: isLrc ? sourceContent : parsed.rawText,
+        lyricsSource: {
+          content: sourceContent,
+          fileType: isLrc ? 'lrc' : 'txt',
+          filePath,
+          fileName: file.name,
+        },
+        songMetadata: metadata,
+        lyricsTimestamps: parsed.timestamps || [],
+        sections: parsed.sections || [],
+        lineToSection: parsed.lineToSection || {},
+      });
 
       if (socket && socket.connected) {
         socket.emit('fileNameUpdate', baseName);

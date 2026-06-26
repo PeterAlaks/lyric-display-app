@@ -1,5 +1,6 @@
 import { appendActionLog } from '../actionLog.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
+import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { state } from '../state.js';
 
 export function registerStageHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
@@ -29,6 +30,7 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
         : (nextStageTimerState.finished ? 'finished' : 'idle');
     }
     state.currentStageTimerState = nextStageTimerState;
+    schedulePersistSessionState();
     console.log(`Stage timer updated by ${clientType} client:`, state.currentStageTimerState);
     appendActionLog(io, {
       type: 'stage',
@@ -55,6 +57,7 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
     }
 
     state.currentStageMessages = Array.isArray(messages) ? [...messages] : [];
+    schedulePersistSessionState();
     console.log(`Stage messages updated by ${clientType} client: ${messages?.length || 0} messages`);
     appendActionLog(io, {
       type: 'stage',

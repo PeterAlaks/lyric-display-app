@@ -39,6 +39,7 @@ const useSocketEvents = (role) => {
     setLyricsFileName,
     setRawLyricsContent,
     setLyricsSource,
+    setSongMetadata,
     setLyricsSections,
     setLineToSection,
   } = useLyricsStore();
@@ -160,8 +161,8 @@ const useSocketEvents = (role) => {
       const state = rawState;
       const storeAtStart = useLyricsStore.getState();
       const incomingLyrics = hasOwn(state, 'lyrics') && Array.isArray(state.lyrics) ? state.lyrics : null;
-      const preserveDesktopHydratedLyrics = Boolean(
-        isDesktopApp &&
+      const preserveHydratedLyrics = Boolean(
+        (isDesktopApp || clientType === 'obsDock') &&
         source === 'currentState' &&
         Array.isArray(incomingLyrics) &&
         incomingLyrics.length === 0 &&
@@ -178,25 +179,34 @@ const useSocketEvents = (role) => {
         reconcileCustomOutputsFromSnapshot(state);
       }
 
-      if (hasOwn(state, 'lyrics') && Array.isArray(state.lyrics) && !preserveDesktopHydratedLyrics) {
+      if (hasOwn(state, 'lyrics') && Array.isArray(state.lyrics) && !preserveHydratedLyrics) {
         const currentLyrics = useLyricsStore.getState().lyrics;
         if (!shallowArrayEqual(currentLyrics, state.lyrics)) {
           setLyrics(state.lyrics);
         }
       }
-      if (hasOwn(state, 'lyricsTimestamps') && !preserveDesktopHydratedLyrics) {
+      if (hasOwn(state, 'lyricsTimestamps') && !preserveHydratedLyrics) {
         const nextTimestamps = Array.isArray(state.lyricsTimestamps) ? state.lyricsTimestamps : [];
         const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
         if (!shallowArrayEqual(currentTimestamps, nextTimestamps)) {
           setLyricsTimestamps(nextTimestamps);
         }
       }
-      if (hasOwn(state, 'lyricsFileName') && typeof state.lyricsFileName === 'string' && !preserveDesktopHydratedLyrics) {
+      if (hasOwn(state, 'lyricsFileName') && typeof state.lyricsFileName === 'string' && !preserveHydratedLyrics) {
         if (shouldIgnoreEmptyRemoteFileName(state.lyricsFileName)) {
           logDebug(`Ignoring empty ${source} lyricsFileName to preserve local desktop state`);
         } else {
           setLyricsFileName(state.lyricsFileName);
         }
+      }
+      if (hasOwn(state, 'rawLyricsContent') && typeof state.rawLyricsContent === 'string' && !preserveHydratedLyrics) {
+        setRawLyricsContent(state.rawLyricsContent);
+      }
+      if (hasOwn(state, 'lyricsSource') && isPlainObject(state.lyricsSource) && !preserveHydratedLyrics) {
+        setLyricsSource(state.lyricsSource);
+      }
+      if (hasOwn(state, 'songMetadata') && isPlainObject(state.songMetadata) && !preserveHydratedLyrics) {
+        setSongMetadata(state.songMetadata);
       }
 
       const isDesktop = state.isDesktopClient === true;
@@ -242,7 +252,7 @@ const useSocketEvents = (role) => {
         }
       }
 
-      if (!preserveDesktopHydratedLyrics) {
+      if (!preserveHydratedLyrics) {
         applySections(state.lyricsSections || state.sections, state.lineToSection, state.lyrics);
       }
 
@@ -292,7 +302,19 @@ const useSocketEvents = (role) => {
         lyrics[lyrics.length - 1] === currentStore.lyrics[lyrics.length - 1];
 
       setLyrics(lyrics);
-      setLyricsTimestamps([]);
+      setLyricsTimestamps(Array.isArray(payloadObject?.lyricsTimestamps) ? payloadObject.lyricsTimestamps : []);
+      if (typeof payloadObject?.fileName === 'string') {
+        setLyricsFileName(payloadObject.fileName);
+      }
+      if (typeof payloadObject?.rawLyricsContent === 'string') {
+        setRawLyricsContent(payloadObject.rawLyricsContent);
+      }
+      if (isPlainObject(payloadObject?.lyricsSource)) {
+        setLyricsSource(payloadObject.lyricsSource);
+      }
+      if (isPlainObject(payloadObject?.songMetadata)) {
+        setSongMetadata(payloadObject.songMetadata);
+      }
       if (!isSameLyrics) {
         selectLine(null);
       }
@@ -622,7 +644,7 @@ const useSocketEvents = (role) => {
     socket.on('periodicStateSync', (state) => {
       applySnapshot(state, 'periodicStateSync');
     });
-  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent]);
+  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,
@@ -698,23 +720,34 @@ const useSocketEvents = (role) => {
         pendingRegisteredOutputsRef.current = null;
       }
 
-      if (isDesktopApp && role !== 'timer-control') {
+      if ((isDesktopApp || clientType === 'obsDock') && role !== 'timer-control') {
         setTimeout(() => {
           const currentState = useLyricsStore.getState();
 
-          socket.emit('outputToggle', currentState.isOutputOn);
-          for (const key of Object.keys(currentState)) {
-            if (key.startsWith('output') && key.endsWith('Enabled') && typeof currentState[key] === 'boolean') {
-              const outputId = key.slice(0, -'Enabled'.length);
-              socket.emit('individualOutputToggle', { output: outputId, enabled: currentState[key] });
+          if (isDesktopApp) {
+            socket.emit('outputToggle', currentState.isOutputOn);
+            for (const key of Object.keys(currentState)) {
+              if (key.startsWith('output') && key.endsWith('Enabled') && typeof currentState[key] === 'boolean') {
+                const outputId = key.slice(0, -'Enabled'.length);
+                socket.emit('individualOutputToggle', { output: outputId, enabled: currentState[key] });
+              }
             }
-          }
-          if (typeof currentState.stageEnabled === 'boolean') {
-            socket.emit('individualOutputToggle', { output: 'stage', enabled: currentState.stageEnabled });
+            if (typeof currentState.stageEnabled === 'boolean') {
+              socket.emit('individualOutputToggle', { output: 'stage', enabled: currentState.stageEnabled });
+            }
           }
 
           if (currentState.lyrics.length > 0) {
-            socket.emit('lyricsLoad', currentState.lyrics);
+            socket.emit('lyricsLoad', {
+              lyrics: currentState.lyrics,
+              fileName: currentState.lyricsFileName || '',
+              rawLyricsContent: currentState.rawLyricsContent || '',
+              lyricsSource: currentState.lyricsSource || null,
+              songMetadata: currentState.songMetadata || null,
+              lyricsTimestamps: currentState.lyricsTimestamps || [],
+              sections: currentState.lyricsSections || [],
+              lineToSection: currentState.lineToSection || {},
+            });
             if (Array.isArray(currentState.lyricsTimestamps) && currentState.lyricsTimestamps.length > 0) {
               socket.emit('lyricsTimestampsUpdate', currentState.lyricsTimestamps);
             }

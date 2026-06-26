@@ -69,9 +69,12 @@ export const useLyricsLoader = ({
         fileName: finalFileName,
       });
 
-      if (!context.providerId) {
+      let metadata = context.songMetadata || null;
+      if (metadata) {
+        setSongMetadata(metadata);
+      } else if (!context.providerId) {
         const detected = detectArtistFromFilename(finalBaseName);
-        const metadata = {
+        metadata = {
           title: detected.title || finalBaseName,
           artists: detected.artist ? [detected.artist] : [],
           album: null,
@@ -83,7 +86,21 @@ export const useLyricsLoader = ({
         setSongMetadata(metadata);
       }
 
-      emitLyricsLoad(processedLines);
+      emitLyricsLoad({
+        lyrics: processedLines,
+        fileName: finalBaseName,
+        rawLyricsContent: finalType === 'lrc' ? (content || rawText) : rawText,
+        lyricsSource: {
+          content: content || rawText || '',
+          fileType: finalType,
+          filePath: filePath || null,
+          fileName: finalFileName,
+        },
+        songMetadata: metadata,
+        lyricsTimestamps: timestamps,
+        sections,
+        lineToSection,
+      });
       if (socket && socket.connected) {
         if (finalBaseName) {
           socket.emit('fileNameUpdate', finalBaseName);
@@ -138,6 +155,16 @@ export const useLyricsLoader = ({
 
     const hasLrcTimestamps = /^\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(lyric.content.trim());
     const fileType = hasLrcTimestamps ? 'lrc' : 'txt';
+    const album = lyric.album || lyric.albumName || null;
+    const metadata = {
+      title: lyric.title || 'Untitled Song',
+      artists: lyric.artist ? [lyric.artist] : [],
+      album: album,
+      year: lyric.year || lyric.metadata?.year || null,
+      lyricLines: lyrics.length,
+      origin: providerName || providerId,
+      filePath: null
+    };
 
     const success = await processLoadedLyrics(
       {
@@ -151,21 +178,11 @@ export const useLyricsLoader = ({
         toastTitle: 'Lyrics imported',
         toastMessage: `Loaded from ${providerName || providerId}.`,
         providerId,
+        songMetadata: metadata,
       }
     );
 
     if (success) {
-      const album = lyric.album || lyric.albumName || null;
-
-      const metadata = {
-        title: lyric.title || 'Untitled Song',
-        artists: lyric.artist ? [lyric.artist] : [],
-        album: album,
-        year: lyric.year || lyric.metadata?.year || null,
-        lyricLines: lyrics.length,
-        origin: providerName || providerId,
-        filePath: null
-      };
       setSongMetadata(metadata);
     }
 

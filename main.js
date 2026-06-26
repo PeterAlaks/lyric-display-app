@@ -14,9 +14,10 @@ import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
 import { registerObsDockPairingToken, setBackendMessageHandler } from './main/backend.js';
-import { relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
+import { relaunchInDesktopMode, relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
 import * as userPreferences from './main/userPreferences.js';
 import { initFileLogging } from './main/logging.js';
+import { createAppTray, destroyAppTray } from './main/tray.js';
 
 const APP_PROTOCOL = 'lyricdisplay';
 const DEV_APP_PROTOCOL = 'lyricdisplay-dev';
@@ -197,16 +198,60 @@ function attachMainWindowLifecycle(win) {
   });
 }
 
+const forceShowMainWindow = (win) => {
+  if (!win || win.isDestroyed()) return false;
+
+  try {
+    if (win.isMinimized()) win.restore();
+    win.setSkipTaskbar(false);
+    win.show();
+    if (typeof app.focus === 'function') {
+      app.focus({ steal: true });
+    }
+    win.focus();
+
+    if (process.platform === 'win32') {
+      win.setAlwaysOnTop(true, 'screen-saver');
+      win.show();
+      win.focus();
+      setTimeout(() => {
+        try {
+          if (!win.isDestroyed()) {
+            win.setAlwaysOnTop(false);
+            win.focus();
+          }
+        } catch {
+        }
+      }, 300);
+    }
+
+    return true;
+  } catch (error) {
+    console.warn('[Main] Failed to show main window:', error);
+    return false;
+  }
+};
+
 const openMainWindow = () => {
+  if (isHeadlessMode) {
+    console.warn('[Main] Refusing to create desktop window from headless Dock Mode; relaunch desktop mode instead');
+    return null;
+  }
+
   if (mainWindow && !mainWindow.isDestroyed()) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
+    forceShowMainWindow(mainWindow);
     return mainWindow;
   }
 
   const win = menuAPI?.createWindow ? menuAPI.createWindow('/') : createWindow('/');
   mainWindow = win;
   attachMainWindowLifecycle(win);
+  win.once('ready-to-show', () => {
+    forceShowMainWindow(win);
+  });
+  win.webContents.once('did-finish-load', () => {
+    forceShowMainWindow(win);
+  });
   return win;
 };
 
@@ -295,6 +340,14 @@ const hasLock = setupSingleInstanceLock((commandLine) => {
     return;
   }
 
+  const secondInstanceRequestsDockMode = commandLine.includes('--headless') || commandLine.includes('--obs-dock');
+  if (secondInstanceRequestsDockMode) {
+    if (!isHeadlessMode) {
+      confirmHeadlessRelaunchFromProtocol();
+    }
+    return;
+  }
+
   if (commandLine.length >= 2) {
     const filePath = extractFilePathFromArgs(commandLine);
     if (filePath) {
@@ -350,13 +403,33 @@ registerIpcHandlers({
 registerInAppBrowserIpc();
 
 setBackendMessageHandler((message) => {
-  if (message?.type === 'open-main-window') {
-    openMainWindow();
-    return;
+  if (message?.type === 'switch-to-desktop-mode') {
+    if (isHeadlessMode) {
+      console.log('[Main] Desktop mode relaunch requested from Dock Mode');
+      setTimeout(() => {
+        relaunchInDesktopMode();
+      }, 1000);
+      return { success: true };
+    }
+
+    const win = openMainWindow();
+    forceShowMainWindow(win);
+    return {
+      success: Boolean(win && !win.isDestroyed()),
+    };
   }
 
   if (message?.type === 'switch-to-dock-mode') {
     confirmHeadlessRelaunchFromProtocol();
+  }
+
+  if (message?.type === 'quit-app') {
+    console.log('[Main] Quit requested from app control');
+    setTimeout(() => {
+      app.isQuitting = true;
+      app.quit();
+    }, 250);
+    return { success: true };
   }
 });
 
@@ -377,6 +450,17 @@ app.whenReady().then(async () => {
 
   if (mainWindow) {
     attachMainWindowLifecycle(mainWindow);
+  }
+
+  if (isHeadlessMode || userPreferences.getPreference('general.minimizeToTray')) {
+    createAppTray({
+      isHeadlessMode,
+      openMainWindow: isHeadlessMode ? () => relaunchInDesktopMode() : openMainWindow,
+      quitApp: () => {
+        app.isQuitting = true;
+        app.quit();
+      },
+    });
   }
 
   if (initialProtocolUrl && getProtocolAction(initialProtocolUrl) !== 'start-headless') {
@@ -419,5 +503,6 @@ app.on('before-quit', (event) => {
 });
 
 app.on('will-quit', () => {
+  destroyAppTray();
   performCleanup();
 });
