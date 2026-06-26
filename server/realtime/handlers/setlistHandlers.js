@@ -2,6 +2,7 @@ import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLine
 import { MAX_SETLIST_ITEMS } from '../../../shared/setlistLimits.js';
 import { appendActionLog } from '../actionLog.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
+import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { state } from '../state.js';
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
@@ -193,8 +194,22 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       state.currentLyricsTimestamps = timestamps;
       state.currentSelectedLine = null;
       state.currentLyricsFileName = cleanDisplayName;
+      state.currentRawLyricsContent = sanitizedRawContent;
+      state.currentLyricsSource = {
+        content: file.content || sanitizedRawContent || '',
+        fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
+        filePath: file.metadata?.filePath || null,
+        fileName: file.originalName || cleanDisplayName || '',
+      };
+      state.currentSongMetadata = {
+        ...(file.metadata || {}),
+        title: file.metadata?.title || cleanDisplayName || '',
+        lyricLines: processedLines.length,
+        filePath: file.metadata?.filePath || null,
+      };
       state.currentLyricsSections = sections;
       state.currentLineToSection = lineToSection;
+      schedulePersistSessionState();
 
       console.log(`${clientType} client loaded "${cleanDisplayName}" from setlist (${processedLines.length} lines, ${timestamps.length} timestamps)`);
       appendActionLog(io, {
@@ -210,7 +225,16 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         },
       });
 
-      io.emit('lyricsLoad', processedLines);
+      io.emit('lyricsLoad', {
+        lyrics: processedLines,
+        fileName: cleanDisplayName,
+        rawLyricsContent: sanitizedRawContent,
+        lyricsSource: state.currentLyricsSource,
+        songMetadata: state.currentSongMetadata,
+        lyricsTimestamps: timestamps,
+        sections,
+        lineToSection,
+      });
       io.emit('lyricsTimestampsUpdate', timestamps);
       io.emit('lyricsSectionsUpdate', { sections, lineToSection });
       io.emit('setlistLoadSuccess', {

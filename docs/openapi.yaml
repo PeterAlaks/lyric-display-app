@@ -9,7 +9,10 @@ info:
     API documentation for the LyricDisplay App's Express REST API. JWTs minted here
     are required for Socket.IO connections (`auth.token`). Desktop tokens in production
     require the admin key; web/mobile controller tokens require the 6-digit join code
-    and are rate-limited.
+    and are rate-limited. LyricDisplay Dock controllers can authenticate through
+    local-only dock auth when LyricDisplay was intentionally started headless,
+    with protocol pairing retained as a fallback for browser hosts that can hand
+    custom app protocols to the operating system.
 
 servers:
   - url: http://localhost:4000
@@ -35,7 +38,7 @@ paths:
               properties:
                 clientType:
                   type: string
-                  enum: [desktop, web, output1, output2, stage, mobile]
+                  enum: [desktop, web, obsDock, output1, output2, stage, mobile]
                 deviceId:
                   type: string
                   description: Stable device identifier used for rate limiting and permissions
@@ -46,7 +49,7 @@ paths:
                   description: Required for desktop clients in production
                 joinCode:
                   type: string
-                  description: Required for controller clients (web, mobile)
+                  description: Required for controller clients (web, mobile, obsDock) unless obsDock uses the local pairing endpoint
       responses:
         '200':
           description: Token generated successfully
@@ -87,6 +90,47 @@ paths:
                   joinCode:
                     type: string
                     nullable: true
+
+  /api/auth/obs-dock/token:
+    post:
+      summary: Exchange LyricDisplay Dock local startup proof for an obsDock JWT
+      description: >
+        Local-only endpoint used by LyricDisplay Dock after LyricDisplay has
+        started in LyricDisplay Dock headless mode. When local dock auth is
+        enabled, the endpoint may mint a limited obsDock token without a pairing
+        token. Protocol pairing tokens are still accepted as a fallback and are
+        short-lived, one-time credentials.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceId
+                - pairingToken
+              properties:
+                deviceId:
+                  type: string
+                sessionId:
+                  type: string
+                pairingToken:
+                  type: string
+                  description: Temporary token from the LyricDisplay Dock launcher; optional when local headless dock auth is enabled
+      responses:
+        '200':
+          description: LyricDisplay Dock token generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad request (missing fields)
+        '403':
+          description: Forbidden (non-local origin or invalid pairing token)
+        '500':
+          description: Server error
 
   /api/auth/refresh:
     post:
@@ -158,6 +202,56 @@ paths:
           description: Missing token
         '401':
           description: Invalid token
+
+  /api/app/switch-to-desktop-mode:
+    post:
+      summary: Ask Electron to restart Dock Mode as the desktop app
+      description: >
+        Local-only endpoint used by LyricDisplay Dock when LyricDisplay is already
+        running in headless/background mode. The backend forwards the request to
+        Electron over IPC. Electron acknowledges the request, then relaunches
+        without Dock Mode arguments. Browser origins must be local
+        (`file://`/`null`, `localhost`, or `127.0.0.1`).
+      security: []
+      responses:
+        '200':
+          description: Desktop mode switch accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '403':
+          description: Request did not come from a local dock page
+        '503':
+          description: Backend is not running under Electron
+
+  /api/app/quit:
+    post:
+      summary: Ask Electron to quit Dock Mode
+      description: >
+        Local-only endpoint used by the native tray helper when LyricDisplay is
+        running in Dock Mode. The backend forwards the request to Electron over
+        IPC. Electron acknowledges the request, then quits. Origins must be
+        local or absent because the Windows tray helper does not send a browser
+        Origin header.
+      security: []
+      responses:
+        '200':
+          description: Quit request accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '403':
+          description: Request did not come from a local page or helper
+        '503':
+          description: Backend is not running under Electron
 
   /api/connection/clients:
     get:

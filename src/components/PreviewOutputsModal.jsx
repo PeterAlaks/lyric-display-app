@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Monitor, RefreshCw, ExternalLink } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -44,6 +44,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
   const stageContainerRef = useRef(null);
   const timeContainerRef = useRef(null);
   const customContainerRef = useRef(null);
+  const iframeRefs = useRef(new Set());
   const [output1Dimensions, setOutput1Dimensions] = useState({ width: 0, height: 0 });
   const [output2Dimensions, setOutput2Dimensions] = useState({ width: 0, height: 0 });
   const [stageDimensions, setStageDimensions] = useState({ width: 0, height: 0 });
@@ -51,20 +52,44 @@ const PreviewOutputsModal = ({ darkMode }) => {
   const [customDimensions, setCustomDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
+    let frameId = null;
+    const pendingDimensions = new Map();
+    const setters = new Map([
+      [output1ContainerRef, setOutput1Dimensions],
+      [output2ContainerRef, setOutput2Dimensions],
+      [stageContainerRef, setStageDimensions],
+      [timeContainerRef, setTimeDimensions],
+      [customContainerRef, setCustomDimensions],
+    ]);
+
+    const flushDimensions = () => {
+      frameId = null;
+      pendingDimensions.forEach((dimensions, ref) => {
+        const setter = setters.get(ref);
+        if (!setter) return;
+        setter((previous) => (
+          previous.width === dimensions.width && previous.height === dimensions.height
+            ? previous
+            : dimensions
+        ));
+      });
+      pendingDimensions.clear();
+    };
+
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
+        const matchedRef = Array.from(setters.keys()).find((ref) => entry.target === ref.current);
+        if (!matchedRef) continue;
+
         const { width, height } = entry.contentRect;
-        if (entry.target === output1ContainerRef.current) {
-          setOutput1Dimensions({ width, height });
-        } else if (entry.target === output2ContainerRef.current) {
-          setOutput2Dimensions({ width, height });
-        } else if (entry.target === stageContainerRef.current) {
-          setStageDimensions({ width, height });
-        } else if (entry.target === timeContainerRef.current) {
-          setTimeDimensions({ width, height });
-        } else if (entry.target === customContainerRef.current) {
-          setCustomDimensions({ width, height });
-        }
+        pendingDimensions.set(matchedRef, {
+          width: Math.round(width),
+          height: Math.round(height),
+        });
+      }
+
+      if (!frameId) {
+        frameId = window.requestAnimationFrame(flushDimensions);
       }
     });
 
@@ -75,8 +100,24 @@ const PreviewOutputsModal = ({ darkMode }) => {
     if (customContainerRef.current) resizeObserver.observe(customContainerRef.current);
 
     return () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
     };
+  }, []);
+
+  useEffect(() => () => {
+    iframeRefs.current.forEach((iframe) => {
+      try {
+        iframe.src = 'about:blank';
+      } catch { }
+    });
+    iframeRefs.current.clear();
+  }, []);
+
+  const registerPreviewIframe = useCallback((iframe) => {
+    if (iframe) {
+      iframeRefs.current.add(iframe);
+    }
   }, []);
 
   useEffect(() => {
@@ -282,6 +323,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                   )}
                   <div className="z-10" style={transform.wrapper}>
                     <iframe
+                      ref={registerPreviewIframe}
                       key={`output1-${key}`}
                       src={getPreviewUrl('output1') || null}
                       title="Output 1 Preview"
@@ -382,6 +424,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                   )}
                   <div className="z-10" style={transform.wrapper}>
                     <iframe
+                      ref={registerPreviewIframe}
                       key={`output2-${key}`}
                       src={getPreviewUrl('output2') || null}
                       title="Output 2 Preview"
@@ -453,6 +496,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
               return (
                 <div className="z-10" style={transform.wrapper}>
                   <iframe
+                    ref={registerPreviewIframe}
                     key={`stage-${key}`}
                     src={getPreviewUrl('stage') || null}
                     title="Stage Preview"
@@ -523,6 +567,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
               return (
                 <div className="z-10" style={transform.wrapper}>
                   <iframe
+                    ref={registerPreviewIframe}
                     key={`time-${key}`}
                     src={getPreviewUrl('time') || null}
                     title="Time Preview"
@@ -644,6 +689,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                   <div className="z-10 relative" style={transform.wrapper}>
                     {previewCustomOutputId ? (
                       <iframe
+                        ref={registerPreviewIframe}
                         key={`custom-${previewCustomOutputId}-${key}`}
                         src={getPreviewUrl(previewCustomOutputId) || null}
                         title={`${formatOutputLabel(previewCustomOutputId)} Preview`}

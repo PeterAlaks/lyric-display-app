@@ -99,25 +99,32 @@ const useAutoFitText = (text, options = {}) => {
       textEl.style.fontSize = `${best}px`;
     };
 
+    let frameId = null;
     let delayedFitId = null;
-    const frameId = window.requestAnimationFrame(() => {
+    const scheduleFit = () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        fit();
+      });
+    };
+
+    frameId = window.requestAnimationFrame(() => {
+      frameId = null;
       fit();
       // Re-fit shortly after mount to handle late layout/font metric updates.
       delayedFitId = window.setTimeout(fit, 32);
     });
-    const resizeObserver = new ResizeObserver(() => {
-      fit();
-    });
+    const resizeObserver = new ResizeObserver(scheduleFit);
 
     resizeObserver.observe(containerEl);
-    resizeObserver.observe(textEl);
-    window.addEventListener('resize', fit);
+    window.addEventListener('resize', scheduleFit);
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      if (frameId) window.cancelAnimationFrame(frameId);
       if (delayedFitId) window.clearTimeout(delayedFitId);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', fit);
+      window.removeEventListener('resize', scheduleFit);
     };
   }, [containerEl, textEl, text, minFontSize, maxFontSize, widthRatio, heightRatio, allowWrap, enabled]);
 
@@ -131,7 +138,7 @@ const Stage = () => {
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
-  useSocket('stage');
+  useSocket('stage', { preview: isPreviewMode });
   const { lyrics, selectedLine, lyricsFileName } = useLyricsState();
   const { isOutputOn } = useOutputState();
   const { settings: stageSettings } = useStageSettings();

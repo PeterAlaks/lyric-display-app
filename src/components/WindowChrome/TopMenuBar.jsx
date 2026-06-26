@@ -17,7 +17,7 @@ const TOP_MENU_CONFIG = {
   edit: { count: 8, sub: [] },
   view: { count: 7, sub: [] },
   output: { count: 6, sub: [] },
-  tools: { count: 6, sub: [] },
+  tools: { count: 7, sub: [] },
   window: { count: 3, sub: [] },
   help: { count: 8, sub: [] },
 };
@@ -680,10 +680,11 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('tools', 0, el)} label="Setlist Manager" shortcut="Ctrl/Cmd + Shift + S" onClick={menuHandlers.handleOpenSetlist} disabled={isNewSongCanvas} active={openMenu === 'tools' && activeIndex === 0} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
                 <MenuItem ref={(el) => registerItemRef('tools', 1, el)} label="Timer Control" onClick={menuHandlers.handleOpenTimerControl} active={openMenu === 'tools' && activeIndex === 1} />
                 <MenuItem ref={(el) => registerItemRef('tools', 2, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu === 'tools' && activeIndex === 2} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('tools', 3, el)} label="LyricDisplay Dock Setup" onClick={menuHandlers.handleObsDockSetup} active={openMenu === 'tools' && activeIndex === 3} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('tools', 3, el)} label="Connection Diagnostics" onClick={menuHandlers.handleConnectionDiagnostics} active={openMenu === 'tools' && activeIndex === 3} />
-                <MenuItem ref={(el) => registerItemRef('tools', 4, el)} label="Production Readiness" onClick={menuHandlers.handlePreServiceHealth} active={openMenu === 'tools' && activeIndex === 4} />
-                <MenuItem ref={(el) => registerItemRef('tools', 5, el)} label="Operator Action Log" onClick={menuHandlers.handleOperatorActionLog} active={openMenu === 'tools' && activeIndex === 5} />
+                <MenuItem ref={(el) => registerItemRef('tools', 4, el)} label="Connection Diagnostics" onClick={menuHandlers.handleConnectionDiagnostics} active={openMenu === 'tools' && activeIndex === 4} />
+                <MenuItem ref={(el) => registerItemRef('tools', 5, el)} label="Production Readiness" onClick={menuHandlers.handlePreServiceHealth} active={openMenu === 'tools' && activeIndex === 5} />
+                <MenuItem ref={(el) => registerItemRef('tools', 6, el)} label="Operator Action Log" onClick={menuHandlers.handleOperatorActionLog} active={openMenu === 'tools' && activeIndex === 6} />
               </div>
             )}
           </div>

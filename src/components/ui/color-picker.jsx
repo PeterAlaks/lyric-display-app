@@ -1,4 +1,5 @@
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { HexColorPicker } from "react-colorful"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
@@ -89,12 +90,14 @@ const ColorPicker = React.forwardRef(({
   disabled,
   showHex = false,
   darkMode = false,
+  presentation = "default",
   ...props
 }, ref) => {
   const [open, setOpen] = React.useState(false)
   const [color, setColor] = React.useState(value || "#000000")
   const [format, setFormat] = React.useState("hex")
   const contentRef = React.useRef(null)
+  const sheetMode = presentation === 'sheet'
 
   React.useEffect(() => {
     if (value) {
@@ -123,9 +126,23 @@ const ColorPicker = React.forwardRef(({
     }
   }, [open])
 
+  const handleOpenChange = (nextOpen) => {
+    setOpen(nextOpen)
+    if (nextOpen || sheetMode) {
+      setColor(value || "#000000")
+    }
+  }
+
   const handleColorChange = (newColor) => {
     setColor(newColor)
-    onChange?.(newColor)
+    if (!sheetMode) {
+      onChange?.(newColor)
+    }
+  }
+
+  const handleApply = () => {
+    onChange?.(color)
+    setOpen(false)
   }
 
   const rgb = hexToRgb(color)
@@ -146,8 +163,156 @@ const ColorPicker = React.forwardRef(({
     }
   }
 
+  const pickerPanel = (
+    <div className={`${presentation === 'sheet' ? 'mx-auto max-w-sm' : ''} space-y-3`}>
+      <HexColorPicker color={color} onChange={handleColorChange} />
+
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setFormat("hex")}
+          className={cn(
+            "flex-1",
+            format === "hex"
+              ? darkMode
+                ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
+                : "!bg-black !text-white hover:!bg-black !border-gray-300"
+              : darkMode
+                ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
+                : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
+          )}
+        >
+          HEX
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setFormat("rgb")}
+          className={cn(
+            "flex-1",
+            format === "rgb"
+              ? darkMode
+                ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
+                : "!bg-black !text-white hover:!bg-black !border-gray-300"
+              : darkMode
+                ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
+                : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
+          )}
+        >
+          RGB
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setFormat("hsl")}
+          className={cn(
+            "flex-1",
+            format === "hsl"
+              ? darkMode
+                ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
+                : "!bg-black !text-white hover:!bg-black !border-gray-300"
+              : darkMode
+                ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
+                : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
+          )}
+        >
+          HSL
+        </Button>
+      </div>
+
+      {format === "hex" && (
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>#</span>
+          <Input
+            value={color.replace("#", "")}
+            onChange={(e) => handleInputChange(e.target.value, "hex")}
+            className={`flex-1 uppercase ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            maxLength={6}
+          />
+        </div>
+      )}
+
+      {format === "rgb" && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>R</span>
+            <Input
+              type="number"
+              value={rgb.r}
+              onChange={(e) => handleInputChange(e.target.value, "r")}
+              min={0}
+              max={255}
+              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>G</span>
+            <Input
+              type="number"
+              value={rgb.g}
+              onChange={(e) => handleInputChange(e.target.value, "g")}
+              min={0}
+              max={255}
+              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>B</span>
+            <Input
+              type="number"
+              value={rgb.b}
+              onChange={(e) => handleInputChange(e.target.value, "b")}
+              min={0}
+              max={255}
+              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+          </div>
+        </div>
+      )}
+
+      {format === "hsl" && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>H</span>
+            <Input
+              type="number"
+              value={hsl.h}
+              onChange={(e) => handleInputChange(e.target.value, "h")}
+              min={0}
+              max={360}
+              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>S</span>
+            <Input
+              type="number"
+              value={hsl.s}
+              onChange={(e) => handleInputChange(e.target.value, "s")}
+              min={0}
+              max={100}
+              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>L</span>
+            <Input
+              type="number"
+              value={hsl.l}
+              onChange={(e) => handleInputChange(e.target.value, "l")}
+              min={0}
+              max={100}
+              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           ref={ref}
@@ -170,158 +335,53 @@ const ColorPicker = React.forwardRef(({
           {showHex && <span className="flex-1 text-left font-mono text-xs">{color.toUpperCase()}</span>}
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        ref={contentRef}
-        data-popover-scroll-lock-allow="true"
-        className={`w-[224px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
-        align="start"
-      >
-        <div className="space-y-3">
-          <HexColorPicker color={color} onChange={handleColorChange} />
-
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setFormat("hex")}
-              className={cn(
-                "flex-1",
-                format === "hex"
-                  ? darkMode
-                    ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
-                    : "!bg-black !text-white hover:!bg-black !border-gray-300"
-                  : darkMode
-                    ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
-                    : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
-              )}
-            >
-              HEX
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setFormat("rgb")}
-              className={cn(
-                "flex-1",
-                format === "rgb"
-                  ? darkMode
-                    ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
-                    : "!bg-black !text-white hover:!bg-black !border-gray-300"
-                  : darkMode
-                    ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
-                    : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
-              )}
-            >
-              RGB
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setFormat("hsl")}
-              className={cn(
-                "flex-1",
-                format === "hsl"
-                  ? darkMode
-                    ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
-                    : "!bg-black !text-white hover:!bg-black !border-gray-300"
-                  : darkMode
-                    ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
-                    : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
-              )}
-            >
-              HSL
-            </Button>
+      {sheetMode && open && typeof document !== 'undefined' ? createPortal(
+        <div
+          className="fixed inset-0 z-[2400] bg-black/35 p-2"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) handleOpenChange(false)
+          }}
+        >
+          <div
+            ref={contentRef}
+            data-popover-scroll-lock-allow="true"
+            className={`flex h-full flex-col overflow-hidden rounded-lg border shadow-2xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          >
+            <div className={`flex items-center justify-between border-b px-4 py-3 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Choose Colour</div>
+              <button
+                type="button"
+                onClick={() => handleOpenChange(false)}
+                className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${darkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-700' : 'border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {pickerPanel}
+            </div>
+            <div className={`border-t p-3 ${darkMode ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-gray-50'}`}>
+              <Button
+                type="button"
+                onClick={handleApply}
+                className="w-full bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Apply
+              </Button>
+            </div>
           </div>
-
-          {format === "hex" && (
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>#</span>
-              <Input
-                value={color.replace("#", "")}
-                onChange={(e) => handleInputChange(e.target.value, "hex")}
-                className={`flex-1 uppercase ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                maxLength={6}
-              />
-            </div>
-          )}
-
-          {format === "rgb" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>R</span>
-                <Input
-                  type="number"
-                  value={rgb.r}
-                  onChange={(e) => handleInputChange(e.target.value, "r")}
-                  min={0}
-                  max={255}
-                  className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>G</span>
-                <Input
-                  type="number"
-                  value={rgb.g}
-                  onChange={(e) => handleInputChange(e.target.value, "g")}
-                  min={0}
-                  max={255}
-                  className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>B</span>
-                <Input
-                  type="number"
-                  value={rgb.b}
-                  onChange={(e) => handleInputChange(e.target.value, "b")}
-                  min={0}
-                  max={255}
-                  className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                />
-              </div>
-            </div>
-          )}
-
-          {format === "hsl" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>H</span>
-                <Input
-                  type="number"
-                  value={hsl.h}
-                  onChange={(e) => handleInputChange(e.target.value, "h")}
-                  min={0}
-                  max={360}
-                  className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>S</span>
-                <Input
-                  type="number"
-                  value={hsl.s}
-                  onChange={(e) => handleInputChange(e.target.value, "s")}
-                  min={0}
-                  max={100}
-                  className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium w-8 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>L</span>
-                <Input
-                  type="number"
-                  value={hsl.l}
-                  onChange={(e) => handleInputChange(e.target.value, "l")}
-                  min={0}
-                  max={100}
-                  className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
+        </div>,
+        document.body
+      ) : (
+        <PopoverContent
+          ref={contentRef}
+          data-popover-scroll-lock-allow="true"
+          className={`w-[224px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          align="start"
+        >
+          {pickerPanel}
+        </PopoverContent>
+      )}
     </Popover>
   )
 })

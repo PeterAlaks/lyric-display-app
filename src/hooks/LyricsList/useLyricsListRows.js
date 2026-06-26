@@ -12,7 +12,12 @@ export default function useLyricsListRows({
   highlightedLineIndex,
   searchQuery,
   darkMode,
+  density = 'default',
 }) {
+  const compact = density === 'dock' || density === 'compact';
+  const baseRowHeight = compact ? 38 : DEFAULT_ROW_HEIGHT;
+  const rowGap = compact ? 4 : ROW_GAP;
+
   const isStructureTagLine = useCallback((line) => {
     if (!line || typeof line !== 'string') return false;
     const trimmed = line.trim();
@@ -61,62 +66,75 @@ export default function useLyricsListRows({
   }, [lineToSection, selectedLine]);
 
   const dynamicRowHeight = useDynamicRowHeight({
-    defaultRowHeight: DEFAULT_ROW_HEIGHT,
+    defaultRowHeight: baseRowHeight,
     key: lyrics.length,
   });
 
   const getInitialRowHeight = useCallback((index) => {
     const line = lyrics[index];
-    if (!line) return DEFAULT_ROW_HEIGHT;
+    if (!line) return baseRowHeight;
 
     if (isStructureTagLine(line)) {
-      return 8;
+      return compact ? 4 : 8;
     }
 
     const hasSectionHeader = sectionStartLookup.has(index);
 
     if (line.type === 'group') {
-      let height = 48;
+      let height = compact ? 38 : 48;
 
       if (line.translation) {
-        height += 24;
+        height += compact ? 18 : 24;
       }
-      if (hasSectionHeader) height += 24;
+      if (hasSectionHeader) height += compact ? 18 : 24;
       return height;
     }
 
     if (line.type === 'normal-group') {
       const lineCount = Math.max(2, getNormalGroupLines(line).length || 2);
-      let height = 48 + (Math.max(0, lineCount - 1) * 24);
-      if (hasSectionHeader) height += 24;
+      let height = (compact ? 38 : 48) + (Math.max(0, lineCount - 1) * (compact ? 18 : 24));
+      if (hasSectionHeader) height += compact ? 18 : 24;
       return height;
     }
 
-    return DEFAULT_ROW_HEIGHT + (hasSectionHeader ? 24 : 0);
-  }, [getNormalGroupLines, isStructureTagLine, lyrics, sectionStartLookup]);
+    return baseRowHeight + (hasSectionHeader ? (compact ? 18 : 24) : 0);
+  }, [baseRowHeight, compact, getNormalGroupLines, isStructureTagLine, lyrics, sectionStartLookup]);
 
   const rowHeightConfig = useMemo(() => ({
     ...dynamicRowHeight,
     getAverageRowHeight: () => {
       const averageContentHeight =
-        dynamicRowHeight.getAverageRowHeight?.() ?? DEFAULT_ROW_HEIGHT;
-      return averageContentHeight + ROW_GAP;
+        dynamicRowHeight.getAverageRowHeight?.() ?? baseRowHeight;
+      return averageContentHeight + rowGap;
     },
     getRowHeight: (index) => {
       const measured = dynamicRowHeight.getRowHeight?.(index);
       const contentHeight = measured ?? getInitialRowHeight(index);
-      return contentHeight + ROW_GAP;
+      return contentHeight + rowGap;
     },
     observeRowElements: (elements) => {
       const cleanup = dynamicRowHeight.observeRowElements?.(elements);
       return typeof cleanup === 'function' ? cleanup : () => { };
     },
-  }), [dynamicRowHeight, getInitialRowHeight]);
+  }), [baseRowHeight, dynamicRowHeight, getInitialRowHeight, rowGap]);
 
   const getLineClassName = useCallback(
     (index, isVirtualized = false, isMultiSelected = false) => {
-      const padding = 'p-3';
-      let base = `${padding} rounded cursor-pointer transition-colors duration-150 select-none `;
+      const padding = compact ? 'px-2.5 py-2' : 'p-3';
+      let base = `${padding} ${compact ? 'rounded-md border text-[13px] leading-snug' : 'rounded'} cursor-pointer transition-colors duration-150 select-none `;
+
+      if (compact && darkMode) {
+        if (index === selectedLine) {
+          return `${base}border-blue-400 bg-blue-400 text-white shadow-sm`;
+        }
+        if (index === highlightedLineIndex && searchQuery) {
+          return `${base}border-amber-400/70 bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/25`;
+        }
+        if (isMultiSelected) {
+          return `${base}border-blue-400/70 bg-blue-900/35 text-blue-50 ring-1 ring-blue-400/40`;
+        }
+        return `${base}border-gray-800 bg-gray-900/80 text-gray-200 hover:border-gray-700 hover:bg-gray-800/90`;
+      }
 
       if (index === selectedLine) base += 'bg-blue-400 text-white';
       else if (index === highlightedLineIndex && searchQuery)
@@ -131,7 +149,7 @@ export default function useLyricsListRows({
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200';
       return base;
     },
-    [selectedLine, highlightedLineIndex, searchQuery, darkMode]
+    [compact, selectedLine, highlightedLineIndex, searchQuery, darkMode]
   );
 
   return {

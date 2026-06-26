@@ -2,8 +2,8 @@
 
 > Professional real-time lyric display application for live events, church services, and multimedia presentations.
 
-**Version:** 6.5.3  
-**Author:** Peter Alakembi  
+**Version:** 6.5.3
+**Author:** Peter Alakembi
 **Co-Contributor:** David Okaliwe
 
 ## Overview
@@ -118,6 +118,26 @@ http://localhost:4000/#/output3
 
 Add a Web Browser input and use the same output URL format as OBS.
 
+### LyricDisplay Dock
+
+LyricDisplay also includes a compact OBS custom dock for basic control on lower-powered streaming machines.
+
+On Windows packaged installs, add `obs-dock.html` from the LyricDisplay install folder as an OBS Custom Browser Dock:
+
+```text
+file:///C:/Program Files/LyricDisplay/obs-dock.html
+```
+
+For the most reliable LyricDisplay Dock flow in OBS, open LyricDisplay once and use `LyricDisplay Dock / Headless Mode` in Advanced Settings. `LyricDisplay Dock Setup` shows the one local HTML URL to paste into OBS. Use `Launch Headless Mode` for the current session, or enable `Start at Sign In` if you want LyricDisplay to start headless automatically. When you click `Start LyricDisplay Dock` inside OBS, that same dock loads the controller.
+
+During development, add the same local launcher file as an OBS dock:
+
+```text
+file:///D:/path/to/lyric-display-app/obs-dock.html?mode=dev
+```
+
+Run `npm run electron-dev:headless`, then click `Start LyricDisplay Dock` in the local dev launcher. The controller loads in that same dock.
+
 ## Development
 
 ### Tech Stack
@@ -136,6 +156,7 @@ Add a Web Browser input and use the same output URL format as OBS.
 npm run dev              # Vite development server
 npm run server           # Backend server only
 npm run electron-dev     # Full Electron development
+npm run electron-dev:headless # Electron development without the main app window
 npm run build            # Production build
 npm run electron-pack    # Package Electron app
 ```

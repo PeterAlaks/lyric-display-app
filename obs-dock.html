@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LyricDisplay Dock</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #070a12;
+        color: #f8fafc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #070a12;
+      }
+
+      main {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        justify-content: center;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand img {
+        height: 34px;
+        width: 34px;
+        border-radius: 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .beta-label {
+        display: inline-flex;
+        transform: translateY(-1px);
+        border: 1px solid rgba(96, 165, 250, 0.45);
+        border-radius: 999px;
+        background: rgba(59, 130, 246, 0.16);
+        color: #bfdbfe;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      p {
+        margin: 0;
+        color: #9ca3af;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .status,
+      .dev-panel {
+        border: 1px solid #1f2937;
+        border-radius: 8px;
+        background: #111827;
+        color: #d1d5db;
+      }
+
+      .status {
+        min-height: 44px;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      .status.ready {
+        border-color: #16a34a;
+        color: #bbf7d0;
+      }
+
+      .status.error {
+        border-color: #dc2626;
+        color: #fecaca;
+      }
+
+      .status.pending {
+        border-color: #2563eb;
+        color: #bfdbfe;
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      button,
+      .button-link {
+        display: inline-flex;
+        min-height: 42px;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #ffffff;
+        cursor: pointer;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      button.secondary,
+      .button-link.secondary {
+        border: 1px solid #374151;
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.75;
+      }
+
+      .button-link[aria-disabled="true"] {
+        cursor: wait;
+        opacity: 0.75;
+      }
+
+      .dev-panel {
+        display: none;
+        padding: 10px 12px;
+      }
+
+      body.dev-mode .dev-panel {
+        display: block;
+      }
+
+      .dev-command {
+        margin-top: 6px;
+        display: block;
+        color: #bfdbfe;
+        font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        word-break: break-all;
+      }
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <img id="appIcon" src="./LyricDisplay-icon.png" alt="" />
+        <div>
+          <h1>LyricDisplay Dock <span class="beta-label">Beta</span></h1>
+          <p>Open the controller when Dock Mode is ready.</p>
+        </div>
+      </div>
+
+      <div id="status" class="status">Checking LyricDisplay...</div>
+
+      <div id="devPanel" class="dev-panel">
+        <p>
+          Development mode uses this command from the app folder:
+          <code class="dev-command">npm run electron-dev:headless</code>
+        </p>
+      </div>
+
+      <div class="actions">
+        <a id="startLink" class="button-link" href="#" aria-disabled="true">Open Controller</a>
+        <button id="startRuntimeButton" class="secondary" type="button" hidden>Switch to Dock Mode</button>
+        <button id="openDesktopButton" class="secondary" type="button" hidden>Switch to Desktop Mode</button>
+      </div>
+
+    </main>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const startLink = document.getElementById('startLink');
+      const startRuntimeButton = document.getElementById('startRuntimeButton');
+      const openDesktopButton = document.getElementById('openDesktopButton');
+      const iconEl = document.getElementById('appIcon');
+      const params = new URLSearchParams(window.location.search);
+
+      const isHttpVitePage = window.location.protocol.startsWith('http') && window.location.port === '5173';
+      const devOrigin = 'http://127.0.0.1:5173';
+      const productionDockUrl = 'http://127.0.0.1:4000/#/obs-dock';
+      const devDockUrl = `${devOrigin}/?dock=obs&clientType=obsDock`;
+      const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
+      const capabilitiesUrl = 'http://127.0.0.1:4000/api/app/capabilities';
+      const switchToDockModeUrl = 'http://127.0.0.1:4000/api/app/switch-to-dock-mode';
+      const switchToDesktopModeUrl = 'http://127.0.0.1:4000/api/app/switch-to-desktop-mode';
+      const devReadyUrl = devDockUrl;
+      const isWindowsPlatform = /win/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
+
+      let checking = false;
+      let controllerReady = false;
+
+      let devMode = params.get('mode') === 'dev' || isHttpVitePage;
+
+      iconEl.addEventListener('error', () => {
+        if (!iconEl.src.endsWith('/public/LyricDisplay-icon.png')) {
+          iconEl.src = './public/LyricDisplay-icon.png';
+        }
+      });
+
+      const setStatus = (message, className = '') => {
+        statusEl.className = `status ${className}`.trim();
+        statusEl.textContent = message;
+      };
+
+      const getControllerUrl = () => devMode ? devDockUrl : productionDockUrl;
+      const getDockModeNotRunningMessage = () => isWindowsPlatform
+        ? 'Dock Mode is not running. Start LyricDisplay Dock Mode from the Start menu, open LyricDisplay and switch to Dock Mode, or enable Start at Sign-In.'
+        : 'Dock Mode is not running. Open LyricDisplay and switch to Dock Mode, or enable Start at Sign-In.';
+
+      const setControllerLinkReady = (ready) => {
+        controllerReady = Boolean(ready);
+        const url = getControllerUrl();
+        startLink.href = controllerReady ? url : '#';
+        startLink.setAttribute('aria-disabled', controllerReady ? 'false' : 'true');
+        startRuntimeButton.hidden = devMode || controllerReady;
+        startRuntimeButton.disabled = false;
+        startRuntimeButton.textContent = 'Switch to Dock Mode';
+      };
+
+      const setDevMode = (enabled) => {
+        devMode = Boolean(enabled);
+        document.body.classList.toggle('dev-mode', devMode);
+        startLink.textContent = 'Open Controller';
+        setControllerLinkReady(false);
+        setStatus(devMode
+          ? 'Start the development Dock Mode command, then open the controller.'
+          : 'Open the controller when Dock Mode is ready.'
+        );
+      };
+
+      const canFetch = async (url, predicate = null) => {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 2500);
+        try {
+          const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
+          if (!response.ok) return false;
+          if (!predicate) return true;
+          const payload = await response.json();
+          return predicate(payload);
+        } catch {
+          return false;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      };
+
+      const canReachNoCors = async (url) => {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 2500);
+        try {
+          await fetch(url, { cache: 'no-store', mode: 'no-cors', signal: controller.signal });
+          return true;
+        } catch {
+          return false;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      };
+
+      const checkBackendReady = () => canFetch(
+        readyUrl,
+        (payload) => payload && payload.status === 'ready' && payload.serverListening
+      );
+
+      const getBackendCapabilities = async () => {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 2500);
+        try {
+          const response = await fetch(capabilitiesUrl, { cache: 'no-store', signal: controller.signal });
+          if (!response.ok) return null;
+          return await response.json();
+        } catch {
+          return null;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      };
+
+      const checkRuntimeReady = async () => {
+        const backendReady = await checkBackendReady();
+        const capabilities = backendReady ? await getBackendCapabilities() : null;
+        const dockAuthReady = Boolean(capabilities?.obsDockLocalAuth);
+        const devReady = devMode ? await canReachNoCors(devReadyUrl) : true;
+        const desktopSwitchAvailable = Boolean(capabilities?.switchToDesktopMode);
+        return { ready: backendReady && dockAuthReady && devReady, backendReady, dockAuthReady, devReady, desktopSwitchAvailable };
+      };
+
+      const refreshControllerReadiness = async () => {
+        if (checking) return controllerReady;
+
+        checking = true;
+        startLink.setAttribute('aria-disabled', 'true');
+        setStatus(devMode ? 'Checking the development session...' : 'Checking Dock Mode...', 'pending');
+
+        const result = await checkRuntimeReady();
+        openDesktopButton.hidden = !(result.backendReady && result.dockAuthReady && result.desktopSwitchAvailable);
+
+        if (result.ready) {
+          setControllerLinkReady(true);
+          setStatus('Dock Mode is ready. Open the controller when ready.', 'ready');
+          checking = false;
+          return true;
+        }
+
+        setControllerLinkReady(false);
+        if (devMode) {
+          if (result.backendReady && !result.dockAuthReady) {
+            setStatus('LyricDisplay is running in normal development mode. Stop it, then run npm run electron-dev:headless.', 'error');
+          } else if (result.backendReady && !result.devReady) {
+            setStatus('The app service is ready, but the development page is not available. Run npm run electron-dev:headless.', 'error');
+          } else if (!result.backendReady && result.devReady) {
+            setStatus('The development page is available, but LyricDisplay is not ready yet. Run npm run electron-dev:headless.', 'error');
+          } else {
+            setStatus('Development Dock Mode is not ready. Run npm run electron-dev:headless, then try again.', 'error');
+          }
+        } else {
+          startRuntimeButton.hidden = false;
+          setStatus(result.backendReady && !result.dockAuthReady
+            ? 'LyricDisplay is open normally. Click Switch to Dock Mode and confirm the switch in LyricDisplay.'
+            : getDockModeNotRunningMessage(),
+            'error'
+          );
+          startRuntimeButton.disabled = false;
+          startRuntimeButton.textContent = result.backendReady ? 'Switch to Dock Mode' : 'Check Again';
+        }
+
+        checking = false;
+        return false;
+      };
+
+      const openDesktopApp = async () => {
+        setStatus('Switching to desktop mode...', 'pending');
+        try {
+          const response = await fetch(switchToDesktopModeUrl, {
+            method: 'POST',
+            cache: 'no-store'
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          setStatus('LyricDisplay is restarting in desktop mode.', 'ready');
+        } catch {
+          setStatus('Could not switch to desktop mode. Use the LyricDisplay tray menu to open or quit Dock Mode.', 'error');
+        }
+      };
+
+      const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+      const switchToDockMode = async () => {
+        if (devMode) return;
+
+        const current = await checkRuntimeReady();
+        if (current.ready) {
+          setControllerLinkReady(true);
+          setStatus('Dock Mode is ready. Open the controller when ready.', 'ready');
+          return;
+        }
+
+        if (!current.backendReady) {
+          setControllerLinkReady(false);
+          startRuntimeButton.disabled = false;
+          startRuntimeButton.textContent = 'Check Again';
+          setStatus(getDockModeNotRunningMessage(), 'error');
+          return;
+        }
+
+        setStatus('Asking LyricDisplay to switch to Dock Mode. Confirm the switch in LyricDisplay.', 'pending');
+        try {
+          const response = await fetch(switchToDockModeUrl, {
+            method: 'POST',
+            cache: 'no-store'
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        } catch {
+          setStatus('Could not ask LyricDisplay to switch to Dock Mode. Open LyricDisplay and switch from there.', 'error');
+          return;
+        }
+
+        for (let attempt = 0; attempt < 18; attempt += 1) {
+          await sleep(1000);
+          const result = await checkRuntimeReady();
+          if (result.ready) {
+            setControllerLinkReady(true);
+            setStatus('Dock Mode is ready. Open the controller when ready.', 'ready');
+            return;
+          }
+        }
+
+        setControllerLinkReady(false);
+        setStatus('Dock Mode is not ready yet. If LyricDisplay asked for confirmation, accept it, then try again.', 'error');
+      };
+
+      startLink.addEventListener('click', async (event) => {
+        if (controllerReady) return;
+        event.preventDefault();
+        const ready = await refreshControllerReadiness();
+        if (ready) {
+          setStatus('Dock Mode is ready. Click Open Controller again.', 'ready');
+        }
+      });
+      startRuntimeButton.addEventListener('click', switchToDockMode);
+      openDesktopButton.addEventListener('click', openDesktopApp);
+
+      setDevMode(devMode);
+      refreshControllerReadiness();
+    </script>
+  </body>
+</html>

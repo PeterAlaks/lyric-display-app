@@ -103,7 +103,7 @@ export function setupNativeTheme(mainWindow, menuAPI) {
  * @param {Function} requestRendererModal - Modal request function
  * @returns {Promise<BrowserWindow|null>} - The created main window or null
  */
-export async function handleBackendStartupError(error, requestRendererModal) {
+export async function handleBackendStartupError(error, requestRendererModal, { headless = false } = {}) {
   console.error('[Startup] Failed to start backend:', error);
 
   if (error.message === 'PORT_IN_USE') {
@@ -111,6 +111,18 @@ export async function handleBackendStartupError(error, requestRendererModal) {
       'Application Already Running',
       'LyricDisplay is already running. Only one instance can run at a time.\n\nPlease close the other instance or check your system tray.'
     );
+    app.quit();
+    return null;
+  }
+
+  if (headless) {
+    try {
+      dialog.showErrorBox(
+        'Startup Error',
+        'LyricDisplay could not start its backend service in headless mode. Check the application logs and restart LyricDisplay.'
+      );
+    } catch {
+    }
     app.quit();
     return null;
   }
@@ -146,10 +158,10 @@ export async function handleBackendStartupError(error, requestRendererModal) {
  * @param {Function} options.handleDisplayChange - Display change handler
  * @returns {Promise<BrowserWindow>} - The main window instance
  */
-export async function performStartupSequence({ menuAPI, requestRendererModal, handleDisplayChange }) {
+export async function performStartupSequence({ menuAPI, requestRendererModal, handleDisplayChange, headless = false, obsDockPairingToken = null }) {
   try {
     updateLoadingStatus('Starting backend server');
-    await startBackend();
+    await startBackend({ obsDockPairingToken, allowLocalObsDockAuth: headless });
     console.log('[Startup] Backend started successfully');
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -176,6 +188,13 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     updateLoadingStatus('Initializing NDI manager');
     registerNdiIpcHandlers();
     registerExternalControlIPC();
+
+    if (headless) {
+      initDisplayManager(handleDisplayChange);
+      initializeNdiManager();
+      console.log('[Startup] Headless mode initialized without creating renderer windows');
+      return null;
+    }
 
     const mainWindow = createWindow('/');
 
@@ -218,6 +237,6 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
 
   } catch (error) {
     closeLoadingWindow();
-    return await handleBackendStartupError(error, requestRendererModal);
+    return await handleBackendStartupError(error, requestRendererModal, { headless });
   }
 }

@@ -60,4 +60,3 @@ export function useActionLogBridge() {
     isAuthenticated: bridgeState.authStatus === 'authenticated',
   };
 }
-

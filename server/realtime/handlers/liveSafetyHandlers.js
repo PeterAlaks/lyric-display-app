@@ -1,5 +1,6 @@
 import { appendActionLog } from '../actionLog.js';
 import { getLiveSafetySnapshot, setLiveSafety } from '../liveSafety.js';
+import { schedulePersistSessionState } from '../sessionPersistence.js';
 
 export function registerLiveSafetyHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
   socket.on('liveSafetySet', (payload = {}) => {
@@ -15,6 +16,7 @@ export function registerLiveSafetyHandlers({ io, socket, hasPermission, clientTy
     }
 
     const snapshot = setLiveSafety(enabled, { clientType, deviceId, sessionId });
+    schedulePersistSessionState();
     console.log(`Live safety mode ${enabled ? 'enabled' : 'disabled'} by ${clientType} client`);
     appendActionLog(io, {
       type: 'safety',

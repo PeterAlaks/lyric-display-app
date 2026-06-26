@@ -4,6 +4,7 @@ import useModal from '@/hooks/useModal';
 import useToast from '@/hooks/useToast';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useLyricsStore from '@/context/LyricsStore';
+import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '@/utils/lyricDisplayDock';
 
 const useMenuHandlers = (closeMenu) => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const useMenuHandlers = (closeMenu) => {
   const { showToast } = useToast();
   const { darkMode, setDarkMode } = useDarkModeState();
   const isNewSongCanvas = location.pathname === '/new-song';
+  const isDevMode = import.meta.env.MODE === 'development';
 
   const handleNewLyrics = useCallback(() => {
     closeMenu();
@@ -403,6 +405,26 @@ const useMenuHandlers = (closeMenu) => {
     });
   }, [closeMenu, showModal]);
 
+  const handleLaunchHeadlessMode = useCallback(
+    () => confirmAndLaunchHeadlessMode({ showModal, showToast }),
+    [showModal, showToast]
+  );
+
+  const handleObsDockSetup = useCallback(() => {
+    closeMenu();
+    showModal({
+      title: 'LyricDisplay Dock Setup',
+      headerDescription: 'Copy the OBS dock URL and review Dock Mode startup options',
+      component: 'ObsDockInfo',
+      variant: 'info',
+      size: 'lg',
+      scrollBehavior: 'scroll',
+      actions: isDevMode
+        ? [{ label: 'Close', variant: 'outline' }]
+        : createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
+    });
+  }, [closeMenu, handleLaunchHeadlessMode, isDevMode, showModal]);
+
   const handleDocs = useCallback(() => {
     closeMenu();
     window.open('https://lyricdisplay.app/documentation', '_blank', 'noopener,noreferrer');
@@ -532,6 +554,7 @@ const useMenuHandlers = (closeMenu) => {
     handleDisplaySettings,
     handlePreServiceHealth,
     handleOperatorActionLog,
+    handleObsDockSetup,
 
     handleDocs,
     handleRepo,

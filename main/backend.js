@@ -7,6 +7,8 @@ import { mirrorStreamToLog } from './logging.js';
 let backendProcess = null;
 let backendStopRequested = false;
 let backendRestartTimer = null;
+let lastStartOptions = {};
+let backendMessageHandler = null;
 
 const BACKEND_TAIL_LIMIT = 64 * 1024;
 const BACKEND_RESTART_WINDOW_MS = 5 * 60_000;
@@ -57,7 +59,7 @@ function scheduleBackendRestart(reason) {
       return;
     }
 
-    startBackend().catch((error) => {
+    startBackend(lastStartOptions).catch((error) => {
       console.error('[Backend] Runtime restart failed:', error);
     });
   }, delayMs);
@@ -94,13 +96,25 @@ async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
   return false;
 }
 
-export function startBackend() {
+export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false } = {}) {
   return new Promise((resolve, reject) => {
     if (backendProcess && !backendProcess.killed) {
+      if (obsDockPairingToken) {
+        registerObsDockPairingToken(obsDockPairingToken);
+      }
+      if (allowLocalObsDockAuth) {
+        lastStartOptions = { ...lastStartOptions, allowLocalObsDockAuth: true };
+        try {
+          backendProcess.send({ type: 'obs-dock-local-auth', enabled: true });
+        } catch (error) {
+          console.warn('[Backend] Failed to enable LyricDisplay Dock local auth:', error);
+        }
+      }
       resolve();
       return;
     }
 
+    lastStartOptions = { allowLocalObsDockAuth };
     backendStopRequested = false;
     if (backendRestartTimer) {
       clearTimeout(backendRestartTimer);
@@ -108,14 +122,18 @@ export function startBackend() {
     }
 
     const serverPath = resolveProductionPath('server', 'index.js');
-    const backendDataDir = path.join(app.getPath('userData'), 'backend');
+    const userDataDir = app.getPath('userData');
+    const backendDataDir = path.join(userDataDir, 'backend');
 
     const child = fork(serverPath, [], {
       cwd: path.dirname(serverPath),
       env: {
         ...process.env,
         NODE_ENV: app.isPackaged ? 'production' : 'development',
-        LYRICDISPLAY_DATA_DIR: backendDataDir
+        LYRICDISPLAY_DATA_DIR: backendDataDir,
+        LYRICDISPLAY_USER_DATA_DIR: userDataDir,
+        LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
+        LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     });
@@ -242,6 +260,38 @@ export function startBackend() {
     });
 
     child.on('message', async (msg) => {
+      if (backendMessageHandler) {
+        try {
+          const result = await backendMessageHandler(msg);
+          if (msg?.requestId) {
+            try {
+              child.send({
+                type: 'app-control-response',
+                requestId: msg.requestId,
+                success: result?.success !== false,
+                error: result?.error || null,
+              });
+            } catch (error) {
+              console.warn('[Backend] Failed to send app-control response:', error);
+            }
+          }
+        } catch (error) {
+          console.warn('[Backend] Message handler failed:', error);
+          if (msg?.requestId) {
+            try {
+              child.send({
+                type: 'app-control-response',
+                requestId: msg.requestId,
+                success: false,
+                error: error?.message || 'Main process failed to handle request',
+              });
+            } catch (sendError) {
+              console.warn('[Backend] Failed to send app-control error response:', sendError);
+            }
+          }
+        }
+      }
+
       if (msg?.status === 'error' && msg?.error === 'EADDRINUSE' && !isResolved) {
         console.error(`Backend failed: Port ${msg.port} is already in use`);
         rejectStartup(new Error('PORT_IN_USE'));
@@ -274,6 +324,22 @@ export function startBackend() {
       }
     }, 3000);
   });
+}
+
+export function registerObsDockPairingToken(token) {
+  if (!backendProcess || !token) return false;
+
+  try {
+    backendProcess.send({ type: 'obs-dock-pairing-token', token });
+    return true;
+  } catch (error) {
+    console.warn('[Backend] Failed to send LyricDisplay Dock pairing token:', error);
+    return false;
+  }
+}
+
+export function setBackendMessageHandler(handler) {
+  backendMessageHandler = typeof handler === 'function' ? handler : null;
 }
 
 export function stopBackend() {

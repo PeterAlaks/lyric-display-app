@@ -224,7 +224,7 @@ const OutputPage = ({ outputId }) => {
 
   useEffect(() => {
     const preloadVideo = async () => {
-      if (!shouldShowFullScreenBackground || fullScreenBackgroundType !== 'media' || !fullScreenBackgroundMedia) {
+      if (isPreviewMode || !shouldShowFullScreenBackground || fullScreenBackgroundType !== 'media' || !fullScreenBackgroundMedia) {
         return;
       }
 
@@ -305,7 +305,7 @@ const OutputPage = ({ outputId }) => {
         preloadAbortControllerRef.current = null;
       }
     };
-  }, [fullScreenMode, fullScreenBackgroundType, fullScreenBackgroundMedia?.url, fullScreenBackgroundMedia?.uploadedAt, shouldShowFullScreenBackground, label]);
+  }, [fullScreenMode, fullScreenBackgroundType, fullScreenBackgroundMedia?.url, fullScreenBackgroundMedia?.uploadedAt, shouldShowFullScreenBackground, label, isPreviewMode]);
 
   useEffect(() => {
     return () => {

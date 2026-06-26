@@ -22,4 +22,3 @@ export function registerActionLogHandlers({ io, socket, hasPermission, clientTyp
     socket.emit('actionLogSnapshot', getActionLogSnapshot());
   });
 }
-

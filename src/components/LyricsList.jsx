@@ -24,7 +24,10 @@ export default function LyricsList({
   onContextMenuApiReady,
   clickAwayIgnoreRefs = [],
   maxLinesPerGroup = 2,
+  density = 'default',
 }) {
+  const compact = density === 'dock' || density === 'compact';
+  const forceDarkMode = density === 'dock';
   const listRef = useListRef();
   const {
     lyrics = [],
@@ -37,7 +40,8 @@ export default function LyricsList({
     setLyrics,
     setLyricsTimestamps
   } = useLyricsState();
-  const { darkMode } = useDarkModeState();
+  const { darkMode: storedDarkMode } = useDarkModeState();
+  const darkMode = forceDarkMode ? true : storedDarkMode;
   const isDesktopApp = useIsDesktopApp();
   const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup } = useControlSocket();
   const { showToast } = useToast();
@@ -72,6 +76,7 @@ export default function LyricsList({
     highlightedLineIndex,
     searchQuery,
     darkMode,
+    density,
   });
 
   const handleLineClickPlain = useCallback(
@@ -206,8 +211,9 @@ export default function LyricsList({
       searchQuery,
       isStructureTagLine,
       getNormalGroupLines,
+      density,
     }),
-    [lyrics, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, isStructureTagLine, getNormalGroupLines]
+    [lyrics, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, isStructureTagLine, getNormalGroupLines, density]
   );
 
   const itemCount = useMemo(() => lyrics.length, [lyrics]);
@@ -248,11 +254,12 @@ export default function LyricsList({
       onSectionJump={handleSectionJump}
       containerRef={sectionChipsContainerRef}
       scrollerRef={sectionChipsScrollerRef}
+      density={density}
     />
   ) : null;
 
   const listContent = !useVirtualized ? (
-    <div className={`space-y-2 pb-4 relative ${hasSections ? '' : 'pt-4'}`}>
+    <div className={`${compact ? 'space-y-1 pb-2' : 'space-y-2 pb-4'} relative ${hasSections ? '' : compact ? 'pt-2' : 'pt-4'}`}>
       {sectionChips}
       {lyrics.map((line, i) => (
         <LyricRow
@@ -285,6 +292,7 @@ export default function LyricsList({
           searchQuery={searchQuery}
           isStructureTagLine={isStructureTagLine}
           getNormalGroupLines={getNormalGroupLines}
+          density={density}
         />
       ))}
     </div>
@@ -302,8 +310,8 @@ export default function LyricsList({
             overflowY: 'auto',
             height: '100%',
             width: '100%',
-            paddingTop: `${HORIZONTAL_PADDING_PX}px`,
-            paddingBottom: `${HORIZONTAL_PADDING_PX}px`,
+            paddingTop: compact ? '8px' : `${HORIZONTAL_PADDING_PX}px`,
+            paddingBottom: compact ? '8px' : `${HORIZONTAL_PADDING_PX}px`,
             boxSizing: 'border-box',
           }}
         />

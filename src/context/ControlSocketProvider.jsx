@@ -5,6 +5,7 @@ import { resolveBackendOrigin } from '../utils/network';
 import useSocketEvents from '../hooks/useSocketEvents';
 import { connectionManager } from '../utils/connectionManager';
 import { logDebug, logError, logWarn } from '../utils/logger';
+import { getRequestedControllerClientType } from '../utils/clientType';
 
 const ControlSocketContext = createContext(null);
 
@@ -17,6 +18,7 @@ export const useControlSocket = () => {
 };
 
 const LONG_BACKOFF_WARNING_MS = 4000;
+const OBS_DOCK_RECOVERY_POLL_MS = 2500;
 
 export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const socketRef = useRef(null);
@@ -44,6 +46,8 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
 
     const getClientType = useCallback(() => {
         if (window.electronAPI) return 'desktop';
+        const requestedClientType = getRequestedControllerClientType();
+        if (requestedClientType) return requestedClientType;
         if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
             return 'mobile';
         }
@@ -527,6 +531,55 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
             }, 100);
         });
     }, [cleanupSocket, connectSocketInternal, clearBackoffWarning, setAuthStatus]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        if (getClientType() !== 'obsDock') return undefined;
+        if (connectionStatus === 'connected' || connectionStatus === 'connecting' || authStatus === 'authenticating') {
+            return undefined;
+        }
+
+        let cancelled = false;
+        let recoveryPending = false;
+        const backendReadyUrl = `${resolveBackendOrigin()}/api/health/ready`;
+
+        const tryRecoverDockConnection = async () => {
+            if (cancelled || recoveryPending) return;
+            recoveryPending = true;
+
+            try {
+                const response = await fetch(backendReadyUrl, { cache: 'no-store' });
+                if (!response.ok) return;
+                const payload = await response.json();
+                if (cancelled || payload?.status !== 'ready' || !payload?.serverListening) return;
+
+                logDebug('OBS dock backend is ready after restart; resetting connection backoff');
+                connectionManager.cleanup(clientId.current);
+                if (reconnectTimeoutRef.current) {
+                    clearTimeout(reconnectTimeoutRef.current);
+                    reconnectTimeoutRef.current = null;
+                }
+                setConnectionStatus('disconnected');
+                setAuthStatus('pending');
+                readyRef.current = false;
+                setReady(false);
+                clearBackoffWarning();
+                connectSocketInternal();
+            } catch {
+                // The backend is expected to be unreachable while Dock Mode is restarting.
+            } finally {
+                recoveryPending = false;
+            }
+        };
+
+        tryRecoverDockConnection();
+        const interval = window.setInterval(tryRecoverDockConnection, OBS_DOCK_RECOVERY_POLL_MS);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+        };
+    }, [authStatus, clearBackoffWarning, connectSocketInternal, connectionStatus, getClientType, setAuthStatus, setConnectionStatus]);
 
     // Connection diagnostics
     const getConnectionDiagnostics = useCallback(() => {

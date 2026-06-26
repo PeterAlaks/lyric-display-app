@@ -22,6 +22,7 @@ const OutputPage = React.lazy(() => import('./pages/OutputPage'));
 const ObsSetup = React.lazy(() => import('./pages/ObsSetup'));
 const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
 const TimerControlModule = React.lazy(() => import('./components/TimerControlModule'));
+const ObsDockLayout = React.lazy(() => import('./components/ObsDockLayout'));
 
 const ElectronModalBridge = React.lazy(() => import('./components/bridges/ElectronModalBridge'));
 const JoinCodePromptBridge = React.lazy(() => import('./components/bridges/JoinCodePromptBridge'));
@@ -62,7 +63,9 @@ function MainWindowBridges() {
 
 function AppRoutes() {
   const location = useLocation();
-  const isMainWindowRoute = location.pathname === '/' || location.pathname.startsWith('/new-song');
+  const searchParams = new URLSearchParams(location.search || '');
+  const isObsDockEntry = location.pathname === '/' && searchParams.get('dock') === 'obs';
+  const isMainWindowRoute = !isObsDockEntry && (location.pathname === '/' || location.pathname.startsWith('/new-song'));
 
   return (
     <>
@@ -70,11 +73,17 @@ function AppRoutes() {
       <React.Suspense fallback={null}>
         <Routes>
           <Route path="/" element={
-            <ConditionalDesktopShell>
+            isObsDockEntry ? (
               <ControlSocketProvider>
-                <ControlPanel />
+                <ObsDockLayout />
               </ControlSocketProvider>
-            </ConditionalDesktopShell>
+            ) : (
+              <ConditionalDesktopShell>
+                <ControlSocketProvider>
+                  <ControlPanel />
+                </ControlSocketProvider>
+              </ConditionalDesktopShell>
+            )
           } />
           <Route path="/output1" element={<Output1 />} />
           <Route path="/output2" element={<Output2 />} />
@@ -87,6 +96,11 @@ function AppRoutes() {
             <ConditionalDesktopShell>
               <ObsSetup />
             </ConditionalDesktopShell>
+          } />
+          <Route path="/obs-dock" element={
+            <ControlSocketProvider>
+              <ObsDockLayout />
+            </ControlSocketProvider>
           } />
           <Route path="/new-song" element={
             <ConditionalDesktopShell>
@@ -110,14 +124,22 @@ function AppRoutes() {
 
 export default function App() {
   const { darkMode, setDarkMode } = useDarkModeState();
+  const isDockRuntime = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const search = new URLSearchParams(window.location.search || '');
+    const hash = window.location.hash || '';
+    const path = window.location.pathname || '/';
+    return search.get('dock') === 'obs' || path.replace(/\/+$/, '') === '/obs-dock' || hash.startsWith('#/obs-dock');
+  }, []);
+  const effectiveDarkMode = isDockRuntime ? true : darkMode;
 
   useEffect(() => {
-    if (darkMode) {
+    if (effectiveDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [darkMode]);
+  }, [effectiveDarkMode]);
 
   useEffect(() => {
     const unsubscribe = window.electronAPI?.onThemeUpdated?.((payload) => {
@@ -184,8 +206,8 @@ export default function App() {
   }, []);
 
   return (
-    <ModalProvider isDark={!!darkMode}>
-      <ToastProvider isDark={!!darkMode}>
+    <ModalProvider isDark={!!effectiveDarkMode}>
+      <ToastProvider isDark={!!effectiveDarkMode} density={isDockRuntime ? 'dock' : 'default'} position={isDockRuntime ? 'top-right' : 'bottom-right'} offset={isDockRuntime ? 8 : 20}>
         <AppErrorBoundary>
           <PreferencesLoaderBridge />
           <Router>

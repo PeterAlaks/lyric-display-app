@@ -36,7 +36,9 @@ export default function LyricRow({
   searchQuery,
   isStructureTagLine,
   getNormalGroupLines,
+  density = 'default',
 }) {
+  const compact = density === 'dock' || density === 'compact';
   const currentLine = line ?? lyrics?.[index];
   if (currentLine == null) return null;
 
@@ -47,7 +49,7 @@ export default function LyricRow({
 
   if (typeof currentLine === 'string' && isStructureTagLine(currentLine)) {
     if (!virtualized) {
-      return <div data-line-index={index} className="px-4 h-2 pointer-events-none" />;
+      return <div data-line-index={index} className={`${compact ? 'px-2 h-1' : 'px-4 h-2'} pointer-events-none`} />;
     }
 
     return (
@@ -63,12 +65,12 @@ export default function LyricRow({
     <div
       data-line-index={virtualized ? index : undefined}
       style={virtualized ? getVirtualizedStyle(style) : undefined}
-      className={virtualized ? undefined : 'px-4'}
+      className={virtualized ? undefined : compact ? 'px-2' : 'px-4'}
     >
       {sectionLabel && (
-        <div className={`text-xs font-semibold ${virtualized ? 'mb-3' : 'mb-2'} flex items-center gap-2 ${getSectionClassName(isActiveSection, darkMode, virtualized)}`}>
+        <div className={`${compact ? 'text-[10px]' : 'text-xs'} font-semibold ${compact ? 'mb-1' : virtualized ? 'mb-3' : 'mb-2'} flex items-center gap-2 ${getSectionClassName(isActiveSection, darkMode, virtualized, compact)}`}>
           <span className="uppercase tracking-wide">{sectionLabel.toUpperCase ? sectionLabel.toUpperCase() : sectionLabel}</span>
-          <span className="h-px flex-1 bg-gray-300 opacity-60" />
+          <span className={`h-px flex-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-300'} opacity-80`} />
         </div>
       )}
       <div
@@ -89,6 +91,7 @@ export default function LyricRow({
           darkMode={darkMode}
           isStructureTagLine={isStructureTagLine}
           getNormalGroupLines={getNormalGroupLines}
+          density={density}
         />
 
         {isDesktopApp && currentLine?.type === 'normal-group' && hoveredLineIndex === index && (
@@ -154,10 +157,12 @@ function getVirtualizedStyle(style) {
   };
 }
 
-function getSectionClassName(isActiveSection, darkMode, virtualized) {
+function getSectionClassName(isActiveSection, darkMode, virtualized, compact) {
   if (isActiveSection) {
+    if (darkMode && compact) return 'text-blue-300';
     return darkMode ? 'text-green-400' : virtualized ? 'text-green-600' : 'text-green-500';
   }
 
+  if (darkMode && compact) return 'text-gray-500';
   return darkMode ? 'text-gray-300' : 'text-gray-600';
 }

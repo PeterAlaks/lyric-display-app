@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import registerSocketEvents, { getOutputRegistry, hasOutput } from './events.js';
 import SimpleSecretManager from './security/secretManager.js';
 import { createTokenService } from './auth/tokens.js';
+import { registerObsDockPairingToken } from './auth/obsDockPairing.js';
 import { createRequestAuthenticator } from './auth/httpAuth.js';
 import { createSocketAuthenticator } from './auth/socketAuth.js';
 import { hasPermission } from './auth/permissions.js';
@@ -24,6 +25,9 @@ import { registerMediaRoutes } from './routes/media.js';
 import { registerAdminSecretRoutes } from './routes/adminSecrets.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerIntegrationRoutes } from './routes/integrations.js';
+import { registerAppControlRoutes } from './routes/appControl.js';
+import { registerTemplateRoutes } from './routes/templates.js';
+import { loadPersistedSessionState } from './realtime/sessionPersistence.js';
 
 dotenv.config();
 
@@ -53,6 +57,10 @@ const TOKEN_EXPIRY = secrets.TOKEN_EXPIRY || process.env.TOKEN_EXPIRY || '24h';
 const ADMIN_TOKEN_EXPIRY = secrets.ADMIN_TOKEN_EXPIRY || process.env.ADMIN_TOKEN_EXPIRY || '7d';
 
 global.controllerJoinCode = String(Math.floor(100000 + Math.random() * 900000));
+
+if (process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN) {
+  registerObsDockPairingToken(process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -90,12 +98,16 @@ const uploadMiddleware = createUploadMiddleware({
   getMediaDirectory: userMediaService.getMediaDirectory,
 });
 
+await loadPersistedSessionState({ dataRoot });
+
 app.use(corsMiddleware);
 app.use(express.json());
 app.use('/api/auth', tokenRateLimit);
 
 registerOutputRoutes(app, { getOutputRegistry, hasOutput });
 registerIntegrationRoutes(app, { getOutputRegistry, port: PORT });
+registerAppControlRoutes(app, { localhostOnly });
+registerTemplateRoutes(app, { localhostOnly });
 registerAuthRoutes(app, { secrets, tokenService, localhostOnly });
 registerConnectionRoutes(app, { authenticateRequest });
 registerMediaRoutes(app, {
@@ -125,6 +137,20 @@ registerHealthRoutes(app, {
   secretManager,
   startupSecretRotation,
   tokenRateLimit,
+});
+
+process.on('message', (message) => {
+  if (message?.type === 'obs-dock-pairing-token') {
+    const registered = registerObsDockPairingToken(message.token);
+    if (registered) {
+      console.log('Registered temporary OBS dock pairing token');
+    }
+    return;
+  }
+
+  if (message?.type === 'obs-dock-local-auth') {
+    process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH = message.enabled ? '1' : '';
+  }
 });
 
 if (!isDev) {

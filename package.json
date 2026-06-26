@@ -15,6 +15,8 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron-dev:headless": "node scripts/electron-dev-headless.js",
+    "dev:register-protocol": "node scripts/register-dev-protocol.js",
     "electron": "electron .",
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run build && electron-builder",
@@ -115,6 +117,14 @@
       {
         "from": "INSTALLATION.md",
         "to": "INSTALLATION.md"
+      },
+      {
+        "from": "obs-dock.html",
+        "to": "obs-dock.html"
+      },
+      {
+        "from": "public/LyricDisplay-icon.png",
+        "to": "LyricDisplay-icon.png"
       }
     ],
     "win": {
@@ -127,6 +137,12 @@
       "icon": "public/favicon.ico",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${productName}-${version}-Windows-Setup.${ext}",
+      "extraFiles": [
+        {
+          "from": "build/Start LyricDisplay Dock Mode.cmd",
+          "to": "Start LyricDisplay Dock Mode.cmd"
+        }
+      ],
       "fileAssociations": [
         {
           "ext": "lrc",
@@ -157,6 +173,7 @@
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "public/favicon.ico",
       "uninstallerIcon": "public/favicon.ico",
+      "include": "build/installer.nsh",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "LyricDisplay"
@@ -250,6 +267,12 @@
           "description": "LyricDisplay setlist file",
           "mimeType": "application/x-ldset"
         }
+      ]
+    },
+    "protocols": {
+      "name": "LyricDisplay",
+      "schemes": [
+        "lyricdisplay"
       ]
     },
     "publish": [

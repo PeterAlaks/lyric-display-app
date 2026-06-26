@@ -4,6 +4,7 @@ import { cleanupDisplayManager } from './displayManager.js';
 import { getLoadingWindow } from './loadingWindow.js';
 import { destroyExternalControl } from './externalControl.js';
 import { cleanupNdiManager } from './ndiManager.js';
+import { stopObsDockDevServer } from './devServer.js';
 
 const isOutputRoute = (url) => /(?:#\/|\/)(stage|time|output\d+)(?:\?|$)/i.test(String(url || ''));
 
@@ -72,6 +73,12 @@ export function performCleanup() {
     cleanupNdiManager();
   } catch (error) {
     console.error('[Cleanup] Error cleaning up NDI manager:', error);
+  }
+
+  try {
+    stopObsDockDevServer();
+  } catch (error) {
+    console.error('[Cleanup] Error stopping LyricDisplay Dock dev server:', error);
   }
 
   closeOutputWindows();
