@@ -60,8 +60,8 @@ export const outputTemplates = [
     }
   },
   {
-    id: 'transparent-karaoke-impact',
-    title: 'Transparent Karaoke Impact',
+    id: 'transparent-lyric-video-impact',
+    title: 'Transparent Lyric Video Impact',
     description: 'Bold no-band style for sing-alongs where the background should stay visible',
     settings: {
       ...baseOutputSettings,

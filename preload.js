@@ -13,6 +13,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   syncNativeThemeSource: (themeSource) => ipcRenderer.invoke('sync-native-theme-source', themeSource),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
   parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
+  lyricVideo: {
+    selectAudio: () => ipcRenderer.invoke('lyric-video:select-audio'),
+    exportVideo: (payload) => ipcRenderer.invoke('lyric-video:export-video', payload),
+    cancelExport: () => ipcRenderer.invoke('lyric-video:cancel-export'),
+    onExportProgress: (callback) => {
+      const channel = 'lyric-video:export-progress';
+      const listener = (_event, progress) => callback?.(progress);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    }
+  },
   getAdminKey: () => ipcRenderer.invoke('get-admin-key'),
   getJoinCode: () => ipcRenderer.invoke('get-join-code'),
   getDesktopJWT: (payload) => ipcRenderer.invoke('get-desktop-jwt', payload),

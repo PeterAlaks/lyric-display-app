@@ -1,4 +1,5 @@
 import { BrowserWindow, nativeTheme, dialog, app } from 'electron';
+import { registerLyricVideoMediaProtocol } from './lyricVideoMediaProtocol.js';
 import { prewarmCredentials } from './providerCredentials.js';
 import { isDev } from './paths.js';
 import { startBackend } from './backend.js';
@@ -159,6 +160,7 @@ export async function handleBackendStartupError(error, requestRendererModal, { h
  * @returns {Promise<BrowserWindow>} - The main window instance
  */
 export async function performStartupSequence({ menuAPI, requestRendererModal, handleDisplayChange, headless = false, obsDockPairingToken = null }) {
+  registerLyricVideoMediaProtocol();
   try {
     updateLoadingStatus('Starting backend server');
     await startBackend({ obsDockPairingToken, allowLocalObsDockAuth: headless });

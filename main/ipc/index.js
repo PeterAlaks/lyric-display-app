@@ -34,6 +34,7 @@ import { registerTemplatesHandlers } from './templates.js';
 import { registerPreferencesHandlers } from './preferences.js';
 import { registerMiscHandlers } from './misc.js';
 import { registerSecurityHandlers } from './security.js';
+import { registerLyricVideoExportHandlers } from './lyricVideoExport.js';
 
 /**
  * Register all IPC handlers
@@ -62,4 +63,5 @@ export function registerIpcHandlers(context) {
   registerPreferencesHandlers(context);
   registerMiscHandlers(context);
   registerSecurityHandlers(context);
+  registerLyricVideoExportHandlers(context);
 }

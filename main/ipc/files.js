@@ -4,8 +4,15 @@ import path from 'path';
 import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
 import { addRecent } from '../recents.js';
 import * as userPreferences from '../userPreferences.js';
+import { grantLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
 
 const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc']);
+const AUDIO_MIME_TYPES = {
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac',
+};
 const MAX_WRITE_CONTENT_BYTES = 10 * 1024 * 1024;
 const writeGrantPaths = new Set();
 
@@ -120,6 +127,37 @@ export function registerFileHandlers({ getMainWindow }) {
     } catch (error) {
       console.error('Error loading lyrics file:', error);
       return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('lyric-video:select-audio', async () => {
+    try {
+      const win = getMainWindow?.();
+      const result = await dialog.showOpenDialog(win || undefined, {
+        properties: ['openFile'],
+        filters: [
+          { name: 'Audio Files', extensions: ['mp3', 'wav', 'm4a', 'aac'] },
+        ],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+
+      const filePath = result.filePaths[0];
+      const extension = path.extname(filePath).toLowerCase();
+      const fileName = path.basename(filePath);
+
+      return {
+        success: true,
+        filePath,
+        fileName,
+        mimeType: AUDIO_MIME_TYPES[extension] || 'audio/*',
+        sourceUrl: grantLyricVideoMediaFile(filePath, AUDIO_MIME_TYPES[extension] || 'audio/*'),
+      };
+    } catch (error) {
+      console.error('Error selecting lyric video audio:', error);
+      return { success: false, error: error.message || 'Failed to select audio' };
     }
   });
 

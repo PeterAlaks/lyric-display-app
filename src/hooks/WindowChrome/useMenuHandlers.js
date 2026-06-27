@@ -247,6 +247,11 @@ const useMenuHandlers = (closeMenu) => {
     navigate('/timer-control');
   }, [closeMenu, navigate]);
 
+  const handleOpenLyricVideoStudio = useCallback(() => {
+    closeMenu();
+    navigate('/lyric-video-studio');
+  }, [closeMenu, navigate]);
+
   const handleNdiPreferences = useCallback(() => {
     closeMenu();
     showModal({
@@ -533,6 +538,7 @@ const useMenuHandlers = (closeMenu) => {
     handlePreviewOutputs,
     handleSyncOutputs,
     handleOpenTimerControl,
+    handleOpenLyricVideoStudio,
     handleNdiPreferences,
     handleUserMedia,
     handleQuit,

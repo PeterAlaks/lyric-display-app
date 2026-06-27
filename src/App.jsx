@@ -20,6 +20,8 @@ const Stage = React.lazy(() => import('./pages/Stage'));
 const TimeDisplay = React.lazy(() => import('./pages/TimeDisplay'));
 const OutputPage = React.lazy(() => import('./pages/OutputPage'));
 const ObsSetup = React.lazy(() => import('./pages/ObsSetup'));
+const LyricVideoStudio = React.lazy(() => import('./pages/LyricVideoStudio'));
+const LyricVideoExportFrame = React.lazy(() => import('./pages/LyricVideoExportFrame'));
 const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
 const TimerControlModule = React.lazy(() => import('./components/TimerControlModule'));
 const ObsDockLayout = React.lazy(() => import('./components/ObsDockLayout'));
@@ -102,6 +104,12 @@ function AppRoutes() {
               <ObsDockLayout />
             </ControlSocketProvider>
           } />
+          <Route path="/lyric-video-studio" element={
+            <ConditionalDesktopShell>
+              <LyricVideoStudio />
+            </ConditionalDesktopShell>
+          } />
+          <Route path="/lyric-video-export-frame" element={<LyricVideoExportFrame />} />
           <Route path="/new-song" element={
             <ConditionalDesktopShell>
               <ControlSocketProvider>

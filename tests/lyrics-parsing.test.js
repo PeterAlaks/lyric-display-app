@@ -38,6 +38,18 @@ test('LRC parsing preserves blank timestamped lines without visible placeholders
   assert.equal(parsed.rawText, '\nFirst line\n\nSecond line');
 });
 
+test('LRC parsing preserves empty timestamped lines as blanks', () => {
+  const parsed = parseLrcContent([
+    '[00:00.00]Intro',
+    '[00:01.50]',
+    '[00:03.00]Verse',
+  ].join('\n'), { enableSplitting: false });
+
+  assert.deepEqual(parsed.processedLines, ['Intro', '', 'Verse']);
+  assert.deepEqual(parsed.timestamps, [0, 150, 300]);
+  assert.equal(parsed.rawText, 'Intro\n\nVerse');
+});
+
 test('plain text parsing keeps section metadata aligned with processed lines', () => {
   const parsed = parseTxtContent([
     '[Verse 1]',

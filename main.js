@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron';
 import './main/appIdentity.js';
+import { registerLyricVideoMediaScheme } from './main/lyricVideoMediaProtocol.js';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { appRoot, isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';
@@ -369,6 +370,7 @@ if (!hasLock) {
 }
 
 initFileLogging();
+registerLyricVideoMediaScheme();
 
 if (process.platform === 'win32' && process.argv.length >= 2) {
   const filePath = extractFilePathFromArgs(process.argv);

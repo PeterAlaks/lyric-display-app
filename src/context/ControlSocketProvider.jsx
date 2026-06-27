@@ -17,6 +17,8 @@ export const useControlSocket = () => {
     return context;
 };
 
+export const useOptionalControlSocket = () => useContext(ControlSocketContext);
+
 const LONG_BACKOFF_WARNING_MS = 4000;
 const OBS_DOCK_RECOVERY_POLL_MS = 2500;
 
