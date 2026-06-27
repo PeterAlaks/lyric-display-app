@@ -87,17 +87,17 @@ const AdvancedPreferencesSection = ({
 
   return (
     <div className="space-y-6">
-    <div className={`p-4 rounded-lg border ${darkMode ? 'border-yellow-600/50 bg-yellow-900/20' : 'border-yellow-400 bg-yellow-50'}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <AlertTriangle className={`w-4 h-4 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
-        <span className={`text-sm font-medium ${darkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
-          Advanced Settings
-        </span>
+      <div>
+        <div className="flex items-center gap-2">
+          <AlertTriangle className={`w-4 h-4 ${mutedClass}`} />
+          <span className={`text-sm font-medium ${labelClass}`}>
+            Advanced Settings
+          </span>
+        </div>
+        <p className={`mt-1 text-xs ${mutedClass}`}>
+          These settings are for advanced users. Changing them may affect application stability.
+        </p>
       </div>
-      <p className={`text-xs ${darkMode ? 'text-yellow-300/80' : 'text-yellow-700'}`}>
-        These settings are for advanced users. Changing them may affect application stability.
-      </p>
-    </div>
 
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
       <div className="mb-4 flex items-start gap-3">

@@ -396,11 +396,11 @@ const LyricDisplayApp = () => {
   });
 
   const iconButtonClass = (disabled = false) => {
-    const base = 'h-10 w-full rounded-lg font-medium transition-colors flex items-center justify-center';
+    const base = 'h-10 w-full rounded-lg font-medium transition-all duration-150 flex items-center justify-center';
     if (disabled) {
-      return `${base} ${darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'}`;
+      return `${base} ${darkMode ? 'bg-transparent text-gray-600 cursor-not-allowed opacity-60' : 'bg-transparent text-gray-300 cursor-not-allowed opacity-70'}`;
     }
-    return `${base} ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`;
+    return `${base} ${darkMode ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300' : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'}`;
   };
 
   if (!isDesktopApp) {
@@ -415,7 +415,7 @@ const LyricDisplayApp = () => {
         {/* Left Sidebar - Control Panel */}
         <div className={`w-[420px] flex-shrink-0 shadow-lg flex flex-col h-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           {/* Fixed Header Section */}
-          <div className={`flex-shrink-0 p-6 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className={`flex-shrink-0 pt-4 px-5 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <ControlPanelHeaderActions
               authStatus={authStatus}
               connectionStatus={connectionStatus}
@@ -451,8 +451,8 @@ const LyricDisplayApp = () => {
               <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="left">
                 <button
                   className={`h-[52px] w-[52px] rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    ? 'bg-gray-700 hover:bg-blue-500/10 hover:text-blue-300 text-gray-200'
+                    : 'bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700'
                     }`}
                   onClick={handleCreateNewSong}
                 >

@@ -268,7 +268,7 @@ export const useAutoplayManager = ({
         title: 'Intelligent Autoplay',
         component: 'IntelligentAutoplayInfo',
         variant: 'info',
-        size: 'auto',
+        size: 'md',
         dismissible: true,
         setDontShowAgain: (value) => {
           if (value) {

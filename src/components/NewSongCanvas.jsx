@@ -462,8 +462,8 @@ const NewSongCanvas = () => {
   };
 
   const toolbarGhostClass = darkMode
-    ? 'text-gray-200 hover:text-white hover:bg-gray-700/70 active:bg-gray-700/80 focus-visible:ring-1 focus-visible:ring-blue-500/60'
-    : '';
+    ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 active:bg-blue-500/15 focus-visible:bg-blue-500/10 focus-visible:text-blue-300 focus-visible:ring-1 focus-visible:ring-blue-500/60'
+    : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600 active:bg-blue-100 focus-visible:bg-blue-50 focus-visible:text-blue-600 focus-visible:ring-1 focus-visible:ring-blue-500/30';
 
   useKeyboardShortcuts({
     handleBack,
@@ -530,10 +530,10 @@ const NewSongCanvas = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 pt-4 px-5 pb-5">
         <div
           ref={editorContainerRef}
-          className={`relative h-full rounded-lg border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
+          className={`relative h-full overflow-hidden rounded-lg border transition-colors ${darkMode ? 'border-gray-800 bg-gray-800' : 'border-gray-200 bg-white'}`}
           onContextMenu={handleCanvasContextMenu}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -557,8 +557,8 @@ const NewSongCanvas = () => {
             onKeyUp={handleTextareaSelect}
             onSelect={handleTextareaSelect}
             placeholder="Start typing your lyrics here, or paste existing content..."
-            className={`w-full h-full p-6 rounded-lg resize-none outline-none font-mono text-base leading-relaxed ${darkMode
-              ? 'bg-gray-800 text-gray-200 placeholder-gray-500'
+            className={`w-full h-full resize-none rounded-2xl p-5 outline-none font-mono text-base leading-relaxed ${darkMode
+              ? 'bg-gray-800 text-gray-200 placeholder-gray-600'
               : 'bg-white text-gray-900 placeholder-gray-400'
               }`}
             spellCheck={false}

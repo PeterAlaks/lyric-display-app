@@ -25,13 +25,13 @@ export default function QuickParserPopover({
     <button
       type="button"
       disabled={quickParserLoading}
-      className={`${presentation === 'sheet' ? 'h-8' : 'h-9'} px-3 rounded-md border flex items-center justify-center transition-colors ${darkMode
-        ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700'
-        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+      className={`${presentation === 'sheet' ? 'h-8' : 'h-9'} px-3 rounded-md flex items-center justify-center transition-all ${darkMode
+        ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+        : 'bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'
         } ${quickParserLoading ? 'opacity-60 cursor-wait' : ''}`}
       {...triggerProps}
     >
-      <SlidersHorizontal className="w-4 h-4" />
+      <SlidersHorizontal className="h-[18px] w-[18px]" />
     </button>
   );
 

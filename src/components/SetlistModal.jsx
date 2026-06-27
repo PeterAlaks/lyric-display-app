@@ -505,6 +505,19 @@ const SetlistModal = () => {
   const topMenuHeight = typeof document !== 'undefined'
     ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
     : '0px';
+  const iconActionClass = darkMode
+    ? 'bg-transparent text-gray-400 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+    : 'bg-transparent text-gray-500 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
+  const dangerActionClass = darkMode
+    ? 'bg-transparent text-gray-400 hover:bg-red-500/10 hover:text-red-300 focus-visible:bg-red-500/10 focus-visible:text-red-300'
+    : 'bg-transparent text-gray-500 hover:bg-red-50 hover:text-red-600 focus-visible:bg-red-50 focus-visible:text-red-600';
+  const searchInputClass = darkMode
+    ? 'h-10 rounded-full border-gray-700/70 bg-gray-800/90 pl-10 pr-10 text-[13px] text-white placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20'
+    : 'h-10 rounded-full border-gray-200 bg-white pl-10 pr-10 text-[13px] text-gray-900 placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15';
+  const searchIconClass = darkMode ? 'text-gray-500' : 'text-gray-400';
+  const searchClearClass = darkMode
+    ? 'text-gray-400 hover:bg-blue-500/10 hover:text-blue-300'
+    : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600';
 
   return (
     <div
@@ -520,7 +533,7 @@ const SetlistModal = () => {
       <div className={`
         relative w-full max-w-4xl mx-4 max-h-[90vh] rounded-2xl border shadow-2xl ring-1 overflow-hidden
         ${darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20'}
-        md:mx-auto md:w-full md:max-w-2xl md:max-h-[80vh] md:rounded-2xl
+        md:mx-auto md:w-full md:max-w-3xl md:max-h-[80vh] md:rounded-2xl
         sm:mx-2 sm:max-w-full sm:h-full sm:max-h-full sm:rounded-none
         transition-all duration-200 ease-out
         ${(exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100'}
@@ -528,12 +541,12 @@ const SetlistModal = () => {
 
         {/* Fixed Header */}
         <div className={`
-          px-6 py-4 border-b flex items-center justify-between
-          ${darkMode ? 'border-gray-800' : 'border-gray-200'}
+          px-6 py-4 border-b flex items-center justify-between gap-4
+          ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}
         `}>
-          <div>
-            <h2 className="text-xl font-bold">Setlist Manager</h2>
-            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className="min-w-0">
+            <h2 className="truncate text-xl font-semibold">Setlist Manager</h2>
+            <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               Add up to {maxSetlistFiles} lyric files to setlist ({setlistFiles.length}/{maxSetlistFiles})
             </p>
           </div>
@@ -550,7 +563,7 @@ const SetlistModal = () => {
                   className={`
                   w-10 h-10
                   ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${darkMode ? 'hover:bg-gray-700 hover:text-red-400' : 'hover:bg-gray-100 hover:text-red-600'}
+                  ${dangerActionClass}
                 `}
                 >
                   <Trash className="w-4 h-4" />
@@ -569,7 +582,7 @@ const SetlistModal = () => {
                   className={`
                   w-10 h-10
                   ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
+                  ${iconActionClass}
                 `}
                 >
                   <Save className="w-4 h-4" />
@@ -584,7 +597,7 @@ const SetlistModal = () => {
                   onClick={handleLoadSetlist}
                   variant="ghost"
                   size="icon"
-                  className={`w-10 h-10 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                  className={`w-10 h-10 ${iconActionClass}`}
                 >
                   <FolderOpen className="w-4 h-4" />
                 </Button>
@@ -666,7 +679,7 @@ const SetlistModal = () => {
                   className={`
                   w-10 h-10
                   ${list.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
+                  ${iconActionClass}
                 `}
                 >
                   <FileDown className="w-4 h-4" />
@@ -682,9 +695,9 @@ const SetlistModal = () => {
                   disabled={isSetlistFull() || isLoading}
                   variant="ghost"
                   className={`
-    flex items-center gap-2 px-3 py-2
+    flex items-center gap-2 rounded-full px-3 py-2
                 ${isSetlistFull() ? 'opacity-50 cursor-not-allowed' : ''}
-    ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}
+    ${darkMode ? 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/15' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}
   `}
                 >
                   <Plus className="w-4 h-4" />
@@ -698,7 +711,7 @@ const SetlistModal = () => {
               onClick={closeModal}
               variant="ghost"
               size="icon"
-              className={`w-10 h-10 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              className={`w-10 h-10 ${iconActionClass}`}
             >
               <X className="w-6 h-6" />
             </Button>
@@ -707,35 +720,30 @@ const SetlistModal = () => {
 
         {/* Fixed Search Bar */}
         <div className={`
-          px-6 py-3 border-b
-          ${darkMode ? 'border-gray-800' : 'border-gray-200'}
+          px-6 py-4 border-b
+          ${darkMode ? 'border-gray-800 bg-gray-950/35' : 'border-gray-200 bg-gray-50/70'}
         `}>
           <div className="relative">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'
-              }`} />
+            <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${searchIconClass}`} />
             <Input
               type="text"
               placeholder="Search setlist files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`pl-10 pr-10 ${darkMode
-                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                : 'bg-white border-gray-300'
-                }`}
+              className={searchInputClass}
             />
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
-                  }`}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 transition-all ${searchClearClass}`}
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
           {searchQuery && (
-            <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`mt-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               {filteredFiles.length > 0
                 ? `Showing ${filteredFiles.length} of ${list.length} files`
                 : 'No files match your search'
@@ -751,7 +759,7 @@ const SetlistModal = () => {
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 max-h-96">
+        <div className={`flex-1 overflow-y-auto p-5 max-h-96 ${darkMode ? 'bg-gray-950/20' : 'bg-white'}`}>
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -868,18 +876,18 @@ const SortableSetlistItem = ({
   };
 
   const baseClasses = darkMode
-    ? 'bg-gray-700 border-gray-600 hover:bg-gray-600'
-    : 'bg-gray-50 border-gray-200 hover:bg-gray-100';
+    ? 'bg-gray-900/80 border-gray-800 hover:border-blue-500/30 hover:bg-blue-500/10'
+    : 'bg-white border-gray-200 hover:border-blue-200 hover:bg-blue-50/45';
 
-  const activeClasses = isActive ? 'ring-2 ring-indigo-400 ring-offset-1' : '';
+  const activeClasses = isActive ? 'ring-2 ring-blue-400/70 ring-offset-1 ring-offset-transparent' : '';
 
   const removeButtonClasses = darkMode
-    ? 'hover:bg-gray-800 text-gray-400 hover:text-red-400'
-    : 'hover:bg-gray-200 text-gray-500 hover:text-red-500';
+    ? 'text-gray-500 hover:bg-red-500/10 hover:text-red-300'
+    : 'text-gray-400 hover:bg-red-50 hover:text-red-600';
 
   const handleClasses = darkMode
-    ? 'border-gray-600 text-gray-400 hover:bg-gray-600'
-    : 'border-gray-200 text-gray-500 hover:bg-gray-200';
+    ? 'text-gray-500 hover:bg-blue-500/10 hover:text-blue-300'
+    : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600';
 
   const reorderTitle = canReorder
     ? 'Drag to reorder'
@@ -889,7 +897,7 @@ const SortableSetlistItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative p-4 rounded-lg border cursor-pointer transition-all duration-200 ${baseClasses} hover:shadow-md ${activeClasses}`}
+      className={`group relative rounded-xl border p-3.5 cursor-pointer transition-all duration-200 ${baseClasses} hover:shadow-sm ${activeClasses}`}
       onClick={handleLoad}
       onKeyDown={handleKeyDown}
       role="button"
@@ -902,7 +910,7 @@ const SortableSetlistItem = ({
               <button
                 type="button"
                 ref={setActivatorNodeRef}
-                className={`mt-1 hidden sm:flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${handleClasses} ${canReorder ? 'cursor-grab active:cursor-grabbing opacity-100' : 'cursor-not-allowed opacity-40'}`}
+                className={`mt-0.5 hidden sm:flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${handleClasses} ${canReorder ? 'cursor-grab active:cursor-grabbing opacity-100' : 'cursor-not-allowed opacity-40'}`}
                 onClick={(event) => event.stopPropagation()}
                 aria-label="Reorder setlist item"
                 {...(canReorder ? attributes : {})}
@@ -913,11 +921,11 @@ const SortableSetlistItem = ({
             </Tooltip>
           )}
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-base truncate mb-1">
+            <h3 className="truncate text-sm font-semibold">
               {file.displayName}
             </h3>
-            <div className={`flex items-center gap-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              <Clock className="w-3 h-3" />
+            <div className={`mt-1 flex items-center gap-1.5 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              <Clock className="h-3 w-3" />
               <span>{formatDate(file.lastModified)}</span>
             </div>
           </div>
@@ -928,9 +936,9 @@ const SortableSetlistItem = ({
             <button
               type="button"
               onClick={handleRemove}
-              className={`opacity-0 group-hover:opacity-100 p-2 rounded-md transition-opacity ${removeButtonClasses}`}
+              className={`p-2 rounded-lg opacity-0 transition-all group-hover:opacity-100 focus-visible:opacity-100 ${removeButtonClasses}`}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </Tooltip>
         )}

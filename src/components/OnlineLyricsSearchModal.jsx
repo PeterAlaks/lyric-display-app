@@ -477,8 +477,12 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
       : (darkMode ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-100'),
   ].join(' ');
   const inputClasses = darkMode
-    ? 'h-10 border-gray-700 bg-gray-950 text-white placeholder-gray-500 pr-10'
-    : 'h-10 pr-10';
+    ? 'h-10 rounded-full border-gray-700/70 bg-gray-800/90 pl-10 pr-10 text-[13px] text-white placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20'
+    : 'h-10 rounded-full border-gray-200 bg-white pl-10 pr-10 text-[13px] text-gray-900 placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15';
+  const searchIconClass = darkMode ? 'text-gray-500' : 'text-gray-400';
+  const clearSearchButtonClass = darkMode
+    ? 'text-gray-400 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+    : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
   const clearSearch = () => {
     setQuery('');
     setShowFullResults(false);
@@ -574,6 +578,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                 </div>
                 <div className="flex min-w-0 flex-1 gap-2">
                   <div className="relative min-w-0 flex-1">
+                    <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${searchIconClass}`} />
                     <Input
                       type="text"
                       value={query}
@@ -606,10 +611,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     {query && (
                       <button
                         onClick={clearSearch}
-                        className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors ${darkMode
-                          ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                          }`}
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 transition-all ${clearSearchButtonClass}`}
                         aria-label="Clear search"
                       >
                         <X className="h-4 w-4" />
@@ -635,7 +637,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                   <Button
                     onClick={handlePrimarySearch}
                     disabled={primarySearchDisabled}
-                    className="h-10 w-24 shrink-0 justify-center"
+                    className="h-10 w-24 shrink-0 justify-center rounded-full"
                   >
                     {isLibrariesMode ? <Search className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
                     {isLibrariesMode ? 'Search' : 'Open'}

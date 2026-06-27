@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle2, Monitor, Network, Projector, Power, ScreenShare, Tv2, Radio } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Monitor, Network, Projector, Power, ScreenShare, Tv2, Radio, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useToast from '@/hooks/useToast';
 import useLyricsStore from '@/context/LyricsStore';
@@ -32,7 +32,7 @@ const projectionTargetValue = (projection) => {
 };
 
 const projectionTargetLabel = (projection) => {
-  if (!projection) return 'Unknown target';
+  if (!projection) return 'Unknown';
   if (projection.targetType === 'desktop') return 'This Monitor';
   return projection.displayName || 'External Display';
 };
@@ -51,6 +51,32 @@ const outputIcon = (value) => {
   return Tv2;
 };
 
+/* ─── Section header ──────────────────────────────────────── */
+function SectionHeader({ icon: Icon, label, aside, darkMode }) {
+  const d = darkMode;
+  return (
+    <div className={cn(
+      'sticky top-0 z-10 flex items-center gap-1.5 border-b px-3 py-2.5',
+      d ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'
+    )}>
+      <Icon className={cn('h-3.5 w-3.5', d ? 'text-gray-500' : 'text-gray-400')} />
+      <span className={cn('text-[10px] font-semibold uppercase tracking-widest', d ? 'text-gray-400' : 'text-gray-500')}>{label}</span>
+      {aside && <div className="ml-auto">{aside}</div>}
+    </div>
+  );
+}
+
+/* ─── Live badge ──────────────────────────────────────────── */
+function LiveBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-500 ring-1 ring-inset ring-emerald-500/25">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      Live
+    </span>
+  );
+}
+
+/* ─── Main component ──────────────────────────────────────── */
 const ProjectOutputModal = ({
   darkMode,
   onClose,
@@ -76,7 +102,7 @@ const ProjectOutputModal = ({
   const [stoppingOutputKey, setStoppingOutputKey] = React.useState(null);
 
   React.useEffect(() => {
-    if (!outputOptions.some((option) => option.value === selectedOutput)) {
+    if (!outputOptions.some((o) => o.value === selectedOutput)) {
       setSelectedOutput(outputOptions[0]?.value || 'output1');
     }
   }, [outputOptions, selectedOutput]);
@@ -90,15 +116,14 @@ const ProjectOutputModal = ({
       const externals = Array.isArray(result.externalDisplays)
         ? result.externalDisplays
         : (Array.isArray(result.displays) ? result.displays.filter((d) => !d.primary) : []);
-      const excludedOutputs = new Set(excludedOutputKeys);
+      const excluded = new Set(excludedOutputKeys);
       const nextProjections = (Array.isArray(result.projections) ? result.projections : [])
-        .filter((entry) => entry?.outputKey && !excludedOutputs.has(entry.outputKey));
+        .filter((e) => e?.outputKey && !excluded.has(e.outputKey));
       setExternalDisplays(externals);
       setProjections(nextProjections);
       return { projections: nextProjections, externalDisplays: externals };
-    } catch (error) {
-      console.warn('Failed to load projection state:', error);
-      return null;
+    } catch (err) {
+      console.warn('Failed to load projection state:', err);
     } finally {
       setLoadingState(false);
     }
@@ -108,60 +133,47 @@ const ProjectOutputModal = ({
 
   React.useEffect(() => {
     if (!preferredDisplayId) return;
-    if (!externalDisplays.some((display) => String(display.id) === String(preferredDisplayId))) return;
+    if (!externalDisplays.some((d) => String(d.id) === String(preferredDisplayId))) return;
     setSelectedTarget(String(preferredDisplayId));
   }, [preferredDisplayId, externalDisplays]);
 
   const activeProjection = React.useMemo(
-    () => projections.find((entry) => entry.outputKey === selectedOutput) || null,
+    () => projections.find((e) => e.outputKey === selectedOutput) || null,
     [projections, selectedOutput]
   );
 
   React.useEffect(() => {
     if (!activeProjection) return;
-    const nextTarget = activeProjection.targetType === 'display' && activeProjection.displayId !== null
+    const next = activeProjection.targetType === 'display' && activeProjection.displayId !== null
       ? String(activeProjection.displayId)
       : DESKTOP_TARGET;
-    setSelectedTarget((prev) => (prev === nextTarget ? prev : nextTarget));
+    setSelectedTarget((prev) => (prev === next ? prev : next));
   }, [activeProjection]);
 
   const targetOptions = React.useMemo(() => {
-    const base = [{
-      value: DESKTOP_TARGET,
-      label: 'This Monitor',
-      sub: 'Fullscreen projection; press Esc to exit',
-      icon: Monitor,
-    }];
-    externalDisplays.forEach((display, index) => {
-      base.push({
-        value: String(display.id),
-        label: displayLabel(display, index),
-        sub: 'External display',
-        icon: Tv2,
-      });
+    const base = [{ value: DESKTOP_TARGET, label: 'This Monitor', sub: 'Fullscreen · press Esc to exit', icon: Monitor }];
+    externalDisplays.forEach((display, i) => {
+      base.push({ value: String(display.id), label: displayLabel(display, i), sub: 'External display', icon: Tv2 });
     });
     return base;
   }, [externalDisplays]);
 
   const selectedTargetInfo = React.useMemo(
-    () => targetOptions.find((option) => option.value === selectedTarget) || targetOptions[0],
+    () => targetOptions.find((o) => o.value === selectedTarget) || targetOptions[0],
     [targetOptions, selectedTarget]
   );
 
   React.useEffect(() => {
-    if (targetOptions.some((option) => option.value === selectedTarget)) return;
-    setSelectedTarget(DESKTOP_TARGET);
+    if (!targetOptions.some((o) => o.value === selectedTarget)) setSelectedTarget(DESKTOP_TARGET);
   }, [selectedTarget, targetOptions]);
 
   const activeProjections = React.useMemo(
-    () => projections.filter((entry) => entry && entry.outputKey),
+    () => projections.filter((e) => e && e.outputKey),
     [projections]
   );
 
   const targetOccupant = React.useMemo(() => (
-    activeProjections.find((entry) => (
-      entry.outputKey !== selectedOutput && projectionTargetValue(entry) === selectedTarget
-    )) || null
+    activeProjections.find((e) => e.outputKey !== selectedOutput && projectionTargetValue(e) === selectedTarget) || null
   ), [activeProjections, selectedOutput, selectedTarget]);
 
   const isActiveOnSelectedTarget = React.useMemo(() => (
@@ -172,13 +184,13 @@ const ProjectOutputModal = ({
   const isStopping = Boolean(stoppingOutputKey);
 
   const projectActionLabel = React.useMemo(() => {
-    if (isProjecting) return 'Projecting…';
-    const outputLabel = formatOutputLabel(selectedOutput);
-    const targetLabel = selectedTargetInfo?.label || 'Selected Target';
-    if (targetOccupant && activeProjection) return `Replace & Move ${outputLabel}`;
-    if (targetOccupant) return `Replace with ${outputLabel}`;
-    if (activeProjection) return `Move to ${targetLabel}`;
-    return `Project to ${targetLabel}`;
+    if (isProjecting) return 'Starting…';
+    const ol = formatOutputLabel(selectedOutput);
+    const tl = selectedTargetInfo?.label || 'Target';
+    if (targetOccupant && activeProjection) return `Replace & Move ${ol}`;
+    if (targetOccupant) return `Replace with ${ol}`;
+    if (activeProjection) return `Move to ${tl}`;
+    return `Project to ${tl}`;
   }, [isProjecting, targetOccupant, activeProjection, selectedOutput, selectedTargetInfo]);
 
   const handleProject = async () => {
@@ -195,22 +207,20 @@ const ProjectOutputModal = ({
       };
       const result = await window.electronAPI.display.projectOutput(payload);
       if (!result?.success) throw new Error(result?.error || 'Could not start projection.');
-      const displacedOutputKey = result?.displacedOutputKey || null;
-      const displacementMessage = displacedOutputKey
-        ? ` ${formatOutputLabel(displacedOutputKey)} was turned off on this target.` : '';
+      const displaced = result?.displacedOutputKey || null;
       showToast({
-        title: 'Projection started',
-        message: `${formatOutputLabel(selectedOutput)} is now projecting to ${selectedTargetInfo?.label || 'selected target'}.${displacementMessage}`,
+        title: 'Projecting',
+        message: `${formatOutputLabel(selectedOutput)} → ${selectedTargetInfo?.label || 'target'}.${displaced ? ` ${formatOutputLabel(displaced)} was turned off.` : ''}`,
         variant: 'success',
       });
       const nextState = await loadProjectionState();
       if (!activeProjection && nextState?.projections) {
-        const projectedKeys = new Set(nextState.projections.map((entry) => entry.outputKey));
-        const nextOutput = outputOptions.find((option) => !projectedKeys.has(option.value));
+        const projected = new Set(nextState.projections.map((e) => e.outputKey));
+        const nextOutput = outputOptions.find((o) => !projected.has(o.value));
         if (nextOutput?.value) setSelectedOutput(nextOutput.value);
       }
-    } catch (error) {
-      showToast({ title: 'Projection failed', message: error?.message || 'Could not start projection.', variant: 'error' });
+    } catch (err) {
+      showToast({ title: 'Projection failed', message: err?.message || 'Could not start projection.', variant: 'error' });
       await loadProjectionState();
     } finally {
       setIsProjecting(false);
@@ -219,44 +229,43 @@ const ProjectOutputModal = ({
 
   const handleStopProjection = async (outputKey = selectedOutput) => {
     if (!window?.electronAPI?.display?.stopProjection) {
-      showToast({ title: 'Projection unavailable', message: 'Display projection API is not available.', variant: 'error' });
+      showToast({ title: 'Unavailable', message: 'Display projection API is not available.', variant: 'error' });
       return;
     }
     setStoppingOutputKey(outputKey);
     try {
       const result = await window.electronAPI.display.stopProjection({ outputKey });
       if (!result?.success) throw new Error(result?.error || 'Could not stop projection.');
-      showToast({ title: 'Projection stopped', message: `${formatOutputLabel(outputKey)} projection has been turned off.`, variant: 'success' });
-      setProjections((current) => current.filter((entry) => entry?.outputKey !== outputKey));
+      showToast({ title: 'Output stopped', message: `${formatOutputLabel(outputKey)} has been turned off.`, variant: 'success' });
+      setProjections((cur) => cur.filter((e) => e?.outputKey !== outputKey));
       await loadProjectionState({ excludedOutputKeys: [outputKey] });
-    } catch (error) {
-      showToast({ title: 'Stop failed', message: error?.message || 'Could not stop projection.', variant: 'error' });
+    } catch (err) {
+      showToast({ title: 'Stop failed', message: err?.message || 'Could not stop projection.', variant: 'error' });
     } finally {
       setStoppingOutputKey(null);
     }
   };
 
   const detectionBanner = triggerSource !== 'manual' && Array.isArray(detectedDisplays) && detectedDisplays.length > 0;
-
-  const dark = darkMode;
+  const d = darkMode;
 
   return (
-    <div className="flex h-[560px] max-h-full min-h-0 flex-col overflow-hidden rounded-b-2xl">
+    <div className="flex flex-col" style={{ height: 560, maxHeight: '100%' }}>
       {/* Scrollable body */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
 
         {/* Detection banner */}
         {detectionBanner && (
           <div className={cn(
-            'flex items-start gap-3 rounded-xl border px-4 py-3',
-            dark ? 'border-blue-600/40 bg-blue-500/10' : 'border-blue-200 bg-blue-50'
+            'flex items-start gap-3 rounded-xl px-4 py-3 border',
+            d ? 'bg-blue-500/10 border-blue-500/20 text-blue-200' : 'bg-blue-50 border-blue-100 text-blue-800'
           )}>
-            <Monitor className={cn('mt-0.5 h-4 w-4 shrink-0', dark ? 'text-blue-300' : 'text-blue-600')} />
+            <Monitor className={cn('mt-0.5 h-4 w-4 shrink-0', d ? 'text-blue-400' : 'text-blue-600')} />
             <div>
-              <p className={cn('text-sm font-semibold', dark ? 'text-blue-100' : 'text-blue-900')}>
+              <p className="text-sm font-semibold">
                 {detectedDisplays.length > 1 ? `${detectedDisplays.length} External Displays Found` : 'External Display Found'}
               </p>
-              <p className={cn('mt-0.5 text-xs leading-relaxed', dark ? 'text-blue-200/80' : 'text-blue-700')}>
+              <p className={cn('mt-0.5 text-xs leading-relaxed', d ? 'text-blue-300/80' : 'text-blue-600')}>
                 {detectedDisplays.length > 1
                   ? 'Pick what to show and choose a destination for each.'
                   : 'Pick what to show, then select the detected display as the destination.'}
@@ -265,28 +274,21 @@ const ProjectOutputModal = ({
           </div>
         )}
 
-        {/* Two-column layout: Output picker + Destination picker */}
+        {/* Output + Destination columns */}
         <div className="grid grid-cols-2 gap-3">
-          {/* ── Output column ── */}
-          <div className={cn('overflow-hidden rounded-xl border', dark ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-white')}>
-            <div className="max-h-80 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
-              <div className={cn(
-                'sticky top-0 z-10 flex items-center gap-1.5 border-b px-3 py-2.5',
-                dark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
-              )}>
-                <Projector className={cn('h-3.5 w-3.5', dark ? 'text-blue-300' : 'text-blue-600')} />
-                <span className={cn('text-xs font-semibold tracking-wide uppercase', dark ? 'text-gray-300' : 'text-gray-500')}>Output</span>
-                {activeProjection && (
-                  <span className={cn('ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-medium', dark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700')}>
-                    Live
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-1.5 px-3 pb-3 pt-2 pr-1.5">
+          {/* ── Output ── */}
+          <div className={cn('rounded-xl border overflow-hidden', d ? 'border-gray-800 bg-gray-900/60' : 'border-gray-200 bg-white')}>
+            <div className="max-h-72 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+              <SectionHeader
+                icon={Projector}
+                label="Output"
+                darkMode={d}
+                aside={activeProjection ? <LiveBadge /> : null}
+              />
+              <div className="p-2 space-y-1">
                 {outputOptions.map((option) => {
                   const isSelected = option.value === selectedOutput;
-                  const projection = activeProjections.find((entry) => entry.outputKey === option.value);
+                  const projection = activeProjections.find((e) => e.outputKey === option.value);
                   const Icon = outputIcon(option.value);
                   return (
                     <button
@@ -294,26 +296,30 @@ const ProjectOutputModal = ({
                       type="button"
                       onClick={() => setSelectedOutput(option.value)}
                       className={cn(
-                        'w-full rounded-lg border px-2.5 py-2 text-left transition-all duration-150',
-                        dark
-                          ? 'border-gray-700 bg-gray-900/40 hover:border-blue-500/50 hover:bg-gray-900/70'
-                          : 'border-gray-200 bg-gray-50/80 hover:border-blue-300 hover:bg-blue-50/50',
-                        isSelected && (dark
-                          ? 'border-blue-400/70 bg-blue-500/15 ring-1 ring-blue-400/30'
-                          : 'border-blue-400 bg-blue-50 ring-1 ring-blue-200/80')
+                        'w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-150 group',
+                        isSelected
+                          ? d
+                            ? 'border-blue-500/50 bg-blue-500/10 ring-1 ring-blue-500/20'
+                            : 'border-blue-300 bg-blue-50/80 ring-1 ring-blue-100'
+                          : d
+                          ? 'border-gray-800 bg-gray-900/30 hover:border-gray-700 hover:bg-gray-900/60'
+                          : 'border-gray-100 bg-gray-50/50 hover:border-gray-200 hover:bg-white'
                       )}
                     >
                       <div className="flex items-center gap-2">
-                        <Icon className={cn('h-3.5 w-3.5 shrink-0', isSelected
-                          ? (dark ? 'text-blue-300' : 'text-blue-600')
-                          : (dark ? 'text-gray-500' : 'text-gray-400')
+                        <Icon className={cn('h-3.5 w-3.5 shrink-0',
+                          isSelected
+                            ? d ? 'text-blue-400' : 'text-blue-600'
+                            : d ? 'text-gray-600' : 'text-gray-400'
                         )} />
-                        <span className={cn('flex-1 truncate text-xs font-semibold', dark ? 'text-gray-100' : 'text-gray-800')}>
+                        <span className={cn('flex-1 truncate text-xs font-semibold',
+                          isSelected ? (d ? 'text-blue-200' : 'text-blue-800') : (d ? 'text-gray-200' : 'text-gray-700')
+                        )}>
                           {option.label}
                         </span>
-                        {isSelected && <CheckCircle2 className={cn('h-3.5 w-3.5 shrink-0', dark ? 'text-blue-300' : 'text-blue-500')} />}
+                        {isSelected && <CheckCircle2 className={cn('h-3.5 w-3.5 shrink-0', d ? 'text-blue-400' : 'text-blue-500')} />}
                       </div>
-                      <p className={cn('mt-0.5 truncate pl-5.5 text-[10px]', dark ? 'text-gray-500' : 'text-gray-400')}>
+                      <p className={cn('mt-0.5 pl-5.5 text-[10px]', d ? 'text-gray-600' : 'text-gray-400')}>
                         {projection ? `Live → ${projectionTargetLabel(projection)}` : outputHint(option.value)}
                       </p>
                     </button>
@@ -323,21 +329,14 @@ const ProjectOutputModal = ({
             </div>
           </div>
 
-          {/* ── Destination column ── */}
-          <div className={cn('overflow-hidden rounded-xl border', dark ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-white')}>
-            <div className="max-h-80 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
-              <div className={cn(
-                'sticky top-0 z-10 flex items-center gap-1.5 border-b px-3 py-2.5',
-                dark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
-              )}>
-                <Monitor className={cn('h-3.5 w-3.5', dark ? 'text-purple-300' : 'text-purple-600')} />
-                <span className={cn('text-xs font-semibold tracking-wide uppercase', dark ? 'text-gray-300' : 'text-gray-500')}>Destination</span>
-              </div>
-
-              <div className="space-y-1.5 px-3 pb-3 pt-2 pr-1.5">
+          {/* ── Destination ── */}
+          <div className={cn('rounded-xl border overflow-hidden', d ? 'border-gray-800 bg-gray-900/60' : 'border-gray-200 bg-white')}>
+            <div className="max-h-72 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+              <SectionHeader icon={Monitor} label="Destination" darkMode={d} />
+              <div className="p-2 space-y-1">
                 {targetOptions.map((option) => {
                   const isSelected = option.value === selectedTarget;
-                  const occupant = activeProjections.find((entry) => projectionTargetValue(entry) === option.value);
+                  const occupant = activeProjections.find((e) => projectionTargetValue(e) === option.value);
                   const selectedOutputOwnsTarget = occupant?.outputKey === selectedOutput;
                   const Icon = option.icon || Monitor;
                   return (
@@ -346,40 +345,46 @@ const ProjectOutputModal = ({
                       type="button"
                       onClick={() => setSelectedTarget(option.value)}
                       className={cn(
-                        'w-full rounded-lg border px-2.5 py-2 text-left transition-all duration-150',
-                        dark
-                          ? 'border-gray-700 bg-gray-900/40 hover:border-purple-500/50 hover:bg-gray-900/70'
-                          : 'border-gray-200 bg-gray-50/80 hover:border-purple-300 hover:bg-purple-50/50',
-                        isSelected && (dark
-                          ? 'border-purple-400/70 bg-purple-500/15 ring-1 ring-purple-400/30'
-                          : 'border-purple-400 bg-purple-50 ring-1 ring-purple-200/80')
+                        'w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-150',
+                        isSelected
+                          ? d
+                            ? 'border-violet-500/50 bg-violet-500/10 ring-1 ring-violet-500/20'
+                            : 'border-violet-300 bg-violet-50/80 ring-1 ring-violet-100'
+                          : d
+                          ? 'border-gray-800 bg-gray-900/30 hover:border-gray-700 hover:bg-gray-900/60'
+                          : 'border-gray-100 bg-gray-50/50 hover:border-gray-200 hover:bg-white'
                       )}
                     >
                       <div className="flex items-center gap-2">
-                        <Icon className={cn('h-3.5 w-3.5 shrink-0', isSelected
-                          ? (dark ? 'text-purple-300' : 'text-purple-600')
-                          : (dark ? 'text-gray-500' : 'text-gray-400')
+                        <Icon className={cn('h-3.5 w-3.5 shrink-0',
+                          isSelected
+                            ? d ? 'text-violet-400' : 'text-violet-600'
+                            : d ? 'text-gray-600' : 'text-gray-400'
                         )} />
-                        <span className={cn('flex-1 truncate text-xs font-semibold', dark ? 'text-gray-100' : 'text-gray-800')}>
+                        <span className={cn('flex-1 truncate text-xs font-semibold',
+                          isSelected ? (d ? 'text-violet-200' : 'text-violet-800') : (d ? 'text-gray-200' : 'text-gray-700')
+                        )}>
                           {option.label}
                         </span>
-                        {isSelected && <CheckCircle2 className={cn('h-3.5 w-3.5 shrink-0', dark ? 'text-purple-300' : 'text-purple-500')} />}
+                        {isSelected && <CheckCircle2 className={cn('h-3.5 w-3.5 shrink-0', d ? 'text-violet-400' : 'text-violet-500')} />}
                       </div>
-                      <p className={cn('mt-0.5 pl-5.5 text-[10px]', dark ? 'text-gray-500' : 'text-gray-400')}>
+                      <p className={cn('mt-0.5 pl-5.5 text-[10px]', d ? 'text-gray-600' : 'text-gray-400')}>
                         {option.sub}
                       </p>
                       {occupant && (
                         <div className={cn(
-                          'mt-1.5 flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px]',
+                          'mt-1.5 flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium',
                           selectedOutputOwnsTarget
-                            ? (dark ? 'bg-green-500/15 text-green-300' : 'bg-green-50 text-green-700')
-                            : (dark ? 'bg-amber-500/10 text-amber-300' : 'bg-amber-50 text-amber-700')
+                            ? (d ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-700')
+                            : (d ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-50 text-amber-700')
                         )}>
                           {selectedOutputOwnsTarget
                             ? <CheckCircle2 className="h-3 w-3 shrink-0" />
                             : <AlertTriangle className="h-3 w-3 shrink-0" />}
                           <span className="truncate">
-                            {selectedOutputOwnsTarget ? 'Currently showing this' : `In use: ${formatOutputLabel(occupant.outputKey)}`}
+                            {selectedOutputOwnsTarget
+                              ? 'Currently showing this output'
+                              : `In use by: ${formatOutputLabel(occupant.outputKey)}`}
                           </span>
                         </div>
                       )}
@@ -388,51 +393,54 @@ const ProjectOutputModal = ({
                 })}
               </div>
             </div>
-
-            {/* Conflict warning */}
-            {targetOccupant && (
-              <div className={cn('mx-3 mb-3 mt-2 rounded-lg px-2.5 py-2 text-[11px] leading-relaxed', dark ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-50 text-amber-700')}>
-                <AlertTriangle className="mb-0.5 mr-1 inline h-3 w-3" />
-                Replacing {formatOutputLabel(targetOccupant.outputKey)} with {formatOutputLabel(selectedOutput)}.
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Active projections strip */}
+        {/* Conflict warning */}
+        {targetOccupant && (
+          <div className={cn(
+            'flex items-start gap-2.5 rounded-xl px-3.5 py-2.5 text-xs border',
+            d ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-100 text-amber-700'
+          )}>
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>
+              <strong>{formatOutputLabel(targetOccupant.outputKey)}</strong> is already using this destination and will be replaced by <strong>{formatOutputLabel(selectedOutput)}</strong>.
+            </span>
+          </div>
+        )}
+
+        {/* Active projections */}
         {activeProjections.length > 0 && (
-          <div className={cn('rounded-xl border p-3 space-y-1.5', dark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50')}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-                <span className={cn('text-xs font-semibold tracking-wide uppercase', dark ? 'text-gray-400' : 'text-gray-500')}>
-                  Live
-                </span>
-                {loadingState && <span className={cn('text-[10px]', dark ? 'text-gray-500' : 'text-gray-400')}>Refreshing…</span>}
-              </div>
+          <div className={cn('rounded-xl border overflow-hidden', d ? 'border-gray-800' : 'border-gray-200')}>
+            <div className={cn('flex items-center gap-2 px-3.5 py-2.5 border-b', d ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-100')}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className={cn('text-[10px] font-semibold uppercase tracking-widest', d ? 'text-gray-400' : 'text-gray-500')}>
+                Live Outputs
+              </span>
+              {loadingState && <Loader2 className={cn('ml-1 h-3 w-3 animate-spin', d ? 'text-gray-600' : 'text-gray-400')} />}
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className={cn('flex flex-wrap gap-2 p-3', d ? 'bg-gray-900/40' : 'bg-white')}>
               {activeProjections.map((entry) => {
-                const isSelected = entry.outputKey === selectedOutput;
-                const isStoppingThis = stoppingOutputKey === entry.outputKey;
+                const isSel = entry.outputKey === selectedOutput;
+                const isStopping2 = stoppingOutputKey === entry.outputKey;
                 return (
                   <div
                     key={`${entry.outputKey}-${entry.windowId || entry.displayId || entry.targetType}`}
                     className={cn(
-                      'flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition-colors',
-                      dark
-                        ? (isSelected ? 'border-green-500/40 bg-green-500/15 text-green-100' : 'border-gray-700 bg-gray-900/50 text-gray-300')
-                        : (isSelected ? 'border-green-300 bg-green-50 text-green-900 ring-1 ring-green-200' : 'border-gray-200 bg-white text-gray-700')
+                      'flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs',
+                      isSel
+                        ? d ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : d ? 'border-gray-800 bg-gray-900/60 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-600'
                     )}
                   >
                     <button
                       type="button"
                       onClick={() => setSelectedOutput(entry.outputKey)}
-                      className="flex items-center gap-1.5 text-left"
+                      className="flex items-center gap-1.5"
                     >
                       <ScreenShare className="h-3.5 w-3.5 shrink-0" />
                       <span className="font-medium">{formatOutputLabel(entry.outputKey)}</span>
-                      <span className={cn('text-[10px]', dark ? 'text-gray-500' : 'text-gray-400')}>
+                      <span className={cn('text-[10px]', d ? 'text-gray-600' : 'text-gray-400')}>
                         → {projectionTargetLabel(entry)}
                       </span>
                     </button>
@@ -441,11 +449,11 @@ const ProjectOutputModal = ({
                       onClick={() => handleStopProjection(entry.outputKey)}
                       disabled={isProjecting || isStopping}
                       className={cn(
-                        'ml-1 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40',
-                        dark ? 'text-red-400 hover:bg-red-500/20 hover:text-red-300' : 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                        'ml-0.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40',
+                        d ? 'text-rose-400 hover:bg-rose-500/15' : 'text-rose-600 hover:bg-rose-50'
                       )}
                     >
-                      {isStoppingThis ? 'Stopping…' : <><Power className="h-2.5 w-2.5" /> Off</>}
+                      {isStopping2 ? 'Stopping…' : <><Power className="h-2.5 w-2.5" /> Off</>}
                     </button>
                   </div>
                 );
@@ -455,42 +463,49 @@ const ProjectOutputModal = ({
         )}
 
         {activeProjections.length === 0 && !loadingState && (
-          <div className={cn('rounded-xl border border-dashed px-4 py-3 text-center text-xs', dark ? 'border-gray-700 text-gray-500' : 'border-gray-300 text-gray-400')}>
-            Nothing is projecting yet
+          <div className={cn(
+            'rounded-xl border border-dashed px-4 py-4 text-center',
+            d ? 'border-gray-800 text-gray-600' : 'border-gray-200 text-gray-400'
+          )}>
+            <Projector className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
+            <p className="text-xs">No outputs are projecting yet</p>
           </div>
         )}
 
         {/* Integration callout */}
-        <div className={cn('flex items-center gap-3 rounded-xl border px-3.5 py-3', dark ? 'border-cyan-700/40 bg-cyan-500/8' : 'border-cyan-200 bg-cyan-50')}>
-          <Network className={cn('h-4 w-4 shrink-0', dark ? 'text-cyan-300' : 'text-cyan-600')} />
+        <div className={cn(
+          'flex items-center gap-3 rounded-xl border px-4 py-3',
+          d ? 'border-cyan-500/20 bg-cyan-500/5' : 'border-cyan-100 bg-cyan-50'
+        )}>
+          <Network className={cn('h-4 w-4 shrink-0', d ? 'text-cyan-400' : 'text-cyan-600')} />
           <div className="flex-1 min-w-0">
-            <p className={cn('text-sm font-semibold', dark ? 'text-cyan-100' : 'text-cyan-900')}>Using OBS, vMix, or Wirecast?</p>
-            <p className={cn('text-xs', dark ? 'text-cyan-300/70' : 'text-cyan-700')}>Use a browser source for production software.</p>
+            <p className={cn('text-xs font-semibold', d ? 'text-cyan-300' : 'text-cyan-900')}>Using OBS, vMix, or Wirecast?</p>
+            <p className={cn('text-[10px] mt-0.5', d ? 'text-cyan-400/70' : 'text-cyan-600')}>Use a browser source for production software.</p>
           </div>
           <Button
             type="button"
+            size="sm"
             variant="outline"
             onClick={() => onOpenIntegrationGuide?.()}
             className={cn(
-              'shrink-0',
-              dark ? 'bg-transparent border-cyan-500/50 text-cyan-100 hover:bg-cyan-500/20 hover:border-cyan-400' : 'border-cyan-300 text-cyan-800 hover:bg-cyan-100'
+              'shrink-0 text-xs h-8',
+              d ? 'border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/15 bg-transparent' : 'border-cyan-200 text-cyan-700 hover:bg-cyan-100'
             )}
           >
-            Integration Guide
+            Guide
           </Button>
         </div>
       </div>
 
       {/* Footer */}
       <div className={cn(
-        'flex flex-shrink-0 items-center justify-between gap-3 rounded-b-2xl border-t px-5 py-6',
-        dark ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'
+        'flex shrink-0 items-center justify-between gap-3 border-t px-5 py-4',
+        d ? 'border-gray-800 bg-gray-900/60' : 'border-gray-100 bg-gray-50'
       )}>
         <Button
           variant="outline"
-          size="lg"
           onClick={() => onClose?.({ dismissed: true })}
-          className={dark ? 'bg-transparent border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white hover:border-gray-500' : ''}
+          className={cn(d ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white bg-transparent' : '')}
         >
           Close
         </Button>
@@ -499,10 +514,9 @@ const ProjectOutputModal = ({
           {activeProjection && (
             <Button
               variant="destructive"
-              size="lg"
               onClick={() => handleStopProjection(selectedOutput)}
               disabled={isStopping || isProjecting}
-              className={cn('gap-1.5', dark ? 'bg-red-600 hover:bg-red-700 text-white border-0' : '')}
+              className="gap-1.5"
             >
               <Power className="h-3.5 w-3.5" />
               {stoppingOutputKey === selectedOutput ? 'Stopping…' : 'Turn Off'}
@@ -510,12 +524,16 @@ const ProjectOutputModal = ({
           )}
           {showProjectAction && (
             <Button
-              size="lg"
               onClick={handleProject}
               disabled={isProjecting || isStopping}
-              className={cn('gap-1.5', dark ? 'bg-blue-600 hover:bg-blue-700 text-white border-0' : 'bg-blue-600 hover:bg-blue-700 text-white')}
+              className={cn(
+                'gap-1.5',
+                d ? 'bg-blue-600 hover:bg-blue-700 text-white border-0' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              )}
             >
-              <Projector className="h-3.5 w-3.5" />
+              {isProjecting
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <Projector className="h-3.5 w-3.5" />}
               {projectActionLabel}
             </Button>
           )}

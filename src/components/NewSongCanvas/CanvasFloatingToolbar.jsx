@@ -16,7 +16,7 @@ const CanvasFloatingToolbar = ({
   return (
     <div
       ref={toolbarRef}
-      className={`pointer-events-auto absolute flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium shadow-sm transition-all duration-150 ${darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-700 border-gray-200'}`}
+      className={`pointer-events-auto absolute flex items-center gap-1 rounded-full border px-1.5 py-1 text-xs font-medium shadow-lg backdrop-blur transition-all duration-150 ${darkMode ? 'bg-gray-900/95 text-gray-100 border-gray-800' : 'bg-white/95 text-gray-700 border-gray-200'}`}
       style={{
         top: toolbarTop,
         left: toolbarLeft,
@@ -27,7 +27,7 @@ const CanvasFloatingToolbar = ({
         <>
           <button
             type="button"
-            className={`rounded-sm px-2 py-1 transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 focus-visible:bg-gray-700' : 'hover:bg-gray-100 focus-visible:bg-gray-100'}`}
+            className={`rounded-full px-2.5 py-1 transition-colors duration-150 ${darkMode ? 'hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300' : 'hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'}`}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -38,12 +38,12 @@ const CanvasFloatingToolbar = ({
           >
             Add Translation
           </button>
-          <div className={`h-4 w-px ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+          <div className={`h-4 w-px ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
         </>
       )}
       <button
         type="button"
-        className={`rounded-sm px-2 py-1 transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 focus-visible:bg-gray-700' : 'hover:bg-gray-100 focus-visible:bg-gray-100'}`}
+        className={`rounded-full px-2.5 py-1 transition-colors duration-150 ${darkMode ? 'hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300' : 'hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'}`}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();

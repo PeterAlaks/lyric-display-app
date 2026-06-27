@@ -52,8 +52,17 @@ const LyricsWorkspace = ({
   totalMatches,
   updateQuickParserSetting,
   useIconOnlyButtons,
-}) => (
-  <div className="flex-1 min-w-0 p-6 flex flex-col h-full">
+}) => {
+  const blueHoverClass = darkMode
+    ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+    : 'bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
+  const mutedDisabledClass = darkMode
+    ? 'bg-transparent text-gray-600 cursor-not-allowed opacity-60'
+    : 'bg-transparent text-gray-400 cursor-not-allowed opacity-60';
+  const actionPadding = useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2';
+
+  return (
+    <div className="flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full">
     <div className="mb-6 flex-shrink-0 min-w-0" ref={headerContainerRef}>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -81,16 +90,14 @@ const LyricsWorkspace = ({
                   onClick={handleIntelligentAutoplayToggle}
                   disabled={remoteAutoplayActive || autoplayActive}
                   className={`p-2 rounded-lg text-xs font-medium transition-all ${remoteAutoplayActive || autoplayActive
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60'
+                    ? mutedDisabledClass
                     : intelligentAutoplayActive
                       ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
-                      : darkMode
-                        ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/30 hover:to-blue-600/30 text-purple-300 border border-purple-500/30'
-                        : 'bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 text-purple-700 border border-purple-300'
+                      : blueHoverClass
                     }`}
                   title={intelligentAutoplayActive ? 'Stop intelligent autoplay' : 'Start intelligent autoplay'}
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="h-[16px] w-[16px]" />
                 </button>
               </Tooltip>
             )}
@@ -107,30 +114,22 @@ const LyricsWorkspace = ({
                   onClick={handleAutoplayToggle}
                   disabled={remoteAutoplayActive || intelligentAutoplayActive}
                   className={`flex items-center gap-2 text-xs font-medium transition-all ${remoteAutoplayActive || intelligentAutoplayActive
-                    ? useIconOnlyButtons
-                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed px-2 py-2 rounded-lg opacity-60'
-                      : 'bg-gray-400 text-gray-600 cursor-not-allowed px-4 py-2 rounded-lg opacity-60'
+                    ? `${mutedDisabledClass} ${actionPadding} rounded-lg`
                     : autoplayActive
                       ? useIconOnlyButtons
                         ? 'bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-lg'
                         : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg'
-                      : useIconOnlyButtons
-                        ? darkMode
-                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-2 py-2 rounded-l-lg'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-2 rounded-l-lg'
-                        : darkMode
-                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-l-lg'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-l-lg'
+                      : `${blueHoverClass} ${actionPadding} rounded-l-lg`
                     }`}
                 >
                   {autoplayActive ? (
                     <>
-                      <Square className="w-4 h-4 flex-shrink-0 fill-current" />
+                      <Square className="h-[16px] w-[16px] flex-shrink-0 fill-current" />
                       {!useIconOnlyButtons && <span className="whitespace-nowrap">Autoplay</span>}
                     </>
                   ) : (
                     <>
-                      <Play className="w-4 h-4 flex-shrink-0" />
+                      <Play className="h-[16px] w-[16px] flex-shrink-0" />
                       {!useIconOnlyButtons && <span className="whitespace-nowrap">Autoplay</span>}
                     </>
                   )}
@@ -142,15 +141,10 @@ const LyricsWorkspace = ({
                       e.stopPropagation();
                       handleOpenAutoplaySettings();
                     }}
-                    className={`flex items-center justify-center ${useIconOnlyButtons ? 'px-1.5' : 'px-2'} py-2 rounded-r-lg transition-colors border-l ${autoplayActive
-                      ? 'bg-green-600 hover:bg-green-700 text-white border-green-500'
-                      : darkMode
-                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
-                      }`}
+                    className={`flex items-center justify-center ${useIconOnlyButtons ? 'px-1.5' : 'px-2'} py-2 rounded-r-lg transition-all ${blueHoverClass}`}
                     title="Autoplay settings"
                   >
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown className="h-[16px] w-[16px]" />
                   </button>
                 )}
               </div>
@@ -160,14 +154,11 @@ const LyricsWorkspace = ({
               <button
                 onClick={handleAddToSetlist}
                 aria-disabled={addDisabled}
-                className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-colors ${addDisabled
-                  ? (darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400')
-                  : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')
-                  } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}
+                className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-all ${addDisabled ? mutedDisabledClass : blueHoverClass} ${actionPadding}`}
                 title={addTitle}
                 style={{ cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.9 : 1 }}
               >
-                <Plus className="w-4 h-4 flex-shrink-0" />
+                <Plus className="h-[16px] w-[16px] flex-shrink-0" />
                 {!useIconOnlyButtons && <span className="whitespace-nowrap overflow-hidden text-ellipsis">Add to Setlist</span>}
               </button>
             </Tooltip>
@@ -175,12 +166,9 @@ const LyricsWorkspace = ({
             <Tooltip content="Edit current lyrics in the song canvas editor" side="bottom">
               <button
                 onClick={handleEditLyrics}
-                className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                  } ${useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2'}`}
+                className={`flex items-center gap-2 rounded-lg text-xs font-medium transition-all ${blueHoverClass} ${actionPadding}`}
               >
-                <Edit className="w-4 h-4 flex-shrink-0" />
+                <Edit className="h-[16px] w-[16px] flex-shrink-0" />
                 {!useIconOnlyButtons && <span className="whitespace-nowrap overflow-hidden text-ellipsis">Edit Lyrics</span>}
               </button>
             </Tooltip>
@@ -196,13 +184,10 @@ const LyricsWorkspace = ({
                     dismissLabel: 'Close'
                   });
                 }}
-                className={`p-2 rounded-lg transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
+                className={`p-2 rounded-lg transition-all ${blueHoverClass}`}
                 title="Song Information"
               >
-                <Info className="w-4 h-4" />
+                <Info className="h-[16px] w-[16px]" />
               </button>
             </Tooltip>
           </div>
@@ -210,7 +195,7 @@ const LyricsWorkspace = ({
       </div>
 
       {hasLyrics && (
-        <div className="mt-3 w-full">
+        <div className="mt-5 w-full">
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <SearchBar
@@ -288,6 +273,7 @@ const LyricsWorkspace = ({
       )}
     </div>
   </div>
-);
+  );
+};
 
 export default LyricsWorkspace;

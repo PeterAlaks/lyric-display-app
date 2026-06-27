@@ -24,14 +24,14 @@ export default function ControlPanelHeaderActions({
   themeMode,
 }) {
   return (
-    <div className="flex items-center mb-6">
+    <div className="mb-6">
       <div className="grid grid-cols-8 gap-2 w-full">
         <Tooltip content={<span>Search and import lyrics from online providers - <strong>Ctrl+Shift+O</strong></span>} side="bottom">
           <button
             className={iconButtonClass(false)}
             onClick={handleOpenOnlineLyricsSearch}
           >
-            <Globe className="w-4 h-4" />
+            <Globe className="h-[16px] w-[16px]" />
           </button>
         </Tooltip>
 
@@ -40,7 +40,7 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(false)}
             onClick={handleOpenSetlist}
           >
-            <ListMusic className="w-4 h-4" />
+            <ListMusic className="h-[16px] w-[16px]" />
           </button>
         </Tooltip>
 
@@ -50,7 +50,7 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
             onClick={handleSyncOutputs}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="h-[16px] w-[16px]" />
           </button>
         </Tooltip>
 
@@ -73,7 +73,7 @@ export default function ControlPanelHeaderActions({
               window.electronAPI?.setDarkMode?.(next);
             }}
           >
-            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {darkMode ? <Sun className="h-[16px] w-[16px]" /> : <Moon className="h-[16px] w-[16px]" />}
           </button>
         </Tooltip>
 
@@ -93,7 +93,7 @@ export default function ControlPanelHeaderActions({
               });
             }}
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="h-[16px] w-[16px]" />
           </button>
         </Tooltip>
 
@@ -113,7 +113,7 @@ export default function ControlPanelHeaderActions({
               });
             }}
           >
-            <Video className="w-4 h-4" />
+            <Video className="h-[16px] w-[16px]" />
           </button>
         </Tooltip>
 
@@ -122,7 +122,7 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(false)}
             onClick={handleOpenTimerControl}
           >
-            <Timer className="w-4 h-4" />
+            <Timer className="h-[16px] w-[16px]" />
           </button>
         </Tooltip>
 

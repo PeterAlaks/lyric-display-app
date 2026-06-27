@@ -1,41 +1,75 @@
 import React, { useCallback, useEffect } from 'react';
-import { Activity, Shield, ShieldAlert, ShieldCheck, RefreshCw, Copy } from 'lucide-react';
+import { Activity, Shield, ShieldAlert, ShieldCheck, RefreshCw, Copy, Check, Wifi } from 'lucide-react';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 import { useLiveSafetyBridge } from '../hooks/useLiveSafetyBridge';
 
+/* ─────────────────────────────────────────────────────────── Live Safety Cell */
 function LiveSafetyStatusCell({ darkMode }) {
   const { liveSafety, setLiveSafetyEnabled, isAuthenticated, ready } = useLiveSafetyBridge();
+  const d = darkMode;
+  const on = Boolean(liveSafety?.enabled);
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Live Safety</p>
-      <div className="flex items-center gap-3">
+    <div className="space-y-1.5">
+      <p className={`text-[10px] font-semibold uppercase tracking-widest ${d ? 'text-gray-500' : 'text-gray-400'}`}>
+        Live Safety
+      </p>
+      <div className="flex items-center gap-2.5">
         <Switch
-          checked={Boolean(liveSafety?.enabled)}
+          checked={on}
           disabled={!isAuthenticated || !ready}
           onCheckedChange={(checked) => setLiveSafetyEnabled(checked)}
-          className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-            ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-            : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-            }`}
-          thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+          className={`h-6! w-11! border-0! transition-colors ${
+            d
+              ? 'data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-gray-700'
+              : 'data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-gray-200'
+          }`}
+          thumbClassName="!h-4 !w-4 data-[state=checked]:!translate-x-5.5 data-[state=unchecked]:!translate-x-1"
         />
-        <p className={`text-sm font-bold ${liveSafety?.enabled ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
-          {liveSafety?.enabled ? 'On' : 'Off'}
-        </p>
+        <span className={`text-xs font-semibold ${on ? 'text-emerald-500' : (d ? 'text-gray-500' : 'text-gray-400')}`}>
+          {on ? 'On' : 'Off'}
+        </span>
       </div>
     </div>
   );
 }
 
-const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshToken, darkMode = false, compact = false, className = '' }) => {
+/* ─────────────────────────────────────────────────────── Status badge helpers */
+const STATUS_CONFIG = {
+  success: { dot: 'bg-emerald-500', label: 'text-emerald-600 dark:text-emerald-400', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20' },
+  warning: { dot: 'bg-amber-400 animate-pulse', label: 'text-amber-600 dark:text-amber-400', badge: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20' },
+  error:   { dot: 'bg-rose-500', label: 'text-rose-600 dark:text-rose-400', badge: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20' },
+  info:    { dot: 'bg-gray-400 animate-pulse', label: 'text-gray-500 dark:text-gray-400', badge: 'bg-gray-50 text-gray-600 ring-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600' },
+};
+
+function StatusBadge({ value, variant }) {
+  const cfg = STATUS_CONFIG[variant] || STATUS_CONFIG.info;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-inset ${cfg.badge}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {value}
+    </span>
+  );
+}
+
+/* ──────────────────────────────────────────────────────── Main component */
+const AuthStatusIndicator = ({
+  authStatus,
+  connectionStatus,
+  onRetry,
+  onRefreshToken,
+  darkMode = false,
+  compact = false,
+  className = '',
+}) => {
   const { showToast } = useToast();
   const { showModal } = useModal();
-
   const [joinCode, setJoinCode] = React.useState(null);
+  const [copied, setCopied] = React.useState(false);
+  const d = darkMode;
 
   const refreshJoinCode = useCallback(async () => {
     try {
@@ -45,69 +79,36 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
         return;
       }
       setJoinCode(null);
-    } catch (error) {
-      console.warn('Failed to load join code', error);
+    } catch {
+      console.warn('Failed to load join code');
     }
   }, []);
 
   useEffect(() => {
     refreshJoinCode();
-
     const handleJoinCodeUpdated = (event) => {
       const nextCode = event?.detail?.joinCode;
-      if (typeof nextCode === 'string') {
-        setJoinCode(nextCode);
-      } else {
-        setJoinCode(null);
-        refreshJoinCode();
-      }
+      if (typeof nextCode === 'string') setJoinCode(nextCode);
+      else { setJoinCode(null); refreshJoinCode(); }
     };
-
     window.addEventListener('join-code-updated', handleJoinCodeUpdated);
     return () => window.removeEventListener('join-code-updated', handleJoinCodeUpdated);
   }, [refreshJoinCode]);
 
   useEffect(() => {
-    const handleAuthError = (event) => {
-      showToast({
-        title: 'Authentication Error',
-        message: event.detail.message || 'Authentication failed',
-        variant: 'error'
-      });
-    };
-
-    const handlePermissionError = (event) => {
-      showToast({
-        title: 'Permission Denied',
-        message: event.detail.message || 'Insufficient permissions',
-        variant: 'warning'
-      });
-    };
-
-    const handleSetlistError = (event) => {
-      showToast({
-        title: 'Setlist Error',
-        message: event.detail.message || 'Operation failed',
-        variant: 'error'
-      });
-    };
-
-    const handleSetlistSuccess = (event) => {
-      const { addedCount, totalCount } = event.detail;
+    const handleAuthError = (e) => showToast({ title: 'Authentication Error', message: e.detail.message || 'Authentication failed', variant: 'error' });
+    const handlePermissionError = (e) => showToast({ title: 'Permission Denied', message: e.detail.message || 'Insufficient permissions', variant: 'warning' });
+    const handleSetlistError = (e) => showToast({ title: 'Setlist Error', message: e.detail.message || 'Operation failed', variant: 'error' });
+    const handleSetlistSuccess = (e) => {
+      const { addedCount, totalCount } = e.detail;
       if (typeof addedCount === 'number' && addedCount > 1) {
-        showToast({
-          title: 'Files Added',
-          message: `Added ${addedCount} files to setlist (Total: ${totalCount})`,
-          variant: 'success'
-        });
+        showToast({ title: 'Files Added', message: `Added ${addedCount} files (Total: ${totalCount})`, variant: 'success' });
       }
     };
-
     window.addEventListener('auth-error', handleAuthError);
     window.addEventListener('permission-error', handlePermissionError);
     window.addEventListener('setlist-error', handleSetlistError);
     window.addEventListener('setlist-add-success', handleSetlistSuccess);
-
     return () => {
       window.removeEventListener('auth-error', handleAuthError);
       window.removeEventListener('permission-error', handlePermissionError);
@@ -116,178 +117,83 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
     };
   }, [showToast]);
 
-  const getStatusIcon = () => {
-    if (authStatus === 'authenticated' && connectionStatus === 'connected') {
-      return <ShieldCheck className="w-4 h-4 text-green-500" />;
-    }
-    if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') {
-      return <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />;
-    }
-    if (authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error') {
-      return <ShieldAlert className="w-4 h-4 text-red-500" />;
-    }
-    return <Shield className="w-4 h-4 text-gray-400" />;
-  };
-
-  const getStatusText = () => {
-    if (authStatus === 'authenticated' && connectionStatus === 'connected') {
-      return 'Secure Connection';
-    }
-    if (authStatus === 'authenticating') {
-      return 'Authenticating...';
-    }
-    if (connectionStatus === 'reconnecting') {
-      return 'Reconnecting...';
-    }
-    if (authStatus === 'failed') {
-      return 'Authentication Failed';
-    }
-    if (authStatus === 'admin-key-required') {
-      return 'Admin Key Required';
-    }
-    if (connectionStatus === 'error') {
-      return 'Connection Error';
-    }
-    if (connectionStatus === 'disconnected') {
-      return 'Disconnected';
-    }
-    return 'Connecting...';
-  };
-
-  const getStatusVariant = () => {
-    if (authStatus === 'authenticated' && connectionStatus === 'connected') {
-      return 'success';
-    }
-    if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') {
-      return 'warning';
-    }
-    if (authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error') {
-      return 'error';
-    }
+  /* ── derived state ── */
+  const getVariant = () => {
+    if (authStatus === 'authenticated' && connectionStatus === 'connected') return 'success';
+    if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') return 'warning';
+    if (authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error') return 'error';
     return 'info';
   };
 
-  const capitalizeStatus = (status) => {
-    if (typeof status !== 'string') return status;
-    return status.charAt(0).toUpperCase() + status.slice(1);
+  const variant = getVariant();
+  const cfg = STATUS_CONFIG[variant];
+
+  const getLabel = () => {
+    if (authStatus === 'authenticated' && connectionStatus === 'connected') return 'Connected';
+    if (authStatus === 'authenticating') return 'Authenticating…';
+    if (connectionStatus === 'reconnecting') return 'Reconnecting…';
+    if (authStatus === 'failed') return 'Auth Failed';
+    if (authStatus === 'admin-key-required') return 'Key Required';
+    if (connectionStatus === 'error') return 'Error';
+    if (connectionStatus === 'disconnected') return 'Disconnected';
+    return 'Connecting…';
   };
 
-  const getStatusDetails = () => {
-    const conn = capitalizeStatus(connectionStatus);
-    const auth = capitalizeStatus(authStatus);
-    return { connection: conn, auth };
+  const getStatusText = () => {
+    if (authStatus === 'authenticated' && connectionStatus === 'connected') return 'Your connection is secure';
+    if (authStatus === 'authenticating') return 'Establishing secure session…';
+    if (connectionStatus === 'reconnecting') return 'Reconnecting…';
+    if (authStatus === 'failed') return 'Authentication failed';
+    if (authStatus === 'admin-key-required') return 'Administrator key required';
+    if (connectionStatus === 'error') return 'Connection error';
+    if (connectionStatus === 'disconnected') return 'Disconnected';
+    return 'Connecting…';
   };
 
+  const getSubtext = () => {
+    if (authStatus === 'authenticated' && connectionStatus === 'connected')
+      return 'Your connection is secured with JWT tokens and has full permissions.';
+    if (authStatus === 'failed')
+      return 'Authentication failed. Please retry to obtain a new token.';
+    if (authStatus === 'admin-key-required')
+      return 'Waiting for the administrator key. Restore secure secrets on the host machine, then retry.';
+    if (connectionStatus === 'error')
+      return 'Connection to the backend failed. Check the server status and try again.';
+    if (authStatus === 'authenticating' || connectionStatus === 'reconnecting')
+      return 'The client is attempting to establish a secure session.';
+    return '';
+  };
+
+  const getStatusIcon = (size = 'w-4 h-4') => {
+    if (authStatus === 'authenticated' && connectionStatus === 'connected')
+      return <ShieldCheck className={`${size} text-emerald-500`} />;
+    if (authStatus === 'authenticating' || connectionStatus === 'reconnecting')
+      return <RefreshCw className={`${size} text-amber-400 animate-spin`} />;
+    if (authStatus === 'failed' || authStatus === 'admin-key-required' || connectionStatus === 'error')
+      return <ShieldAlert className={`${size} text-rose-500`} />;
+    return <Shield className={`${size} text-gray-400`} />;
+  };
+
+  const cap = (s) => typeof s === 'string' ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
+  const connVariant = connectionStatus === 'connected' ? 'success'
+    : connectionStatus === 'reconnecting' ? 'warning'
+    : connectionStatus === 'error' ? 'error' : 'info';
+
+  const authVariant = authStatus === 'authenticated' ? 'success'
+    : authStatus === 'authenticating' ? 'warning'
+    : (authStatus === 'failed' || authStatus === 'admin-key-required') ? 'error' : 'info';
+
+  /* ── modal body ── */
   const showAuthModal = () => {
     refreshJoinCode();
-    const showRefreshButton = authStatus === 'authenticated' && connectionStatus === 'connected';
+    const isConnected = authStatus === 'authenticated' && connectionStatus === 'connected';
 
-    const statusDetails = getStatusDetails();
-
-    let subtext = '';
-    if (authStatus === 'authenticated' && connectionStatus === 'connected') {
-      subtext = 'Your connection is secured with JWT tokens and has full permissions.';
-    } else if (authStatus === 'failed') {
-      subtext = 'Authentication failed. Please retry to obtain a new token.';
-    } else if (authStatus === 'admin-key-required') {
-      subtext = 'The desktop app is waiting for the administrator key. Add or restore the secure secrets data on the host machine, then retry.';
-    } else if (connectionStatus === 'error') {
-      subtext = 'Connection to the backend failed. Check the server status and try again.';
-    } else if (authStatus === 'authenticating' || connectionStatus === 'reconnecting') {
-      subtext = 'The client is attempting to establish a secure session.';
-    }
-
-    const actions = [];
-
-    actions.push({
-      label: 'Connection Diagnostics',
-      variant: 'default',
-      onSelect: () => {
-        showModal({
-          title: 'Connection Diagnostics',
-          headerDescription: 'Inspect connected clients, sync state, and retry health',
-          component: 'ConnectionDiagnostics',
-          variant: 'info',
-          size: 'lg',
-          actions: [
-            { label: 'Close', variant: 'outline' },
-            {
-              label: 'Production Readiness',
-              variant: 'default',
-              onSelect: () => {
-                showModal({
-                  title: 'Production Readiness Check',
-                  headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
-                  component: 'PreServiceHealth',
-                  variant: 'info',
-                  size: 'lg',
-                  customLayout: true,
-                  actions: [{ label: 'Close', variant: 'outline' }],
-                });
-              },
-            },
-          ],
-        });
-      },
-    });
-
-    actions.push({
-      label: 'Refresh Token',
-      variant: 'outline',
-      disabled: !showRefreshButton,
-      onSelect: () => {
-        onRefreshToken();
-        return true;
-      }
-    });
-
-    const statusBody = (
-      <div className="space-y-4 p-2">
-        <div className={`p-4 rounded-2xl flex items-center gap-3 border ${getStatusVariant() === 'success' ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30 text-green-900 dark:text-green-100' : 'bg-yellow-50 dark:bg-yellow-500/10 border-yellow-200 dark:border-yellow-500/30 text-yellow-900 dark:text-yellow-100'}`}>
-          {getStatusIcon()}
-          <div>
-            <h3 className="text-xl font-bold">{getStatusText()}</h3>
-            <p className="text-sm opacity-90">Connection health overview</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Connection</p>
-            <p className="text-lg font-bold text-green-600 dark:text-green-400">{statusDetails.connection}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Authentication</p>
-            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{statusDetails.auth}</p>
-          </div>
-          <LiveSafetyStatusCell darkMode={darkMode} />
-        </div>
-
-        {subtext && (
-          <p className={`text-xs leading-relaxed mt-2 opacity-80 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {subtext}
-          </p>
-        )}
-      </div>
-    );
-
-    const handleCopyJoinCode = () => {
-      if (joinCode) {
-        navigator.clipboard.writeText(joinCode).then(() => {
-          showToast({
-            title: 'Copied',
-            message: 'Join code copied to clipboard',
-            variant: 'success',
-            duration: 2000,
-          });
-        }).catch(() => {
-          showToast({
-            title: 'Copy failed',
-            message: 'Could not copy join code',
-            variant: 'error',
-          });
-        });
-      }
+    const handleCopyCode = () => {
+      if (!joinCode) return;
+      navigator.clipboard.writeText(joinCode).then(() => {
+        showToast({ title: 'Copied', message: 'Join code copied to clipboard', variant: 'success', duration: 2000 });
+      }).catch(() => showToast({ title: 'Copy failed', message: 'Could not copy join code', variant: 'error' }));
     };
 
     const handleOpenPreServiceHealth = () => {
@@ -302,85 +208,154 @@ const AuthStatusIndicator = ({ authStatus, connectionStatus, onRetry, onRefreshT
       });
     };
 
-    const modalBody = joinCode ? (
-      <>
-        {statusBody}
-        <div className="space-y-4 p-4 pt-6 border-t border-gray-200 dark:border-gray-600 mt-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-            Controller Join Code
-          </p>
-          <div className="flex items-center gap-3">
-            <p className={`text-xl font-semibold tracking-[0.3em] tabular-nums ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              {joinCode}
-            </p>
-            <button
-              onClick={handleCopyJoinCode}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 border hover:shadow-sm hover:scale-[1.02] ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'}`}
-            >
-              <Copy className="w-3 h-3" />
-              Copy
-            </button>
-            <button
-              onClick={handleOpenPreServiceHealth}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 border hover:shadow-sm hover:scale-[1.02] ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'}`}
-            >
-              <Activity className="w-3 h-3" />
-              Production Readiness
-            </button>
+    const body = (
+      <div className="space-y-5">
+        {/* Status summary */}
+        <div className={`flex items-start gap-3.5 p-4 rounded-xl ${
+          variant === 'success'
+            ? (d ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-100')
+            : variant === 'error'
+            ? (d ? 'bg-rose-500/10 border border-rose-500/20' : 'bg-rose-50 border border-rose-100')
+            : variant === 'warning'
+            ? (d ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-100')
+            : (d ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200')
+        }`}>
+          <span className="mt-0.5 shrink-0">{getStatusIcon('w-5 h-5')}</span>
+          <div className="min-w-0">
+            <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>{getStatusText()}</p>
+            {getSubtext() && (
+              <p className={`text-xs mt-0.5 leading-relaxed ${d ? 'text-gray-400' : 'text-gray-500'}`}>{getSubtext()}</p>
+            )}
           </div>
         </div>
-      </>
-    ) : (
-      statusBody
+
+        {/* Status grid */}
+        <div className={`rounded-xl border overflow-hidden ${d ? 'border-gray-800' : 'border-gray-200'}`}>
+          <div className={`grid grid-cols-3 divide-x ${d ? 'divide-gray-800' : 'divide-gray-200'}`}>
+            {[
+              { label: 'Connection', value: cap(connectionStatus), variant: connVariant },
+              { label: 'Authentication', value: cap(authStatus), variant: authVariant },
+            ].map(({ label, value, variant: v }) => (
+              <div key={label} className={`px-4 py-3.5 ${d ? 'bg-gray-900/40' : 'bg-white'}`}>
+                <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${d ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
+                <StatusBadge value={value} variant={v} />
+              </div>
+            ))}
+            <div className={`px-4 py-3.5 ${d ? 'bg-gray-900/40' : 'bg-white'}`}>
+              <LiveSafetyStatusCell darkMode={d} />
+            </div>
+          </div>
+        </div>
+
+        {/* Join code */}
+        {joinCode && (
+          <div className={`rounded-xl border overflow-hidden ${d ? 'border-gray-800' : 'border-gray-200'}`}>
+            <div className={`px-4 py-2.5 border-b ${d ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-100'}`}>
+              <p className={`text-[10px] font-semibold uppercase tracking-widest ${d ? 'text-gray-500' : 'text-gray-400'}`}>Controller Join Code</p>
+            </div>
+            <div className={`flex items-center gap-4 px-4 py-3.5 ${d ? 'bg-gray-900/40' : 'bg-white'}`}>
+              <span className={`text-xl font-mono font-bold tracking-[0.35em] tabular-nums ${d ? 'text-white' : 'text-gray-900'}`}>
+                {joinCode}
+              </span>
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  onClick={handleCopyCode}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                    d ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <Copy className="w-3 h-3" />
+                  Copy
+                </button>
+                <button
+                  onClick={handleOpenPreServiceHealth}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                    d ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <Activity className="w-3 h-3" />
+                  Readiness
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
 
+    const actions = [
+      {
+        label: 'Connection Diagnostics',
+        variant: 'default',
+        onSelect: () => {
+          showModal({
+            title: 'Connection Diagnostics',
+            headerDescription: 'Inspect connected clients, sync state, and retry health',
+            component: 'ConnectionDiagnostics',
+            variant: 'info',
+            size: 'lg',
+            actions: [
+              { label: 'Close', variant: 'outline' },
+              {
+                label: 'Production Readiness',
+                variant: 'default',
+                onSelect: () => {
+                  showModal({
+                    title: 'Production Readiness Check',
+                    headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+                    component: 'PreServiceHealth',
+                    variant: 'info',
+                    size: 'lg',
+                    customLayout: true,
+                    actions: [{ label: 'Close', variant: 'outline' }],
+                  });
+                },
+              },
+            ],
+          });
+        },
+      },
+      {
+        label: 'Refresh Token',
+        variant: 'outline',
+        disabled: !isConnected,
+        onSelect: () => { onRefreshToken(); return true; },
+      },
+    ];
+
     showModal({
-      title: 'Socket Connection Status',
-      headerDescription: 'View authentication details and secondary controller join code',
-      body: modalBody,
-      variant: getStatusVariant(),
+      title: 'Connection Status',
+      headerDescription: 'Authentication details and controller join code',
+      body,
+      variant: getVariant(),
       actions,
-      icon: getStatusIcon()
+      icon: getStatusIcon(),
     });
   };
 
-  const getStatusLabel = () => {
-    if (authStatus === 'authenticated' && connectionStatus === 'connected') {
-      return 'Connected';
-    }
-    if (authStatus === 'authenticating') {
-      return 'Authenticating...';
-    }
-    if (connectionStatus === 'reconnecting') {
-      return 'Reconnecting...';
-    }
-    if (authStatus === 'failed') {
-      return 'Auth Failed';
-    }
-    if (authStatus === 'admin-key-required') {
-      return 'Key Required';
-    }
-    if (connectionStatus === 'error') {
-      return 'Error';
-    }
-    if (connectionStatus === 'disconnected') {
-      return 'Disconnected';
-    }
-    return 'Connecting...';
-  };
+  /* ── trigger button ── */
+  const variantCfg = STATUS_CONFIG[variant];
+  const compactClass = d
+    ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300'
+    : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600';
+  const fullClass = d
+    ? 'bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700'
+    : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200';
 
   return (
-    <Tooltip content="See current socket connection status and mobile controller join code" side="bottom">
+    <Tooltip content="View socket connection status and mobile controller join code" side="bottom">
       <button
         onClick={showAuthModal}
-        className={`${compact ? '' : 'flex-1 min-w-0 px-3 py-2.5'} rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${darkMode
-          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          } ${className}`}
-        title={`Authentication Status: ${getStatusText()}`}
+        className={`${compact ? '' : 'flex-1 min-w-0 px-3 py-2'} rounded-lg font-medium transition-all duration-150 flex items-center justify-center gap-2 ${compact ? compactClass : fullClass} ${className}`}
+        title={`Status: ${getLabel()}`}
       >
-        <span className="shrink-0">{getStatusIcon()}</span>
-        {!compact && <span className="text-xs truncate">{getStatusLabel()}</span>}
+        <span className="shrink-0">{getStatusIcon(compact ? 'w-[16px] h-[16px]' : 'w-4 h-4')}</span>
+        {!compact && (
+          <span className="flex items-center gap-1.5 text-xs truncate">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${variantCfg.dot}`} />
+            {getLabel()}
+          </span>
+        )}
       </button>
     </Tooltip>
   );

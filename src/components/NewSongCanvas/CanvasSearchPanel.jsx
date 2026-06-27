@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -20,33 +20,42 @@ const CanvasSearchPanel = ({
   searchQuery,
   toggleSearchExpansion,
   totalMatches,
-}) => (
+}) => {
+  const panelClass = darkMode
+    ? 'border-gray-800 bg-gray-900/95 text-gray-100'
+    : 'border-gray-200 bg-white/95 text-gray-900';
+  const inputClass = darkMode
+    ? 'h-10 rounded-full border-gray-700/70 bg-gray-800/90 pl-10 pr-20 text-[13px] text-gray-100 placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20'
+    : 'h-10 rounded-full border-gray-200 bg-white pl-10 pr-20 text-[13px] text-gray-900 placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15';
+  const replaceInputClass = darkMode
+    ? 'h-9 rounded-full border-gray-700/70 bg-gray-800/90 px-4 text-[13px] text-gray-100 placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20'
+    : 'h-9 rounded-full border-gray-200 bg-white px-4 text-[13px] text-gray-900 placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15';
+  const iconButtonClass = darkMode
+    ? 'text-gray-400 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+    : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
+
+  return (
   <div className="absolute top-4 right-4 z-20 w-full max-w-sm pointer-events-auto">
-    <div className={`relative rounded-lg border shadow-lg p-3 ${darkMode ? 'bg-gray-900/95 border-gray-700' : 'bg-white border-gray-200'}`}>
+    <div className={`relative rounded-2xl border p-3 shadow-xl backdrop-blur ${panelClass}`}>
       <div className="flex items-stretch gap-2">
         <button
           type="button"
           onClick={toggleSearchExpansion}
-          className={`px-2.5 rounded-md border transition-colors h-10 ${darkMode
-            ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
-            : 'border-gray-200 text-gray-600 hover:bg-gray-100'
-            }`}
+          className={`h-10 rounded-lg px-2.5 transition-all ${iconButtonClass}`}
           title="Expand for replace"
         >
           <ChevronRight className={`w-4 h-4 transition-transform ${searchExpanded ? 'rotate-90' : ''}`} />
         </button>
         <div className="flex-1">
           <div className="relative">
+            <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
             <Input
               ref={searchInputRef}
               type="text"
               placeholder="Search in canvas..."
               value={searchQuery}
               onChange={(e) => handleSearchInputChange(e.target.value)}
-              className={`pr-20 text-sm h-10 ${darkMode
-                ? 'border-gray-700 bg-gray-800 text-gray-100 placeholder-gray-400'
-                : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'
-                }`}
+              className={inputClass}
             />
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {searchQuery && totalMatches > 0 && (
@@ -54,10 +63,7 @@ const CanvasSearchPanel = ({
                   <button
                     type="button"
                     onClick={handlePreviousMatch}
-                    className={`p-1 rounded transition-colors ${darkMode
-                      ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
+                    className={`p-1 rounded-md transition-all ${iconButtonClass}`}
                     title="Previous match"
                   >
                     <ChevronUp className="w-4 h-4" />
@@ -65,10 +71,7 @@ const CanvasSearchPanel = ({
                   <button
                     type="button"
                     onClick={handleNextMatch}
-                    className={`p-1 rounded transition-colors ${darkMode
-                      ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
+                    className={`p-1 rounded-md transition-all ${iconButtonClass}`}
                     title="Next match"
                   >
                     <ChevronDown className="w-4 h-4" />
@@ -79,10 +82,7 @@ const CanvasSearchPanel = ({
                 <button
                   type="button"
                   onClick={handleClearSearch}
-                  className={`p-1 rounded transition-colors ${darkMode
-                    ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                    }`}
+                  className={`p-1 rounded-md transition-all ${iconButtonClass}`}
                   title="Clear search"
                 >
                   <X className="w-4 h-4" />
@@ -105,10 +105,7 @@ const CanvasSearchPanel = ({
                 placeholder="Replace with..."
                 value={replaceValue}
                 onChange={(e) => handleReplaceValueChange(e.target.value)}
-                className={`text-sm ${darkMode
-                  ? 'border-gray-700 bg-gray-800 text-gray-100 placeholder-gray-400'
-                  : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'
-                  }`}
+                className={replaceInputClass}
               />
               <div className="flex justify-end gap-2">
                 <Button
@@ -116,7 +113,7 @@ const CanvasSearchPanel = ({
                   variant="outline"
                   onClick={handleReplaceCurrent}
                   disabled={!searchQuery || totalMatches === 0}
-                  className={`${darkMode ? 'border-gray-600 text-gray-100 hover:bg-gray-800' : ''} text-xs`}
+                  className={`${darkMode ? 'border-gray-700 text-gray-100 hover:bg-blue-500/10 hover:text-blue-300' : 'hover:bg-blue-50 hover:text-blue-600'} rounded-full text-xs`}
                 >
                   Replace
                 </Button>
@@ -124,7 +121,7 @@ const CanvasSearchPanel = ({
                   size="sm"
                   onClick={handleReplaceAll}
                   disabled={!searchQuery || totalMatches === 0}
-                  className="bg-blue-500 text-white hover:bg-blue-600 text-xs"
+                  className="rounded-full bg-blue-600 text-xs text-white hover:bg-blue-700"
                 >
                   Replace All
                 </Button>
@@ -135,10 +132,7 @@ const CanvasSearchPanel = ({
         <button
           type="button"
           onClick={closeSearchBar}
-          className={`px-2.5 rounded-md border transition-colors h-10 ${darkMode
-            ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
-            : 'border-gray-200 text-gray-600 hover:bg-gray-100'
-            }`}
+          className={`h-10 rounded-lg px-2.5 transition-all ${iconButtonClass}`}
           title="Close search"
         >
           <X className="w-4 h-4" />
@@ -146,6 +140,7 @@ const CanvasSearchPanel = ({
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default CanvasSearchPanel;

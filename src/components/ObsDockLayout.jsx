@@ -48,9 +48,9 @@ function OutputPill({ outputId, active, onSelect, onToggle, onSettings }) {
   ));
 
   return (
-    <div className={`flex h-8 shrink-0 items-center rounded-md border text-[11px] ${active
-      ? darkMode ? 'border-blue-400 bg-blue-500/15 text-blue-100' : 'border-blue-500 bg-blue-50 text-blue-900'
-      : darkMode ? 'border-gray-800 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-700'
+    <div className={`flex h-8 shrink-0 items-center rounded-full border text-[11px] transition-colors ${active
+      ? darkMode ? 'border-blue-400/60 bg-blue-500/15 text-blue-100' : 'border-blue-400 bg-blue-50 text-blue-900'
+      : darkMode ? 'border-gray-800/80 bg-transparent text-gray-400 hover:border-blue-500/35 hover:text-blue-300' : 'border-gray-200 bg-transparent text-gray-600 hover:border-blue-200 hover:text-blue-600'
       }`}>
       <button type="button" onClick={onSelect} className="px-2 font-semibold">
         {outputLabel(outputId)}
@@ -58,18 +58,18 @@ function OutputPill({ outputId, active, onSelect, onToggle, onSettings }) {
       <button
         type="button"
         onClick={() => onToggle(outputId, !enabled)}
-        className={`h-full border-l px-1.5 ${darkMode ? 'border-gray-800' : 'border-gray-200'} ${enabled ? 'text-green-500' : 'text-gray-400'}`}
+        className={`h-full border-l px-1.5 transition-colors ${darkMode ? 'border-gray-800 hover:text-blue-300' : 'border-gray-200 hover:text-blue-600'} ${enabled ? 'text-green-500' : 'text-gray-500'}`}
         title={enabled ? 'Disable output' : 'Enable output'}
       >
-        <Power className="h-3 w-3" />
+        <Power className="h-3.5 w-3.5" />
       </button>
       <button
         type="button"
         onClick={() => onSettings(outputId)}
-        className={`h-full border-l px-1.5 ${darkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-500'}`}
+        className={`h-full border-l px-1.5 transition-colors ${darkMode ? 'border-gray-800 text-gray-500 hover:text-blue-300' : 'border-gray-200 text-gray-500 hover:text-blue-600'}`}
         title="Open output settings"
       >
-        <Settings className="h-3 w-3" />
+        <Settings className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -324,7 +324,12 @@ export default function ObsDockLayout() {
   const quickSwitchClassName = '!h-7 !w-14 !border-0 shadow-sm transition-colors data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600';
   const quickSwitchThumbClassName = '!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1';
   const shellClasses = darkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-950';
-  const toolbarClasses = darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-white';
+  const toolbarClasses = darkMode ? 'border-gray-800 bg-gray-950/95' : 'border-gray-200 bg-white/95';
+  const dockIconButtonClass = darkMode
+    ? 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-blue-500/10 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35'
+    : 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35';
+  const dockIconDisabledClass = 'cursor-not-allowed opacity-45';
+  const dockPrimaryButtonClass = 'flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 px-3 text-xs font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40';
   const currentLineText = hasLyrics && typeof selectedLine === 'number'
     ? `${selectedLine + 1}/${lyrics.length}`
     : hasLyrics ? `${lyrics.length} lines` : 'No lyrics';
@@ -534,24 +539,24 @@ export default function ObsDockLayout() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setSetlistOpen(true)} className={`relative rounded-md p-1.5 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Open setlist">
-            <ListMusic className="h-4 w-4" />
+          <button type="button" onClick={() => setSetlistOpen(true)} className={`relative ${dockIconButtonClass}`} title="Open setlist">
+            <ListMusic className="h-[18px] w-[18px]" />
             {setlistFiles.length > 0 && (
               <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-bold leading-4 text-white">
                 {setlistFiles.length}
               </span>
             )}
           </button>
-          <button type="button" onClick={forceReconnect} className={`rounded-md p-2 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Reconnect">
-            <RefreshCw className="h-3.5 w-3.5" />
+          <button type="button" onClick={forceReconnect} className={dockIconButtonClass} title="Reconnect">
+            <RefreshCw className="h-[18px] w-[18px]" />
           </button>
           {desktopControlAvailable && (
-            <button type="button" onClick={openDesktopApp} className={`rounded-md p-1.5 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Switch to Desktop Mode">
-              <ExternalLink className="h-3.5 w-3.5" />
+            <button type="button" onClick={openDesktopApp} className={dockIconButtonClass} title="Switch to Desktop Mode">
+              <ExternalLink className="h-[18px] w-[18px]" />
             </button>
           )}
-          <button type="button" onClick={() => handleOpenSettings(activeOutput)} className={`rounded-md p-1.5 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Output settings">
-            <Menu className="h-3.5 w-3.5" />
+          <button type="button" onClick={() => handleOpenSettings(activeOutput)} className={dockIconButtonClass} title="Output settings">
+            <Menu className="h-[18px] w-[18px]" />
           </button>
         </div>
       </header>
@@ -559,18 +564,18 @@ export default function ObsDockLayout() {
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className={`shrink-0 border-b px-2 py-1.5 ${toolbarClasses}`}>
           <div className="mb-1.5 flex items-center gap-1.5">
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md bg-gradient-to-r from-blue-400 to-purple-600 px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:from-blue-500 hover:to-purple-700">
-              <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+            <button type="button" onClick={() => fileInputRef.current?.click()} className={dockPrimaryButtonClass}>
+              <FolderOpen className="h-[18px] w-[18px] shrink-0" />
               <span className="truncate">Load</span>
             </button>
-            <button type="button" onClick={openCreateEditor} className={`rounded-md px-2 py-1.5 text-xs font-semibold ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`} title="Create new song">
-              <FilePlus2 className="h-3.5 w-3.5" />
+            <button type="button" onClick={openCreateEditor} className={dockIconButtonClass} title="Create new song">
+              <FilePlus2 className="h-[18px] w-[18px]" />
             </button>
-            <button type="button" onClick={handleAddCurrentToSetlist} disabled={!hasLyrics || !canControl} className={`rounded-md px-2 py-1.5 text-xs font-semibold ${!hasLyrics || !canControl ? 'cursor-not-allowed opacity-45' : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`} title="Add current song to setlist">
-              <ListPlus className="h-3.5 w-3.5" />
+            <button type="button" onClick={handleAddCurrentToSetlist} disabled={!hasLyrics || !canControl} className={`${dockIconButtonClass} ${!hasLyrics || !canControl ? dockIconDisabledClass : ''}`} title="Add current song to setlist">
+              <ListPlus className="h-[18px] w-[18px]" />
             </button>
-            <button type="button" onClick={handleToggleOutput} disabled={!canControl} className={`rounded-md px-2 py-1.5 text-xs font-semibold ${!canControl ? 'cursor-not-allowed opacity-45' : isOutputOn ? 'bg-green-600 text-white hover:bg-green-700' : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`} title={isOutputOn ? 'Turn display output off' : 'Turn display output on'}>
-              <Power className="h-3.5 w-3.5" />
+            <button type="button" onClick={handleToggleOutput} disabled={!canControl} className={`${isOutputOn && canControl ? 'inline-flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 text-white transition-colors hover:bg-green-500' : dockIconButtonClass} ${!canControl ? dockIconDisabledClass : ''}`} title={isOutputOn ? 'Turn display output off' : 'Turn display output on'}>
+              <Power className="h-[18px] w-[18px]" />
             </button>
           </div>
           <input ref={fileInputRef} type="file" accept=".txt,.lrc" className="hidden" onChange={handleMainFileInput} />
@@ -581,7 +586,7 @@ export default function ObsDockLayout() {
           </div>
         </div>
 
-        <div className={`shrink-0 border-b px-2 py-1.5 ${darkMode ? 'border-gray-800 bg-gray-950/95' : 'border-gray-200 bg-gray-50'}`}>
+        <div className={`shrink-0 border-b px-2 py-1.5 ${darkMode ? 'border-gray-800 bg-gray-950/90' : 'border-gray-200 bg-white/80'}`}>
           <div className="flex gap-1.5 overflow-x-auto pb-0.5">
             {[...allOutputIds, 'stage'].map((outputId) => (
               <OutputPill
@@ -617,9 +622,9 @@ export default function ObsDockLayout() {
                   <button
                     type="button"
                     onClick={openEditEditor}
-                    className={`flex h-8 items-center justify-center rounded-md border px-3 transition-colors ${darkMode
-                      ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700'
-                      : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${darkMode
+                      ? 'text-gray-400 hover:bg-blue-500/10 hover:text-blue-300'
+                      : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     title="Edit lyrics"
                   >

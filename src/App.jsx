@@ -207,7 +207,7 @@ export default function App() {
 
   return (
     <ModalProvider isDark={!!effectiveDarkMode}>
-      <ToastProvider isDark={!!effectiveDarkMode} density={isDockRuntime ? 'dock' : 'default'} position={isDockRuntime ? 'top-right' : 'bottom-right'} offset={isDockRuntime ? 8 : 20}>
+      <ToastProvider isDark={!!effectiveDarkMode} density={isDockRuntime ? 'dock' : 'default'} position={isDockRuntime ? 'top-right' : 'bottom-right'} offset={isDockRuntime ? 8 : 32}>
         <AppErrorBoundary>
           <PreferencesLoaderBridge />
           <Router>

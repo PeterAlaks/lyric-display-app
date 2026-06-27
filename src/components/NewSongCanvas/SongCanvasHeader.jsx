@@ -22,13 +22,13 @@ const HelpButton = ({ darkMode, showModal }) => (
         dismissLabel: 'Got it'
       });
     }}
-    className={`p-1.5 rounded-lg transition-colors ${darkMode
-      ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-      : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+    className={`p-1.5 rounded-lg transition-all ${darkMode
+      ? 'bg-transparent text-gray-400 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+      : 'bg-transparent text-gray-500 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'
       }`}
     title="Song Canvas Help"
   >
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   </button>
@@ -49,6 +49,8 @@ const SaveActions = ({
   toolbarGhostClass,
 }) => {
   const disabled = isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges);
+  const gradientActionClass = `${mobile ? 'whitespace-nowrap' : 'flex items-center gap-2 px-3 py-1.5'} rounded-full bg-gradient-to-r from-blue-400 to-purple-600 text-sm text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55`;
+
   if (composeMode) {
     return (
       <Tooltip content={getSaveAndLoadButtonTooltip()} side={mobile ? 'left' : 'bottom'}>
@@ -56,7 +58,7 @@ const SaveActions = ({
           <Button
             onClick={handleLoadDraft}
             disabled={isContentEmpty || isTitleEmpty}
-            className={`${mobile ? 'whitespace-nowrap' : 'flex items-center gap-2 px-2.5 py-1.5'} bg-gradient-to-r from-blue-400 to-purple-600 text-white hover:from-blue-500 hover:to-purple-700 text-sm`}
+            className={gradientActionClass}
             size="sm"
           >
             <FolderOpen className="w-4 h-4 mr-1" /> {mobile ? 'Load' : 'Load Draft'}
@@ -76,7 +78,7 @@ const SaveActions = ({
             variant="ghost"
             size="sm"
             title="Save"
-            className={mobile ? 'text-sm' : `${toolbarGhostClass} text-sm`}
+            className={`${toolbarGhostClass} text-sm`}
           >
             <Save className="w-4 h-4" /> {!mobile && 'Save'}
           </Button>
@@ -87,7 +89,7 @@ const SaveActions = ({
           <Button
             onClick={handleSaveAndLoad}
             disabled={disabled}
-            className={`${mobile ? 'whitespace-nowrap' : 'flex items-center gap-2 px-2.5 py-1.5'} bg-gradient-to-r from-blue-400 to-purple-600 text-white text-sm`}
+            className={gradientActionClass}
             size="sm"
           >
             <FolderOpen className="w-4 h-4 mr-1" /> Save & Load
@@ -132,7 +134,7 @@ const SectionDropdown = ({
     {sectionDropdownOpen && (
       <div
         ref={sectionDropdownRef}
-        className={`absolute top-full left-0 mt-1 w-40 rounded-md border shadow-lg z-50 max-h-80 overflow-y-auto ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        className={`absolute top-full left-0 mt-1 w-40 rounded-xl border shadow-lg z-50 max-h-80 overflow-y-auto ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
           }`}
       >
         {SONG_SECTIONS.map((section) => (
@@ -143,8 +145,8 @@ const SectionDropdown = ({
               setSectionDropdownOpen(false);
             }}
             className={`w-full text-left px-3 py-2 text-sm transition-colors ${darkMode
-              ? 'hover:bg-gray-700 text-gray-200'
-              : 'hover:bg-gray-100 text-gray-900'
+              ? 'text-gray-200 hover:bg-blue-500/10 hover:text-blue-300'
+              : 'text-gray-900 hover:bg-blue-50 hover:text-blue-600'
               }`}
           >
             {section.label}
@@ -190,17 +192,22 @@ const SongCanvasHeader = ({
   showToast,
   title,
   toolbarGhostClass,
-}) => (
-  <div className={`shadow-sm border-b p-4 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+}) => {
+  const navButtonClass = darkMode
+    ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+    : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
+  const titleInputClass = darkMode
+    ? `rounded-full border-gray-700/70 bg-gray-900/80 text-[13px] placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-200'}`
+    : `rounded-full border-gray-200 bg-white text-[13px] placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`;
+
+  return (
+  <div className={`border-b px-4 py-3 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
     <div className="md:hidden">
       <div className="flex items-center justify-between mb-3">
         <Tooltip content="Return to control panel" side="right">
           <button
             onClick={handleBack}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
-              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all ${navButtonClass}`}
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -217,10 +224,7 @@ const SongCanvasHeader = ({
             <Tooltip content="Start a new song canvas" side="left">
               <button
                 onClick={handleStartNewSong}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-colors ${darkMode
-                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all ${navButtonClass}`}
               >
                 <FilePlusCorner className="w-4 h-4" />
                 New
@@ -275,11 +279,7 @@ const SongCanvasHeader = ({
           onChange={handleTitleChange}
           maxLength={65}
           placeholder="Enter song title..."
-          className={`flex-1 px-3 py-1.5 rounded-md ${isTitlePrefilled ? 'italic' : ''
-            } ${darkMode
-              ? `bg-gray-700 placeholder-gray-400 border-gray-600 ${isTitlePrefilled ? 'text-gray-400' : 'text-gray-200'}`
-              : `bg-white placeholder-gray-400 border-gray-300 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`
-            }`}
+          className={`h-10 flex-1 px-4 ${isTitlePrefilled ? 'italic' : ''} ${titleInputClass}`}
         />
         <SaveActions
           composeMode={composeMode}
@@ -303,10 +303,7 @@ const SongCanvasHeader = ({
         <Tooltip content="Return to control panel" side="right">
           <button
             onClick={handleBack}
-            className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-md font-medium transition-colors w-[120px] ${darkMode
-              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
+            className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg font-medium transition-all w-[120px] ${navButtonClass}`}
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -322,10 +319,7 @@ const SongCanvasHeader = ({
           <Tooltip content="Start a new song canvas" side="left">
             <button
               onClick={handleStartNewSong}
-              className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-md font-medium transition-colors w-[120px] ${darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
+              className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg font-medium transition-all w-[120px] ${navButtonClass}`}
             >
               <FilePlusCorner className="w-4 h-4" />
               New
@@ -358,7 +352,7 @@ const SongCanvasHeader = ({
             <Search className="w-4 h-4" />
           </Button>
         </Tooltip>
-        <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+        <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
         <div className="flex flex-wrap items-center gap-2">
           <Tooltip content="Cut selected text" side="bottom">
             <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
@@ -403,7 +397,7 @@ const SongCanvasHeader = ({
             </Tooltip>
           </div>
         </div>
-        <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+        <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
         <SectionDropdown
           darkMode={darkMode}
           insertSectionAtCursor={insertSectionAtCursor}
@@ -420,11 +414,7 @@ const SongCanvasHeader = ({
           onChange={handleTitleChange}
           maxLength={65}
           placeholder="Enter song title..."
-          className={`px-3 py-1.5 rounded-md flex-shrink min-w-[100px] max-w-xs ${isTitlePrefilled ? 'italic' : ''
-            } ${darkMode
-              ? `bg-gray-700 placeholder-gray-400 border-gray-600 ${isTitlePrefilled ? 'text-gray-400' : 'text-gray-200'}`
-              : `bg-white placeholder-gray-400 border-gray-300 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`
-            }`}
+          className={`h-10 flex-shrink min-w-[100px] max-w-xs px-4 ${isTitlePrefilled ? 'italic' : ''} ${titleInputClass}`}
         />
         <SaveActions
           composeMode={composeMode}
@@ -442,6 +432,7 @@ const SongCanvasHeader = ({
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default SongCanvasHeader;

@@ -107,61 +107,137 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     <ToastContext.Provider value={value}>
       {children}
       <div style={posStyle}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 10 : 12 }}>
           {toasts.map(({ id, title, message, variant, actions, entering, exiting }) => {
-            const accent = variant === 'error' ? '#ef4444' : variant === 'warn' ? '#f59e0b' : variant === 'success' ? '#10b981' : '#3b82f6';
-            const bg = isDark
-              ? (variant === 'error' ? '#7f1d1d' : variant === 'warn' ? '#78350f' : variant === 'success' ? '#064e3b' : '#111827')
-              : '#ffffff';
+            const normalizedVariant = variant === 'warning' ? 'warn' : variant;
+            const palette = {
+              error: {
+                accent: '#ef4444',
+                soft: isDark ? 'rgba(239, 68, 68, 0.14)' : 'rgba(254, 226, 226, 0.95)',
+                border: isDark ? 'rgba(239, 68, 68, 0.28)' : 'rgba(248, 113, 113, 0.35)'
+              },
+              warn: {
+                accent: '#f59e0b',
+                soft: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(254, 243, 199, 0.95)',
+                border: isDark ? 'rgba(245, 158, 11, 0.30)' : 'rgba(245, 158, 11, 0.35)'
+              },
+              success: {
+                accent: '#10b981',
+                soft: isDark ? 'rgba(16, 185, 129, 0.14)' : 'rgba(209, 250, 229, 0.95)',
+                border: isDark ? 'rgba(16, 185, 129, 0.28)' : 'rgba(16, 185, 129, 0.32)'
+              },
+              info: {
+                accent: '#3b82f6',
+                soft: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(219, 234, 254, 0.95)',
+                border: isDark ? 'rgba(59, 130, 246, 0.30)' : 'rgba(59, 130, 246, 0.35)'
+              }
+            };
+            const tone = palette[normalizedVariant] || palette.info;
+            const bg = isDark ? 'rgba(31, 41, 55, 0.96)' : 'rgba(248, 250, 252, 0.97)';
             const textColor = isDark ? '#e5e7eb' : '#111827';
-            const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-            const shadow = isDark ? '0 8px 24px rgba(0,0,0,0.25)' : '0 6px 18px rgba(0,0,0,0.12)';
-            const Icon = variant === 'success' ? CheckCircle2 : variant === 'error' ? XCircle : variant === 'warn' ? AlertTriangle : Info;
+            const mutedTextColor = isDark ? '#9ca3af' : '#4b5563';
+            const borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(15,23,42,0.12)';
+            const shadow = isDark ? '0 18px 42px rgba(0,0,0,0.36)' : '0 18px 42px rgba(15,23,42,0.16)';
+            const Icon = normalizedVariant === 'success' ? CheckCircle2 : normalizedVariant === 'error' ? XCircle : normalizedVariant === 'warn' ? AlertTriangle : Info;
+            const closeBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
+            const actionBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)';
             return (
               <div key={id}
+                role={normalizedVariant === 'error' ? 'alert' : 'status'}
                 style={{
                   pointerEvents: 'auto',
-                  minWidth: compact ? 180 : 280,
-                  maxWidth: compact ? 260 : 420,
-                  padding: compact ? '8px 10px' : '12px 14px',
-                  borderRadius: compact ? 8 : 10,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  minWidth: compact ? 220 : 320,
+                  maxWidth: compact ? 300 : 440,
+                  padding: compact ? '11px 12px' : '16px 16px',
+                  borderRadius: compact ? 12 : 14,
                   boxShadow: shadow,
                   background: bg,
                   color: textColor,
                   border: `1px solid ${borderColor}`,
-                  transition: 'opacity 300ms cubic-bezier(.2,.9,.3,1), transform 300ms cubic-bezier(.2,.9,.3,1)',
+                  backdropFilter: 'blur(14px)',
+                  transition: 'opacity 260ms cubic-bezier(.2,.9,.3,1), transform 260ms cubic-bezier(.2,.9,.3,1)',
                   opacity: (entering || exiting) ? 0 : 1,
                   transform: entering ? 'translateX(32px)' : (exiting ? 'translateX(120%)' : 'translateX(0)')
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'start', gap: compact ? 7 : 10 }}>
-                  <div style={{ lineHeight: 1, marginTop: 2, color: accent, display: 'flex' }}>
-                    <Icon size={compact ? 14 : 18} aria-hidden />
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: compact ? 10 : 13 }}>
+                  <div
+                    style={{
+                      alignItems: 'center',
+                      background: tone.soft,
+                      border: `1px solid ${tone.border}`,
+                      borderRadius: 999,
+                      color: tone.accent,
+                      display: 'flex',
+                      flexShrink: 0,
+                      height: compact ? 25 : 32,
+                      justifyContent: 'center',
+                      marginTop: compact ? 0 : 1,
+                      width: compact ? 25 : 32
+                    }}
+                  >
+                    <Icon size={compact ? 14 : 17} aria-hidden />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    {title && <div style={{ fontWeight: 700, marginBottom: compact ? 2 : 4, fontSize: compact ? 12 : undefined }}>{title}</div>}
-                    {message && <div style={{ opacity: 0.95, fontSize: compact ? 11 : 13, lineHeight: 1.35 }}>{message}</div>}
+                  <div style={{ flex: 1, minWidth: 0, paddingTop: compact ? 1 : 1 }}>
+                    {title && (
+                      <div style={{
+                        color: textColor,
+                        fontSize: compact ? 12 : 13,
+                        fontWeight: 700,
+                        lineHeight: 1.28,
+                        marginBottom: message ? (compact ? 3 : 5) : 0
+                      }}>
+                        {title}
+                      </div>
+                    )}
+                    {message && (
+                      <div style={{
+                        color: mutedTextColor,
+                        fontSize: compact ? 11 : 12,
+                        lineHeight: 1.5,
+                        overflowWrap: 'anywhere'
+                      }}>
+                        {message}
+                      </div>
+                    )}
                   </div>
                   <button
                     aria-label="Dismiss notification"
                     onClick={(e) => { e.stopPropagation(); remove(id); }}
-                    style={{ background: 'transparent', border: 'none', color: textColor, cursor: 'pointer', opacity: 0.7, padding: compact ? 1 : 2, display: 'flex' }}
+                    style={{
+                      alignItems: 'center',
+                      background: closeBg,
+                      border: 'none',
+                      borderRadius: 999,
+                      color: mutedTextColor,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexShrink: 0,
+                      height: compact ? 23 : 26,
+                      justifyContent: 'center',
+                      padding: 0,
+                      marginLeft: compact ? 1 : 2,
+                      width: compact ? 23 : 26
+                    }}
                   >
-                    <X size={compact ? 13 : 16} aria-hidden />
+                    <X size={compact ? 13 : 14} aria-hidden />
                   </button>
                 </div>
                 {Array.isArray(actions) && actions.length > 0 && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, marginTop: compact ? 10 : 13, flexWrap: 'wrap', paddingLeft: compact ? 35 : 45 }}>
                     {actions.map((a, idx) => (
                       <button key={idx}
                         onClick={(e) => { e.stopPropagation(); try { a.onClick?.(); } catch { }; remove(id); }}
                         style={{
-                          border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
-                          background: 'transparent',
+                          border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.12)'}`,
+                          background: actionBg,
                           color: textColor,
-                          padding: compact ? '4px 8px' : '6px 10px',
+                          padding: compact ? '5px 9px' : '7px 12px',
                           fontSize: compact ? 11 : 12,
-                          borderRadius: compact ? 6 : 8,
+                          fontWeight: 650,
+                          borderRadius: 999,
                           cursor: 'pointer'
                         }}
                       >{a.label}</button>

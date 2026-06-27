@@ -2,120 +2,126 @@ import React from 'react';
 import { Sparkles, Clock, Zap, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
+const FEATURES = [
+  {
+    icon: Clock,
+    title: 'Perfect Timing',
+    description: 'Slides advance exactly when the lyrics hit — no manual tapping needed.',
+    accent: 'blue',
+  },
+  {
+    icon: Zap,
+    title: 'Smart Progression',
+    description: 'Reads embedded timestamp data to stay in sync from start to finish.',
+    accent: 'violet',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Standard Autoplay Still Available',
+    description: 'Switch back to manual or fixed-interval autoplay at any time.',
+    accent: 'emerald',
+  },
+];
+
+const accentMap = {
+  blue: {
+    light: { bg: 'bg-blue-50', icon: 'text-blue-500', ring: 'ring-blue-100' },
+    dark:  { bg: 'bg-blue-500/10', icon: 'text-blue-400', ring: 'ring-blue-500/20' },
+  },
+  violet: {
+    light: { bg: 'bg-violet-50', icon: 'text-violet-500', ring: 'ring-violet-100' },
+    dark:  { bg: 'bg-violet-500/10', icon: 'text-violet-400', ring: 'ring-violet-500/20' },
+  },
+  emerald: {
+    light: { bg: 'bg-emerald-50', icon: 'text-emerald-500', ring: 'ring-emerald-100' },
+    dark:  { bg: 'bg-emerald-500/10', icon: 'text-emerald-400', ring: 'ring-emerald-500/20' },
+  },
+};
+
 const IntelligentAutoplayInfo = ({ darkMode, onStart, onClose, setDontShowAgain }) => {
-  const [dontShowAgain, setLocalDontShowAgain] = React.useState(false);
+  const [dontShow, setDontShow] = React.useState(false);
 
   const handleStart = () => {
-    if (dontShowAgain && setDontShowAgain) {
-      setDontShowAgain(true);
-    }
+    if (dontShow && setDontShowAgain) setDontShowAgain(true);
     onStart();
   };
 
+  const d = darkMode;
+
   return (
-    <div className="flex flex-col" style={{ maxHeight: 'calc(100vh - 280px)', minHeight: '400px' }}>
-      {/* Scrollable Content */}
-      <div className="overflow-y-auto flex-1 space-y-6 pr-2">
-        {/* Hero Section */}
-        <div className={`rounded-lg p-6 text-center ${darkMode ? 'bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-purple-500/30' : 'bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200'}`}>
-          <div className="flex justify-center mb-4">
-            <div className={`p-4 rounded-full ${darkMode ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
-              <Sparkles className={`w-8 h-8 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-            </div>
+    <div className="flex flex-col" style={{ minHeight: 360 }}>
+
+      {/* Hero */}
+      <div className={`px-6 pt-6 pb-5 rounded-xl mb-1 ${d ? 'bg-linear-to-br from-violet-500/10 via-blue-500/5 to-transparent' : 'bg-linear-to-br from-violet-50 via-blue-50/60 to-white'}`}>
+        <div className="flex items-start gap-4">
+          <div className={`p-2.5 rounded-xl ring-1 shrink-0 ${d ? 'bg-violet-500/15 ring-violet-500/25 text-violet-300' : 'bg-violet-100 ring-violet-200 text-violet-600'}`}>
+            <Sparkles className="w-5 h-5" />
           </div>
-          <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Intelligent Autoplay
-          </h3>
-          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            Your lyrics contain timing information! Let LyricDisplay automatically advance based on the actual song timing.
-          </p>
-        </div>
-
-        {/* Features */}
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg flex-shrink-0 ${darkMode ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
-              <Clock className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-            </div>
-            <div>
-              <h4 className={`text-sm font-semibold mb-1 ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                Perfect Timing
-              </h4>
-              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Lyrics advance exactly when they should, synchronized with the embedded timestamps from your LRC file or synced lyrics.
-              </p>
-            </div>
+          <div>
+            <h3 className={`text-base font-semibold leading-snug mb-1 ${d ? 'text-white' : 'text-gray-900'}`}>
+              Intelligent Autoplay detected
+            </h3>
+            <p className={`text-sm leading-relaxed ${d ? 'text-gray-400' : 'text-gray-500'}`}>
+              Your lyrics contain timing data. Let LyricDisplay advance slides automatically in sync with the song.
+            </p>
           </div>
-
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg flex-shrink-0 ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
-              <Zap className={`w-5 h-5 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
-            </div>
-            <div>
-              <h4 className={`text-sm font-semibold mb-1 ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                Smart Progression
-              </h4>
-              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                The system intelligently calculates delays between lines, handling varying gaps naturally - from quick verses to long instrumental breaks.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg flex-shrink-0 ${darkMode ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
-              <CheckCircle2 className={`w-5 h-5 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-            </div>
-            <div>
-              <h4 className={`text-sm font-semibold mb-1 ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                Legacy Mode Available
-              </h4>
-              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Your regular autoplay with custom interval settings is still available. Use whichever works best for your workflow.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Important Note */}
-        <div className={`rounded-lg p-4 border ${darkMode ? 'bg-yellow-900/20 border-yellow-500/30' : 'bg-yellow-50 border-yellow-200'}`}>
-          <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-800'}`}>
-            <strong>Note:</strong> Intelligent autoplay works best when you start playback at the beginning of the song. The timing is based on the timestamps in your lyrics file.
-          </p>
-        </div>
-
-        {/* Don't Show Again Checkbox */}
-        <div className="flex items-center gap-3 pt-2 pb-4">
-          <Checkbox
-            id="dont-show-again"
-            checked={dontShowAgain}
-            onCheckedChange={setLocalDontShowAgain}
-            className={darkMode ? 'border-gray-600' : ''}
-          />
-          <label
-            htmlFor="dont-show-again"
-            className={`text-sm cursor-pointer select-none ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-          >
-            Don't show this message again
-          </label>
         </div>
       </div>
 
-      {/* Fixed Footer with Action Buttons */}
-      <div className={`flex-shrink-0 flex items-center justify-end gap-3 pt-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+      {/* Feature list */}
+      <div className="px-1 py-2 space-y-1.5 flex-1">
+        {FEATURES.map(({ icon: Icon, title, description, accent }) => {
+          const theme = accentMap[accent][d ? 'dark' : 'light'];
+          return (
+            <div
+              key={title}
+              className={`flex items-start gap-3.5 rounded-xl px-4 py-3 ring-1 ${theme.bg} ${theme.ring}`}
+            >
+              <div className={`mt-0.5 shrink-0 ${theme.icon}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div>
+                <p className={`text-sm font-medium ${d ? 'text-gray-100' : 'text-gray-800'}`}>{title}</p>
+                <p className={`text-xs mt-0.5 leading-relaxed ${d ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Don't show again */}
+      <div className={`flex items-center gap-2.5 px-1 py-3 mt-1 border-t ${d ? 'border-gray-800' : 'border-gray-100'}`}>
+        <Checkbox
+          id="dont-show-again"
+          checked={dontShow}
+          onCheckedChange={setDontShow}
+          className={`rounded ${d ? 'border-gray-600' : 'border-gray-300'}`}
+        />
+        <label
+          htmlFor="dont-show-again"
+          className={`text-xs cursor-pointer select-none ${d ? 'text-gray-400' : 'text-gray-500'}`}
+        >
+          Don't show this again
+        </label>
+      </div>
+
+      {/* Footer actions */}
+      <div className="flex items-center justify-end gap-2.5 pt-3">
         <button
           onClick={onClose}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode
-            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-            }`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            d
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/60'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+          }`}
         >
-          Maybe Later
+          Maybe later
         </button>
         <button
           onClick={handleStart}
-          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
         >
-          <Sparkles className="w-4 h-4" />
+          <Sparkles className="w-3.5 h-3.5" />
           Start Intelligent Autoplay
         </button>
       </div>
