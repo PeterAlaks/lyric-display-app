@@ -27,6 +27,8 @@ export const blurInputOnEnter = (event) => {
   });
 };
 
+const compactOptionButtonClass = '!h-9 !w-9 rounded-md [&_svg]:!size-3.5';
+
 export const AdvancedToggle = ({ expanded, onToggle, darkMode, ariaLabel, disabled = false, className = '' }) => (
   <button
     onClick={onToggle}
@@ -107,7 +109,7 @@ export const EmphasisRow = ({
     <Tooltip content="Apply text styling: bold, italic, underline, or all caps" side="right">
       <LabelWithIcon icon={icon} text="Emphasis" darkMode={darkMode} />
     </Tooltip>
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-1.5 flex-wrap">
       <Tooltip content="Make text bold" side="top">
         <Button
           size="icon"
@@ -117,14 +119,14 @@ export const EmphasisRow = ({
           className={
             boldValue
               ? darkMode
-                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
+                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
               : darkMode
-                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
+                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
           }
         >
-          <Bold className="w-4 h-4" />
+          <Bold className="h-3.5 w-3.5" />
         </Button>
       </Tooltip>
       <Tooltip content="Make text italic" side="top">
@@ -136,14 +138,14 @@ export const EmphasisRow = ({
           className={
             italicValue
               ? darkMode
-                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
+                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
               : darkMode
-                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
+                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
           }
         >
-          <Italic className="w-4 h-4" />
+          <Italic className="h-3.5 w-3.5" />
         </Button>
       </Tooltip>
       <Tooltip content="Underline text" side="top">
@@ -155,14 +157,14 @@ export const EmphasisRow = ({
           className={
             underlineValue
               ? darkMode
-                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
+                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
               : darkMode
-                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
+                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
           }
         >
-          <Underline className="w-4 h-4" />
+          <Underline className="h-3.5 w-3.5" />
         </Button>
       </Tooltip>
       <Tooltip content="Convert text to uppercase" side="top">
@@ -174,14 +176,14 @@ export const EmphasisRow = ({
           className={
             allCapsValue
               ? darkMode
-                ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
+                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
               : darkMode
-                ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
+                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
           }
         >
-          <CaseUpper className="w-4 h-4" />
+          <CaseUpper className="h-3.5 w-3.5" />
         </Button>
       </Tooltip>
     </div>
@@ -204,7 +206,7 @@ export const AlignmentRow = ({
       <Tooltip content={tooltip} side="right">
         <LabelWithIcon icon={icon} text={label} darkMode={darkMode} />
       </Tooltip>
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap">
         <Tooltip content="Align text to the left" side="top">
           <Button
             size="icon"
@@ -214,14 +216,14 @@ export const AlignmentRow = ({
             className={
               currentValue === 'left'
                 ? darkMode
-                  ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                  : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                  ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
+                  : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
                 : darkMode
-                  ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                  : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                  ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
+                  : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
             }
           >
-            <AlignLeft className="w-4 h-4" />
+            <AlignLeft className="h-3.5 w-3.5" />
           </Button>
         </Tooltip>
         <Tooltip content="Align text to the center" side="top">
@@ -233,14 +235,14 @@ export const AlignmentRow = ({
             className={
               currentValue === 'center'
                 ? darkMode
-                  ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                  : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                  ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
+                  : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
                 : darkMode
-                  ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                  : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                  ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
+                  : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
             }
           >
-            <AlignCenter className="w-4 h-4" />
+            <AlignCenter className="h-3.5 w-3.5" />
           </Button>
         </Tooltip>
         <Tooltip content="Align text to the right" side="top">
@@ -252,14 +254,14 @@ export const AlignmentRow = ({
             className={
               currentValue === 'right'
                 ? darkMode
-                  ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                  : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                  ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
+                  : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
                 : darkMode
-                  ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                  : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                  ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
+                  : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
             }
           >
-            <AlignRight className="w-4 h-4" />
+            <AlignRight className="h-3.5 w-3.5" />
           </Button>
         </Tooltip>
       </div>

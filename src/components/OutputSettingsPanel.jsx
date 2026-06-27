@@ -621,7 +621,7 @@ const OutputSettingsPanel = ({
         {children}
       </div>
     );
-    const ToggleButton = ({ active, disabled = false, onClick, children }) => (
+    const ToggleButton = ({ active, disabled = false, onClick, children, className = '' }) => (
       <button
         type="button"
         disabled={disabled}
@@ -629,7 +629,7 @@ const OutputSettingsPanel = ({
         className={`h-8 rounded-md border px-2 text-xs font-semibold transition-colors ${active
           ? darkMode ? 'border-blue-500 bg-blue-500/15 text-blue-100' : 'border-blue-500 bg-blue-50 text-blue-900'
           : darkMode ? 'border-gray-800 bg-gray-900 text-gray-300 hover:bg-gray-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-100'
-          } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+          } ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${className}`}
       >
         {children}
       </button>
@@ -935,10 +935,10 @@ const OutputSettingsPanel = ({
             </CompactField>
             <CompactField label="Emphasis">
               <div className="grid grid-cols-4 gap-1">
-                <ToggleButton active={settings.bold} onClick={() => update('bold', !settings.bold)}>B</ToggleButton>
-                <ToggleButton active={settings.italic} onClick={() => update('italic', !settings.italic)}>I</ToggleButton>
-                <ToggleButton active={settings.underline} onClick={() => update('underline', !settings.underline)}>U</ToggleButton>
-                <ToggleButton active={settings.allCaps} onClick={() => update('allCaps', !settings.allCaps)}>AA</ToggleButton>
+                <ToggleButton className="px-1.5 text-[11px]" active={settings.bold} onClick={() => update('bold', !settings.bold)}>B</ToggleButton>
+                <ToggleButton className="px-1.5 text-[11px]" active={settings.italic} onClick={() => update('italic', !settings.italic)}>I</ToggleButton>
+                <ToggleButton className="px-1.5 text-[11px]" active={settings.underline} onClick={() => update('underline', !settings.underline)}>U</ToggleButton>
+                <ToggleButton className="px-1.5 text-[11px]" active={settings.allCaps} onClick={() => update('allCaps', !settings.allCaps)}>AA</ToggleButton>
               </div>
             </CompactField>
           </CompactGrid>
