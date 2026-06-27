@@ -4,13 +4,14 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Palette, SlidersHorizontal } from 'lucide-react';
 
-const inputClassName = 'h-9 rounded-full border-gray-200 bg-white text-sm dark:border-gray-700/70 dark:bg-gray-800/90 dark:text-gray-100';
-const selectTriggerClassName = 'h-9 rounded-full border-gray-200 bg-white text-sm dark:border-gray-700/70 dark:bg-gray-800/90 dark:text-gray-100';
+const inputClassName = 'h-9 rounded-md border-gray-300 bg-white text-sm text-gray-900 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
+const selectTriggerClassName = 'h-9 rounded-md border-gray-300 bg-white px-3 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
+const selectContentClassName = 'rounded-md border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
 const ghostButtonClassName = 'rounded-full text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300';
 
 const Field = ({ label, children }) => (
-  <label className="block space-y-2">
-    <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
+  <label className="flex min-w-0 flex-col gap-1.5">
+    <span className="text-[11px] font-medium uppercase leading-4 tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
     {children}
   </label>
 );
@@ -75,7 +76,7 @@ export default function LyricVideoSettingsPanel({
               <SelectTrigger className={selectTriggerClassName}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className={selectContentClassName}>
                 <SelectItem value="lyricVideo">Lyric Video</SelectItem>
                 {outputIds.map((outputId) => (
                   <SelectItem key={outputId} value={outputId}>
@@ -96,7 +97,7 @@ export default function LyricVideoSettingsPanel({
               <SelectTrigger className={selectTriggerClassName}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className={selectContentClassName}>
                 <SelectItem value="background-only">Background only</SelectItem>
                 <SelectItem value="blank">Blank</SelectItem>
                 <SelectItem value="show-title">Show title</SelectItem>
