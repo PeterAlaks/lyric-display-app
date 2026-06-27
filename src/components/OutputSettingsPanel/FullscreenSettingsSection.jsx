@@ -121,7 +121,7 @@ const FullscreenSettingsSection = ({
               variant="outline"
               onClick={openMediaLibrary}
               disabled={fullScreenControlsDisabled}
-              className={`h-9 px-4 flex-shrink-0 text-xs font-semibold ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`h-9 px-4 shrink-0 text-xs font-semibold ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {hasBackgroundMedia ? 'Change Media' : 'Choose Media'}
             </Button>

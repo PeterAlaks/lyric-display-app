@@ -329,7 +329,7 @@ export default function ObsDockLayout() {
     ? 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-blue-500/10 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35'
     : 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35';
   const dockIconDisabledClass = 'cursor-not-allowed opacity-45';
-  const dockPrimaryButtonClass = 'flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 px-3 text-xs font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40';
+  const dockPrimaryButtonClass = 'flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-3 text-xs font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40';
   const currentLineText = hasLyrics && typeof selectedLine === 'number'
     ? `${selectedLine + 1}/${lyrics.length}`
     : hasLyrics ? `${lyrics.length} lines` : 'No lyrics';
@@ -540,7 +540,7 @@ export default function ObsDockLayout() {
         </div>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setSetlistOpen(true)} className={`relative ${dockIconButtonClass}`} title="Open setlist">
-            <ListMusic className="h-[18px] w-[18px]" />
+            <ListMusic className="h-4.5 w-4.5" />
             {setlistFiles.length > 0 && (
               <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-bold leading-4 text-white">
                 {setlistFiles.length}
@@ -548,15 +548,15 @@ export default function ObsDockLayout() {
             )}
           </button>
           <button type="button" onClick={forceReconnect} className={dockIconButtonClass} title="Reconnect">
-            <RefreshCw className="h-[18px] w-[18px]" />
+            <RefreshCw className="h-4.5 w-4.5" />
           </button>
           {desktopControlAvailable && (
             <button type="button" onClick={openDesktopApp} className={dockIconButtonClass} title="Switch to Desktop Mode">
-              <ExternalLink className="h-[18px] w-[18px]" />
+              <ExternalLink className="h-4.5 w-4.5" />
             </button>
           )}
           <button type="button" onClick={() => handleOpenSettings(activeOutput)} className={dockIconButtonClass} title="Output settings">
-            <Menu className="h-[18px] w-[18px]" />
+            <Menu className="h-4.5 w-4.5" />
           </button>
         </div>
       </header>
@@ -565,17 +565,17 @@ export default function ObsDockLayout() {
         <div className={`shrink-0 border-b px-2 py-1.5 ${toolbarClasses}`}>
           <div className="mb-1.5 flex items-center gap-1.5">
             <button type="button" onClick={() => fileInputRef.current?.click()} className={dockPrimaryButtonClass}>
-              <FolderOpen className="h-[18px] w-[18px] shrink-0" />
+              <FolderOpen className="h-4.5 w-4.5 shrink-0" />
               <span className="truncate">Load</span>
             </button>
             <button type="button" onClick={openCreateEditor} className={dockIconButtonClass} title="Create new song">
-              <FilePlus2 className="h-[18px] w-[18px]" />
+              <FilePlus2 className="h-4.5 w-4.5" />
             </button>
             <button type="button" onClick={handleAddCurrentToSetlist} disabled={!hasLyrics || !canControl} className={`${dockIconButtonClass} ${!hasLyrics || !canControl ? dockIconDisabledClass : ''}`} title="Add current song to setlist">
-              <ListPlus className="h-[18px] w-[18px]" />
+              <ListPlus className="h-4.5 w-4.5" />
             </button>
             <button type="button" onClick={handleToggleOutput} disabled={!canControl} className={`${isOutputOn && canControl ? 'inline-flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 text-white transition-colors hover:bg-green-500' : dockIconButtonClass} ${!canControl ? dockIconDisabledClass : ''}`} title={isOutputOn ? 'Turn display output off' : 'Turn display output on'}>
-              <Power className="h-[18px] w-[18px]" />
+              <Power className="h-4.5 w-4.5" />
             </button>
           </div>
           <input ref={fileInputRef} type="file" accept=".txt,.lrc" className="hidden" onChange={handleMainFileInput} />

@@ -2,6 +2,7 @@ import { ipcMain, BrowserWindow } from 'electron';
 import * as displayManager from '../displayManager.js';
 
 const resolveOutputRoute = (outputKey) => {
+  if (outputKey === 'lyric-video-studio') return '/lyric-video-live-output';
   if (outputKey === 'stage') return '/stage';
   if (outputKey === 'time') return '/time';
   if (typeof outputKey === 'string' && /^output\d+$/.test(outputKey)) return `/${outputKey}`;
@@ -10,8 +11,10 @@ const resolveOutputRoute = (outputKey) => {
 
 const resolveOutputKeyFromUrl = (url) => {
   if (!url) return null;
-  const match = String(url).match(/(?:#\/|\/)(stage|time|output\d+)(?:\?|$)/i);
-  return match ? match[1].toLowerCase() : null;
+  const match = String(url).match(/(?:#\/|\/)(lyric-video-live-output|stage|time|output\d+)(?:\?|$)/i);
+  if (!match) return null;
+  if (match[1].toLowerCase() === 'lyric-video-live-output') return 'lyric-video-studio';
+  return match[1].toLowerCase();
 };
 
 const isProjectionUrl = (url) => /[?&]projection=(1|true)\b/i.test(String(url || ''));

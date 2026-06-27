@@ -189,7 +189,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                             ].map((item, idx) => (
                                 <div key={idx} className="flex items-start gap-3">
                                     <div
-                                        className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'
+                                        className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'
                                             }`}
                                     />
                                     <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{item}</p>
@@ -285,7 +285,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                                             {provider.keySteps.map((step, idx) => (
                                                 <li key={idx} className="flex items-start gap-3">
                                                     <span
-                                                        className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                                                        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
                                                             }`}
                                                     >
                                                         {idx + 1}

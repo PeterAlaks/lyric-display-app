@@ -43,7 +43,7 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
     return (
         <div className="flex flex-col h-full">
             {/* Fixed Header with Tabs */}
-            <div className={`flex-shrink-0 pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <div className={`shrink-0 pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList className={`w-full h-12 p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                         <TabsTrigger
@@ -689,7 +689,7 @@ function SourceCreatorCallout({ darkMode, localIP, onRequestClose }) {
                 <button
                     type="button"
                     onClick={openCreator}
-                    className={`inline-flex h-9 flex-shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors ${darkMode ? 'bg-blue-400 text-gray-950 hover:bg-blue-300' : 'bg-blue-700 text-white hover:bg-blue-800'}`}
+                    className={`inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors ${darkMode ? 'bg-blue-400 text-gray-950 hover:bg-blue-300' : 'bg-blue-700 text-white hover:bg-blue-800'}`}
                 >
                     <ExternalLink className="h-4 w-4" />
                     Open Creator
@@ -756,7 +756,7 @@ function StepsList({ children }) {
 function Step({ number, children, darkMode }) {
     return (
         <div className="flex gap-3">
-            <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+            <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
                 {number}
             </div>
             <div className={`flex-1 pt-0.5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -777,7 +777,7 @@ function SubSteps({ children, darkMode }) {
 function SubStep({ children, darkMode }) {
     return (
         <div className="flex gap-2 items-start">
-            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${darkMode ? 'bg-gray-500' : 'bg-gray-400'}`} />
+            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${darkMode ? 'bg-gray-500' : 'bg-gray-400'}`} />
             <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 {children}
             </span>
@@ -804,7 +804,7 @@ function URLBox({ children, darkMode }) {
             <span ref={textRef} className="break-all flex-1">{children}</span>
             <button
                 onClick={handleCopy}
-                className={`flex-shrink-0 p-1.5 rounded transition-all ${copied
+                className={`shrink-0 p-1.5 rounded transition-all ${copied
                     ? darkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'
                     : darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
                     }`}
@@ -840,7 +840,7 @@ function CheckboxList({ children }) {
 function CheckboxItem({ children, darkMode }) {
     return (
         <div className="flex gap-2 items-start">
-            <Check className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
+            <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
             <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {children}
             </span>
@@ -903,7 +903,7 @@ function TipBox({ children, darkMode, type = 'pro' }) {
 
     return (
         <div className={`p-3 rounded-lg border flex gap-2.5 ${styles[type]}`}>
-            <span className="text-base flex-shrink-0">{icons[type]}</span>
+            <span className="text-base shrink-0">{icons[type]}</span>
             <p className="text-xs leading-relaxed">
                 {children}
             </p>

@@ -653,7 +653,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
               {isLibrariesMode && !isOnline && (
                 <div className={`rounded-md border px-4 py-3 ${darkMode ? 'border-red-500/40 bg-red-500/10' : 'border-red-200 bg-red-50'}`}>
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
+                    <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
                     <div>
                       <p className={`text-sm font-semibold ${darkMode ? 'text-red-300' : 'text-red-900'}`}>No internet connection</p>
                       <p className={`mt-1 text-xs ${darkMode ? 'text-red-400' : 'text-red-700'}`}>Online library search is unavailable.</p>
@@ -690,7 +690,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
                     <div className={`mb-3 rounded-md border px-4 py-3 ${darkMode ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-yellow-200 bg-yellow-50'}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 flex-1 items-start gap-2">
-                          <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                          <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                           <div className="min-w-0">
                             <p className={`text-sm font-medium ${darkMode ? 'text-yellow-300' : 'text-yellow-900'}`}>{lastError.title}</p>
                             <p className={`mt-1 text-xs ${darkMode ? 'text-yellow-400/80' : 'text-yellow-700'}`}>{lastError.message}</p>

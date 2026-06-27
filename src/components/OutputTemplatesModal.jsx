@@ -90,9 +90,9 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               {isUserTemplate ? (
-                <User className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                <User className={`w-4 h-4 shrink-0 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
               ) : (
-                <Sparkles className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                <Sparkles className={`w-4 h-4 shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
               )}
               <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 {isUserTemplate ? template.name : template.title}
@@ -152,7 +152,7 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {isUserTemplate && (
               <Button
                 variant="ghost"

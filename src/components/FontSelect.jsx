@@ -480,7 +480,7 @@ const FontSelect = ({
     >
       <span className="truncate" title={font}>{font}</span>
       {normalizedValue && normalizedValue.toLowerCase() === font.toLowerCase() && (
-        <Check className="w-4 h-4 flex-shrink-0" />
+        <Check className="w-4 h-4 shrink-0" />
       )}
     </button>
   ), [darkMode, handleSelect, normalizedValue, handleFontItemKeyDown]);
@@ -615,7 +615,7 @@ const FontSelect = ({
         ref={triggerRef}
       >
         <span className="min-w-0 flex-1 truncate text-left" title={value || placeholder}>{value || placeholder}</span>
-        <ChevronDown className="h-4 w-4 flex-shrink-0 opacity-60" />
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
       </button>
 
       {isMenuVisible && createPortal(

@@ -174,7 +174,7 @@ const MobileLayout = () => {
       >
         {/* Fixed Header */}
         <div
-          className={`border-b px-4 py-4 flex-shrink-0 ${darkMode
+          className={`border-b px-4 py-4 shrink-0 ${darkMode
             ? 'bg-gray-900 border-gray-800'
             : 'bg-white/95 border-gray-200'
             }`}
@@ -207,7 +207,7 @@ const MobileLayout = () => {
                 className={iconButtonClass(false)}
                 title="Open setlist"
               >
-                <ListMusic className="h-[18px] w-[18px]" />
+                <ListMusic className="h-4.5 w-4.5" />
               </button>
               {/* Sync Outputs Button */}
               <button
@@ -216,7 +216,7 @@ const MobileLayout = () => {
                 className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
                 title={(!isConnected || !isAuthenticated || !ready) ? "Cannot sync - not connected or authenticated" : "Sync outputs"}
               >
-                <RefreshCw className="h-[18px] w-[18px]" />
+                <RefreshCw className="h-4.5 w-4.5" />
               </button>
               <button
                 onClick={() => {
@@ -231,7 +231,7 @@ const MobileLayout = () => {
                 className={iconButtonClass(false)}
                 title="Help"
               >
-                <HelpCircle className="h-[18px] w-[18px]" />
+                <HelpCircle className="h-4.5 w-4.5" />
               </button>
             </div>
           </div>
@@ -242,14 +242,14 @@ const MobileLayout = () => {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() => navigate('/new-song?mode=compose')}
-                className="flex h-11 min-w-0 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 px-4 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 md:max-w-md"
+                className="flex h-11 min-w-0 w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-4 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 md:max-w-md"
               >
-                <FileText className="h-[18px] w-[18px] flex-shrink-0" />
+                <FileText className="h-4.5 w-4.5 shrink-0" />
                 <span className="truncate">Create Lyrics</span>
               </button>
 
               {/* Toggle Display Switch */}
-              <div className="flex flex-shrink-0 items-center gap-4">
+              <div className="flex shrink-0 items-center gap-4">
                 <Switch
                   checked={isOutputOn}
                   onCheckedChange={handleToggle}
@@ -292,7 +292,7 @@ const MobileLayout = () => {
             {hasLyrics ? (
               <>
                 {/* Fixed Search Bar and Autoplay */}
-                <div className={`border-b px-3 py-3 flex-shrink-0 ${darkMode
+                <div className={`border-b px-3 py-3 shrink-0 ${darkMode
                   ? 'border-gray-800 bg-gray-900/70'
                   : 'border-gray-200 bg-white/80'
                   }`}>
@@ -314,7 +314,7 @@ const MobileLayout = () => {
                     </div>
 
                     {/* Autoplay Controls */}
-                    <div className="flex gap-2 md:w-auto md:flex-shrink-0">
+                    <div className="flex gap-2 md:w-auto md:shrink-0">
                       {/* Intelligent Autoplay Button */}
                       {hasValidTimestamps(lyricsTimestamps) && (
                         <button
@@ -323,7 +323,7 @@ const MobileLayout = () => {
                           className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-sm font-medium transition-colors ${remoteAutoplayActive || autoplayActive
                             ? 'cursor-not-allowed text-gray-500 opacity-45'
                             : intelligentAutoplayActive
-                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                              ? 'bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
                               : darkMode
                                 ? 'text-gray-400 hover:bg-blue-500/10 hover:text-blue-300'
                                 : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
@@ -336,14 +336,14 @@ const MobileLayout = () => {
                                 : "Start intelligent autoplay"
                           }
                         >
-                          <Sparkles className="h-[18px] w-[18px]" />
+                          <Sparkles className="h-4.5 w-4.5" />
                         </button>
                       )}
 
                       <button
                         onClick={handleAutoplayToggle}
                         disabled={remoteAutoplayActive || intelligentAutoplayActive}
-                        className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors md:flex-initial md:min-w-[140px] ${remoteAutoplayActive || intelligentAutoplayActive
+                        className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors md:flex-initial md:min-w-35 ${remoteAutoplayActive || intelligentAutoplayActive
                           ? 'cursor-not-allowed text-gray-500 opacity-45'
                           : autoplayActive
                             ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -354,13 +354,13 @@ const MobileLayout = () => {
                       >
                         {autoplayActive ? (
                           <>
-                            <Square className="h-[18px] w-[18px] fill-current" />
+                            <Square className="h-4.5 w-4.5 fill-current" />
                             <span className="hidden md:inline">Stop</span>
                             <span className="md:hidden">Stop Autoplay</span>
                           </>
                         ) : (
                           <>
-                            <Play className="h-[18px] w-[18px]" />
+                            <Play className="h-4.5 w-4.5" />
                             <span className="hidden md:inline">Autoplay</span>
                             <span className="md:hidden">Start Autoplay</span>
                           </>
@@ -377,7 +377,7 @@ const MobileLayout = () => {
                             }`}
                           title="Autoplay settings"
                         >
-                          <ChevronDown className="h-[18px] w-[18px]" />
+                          <ChevronDown className="h-4.5 w-4.5" />
                         </button>
                       )}
                     </div>
@@ -498,7 +498,7 @@ const MobileLayout = () => {
 
         {/* Fixed Footer */}
         <div
-          className={`px-4 py-3 text-center text-xs border-t flex-shrink-0 whitespace-normal break-words ${darkMode
+          className={`px-4 py-3 text-center text-xs border-t shrink-0 whitespace-normal wrap-break-word ${darkMode
             ? 'text-gray-400 bg-gray-800 border-gray-700'
             : 'text-gray-600 bg-gray-50 border-gray-200'
             }`}

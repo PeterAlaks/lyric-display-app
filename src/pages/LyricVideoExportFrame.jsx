@@ -58,6 +58,7 @@ export default function LyricVideoExportFrame() {
       frameKey={line || 'gap'}
       label="Lyric Video Export"
       className="relative h-screen w-screen overflow-hidden"
+      backgroundVideoPlaying={false}
     />
   );
 }

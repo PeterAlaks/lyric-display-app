@@ -120,7 +120,7 @@ const NdiPreferencesSection = ({
 
       {ndiStatus.installed && ndiUpdateInfo?.updateAvailable && (
         <div className={`flex items-start gap-3 p-3 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-600/30' : 'bg-blue-50 border border-blue-200'}`}>
-          <Download className={`w-4 h-4 mt-0.5 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+          <Download className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
               Update available: v{ndiUpdateInfo.latestVersion}
@@ -133,7 +133,7 @@ const NdiPreferencesSection = ({
             size="sm"
             onClick={handleNdiUpdate}
             disabled={ndiUpdating || isDownloading}
-            className={`flex-shrink-0 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+            className={`shrink-0 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
           >
             {ndiUpdating ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

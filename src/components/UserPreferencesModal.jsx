@@ -768,7 +768,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               </p>
               {(preferences.fileHandling?.maxSetlistFiles ?? DEFAULT_SETLIST_ITEMS) > SETLIST_PERFORMANCE_WARNING_ITEMS && (
                 <div className={`flex items-start gap-2 p-2 rounded ${darkMode ? 'bg-yellow-900/20 border border-yellow-600/30' : 'bg-yellow-50 border border-yellow-200'}`}>
-                  <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                  <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                   <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
                     Large setlists may impact performance when loading or switching between songs
                   </p>

@@ -359,7 +359,7 @@ export default function PreServiceHealthModal({ darkMode }) {
                     <div key={check.id} className={`grid gap-3 px-4 py-3 transition-colors sm:grid-cols-[minmax(0,1fr)_auto] ${darkMode ? 'hover:bg-blue-500/5' : 'hover:bg-blue-50/50'}`}>
                       <div className="flex min-w-0 items-start gap-3">
                         <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${darkMode ? 'bg-gray-950 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
-                          <ItemIcon className="h-[18px] w-[18px]" />
+                          <ItemIcon className="h-4.5 w-4.5" />
                         </div>
                         <div className="min-w-0">
                           <p className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{check.label}</p>

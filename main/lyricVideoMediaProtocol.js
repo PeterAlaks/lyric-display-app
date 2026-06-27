@@ -90,3 +90,16 @@ export function grantLyricVideoMediaFile(filePath, mimeType) {
   const fileName = encodeURIComponent(path.basename(filePath));
   return `${SCHEME}://${token}/${fileName}`;
 }
+
+export function revokeLyricVideoMediaFile(sourceUrl) {
+  if (typeof sourceUrl !== 'string' || !sourceUrl.startsWith(`${SCHEME}://`)) {
+    return false;
+  }
+
+  try {
+    const url = new URL(sourceUrl);
+    return mediaGrants.delete(url.hostname);
+  } catch {
+    return false;
+  }
+}

@@ -173,7 +173,7 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
                     pointerEvents: 'none',
                 }}
             >
-                <Lightbulb className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{content}</span>
             </div>,
             document.body

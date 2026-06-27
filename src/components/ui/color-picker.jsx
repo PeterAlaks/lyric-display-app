@@ -176,11 +176,11 @@ const ColorPicker = React.forwardRef(({
             "flex-1",
             format === "hex"
               ? darkMode
-                ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
-                : "!bg-black !text-white hover:!bg-black !border-gray-300"
+                ? "bg-white! text-gray-900! hover:bg-white! border-gray-300!"
+                : "bg-black! text-white! hover:bg-black! border-gray-300!"
               : darkMode
-                ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
-                : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
+                ? "bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700!"
+                : "bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100!"
           )}
         >
           HEX
@@ -193,11 +193,11 @@ const ColorPicker = React.forwardRef(({
             "flex-1",
             format === "rgb"
               ? darkMode
-                ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
-                : "!bg-black !text-white hover:!bg-black !border-gray-300"
+                ? "bg-white! text-gray-900! hover:bg-white! border-gray-300!"
+                : "bg-black! text-white! hover:bg-black! border-gray-300!"
               : darkMode
-                ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
-                : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
+                ? "bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700!"
+                : "bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100!"
           )}
         >
           RGB
@@ -210,11 +210,11 @@ const ColorPicker = React.forwardRef(({
             "flex-1",
             format === "hsl"
               ? darkMode
-                ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300"
-                : "!bg-black !text-white hover:!bg-black !border-gray-300"
+                ? "bg-white! text-gray-900! hover:bg-white! border-gray-300!"
+                : "bg-black! text-white! hover:bg-black! border-gray-300!"
               : darkMode
-                ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700"
-                : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100"
+                ? "bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700!"
+                : "bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100!"
           )}
         >
           HSL
@@ -327,7 +327,7 @@ const ColorPicker = React.forwardRef(({
         >
           <div
             className={cn(
-              "rounded border border-border flex-shrink-0",
+              "rounded border border-border shrink-0",
               showHex ? "h-5 w-5" : "h-6 w-full"
             )}
             style={{ backgroundColor: color }}
@@ -337,7 +337,7 @@ const ColorPicker = React.forwardRef(({
       </PopoverTrigger>
       {sheetMode && open && typeof document !== 'undefined' ? createPortal(
         <div
-          className="fixed inset-0 z-[2400] bg-black/35 p-2"
+          className="fixed inset-0 z-2400 bg-black/35 p-2"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) handleOpenChange(false)
           }}
@@ -376,7 +376,7 @@ const ColorPicker = React.forwardRef(({
         <PopoverContent
           ref={contentRef}
           data-popover-scroll-lock-allow="true"
-          className={`w-[224px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          className={`w-56 p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
           align="start"
         >
           {pickerPanel}

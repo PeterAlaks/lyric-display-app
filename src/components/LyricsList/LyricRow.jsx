@@ -108,7 +108,7 @@ export default function LyricRow({
                     : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
                 }`}
             >
-              <Ungroup className="w-3.5 h-3.5 flex-shrink-0" />
+              <Ungroup className="w-3.5 h-3.5 shrink-0" />
               <span
                 className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === index
                   ? 'max-w-[60px] opacity-100 ml-0'

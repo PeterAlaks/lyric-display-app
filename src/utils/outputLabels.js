@@ -9,6 +9,10 @@ export const formatOutputLabel = (outputKey, { uppercase = false } = {}) => {
     return uppercase ? 'TIME' : 'Time';
   }
 
+  if (outputKey === 'lyric-video-studio') {
+    return uppercase ? 'LYRIC VIDEO STUDIO' : 'Lyric Video Studio';
+  }
+
   const match = /^output(\d+)$/i.exec(String(outputKey));
   if (match) {
     const num = match[1];

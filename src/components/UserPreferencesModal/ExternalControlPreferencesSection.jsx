@@ -116,7 +116,7 @@ const ExternalControlPreferencesSection = ({
             <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-white'}`}>
               <div className={`px-3 py-2 flex items-center justify-between gap-3 ${darkMode ? 'bg-gray-800/60 border-b border-gray-700' : 'bg-gray-50 border-b border-gray-200'}`}>
                 <p className={`text-xs font-semibold tracking-wide ${labelClass}`}>MIDI Mappings</p>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   {lastLearnedMidi && (
                     <span className={`text-[11px] ${mutedClass}`}>
                       Last learned: {lastLearnedMidi.type === 'note'

@@ -171,7 +171,7 @@ export function SupportDevelopmentModal({ isOpen, onClose, isDark = false }) {
                     onClick={handleDonate}
                     className={cn(
                       'w-full h-12 text-base font-semibold gap-2',
-                      'bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600',
+                      'bg-linear-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600',
                       'text-white shadow-lg hover:shadow-xl transition-all duration-200'
                     )}
                   >

@@ -257,7 +257,7 @@ const PaintPicker = React.forwardRef(({
         >
           <div
             className={cn(
-              "rounded border border-border flex-shrink-0",
+              "rounded border border-border shrink-0",
               showValue ? "h-5 w-5" : "h-6 w-full"
             )}
             style={{ background: previewBackground }}

@@ -346,7 +346,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
           darkMode ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200'
         )}
       >
-        <div className={cn('px-6 py-5 border-b flex-shrink-0', darkMode ? 'border-gray-800' : 'border-gray-200')}>
+        <div className={cn('px-6 py-5 border-b shrink-0', darkMode ? 'border-gray-800' : 'border-gray-200')}>
           <div className="flex items-center gap-3 mb-3">
             <div className={cn(
               'flex h-11 w-11 items-center justify-center rounded-xl',
@@ -671,7 +671,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
         </div>
 
         <div className={cn(
-          'px-6 py-4 border-t flex items-center justify-between flex-shrink-0',
+          'px-6 py-4 border-t flex items-center justify-between shrink-0',
           darkMode ? 'border-gray-800' : 'border-gray-200'
         )}>
           <div>

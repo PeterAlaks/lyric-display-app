@@ -238,7 +238,7 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
 
         {settings.enabled && !companionRunning && (
           <div className={`flex items-start gap-2 p-3 rounded-lg ${darkMode ? 'bg-yellow-900/20 border border-yellow-600/30' : 'bg-yellow-50 border border-yellow-200'}`}>
-            <Zap className={`w-4 h-4 mt-0.5 flex-shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+            <Zap className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
             <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
               The NDI companion is not running. Launch it from Preferences -&gt; NDI to start broadcasting.
             </p>

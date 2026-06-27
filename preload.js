@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
   lyricVideo: {
     selectAudio: () => ipcRenderer.invoke('lyric-video:select-audio'),
+    restoreAudio: (payload) => ipcRenderer.invoke('lyric-video:restore-audio', payload),
+    revokeMedia: (sourceUrl) => ipcRenderer.invoke('lyric-video:revoke-media', sourceUrl),
+    getExportReadiness: (payload) => ipcRenderer.invoke('lyric-video:get-export-readiness', payload),
+    selectFfmpeg: () => ipcRenderer.invoke('lyric-video:select-ffmpeg'),
     exportVideo: (payload) => ipcRenderer.invoke('lyric-video:export-video', payload),
     cancelExport: () => ipcRenderer.invoke('lyric-video:cancel-export'),
     onExportProgress: (callback) => {

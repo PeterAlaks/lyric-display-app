@@ -77,7 +77,7 @@ export function WelcomeSplash({ darkMode, onOpenIntegration }) {
 function FeatureCard({ icon, title, description, darkMode }) {
     return (
         <div className={`flex gap-3 p-3 rounded-lg border ${darkMode ? 'bg-gray-800/30 border-gray-700/50' : 'bg-white border-gray-200'}`}>
-            <div className="text-2xl flex-shrink-0">{icon}</div>
+            <div className="text-2xl shrink-0">{icon}</div>
             <div className="flex-1 min-w-0">
                 <h3 className={`text-sm font-semibold mb-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
                     {title}
@@ -93,7 +93,7 @@ function FeatureCard({ icon, title, description, darkMode }) {
 function QuickAction({ children, darkMode }) {
     return (
         <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'}`} />
+            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${darkMode ? 'bg-blue-400' : 'bg-blue-600'}`} />
             <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
                 {children}
             </span>

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings } from 'lucide-react';
+import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings, Film, Music2, SlidersHorizontal } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-        <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-white'
+        <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-white'
             }`}>
             <Icon className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
         </div>
@@ -216,6 +216,51 @@ export const SongCanvasHelp = ({ darkMode }) => (
     </div>
 );
 
+export const LyricVideoStudioHelp = ({ darkMode }) => (
+    <div className="space-y-3">
+        <HelpSection
+            icon={FileText}
+            title="Use Timestamped LRC Files"
+            description="Import an .lrc file with timestamps before exporting. Untimed or plain text lyrics can be previewed visually, but MP4 export requires usable timestamps so every rendered frame can resolve the correct line."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Music2}
+            title="Attach Local Audio"
+            description="Attach MP3, WAV, M4A, or AAC audio from the desktop app. Browser-only audio can be previewed, but production MP4 export needs a desktop file path so FFmpeg can mux the selected audio."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={SlidersHorizontal}
+            title="Review Sync Before Export"
+            description="Use the transport, timeline, and global offset control to verify timing end to end. The export uses the same offset, no-lyric behavior, clear-after timing, and selected visual source shown in the preview."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Film}
+            title="MP4 Export Requirements"
+            description="The desktop app renders hidden frames and encodes them with FFmpeg. Set FFMPEG_PATH when using a custom FFmpeg binary, bundle FFmpeg with the app resources, or install FFmpeg so it is available on PATH."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Shield}
+            title="Local Files and Rights"
+            description="LyricDisplay does not provide the song audio or lyric file for this workflow. Export only content you supplied locally and have the right to use, publish, or distribute."
+            darkMode={darkMode}
+        />
+
+        <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
+            <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                Tip: Do a short test export first after changing FPS, resolution, offset, or FFmpeg setup. It catches missing audio paths, unavailable FFmpeg binaries, and sync mistakes before a long render.
+            </p>
+        </div>
+    </div>
+);
+
 export const StageDisplayHelp = ({ darkMode }) => (
     <div className="space-y-3">
         <HelpSection
@@ -393,4 +438,4 @@ export const ObsWebSocketHelp = ({ darkMode }) => (
     </div>
 );
 
-export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp };
+export default { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, LyricVideoStudioHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp };

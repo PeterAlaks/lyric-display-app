@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { useDarkModeState, useIsDesktopApp } from './hooks/useStoreSelectors';
 import useLyricsStore from './context/LyricsStore';
 import { ToastProvider } from '@/components/toast/ToastProvider';
@@ -22,6 +22,7 @@ const OutputPage = React.lazy(() => import('./pages/OutputPage'));
 const ObsSetup = React.lazy(() => import('./pages/ObsSetup'));
 const LyricVideoStudio = React.lazy(() => import('./pages/LyricVideoStudio'));
 const LyricVideoExportFrame = React.lazy(() => import('./pages/LyricVideoExportFrame'));
+const LyricVideoLiveOutput = React.lazy(() => import('./pages/LyricVideoLiveOutput'));
 const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
 const TimerControlModule = React.lazy(() => import('./components/TimerControlModule'));
 const ObsDockLayout = React.lazy(() => import('./components/ObsDockLayout'));
@@ -63,30 +64,47 @@ function MainWindowBridges() {
   );
 }
 
+function MainWindowShell() {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search || '');
+  const isObsDockEntry = location.pathname === '/' && searchParams.get('dock') === 'obs';
+
+  if (isObsDockEntry) {
+    return <Outlet />;
+  }
+
+  return (
+    <ConditionalDesktopShell>
+      <ControlSocketProvider>
+        <MainWindowBridges />
+        <Outlet />
+      </ControlSocketProvider>
+    </ConditionalDesktopShell>
+  );
+}
+
 function AppRoutes() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search || '');
   const isObsDockEntry = location.pathname === '/' && searchParams.get('dock') === 'obs';
-  const isMainWindowRoute = !isObsDockEntry && (location.pathname === '/' || location.pathname.startsWith('/new-song'));
 
   return (
     <>
-      {isMainWindowRoute && <MainWindowBridges />}
       <React.Suspense fallback={null}>
         <Routes>
-          <Route path="/" element={
-            isObsDockEntry ? (
-              <ControlSocketProvider>
-                <ObsDockLayout />
-              </ControlSocketProvider>
-            ) : (
-              <ConditionalDesktopShell>
+          <Route element={<MainWindowShell />}>
+            <Route path="/" element={
+              isObsDockEntry ? (
                 <ControlSocketProvider>
-                  <ControlPanel />
+                  <ObsDockLayout />
                 </ControlSocketProvider>
-              </ConditionalDesktopShell>
-            )
-          } />
+              ) : (
+                <ControlPanel />
+              )
+            } />
+            <Route path="/lyric-video-studio" element={<LyricVideoStudio />} />
+            <Route path="/new-song" element={<NewSongCanvas />} />
+          </Route>
           <Route path="/output1" element={<Output1 />} />
           <Route path="/output2" element={<Output2 />} />
           {CUSTOM_OUTPUT_ROUTE_IDS.map((outputId) => (
@@ -104,19 +122,8 @@ function AppRoutes() {
               <ObsDockLayout />
             </ControlSocketProvider>
           } />
-          <Route path="/lyric-video-studio" element={
-            <ConditionalDesktopShell>
-              <LyricVideoStudio />
-            </ConditionalDesktopShell>
-          } />
+          <Route path="/lyric-video-live-output" element={<LyricVideoLiveOutput />} />
           <Route path="/lyric-video-export-frame" element={<LyricVideoExportFrame />} />
-          <Route path="/new-song" element={
-            <ConditionalDesktopShell>
-              <ControlSocketProvider>
-                <NewSongCanvas />
-              </ControlSocketProvider>
-            </ConditionalDesktopShell>
-          } />
           <Route path="/timer-control" element={
             <ConditionalDesktopShell>
               <ControlSocketProvider role="timer-control">

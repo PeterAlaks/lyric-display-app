@@ -1,47 +1,134 @@
 import React from 'react';
-import { Download } from 'lucide-react';
+import {
+  Captions,
+  Download,
+  ExternalLink,
+  FileAudio,
+  FolderOpen,
+  HardDrive,
+  Loader2,
+  RefreshCw,
+  Wrench,
+} from 'lucide-react';
 import useModal from '../../hooks/useModal';
+import { Button } from '../ui/button';
+
+function ReadinessRow({ icon: Icon, label, detail, ready, checking }) {
+  return (
+    <div className="flex min-w-0 items-start gap-3 py-2.5">
+      <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center ${ready
+        ? 'text-green-600 dark:text-green-300'
+        : checking
+          ? 'text-blue-600 dark:text-blue-300'
+          : 'text-amber-600 dark:text-amber-300'
+        }`}
+      >
+        {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <span className="font-medium text-gray-900 dark:text-gray-100">{label}</span>
+          <span className={`shrink-0 text-xs font-medium ${ready
+            ? 'text-green-700 dark:text-green-300'
+            : checking
+              ? 'text-blue-700 dark:text-blue-300'
+              : 'text-amber-700 dark:text-amber-300'
+            }`}
+          >
+            {checking ? 'Checking' : ready ? 'Ready' : 'Needs attention'}
+          </span>
+        </div>
+        <p className="mt-0.5 wrap-break-word text-xs leading-5 text-gray-500 dark:text-gray-400">{detail}</p>
+      </div>
+    </div>
+  );
+}
 
 function LyricVideoExportBody({
   settings,
   audioAttached,
   audioExportable,
   hasTimedLyrics,
+  ffmpegReadiness,
   isExporting,
   progress,
   result,
+  onSelectFfmpeg,
+  onRefreshReadiness,
+  onOpenFfmpegDownload,
 }) {
   const percent = Math.max(0, Math.min(100, Number(progress?.percent) || 0));
+  const ffmpegChecking = ffmpegReadiness?.checking || !ffmpegReadiness;
+  const ffmpegReady = ffmpegReadiness?.available === true;
+  const ffmpegActionButtonClass = 'justify-start border-gray-300 bg-white text-gray-800 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-100 dark:hover:border-blue-400/60 dark:hover:bg-blue-500/15 dark:hover:text-blue-100';
+  const readinessItems = [
+    {
+      label: 'Audio attached',
+      icon: FileAudio,
+      ready: audioAttached,
+      detail: audioAttached ? 'An audio file is loaded in the studio.' : 'Attach the song audio before exporting.',
+    },
+    {
+      label: 'Desktop audio path',
+      icon: HardDrive,
+      ready: audioExportable,
+      detail: audioExportable ? 'The selected audio has a local file path and duration.' : 'Select audio from the desktop app so export can read the original file.',
+    },
+    {
+      label: 'Timed LRC lyrics',
+      icon: Captions,
+      ready: hasTimedLyrics,
+      detail: hasTimedLyrics ? 'Usable lyric timestamps are loaded.' : 'Import an LRC file with timestamps.',
+    },
+    {
+      label: 'FFmpeg',
+      icon: Wrench,
+      ready: ffmpegReady,
+      checking: ffmpegChecking,
+      detail: ffmpegChecking
+        ? 'checking...'
+        : ffmpegReady
+          ? `Ready${ffmpegReadiness?.ffmpegPath ? `: ${ffmpegReadiness.ffmpegPath}` : ''}`
+          : (ffmpegReadiness?.error || 'FFmpeg is not available.'),
+    },
+  ];
 
   return (
-    <div className="space-y-4 text-sm">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/70">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Format</div>
-          <div className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.format.toUpperCase()}</div>
+    <div className="space-y-5 text-sm">
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Export Settings</div>
+          </div>
         </div>
-        <div className="rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/70">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Canvas</div>
-          <div className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.width} x {settings.height}</div>
-        </div>
-        <div className="rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/70">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Frame Rate</div>
-          <div className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.fps} fps</div>
-        </div>
-        <div className="rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/70">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Outro</div>
-          <div className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.outroPaddingMs} ms</div>
-        </div>
-      </div>
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/70">
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Format</dt>
+            <dd className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.format.toUpperCase()}</dd>
+          </div>
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/70">
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Canvas</dt>
+            <dd className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.width} x {settings.height}</dd>
+          </div>
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/70">
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Frame Rate</dt>
+            <dd className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.fps} fps</dd>
+          </div>
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/70">
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Outro</dt>
+            <dd className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.outroPaddingMs} ms</dd>
+          </div>
+        </dl>
+      </section>
 
       {isExporting && (
-        <div className="space-y-2 rounded-xl bg-blue-50 p-3 dark:bg-blue-500/10">
+        <div className="space-y-2 border-b border-gray-200 pb-4 dark:border-gray-800">
           <div className="flex justify-between text-xs font-medium uppercase tracking-wide text-blue-800 dark:text-blue-100">
             <span>{progress?.phase || 'exporting'}</span>
             <span>{percent}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-blue-200 dark:bg-blue-950">
-            <div className="h-full bg-gradient-to-r from-blue-400 to-purple-600 transition-all" style={{ width: `${percent}%` }} />
+            <div className="h-full bg-linear-to-r from-blue-400 to-purple-600 transition-all" style={{ width: `${percent}%` }} />
           </div>
           <div className="text-xs text-blue-900 dark:text-blue-100">
             Frame {progress?.frame || 0} of {progress?.frameCount || 0}
@@ -50,20 +137,70 @@ function LyricVideoExportBody({
       )}
 
       {result?.success && (
-        <div className="rounded-md bg-green-50 p-3 text-green-900 dark:bg-green-950/40 dark:text-green-100">
+        <div className="border-b border-gray-200 pb-4 text-green-700 dark:border-gray-800 dark:text-green-300">
           Export complete: <span className="font-mono">{result.outputPath}</span>
         </div>
       )}
 
       {result?.error && (
-        <div className="max-h-40 overflow-y-auto rounded-md bg-red-50 p-3 text-red-900 dark:bg-red-950/40 dark:text-red-100">
+        <div className="max-h-40 overflow-y-auto border-b border-gray-200 pb-4 text-red-700 dark:border-gray-800 dark:text-red-300">
           {result.error}
         </div>
       )}
 
-      <div className="rounded-xl bg-gray-50 p-3 text-gray-700 dark:bg-gray-900/70 dark:text-gray-300">
-        <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Readiness</div>
-        {audioAttached ? 'Audio attached' : 'Audio missing'}, {audioExportable ? 'desktop file path ready' : 'desktop file path missing'}, {hasTimedLyrics ? 'timed lyrics loaded' : 'timed lyrics missing'}. FFmpeg must be installed and available on PATH.
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <section className="space-y-3">
+          <div className="divide-y divide-gray-200 dark:divide-gray-800">
+            {readinessItems.map((item) => (
+              <ReadinessRow key={item.label} {...item} />
+            ))}
+          </div>
+        </section>
+
+        <aside className="space-y-4 lg:border-l lg:border-gray-200 lg:pl-5 lg:dark:border-gray-800">
+          {!ffmpegReady && !ffmpegChecking ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 font-medium text-gray-950 dark:text-gray-100">
+                <Wrench className="h-4 w-4 text-blue-600 dark:text-blue-300" />
+                Set up FFmpeg
+              </div>
+              <p className="text-xs leading-5 text-gray-600 dark:text-gray-300">
+                On ffmpeg.org, use the packages/executable builds for your platform.
+              </p>
+              <div className="grid gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={onOpenFfmpegDownload} className={ffmpegActionButtonClass}>
+                  <ExternalLink className="h-4 w-4" />
+                  Get FFmpeg
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={onSelectFfmpeg} className={ffmpegActionButtonClass}>
+                  <FolderOpen className="h-4 w-4" />
+                  Choose FFmpeg
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={onRefreshReadiness} disabled={ffmpegChecking} className={ffmpegActionButtonClass}>
+                  <RefreshCw className={`h-4 w-4 ${ffmpegChecking ? 'animate-spin' : ''}`} />
+                  Recheck
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={onSelectFfmpeg} className={ffmpegActionButtonClass}>
+                <FolderOpen className="h-4 w-4" />
+                Change FFmpeg
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={onRefreshReadiness} disabled={ffmpegChecking} className={ffmpegActionButtonClass}>
+                <RefreshCw className={`h-4 w-4 ${ffmpegChecking ? 'animate-spin' : ''}`} />
+                Recheck
+              </Button>
+            </div>
+          )}
+
+          <div className="text-xs leading-5 text-gray-600 dark:text-gray-300">
+            <p>
+              This export uses only the LRC and audio files you selected locally. Confirm you have the rights needed before publishing or distributing the rendered video.
+            </p>
+          </div>
+        </aside>
       </div>
     </div>
   );
@@ -75,9 +212,13 @@ export default function LyricVideoExportModal({
   audioAttached,
   audioExportable,
   hasTimedLyrics,
+  ffmpegReadiness,
   isExporting,
   progress,
   result,
+  onSelectFfmpeg,
+  onRefreshReadiness,
+  onOpenFfmpegDownload,
   onStartExport,
   onCancelExport,
   onClose,
@@ -85,7 +226,8 @@ export default function LyricVideoExportModal({
   const { showModal } = useModal();
   const openRef = React.useRef(false);
   const latestRef = React.useRef({ onClose });
-  const canExport = audioAttached && audioExportable && hasTimedLyrics && !isExporting;
+  const ffmpegReady = ffmpegReadiness?.available === true;
+  const canExport = audioAttached && audioExportable && hasTimedLyrics && ffmpegReady && !isExporting;
 
   React.useEffect(() => {
     latestRef.current = { onClose };
@@ -99,7 +241,8 @@ export default function LyricVideoExportModal({
       headerDescription: 'Render lyric video frames, encode with FFmpeg, and mux the selected audio.',
       variant: 'info',
       icon: <Download className="h-6 w-6" aria-hidden />,
-      size: 'md',
+      size: 'lg',
+      className: 'h-[min(680px,calc(100vh-120px))]',
       scrollBehavior: 'scroll',
       allowBackdropClose: false,
       dismissible: !isExporting,
@@ -110,9 +253,13 @@ export default function LyricVideoExportModal({
           audioAttached={audioAttached}
           audioExportable={audioExportable}
           hasTimedLyrics={hasTimedLyrics}
+          ffmpegReadiness={ffmpegReadiness}
           isExporting={isExporting}
           progress={progress}
           result={result}
+          onSelectFfmpeg={onSelectFfmpeg}
+          onRefreshReadiness={onRefreshReadiness}
+          onOpenFfmpegDownload={onOpenFfmpegDownload}
         />
       ),
       actions: isExporting
@@ -154,8 +301,12 @@ export default function LyricVideoExportModal({
     audioExportable,
     canExport,
     hasTimedLyrics,
+    ffmpegReadiness,
     isExporting,
     onCancelExport,
+    onOpenFfmpegDownload,
+    onRefreshReadiness,
+    onSelectFfmpeg,
     onStartExport,
     open,
     progress,

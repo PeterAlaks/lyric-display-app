@@ -24,7 +24,7 @@ const UserPreferencesLayout = ({
 }) => (
   <div className="flex flex-col h-[500px]">
     <div className="flex flex-1 min-h-0">
-      <div className={`w-52 flex-shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
+      <div className={`w-52 shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
         <nav className="p-2 space-y-1">
           {categories.map((category) => {
             const Icon = category.icon;
@@ -38,9 +38,9 @@ const UserPreferencesLayout = ({
                   : `${darkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`
                   }`}
               >
-                <Icon className="w-4 h-4 flex-shrink-0" />
+                <Icon className="w-4 h-4 shrink-0" />
                 <span className="text-sm font-medium truncate">{category.label}</span>
-                {isActive && <ChevronRight className="w-4 h-4 ml-auto flex-shrink-0" />}
+                {isActive && <ChevronRight className="w-4 h-4 ml-auto shrink-0" />}
               </button>
             );
           })}
@@ -53,7 +53,7 @@ const UserPreferencesLayout = ({
             {categories.find(c => c.id === activeCategory)?.label}
           </h3>
           {activeCategory === 'ndi' && ndiStatus.installed && (
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {!companionRunning ? (
                 <Tooltip content="Launch the NDI companion process" side="bottom">
                   <Button size="sm" onClick={handleNdiLaunch} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
@@ -97,7 +97,7 @@ const UserPreferencesLayout = ({
       </div>
     </div>
 
-    <div className={`flex items-center justify-center px-6 py-3 border-t flex-shrink-0 rounded-b-2xl ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+    <div className={`flex items-center justify-center px-6 py-3 border-t shrink-0 rounded-b-2xl ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
       <div className={`text-xs ${mutedClass} flex items-center gap-2`}>
         {saving ? (
           <>

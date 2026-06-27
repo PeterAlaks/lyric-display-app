@@ -203,9 +203,9 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
                 }`}>
                 <div className="flex items-start gap-3">
                     {isHealthy ? (
-                        <CheckCircle className={`w-6 h-6 flex-shrink-0 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
+                        <CheckCircle className={`w-6 h-6 shrink-0 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
                     ) : (
-                        <AlertCircle className={`w-6 h-6 flex-shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                        <AlertCircle className={`w-6 h-6 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                     )}
                     <div className="flex-1">
                         <h3 className={`font-semibold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>

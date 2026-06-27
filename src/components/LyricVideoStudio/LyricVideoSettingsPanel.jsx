@@ -4,10 +4,16 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Palette, SlidersHorizontal } from 'lucide-react';
 
-const inputClassName = 'h-9 rounded-md border-gray-300 bg-white text-sm text-gray-900 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
-const selectTriggerClassName = 'h-9 rounded-md border-gray-300 bg-white px-3 text-sm text-gray-900 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
+const inputClassName = 'h-9 rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
+const selectTriggerClassName = 'h-9 rounded-md border-gray-300 bg-white px-3 !text-xs text-gray-900 md:!text-xs focus:ring-1 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
 const selectContentClassName = 'rounded-md border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
 const ghostButtonClassName = 'rounded-full text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300';
+
+const clampInteger = (value, fallback, min, max) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+};
 
 const Field = ({ label, children }) => (
   <label className="flex min-w-0 flex-col gap-1.5">
@@ -36,7 +42,6 @@ export default function LyricVideoSettingsPanel({
     <div className="h-full overflow-y-auto bg-white dark:bg-gray-900">
       <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
         <h2 className="text-sm font-semibold text-gray-950 dark:text-gray-100">Studio Settings</h2>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">Sync, style, and export setup.</p>
       </div>
 
       <div className="space-y-7 px-5 pb-8 pt-5">
@@ -67,6 +72,9 @@ export default function LyricVideoSettingsPanel({
               +100 ms
             </button>
           </div>
+          <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+            Positive values show lyrics a little earlier. Negative values hold them back if the words are arriving too soon.
+          </p>
         </section>
 
         <section className="space-y-4 border-t border-gray-100 pt-5 dark:border-gray-800">
@@ -127,7 +135,7 @@ export default function LyricVideoSettingsPanel({
                 type="number"
                 min="320"
                 value={project.exportSettings.width}
-                onChange={(event) => patchExport({ width: Number(event.target.value) || 1920 })}
+                onChange={(event) => patchExport({ width: clampInteger(event.target.value, 1920, 320, 7680) })}
                 className={inputClassName}
               />
             </Field>
@@ -136,7 +144,7 @@ export default function LyricVideoSettingsPanel({
                 type="number"
                 min="180"
                 value={project.exportSettings.height}
-                onChange={(event) => patchExport({ height: Number(event.target.value) || 1080 })}
+                onChange={(event) => patchExport({ height: clampInteger(event.target.value, 1080, 180, 4320) })}
                 className={inputClassName}
               />
             </Field>
@@ -146,7 +154,7 @@ export default function LyricVideoSettingsPanel({
                 min="1"
                 max="120"
                 value={project.exportSettings.fps}
-                onChange={(event) => patchExport({ fps: Number(event.target.value) || 30 })}
+                onChange={(event) => patchExport({ fps: clampInteger(event.target.value, 30, 1, 120) })}
                 className={inputClassName}
               />
             </Field>
@@ -156,14 +164,14 @@ export default function LyricVideoSettingsPanel({
                 min="0"
                 step="500"
                 value={project.exportSettings.outroPaddingMs}
-                onChange={(event) => patchExport({ outroPaddingMs: Math.max(0, Number(event.target.value) || 0) })}
+                onChange={(event) => patchExport({ outroPaddingMs: clampInteger(event.target.value, 0, 0, 300000) })}
                 className={inputClassName}
               />
             </Field>
           </div>
           <button
             type="button"
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 px-4 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-4 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700"
             onClick={onOpenExport}
           >
             <SlidersHorizontal className="h-4 w-4" />

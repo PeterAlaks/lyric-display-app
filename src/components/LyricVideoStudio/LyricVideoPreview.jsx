@@ -9,6 +9,7 @@ export default function LyricVideoPreview({
   title,
   gapBehavior,
   styleLabel,
+  backgroundVideoPlaying,
 }) {
   let line = resolvedLine;
   let visible = Boolean(line);
@@ -39,6 +40,7 @@ export default function LyricVideoPreview({
             frameKey={line || 'gap'}
             label="Lyric Video Preview"
             className="relative h-full w-full overflow-hidden"
+            backgroundVideoPlaying={backgroundVideoPlaying}
           />
         </div>
       </div>

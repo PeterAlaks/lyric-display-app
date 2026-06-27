@@ -413,9 +413,9 @@ const LyricDisplayApp = () => {
       {isDesktopApp && <DraftApprovalModal darkMode={darkMode} />}
       <div className={`flex h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Control Panel */}
-        <div className="control-panel-sidebar-texture w-[420px] flex-shrink-0 shadow-lg flex flex-col h-full">
+        <div className="control-panel-sidebar-texture w-[420px] shrink-0 shadow-lg flex flex-col h-full">
           {/* Fixed Header Section */}
-          <div className="flex-shrink-0 pt-4 px-5 pb-0 bg-transparent">
+          <div className="shrink-0 pt-4 px-5 pb-0 bg-transparent">
             <ControlPanelHeaderActions
               authStatus={authStatus}
               connectionStatus={connectionStatus}
@@ -441,7 +441,7 @@ const LyricDisplayApp = () => {
             <div className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
               <Tooltip content={<span>Load a .txt or .lrc lyrics file from your computer - <strong>Ctrl+O</strong></span>} side="right">
                 <button
-                  className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-4 bg-linear-to-r from-blue-400 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
                   onClick={openFileDialog}
                 >
                   <FolderOpen className="w-5 h-5" />
@@ -471,7 +471,7 @@ const LyricDisplayApp = () => {
             {/* Current File Indicator */}
             {hasLyrics && (
               <div className={`mb-6 text-xs font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                <FileMusic className="w-4 h-4 flex-shrink-0" />
+                <FileMusic className="w-4 h-4 shrink-0" />
                 <span className="truncate">{lyricsFileName}</span>
               </div>
             )}

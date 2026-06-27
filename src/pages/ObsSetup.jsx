@@ -151,7 +151,7 @@ function StatusBox({ status, port }) {
 
   return (
     <div className={`flex items-start gap-2 rounded-md border p-3 text-sm ${styles[status.type] || styles.info}`}>
-      <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <div>
         <div>{status.message}</div>
         {status.showObsHelp && (

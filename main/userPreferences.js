@@ -98,6 +98,7 @@ const preferencesStore = new Store({
       connectionTimeout: 10000,
       heartbeatInterval: 30000,
       maxConnectionAttempts: 10,
+      ffmpegPath: '',
     },
   },
 });

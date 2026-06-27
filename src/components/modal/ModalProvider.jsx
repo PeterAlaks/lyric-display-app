@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
 import PreviewOutputsModal from '../PreviewOutputsModal';
-import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp } from '../HelpContent';
+import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, LyricVideoStudioHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp } from '../HelpContent';
 import { WelcomeSplash } from '../WelcomeSplash';
 import { IntegrationInstructions } from '../IntegrationInstructions';
 import SongInfoModal from '../SongInfoModal';
@@ -500,12 +500,12 @@ export function ModalProvider({ children, isDark = false }) {
               >
                 {/* Fixed Header */}
                 <div className={cn(
-                  'flex gap-4 px-6 py-5 border-b flex-shrink-0',
+                  'flex gap-4 px-6 py-5 border-b shrink-0',
                   modal.headerDescription ? 'items-start' : 'items-center',
                   isDark ? 'border-gray-800' : 'border-gray-200'
                 )}>
                   <div className={cn(
-                    'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl',
+                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
                     palette.badge
                   )}>
                     {modal.icon ? modal.icon : <IconComponent className={cn('h-6 w-6', palette.accent)} aria-hidden />}
@@ -529,7 +529,7 @@ export function ModalProvider({ children, isDark = false }) {
                     <button
                       type="button"
                       className={cn(
-                        'relative flex-shrink-0 rounded-full p-2 transition-colors',
+                        'relative shrink-0 rounded-full p-2 transition-colors',
                         modal.headerDescription ? '-mr-2 -mt-1' : '-mr-2',
                         isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-black/5'
                       )}
@@ -574,6 +574,9 @@ export function ModalProvider({ children, isDark = false }) {
                       {modal.component === 'SongCanvasHelp' && (
                         <SongCanvasHelp darkMode={isDark} />
                       )}
+                      {modal.component === 'LyricVideoStudioHelp' && (
+                        <LyricVideoStudioHelp darkMode={isDark} />
+                      )}
                       {modal.component === 'StageDisplayHelp' && (
                         <StageDisplayHelp darkMode={isDark} />
                       )}
@@ -601,6 +604,8 @@ export function ModalProvider({ children, isDark = false }) {
                           preferredDisplayId={modal.preferredDisplayId}
                           triggerSource={modal.triggerSource || 'manual'}
                           detectedDisplays={modal.detectedDisplays || modal.displays || []}
+                          initialOutputKey={modal.initialOutputKey}
+                          extraOutputOptions={modal.extraOutputOptions}
                           onOpenIntegrationGuide={() => {
                             closeModal(modal.id, { action: 'open-integration-guide' });
                             showModal({
@@ -734,7 +739,7 @@ export function ModalProvider({ children, isDark = false }) {
                 {/* Fixed Footer with Actions */}
                 {modal.actions.length > 0 && (
                   <div className={cn(
-                    'flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0',
+                    'flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t shrink-0',
                     isDark ? 'border-gray-800' : 'border-gray-200'
                   )}>
                     {modal.actions.map((action, idx) => {

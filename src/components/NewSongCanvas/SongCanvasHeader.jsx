@@ -28,7 +28,7 @@ const HelpButton = ({ darkMode, showModal }) => (
       }`}
     title="Song Canvas Help"
   >
-    <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   </button>
@@ -49,7 +49,7 @@ const SaveActions = ({
   toolbarGhostClass,
 }) => {
   const disabled = isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges);
-  const gradientActionClass = `${mobile ? 'whitespace-nowrap' : 'flex items-center gap-2 px-3 py-1.5'} rounded-full bg-gradient-to-r from-blue-400 to-purple-600 text-sm text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55`;
+  const gradientActionClass = `${mobile ? 'whitespace-nowrap' : 'flex items-center gap-2 px-3 py-1.5'} rounded-full bg-linear-to-r from-blue-400 to-purple-600 text-sm text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55`;
 
   if (composeMode) {
     return (

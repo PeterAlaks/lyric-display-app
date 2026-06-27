@@ -586,7 +586,7 @@ const Stage = () => {
     >
       <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       {/* Top Bar - Song Names */}
-      <div className="flex-shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center">
+      <div className="shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center">
         <div
           className="leading-none"
           style={{
@@ -782,7 +782,7 @@ const Stage = () => {
             >
               {prevLineEnabled && (
                 <div
-                  className="w-full flex-shrink-0"
+                  className="w-full shrink-0"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -830,7 +830,7 @@ const Stage = () => {
 
               {/* Current/Live Line */}
               <div
-                className={`w-full ${shouldExpandCurrentLine ? 'flex-1' : 'flex-shrink-0'}`}
+                className={`w-full ${shouldExpandCurrentLine ? 'flex-1' : 'shrink-0'}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -862,7 +862,7 @@ const Stage = () => {
 
               {nextLineEnabled && (
                 <div
-                  className="w-full flex-shrink-0"
+                  className="w-full shrink-0"
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -946,7 +946,7 @@ const Stage = () => {
 
       {/* Bottom Bar - Time and Messages */}
       <div
-        className="flex-shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center leading-none"
+        className="shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center leading-none"
         style={{
           fontSize: `${responsiveBottomBarSize}px`,
           color: bottomBarColor,

@@ -2,7 +2,7 @@ const CanvasMeasurementLayer = ({ editorPadding, lines, measurementContainerRef,
   <div
     ref={measurementContainerRef}
     aria-hidden="true"
-    className="pointer-events-none absolute inset-0 select-none overflow-hidden whitespace-pre-wrap break-words font-mono text-base leading-relaxed opacity-0"
+    className="pointer-events-none absolute inset-0 select-none overflow-hidden whitespace-pre-wrap wrap-break-word font-mono text-base leading-relaxed opacity-0"
     style={{
       paddingTop: `${editorPadding.top}px`,
       paddingRight: `${editorPadding.right}px`,
@@ -17,7 +17,7 @@ const CanvasMeasurementLayer = ({ editorPadding, lines, measurementContainerRef,
           measurementRefs.current[index] = node;
         }}
       >
-        <span className="inline-block whitespace-pre-wrap break-words">
+        <span className="inline-block whitespace-pre-wrap wrap-break-word">
           {line.length > 0 ? line : '\u00A0'}
         </span>
       </div>

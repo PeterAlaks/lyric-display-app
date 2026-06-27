@@ -17,7 +17,7 @@ const TOP_MENU_CONFIG = {
   edit: { count: 8, sub: [] },
   view: { count: 7, sub: [] },
   output: { count: 6, sub: [] },
-  tools: { count: 7, sub: [] },
+  tools: { count: 8, sub: [] },
   window: { count: 3, sub: [] },
   help: { count: 8, sub: [] },
 };
@@ -57,6 +57,9 @@ const TopMenuBar = () => {
   const { darkMode } = useDarkModeState();
   const location = useLocation();
   const isNewSongCanvas = location.pathname === '/new-song';
+  const isLyricVideoStudio = location.pathname === '/lyric-video-studio';
+  const isControlPanelRoute = location.pathname === '/';
+  const controlPanelOnlyTitle = 'Only available in Control Panel';
 
   const [recents, setRecents] = useState([]);
   const [windowState, setWindowState] = useState({ isMaximized: false, isFullScreen: false, isFocused: true });
@@ -417,7 +420,7 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('file')}
               >
                 <MenuItem ref={(el) => registerItemRef('file', 0, el)} label="New Lyrics" shortcut="Ctrl/Cmd + N" onClick={menuHandlers.handleNewLyrics} active={openMenu?.startsWith('file') && activeIndex === 0} />
-                <MenuItem ref={(el) => registerItemRef('file', 1, el)} label="Load Lyrics File" shortcut="Ctrl/Cmd + O" onClick={menuHandlers.handleOpenLyrics} active={openMenu?.startsWith('file') && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('file', 1, el)} label="Load Lyrics File" shortcut="Ctrl/Cmd + O" onClick={menuHandlers.handleOpenLyrics} disabled={isLyricVideoStudio} active={openMenu?.startsWith('file') && activeIndex === 1} title={isLyricVideoStudio ? 'Use Import LRC inside Lyric Video Studio' : undefined} />
                 <div
                   className="relative"
                   onMouseEnter={() => {
@@ -431,9 +434,16 @@ const TopMenuBar = () => {
                     label="Open Recent"
                     shortcut=">"
                     onClick={() => { }}
-                    disabled={false}
+                    disabled={isLyricVideoStudio}
                     active={openMenu?.startsWith('file') && activeIndex === 2}
-                    onMouseEnter={() => { clearCloseTimer(); clearRecentsCloseTimer(); clearImportCloseTimer(); openRecentsSubmenu(false, 'hover'); }}
+                    title={isLyricVideoStudio ? controlPanelOnlyTitle : undefined}
+                    onMouseEnter={() => {
+                      if (isLyricVideoStudio) return;
+                      clearCloseTimer();
+                      clearRecentsCloseTimer();
+                      clearImportCloseTimer();
+                      openRecentsSubmenu(false, 'hover');
+                    }}
                     onMouseLeave={closeRecentsAfterDelay}
                   />
                   {openMenu === 'file:recent' && (
@@ -485,11 +495,11 @@ const TopMenuBar = () => {
                     label="Import Lyrics"
                     shortcut=">"
                     onClick={() => { }}
-                    disabled={isNewSongCanvas}
+                    disabled={!isControlPanelRoute}
                     active={openMenu?.startsWith('file') && activeIndex === 3}
-                    title={isNewSongCanvas ? 'Only available in Control Panel' : undefined}
+                    title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined}
                     onMouseEnter={() => {
-                      if (isNewSongCanvas) return;
+                      if (!isControlPanelRoute) return;
                       clearCloseTimer();
                       clearRecentsCloseTimer();
                       clearImportCloseTimer();
@@ -644,13 +654,13 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('output')}
                 onKeyDown={getMenuKeyDown('output')}
               >
-                <MenuItem ref={(el) => registerItemRef('output', 0, el)} label="Project to Display" onClick={menuHandlers.handleDisplaySettings} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 0} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
-                <MenuItem ref={(el) => registerItemRef('output', 1, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 1} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
-                <MenuItem ref={(el) => registerItemRef('output', 2, el)} label="Sync Outputs" onClick={menuHandlers.handleSyncOutputs} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 2} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 0, el)} label="Project to Display" onClick={menuHandlers.handleDisplaySettings} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 0} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 1, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 1} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 2, el)} label="Sync Outputs" onClick={menuHandlers.handleSyncOutputs} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 2} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('output', 3, el)} label="OBS Source Creator" onClick={menuHandlers.handleOpenObsSourceCreator} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 3} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 3, el)} label="OBS Source Creator" onClick={menuHandlers.handleOpenObsSourceCreator} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 3} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <MenuItem ref={(el) => registerItemRef('output', 4, el)} label="NDI Preferences" onClick={menuHandlers.handleNdiPreferences} active={openMenu === 'output' && activeIndex === 4} />
-                <MenuItem ref={(el) => registerItemRef('output', 5, el)} label="User Media Library" onClick={menuHandlers.handleUserMedia} disabled={isNewSongCanvas} active={openMenu === 'output' && activeIndex === 5} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 5, el)} label="User Media Library" onClick={menuHandlers.handleUserMedia} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 5} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
               </div>
             )}
           </div>
@@ -677,9 +687,9 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('tools')}
                 onKeyDown={getMenuKeyDown('tools')}
               >
-                <MenuItem ref={(el) => registerItemRef('tools', 0, el)} label="Setlist Manager" shortcut="Ctrl/Cmd + Shift + S" onClick={menuHandlers.handleOpenSetlist} disabled={isNewSongCanvas} active={openMenu === 'tools' && activeIndex === 0} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('tools', 0, el)} label="Setlist Manager" shortcut="Ctrl/Cmd + Shift + S" onClick={menuHandlers.handleOpenSetlist} disabled={!isControlPanelRoute} active={openMenu === 'tools' && activeIndex === 0} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <MenuItem ref={(el) => registerItemRef('tools', 1, el)} label="Timer Control" onClick={menuHandlers.handleOpenTimerControl} active={openMenu === 'tools' && activeIndex === 1} />
-                <MenuItem ref={(el) => registerItemRef('tools', 2, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={isNewSongCanvas} active={openMenu === 'tools' && activeIndex === 2} title={isNewSongCanvas ? 'Only available in Control Panel' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('tools', 2, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={!isControlPanelRoute} active={openMenu === 'tools' && activeIndex === 2} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <MenuItem ref={(el) => registerItemRef('tools', 3, el)} label="LyricDisplay Dock Setup" onClick={menuHandlers.handleObsDockSetup} active={openMenu === 'tools' && activeIndex === 3} />
                 <MenuItem ref={(el) => registerItemRef('tools', 4, el)} label="Lyric Video Studio" onClick={menuHandlers.handleOpenLyricVideoStudio} active={openMenu === 'tools' && activeIndex === 4} />
                 <Separator />

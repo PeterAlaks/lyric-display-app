@@ -37,7 +37,9 @@ const projectionTargetLabel = (projection) => {
   return projection.displayName || 'External Display';
 };
 
-const outputHint = (value) => {
+const outputHint = (value, option = {}) => {
+  if (option.hint) return option.hint;
+  if (value === 'lyric-video-studio') return 'Live studio preview';
   if (value === 'stage') return 'Presenter view';
   if (value === 'time') return 'Clock and timer';
   if (value === 'output1') return 'Main lyrics display';
@@ -48,6 +50,7 @@ const outputHint = (value) => {
 const outputIcon = (value) => {
   if (value === 'stage') return Radio;
   if (value === 'time') return Monitor;
+  if (value === 'lyric-video-studio') return ScreenShare;
   return Tv2;
 };
 
@@ -84,16 +87,29 @@ const ProjectOutputModal = ({
   triggerSource = 'manual',
   detectedDisplays = [],
   onOpenIntegrationGuide,
+  initialOutputKey = null,
+  extraOutputOptions = [],
 }) => {
   const { showToast } = useToast();
   const customOutputIds = useLyricsStore((state) => state.customOutputIds || []);
 
   const outputOptions = React.useMemo(() => {
-    const options = [...DEFAULT_OUTPUT_IDS, ...customOutputIds, 'stage', 'time'];
-    return options.map((value) => ({ value, label: formatOutputLabel(value) }));
-  }, [customOutputIds]);
+    const baseOptions = [...DEFAULT_OUTPUT_IDS, ...customOutputIds, 'stage', 'time']
+      .map((value) => ({ value, label: formatOutputLabel(value) }));
+    const byValue = new Map(baseOptions.map((option) => [option.value, option]));
 
-  const [selectedOutput, setSelectedOutput] = React.useState(outputOptions[0]?.value || 'output1');
+    extraOutputOptions.forEach((option) => {
+      if (!option?.value) return;
+      byValue.set(option.value, {
+        ...option,
+        label: option.label || formatOutputLabel(option.value),
+      });
+    });
+
+    return Array.from(byValue.values());
+  }, [customOutputIds, extraOutputOptions]);
+
+  const [selectedOutput, setSelectedOutput] = React.useState(initialOutputKey || outputOptions[0]?.value || 'output1');
   const [selectedTarget, setSelectedTarget] = React.useState(DESKTOP_TARGET);
   const [externalDisplays, setExternalDisplays] = React.useState([]);
   const [projections, setProjections] = React.useState([]);
@@ -320,7 +336,7 @@ const ProjectOutputModal = ({
                         {isSelected && <CheckCircle2 className={cn('h-3.5 w-3.5 shrink-0', d ? 'text-blue-400' : 'text-blue-500')} />}
                       </div>
                       <p className={cn('mt-0.5 pl-5.5 text-[10px]', d ? 'text-gray-600' : 'text-gray-400')}>
-                        {projection ? `Live → ${projectionTargetLabel(projection)}` : outputHint(option.value)}
+                        {projection ? `Live → ${projectionTargetLabel(projection)}` : outputHint(option.value, option)}
                       </p>
                     </button>
                   );

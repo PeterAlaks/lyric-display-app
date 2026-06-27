@@ -1,10 +1,10 @@
 import { ipcMain, dialog } from 'electron';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, stat, writeFile } from 'fs/promises';
 import path from 'path';
 import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
 import { addRecent } from '../recents.js';
 import * as userPreferences from '../userPreferences.js';
-import { grantLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
+import { grantLyricVideoMediaFile, revokeLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
 
 const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc']);
 const AUDIO_MIME_TYPES = {
@@ -160,6 +160,38 @@ export function registerFileHandlers({ getMainWindow }) {
       return { success: false, error: error.message || 'Failed to select audio' };
     }
   });
+
+  ipcMain.handle('lyric-video:restore-audio', async (_event, payload = {}) => {
+    try {
+      const normalized = normalizeFilePath(payload?.filePath);
+      if (!normalized) {
+        return { success: false, error: 'Invalid audio file path' };
+      }
+
+      const fileStat = await stat(normalized);
+      if (!fileStat.isFile()) {
+        return { success: false, error: 'Saved audio path is not a file' };
+      }
+
+      const extension = path.extname(normalized).toLowerCase();
+      const fileName = path.basename(normalized);
+      const mimeType = AUDIO_MIME_TYPES[extension] || payload?.mimeType || 'audio/*';
+
+      return {
+        success: true,
+        filePath: normalized,
+        fileName,
+        mimeType,
+        sourceUrl: grantLyricVideoMediaFile(normalized, mimeType),
+      };
+    } catch (error) {
+      return { success: false, error: error?.message || 'Saved audio file could not be restored' };
+    }
+  });
+
+  ipcMain.handle('lyric-video:revoke-media', async (_event, sourceUrl) => ({
+    success: revokeLyricVideoMediaFile(sourceUrl),
+  }));
 
   ipcMain.handle('parse-lyrics-file', async (_event, payload = {}) => {
     try {

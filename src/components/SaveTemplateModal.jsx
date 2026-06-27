@@ -137,7 +137,7 @@ const SaveTemplateModal = ({
         {/* Error Message */}
         {displayError && (
           <div className={`flex items-center gap-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{displayError}</span>
           </div>
         )}

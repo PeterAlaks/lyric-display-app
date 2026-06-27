@@ -316,7 +316,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
             >
                 {/* Header with Progress */}
                 <div className={cn(
-                    'px-6 py-5 border-b flex-shrink-0',
+                    'px-6 py-5 border-b shrink-0',
                     darkMode ? 'border-gray-800' : 'border-gray-200'
                 )}>
                     <div className="flex items-center gap-3 mb-3">
@@ -722,7 +722,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
 
                 {/* Footer */}
                 <div className={cn(
-                    'px-6 py-4 border-t flex items-center justify-between flex-shrink-0',
+                    'px-6 py-4 border-t flex items-center justify-between shrink-0',
                     darkMode ? 'border-gray-800' : 'border-gray-200'
                 )}>
                     <div>

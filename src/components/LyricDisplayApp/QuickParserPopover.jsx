@@ -31,7 +31,7 @@ export default function QuickParserPopover({
         } ${quickParserLoading ? 'opacity-60 cursor-wait' : ''}`}
       {...triggerProps}
     >
-      <SlidersHorizontal className="h-[18px] w-[18px]" />
+      <SlidersHorizontal className="h-4.5 w-4.5" />
     </button>
   );
 
