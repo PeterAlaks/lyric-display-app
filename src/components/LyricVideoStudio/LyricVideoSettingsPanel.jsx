@@ -3,8 +3,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Palette, SlidersHorizontal } from 'lucide-react';
+import { Switch } from '../ui/switch';
+import { Textarea } from '../ui/textarea';
+import AlwaysInfoButton from './AlwaysInfoButton';
 
 const inputClassName = 'h-9 rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
+const textareaClassName = 'min-h-[72px] rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
 const selectTriggerClassName = 'h-9 rounded-md border-gray-300 bg-white px-3 !text-xs text-gray-900 md:!text-xs focus:ring-1 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
 const selectContentClassName = 'rounded-md border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
 const ghostButtonClassName = 'rounded-full text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300';
@@ -37,16 +41,31 @@ export default function LyricVideoSettingsPanel({
       ...updates,
     },
   }));
+  const patchIntro = (updates) => onProjectChange?.((current) => ({
+    ...current,
+    intro: {
+      ...(current.intro || current.openingScreen || {}),
+      ...updates,
+    },
+  }));
+  const intro = project.intro || project.openingScreen || {};
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-gray-900">
-      <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+      <div className="flex h-16 shrink-0 items-center border-b border-gray-200 px-5 dark:border-gray-800">
         <h2 className="text-sm font-semibold text-gray-950 dark:text-gray-100">Studio Settings</h2>
       </div>
 
       <div className="space-y-7 px-5 pb-8 pt-5">
         <section className="space-y-4">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sync</h3>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sync</h3>
+            <AlwaysInfoButton
+              side="left"
+              ariaLabel="Sync offset help"
+              content="Positive values show lyrics a little earlier. Negative values hold them back if the words are arriving too soon."
+            />
+          </div>
           <Field label="Global Offset (ms)">
             <Input
               type="number"
@@ -72,9 +91,6 @@ export default function LyricVideoSettingsPanel({
               +100 ms
             </button>
           </div>
-          <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
-            Positive values show lyrics a little earlier. Negative values hold them back if the words are arriving too soon.
-          </p>
         </section>
 
         <section className="space-y-4 border-t border-gray-100 pt-5 dark:border-gray-800">
@@ -124,6 +140,61 @@ export default function LyricVideoSettingsPanel({
                 className={inputClassName}
               />
             </Field>
+          )}
+        </section>
+
+        <section className="space-y-4 border-t border-gray-100 pt-5 dark:border-gray-800">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Intro</h3>
+            </div>
+            <Switch
+              checked={Boolean(intro.enabled)}
+              onCheckedChange={(enabled) => patchIntro({ enabled })}
+              aria-label="Enable intro"
+              className="data-[state=checked]:bg-blue-600"
+            />
+          </div>
+          {intro.enabled && (
+            <div className="space-y-3">
+              <Field label="Title">
+                <Input
+                  type="text"
+                  value={intro.title || ''}
+                  placeholder={project.name || 'Untitled Video 1'}
+                  maxLength={120}
+                  onChange={(event) => patchIntro({ title: event.target.value.slice(0, 120) })}
+                  className={inputClassName}
+                />
+              </Field>
+              <Field label="Subtitle">
+                <Input
+                  type="text"
+                  value={intro.subtitle || ''}
+                  maxLength={160}
+                  onChange={(event) => patchIntro({ subtitle: event.target.value.slice(0, 160) })}
+                  className={inputClassName}
+                />
+              </Field>
+              <Field label="Details">
+                <Textarea
+                  value={intro.details || ''}
+                  maxLength={400}
+                  onChange={(event) => patchIntro({ details: event.target.value.slice(0, 400) })}
+                  className={textareaClassName}
+                />
+              </Field>
+              <Field label="Duration (ms)">
+                <Input
+                  type="number"
+                  min="500"
+                  step="250"
+                  value={intro.durationMs ?? 3000}
+                  onChange={(event) => patchIntro({ durationMs: clampInteger(event.target.value, 3000, 500, 30000) })}
+                  className={inputClassName}
+                />
+              </Field>
+            </div>
           )}
         </section>
 

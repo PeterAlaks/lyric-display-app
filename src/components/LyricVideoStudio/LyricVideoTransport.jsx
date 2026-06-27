@@ -23,6 +23,10 @@ export default function LyricVideoTransport({
 }) {
   const safeDuration = Math.max(0, Number(durationMs) || 0);
   const canPlay = Boolean(audio?.sourceUrl || audio?.objectUrl);
+  const currentProgress = safeDuration
+    ? Math.min(100, Math.max(0, ((Number(currentTimeMs) || 0) / safeDuration) * 100))
+    : 0;
+  const volumeProgress = Math.min(100, Math.max(0, (Number(volume) || 0) * 100));
 
   return (
     <div className="shrink-0 border-t border-gray-200 bg-white px-5 pb-5 pt-4 dark:border-gray-800 dark:bg-gray-900">
@@ -57,7 +61,8 @@ export default function LyricVideoTransport({
           value={Math.min(currentTimeMs || 0, safeDuration || 0)}
           onChange={(event) => onSeek?.(Number(event.target.value))}
           disabled={!canPlay || !safeDuration}
-          className="h-2 w-full accent-blue-600"
+          className="lyric-video-range w-full"
+          style={{ '--range-progress': `${currentProgress}%` }}
         />
         <span className="text-right font-mono text-xs text-gray-500 dark:text-gray-400">{formatClock(safeDuration)}</span>
       </div>
@@ -72,7 +77,8 @@ export default function LyricVideoTransport({
             step="0.01"
             value={volume}
             onChange={(event) => onVolumeChange?.(Number(event.target.value))}
-            className="h-2 w-32 accent-blue-600"
+            className="lyric-video-range w-32"
+            style={{ '--range-progress': `${volumeProgress}%` }}
           />
           <span className="w-9 text-xs tabular-nums text-gray-500 dark:text-gray-400">{Math.round(volume * 100)}%</span>
         </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
+import IntroOverlay from '../components/LyricVideoStudio/IntroOverlay';
 import { getActiveLyricVideoLine } from '../utils/lyricVideoTimeline';
 import { getLyricVideoLineOutputText } from '../utils/lyricVideoLineText';
 import {
@@ -90,17 +91,33 @@ export default function LyricVideoLiveOutput() {
     };
   }, [snapshot?.isPlaying]);
 
-  const currentTimeMs = snapshot
+  const projectedTimeMs = snapshot
     ? snapshot.currentTimeMs + (snapshot.isPlaying ? Math.max(0, clockNow - snapshot.sentAt) : 0)
     : 0;
+  const currentTimeMs = snapshot?.videoDurationMs
+    ? Math.min(projectedTimeMs, Math.max(0, Number(snapshot.videoDurationMs) || 0))
+    : projectedTimeMs;
 
   const resolved = useMemo(() => {
     if (!snapshot) return null;
     const project = snapshot.project || {};
+    const intro = project.intro || project.openingScreen || {};
+    const introDurationMs = intro.enabled ? Math.max(0, Number(intro.durationMs) || 0) : 0;
+    const introPaddingMs = Math.max(0, Number(project.exportSettings?.introPaddingMs) || 0);
+    if (currentTimeMs < introDurationMs + introPaddingMs) {
+      return {
+        activeIndex: null,
+        activeLine: null,
+        nextIndex: null,
+        progressToNext: 0,
+        inGap: false,
+        gapMs: 0,
+      };
+    }
     return getActiveLyricVideoLine({
       lyrics: snapshot.studioLyrics,
       timestamps: snapshot.studioTimestamps,
-      currentTimeMs,
+      currentTimeMs: Math.max(0, currentTimeMs - introDurationMs - introPaddingMs),
       offsetMs: project.offsetMs,
       gapBehavior: project.gapBehavior,
       clearAfterMs: project.clearAfterMs,
@@ -112,26 +129,40 @@ export default function LyricVideoLiveOutput() {
   }
 
   const project = snapshot.project || {};
+  const intro = project.intro || project.openingScreen || {};
+  const introDurationMs = intro.enabled ? Math.max(0, Number(intro.durationMs) || 0) : 0;
+  const introPaddingMs = Math.max(0, Number(project.exportSettings?.introPaddingMs) || 0);
+  const preMainTimeline = currentTimeMs < introDurationMs + introPaddingMs;
   const title = snapshot.previewTitle || snapshot.studioFileName?.replace(/\.[^.]+$/, '') || 'Lyric Video';
   let line = getLyricVideoLineOutputText(resolved?.activeLine) || '';
-  if (!line && project.gapBehavior === 'show-title') {
+  if (preMainTimeline) {
+    line = '';
+  } else if (!line && project.gapBehavior === 'show-title') {
     line = title;
   }
 
   return (
-    <LyricVisualFrame
-      line={line}
-      currentLine={resolved?.activeLine}
-      settings={snapshot.visualSettings || snapshot.lyricVideoSettings}
-      visible={Boolean(line)}
-      active
-      previewMode={false}
-      frameKey={line || 'gap'}
-      label="Lyric Video Studio"
-      isProjectionMode={isProjectionMode}
-      showProjectionExitHint={showProjectionExitHint}
-      className="relative h-screen w-screen overflow-hidden"
-      backgroundVideoPlaying={Boolean(snapshot.isPlaying)}
-    />
+    <div className="relative h-screen w-screen overflow-hidden bg-transparent">
+      <LyricVisualFrame
+        line={line}
+        currentLine={resolved?.activeLine}
+        settings={snapshot.visualSettings || snapshot.lyricVideoSettings}
+        visible={Boolean(line)}
+        active
+        previewMode={false}
+        frameKey={line || 'gap'}
+        label="Lyric Video Studio"
+        isProjectionMode={isProjectionMode}
+        showProjectionExitHint={showProjectionExitHint}
+        className="relative h-screen w-screen overflow-hidden"
+        backgroundVideoPlaying={Boolean(snapshot.isPlaying)}
+      />
+      <IntroOverlay
+        intro={intro}
+        title={title}
+        currentTimeMs={currentTimeMs}
+        canvasHeight={snapshot.project?.exportSettings?.height || 1080}
+      />
+    </div>
   );
 }

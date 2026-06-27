@@ -5,13 +5,40 @@ import {
   ExternalLink,
   FileAudio,
   FolderOpen,
+  Gauge,
   HardDrive,
   Loader2,
   RefreshCw,
+  Sparkles,
+  Zap,
   Wrench,
 } from 'lucide-react';
 import useModal from '../../hooks/useModal';
 import { Button } from '../ui/button';
+import AlwaysInfoButton from './AlwaysInfoButton';
+
+const PERFORMANCE_MODES = [
+  {
+    value: 'faster',
+    label: 'Faster',
+    icon: Zap,
+  },
+  {
+    value: 'balanced',
+    label: 'Balanced',
+    icon: Gauge,
+  },
+  {
+    value: 'best',
+    label: 'Best',
+    icon: Sparkles,
+  },
+];
+
+const formatMp4Name = (name) => {
+  const trimmed = String(name || 'Untitled Video 1').trim() || 'Untitled Video 1';
+  return trimmed.toLowerCase().endsWith('.mp4') ? trimmed : `${trimmed}.mp4`;
+};
 
 function ReadinessRow({ icon: Icon, label, detail, ready, checking }) {
   return (
@@ -38,7 +65,9 @@ function ReadinessRow({ icon: Icon, label, detail, ready, checking }) {
             {checking ? 'Checking' : ready ? 'Ready' : 'Needs attention'}
           </span>
         </div>
-        <p className="mt-0.5 wrap-break-word text-xs leading-5 text-gray-500 dark:text-gray-400">{detail}</p>
+        {detail && (
+          <p className="mt-0.5 wrap-break-word text-xs leading-5 text-gray-500 dark:text-gray-400">{detail}</p>
+        )}
       </div>
     </div>
   );
@@ -46,6 +75,7 @@ function ReadinessRow({ icon: Icon, label, detail, ready, checking }) {
 
 function LyricVideoExportBody({
   settings,
+  projectName,
   audioAttached,
   audioExportable,
   hasTimedLyrics,
@@ -53,6 +83,8 @@ function LyricVideoExportBody({
   isExporting,
   progress,
   result,
+  performanceMode,
+  onPerformanceModeChange,
   onSelectFfmpeg,
   onRefreshReadiness,
   onOpenFfmpegDownload,
@@ -60,25 +92,23 @@ function LyricVideoExportBody({
   const percent = Math.max(0, Math.min(100, Number(progress?.percent) || 0));
   const ffmpegChecking = ffmpegReadiness?.checking || !ffmpegReadiness;
   const ffmpegReady = ffmpegReadiness?.available === true;
+  const ffmpegActionsDisabled = isExporting || ffmpegChecking;
   const ffmpegActionButtonClass = 'justify-start border-gray-300 bg-white text-gray-800 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-100 dark:hover:border-blue-400/60 dark:hover:bg-blue-500/15 dark:hover:text-blue-100';
   const readinessItems = [
     {
       label: 'Audio attached',
       icon: FileAudio,
       ready: audioAttached,
-      detail: audioAttached ? 'An audio file is loaded in the studio.' : 'Attach the song audio before exporting.',
     },
     {
       label: 'Desktop audio path',
       icon: HardDrive,
       ready: audioExportable,
-      detail: audioExportable ? 'The selected audio has a local file path and duration.' : 'Select audio from the desktop app so export can read the original file.',
     },
     {
       label: 'Timed LRC lyrics',
       icon: Captions,
       ready: hasTimedLyrics,
-      detail: hasTimedLyrics ? 'Usable lyric timestamps are loaded.' : 'Import an LRC file with timestamps.',
     },
     {
       label: 'FFmpeg',
@@ -100,6 +130,9 @@ function LyricVideoExportBody({
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Export Settings</div>
           </div>
+          <div className="min-w-0 max-w-[50%] truncate text-xs font-medium text-gray-600 dark:text-gray-300">
+            {formatMp4Name(projectName)}
+          </div>
         </div>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/70">
@@ -119,6 +152,40 @@ function LyricVideoExportBody({
             <dd className="mt-1 font-medium text-gray-950 dark:text-gray-100">{settings.outroPaddingMs} ms</dd>
           </div>
         </dl>
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Performance</div>
+          <AlwaysInfoButton
+            side="left"
+            ariaLabel="Export performance notes"
+            content="Faster export depends on FFmpeg hardware encoder support on this computer. Battery power can slow exports."
+          />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {PERFORMANCE_MODES.map((mode) => {
+            const Icon = mode.icon;
+            const selected = performanceMode === mode.value;
+            return (
+              <button
+                key={mode.value}
+                type="button"
+                disabled={isExporting}
+                onClick={() => onPerformanceModeChange(mode.value)}
+                className={`min-h-[46px] rounded-md border px-3 py-2 text-left transition ${selected
+                  ? 'border-blue-500 bg-blue-50 text-blue-900 ring-1 ring-blue-200 dark:border-blue-400 dark:bg-blue-500/15 dark:text-blue-100 dark:ring-blue-400/30'
+                  : 'border-gray-200 bg-white text-gray-800 hover:border-blue-300 hover:bg-blue-50/60 dark:border-gray-800 dark:bg-gray-900/70 dark:text-gray-100 dark:hover:border-blue-400/60 dark:hover:bg-blue-500/10'
+                } ${isExporting ? 'cursor-not-allowed opacity-70' : ''}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <Icon className="h-4 w-4" />
+                  {mode.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       {isExporting && (
@@ -165,18 +232,18 @@ function LyricVideoExportBody({
                 Set up FFmpeg
               </div>
               <p className="text-xs leading-5 text-gray-600 dark:text-gray-300">
-                On ffmpeg.org, use the packages/executable builds for your platform.
+                On ffmpeg.org, use the packages or executable builds for your platform. You can choose the downloaded zip, extracted folder, or ffmpeg executable.
               </p>
               <div className="grid gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={onOpenFfmpegDownload} className={ffmpegActionButtonClass}>
+                <Button type="button" variant="outline" size="sm" onClick={onOpenFfmpegDownload} disabled={ffmpegActionsDisabled} className={ffmpegActionButtonClass}>
                   <ExternalLink className="h-4 w-4" />
                   Get FFmpeg
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={onSelectFfmpeg} className={ffmpegActionButtonClass}>
+                <Button type="button" variant="outline" size="sm" onClick={onSelectFfmpeg} disabled={ffmpegActionsDisabled} className={ffmpegActionButtonClass}>
                   <FolderOpen className="h-4 w-4" />
                   Choose FFmpeg
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={onRefreshReadiness} disabled={ffmpegChecking} className={ffmpegActionButtonClass}>
+                <Button type="button" variant="outline" size="sm" onClick={onRefreshReadiness} disabled={ffmpegActionsDisabled} className={ffmpegActionButtonClass}>
                   <RefreshCw className={`h-4 w-4 ${ffmpegChecking ? 'animate-spin' : ''}`} />
                   Recheck
                 </Button>
@@ -184,11 +251,11 @@ function LyricVideoExportBody({
             </div>
           ) : (
             <div className="grid gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onSelectFfmpeg} className={ffmpegActionButtonClass}>
+              <Button type="button" variant="outline" size="sm" onClick={onSelectFfmpeg} disabled={ffmpegActionsDisabled} className={ffmpegActionButtonClass}>
                 <FolderOpen className="h-4 w-4" />
                 Change FFmpeg
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={onRefreshReadiness} disabled={ffmpegChecking} className={ffmpegActionButtonClass}>
+              <Button type="button" variant="outline" size="sm" onClick={onRefreshReadiness} disabled={ffmpegActionsDisabled} className={ffmpegActionButtonClass}>
                 <RefreshCw className={`h-4 w-4 ${ffmpegChecking ? 'animate-spin' : ''}`} />
                 Recheck
               </Button>
@@ -209,6 +276,7 @@ function LyricVideoExportBody({
 export default function LyricVideoExportModal({
   open,
   settings,
+  projectName,
   audioAttached,
   audioExportable,
   hasTimedLyrics,
@@ -224,6 +292,7 @@ export default function LyricVideoExportModal({
   onClose,
 }) {
   const { showModal } = useModal();
+  const [performanceMode, setPerformanceMode] = React.useState('balanced');
   const openRef = React.useRef(false);
   const latestRef = React.useRef({ onClose });
   const ffmpegReady = ffmpegReadiness?.available === true;
@@ -250,6 +319,7 @@ export default function LyricVideoExportModal({
       body: (
         <LyricVideoExportBody
           settings={settings}
+          projectName={projectName}
           audioAttached={audioAttached}
           audioExportable={audioExportable}
           hasTimedLyrics={hasTimedLyrics}
@@ -257,6 +327,8 @@ export default function LyricVideoExportModal({
           isExporting={isExporting}
           progress={progress}
           result={result}
+          performanceMode={performanceMode}
+          onPerformanceModeChange={setPerformanceMode}
           onSelectFfmpeg={onSelectFfmpeg}
           onRefreshReadiness={onRefreshReadiness}
           onOpenFfmpegDownload={onOpenFfmpegDownload}
@@ -284,7 +356,7 @@ export default function LyricVideoExportModal({
               variant: 'default',
               disabled: !canExport,
               closeOnClick: false,
-              onSelect: onStartExport,
+              onSelect: () => onStartExport(performanceMode),
             },
           ],
     });
@@ -309,7 +381,9 @@ export default function LyricVideoExportModal({
     onSelectFfmpeg,
     onStartExport,
     open,
+    performanceMode,
     progress,
+    projectName,
     result,
     settings,
     showModal,

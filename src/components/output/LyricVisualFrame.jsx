@@ -34,6 +34,8 @@ export default function LyricVisualFrame({
   onAutosizeChange,
   disableAnimations = false,
   backgroundVideoPlaying,
+  renderBackgroundLayer = true,
+  renderFullScreenElementLayer = true,
 }) {
   const [adjustedFontSize, setAdjustedFontSize] = useState(null);
   const backgroundVideoRef = useRef(null);
@@ -163,14 +165,15 @@ export default function LyricVisualFrame({
   const justifyContent = positionJustifyMap[effectiveLyricsPosition] || 'flex-end';
   const isVisible = Boolean(active && visible && displayLine);
   const shouldShowFullScreenBackground = fullScreenMode && (alwaysShowBackground || active);
+  const shouldRenderFullScreenBackgroundLayer = renderBackgroundLayer && shouldShowFullScreenBackground;
   const fullScreenBackgroundColorValue =
-    shouldShowFullScreenBackground && fullScreenBackgroundType === 'color'
+    shouldRenderFullScreenBackgroundLayer && fullScreenBackgroundType === 'color'
       ? paintToCss(fullScreenBackgroundPaint, fullScreenBackgroundColor || '#000000')
       : 'transparent';
   const windowBackgroundColor = isProjectionMode ? '#000000' : fullScreenBackgroundColorValue;
 
   const resolveBackgroundMediaSource = () => {
-    if (!shouldShowFullScreenBackground || !fullScreenBackgroundMedia) return null;
+    if (!shouldRenderFullScreenBackgroundLayer || !fullScreenBackgroundMedia) return null;
     if (fullScreenBackgroundMedia.dataUrl) return fullScreenBackgroundMedia.dataUrl;
     if (!fullScreenBackgroundMedia.url) return null;
     if (fullScreenBackgroundMedia.bundled) return fullScreenBackgroundMedia.url;
@@ -193,7 +196,7 @@ export default function LyricVisualFrame({
   }, [backgroundVideoPlaying, fullScreenBackgroundMedia?.url, fullScreenBackgroundMedia?.uploadedAt]);
 
   const renderFullScreenMedia = () => {
-    if (!shouldShowFullScreenBackground || fullScreenBackgroundType !== 'media') return null;
+    if (!shouldRenderFullScreenBackgroundLayer || fullScreenBackgroundType !== 'media') return null;
 
     const media = fullScreenBackgroundMedia;
     const mediaSource = resolveBackgroundMediaSource();
@@ -208,6 +211,7 @@ export default function LyricVisualFrame({
         <video
           key={`video-${cacheKey}`}
           ref={backgroundVideoRef}
+          data-lyric-background-video="true"
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay={typeof backgroundVideoPlaying === 'boolean' ? false : true}
@@ -234,7 +238,7 @@ export default function LyricVisualFrame({
   };
 
   const resolveFullScreenElementSource = () => {
-    if (!shouldShowFullScreenBackground || !fullScreenElementEnabled || !fullScreenElementMedia) return null;
+    if (!shouldShowFullScreenBackground || !renderFullScreenElementLayer || !fullScreenElementEnabled || !fullScreenElementMedia) return null;
     if (fullScreenElementMedia.dataUrl) return fullScreenElementMedia.dataUrl;
     if (!fullScreenElementMedia.url) return null;
     return fullScreenElementMedia.bundled
