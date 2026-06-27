@@ -2,15 +2,15 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { List, useListRef } from 'react-window';
 import { Input } from "@/components/ui/input";
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Search, X } from 'lucide-react';
 import { FEATURED_FONTS } from '../constants/fonts';
 import { logWarn } from '../utils/logger';
 import { cn } from '@/lib/utils';
 
 const normalizeFontName = (font) => (typeof font === 'string' ? font.replace(/["']/g, '').trim() : '');
 const DROPDOWN_MAX_HEIGHT = 320;
-const FONT_ROW_HEIGHT = 40;
-const LABEL_ROW_HEIGHT = 32;
+const FONT_ROW_HEIGHT = 36;
+const LABEL_ROW_HEIGHT = 30;
 const DIVIDER_ROW_HEIGHT = 16;
 const HELPER_ROW_HEIGHT = 28;
 const SCROLL_PADDING_PX = 4;
@@ -469,9 +469,9 @@ const FontSelect = ({
       onFocus={() => { activeFontIndexRef.current = index; }}
       style={{ fontFamily: font }}
       className={cn(
-        'w-full text-left flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-r-md rounded-l-none transition-colors truncate focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
+        'w-full text-left flex items-center justify-between gap-2 px-3 py-1.5 text-xs leading-5 rounded-r-md rounded-l-none transition-colors truncate focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
         darkMode
-          ? 'text-gray-200 hover:bg-gray-600 focus:bg-gray-600'
+          ? 'text-gray-200 hover:bg-gray-600 hover:text-white focus:bg-gray-600 focus:text-white'
           : 'text-gray-800 hover:bg-gray-100 focus:bg-gray-200',
         normalizedValue && normalizedValue.toLowerCase() === font.toLowerCase()
           ? (darkMode ? 'bg-gray-600' : 'bg-gray-100')
@@ -604,7 +604,7 @@ const FontSelect = ({
         type="button"
         onClick={handleToggleMenu}
         className={cn(
-          'flex h-9 min-w-0 items-center justify-between whitespace-nowrap rounded-md border px-3 py-2 text-sm shadow-sm',
+          'flex h-9 min-w-0 items-center justify-between whitespace-nowrap rounded-md border px-3 py-2 text-xs leading-5 shadow-sm',
           triggerClassName || 'w-full',
           darkMode
             ? 'border-gray-600 bg-gray-700 text-gray-200'
@@ -640,6 +640,13 @@ const FontSelect = ({
             darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'
           )}>
             <div className="relative">
+              <Search
+                className={cn(
+                  'pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2',
+                  darkMode ? 'text-gray-400' : 'text-gray-500'
+                )}
+                aria-hidden="true"
+              />
               <Input
                 ref={searchInputRef}
                 value={searchTerm}
@@ -647,10 +654,10 @@ const FontSelect = ({
                 placeholder="Search fonts"
                 onFocus={() => { activeFontIndexRef.current = null; }}
                 className={cn(
-                  'h-9 pr-9 text-sm placeholder:text-sm focus-visible:outline-none focus-visible:ring-0 focus-visible:border-gray-400',
+                  'h-9 rounded-full pl-9 pr-9 text-xs shadow-none placeholder:text-xs focus-visible:outline-none focus-visible:ring-0',
                   darkMode
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus-visible:border-gray-300'
-                    : 'bg-white border-gray-300 text-gray-800 placeholder:text-gray-500'
+                    ? 'border-gray-600 bg-gray-800/85 text-white placeholder:text-gray-400 focus-visible:border-gray-300'
+                    : 'border-gray-300 bg-gray-50 text-gray-800 placeholder:text-gray-500 focus-visible:border-gray-400'
                 )}
                 onKeyDown={handleSearchKeyDown}
               />
@@ -659,12 +666,12 @@ const FontSelect = ({
                   type="button"
                   onClick={() => setSearchTerm('')}
                   className={cn(
-                    'absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded',
+                    'absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1',
                     darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-200'
                   )}
                   aria-label="Clear search"
                 >
-                  ×
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>

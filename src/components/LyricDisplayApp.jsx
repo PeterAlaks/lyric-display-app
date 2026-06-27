@@ -413,9 +413,9 @@ const LyricDisplayApp = () => {
       {isDesktopApp && <DraftApprovalModal darkMode={darkMode} />}
       <div className={`flex h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Control Panel */}
-        <div className={`w-[420px] flex-shrink-0 shadow-lg flex flex-col h-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className="control-panel-sidebar-texture w-[420px] flex-shrink-0 shadow-lg flex flex-col h-full">
           {/* Fixed Header Section */}
-          <div className={`flex-shrink-0 pt-4 px-5 pb-0 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="flex-shrink-0 pt-4 px-5 pb-0 bg-transparent">
             <ControlPanelHeaderActions
               authStatus={authStatus}
               connectionStatus={connectionStatus}
@@ -470,7 +470,7 @@ const LyricDisplayApp = () => {
 
             {/* Current File Indicator */}
             {hasLyrics && (
-              <div className={`mb-6 text-sm font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <div className={`mb-6 text-xs font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 <FileMusic className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{lyricsFileName}</span>
               </div>

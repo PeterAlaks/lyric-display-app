@@ -124,19 +124,37 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
     }
   };
 
-  const switchBaseClasses = `!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
+  const switchBaseClasses = `!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
     ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
     : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
     }`;
-  const switchThumbClass = "!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1";
+  const switchThumbClass = "!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1";
+  const customMessagePrimaryButtonClass = darkMode
+    ? 'h-9 border border-blue-500/35 bg-blue-500/15 px-3 text-xs font-semibold text-blue-100 shadow-none hover:border-blue-400/60 hover:bg-blue-500/25'
+    : 'h-9 border border-gray-900 bg-gray-900 px-3 text-xs font-semibold text-white shadow-none hover:bg-gray-800';
+  const customMessageSaveButtonClass = darkMode
+    ? 'h-8 border border-emerald-500/35 bg-emerald-500/15 px-2 text-xs font-semibold text-emerald-100 shadow-none hover:border-emerald-400/60 hover:bg-emerald-500/25'
+    : 'h-8 border border-gray-900 bg-gray-900 px-2 text-xs font-semibold text-white shadow-none hover:bg-gray-800';
+  const customMessageOutlineButtonClass = darkMode
+    ? 'h-9 border border-gray-700 bg-gray-800 px-3 text-xs font-semibold text-gray-200 shadow-none hover:border-gray-600 hover:bg-gray-700 hover:text-white'
+    : 'h-9 border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-700 shadow-none hover:bg-gray-100 hover:text-gray-900';
+  const customMessageSmallOutlineButtonClass = darkMode
+    ? 'h-8 border border-gray-600 bg-gray-700 px-2 text-xs font-semibold text-gray-200 shadow-none hover:border-gray-500 hover:bg-gray-600 hover:text-white'
+    : 'h-8 border border-gray-300 bg-white px-2 text-xs font-semibold text-gray-700 shadow-none hover:bg-gray-100 hover:text-gray-900';
+  const customMessageGhostButtonClass = darkMode
+    ? 'h-8 border border-transparent px-2 text-xs font-semibold text-gray-200 hover:bg-gray-500/45 hover:text-white'
+    : 'h-8 border border-transparent px-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900';
+  const customMessageDangerButtonClass = darkMode
+    ? 'h-8 border border-transparent px-2 text-xs font-semibold text-red-200 hover:bg-red-500/15 hover:text-red-100'
+    : 'h-8 border border-transparent px-2 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700';
 
   const FullScreenToggleRow = ({ label, checked, onChange, disabled, ariaLabel }) => (
     <div className="flex items-center justify-between w-full">
-      <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${disabled ? 'opacity-50' : ''}`}>
+      <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${disabled ? 'opacity-50' : ''}`}>
         {label}
       </label>
       <div className="flex items-center gap-3">
-        <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${disabled ? 'opacity-50' : ''}`}>
+        <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${disabled ? 'opacity-50' : ''}`}>
           {checked ? 'Enabled' : 'Disabled'}
         </span>
         <Switch
@@ -199,7 +217,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             <LabelWithIcon icon={ChevronRight} text="Arrow" darkMode={darkMode} />
           </Tooltip>
           <div className="flex items-center gap-2 justify-end w-full">
-            <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${sectionDisabled ? 'opacity-50' : ''}`}>
+            <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${sectionDisabled ? 'opacity-50' : ''}`}>
               {settings.showNextArrow ? 'Enabled' : 'Disabled'}
             </span>
             <Switch
@@ -210,7 +228,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               className={`${switchBaseClasses} ${sectionDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               thumbClassName={switchThumbClass}
             />
-            <PaintBucket className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <PaintBucket className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <ColorPicker
               value={settings.nextArrowColor}
               onChange={(val) => update('nextArrowColor', val)}
@@ -248,7 +266,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
 
     return (
       <div className="space-y-4">
-        <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>{section.title}</h4>
+        <h4 className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>{section.title}</h4>
 
         {section.settingsToggleKey && (
           <div className="flex items-center justify-between gap-4">
@@ -257,14 +275,14 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               side="right"
             >
               <div className="flex items-center gap-2 min-w-[170px]">
-                <Eye className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                <Eye className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                   {section.settingsToggleKey === 'showNextLine' ? 'Show Next Line' : 'Show Previous Line'}
                 </label>
               </div>
             </Tooltip>
             <div className="flex items-center gap-3 justify-end w-full">
-              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {sectionEnabled ? 'Enabled' : 'Disabled'}
               </span>
               <Switch
@@ -390,10 +408,10 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
   };
 
   return (
-    <div className="space-y-4" onKeyDown={blurInputOnEnter}>
+    <div className="stage-settings-panel space-y-4" onKeyDown={blurInputOnEnter}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        <h3 className={`text-[13px] font-medium uppercase leading-5 tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           Stage Settings
         </h3>
 
@@ -411,7 +429,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                   : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <Power className="w-4 h-4" />
+              <Power className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
 
@@ -491,7 +509,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                 : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <Save className="w-4 h-4" />
+              <Save className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
 
@@ -522,7 +540,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                 : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <Palette className="w-4 h-4" />
+              <Palette className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
 
@@ -544,7 +562,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                 : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
@@ -626,7 +644,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         <div className="space-y-3">
           {/* Custom Name Input with OK Button */}
           <div className="flex items-center justify-between w-full gap-2">
-            <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50' : ''}`}>
+            <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50' : ''}`}>
               Custom Name
             </label>
             <div className="flex items-center gap-2">
@@ -675,7 +693,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       ))}
 
       {/* Song Info Settings */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Top Bar</h4>
+      <h4 className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Top Bar</h4>
 
       <FontSettingsRow
         darkMode={darkMode}
@@ -704,14 +722,14 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
       {/* Bottom Bar Settings */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Bottom Bar</h4>
+      <h4 className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Bottom Bar</h4>
 
       <div className="flex items-center justify-between gap-4 mt-4">
         <Tooltip content="Display current real-world time" side="right">
           <LabelWithIcon icon={ScreenShare} text="Show Time" darkMode={darkMode} />
         </Tooltip>
         <div className="flex items-center gap-3 justify-end w-full">
-          <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {settings.showTime ? 'Enabled' : 'Disabled'}
           </span>
           <Switch
@@ -843,7 +861,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
       {/* Custom Messages */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Custom Messages</h4>
+      <h4 className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Custom Messages</h4>
 
       <div className="flex items-center justify-between gap-4 mt-4">
         <Tooltip content="Time between message transitions (1000-10000ms)" side="right">
@@ -908,14 +926,14 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             maxLength={MAX_STAGE_MESSAGE_LENGTH}
             className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
           />
-          <Button onClick={handleAddMessage} className={darkMode ? 'bg-blue-600 hover:bg-blue-700' : ''}>
+          <Button onClick={handleAddMessage} className={customMessagePrimaryButtonClass}>
             Add
           </Button>
           <Button
             variant="outline"
             onClick={handleClearMessages}
             disabled={customMessages.length === 0}
-            className={darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''}
+            className={customMessageOutlineButtonClass}
           >
             Clear
           </Button>
@@ -945,7 +963,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                       <Button
                         size="sm"
                         onClick={saveEditMessage}
-                        className={darkMode ? 'bg-green-600 hover:bg-green-700 h-8 px-2' : 'h-8 px-2'}
+                        className={customMessageSaveButtonClass}
                       >
                         Save
                       </Button>
@@ -953,7 +971,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                         size="sm"
                         variant="outline"
                         onClick={cancelEditMessage}
-                        className={darkMode ? 'border-gray-500 text-gray-200 hover:bg-gray-700 h-8 px-2' : 'h-8 px-2'}
+                        className={customMessageSmallOutlineButtonClass}
                       >
                         Cancel
                       </Button>
@@ -969,7 +987,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                         size="sm"
                         variant="ghost"
                         onClick={() => beginEditMessage(msg)}
-                        className={darkMode ? 'hover:bg-gray-500 text-gray-200 h-8 px-2' : 'h-8 px-2'}
+                        className={customMessageGhostButtonClass}
                       >
                         Edit
                       </Button>
@@ -977,7 +995,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                         size="sm"
                         variant="ghost"
                         onClick={() => handleRemoveMessage(msg.id)}
-                        className={darkMode ? 'hover:bg-gray-500 text-gray-300 h-8 px-2' : 'h-8 px-2'}
+                        className={customMessageDangerButtonClass}
                       >
                         Remove
                       </Button>
@@ -993,7 +1011,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
 
       {/* Transition Settings */}
-      <h4 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Transition Style</h4>
+      <h4 className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Transition Style</h4>
 
       <div className="flex items-center justify-between gap-4 mt-4">
         <Tooltip content="Choose animation style when lyrics change" side="right">

@@ -9,8 +9,8 @@ import { sanitizeIntegerInput } from '../utils/numberInput';
 
 export const LabelWithIcon = ({ icon: Icon, text, darkMode }) => (
   <div className="flex items-center gap-2 min-w-[140px]">
-    <Icon className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-    <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{text}</label>
+    <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+    <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{text}</label>
   </div>
 );
 
@@ -38,9 +38,9 @@ export const AdvancedToggle = ({ expanded, onToggle, darkMode, ariaLabel, disabl
     aria-label={ariaLabel}
   >
     {expanded ? (
-      <ChevronUp className="w-4 h-4" />
+      <ChevronUp className="h-3.5 w-3.5" />
     ) : (
-      <ChevronDown className="w-4 h-4" />
+      <ChevronDown className="h-3.5 w-3.5" />
     )}
   </button>
 );
@@ -59,10 +59,10 @@ export const FontSettingsRow = ({
 }) => (
   <div className="flex items-center justify-between gap-4">
     <Tooltip content={tooltip} side="right">
-      <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${disabled ? 'opacity-50' : ''}`}>{label}</label>
+      <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${disabled ? 'opacity-50' : ''}`}>{label}</label>
     </Tooltip>
     <div className="flex items-center gap-2">
-      <TextCursorInput className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'} ${disabled ? 'opacity-50' : ''}`} />
+      <TextCursorInput className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'} ${disabled ? 'opacity-50' : ''}`} />
       <Input
         type="number"
         value={sizeValue}
@@ -78,7 +78,7 @@ export const FontSettingsRow = ({
         disabled={disabled}
         className={`w-20 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
-      <PaintBucket className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'} ${disabled ? 'opacity-50' : ''}`} />
+      <PaintBucket className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'} ${disabled ? 'opacity-50' : ''}`} />
       <ColorPicker
         value={colorValue}
         onChange={onColorChange}

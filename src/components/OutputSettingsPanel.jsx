@@ -34,8 +34,8 @@ const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex ite
   <div className="flex items-center justify-between gap-4">
     <Tooltip content={tooltip} side="right">
       <div className="flex items-center gap-2 min-w-[140px]">
-        {icon ? React.createElement(icon, { className: `w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}` }) : null}
-        <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
+        {icon ? React.createElement(icon, { className: `h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}` }) : null}
+        <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
       </div>
     </Tooltip>
     <div className={`${rightClassName} ${justifyEnd ? '' : ''}`}>
@@ -377,7 +377,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
         <div className="space-y-3" onKeyDown={blurInputOnEnter}>
           <div className={`flex items-center justify-between rounded-md border px-3 py-2 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
             <div>
-              <div className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Stage</div>
+              <div className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Stage</div>
               <div className={`text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{isOutputEnabled ? 'Enabled' : 'Disabled'}</div>
             </div>
             <button
@@ -578,7 +578,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
       ? 'bg-gray-800 border-gray-700 text-gray-100'
       : 'bg-white border-gray-300 text-gray-900'
       }`;
-    const compactSelectClass = `h-8 text-xs ${darkMode
+    const compactSelectClass = `h-8 text-[11px] leading-4 ${darkMode
       ? 'bg-gray-800 border-gray-700 text-gray-100'
       : 'bg-white border-gray-300 text-gray-900'
       }`;
@@ -618,7 +618,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
       </button>
     );
     const compactContentClass = darkMode ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900';
-    const compactItemClass = 'text-xs py-2';
+    const compactItemClass = 'py-1.5 text-[11px] leading-4';
     const compactSelectContentProps = {
       className: compactContentClass
     };
@@ -689,7 +689,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
               className="ml-3 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-800 text-gray-300 hover:bg-gray-900"
               aria-label="Close templates"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
@@ -750,7 +750,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
       <div className="space-y-3" onKeyDown={blurInputOnEnter}>
         <div className={`flex items-center justify-between rounded-md border px-3 py-2 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
           <div>
-            <div className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{outputKey.replace('output', 'Output ')}</div>
+            <div className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{outputKey.replace('output', 'Output ')}</div>
             <div className={`text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{isOutputEnabled ? 'Enabled' : 'Disabled'}</div>
           </div>
           <button
@@ -1150,7 +1150,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
   );
 
   return (
-    <div className="space-y-4" onKeyDown={blurInputOnEnter}>
+    <div className="output-settings-panel space-y-4" onKeyDown={blurInputOnEnter}>
       <PanelHeaderActions
         applySettings={applySettings}
         darkMode={darkMode}
@@ -1209,7 +1209,7 @@ const OutputSettingsPanel = ({ outputKey, onDeleteOutput, compact = false }) => 
         style={{ marginTop: fontColorAdvancedExpanded ? undefined : 0 }}
       >
         <div className="flex items-center justify-between w-full">
-          <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+          <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
             Translation Colour
           </label>
           <ColorPicker

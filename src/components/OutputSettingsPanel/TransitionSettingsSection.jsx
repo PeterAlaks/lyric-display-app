@@ -9,8 +9,8 @@ const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'fl
   <div className="flex items-center justify-between gap-4">
     <Tooltip content={tooltip} side="right">
       <div className="flex items-center gap-2 min-w-[140px]">
-        {Icon ? <Icon className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /> : null}
-        <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
+        {Icon ? <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /> : null}
+        <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
       </div>
     </Tooltip>
     <div className={rightClassName}>{children}</div>
@@ -71,7 +71,7 @@ const TransitionSettingsSection = ({
       style={{ marginTop: transitionAdvancedExpanded ? undefined : 0 }}
     >
       <div className="flex items-center justify-between w-full">
-        <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50' : ''}`}>
+        <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50' : ''}`}>
           Transition Speed (ms)
         </label>
         <Input

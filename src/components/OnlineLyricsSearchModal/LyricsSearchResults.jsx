@@ -51,11 +51,11 @@ const ResultBadges = ({ darkMode, item }) => {
   if (!badges.length) return null;
 
   return (
-    <div className="mt-1 flex min-w-0 flex-wrap gap-1.5">
+    <div className="mt-1.5 flex min-w-0 flex-wrap gap-1.5">
       {badges.map((badge) => (
         <span
           key={badge.key}
-          className={`max-w-[13rem] truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${darkMode ? 'bg-gray-700/70 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
+          className={`max-w-[13rem] truncate text-[10px] font-medium ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}
           title={badge.label}
         >
           {badge.label}
@@ -82,8 +82,8 @@ export const SuggestionsList = ({
   if (!isSearchFocused) return null;
 
   const containerClassName = popover
-    ? `absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-md border shadow-2xl backdrop-blur-md ${darkMode ? 'border-gray-700/80 bg-gray-900/88 ring-1 ring-black/40' : 'border-gray-200/90 bg-white/88 ring-1 ring-black/5'}`
-    : `mt-3 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-white'}`;
+    ? `absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-xl border shadow-2xl backdrop-blur-md ${darkMode ? 'border-gray-800 bg-gray-900/92 ring-1 ring-black/40' : 'border-gray-200 bg-white/92 ring-1 ring-black/5'}`
+    : `mt-3 rounded-xl border ${darkMode ? 'border-gray-800 bg-gray-900/60' : 'border-gray-200 bg-white'}`;
 
   if (!items?.length) {
     if (!query.trim()) return null;
@@ -100,7 +100,7 @@ export const SuggestionsList = ({
   return (
     <div
       ref={suggestionListRef}
-      className={`${containerClassName} max-h-64 overflow-y-auto ${popover ? (darkMode ? 'bg-[linear-gradient(135deg,rgba(255,255,255,0.035)_0,rgba(255,255,255,0)_36%)]' : 'bg-[linear-gradient(135deg,rgba(15,23,42,0.035)_0,rgba(15,23,42,0)_36%)]') : ''}`}
+      className={`${containerClassName} max-h-64 overflow-y-auto ${popover ? (darkMode ? 'bg-[linear-gradient(135deg,rgba(255,255,255,0.025)_0,rgba(255,255,255,0)_36%)]' : 'bg-[linear-gradient(135deg,rgba(15,23,42,0.025)_0,rgba(15,23,42,0)_36%)]') : ''}`}
     >
       {items.map((item, index) => {
         const providerName = providerMap.get(item.provider)?.displayName || item.provider;
@@ -113,9 +113,9 @@ export const SuggestionsList = ({
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => handleSelectResult(item)}
             disabled={isLoading}
-            className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${darkMode
-              ? `${isSelected ? 'bg-blue-900/40 border-l-2 border-blue-500/70' : ''} hover:bg-gray-700 disabled:hover:bg-gray-800/90`
-              : `${isSelected ? 'bg-blue-50 border-l-2 border-blue-500/70' : ''} hover:bg-gray-100 disabled:hover:bg-white`
+            className={`flex w-full items-center justify-between gap-3 border-b px-4 py-3 text-left transition last:border-b-0 ${darkMode
+              ? `${isSelected ? 'bg-blue-500/10 text-blue-100' : 'border-gray-800'} hover:bg-blue-500/5 disabled:hover:bg-transparent`
+              : `${isSelected ? 'bg-blue-50/80 text-blue-950' : 'border-gray-100'} hover:bg-blue-50/50 disabled:hover:bg-transparent`
               }`}
             aria-selected={isSelected}
             onMouseEnter={() => setSelectionIndex(index)}
@@ -157,7 +157,7 @@ export const FullResultsList = ({
 }) => {
   if (loadingFullResults) {
     return (
-      <div className={`mt-4 flex h-48 items-center justify-center rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-gray-50'}`}>
+      <div className={`mt-4 flex h-48 items-center justify-center rounded-xl border ${darkMode ? 'border-gray-800 bg-gray-900/45' : 'border-gray-200 bg-white'}`}>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="w-4 h-4 animate-spin" />
           Fetching results...
@@ -168,7 +168,7 @@ export const FullResultsList = ({
 
   if (!items?.length) {
     return (
-      <div className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/80' : 'border-gray-200 bg-white'}`}>
+      <div className={`mt-4 rounded-xl border ${darkMode ? 'border-gray-800 bg-gray-900/45' : 'border-gray-200 bg-white'}`}>
         <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
           <BookOpen className={`w-6 h-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
           <div>
@@ -193,7 +193,7 @@ export const FullResultsList = ({
   return (
     <div
       ref={fullResultsRef}
-      className={`mt-4 rounded-md border ${darkMode ? 'border-gray-600 bg-gray-800/90' : 'border-gray-200 bg-white'} overflow-y-auto`}
+      className={`mt-4 overflow-y-auto rounded-xl border ${darkMode ? 'border-gray-800 bg-gray-900/45' : 'border-gray-200 bg-white'}`}
     >
       {items.map((item, index) => {
         const provider = providerMap.get(item.provider);
@@ -207,8 +207,8 @@ export const FullResultsList = ({
             onClick={() => handleSelectResult(item)}
             disabled={isLoading}
             className={`w-full border-b px-4 py-4 text-left transition last:border-b-0 ${darkMode
-              ? `${isSelected ? 'bg-blue-900/40 border-blue-500/70' : 'border-gray-700'} hover:bg-gray-700/70 disabled:hover:bg-transparent`
-              : `${isSelected ? 'bg-blue-50 border-blue-500/70' : 'border-gray-200'} hover:bg-gray-100 disabled:hover:bg-white`
+              ? `${isSelected ? 'border-gray-800 bg-blue-500/10' : 'border-gray-800'} hover:bg-blue-500/5 disabled:hover:bg-transparent`
+              : `${isSelected ? 'border-gray-100 bg-blue-50/80' : 'border-gray-100'} hover:bg-blue-50/50 disabled:hover:bg-transparent`
               }`}
             aria-selected={isSelected}
             onMouseEnter={() => setSelectionIndex(index)}
@@ -225,7 +225,7 @@ export const FullResultsList = ({
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <span className={`rounded-md px-2 py-1 text-xs font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                <span className={`text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                   {providerName}
                 </span>
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
@@ -235,7 +235,7 @@ export const FullResultsList = ({
         );
       })}
       {lowQualityResults.length > 0 && !showingLowQuality && (
-        <div className={`w-full px-4 py-3 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+        <div className={`w-full border-t px-4 py-3 ${darkMode ? 'border-gray-800 bg-gray-900/40' : 'border-gray-100 bg-gray-50/70'}`}>
           <button
             onClick={handleShowLowQuality}
             disabled={loadingFullResults}

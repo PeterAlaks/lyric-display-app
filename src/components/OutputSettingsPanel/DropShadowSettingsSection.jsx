@@ -9,8 +9,8 @@ const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'fl
   <div className="flex items-center justify-between gap-4">
     <Tooltip content={tooltip} side="right">
       <div className="flex items-center gap-2 min-w-[140px]">
-        {Icon ? <Icon className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /> : null}
-        <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
+        {Icon ? <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /> : null}
+        <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
       </div>
     </Tooltip>
     <div className={rightClassName}>{children}</div>
@@ -76,7 +76,7 @@ const DropShadowSettingsSection = ({
       <div className="flex items-center justify-between w-full">
         <Tooltip content="Horizontal shadow offset in pixels (negative = left, positive = right)" side="top">
           <div className="flex items-center gap-2">
-            <MoveHorizontal className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <MoveHorizontal className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <Input
               type="number"
               value={dropShadowOffsetX}
@@ -96,7 +96,7 @@ const DropShadowSettingsSection = ({
 
         <Tooltip content="Vertical shadow offset in pixels (negative = up, positive = down)" side="top">
           <div className="flex items-center gap-2">
-            <MoveVertical className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <MoveVertical className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <Input
               type="number"
               value={dropShadowOffsetY}
@@ -116,7 +116,7 @@ const DropShadowSettingsSection = ({
 
         <Tooltip content="Shadow blur radius in pixels (0 = sharp, higher = softer)" side="top">
           <div className="flex items-center gap-2">
-            <Sparkles className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <Sparkles className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <Input
               type="number"
               value={dropShadowBlur}

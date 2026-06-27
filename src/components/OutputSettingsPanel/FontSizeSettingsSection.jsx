@@ -196,7 +196,7 @@ const FontSizeSettingsSection = ({
                     : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
               }
             >
-              <ListStart className="w-4 h-4" />
+              <ListStart className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
         </div>
@@ -212,7 +212,7 @@ const FontSizeSettingsSection = ({
       >
         <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
+            <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
               Max Lines
             </label>
             <Input
@@ -229,7 +229,7 @@ const FontSizeSettingsSection = ({
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
+            <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
               Min Font Size
             </label>
             <Input
@@ -252,7 +252,7 @@ const FontSizeSettingsSection = ({
         </div>
 
         <div className="flex items-center justify-between w-full">
-          <label className={`text-sm whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+          <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
             Translation Size
           </label>
 
@@ -273,7 +273,7 @@ const FontSizeSettingsSection = ({
             {translationFontSizeMode === 'custom' && (
               <Tooltip content={`Translation font size (max: ${currentFontSize}px)`} side="top">
                 <div className="flex items-center gap-2">
-                  <Languages className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <Languages className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                   <Input
                     type="number"
                     value={translationFontSize}

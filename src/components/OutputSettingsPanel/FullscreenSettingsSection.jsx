@@ -63,18 +63,18 @@ const FullscreenSettingsSection = ({
         </Tooltip>
       </div>
       <div className="flex items-center gap-3 justify-end w-full">
-        <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+        <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           {fullScreenModeChecked ? 'Enabled' : 'Disabled'}
         </span>
         <Switch
           checked={fullScreenModeChecked}
           onCheckedChange={handleFullScreenToggleWithExpand}
           aria-label="Toggle full screen mode"
-          className={`!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
+          className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
             ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
             : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
             }`}
-          thumbClassName="!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1"
+          thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
         />
       </div>
     </div>
@@ -121,7 +121,7 @@ const FullscreenSettingsSection = ({
               variant="outline"
               onClick={openMediaLibrary}
               disabled={fullScreenControlsDisabled}
-              className={`h-9 px-4 flex-shrink-0 ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`h-9 px-4 flex-shrink-0 text-xs font-semibold ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''} ${fullScreenControlsDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {hasBackgroundMedia ? 'Change Media' : 'Choose Media'}
             </Button>
@@ -146,24 +146,24 @@ const FullscreenSettingsSection = ({
 
       <div className={`flex items-center justify-between w-full pt-3 ${fullScreenControlsDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         <Tooltip content="Show fullscreen background even when the output is toggled off" side="right">
-          <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Always Show Background</label>
+          <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Always Show Background</label>
         </Tooltip>
         <Switch
           checked={Boolean(settings.alwaysShowBackground)}
           onCheckedChange={(checked) => update('alwaysShowBackground', checked)}
           disabled={fullScreenControlsDisabled}
           aria-label="Toggle always show background"
-          className={`!h-7 !w-14 !border-0 shadow-sm transition-colors disabled:opacity-100 ${darkMode
+          className={`!h-6 !w-12 !border-0 shadow-sm transition-colors disabled:opacity-100 ${darkMode
             ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
             : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
             }`}
-          thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+          thumbClassName="!h-4 !w-5 data-[state=checked]:!translate-x-6 data-[state=unchecked]:!translate-x-1"
         />
       </div>
 
       <div className={`flex items-center justify-between w-full pt-3 ${fullScreenControlsDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         <Tooltip content="Add an image element over the full screen background and under the lyrics" side="right">
-          <label className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Add Image/Element Overlay</label>
+          <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Add Image/Element Overlay</label>
         </Tooltip>
         <div className="flex items-center gap-3">
           {settings.fullScreenElementEnabled && (
@@ -172,7 +172,7 @@ const FullscreenSettingsSection = ({
               variant="outline"
               onClick={() => openFullScreenElementMediaLibrary()}
               disabled={fullScreenControlsDisabled}
-              className={`h-8 px-3 ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''}`}
+              className={`h-8 px-3 text-xs font-semibold ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''}`}
             >
               {hasFullScreenElementMedia ? 'Change Media' : 'Choose Media'}
             </Button>
@@ -182,11 +182,11 @@ const FullscreenSettingsSection = ({
             onCheckedChange={handleFullScreenElementToggle}
             disabled={fullScreenControlsDisabled}
             aria-label="Toggle full screen image element"
-            className={`!h-7 !w-14 !border-0 shadow-sm transition-colors disabled:opacity-100 ${darkMode
+            className={`!h-6 !w-12 !border-0 shadow-sm transition-colors disabled:opacity-100 ${darkMode
               ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
               : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
               }`}
-            thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+            thumbClassName="!h-4 !w-5 data-[state=checked]:!translate-x-6 data-[state=unchecked]:!translate-x-1"
           />
         </div>
       </div>
@@ -212,7 +212,7 @@ const FullscreenSettingsSection = ({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-4">
-              <label className={`min-w-[140px] shrink-0 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Position</label>
+              <label className={`min-w-[140px] shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Position</label>
               <Select
                 value={settings.fullScreenElementPosition ?? 'center'}
                 onValueChange={(val) => update('fullScreenElementPosition', val)}
@@ -236,7 +236,7 @@ const FullscreenSettingsSection = ({
 
             <div className="grid grid-cols-3 gap-3">
               <div className="flex min-w-0 items-center justify-between gap-2">
-                <label className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Scale</label>
+                <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Scale</label>
                 <Input
                   type="number"
                   value={settings.fullScreenElementScale ?? 25}
@@ -252,7 +252,7 @@ const FullscreenSettingsSection = ({
               </div>
 
               <div className="flex min-w-0 items-center justify-between gap-2">
-                <label className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Opacity</label>
+                <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Opacity</label>
                 <Input
                   type="number"
                   value={settings.fullScreenElementOpacity ?? 2.5}
@@ -269,7 +269,7 @@ const FullscreenSettingsSection = ({
               </div>
 
               <div className="flex min-w-0 items-center justify-between gap-2">
-                <label className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Blur</label>
+                <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Blur</label>
                 <Input
                   type="number"
                   value={settings.fullScreenElementBlur ?? 0}
@@ -286,7 +286,7 @@ const FullscreenSettingsSection = ({
             </div>
 
             <div className="flex items-center justify-between gap-4">
-              <label className={`min-w-[140px] shrink-0 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>X & Y Margins</label>
+              <label className={`min-w-[140px] shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>X & Y Margins</label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"

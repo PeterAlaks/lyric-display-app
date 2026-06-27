@@ -21,7 +21,7 @@ const PanelHeaderActions = ({
   showToast,
 }) => (
   <div className="flex items-center justify-between mb-4">
-    <h3 className={`text-sm font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+    <h3 className={`text-[13px] font-medium uppercase leading-5 tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
       {formatOutputLabel(outputKey, { uppercase: true })} SETTINGS
     </h3>
 
@@ -35,7 +35,7 @@ const PanelHeaderActions = ({
               : 'hover:bg-red-100 text-gray-500 hover:text-red-600'
               }`}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
       )}
@@ -56,7 +56,7 @@ const PanelHeaderActions = ({
               : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
             }`}
         >
-          <Power className="w-4 h-4" />
+          <Power className="h-3.5 w-3.5" />
         </button>
       </Tooltip>
 
@@ -131,7 +131,7 @@ const PanelHeaderActions = ({
           }}
           className={iconButtonClass(darkMode)}
         >
-          <Save className="w-4 h-4" />
+          <Save className="h-3.5 w-3.5" />
         </button>
       </Tooltip>
 
@@ -162,7 +162,7 @@ const PanelHeaderActions = ({
           }}
           className={iconButtonClass(darkMode)}
         >
-          <Palette className="w-4 h-4" />
+          <Palette className="h-3.5 w-3.5" />
         </button>
       </Tooltip>
 
@@ -180,7 +180,7 @@ const PanelHeaderActions = ({
           }}
           className={iconButtonClass(darkMode)}
         >
-          <CircleHelp className="w-4 h-4" />
+          <CircleHelp className="h-3.5 w-3.5" />
         </button>
       </Tooltip>
     </div>

@@ -11,7 +11,7 @@ const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
             <h4 className={`font-semibold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 {title}
             </h4>
-            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`text-xs leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {description}
             </p>
         </div>
