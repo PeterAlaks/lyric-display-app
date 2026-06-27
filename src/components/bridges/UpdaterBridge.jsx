@@ -29,6 +29,63 @@ export default function UpdaterBridge() {
   useEffect(() => {
     if (!window.electronAPI) return;
 
+    const getErrorMessage = (payload) => {
+      if (!payload) return '';
+      if (typeof payload === 'string') return payload;
+      return payload.message || payload.error || '';
+    };
+
+    const getErrorPhase = (payload) => {
+      if (!payload || typeof payload === 'string') return 'check';
+      return payload.phase || 'check';
+    };
+
+    const showInstallError = (result) => {
+      const message = result?.error || 'The update could not be installed. Please restart LyricDisplay and try again.';
+      showToast({
+        title: 'Unable to install update',
+        message,
+        variant: 'error',
+        duration: 8000,
+        dedupeKey: 'app-update-install-error',
+      });
+    };
+
+    const requestInstall = async () => {
+      const result = await showModal({
+        title: 'Install Update?',
+        description: 'LyricDisplay will restart to finish installing the downloaded update.',
+        body: 'Save any unsaved work before continuing. Output and stage windows will close during the restart.',
+        variant: 'warn',
+        size: 'sm',
+        actions: [
+          { label: 'Later', value: 'later', variant: 'outline', autoFocus: true },
+          { label: 'Install and Restart', value: 'install', variant: 'destructive' },
+        ],
+      });
+
+      if (result !== 'install') return;
+
+      const installResult = await window.electronAPI.requestInstallAndRestart?.();
+      if (installResult && installResult.success === false) {
+        showInstallError(installResult);
+      }
+    };
+
+    const showUpdateReadyToast = () => {
+      showToast({
+        title: 'Update ready to install',
+        message: 'Restart LyricDisplay when you are ready to finish the update.',
+        variant: 'success',
+        duration: 0,
+        dedupeKey: 'app-update-ready',
+        actions: [
+          { label: 'Install and Restart', onClick: requestInstall },
+          { label: 'Later', onClick: () => { } },
+        ],
+      });
+    };
+
     const offAvail = window.electronAPI.onUpdateAvailable?.((info) => {
       const version = info?.version || '';
       const releaseName = info?.releaseName || '';
@@ -114,34 +171,65 @@ export default function UpdaterBridge() {
             variant: 'default',
             value: 'update',
             onSelect: async () => {
-              window.electronAPI.requestUpdateDownload?.();
+              const result = await window.electronAPI.requestUpdateDownload?.();
+              if (result && result.success === false) {
+                showToast({
+                  title: 'Unable to download update',
+                  message: result.error || 'The update download could not be started. Please try again.',
+                  variant: 'error',
+                  duration: 8000,
+                  dedupeKey: 'app-update-download-error',
+                });
+              } else if (result?.alreadyDownloaded) {
+                showUpdateReadyToast();
+              } else if (result?.inProgress) {
+                showToast({
+                  title: 'Update download already running',
+                  message: 'The download is already in progress.',
+                  variant: 'info',
+                  duration: 4000,
+                  dedupeKey: 'app-update-download-running',
+                });
+              }
             }
           },
         ],
       });
     });
     const offDownloaded = window.electronAPI.onUpdateDownloaded?.(() => {
+      showUpdateReadyToast();
+    });
+    const offErr = window.electronAPI.onUpdateError?.((payload) => {
+      const phase = getErrorPhase(payload);
+      const detail = getErrorMessage(payload);
+      try { console.warn(`Update ${phase} failed:`, detail); } catch { }
+
+      const isDownload = phase === 'download' || phase === 'downloading';
+      const isInstall = phase === 'install' || phase === 'installing';
+
       showToast({
-        title: 'Update ready to install',
-        message: 'Install and restart now?',
-        variant: 'success',
-        duration: 0,
-        actions: [
-          { label: 'Install and Restart', onClick: () => window.electronAPI.requestInstallAndRestart?.() },
-          { label: 'Later', onClick: () => { } },
-        ],
+        title: isInstall
+          ? 'Unable to install update'
+          : isDownload
+            ? 'Unable to download update'
+            : 'Unable to check for updates',
+        message: isInstall
+          ? 'The update could not be installed. Please restart LyricDisplay and try again.'
+          : isDownload
+            ? 'The update download failed. You can retry from the update download window.'
+            : 'We could not reach the update service. Please check your internet connection and try again later.',
+        variant: isInstall || isDownload ? 'error' : 'warning',
+        duration: isInstall || isDownload ? 9000 : 7000,
+        dedupeKey: `app-update-${phase}-error`,
       });
     });
-    const offErr = window.electronAPI.onUpdateError?.((msg) => {
-      const detail = msg ? String(msg) : '';
-      try { console.warn('Update check failed:', detail); } catch { }
-      showToast({
-        title: 'Unable to check for updates',
-        message: 'We could not reach the update service. Please check your internet connection and try again later.',
-        variant: 'warning',
-        duration: 7000,
-      });
-    });
+
+    window.electronAPI.getUpdaterState?.().then((result) => {
+      if (result?.state?.status === 'downloaded') {
+        showUpdateReadyToast();
+      }
+    }).catch(() => { });
+
     return () => { offAvail?.(); offDownloaded?.(); offErr?.(); };
   }, [showToast, showModal]);
   return null;

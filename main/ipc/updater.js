@@ -1,55 +1,47 @@
 import { ipcMain } from 'electron';
-import updaterPkg from 'electron-updater';
-import { createProgressWindow } from '../progressWindow.js';
-
-const { autoUpdater } = updaterPkg;
+import {
+  downloadAvailableUpdate,
+  getUpdaterState,
+  hideUpdaterProgressWindow,
+  installDownloadedUpdate
+} from '../updater.js';
 
 /**
- * Register app updater IPC handlers
- * Handles checking for updates, downloading, and installing updates
+ * Register app updater IPC handlers.
  */
 export function registerUpdaterHandlers({ getMainWindow, checkForUpdates }) {
-  
   ipcMain.handle('updater:check', async (_event, showNoUpdateDialog = false) => {
     try {
       if (typeof checkForUpdates === 'function') {
         checkForUpdates(showNoUpdateDialog);
-        return { success: true };
+        return { success: true, state: getUpdaterState() };
       }
-      return { success: false, error: 'checkForUpdates function not available' };
+      return { success: false, error: 'checkForUpdates function not available', state: getUpdaterState() };
     } catch (e) {
-      return { success: false, error: e?.message || String(e) };
+      return { success: false, error: e?.message || String(e), state: getUpdaterState() };
     }
   });
 
+  ipcMain.handle('updater:get-state', async () => ({
+    success: true,
+    state: getUpdaterState()
+  }));
+
   ipcMain.handle('updater:download', async () => {
     try {
-      const parent = getMainWindow?.();
-      const progress = createProgressWindow({ parent });
-      if (progress && !progress.isDestroyed()) {
-        if (parent && typeof parent.isMinimized === 'function' && parent.isMinimized()) {
-          try { 
-            progress.minimize(); 
-          } catch { }
-        } else {
-          try { 
-            progress.show(); 
-          } catch { }
-        }
-      }
-      await autoUpdater.downloadUpdate();
-      return { success: true };
-    } catch (e) { 
-      return { success: false, error: e?.message || String(e) }; 
+      return await downloadAvailableUpdate({ parent: getMainWindow?.() });
+    } catch (e) {
+      return { success: false, error: e?.message || String(e), state: getUpdaterState() };
     }
   });
 
   ipcMain.handle('updater:install', async () => {
-    try { 
-      autoUpdater.quitAndInstall(); 
-      return { success: true }; 
-    } catch (e) { 
-      return { success: false, error: e?.message || String(e) }; 
+    try {
+      return installDownloadedUpdate();
+    } catch (e) {
+      return { success: false, error: e?.message || String(e), state: getUpdaterState() };
     }
   });
+
+  ipcMain.handle('updater:hide-progress', async () => hideUpdaterProgressWindow());
 }
