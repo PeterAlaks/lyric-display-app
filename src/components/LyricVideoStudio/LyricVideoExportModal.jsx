@@ -173,7 +173,7 @@ function LyricVideoExportBody({
                 type="button"
                 disabled={isExporting}
                 onClick={() => onPerformanceModeChange(mode.value)}
-                className={`min-h-[46px] rounded-md border px-3 py-2 text-left transition ${selected
+                className={`min-h-11.5 rounded-md border px-3 py-2 text-left transition ${selected
                   ? 'border-blue-500 bg-blue-50 text-blue-900 ring-1 ring-blue-200 dark:border-blue-400 dark:bg-blue-500/15 dark:text-blue-100 dark:ring-blue-400/30'
                   : 'border-gray-200 bg-white text-gray-800 hover:border-blue-300 hover:bg-blue-50/60 dark:border-gray-800 dark:bg-gray-900/70 dark:text-gray-100 dark:hover:border-blue-400/60 dark:hover:bg-blue-500/10'
                 } ${isExporting ? 'cursor-not-allowed opacity-70' : ''}`}

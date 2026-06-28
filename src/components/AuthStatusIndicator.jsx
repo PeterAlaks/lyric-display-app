@@ -349,7 +349,7 @@ const AuthStatusIndicator = ({
         className={`${compact ? '' : 'flex-1 min-w-0 px-3 py-2'} rounded-lg font-medium transition-all duration-150 flex items-center justify-center gap-2 ${compact ? compactClass : fullClass} ${className}`}
         title={`Status: ${getLabel()}`}
       >
-        <span className="shrink-0">{getStatusIcon(compact ? 'w-[16px] h-[16px]' : 'w-4 h-4')}</span>
+        <span className="shrink-0">{getStatusIcon(compact ? 'w-4 h-4' : 'w-4 h-4')}</span>
         {!compact && (
           <span className="flex items-center gap-1.5 text-xs truncate">
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${variantCfg.dot}`} />

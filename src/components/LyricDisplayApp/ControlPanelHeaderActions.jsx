@@ -31,7 +31,7 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(false)}
             onClick={handleOpenOnlineLyricsSearch}
           >
-            <Globe className="h-[16px] w-[16px]" />
+            <Globe className="h-4 w-4" />
           </button>
         </Tooltip>
 
@@ -40,7 +40,7 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(false)}
             onClick={handleOpenSetlist}
           >
-            <ListMusic className="h-[16px] w-[16px]" />
+            <ListMusic className="h-4 w-4" />
           </button>
         </Tooltip>
 
@@ -50,7 +50,7 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
             onClick={handleSyncOutputs}
           >
-            <RefreshCw className="h-[16px] w-[16px]" />
+            <RefreshCw className="h-4 w-4" />
           </button>
         </Tooltip>
 
@@ -73,7 +73,7 @@ export default function ControlPanelHeaderActions({
               window.electronAPI?.setDarkMode?.(next);
             }}
           >
-            {darkMode ? <Sun className="h-[16px] w-[16px]" /> : <Moon className="h-[16px] w-[16px]" />}
+            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
         </Tooltip>
 
@@ -93,7 +93,7 @@ export default function ControlPanelHeaderActions({
               });
             }}
           >
-            <Settings className="h-[16px] w-[16px]" />
+            <Settings className="h-4 w-4" />
           </button>
         </Tooltip>
 
@@ -113,7 +113,7 @@ export default function ControlPanelHeaderActions({
               });
             }}
           >
-            <Video className="h-[16px] w-[16px]" />
+            <Video className="h-4 w-4" />
           </button>
         </Tooltip>
 
@@ -122,7 +122,7 @@ export default function ControlPanelHeaderActions({
             className={iconButtonClass(false)}
             onClick={handleOpenTimerControl}
           >
-            <Timer className="h-[16px] w-[16px]" />
+            <Timer className="h-4 w-4" />
           </button>
         </Tooltip>
 
