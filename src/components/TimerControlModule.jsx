@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pause, Play, Plus, ScreenShare, SkipForward, Square, Timer, Trash2, Video } from 'lucide-react';
+import { ChevronDown, Pause, Play, Plus, ScreenShare, SkipForward, Square, Timer, Trash2, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -144,10 +144,10 @@ const TargetNumberInput = ({ value, onChange, min, max, placeholder, ariaLabel, 
   />
 );
 
-const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, darkMode, hourFormat, onHourFormatChange }) => {
+const TargetTimePicker = ({ value, onChange, disabled, inputClass, selectTriggerClass, mutedText, darkMode, hourFormat, onHourFormatChange }) => {
   const parts = React.useMemo(() => toTargetTimeParts(value, hourFormat), [hourFormat, value]);
   const preview = React.useMemo(() => formatTargetTimePreview(value, hourFormat), [hourFormat, value]);
-  const selectContentClass = darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : undefined;
+  const selectContentClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300';
   const hourMin = hourFormat === '24' ? TARGET_24_HOUR_MIN : TARGET_12_HOUR_MIN;
   const hourMax = hourFormat === '24' ? TARGET_24_HOUR_MAX : TARGET_12_HOUR_MAX;
 
@@ -170,7 +170,7 @@ const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, da
   return (
     <div className="space-y-2">
       <Select value={hourFormat} onValueChange={onHourFormatChange} disabled={disabled}>
-        <SelectTrigger className={inputClass}>
+        <SelectTrigger className={selectTriggerClass}>
           <SelectValue placeholder="Time format" />
         </SelectTrigger>
         <SelectContent className={selectContentClass}>
@@ -201,7 +201,7 @@ const TargetTimePicker = ({ value, onChange, disabled, inputClass, mutedText, da
         />
         {hourFormat === '12' && (
           <Select value={parts.period || undefined} onValueChange={(nextPeriod) => updatePart('period', nextPeriod)} disabled={disabled}>
-            <SelectTrigger className={inputClass}>
+            <SelectTrigger className={selectTriggerClass}>
               <SelectValue placeholder="AM" />
             </SelectTrigger>
             <SelectContent className={selectContentClass}>
@@ -337,6 +337,10 @@ const TimerControlModule = () => {
   });
   const { commitTimerState } = actions;
   const latestTimerStateRef = React.useRef(timerState);
+  const styleControlsRef = React.useRef(null);
+  const globalTimeFormatRef = React.useRef(null);
+  const [styleControlsExpanded, setStyleControlsExpanded] = React.useState(false);
+  const [globalTimeFormatExpanded, setGlobalTimeFormatExpanded] = React.useState(false);
   const controlSettings = timerControlSettings || DEFAULT_TIMER_CONTROL_SETTINGS;
 
   const {
@@ -422,6 +426,25 @@ const TimerControlModule = () => {
   React.useEffect(() => {
     latestTimerStateRef.current = timerState;
   }, [timerState]);
+
+  const scrollSectionIntoView = React.useCallback((sectionRef) => {
+    window.requestAnimationFrame(() => {
+      sectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    });
+  }, []);
+
+  const toggleStyleControls = React.useCallback(() => {
+    if (!styleControlsExpanded) scrollSectionIntoView(styleControlsRef);
+    setStyleControlsExpanded((expanded) => !expanded);
+  }, [scrollSectionIntoView, styleControlsExpanded]);
+
+  const toggleGlobalTimeFormat = React.useCallback(() => {
+    if (!globalTimeFormatExpanded) scrollSectionIntoView(globalTimeFormatRef);
+    setGlobalTimeFormatExpanded((expanded) => !expanded);
+  }, [globalTimeFormatExpanded, scrollSectionIntoView]);
 
   const applyTimerDisplaySettings = React.useCallback((partial) => {
     const displayUpdatedAt = Date.now();
@@ -573,6 +596,12 @@ const TimerControlModule = () => {
   const inputClass = darkMode
     ? 'bg-gray-700 border-gray-600 text-gray-100 text-xs md:text-xs'
     : 'bg-white border-gray-300 text-xs md:text-xs';
+  const selectTriggerClass = darkMode
+    ? 'bg-gray-700 border-gray-600 text-gray-200 text-xs md:text-xs'
+    : 'bg-white border-gray-300 text-xs md:text-xs';
+  const selectContentClass = darkMode
+    ? 'bg-gray-700 border-gray-600 text-gray-200'
+    : 'bg-white border-gray-300';
   const outlineButtonClass = darkMode
     ? 'bg-gray-800 border-gray-600 text-gray-100 hover:bg-gray-700 hover:text-white'
     : '';
@@ -580,6 +609,9 @@ const TimerControlModule = () => {
   const subtleButtonClass = darkMode
     ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 disabled:bg-gray-700 disabled:text-gray-500'
     : 'bg-gray-100 hover:bg-gray-200 text-gray-800 disabled:text-gray-400';
+  const sectionToggleClass = darkMode
+    ? 'text-gray-100 hover:bg-gray-800/70'
+    : 'text-gray-900 hover:bg-gray-100';
   const switchBaseClasses = `!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
     ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
     : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -591,7 +623,10 @@ const TimerControlModule = () => {
   });
 
   return (
-    <div className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#f8fafc] text-gray-900'}`}>
+    <div
+      className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#f8fafc] text-gray-900'}`}
+      style={{ scrollbarGutter: 'stable' }}
+    >
       <div className="min-h-full p-5 space-y-5">
         <div className={`flex items-center justify-between border-b pb-4 ${dividerClass}`}>
           <div className="flex items-center gap-2">
@@ -635,10 +670,10 @@ const TimerControlModule = () => {
             <div className="space-y-2">
               <label className="text-xs font-medium">Mode</label>
               <Select value={mode} onValueChange={(value) => setTimerControlSettings({ mode: value })} disabled={useSets}>
-                <SelectTrigger className={inputClass}>
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={selectContentClass}>
                   <SelectItem value="countdown">Countdown</SelectItem>
                   <SelectItem value="countup">Count up</SelectItem>
                   <SelectItem value="target">Until time</SelectItem>
@@ -682,6 +717,7 @@ const TimerControlModule = () => {
                   onChange={(value) => setTimerControlSettings({ targetTime: value })}
                   disabled={false}
                   inputClass={inputClass}
+                  selectTriggerClass={selectTriggerClass}
                   mutedText={mutedText}
                   darkMode={darkMode}
                   hourFormat={targetHourFormat}
@@ -754,133 +790,148 @@ const TimerControlModule = () => {
               </div>
             </div>
 
-            <div className={`mt-5 border-t pt-4 space-y-4 ${dividerClass}`}>
-              <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="space-y-2 min-w-0">
-                    <label className="block text-xs font-medium truncate">Timer</label>
-                    <ColorPicker
-                      value={displaySettings.textColor}
-                      onChange={(value) => applyTimerDisplaySettings({ textColor: value })}
-                      darkMode={darkMode}
-                      showHex
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2 min-w-0">
-                    <label className="block text-xs font-medium truncate">Label/accent</label>
-                    <ColorPicker
-                      value={displaySettings.accentColor}
-                      onChange={(value) => applyTimerDisplaySettings({ accentColor: value })}
-                      darkMode={darkMode}
-                      showHex
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2 min-w-0">
-                    <label className="block text-xs font-medium truncate">Background</label>
-                    <PaintPicker
-                      value={displaySettings.backgroundPaint}
-                      fallbackColor={displaySettings.backgroundColor || '#000000'}
-                      onChange={(value) => applyTimerDisplaySettings({
-                        backgroundPaint: value,
-                        ...(value?.type === 'solid' ? { backgroundColor: value.color } : {}),
-                      })}
-                      darkMode={darkMode}
-                      showValue
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              </div>
+            <section ref={styleControlsRef} className={`mt-5 border-t pt-3 ${dividerClass}`}>
+              <button
+                type="button"
+                onClick={toggleStyleControls}
+                className={`flex w-full items-center justify-between rounded px-2 py-3 text-left transition-colors ${sectionToggleClass}`}
+                aria-expanded={styleControlsExpanded}
+                aria-controls="timer-style-controls"
+              >
+                <span className="text-xs font-semibold">Styling</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${styleControlsExpanded ? 'rotate-180' : ''}`} />
+              </button>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2 min-w-0">
-                  <label className="block text-xs font-medium truncate">Timer Font</label>
-                  <FontSelect
-                    value={displaySettings.timerFontFamily}
-                    onChange={(value) => applyTimerDisplaySettings({ timerFontFamily: value })}
-                    darkMode={darkMode}
-                    containerClassName="relative w-full min-w-0"
-                    triggerClassName={`w-full min-w-0 ${inputClass}`}
-                  />
+              {styleControlsExpanded && (
+                <div id="timer-style-controls" className="mt-3 space-y-4">
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-2 min-w-0">
+                        <label className="block text-xs font-medium truncate">Timer</label>
+                        <ColorPicker
+                          value={displaySettings.textColor}
+                          onChange={(value) => applyTimerDisplaySettings({ textColor: value })}
+                          darkMode={darkMode}
+                          showHex
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="space-y-2 min-w-0">
+                        <label className="block text-xs font-medium truncate">Label/accent</label>
+                        <ColorPicker
+                          value={displaySettings.accentColor}
+                          onChange={(value) => applyTimerDisplaySettings({ accentColor: value })}
+                          darkMode={darkMode}
+                          showHex
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="space-y-2 min-w-0">
+                        <label className="block text-xs font-medium truncate">Background</label>
+                        <PaintPicker
+                          value={displaySettings.backgroundPaint}
+                          fallbackColor={displaySettings.backgroundColor || '#000000'}
+                          onChange={(value) => applyTimerDisplaySettings({
+                            backgroundPaint: value,
+                            ...(value?.type === 'solid' ? { backgroundColor: value.color } : {}),
+                          })}
+                          darkMode={darkMode}
+                          showValue
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2 min-w-0">
+                      <label className="block text-xs font-medium truncate">Timer Font</label>
+                      <FontSelect
+                        value={displaySettings.timerFontFamily}
+                        onChange={(value) => applyTimerDisplaySettings({ timerFontFamily: value })}
+                        darkMode={darkMode}
+                        containerClassName="relative w-full min-w-0"
+                        triggerClassName={`w-full min-w-0 ${inputClass}`}
+                      />
+                    </div>
+                    <div className="space-y-2 min-w-0">
+                      <label className="block text-xs font-medium truncate">Secondary text font</label>
+                      <FontSelect
+                        value={displaySettings.fontFamily}
+                        onChange={(value) => applyTimerDisplaySettings({ fontFamily: value })}
+                        darkMode={darkMode}
+                        containerClassName="relative w-full min-w-0"
+                        triggerClassName={`w-full min-w-0 ${inputClass}`}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Size</label>
+                      <Select
+                        value={displaySettings.timerFontSizeMode}
+                        onValueChange={(value) => applyTimerDisplaySettings({ timerFontSizeMode: value })}
+                      >
+                        <SelectTrigger className={selectTriggerClass}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className={selectContentClass}>
+                          <SelectItem value="auto">Auto-fit width</SelectItem>
+                          <SelectItem value="manual">Manual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Manual px</label>
+                      <Input
+                        type="number"
+                        min="48"
+                        max="420"
+                        disabled={displaySettings.timerFontSizeMode !== 'manual'}
+                        value={displaySettings.timerFontSize}
+                        onChange={(event) => applyTimerDisplaySettings({ timerFontSize: event.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Alignment</label>
+                      <Select
+                        value={displaySettings.timerAlign}
+                        onValueChange={(value) => applyTimerDisplaySettings({ timerAlign: value })}
+                      >
+                        <SelectTrigger className={selectTriggerClass}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className={selectContentClass}>
+                          <SelectItem value="left">Left</SelectItem>
+                          <SelectItem value="center">Center</SelectItem>
+                          <SelectItem value="right">Right</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Secondary text scale</label>
+                      <Input
+                        type="number"
+                        min="0.08"
+                        max="2"
+                        step="0.01"
+                        value={displaySettings.otherItemsScale}
+                        onChange={(event) => applyTimerDisplaySettings({ otherItemsScale: event.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button type="button" onClick={() => applyTimerDisplaySettings({ timerBold: !displaySettings.timerBold })} className={`h-9 rounded text-xs font-bold transition-colors ${displaySettings.timerBold ? 'bg-blue-600 text-white' : subtleButtonClass}`}>B</button>
+                    <button type="button" onClick={() => applyTimerDisplaySettings({ timerItalic: !displaySettings.timerItalic })} className={`h-9 rounded text-xs italic transition-colors ${displaySettings.timerItalic ? 'bg-blue-600 text-white' : subtleButtonClass}`}>I</button>
+                    <button type="button" onClick={() => applyTimerDisplaySettings({ timerUnderline: !displaySettings.timerUnderline })} className={`h-9 rounded text-xs underline transition-colors ${displaySettings.timerUnderline ? 'bg-blue-600 text-white' : subtleButtonClass}`}>U</button>
+                  </div>
                 </div>
-                <div className="space-y-2 min-w-0">
-                  <label className="block text-xs font-medium truncate">Secondary text font</label>
-                  <FontSelect
-                    value={displaySettings.fontFamily}
-                    onChange={(value) => applyTimerDisplaySettings({ fontFamily: value })}
-                    darkMode={darkMode}
-                    containerClassName="relative w-full min-w-0"
-                    triggerClassName={`w-full min-w-0 ${inputClass}`}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Size</label>
-                  <Select
-                    value={displaySettings.timerFontSizeMode}
-                    onValueChange={(value) => applyTimerDisplaySettings({ timerFontSizeMode: value })}
-                  >
-                    <SelectTrigger className={inputClass}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">Auto-fit width</SelectItem>
-                      <SelectItem value="manual">Manual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Manual px</label>
-                  <Input
-                    type="number"
-                    min="48"
-                    max="420"
-                    disabled={displaySettings.timerFontSizeMode !== 'manual'}
-                    value={displaySettings.timerFontSize}
-                    onChange={(event) => applyTimerDisplaySettings({ timerFontSize: event.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Alignment</label>
-                  <Select
-                    value={displaySettings.timerAlign}
-                    onValueChange={(value) => applyTimerDisplaySettings({ timerAlign: value })}
-                  >
-                    <SelectTrigger className={inputClass}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="left">Left</SelectItem>
-                      <SelectItem value="center">Center</SelectItem>
-                      <SelectItem value="right">Right</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Secondary text scale</label>
-                  <Input
-                    type="number"
-                    min="0.08"
-                    max="2"
-                    step="0.01"
-                    value={displaySettings.otherItemsScale}
-                    onChange={(event) => applyTimerDisplaySettings({ otherItemsScale: event.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => applyTimerDisplaySettings({ timerBold: !displaySettings.timerBold })} className={`h-9 rounded text-xs font-bold transition-colors ${displaySettings.timerBold ? 'bg-blue-600 text-white' : subtleButtonClass}`}>B</button>
-                <button type="button" onClick={() => applyTimerDisplaySettings({ timerItalic: !displaySettings.timerItalic })} className={`h-9 rounded text-xs italic transition-colors ${displaySettings.timerItalic ? 'bg-blue-600 text-white' : subtleButtonClass}`}>I</button>
-                <button type="button" onClick={() => applyTimerDisplaySettings({ timerUnderline: !displaySettings.timerUnderline })} className={`h-9 rounded text-xs underline transition-colors ${displaySettings.timerUnderline ? 'bg-blue-600 text-white' : subtleButtonClass}`}>U</button>
-              </div>
-            </div>
+              )}
+            </section>
           </section>
 
           <section className={`min-w-0 space-y-5 lg:border-l lg:pl-5 ${columnBorderClass} ${panelClass}`}>
@@ -946,10 +997,10 @@ const TimerControlModule = () => {
                   value={displaySettings.format}
                   onValueChange={(value) => applyTimerDisplaySettings({ format: value })}
                 >
-                  <SelectTrigger className={inputClass}>
+                  <SelectTrigger className={selectTriggerClass}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={selectContentClass}>
                     <SelectItem value="auto">M:SS / H:MM:SS</SelectItem>
                     <SelectItem value="mmss">MM:SS</SelectItem>
                     <SelectItem value="hhmmss">H:MM:SS</SelectItem>
@@ -975,26 +1026,40 @@ const TimerControlModule = () => {
                   {...getSwitchProps(!showSecondaryText)}
                 />
               </div>
-              <div className={`border-t pt-3 space-y-3 ${dividerClass}`}>
-                <div className="text-xs font-medium">Global Time Format</div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs">12-hour clock</span>
-                  <Switch checked={displaySettings.clockHour12} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockHour12: checked })} {...getSwitchProps(false)} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs">Show seconds</span>
-                  <Switch checked={displaySettings.clockShowSeconds} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowSeconds: checked })} {...getSwitchProps(false)} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs">Show AM/PM</span>
-                  <Switch
-                    checked={displaySettings.clockShowPeriod}
-                    onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowPeriod: checked })}
-                    disabled={!displaySettings.clockHour12}
-                    {...getSwitchProps(!displaySettings.clockHour12)}
-                  />
-                </div>
-              </div>
+              <section ref={globalTimeFormatRef} className={`border-t pt-2 ${dividerClass}`}>
+                <button
+                  type="button"
+                  onClick={toggleGlobalTimeFormat}
+                  className={`flex w-full items-center justify-between rounded px-2 py-3 text-left transition-colors ${sectionToggleClass}`}
+                  aria-expanded={globalTimeFormatExpanded}
+                  aria-controls="global-time-format-controls"
+                >
+                  <span className="text-xs font-medium">Global Time Format</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${globalTimeFormatExpanded ? 'rotate-180' : ''}`} />
+                </button>
+
+                {globalTimeFormatExpanded && (
+                  <div id="global-time-format-controls" className="mt-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">12-hour clock</span>
+                      <Switch checked={displaySettings.clockHour12} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockHour12: checked })} {...getSwitchProps(false)} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Show seconds</span>
+                      <Switch checked={displaySettings.clockShowSeconds} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowSeconds: checked })} {...getSwitchProps(false)} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Show AM/PM</span>
+                      <Switch
+                        checked={displaySettings.clockShowPeriod}
+                        onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowPeriod: checked })}
+                        disabled={!displaySettings.clockHour12}
+                        {...getSwitchProps(!displaySettings.clockHour12)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
           </section>
         </div>

@@ -157,7 +157,7 @@ export const FullResultsList = ({
 }) => {
   if (loadingFullResults) {
     return (
-      <div className={`mt-4 flex h-48 items-center justify-center rounded-xl border ${darkMode ? 'border-gray-800 bg-gray-900/45' : 'border-gray-200 bg-white'}`}>
+      <div className="mt-6 flex min-h-32 items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="w-4 h-4 animate-spin" />
           Fetching results...
@@ -168,8 +168,8 @@ export const FullResultsList = ({
 
   if (!items?.length) {
     return (
-      <div className={`mt-4 rounded-xl border ${darkMode ? 'border-gray-800 bg-gray-900/45' : 'border-gray-200 bg-white'}`}>
-        <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+      <div className="mt-6">
+        <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
           <BookOpen className={`w-6 h-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
           <div>
             <p className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>No matches found. Try a different title or artist.</p>
@@ -193,7 +193,7 @@ export const FullResultsList = ({
   return (
     <div
       ref={fullResultsRef}
-      className={`mt-4 overflow-y-auto rounded-xl border ${darkMode ? 'border-gray-800 bg-gray-900/45' : 'border-gray-200 bg-white'}`}
+      className="mt-2 overflow-y-auto"
     >
       {items.map((item, index) => {
         const provider = providerMap.get(item.provider);
@@ -206,7 +206,7 @@ export const FullResultsList = ({
             key={item.id}
             onClick={() => handleSelectResult(item)}
             disabled={isLoading}
-            className={`w-full border-b px-4 py-4 text-left transition last:border-b-0 ${darkMode
+            className={`w-full border-b px-1 py-4 text-left transition last:border-b-0 sm:px-2 ${darkMode
               ? `${isSelected ? 'border-gray-800 bg-blue-500/10' : 'border-gray-800'} hover:bg-blue-500/5 disabled:hover:bg-transparent`
               : `${isSelected ? 'border-gray-100 bg-blue-50/80' : 'border-gray-100'} hover:bg-blue-50/50 disabled:hover:bg-transparent`
               }`}
@@ -235,7 +235,7 @@ export const FullResultsList = ({
         );
       })}
       {lowQualityResults.length > 0 && !showingLowQuality && (
-        <div className={`w-full border-t px-4 py-3 ${darkMode ? 'border-gray-800 bg-gray-900/40' : 'border-gray-100 bg-gray-50/70'}`}>
+        <div className={`w-full border-t px-1 py-3 sm:px-2 ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
           <button
             onClick={handleShowLowQuality}
             disabled={loadingFullResults}
