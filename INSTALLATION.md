@@ -2,7 +2,7 @@
 
 Professional real-time lyric display for streaming, church services, worship services, and live events.
 
-Version: 6.5.3
+Version: 6.6.0
 
 ## What Is LyricDisplay?
 
@@ -40,10 +40,10 @@ Download LyricDisplay only from the official website or GitHub releases:
 
 Direct downloads for version 6.5.3:
 
-- Windows: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.5.3/LyricDisplay-6.5.3-Windows-Setup.exe
-- macOS Apple Silicon: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.5.3/LyricDisplay-6.5.3-macOS-arm64.dmg
-- macOS Intel: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.5.3/LyricDisplay-6.5.3-macOS-x64.dmg
-- Linux: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.5.3/LyricDisplay-6.5.3-Linux.AppImage
+- Windows: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.0/LyricDisplay-6.6.0-Windows-Setup.exe
+- macOS Apple Silicon: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.0/LyricDisplay-6.6.0-macOS-arm64.dmg
+- macOS Intel: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.0/LyricDisplay-6.6.0-macOS-x64.dmg
+- Linux: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.0/LyricDisplay-6.6.0-Linux.AppImage
 
 ## Security and Trust Notes
 
