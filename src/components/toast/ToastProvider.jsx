@@ -156,7 +156,6 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
                   background: bg,
                   color: textColor,
                   border: `1px solid ${borderColor}`,
-                  backdropFilter: 'blur(14px)',
                   transition: 'opacity 260ms cubic-bezier(.2,.9,.3,1), transform 260ms cubic-bezier(.2,.9,.3,1)',
                   opacity: (entering || exiting) ? 0 : 1,
                   transform: entering ? 'translateX(32px)' : (exiting ? 'translateX(120%)' : 'translateX(0)')
