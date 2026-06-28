@@ -697,7 +697,7 @@ const SetlistModal = () => {
                   className={`
     flex items-center gap-2 rounded-full px-3 py-2
                 ${isSetlistFull() ? 'opacity-50 cursor-not-allowed' : ''}
-    ${darkMode ? 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/15' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}
+    ${iconActionClass}
   `}
                 >
                   <Plus className="w-4 h-4" />
@@ -721,7 +721,7 @@ const SetlistModal = () => {
         {/* Fixed Search Bar */}
         <div className={`
           px-6 py-4 border-b
-          ${darkMode ? 'border-gray-800 bg-gray-950/35' : 'border-gray-200 bg-gray-50/70'}
+          ${darkMode ? 'border-gray-800 bg-gray-950/35' : 'border-gray-200 bg-[#f8fafc]'}
         `}>
           <div className="relative">
             <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${searchIconClass}`} />

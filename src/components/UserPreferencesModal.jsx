@@ -141,7 +141,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
   const labelClass = darkMode ? 'text-gray-300' : 'text-gray-700';
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
-  const panelBg = darkMode ? 'bg-gray-800' : 'bg-gray-50';
+  const panelBg = darkMode ? 'bg-gray-800' : 'bg-[#f8fafc]';
   const activeCategoryBg = darkMode ? 'bg-gray-700' : 'bg-white';
   const preferenceFieldLabelClass = `block mb-1.5 text-sm font-medium ${labelClass}`;
   const preferenceToggleRowClass = "flex items-center justify-between gap-6 [&>button]:shrink-0";

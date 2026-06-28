@@ -49,7 +49,7 @@ export default function LyricVideoPreview({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-gray-100 text-gray-950 dark:bg-gray-950 dark:text-gray-100">
+    <div className="flex h-full min-h-0 flex-col bg-[#f8fafc] text-gray-950 dark:bg-gray-950 dark:text-gray-100">
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white/80 px-5 text-xs backdrop-blur dark:border-gray-800 dark:bg-gray-900/80">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-gray-950 dark:text-gray-100">Video Preview</div>

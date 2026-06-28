@@ -542,7 +542,9 @@ const TimerControlModule = () => {
     });
   };
 
-  const panelClass = darkMode ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 bg-white text-gray-900';
+  const panelClass = darkMode ? 'text-gray-100' : 'text-gray-900';
+  const columnBorderClass = darkMode ? 'border-gray-800' : 'border-gray-200/80';
+  const dividerClass = darkMode ? 'border-gray-800' : 'border-gray-200/80';
   const mutedText = darkMode ? 'text-gray-400' : 'text-gray-500';
   const inputClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300';
   const outlineButtonClass = darkMode
@@ -562,9 +564,9 @@ const TimerControlModule = () => {
   });
 
   return (
-    <div className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="min-h-full p-4 space-y-3">
-        <div className="flex items-center justify-between">
+    <div className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#f8fafc] text-gray-900'}`}>
+      <div className="min-h-full p-5 space-y-5">
+        <div className={`flex items-center justify-between border-b pb-4 ${dividerClass}`}>
           <div className="flex items-center gap-2">
             <Timer className="w-5 h-5" />
             <h1 className="text-lg font-semibold">Timer Control</h1>
@@ -574,8 +576,8 @@ const TimerControlModule = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-[minmax(280px,0.85fr)_minmax(484px,1.2fr)_minmax(280px,0.85fr)] gap-3">
-          <section className={`rounded-lg border p-4 space-y-4 ${panelClass}`}>
+        <div className="grid justify-center grid-cols-[minmax(240px,280px)_minmax(0,640px)_minmax(240px,280px)] gap-5">
+          <section className={`min-w-0 space-y-4 lg:border-r lg:pr-5 ${columnBorderClass} ${panelClass}`}>
             <div>
               <h2 className="text-sm font-semibold">Timer Setup</h2>
             </div>
@@ -665,7 +667,7 @@ const TimerControlModule = () => {
 
           </section>
 
-          <section className={`rounded-lg border p-4 flex flex-col ${panelClass}`}>
+          <section className={`min-w-0 flex flex-col ${panelClass}`}>
             <TimerPreview timerState={timerState} displaySettings={displaySettings} />
 
             <div className="mt-4 space-y-2">
@@ -702,7 +704,7 @@ const TimerControlModule = () => {
               </div>
             </div>
 
-            <div className={`mt-4 rounded-lg border p-3 space-y-3 ${darkMode ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`mt-5 border-t pt-4 space-y-4 ${dividerClass}`}>
               <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-2 min-w-0">
@@ -831,7 +833,7 @@ const TimerControlModule = () => {
             </div>
           </section>
 
-          <section className={`rounded-lg border p-4 space-y-4 ${panelClass}`}>
+          <section className={`min-w-0 space-y-5 lg:border-l lg:pl-5 ${columnBorderClass} ${panelClass}`}>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-semibold">Timer Sets</h2>
@@ -843,7 +845,7 @@ const TimerControlModule = () => {
             {useSets && (
               <div className="space-y-2">
                 {sets.map((set, index) => (
-                  <div key={set.id} className={`rounded-md border p-2 space-y-2 ${darkMode ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'}`}>
+                  <div key={set.id} className={`rounded-md p-2 space-y-2 ${darkMode ? 'bg-gray-900/35' : 'bg-white/65'}`}>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs w-5 ${mutedText}`}>{index + 1}</span>
                       <Input value={set.label} onChange={(event) => updateSet(set.id, { label: event.target.value })} className={inputClass} />
@@ -871,7 +873,7 @@ const TimerControlModule = () => {
               </div>
             )}
 
-            <div className="space-y-3 pt-2 border-t border-gray-700/30">
+            <div className={`space-y-3 pt-4 border-t ${dividerClass}`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Auto-start next</span>
                 <Switch checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} disabled={!setRuntimeOptionsEnabled} {...getSwitchProps(!setRuntimeOptionsEnabled)} />
@@ -886,7 +888,7 @@ const TimerControlModule = () => {
               </div>
             </div>
 
-            <div className="space-y-3 pt-2 border-t border-gray-700/30">
+            <div className={`space-y-3 pt-4 border-t ${dividerClass}`}>
               <h2 className="text-sm font-semibold">Display</h2>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Format</label>
@@ -923,7 +925,7 @@ const TimerControlModule = () => {
                   {...getSwitchProps(!showSecondaryText)}
                 />
               </div>
-              <div className={`rounded-md border p-3 space-y-3 ${darkMode ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'}`}>
+              <div className={`border-t pt-3 space-y-3 ${dividerClass}`}>
                 <div className="text-xs font-medium">Global Time Format</div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">12-hour clock</span>

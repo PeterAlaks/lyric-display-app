@@ -491,7 +491,7 @@ const NewSongCanvas = () => {
   useElectronListeners({ canUndo, canRedo, handleUndo, handleRedo });
 
   return (
-    <div className={`flex flex-col h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`flex flex-col h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-[#f8fafc]'}`}>
       <SongCanvasHeader
         canRedo={canRedo}
         canUndo={canUndo}

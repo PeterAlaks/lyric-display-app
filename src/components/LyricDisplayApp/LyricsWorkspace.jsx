@@ -62,7 +62,7 @@ const LyricsWorkspace = ({
   const actionPadding = useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2';
 
   return (
-    <div className="flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full">
+    <div className={`flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full ${darkMode ? '' : 'bg-[#f8fafc]'}`}>
     <div className="mb-6 shrink-0 min-w-0" ref={headerContainerRef}>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
