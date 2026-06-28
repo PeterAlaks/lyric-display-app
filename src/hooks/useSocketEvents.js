@@ -18,6 +18,33 @@ const shallowArrayEqual = (a, b) => {
   return true;
 };
 
+const summarizeSnapshotForLog = (state) => {
+  if (!isPlainObject(state)) return state;
+
+  const outputSettingsCount = Object.keys(state)
+    .filter((key) => key.startsWith('output') && key.endsWith('Settings'))
+    .length;
+  const outputEnabledCount = Object.keys(state)
+    .filter((key) => key.startsWith('output') && key.endsWith('Enabled'))
+    .length;
+
+  return {
+    lyrics: Array.isArray(state.lyrics) ? state.lyrics.length : undefined,
+    lyricsTimestamps: Array.isArray(state.lyricsTimestamps) ? state.lyricsTimestamps.length : undefined,
+    lyricsSections: Array.isArray(state.lyricsSections) ? state.lyricsSections.length : undefined,
+    setlistFiles: Array.isArray(state.setlistFiles) ? state.setlistFiles.length : undefined,
+    rawLyricsContentBytes: typeof state.rawLyricsContent === 'string' ? state.rawLyricsContent.length : undefined,
+    selectedLine: state.selectedLine,
+    lyricsFileName: state.lyricsFileName || '',
+    outputSettingsCount,
+    outputEnabledCount,
+    stageMessages: Array.isArray(state.stageMessages) ? state.stageMessages.length : undefined,
+    hasStageTimerState: Boolean(state.stageTimerState),
+    timestamp: state.timestamp,
+    syncTimestamp: state.syncTimestamp,
+  };
+};
+
 const normalizeOutputRegistry = (payload) => {
   if (!isPlainObject(payload) || !Array.isArray(payload.outputs)) return null;
   const uniqueOutputs = Array.from(
@@ -170,7 +197,7 @@ const useSocketEvents = (role) => {
         storeAtStart.lyrics.length > 0
       );
 
-      logDebug(`Received ${source}:`, state);
+      logDebug(`Received ${source}:`, summarizeSnapshotForLog(state));
       if (window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('sync-completed'));
       }

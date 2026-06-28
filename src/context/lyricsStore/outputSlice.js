@@ -1,8 +1,33 @@
 import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../../shared/outputRegistry.js';
 
+const settingValueEqual = (current, next) => {
+  if (current === next) return true;
+  if (!current || !next || typeof current !== 'object' || typeof next !== 'object') {
+    return Object.is(current, next);
+  }
+
+  if (Array.isArray(current) || Array.isArray(next)) {
+    if (!Array.isArray(current) || !Array.isArray(next) || current.length !== next.length) return false;
+    for (let index = 0; index < current.length; index += 1) {
+      if (!settingValueEqual(current[index], next[index])) return false;
+    }
+    return true;
+  }
+
+  const currentKeys = Object.keys(current);
+  const nextKeys = Object.keys(next);
+  if (currentKeys.length !== nextKeys.length) return false;
+  for (const key of currentKeys) {
+    if (!Object.prototype.hasOwnProperty.call(next, key) || !settingValueEqual(current[key], next[key])) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const settingsChanged = (current = {}, next = {}) => {
   if (!next || typeof next !== 'object' || Array.isArray(next)) return false;
-  return Object.entries(next).some(([key, value]) => !Object.is(current?.[key], value));
+  return Object.entries(next).some(([key, value]) => !settingValueEqual(current?.[key], value));
 };
 
 export const defaultOutput1Settings = {

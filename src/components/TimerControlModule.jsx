@@ -243,7 +243,6 @@ const usePreviewClock = (enabled, intervalMs = 1000) => {
 
 const TimerPreview = React.memo(({ timerState, displaySettings }) => {
   const showSecondaryText = displaySettings.showSecondaryText !== false;
-  const maxTimerSetsReached = sets.length >= MAX_TIMER_SETS;
   const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
   const now = usePreviewClock(needsClock, 1000);
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
@@ -355,6 +354,7 @@ const TimerControlModule = () => {
     indicatorSeconds,
     indicatorLabel,
   } = controlSettings;
+  const maxTimerSetsReached = sets.length >= MAX_TIMER_SETS;
 
   const setTimerControlSettings = React.useCallback((partial) => {
     updateTimerControlSettings(partial);
