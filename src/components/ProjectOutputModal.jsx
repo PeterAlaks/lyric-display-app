@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 
 const DESKTOP_TARGET = 'desktop';
+const PROJECTION_SYNC_CHANNEL = 'lyricdisplay-projection-state';
 
 const toDisplayId = (value) => {
   if (value === null || typeof value === 'undefined') return null;
@@ -92,6 +93,7 @@ const ProjectOutputModal = ({
 }) => {
   const { showToast } = useToast();
   const customOutputIds = useLyricsStore((state) => state.customOutputIds || []);
+  const syncSenderIdRef = React.useRef(`projection-modal-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   const outputOptions = React.useMemo(() => {
     const baseOptions = [...DEFAULT_OUTPUT_IDS, ...customOutputIds, 'stage', 'time']
@@ -146,6 +148,49 @@ const ProjectOutputModal = ({
   }, []);
 
   React.useEffect(() => { loadProjectionState(); }, [loadProjectionState]);
+
+  const notifyProjectionStateChanged = React.useCallback(() => {
+    if (typeof BroadcastChannel === 'undefined') return;
+    try {
+      const channel = new BroadcastChannel(PROJECTION_SYNC_CHANNEL);
+      channel.postMessage({
+        type: 'projection-state-changed',
+        senderId: syncSenderIdRef.current,
+        sentAt: Date.now(),
+      });
+      channel.close();
+    } catch { }
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return undefined;
+    const channel = new BroadcastChannel(PROJECTION_SYNC_CHANNEL);
+    channel.onmessage = (event) => {
+      if (
+        event?.data?.type === 'projection-state-changed'
+        && event.data.senderId !== syncSenderIdRef.current
+      ) {
+        loadProjectionState();
+      }
+    };
+    return () => channel.close();
+  }, [loadProjectionState]);
+
+  React.useEffect(() => {
+    const refreshOnWindowActive = () => loadProjectionState();
+    const refreshOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        loadProjectionState();
+      }
+    };
+
+    window.addEventListener('focus', refreshOnWindowActive);
+    document.addEventListener('visibilitychange', refreshOnVisible);
+    return () => {
+      window.removeEventListener('focus', refreshOnWindowActive);
+      document.removeEventListener('visibilitychange', refreshOnVisible);
+    };
+  }, [loadProjectionState]);
 
   React.useEffect(() => {
     if (!preferredDisplayId) return;
@@ -230,6 +275,7 @@ const ProjectOutputModal = ({
         variant: 'success',
       });
       const nextState = await loadProjectionState();
+      notifyProjectionStateChanged();
       if (!activeProjection && nextState?.projections) {
         const projected = new Set(nextState.projections.map((e) => e.outputKey));
         const nextOutput = outputOptions.find((o) => !projected.has(o.value));
@@ -255,6 +301,7 @@ const ProjectOutputModal = ({
       showToast({ title: 'Output stopped', message: `${formatOutputLabel(outputKey)} has been turned off.`, variant: 'success' });
       setProjections((cur) => cur.filter((e) => e?.outputKey !== outputKey));
       await loadProjectionState({ excludedOutputKeys: [outputKey] });
+      notifyProjectionStateChanged();
     } catch (err) {
       showToast({ title: 'Stop failed', message: err?.message || 'Could not stop projection.', variant: 'error' });
     } finally {
@@ -266,7 +313,13 @@ const ProjectOutputModal = ({
   const d = darkMode;
 
   return (
-    <div className="flex flex-col" style={{ height: 560, maxHeight: '100%' }}>
+    <div
+      className="flex min-h-0 flex-col"
+      style={{
+        height: 'min(560px, calc(100vh - var(--top-menu-height, 0px) - 190px))',
+        maxHeight: 'calc(100vh - var(--top-menu-height, 0px) - 190px)',
+      }}
+    >
       {/* Scrollable body */}
       <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
 

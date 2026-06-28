@@ -1,16 +1,19 @@
 import React from 'react';
-import { Pause, Play, Plus, SkipForward, Square, Timer, Trash2 } from 'lucide-react';
+import { Pause, Play, Plus, ScreenShare, SkipForward, Square, Timer, Trash2, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { PaintPicker } from '@/components/ui/paint-picker';
 import { useControlSocket } from '../context/ControlSocketProvider';
+import useModal from '../hooks/useModal';
 import useSharedTimer from '../hooks/useSharedTimer';
 import {
   DEFAULT_TIMER_CONTROL_SETTINGS,
   DEFAULT_TIMER_DISPLAY,
+  MAX_TIMER_SETS,
   formatGlobalClock,
   getTimerDisplay,
   getTimerIntensity,
@@ -240,6 +243,7 @@ const usePreviewClock = (enabled, intervalMs = 1000) => {
 
 const TimerPreview = React.memo(({ timerState, displaySettings }) => {
   const showSecondaryText = displaySettings.showSecondaryText !== false;
+  const maxTimerSetsReached = sets.length >= MAX_TIMER_SETS;
   const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
   const now = usePreviewClock(needsClock, 1000);
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
@@ -260,7 +264,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
         style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
       >
         {showSecondaryText && (
-          <div className="text-sm font-semibold mb-4" style={{ color: accent }}>
+          <div className="text-xs font-semibold mb-4" style={{ color: accent }}>
             {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
           </div>
         )}
@@ -322,6 +326,7 @@ TimerPreview.displayName = 'TimerPreview';
 
 const TimerControlModule = () => {
   const { emitStageTimerUpdate } = useControlSocket();
+  const { showModal } = useModal();
   const { darkMode } = useDarkModeState();
   const { settings: timerControlSettings, updateSettings: updateTimerControlSettings } = useTimerControlSettings();
   const { settings: timerDisplaySettings, updateSettings: updateTimerDisplaySettings } = useTimerDisplaySettings();
@@ -492,6 +497,24 @@ const TimerControlModule = () => {
     });
   };
 
+  const handleOpenProjectOutput = React.useCallback(() => {
+    showModal({
+      title: 'Project Time Display',
+      headerDescription: 'Send the timer and clock display to this monitor or an external display.',
+      component: 'ProjectOutput',
+      variant: 'info',
+      size: 'lg',
+      className: 'max-w-4xl',
+      actions: [],
+      customLayout: true,
+      initialOutputKey: 'time',
+    });
+  }, [showModal]);
+
+  const handleOpenTimeDisplay = React.useCallback(() => {
+    window.electronAPI?.display?.openOutputWindow?.('time');
+  }, []);
+
   const updateSet = (id, updates) => {
     const nextSets = sets.map((set) => (set.id === id ? { ...set, ...updates } : set));
     setTimerControlSettings({ sets: nextSets });
@@ -531,6 +554,7 @@ const TimerControlModule = () => {
   };
 
   const addSet = () => {
+    if (maxTimerSetsReached) return;
     setTimerControlSettings({
       sets: [...sets, createTimerSet(sets.length)],
     });
@@ -546,10 +570,13 @@ const TimerControlModule = () => {
   const columnBorderClass = darkMode ? 'border-gray-800' : 'border-gray-200/80';
   const dividerClass = darkMode ? 'border-gray-800' : 'border-gray-200/80';
   const mutedText = darkMode ? 'text-gray-400' : 'text-gray-500';
-  const inputClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300';
+  const inputClass = darkMode
+    ? 'bg-gray-700 border-gray-600 text-gray-100 text-xs md:text-xs'
+    : 'bg-white border-gray-300 text-xs md:text-xs';
   const outlineButtonClass = darkMode
     ? 'bg-gray-800 border-gray-600 text-gray-100 hover:bg-gray-700 hover:text-white'
     : '';
+  const headerIconButtonClass = 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300';
   const subtleButtonClass = darkMode
     ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 disabled:bg-gray-700 disabled:text-gray-500'
     : 'bg-gray-100 hover:bg-gray-200 text-gray-800 disabled:text-gray-400';
@@ -571,15 +598,38 @@ const TimerControlModule = () => {
             <Timer className="w-5 h-5" />
             <h1 className="text-lg font-semibold">Timer Control</h1>
           </div>
-          <Button variant="outline" size="sm" className={outlineButtonClass} onClick={() => window.electronAPI?.display?.openOutputWindow?.('time')}>
-            Open Display
-          </Button>
+          <div className="flex items-center gap-2">
+            <Tooltip content="Project time display to this monitor or an external display" side="bottom">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={headerIconButtonClass}
+                onClick={handleOpenProjectOutput}
+                aria-label="Project Time Display"
+              >
+                <Video className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Open time display window" side="bottom">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={headerIconButtonClass}
+                onClick={handleOpenTimeDisplay}
+                aria-label="Open Time Display"
+              >
+                <ScreenShare className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          </div>
         </div>
 
         <div className="grid justify-center grid-cols-[minmax(240px,280px)_minmax(0,640px)_minmax(240px,280px)] gap-5">
           <section className={`min-w-0 space-y-4 lg:border-r lg:pr-5 ${columnBorderClass} ${panelClass}`}>
             <div>
-              <h2 className="text-sm font-semibold">Timer Setup</h2>
+              <h2 className="text-xs font-semibold">Timer Setup</h2>
             </div>
 
             <div className="space-y-2">
@@ -661,7 +711,7 @@ const TimerControlModule = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm">Continue as overrun</span>
+              <span className="text-xs">Continue as overrun</span>
               <Switch checked={overrunMode} onCheckedChange={(checked) => applyTimerControlSettings({ overrunMode: checked })} {...getSwitchProps(false)} />
             </div>
 
@@ -826,9 +876,9 @@ const TimerControlModule = () => {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => applyTimerDisplaySettings({ timerBold: !displaySettings.timerBold })} className={`h-9 rounded text-sm font-bold transition-colors ${displaySettings.timerBold ? 'bg-blue-600 text-white' : subtleButtonClass}`}>B</button>
-                <button type="button" onClick={() => applyTimerDisplaySettings({ timerItalic: !displaySettings.timerItalic })} className={`h-9 rounded text-sm italic transition-colors ${displaySettings.timerItalic ? 'bg-blue-600 text-white' : subtleButtonClass}`}>I</button>
-                <button type="button" onClick={() => applyTimerDisplaySettings({ timerUnderline: !displaySettings.timerUnderline })} className={`h-9 rounded text-sm underline transition-colors ${displaySettings.timerUnderline ? 'bg-blue-600 text-white' : subtleButtonClass}`}>U</button>
+                <button type="button" onClick={() => applyTimerDisplaySettings({ timerBold: !displaySettings.timerBold })} className={`h-9 rounded text-xs font-bold transition-colors ${displaySettings.timerBold ? 'bg-blue-600 text-white' : subtleButtonClass}`}>B</button>
+                <button type="button" onClick={() => applyTimerDisplaySettings({ timerItalic: !displaySettings.timerItalic })} className={`h-9 rounded text-xs italic transition-colors ${displaySettings.timerItalic ? 'bg-blue-600 text-white' : subtleButtonClass}`}>I</button>
+                <button type="button" onClick={() => applyTimerDisplaySettings({ timerUnderline: !displaySettings.timerUnderline })} className={`h-9 rounded text-xs underline transition-colors ${displaySettings.timerUnderline ? 'bg-blue-600 text-white' : subtleButtonClass}`}>U</button>
               </div>
             </div>
           </section>
@@ -836,7 +886,7 @@ const TimerControlModule = () => {
           <section className={`min-w-0 space-y-5 lg:border-l lg:pl-5 ${columnBorderClass} ${panelClass}`}>
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold">Timer Sets</h2>
+                <h2 className="text-xs font-semibold">Timer Sets</h2>
                 <p className={`text-xs ${mutedText}`}>Run multiple timers in sequence.</p>
               </div>
               <Switch checked={useSets} onCheckedChange={(checked) => setTimerControlSettings({ useSets: checked })} {...getSwitchProps(false)} />
@@ -866,20 +916,20 @@ const TimerControlModule = () => {
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" size="sm" className={outlineButtonClass} onClick={addSet}>
+                <Button variant="outline" size="sm" className={outlineButtonClass} onClick={addSet} disabled={maxTimerSetsReached}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Timer
+                  {maxTimerSetsReached ? `Max ${MAX_TIMER_SETS} Timers` : 'Add Timer'}
                 </Button>
               </div>
             )}
 
             <div className={`space-y-3 pt-4 border-t ${dividerClass}`}>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Auto-start next</span>
+                <span className="text-xs">Auto-start next</span>
                 <Switch checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} disabled={!setRuntimeOptionsEnabled} {...getSwitchProps(!setRuntimeOptionsEnabled)} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Indicator period</span>
+                <span className="text-xs">Indicator period</span>
                 <Switch checked={indicatorEnabled} onCheckedChange={(checked) => applyTimerControlSettings({ indicatorEnabled: checked })} disabled={!setRuntimeOptionsEnabled} {...getSwitchProps(!setRuntimeOptionsEnabled)} />
               </div>
               <div className="grid grid-cols-[1fr_90px] gap-2">
@@ -889,7 +939,7 @@ const TimerControlModule = () => {
             </div>
 
             <div className={`space-y-3 pt-4 border-t ${dividerClass}`}>
-              <h2 className="text-sm font-semibold">Display</h2>
+              <h2 className="text-xs font-semibold">Display</h2>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Format</label>
                 <Select
@@ -909,15 +959,15 @@ const TimerControlModule = () => {
                 </Select>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Progress bar</span>
+                <span className="text-xs">Progress bar</span>
                 <Switch checked={displaySettings.showProgress} onCheckedChange={(checked) => applyTimerDisplaySettings({ showProgress: checked })} {...getSwitchProps(false)} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Secondary text</span>
+                <span className="text-xs">Secondary text</span>
                 <Switch checked={showSecondaryText} onCheckedChange={(checked) => applyTimerDisplaySettings({ showSecondaryText: checked })} {...getSwitchProps(false)} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Show global time</span>
+                <span className="text-xs">Show global time</span>
                 <Switch
                   checked={displaySettings.showGlobalClock}
                   onCheckedChange={(checked) => applyTimerDisplaySettings({ showGlobalClock: checked })}
@@ -928,15 +978,15 @@ const TimerControlModule = () => {
               <div className={`border-t pt-3 space-y-3 ${dividerClass}`}>
                 <div className="text-xs font-medium">Global Time Format</div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">12-hour clock</span>
+                  <span className="text-xs">12-hour clock</span>
                   <Switch checked={displaySettings.clockHour12} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockHour12: checked })} {...getSwitchProps(false)} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Show seconds</span>
+                  <span className="text-xs">Show seconds</span>
                   <Switch checked={displaySettings.clockShowSeconds} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowSeconds: checked })} {...getSwitchProps(false)} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Show AM/PM</span>
+                  <span className="text-xs">Show AM/PM</span>
                   <Switch
                     checked={displaySettings.clockShowPeriod}
                     onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowPeriod: checked })}

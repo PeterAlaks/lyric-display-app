@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CircleHelp, Download, FilePlus2, FileText, ScreenShare } from 'lucide-react';
+import { ArrowLeft, CircleHelp, Download, FilePlus2, FileText, ScreenShare, Video } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tooltip } from '../components/ui/tooltip';
 import useToast from '../hooks/useToast';
@@ -1066,6 +1066,10 @@ export default function LyricVideoStudio() {
     });
   };
 
+  const handleOpenLiveOutput = useCallback(() => {
+    window.electronAPI?.display?.openOutputWindow?.('lyric-video-studio');
+  }, []);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 text-gray-950 dark:bg-gray-950 dark:text-gray-100">
       <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white/95 px-4 dark:border-gray-800 dark:bg-gray-900">
@@ -1099,6 +1103,11 @@ export default function LyricVideoStudio() {
         <div className="flex items-center gap-2">
           <Tooltip content="Project live studio preview" side="bottom">
             <Button type="button" variant="ghost" size="icon" onClick={handleOpenProjectOutput} aria-label="Project Lyric Video Studio" className="text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
+              <Video className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Open live studio preview window" side="bottom">
+            <Button type="button" variant="ghost" size="icon" onClick={handleOpenLiveOutput} aria-label="Open Live Studio Preview" className="text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
               <ScreenShare className="h-4 w-4" />
             </Button>
           </Tooltip>

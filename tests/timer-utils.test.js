@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTimerProgress, isTimerVisiblyActive, normalizeTimerDisplaySettings, normalizeTimerState } from '../src/utils/timerUtils.js';
+import {
+  MAX_TIMER_SETS,
+  getTimerProgress,
+  isTimerVisiblyActive,
+  normalizeTimerControlSettings,
+  normalizeTimerDisplaySettings,
+  normalizeTimerState,
+} from '../src/utils/timerUtils.js';
 
 test('timer progress advances for normalized stage panel countdown state', () => {
   const startTime = 1_000_000;
@@ -135,4 +142,31 @@ test('timer state display normalization migrates untouched legacy scale', () => 
 
   assert.equal(state.display.otherItemsScale, 0.1);
   assert.equal(state.display.globalClockScale, 0.1);
+});
+
+test('timer control settings cap timer sets at ten', () => {
+  const settings = normalizeTimerControlSettings({
+    sets: Array.from({ length: MAX_TIMER_SETS + 2 }, (_, index) => ({
+      id: `set-${index + 1}`,
+      label: `Timer ${index + 1}`,
+      durationMs: 60_000,
+    })),
+  });
+
+  assert.equal(settings.sets.length, MAX_TIMER_SETS);
+  assert.equal(settings.sets.at(-1).label, `Timer ${MAX_TIMER_SETS}`);
+});
+
+test('timer state normalization caps runtime timer sets at ten', () => {
+  const state = normalizeTimerState({
+    activeSetIndex: MAX_TIMER_SETS + 4,
+    sets: Array.from({ length: MAX_TIMER_SETS + 3 }, (_, index) => ({
+      id: `runtime-${index + 1}`,
+      label: `Runtime ${index + 1}`,
+      durationMs: 60_000,
+    })),
+  });
+
+  assert.equal(state.sets.length, MAX_TIMER_SETS);
+  assert.equal(state.activeSetIndex, MAX_TIMER_SETS - 1);
 });

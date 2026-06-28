@@ -1,4 +1,5 @@
 export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
+export const MAX_TIMER_SETS = 10;
 
 export const createDefaultTimerControlSet = (index = 0) => ({
   id: `timer-set-${index + 1}`,
@@ -164,6 +165,7 @@ export const normalizeTimerControlSettings = (raw) => {
         durationMs: clampNumber(set?.durationMs, 5 * 60000, 0),
       }))
       .filter((set) => set.durationMs > 0)
+      .slice(0, MAX_TIMER_SETS)
     : DEFAULT_TIMER_CONTROL_SETTINGS.sets;
 
   return {
@@ -204,6 +206,7 @@ export const normalizeTimerState = (raw) => {
         durationMs: clampNumber(set?.durationMs, 0, 0),
       }))
       .filter((set) => set.durationMs > 0)
+      .slice(0, MAX_TIMER_SETS)
     : [];
 
   return {
