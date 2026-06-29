@@ -7,9 +7,10 @@ import {
   rehydrateOutputState,
 } from '../src/context/lyricsStore/outputSlice.js';
 import { registerConnectionHandlers } from '../server/realtime/handlers/connectionHandlers.js';
+import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerOutputHandlers } from '../server/realtime/handlers/outputHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
-import { buildCurrentState, state } from '../server/realtime/state.js';
+import { buildCurrentState, buildPeriodicState, state } from '../server/realtime/state.js';
 
 function createSocketHarness() {
   const handlers = new Map();
@@ -35,6 +36,29 @@ function createSocketHarness() {
   return { handlers, io, ioEvents, socket, socketEvents };
 }
 
+function createTrackedClient(socketId, { type, purpose = type, permissions = ['lyrics:read'] }) {
+  const events = [];
+  const socket = {
+    id: socketId,
+    connected: true,
+    emit(eventName, payload) {
+      events.push({ eventName, payload });
+    },
+  };
+
+  state.connectedClients.set(socketId, {
+    type,
+    purpose,
+    socket,
+    permissions,
+    deviceId: `${socketId}-device`,
+    sessionId: `${socketId}-session`,
+    connectedAt: Date.now(),
+  });
+
+  return { socket, events };
+}
+
 function createOutputStore() {
   let currentState;
   const get = () => currentState;
@@ -51,6 +75,7 @@ function createOutputStore() {
 }
 
 test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized raw content', () => {
+  const previousConnectedClients = state.connectedClients;
   const previousSetlist = state.setlistFiles;
   const previousLyrics = state.currentLyrics;
   const previousTimestamps = state.currentLyricsTimestamps;
@@ -61,6 +86,7 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
   const previousSections = state.currentLyricsSections;
   const previousLineToSection = state.currentLineToSection;
 
+  state.connectedClients = new Map();
   state.setlistFiles = [{
     id: 'setlist_lrc',
     displayName: 'Service Song',
@@ -122,6 +148,7 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     assert.equal(success.metadata.source, 'test');
     assert.ok(Array.isArray(success.metadata.sections));
   } finally {
+    state.connectedClients = previousConnectedClients;
     state.setlistFiles = previousSetlist;
     state.currentLyrics = previousLyrics;
     state.currentLyricsTimestamps = previousTimestamps;
@@ -131,6 +158,219 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     state.currentSongMetadata = previousSongMetadata;
     state.currentLyricsSections = previousSections;
     state.currentLineToSection = previousLineToSection;
+  }
+});
+
+test('lyricsLoad fanout sends render-only payloads to displays and skips timer clients', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousLyrics = state.currentLyrics;
+  const previousTimestamps = state.currentLyricsTimestamps;
+  const previousFileName = state.currentLyricsFileName;
+  const previousRawLyricsContent = state.currentRawLyricsContent;
+  const previousLyricsSource = state.currentLyricsSource;
+  const previousSongMetadata = state.currentSongMetadata;
+  const previousSections = state.currentLyricsSections;
+  const previousLineToSection = state.currentLineToSection;
+
+  state.connectedClients = new Map();
+  const desktop = createTrackedClient('socket-desktop', { type: 'desktop', purpose: 'control', permissions: ['admin:full'] });
+  const output = createTrackedClient('socket-output', { type: 'output1', purpose: 'output1' });
+  const stage = createTrackedClient('socket-stage', { type: 'stage', purpose: 'stage-display' });
+  const timerControl = createTrackedClient('socket-timer', { type: 'desktop', purpose: 'timer-control' });
+  const timeDisplay = createTrackedClient('socket-time', { type: 'stage', purpose: 'time-display' });
+
+  try {
+    const { handlers, io, ioEvents, socket } = createSocketHarness();
+    registerLyricsHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'lyrics:write',
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    handlers.get('lyricsLoad')?.({
+      lyrics: ['First line', 'Second line'],
+      fileName: 'Service Song',
+      rawLyricsContent: 'Raw source that displays should not receive',
+      lyricsSource: { content: 'Raw source that displays should not receive', fileType: 'txt', fileName: 'Service Song.txt' },
+      songMetadata: { title: 'Service Song', artists: ['Artist'] },
+      lyricsTimestamps: [1000, 2000],
+      sections: [{ id: 'verse-1', label: 'Verse 1', startIndex: 0 }],
+      lineToSection: { 0: 'verse-1' },
+    });
+
+    assert.equal(ioEvents.some((event) => event.eventName === 'lyricsLoad'), false);
+
+    const desktopLoad = desktop.events.find((event) => event.eventName === 'lyricsLoad')?.payload;
+    assert.equal(desktopLoad.rawLyricsContent, 'Raw source that displays should not receive');
+    assert.equal(desktopLoad.lyricsSource.fileName, 'Service Song.txt');
+    assert.equal(desktopLoad.songMetadata.title, 'Service Song');
+
+    const outputLoad = output.events.find((event) => event.eventName === 'lyricsLoad')?.payload;
+    assert.deepEqual(outputLoad.lyrics, ['First line', 'Second line']);
+    assert.deepEqual(outputLoad, {
+      lyrics: ['First line', 'Second line'],
+      fileName: 'Service Song',
+    });
+    assert.equal(Object.hasOwn(outputLoad, 'rawLyricsContent'), false);
+    assert.equal(Object.hasOwn(outputLoad, 'lyricsSource'), false);
+    assert.equal(Object.hasOwn(outputLoad, 'songMetadata'), false);
+
+    const stageLoad = stage.events.find((event) => event.eventName === 'lyricsLoad')?.payload;
+    assert.deepEqual(stageLoad, {
+      lyrics: ['First line', 'Second line'],
+      fileName: 'Service Song',
+    });
+
+    assert.equal(timerControl.events.some((event) => event.eventName === 'lyricsLoad'), false);
+    assert.equal(timeDisplay.events.some((event) => event.eventName === 'lyricsLoad'), false);
+    assert.equal(timerControl.events.some((event) => event.eventName === 'lyricsSectionsUpdate'), false);
+    assert.equal(timeDisplay.events.some((event) => event.eventName === 'lyricsSectionsUpdate'), false);
+    assert.equal(output.events.some((event) => event.eventName === 'lyricsTimestampsUpdate'), false);
+    assert.equal(output.events.some((event) => event.eventName === 'lyricsSectionsUpdate'), false);
+    assert.equal(stage.events.some((event) => event.eventName === 'lyricsTimestampsUpdate'), false);
+    assert.equal(stage.events.some((event) => event.eventName === 'lyricsSectionsUpdate'), false);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.currentLyrics = previousLyrics;
+    state.currentLyricsTimestamps = previousTimestamps;
+    state.currentLyricsFileName = previousFileName;
+    state.currentRawLyricsContent = previousRawLyricsContent;
+    state.currentLyricsSource = previousLyricsSource;
+    state.currentSongMetadata = previousSongMetadata;
+    state.currentLyricsSections = previousSections;
+    state.currentLineToSection = previousLineToSection;
+  }
+});
+
+test('setlistLoad fanout keeps raw load success on controllers only', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousSetlist = state.setlistFiles;
+  const previousLyrics = state.currentLyrics;
+  const previousTimestamps = state.currentLyricsTimestamps;
+  const previousFileName = state.currentLyricsFileName;
+  const previousRawLyricsContent = state.currentRawLyricsContent;
+  const previousLyricsSource = state.currentLyricsSource;
+  const previousSongMetadata = state.currentSongMetadata;
+  const previousSections = state.currentLyricsSections;
+  const previousLineToSection = state.currentLineToSection;
+
+  state.connectedClients = new Map();
+  const desktop = createTrackedClient('socket-desktop', { type: 'desktop', purpose: 'control', permissions: ['admin:full'] });
+  const output = createTrackedClient('socket-output', { type: 'output1', purpose: 'output1' });
+  const stage = createTrackedClient('socket-stage', { type: 'stage', purpose: 'stage-display' });
+  const timerControl = createTrackedClient('socket-timer', { type: 'desktop', purpose: 'timer-control' });
+  state.setlistFiles = [{
+    id: 'setlist_txt',
+    displayName: 'Plain Song',
+    originalName: 'Plain Song.txt',
+    fileType: 'txt',
+    content: 'First line\nSecond line',
+    metadata: { source: 'test' },
+  }];
+
+  try {
+    const { handlers, io, ioEvents, socket } = createSocketHarness();
+    registerSetlistHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'lyrics:write',
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    handlers.get('setlistLoad')?.('setlist_txt');
+
+    assert.equal(ioEvents.some((event) => event.eventName === 'lyricsLoad'), false);
+    assert.equal(ioEvents.some((event) => event.eventName === 'setlistLoadSuccess'), false);
+
+    assert.equal(desktop.events.find((event) => event.eventName === 'setlistLoadSuccess')?.payload.rawContent, 'First line\nSecond line');
+    assert.equal(output.events.some((event) => event.eventName === 'setlistLoadSuccess'), false);
+    assert.equal(stage.events.some((event) => event.eventName === 'setlistLoadSuccess'), false);
+    assert.equal(timerControl.events.some((event) => event.eventName === 'setlistLoadSuccess'), false);
+
+    const outputLoad = output.events.find((event) => event.eventName === 'lyricsLoad')?.payload;
+    assert.equal(outputLoad.lyrics.length, 1);
+    assert.equal(outputLoad.lyrics[0].displayText, 'First line\nSecond line');
+    assert.equal(Object.hasOwn(outputLoad, 'lyricsTimestamps'), false);
+    assert.equal(Object.hasOwn(outputLoad, 'sections'), false);
+    assert.equal(Object.hasOwn(outputLoad, 'rawLyricsContent'), false);
+    assert.equal(Object.hasOwn(outputLoad, 'lyricsSource'), false);
+    assert.equal(Object.hasOwn(outputLoad, 'songMetadata'), false);
+    const stageLoad = stage.events.find((event) => event.eventName === 'lyricsLoad')?.payload;
+    assert.equal(stageLoad.lyrics.length, 1);
+    assert.equal(Object.hasOwn(stageLoad, 'lyricsTimestamps'), false);
+    assert.equal(Object.hasOwn(stageLoad, 'sections'), false);
+    assert.equal(stage.events.some((event) => event.eventName === 'lyricsTimestampsUpdate'), false);
+    assert.equal(stage.events.some((event) => event.eventName === 'lyricsSectionsUpdate'), false);
+    assert.equal(timerControl.events.some((event) => event.eventName === 'lyricsLoad'), false);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.setlistFiles = previousSetlist;
+    state.currentLyrics = previousLyrics;
+    state.currentLyricsTimestamps = previousTimestamps;
+    state.currentLyricsFileName = previousFileName;
+    state.currentRawLyricsContent = previousRawLyricsContent;
+    state.currentLyricsSource = previousLyricsSource;
+    state.currentSongMetadata = previousSongMetadata;
+    state.currentLyricsSections = previousSections;
+    state.currentLineToSection = previousLineToSection;
+  }
+});
+
+test('setlistUpdate fanout sends full setlist to controllers and names only to stage displays', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousSetlist = state.setlistFiles;
+
+  state.connectedClients = new Map();
+  state.setlistFiles = [];
+  const desktop = createTrackedClient('socket-desktop', { type: 'desktop', purpose: 'control', permissions: ['admin:full'] });
+  const stage = createTrackedClient('socket-stage', { type: 'stage', purpose: 'stage-display' });
+  const output = createTrackedClient('socket-output', { type: 'output1', purpose: 'output1' });
+  const timerControl = createTrackedClient('socket-timer', { type: 'desktop', purpose: 'timer-control' });
+
+  try {
+    const { handlers, ioEvents, socket } = createSocketHarness();
+    registerSetlistHandlers({
+      io: { emit(eventName, payload) { ioEvents.push({ eventName, payload }); } },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'setlist:write',
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    handlers.get('setlistAdd')?.([{
+      name: 'Service Song.txt',
+      content: 'First line\nSecond line',
+      metadata: { source: 'test' },
+      lastModified: 123,
+    }]);
+
+    assert.equal(ioEvents.some((event) => event.eventName === 'setlistUpdate'), false);
+
+    const desktopUpdate = desktop.events.find((event) => event.eventName === 'setlistUpdate')?.payload;
+    assert.equal(desktopUpdate.length, 1);
+    assert.equal(desktopUpdate[0].content, 'First line\nSecond line');
+    assert.equal(desktopUpdate[0].metadata.source, 'test');
+
+    const stageUpdate = stage.events.find((event) => event.eventName === 'setlistUpdate')?.payload;
+    assert.deepEqual(stageUpdate, [{
+      id: desktopUpdate[0].id,
+      displayName: 'Service Song',
+      originalName: 'Service Song.txt',
+    }]);
+    assert.equal(Object.hasOwn(stageUpdate[0], 'content'), false);
+    assert.equal(Object.hasOwn(stageUpdate[0], 'metadata'), false);
+
+    assert.equal(output.events.some((event) => event.eventName === 'setlistUpdate'), false);
+    assert.equal(timerControl.events.some((event) => event.eventName === 'setlistUpdate'), false);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.setlistFiles = previousSetlist;
   }
 });
 
@@ -331,7 +571,8 @@ test('output connection immediately broadcasts an active instance', () => {
     });
 
     assert.equal(connected, true);
-    const metricsEvent = ioEvents.find((event) => event.eventName === 'outputMetrics');
+    assert.equal(ioEvents.some((event) => event.eventName === 'outputMetrics'), false);
+    const metricsEvent = socketEvents.find((event) => event.eventName === 'outputMetrics');
     assert.equal(metricsEvent.payload.output, 'output1');
     assert.equal(metricsEvent.payload.instanceCount, 1);
     assert.equal(metricsEvent.payload.allInstances.length, 1);
@@ -482,6 +723,48 @@ test('generic stage clientConnect does not downgrade authenticated time-display 
   }
 });
 
+test('stage output toggle fanout reaches controllers and stage display only', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousStageEnabled = state.currentStageEnabled;
+
+  state.connectedClients = new Map();
+  state.currentStageEnabled = true;
+  const desktop = createTrackedClient('socket-desktop', { type: 'desktop', purpose: 'control', permissions: ['admin:full'] });
+  const stage = createTrackedClient('socket-stage', { type: 'stage', purpose: 'stage-display' });
+  const output = createTrackedClient('socket-output', { type: 'output1', purpose: 'output1' });
+  const timerControl = createTrackedClient('socket-timer', { type: 'desktop', purpose: 'timer-control' });
+
+  try {
+    const { handlers, ioEvents, socket } = createSocketHarness();
+    registerOutputHandlers({
+      io: { emit(eventName, payload) { ioEvents.push({ eventName, payload }); } },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'output:control',
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    handlers.get('individualOutputToggle')?.({ output: 'stage', enabled: false });
+
+    assert.equal(state.currentStageEnabled, false);
+    assert.equal(ioEvents.some((event) => event.eventName === 'individualOutputToggle'), false);
+    assert.deepEqual(desktop.events.find((event) => event.eventName === 'individualOutputToggle')?.payload, {
+      output: 'stage',
+      enabled: false,
+    });
+    assert.deepEqual(stage.events.find((event) => event.eventName === 'individualOutputToggle')?.payload, {
+      output: 'stage',
+      enabled: false,
+    });
+    assert.equal(output.events.some((event) => event.eventName === 'individualOutputToggle'), false);
+    assert.equal(timerControl.events.some((event) => event.eventName === 'individualOutputToggle'), false);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.currentStageEnabled = previousStageEnabled;
+  }
+});
+
 test('preview output metrics are ignored by production readiness tracking', () => {
   const previousOutputInstances = state.outputInstances;
   const previousOutputSettings = state.outputSettings;
@@ -548,6 +831,7 @@ test('current state is trimmed for timer, time display, and output clients', () 
   const previousSongMetadata = state.currentSongMetadata;
   const previousSections = state.currentLyricsSections;
   const previousLineToSection = state.currentLineToSection;
+  const previousSelectedLine = state.currentSelectedLine;
   const previousOutputSettings = state.outputSettings;
   const previousOutputEnabled = state.outputEnabled;
   const previousIsOutputOn = state.currentIsOutputOn;
@@ -565,6 +849,7 @@ test('current state is trimmed for timer, time display, and output clients', () 
   state.currentSongMetadata = { title: 'Service Song', artists: ['Artist'] };
   state.currentLyricsSections = [{ id: 'verse-1', label: 'Verse 1', startIndex: 0 }];
   state.currentLineToSection = { 0: 'verse-1' };
+  state.currentSelectedLine = 1;
   state.outputSettings = new Map([
     ['output1', { fontSize: 72 }],
     ['output2', { fontSize: 96 }],
@@ -576,7 +861,13 @@ test('current state is trimmed for timer, time display, and output clients', () 
   state.currentIsOutputOn = true;
   state.currentStageSettings = { showTime: true };
   state.currentStageEnabled = true;
-  state.setlistFiles = [{ id: 'next-song', displayName: 'Next Song' }];
+  state.setlistFiles = [{
+    id: 'next-song',
+    displayName: 'Next Song',
+    originalName: 'Next Song.txt',
+    content: 'Full source should stay off stage displays',
+    metadata: { source: 'test' },
+  }];
   state.currentStageTimerState = { running: true, remaining: '1:00', display: { label: 'Time Left' } };
   state.currentStageMessages = [{ text: 'Welcome' }];
 
@@ -598,6 +889,9 @@ test('current state is trimmed for timer, time display, and output clients', () 
     assert.equal(outputState.output1Enabled, true);
     assert.equal(outputState.isOutputOn, true);
     assert.equal(Object.hasOwn(outputState, 'output2Settings'), false);
+    assert.equal(Object.hasOwn(outputState, 'lyricsTimestamps'), false);
+    assert.equal(Object.hasOwn(outputState, 'lyricsSections'), false);
+    assert.equal(Object.hasOwn(outputState, 'lineToSection'), false);
     assert.equal(Object.hasOwn(outputState, 'rawLyricsContent'), false);
     assert.equal(Object.hasOwn(outputState, 'lyricsSource'), false);
     assert.equal(Object.hasOwn(outputState, 'songMetadata'), false);
@@ -605,10 +899,37 @@ test('current state is trimmed for timer, time display, and output clients', () 
 
     const stageState = buildCurrentState({ type: 'stage', purpose: 'stage-display', permissions: ['lyrics:read'] });
     assert.deepEqual(stageState.lyrics, ['Line one', 'Line two']);
-    assert.deepEqual(stageState.setlistFiles, [{ id: 'next-song', displayName: 'Next Song' }]);
+    assert.deepEqual(stageState.setlistFiles, [{
+      id: 'next-song',
+      displayName: 'Next Song',
+      originalName: 'Next Song.txt',
+    }]);
     assert.deepEqual(stageState.stageMessages, [{ text: 'Welcome' }]);
+    assert.equal(Object.hasOwn(stageState, 'lyricsTimestamps'), false);
+    assert.equal(Object.hasOwn(stageState, 'lyricsSections'), false);
+    assert.equal(Object.hasOwn(stageState, 'lineToSection'), false);
     assert.equal(Object.hasOwn(stageState, 'rawLyricsContent'), false);
     assert.equal(Object.hasOwn(stageState, 'lyricsSource'), false);
+
+    const periodicOutputState = buildPeriodicState({ type: 'output1', purpose: 'output1', permissions: ['lyrics:read'] });
+    assert.deepEqual(periodicOutputState.output1Settings, { fontSize: 72 });
+    assert.equal(periodicOutputState.selectedLine, 1);
+    assert.equal(periodicOutputState.isOutputOn, true);
+    assert.equal(Object.hasOwn(periodicOutputState, 'lyrics'), false);
+    assert.equal(Object.hasOwn(periodicOutputState, 'lyricsFileName'), false);
+    assert.equal(Object.hasOwn(periodicOutputState, 'stageTimerState'), false);
+
+    const periodicStageState = buildPeriodicState({ type: 'stage', purpose: 'stage-display', permissions: ['lyrics:read'] });
+    assert.equal(periodicStageState.stageTimerState.remaining, '1:00');
+    assert.equal(periodicStageState.isOutputOn, true);
+    assert.equal(periodicStageState.stageEnabled, true);
+    assert.equal(Object.hasOwn(periodicStageState, 'lyrics'), false);
+    assert.equal(Object.hasOwn(periodicStageState, 'stageSettings'), false);
+    assert.equal(Object.hasOwn(periodicStageState, 'stageMessages'), false);
+
+    const periodicTimeDisplayState = buildPeriodicState({ type: 'stage', purpose: 'time-display', permissions: ['lyrics:read'] });
+    assert.equal(periodicTimeDisplayState.stageTimerState.remaining, '1:00');
+    assert.equal(Object.hasOwn(periodicTimeDisplayState, 'lyrics'), false);
   } finally {
     state.currentLyrics = previousLyrics;
     state.currentLyricsTimestamps = previousTimestamps;
@@ -618,6 +939,7 @@ test('current state is trimmed for timer, time display, and output clients', () 
     state.currentSongMetadata = previousSongMetadata;
     state.currentLyricsSections = previousSections;
     state.currentLineToSection = previousLineToSection;
+    state.currentSelectedLine = previousSelectedLine;
     state.outputSettings = previousOutputSettings;
     state.outputEnabled = previousOutputEnabled;
     state.currentIsOutputOn = previousIsOutputOn;

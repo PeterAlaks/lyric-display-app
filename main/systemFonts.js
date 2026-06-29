@@ -1,6 +1,9 @@
 let cachedFonts = null;
 let cachedFontsPromise = null;
 let prewarmPromise = null;
+let fontLoadRequestId = 0;
+
+const FONT_LOAD_TIMEOUT_MS = 8000;
 
 const normalizeFonts = (fonts) => Array.from(
   new Set(
@@ -10,35 +13,83 @@ const normalizeFonts = (fonts) => Array.from(
   )
 ).sort((a, b) => a.localeCompare(b));
 
-export const loadSystemFonts = async () => {
-  if (cachedFonts && Array.isArray(cachedFonts)) return cachedFonts;
-  if (cachedFontsPromise) return cachedFontsPromise;
+const withTimeout = (promise, timeoutMs, message) => {
+  let timeoutId = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
 
-  cachedFontsPromise = (async () => {
-    try {
-      const fontList = await import('font-list');
-      const getFonts = fontList.getFonts || fontList.default?.getFonts;
-      if (typeof getFonts !== 'function') {
-        throw new Error('font-list getFonts not available');
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+};
+
+const scanSystemFonts = async () => {
+  const fontList = await import('font-list');
+  const getFonts = fontList.getFonts || fontList.default?.getFonts;
+  if (typeof getFonts !== 'function') {
+    throw new Error('font-list getFonts not available');
+  }
+  return getFonts({ disableQuoting: true });
+};
+
+export const loadSystemFonts = async ({ force = false } = {}) => {
+  if (!force && Array.isArray(cachedFonts)) return cachedFonts;
+  if (!force && cachedFontsPromise) return cachedFontsPromise;
+
+  const requestId = ++fontLoadRequestId;
+  const scanPromise = scanSystemFonts()
+    .then((fonts) => {
+      const normalizedFonts = normalizeFonts(fonts);
+      if (requestId === fontLoadRequestId || !Array.isArray(cachedFonts)) {
+        cachedFonts = normalizedFonts;
       }
-      const fonts = await getFonts({ disableQuoting: true });
-      cachedFonts = normalizeFonts(fonts);
-      return cachedFonts;
-    } catch (error) {
-      console.error('[SystemFonts] Error loading system fonts:', error);
-      cachedFonts = [];
-      return cachedFonts;
-    } finally {
-      cachedFontsPromise = null;
-    }
-  })();
+      console.log(`[SystemFonts] Loaded ${normalizedFonts.length} system fonts`);
+      return normalizedFonts;
+    });
 
-  return cachedFontsPromise;
+  const pendingPromise = withTimeout(
+    scanPromise,
+    FONT_LOAD_TIMEOUT_MS,
+    `System font scan timed out after ${FONT_LOAD_TIMEOUT_MS}ms`
+  )
+    .then((fonts) => {
+      if (Array.isArray(fonts)) return fonts;
+      return Array.isArray(cachedFonts) ? cachedFonts : [];
+    })
+    .catch((error) => {
+      console.warn('[SystemFonts] Font scan unavailable:', error?.message || error);
+      if (Array.isArray(cachedFonts)) return cachedFonts;
+      throw error;
+    })
+    .finally(() => {
+      if (cachedFontsPromise === pendingPromise) {
+        cachedFontsPromise = null;
+      }
+    });
+
+  cachedFontsPromise = pendingPromise;
+  return pendingPromise;
 };
 
 export const preloadSystemFonts = () => {
+  if (Array.isArray(cachedFonts)) return Promise.resolve(cachedFonts);
   if (prewarmPromise) return prewarmPromise;
-  prewarmPromise = loadSystemFonts().catch(() => { /* logged inside loadSystemFonts */ });
+  if (cachedFontsPromise) {
+    prewarmPromise = cachedFontsPromise
+      .catch(() => [])
+      .finally(() => {
+        prewarmPromise = null;
+      });
+    return prewarmPromise;
+  }
+  if (!prewarmPromise) {
+    prewarmPromise = loadSystemFonts()
+      .catch(() => [])
+      .finally(() => {
+        prewarmPromise = null;
+      });
+  }
   return prewarmPromise;
 };
 

@@ -1,4 +1,5 @@
 import { appendActionLog } from '../actionLog.js';
+import { emitStageMessagesUpdate, emitStageTimerUpdate } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { state } from '../state.js';
@@ -43,7 +44,7 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
         running: Boolean(state.currentStageTimerState.running),
       },
     });
-    io.emit('stageTimerUpdate', state.currentStageTimerState);
+    emitStageTimerUpdate(io, state.currentStageTimerState);
   });
 
   socket.on('stageMessagesUpdate', (messages) => {
@@ -67,6 +68,6 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
       target: 'stage messages',
       metadata: { count: state.currentStageMessages.length },
     });
-    io.emit('stageMessagesUpdate', messages);
+    emitStageMessagesUpdate(io, messages);
   });
 }

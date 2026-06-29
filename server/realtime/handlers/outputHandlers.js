@@ -6,6 +6,12 @@ import {
   state
 } from '../state.js';
 import { appendActionLog } from '../actionLog.js';
+import {
+  emitIndividualOutputEvent,
+  emitOutputMetricsUpdate,
+  emitOutputRegistry,
+  emitOutputVisibilityEvent
+} from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { getPrimaryOutputInstance, isOutputClientType, isPlainObject } from '../utils.js';
@@ -52,7 +58,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       target: 'all outputs',
       metadata: { enabled: nextState },
     });
-    io.emit('outputToggle', nextState);
+    emitOutputVisibilityEvent(io, 'outputToggle', nextState);
   });
 
   socket.on('individualOutputToggle', (payload) => {
@@ -92,7 +98,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       target: output,
       metadata: { enabled },
     });
-    io.emit('individualOutputToggle', { output, enabled });
+    emitIndividualOutputEvent(io, 'individualOutputToggle', { output, enabled });
   });
 
   socket.on('styleUpdate', (payload) => {
@@ -138,7 +144,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
         metadata: { keys: changedKeys.slice(0, 12) },
       });
     }
-    io.emit('styleUpdate', { output, settings });
+    emitIndividualOutputEvent(io, 'styleUpdate', { output, settings });
   });
 
   socket.on('outputRemove', (payload) => {
@@ -181,8 +187,8 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       actor,
       target: output,
     });
-    io.emit('outputRemoved', { output });
-    io.emit('outputsRegistry', { outputs: buildOutputList() });
+    emitIndividualOutputEvent(io, 'outputRemoved', { output });
+    emitOutputRegistry(io, { outputs: buildOutputList() });
   });
 
   socket.on('outputsRegister', (payload) => {
@@ -211,7 +217,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       target: 'outputs',
       metadata: { outputs },
     });
-    io.emit('outputsRegistry', { outputs: buildOutputList() });
+    emitOutputRegistry(io, { outputs: buildOutputList() });
   });
 
   socket.on('outputMetrics', (payload) => {
@@ -253,7 +259,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     const allInstances = Array.from(state.outputInstances.get(output).values());
     const primaryInstance = getPrimaryOutputInstance(allInstances);
 
-    io.emit('outputMetrics', {
+    emitOutputMetricsUpdate(io, {
       output,
       metrics: primaryInstance || safe,
       allInstances: allInstances,

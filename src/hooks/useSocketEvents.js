@@ -9,6 +9,7 @@ const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 const isOutputId = (value) => typeof value === 'string' && value.startsWith('output');
 const isRoutableOutput = (value) => value === 'stage' || isOutputId(value);
 const isCustomOutputId = (value) => isOutputId(value) && value !== 'output1' && value !== 'output2';
+const isPassiveDisplayRole = (role) => role === 'stage' || isOutputId(role);
 const shallowArrayEqual = (a, b) => {
   if (!Array.isArray(a) || !Array.isArray(b)) return false;
   if (a.length !== b.length) return false;
@@ -133,6 +134,10 @@ const useSocketEvents = (role, clientPurpose = role) => {
     const applyOutputEnabled = (output, enabled) => {
       if (typeof enabled !== 'boolean') return;
       const store = useLyricsStore.getState();
+      if (output === 'stage' && typeof store.setStageEnabled === 'function') {
+        store.setStageEnabled(enabled);
+        return;
+      }
       const setterName = `set${output.charAt(0).toUpperCase()}${output.slice(1)}Enabled`;
       const setter = store[setterName];
       if (typeof setter === 'function') {
@@ -279,7 +284,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
         }
       }
 
-      if (!preserveHydratedLyrics) {
+      if (!preserveHydratedLyrics && !isPassiveDisplayRole(role)) {
         applySections(state.lyricsSections || state.sections, state.lineToSection, state.lyrics);
       }
 
@@ -329,7 +334,9 @@ const useSocketEvents = (role, clientPurpose = role) => {
         lyrics[lyrics.length - 1] === currentStore.lyrics[lyrics.length - 1];
 
       setLyrics(lyrics);
-      setLyricsTimestamps(Array.isArray(payloadObject?.lyricsTimestamps) ? payloadObject.lyricsTimestamps : []);
+      if (!isPassiveDisplayRole(role)) {
+        setLyricsTimestamps(Array.isArray(payloadObject?.lyricsTimestamps) ? payloadObject.lyricsTimestamps : []);
+      }
       if (typeof payloadObject?.fileName === 'string') {
         setLyricsFileName(payloadObject.fileName);
       }
@@ -345,7 +352,9 @@ const useSocketEvents = (role, clientPurpose = role) => {
       if (!isSameLyrics) {
         selectLine(null);
       }
-      applySections(sections, lineToSection, lyrics);
+      if (!isPassiveDisplayRole(role)) {
+        applySections(sections, lineToSection, lyrics);
+      }
     });
 
     socket.on('lyricsTimestampsUpdate', (timestamps) => {
@@ -368,7 +377,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     });
 
     socket.on('individualOutputToggle', (payload) => {
-      if (!isPlainObject(payload) || !isOutputId(payload.output) || typeof payload.enabled !== 'boolean') {
+      if (!isPlainObject(payload) || !isRoutableOutput(payload.output) || typeof payload.enabled !== 'boolean') {
         return;
       }
       const { output, enabled } = payload;

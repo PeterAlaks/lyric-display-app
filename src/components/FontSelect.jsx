@@ -8,6 +8,12 @@ import { logWarn } from '../utils/logger';
 import { cn } from '@/lib/utils';
 
 const normalizeFontName = (font) => (typeof font === 'string' ? font.replace(/["']/g, '').trim() : '');
+const getFontPreviewFamily = (font) => {
+  const normalized = normalizeFontName(font);
+  if (!normalized) return undefined;
+  const escaped = normalized.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `"${escaped}", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+};
 const DROPDOWN_MAX_HEIGHT = 320;
 const FONT_ROW_HEIGHT = 36;
 const LABEL_ROW_HEIGHT = 30;
@@ -15,6 +21,7 @@ const DIVIDER_ROW_HEIGHT = 16;
 const HELPER_ROW_HEIGHT = 28;
 const SCROLL_PADDING_PX = 4;
 const ANIMATION_DURATION = 220;
+const FONT_LOAD_TIMEOUT_MS = 5000;
 
 const sortAndDeduplicate = (fonts) => Array.from(
   new Set(
@@ -27,25 +34,47 @@ const sortAndDeduplicate = (fonts) => Array.from(
 let cachedSystemFonts = null;
 let cachedSystemFontPromise = null;
 
+const withTimeout = (promise, timeoutMs, message) => {
+  let timeoutId = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+};
+
 const loadSystemFonts = async () => {
-  if (cachedSystemFonts) return cachedSystemFonts;
+  if (Array.isArray(cachedSystemFonts)) {
+    return { fonts: cachedSystemFonts, ok: true };
+  }
   if (cachedSystemFontPromise) return cachedSystemFontPromise;
 
   if (typeof window === 'undefined' || !window.electronAPI?.getSystemFonts) {
     cachedSystemFonts = [];
-    return cachedSystemFonts;
+    return { fonts: cachedSystemFonts, ok: true };
   }
 
-  cachedSystemFontPromise = window.electronAPI.getSystemFonts()
+  cachedSystemFontPromise = withTimeout(
+    window.electronAPI.getSystemFonts(),
+    FONT_LOAD_TIMEOUT_MS,
+    `System font request timed out after ${FONT_LOAD_TIMEOUT_MS}ms`
+  )
     .then((result) => {
+      if (result?.success === false) {
+        throw new Error(result.error || 'System font request failed');
+      }
       const fontsPayload = Array.isArray(result) ? result : result?.fonts;
       cachedSystemFonts = sortAndDeduplicate(fontsPayload);
-      return cachedSystemFonts;
+      return { fonts: cachedSystemFonts, ok: true };
     })
     .catch((error) => {
       logWarn('Failed to fetch system fonts', error?.message || error);
-      cachedSystemFonts = [];
-      return cachedSystemFonts;
+      return {
+        fonts: Array.isArray(cachedSystemFonts) ? cachedSystemFonts : [],
+        ok: Array.isArray(cachedSystemFonts)
+      };
     })
     .finally(() => {
       cachedSystemFontPromise = null;
@@ -65,6 +94,7 @@ const FontSelect = ({
   const [searchTerm, setSearchTerm] = React.useState('');
   const [installedFonts, setInstalledFonts] = React.useState([]);
   const [loadingFonts, setLoadingFonts] = React.useState(false);
+  const [fontLoadFailed, setFontLoadFailed] = React.useState(false);
   const [fontsLoaded, setFontsLoaded] = React.useState(false);
   const [menuState, setMenuState] = React.useState('closed');
   const searchInputRef = React.useRef(null);
@@ -148,19 +178,23 @@ const FontSelect = ({
     if (!isDesktopApp || !isMenuVisible || fontsLoaded) return undefined;
 
     let mounted = true;
+    setFontLoadFailed(false);
     setLoadingFonts(true);
 
     loadSystemFonts()
-      .then((fonts) => {
+      .then((result) => {
         if (mounted) {
-          setInstalledFonts(fonts || []);
-          setFontsLoaded(true);
+          const fonts = result?.fonts || [];
+          setInstalledFonts(fonts);
+          setFontsLoaded(Boolean(result?.ok));
+          setFontLoadFailed(!result?.ok);
         }
       })
       .catch(() => {
         if (mounted) {
           setInstalledFonts([]);
-          setFontsLoaded(true);
+          setFontsLoaded(false);
+          setFontLoadFailed(true);
         }
       })
       .finally(() => {
@@ -314,9 +348,11 @@ const FontSelect = ({
       items.push({ type: 'helper', text: 'System fonts are available in the desktop app' });
     } else if (loadingFonts) {
       items.push({ type: 'helper', text: 'Loading installed fonts...' });
+    } else if (fontLoadFailed) {
+      items.push({ type: 'helper', text: 'Installed fonts unavailable. Reopen to retry.' });
     }
 
-    if (isDesktopApp && !loadingFonts) {
+    if (isDesktopApp && !loadingFonts && !fontLoadFailed) {
       if (visibleInstalledFonts.length) {
         visibleInstalledFonts.forEach((font) => {
           items.push({ type: 'font', font });
@@ -327,7 +363,7 @@ const FontSelect = ({
     }
 
     return items;
-  }, [visibleFeaturedFonts, isDesktopApp, loadingFonts, visibleInstalledFonts]);
+  }, [visibleFeaturedFonts, isDesktopApp, loadingFonts, fontLoadFailed, visibleInstalledFonts]);
 
   const listItemsRef = React.useRef(listItems);
   React.useEffect(() => {
@@ -464,12 +500,21 @@ const FontSelect = ({
       key={font}
       type="button"
       data-font-index={index}
-      onClick={() => handleSelect(font)}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        handleSelect(font);
+      }}
+      onClick={(event) => {
+        if (event.detail === 0) {
+          handleSelect(font);
+        }
+      }}
       onKeyDown={(event) => handleFontItemKeyDown(event, index)}
       onFocus={() => { activeFontIndexRef.current = index; }}
-      style={{ fontFamily: font }}
+      style={{ contain: 'layout paint style' }}
       className={cn(
-        'w-full text-left flex items-center justify-between gap-2 px-3 py-1.5 text-xs leading-5 rounded-r-md rounded-l-none transition-colors truncate focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
+        'w-full text-left flex items-center justify-between gap-2 px-3 py-1.5 text-xs leading-5 rounded-r-md rounded-l-none truncate focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
         darkMode
           ? 'text-gray-200 hover:bg-gray-600 hover:text-white focus:bg-gray-600 focus:text-white'
           : 'text-gray-800 hover:bg-gray-100 focus:bg-gray-200',
@@ -478,7 +523,16 @@ const FontSelect = ({
           : ''
       )}
     >
-      <span className="truncate" title={font}>{font}</span>
+      <span
+        className="truncate"
+        title={font}
+        style={{
+          fontFamily: getFontPreviewFamily(font),
+          fontSynthesis: 'none',
+        }}
+      >
+        {font}
+      </span>
       {normalizedValue && normalizedValue.toLowerCase() === font.toLowerCase() && (
         <Check className="w-4 h-4 shrink-0" />
       )}

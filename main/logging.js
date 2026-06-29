@@ -6,13 +6,17 @@ import { getUserDataMigrationResult } from './appIdentity.js';
 
 const MAX_LOG_BYTES = 5 * 1024 * 1024;
 const MAX_ROTATED_LOGS = 3;
+const MAX_LOG_SESSIONS = 20;
+const MAX_LOG_DIR_BYTES = 100 * 1024 * 1024;
 const RESOURCE_LOG_INTERVAL_MS = 60_000;
+const MANAGED_LOG_FILE_PATTERN = /^lyricdisplay-.+\.log(?:\.\d+)?$/;
 
 let initialized = false;
 let logDir = null;
 let logFilePath = null;
 let latestLogFilePath = null;
-let logStream = null;
+let fileLoggingReady = false;
+let currentLogBytes = 0;
 let originals = null;
 let resourceDiagnosticsTimer = null;
 let resourceDiagnosticsPending = false;
@@ -54,11 +58,27 @@ const resolveLogDir = () => {
   }
 };
 
-const rotateLogs = (filePath) => {
+const warnLoggingFailure = (...args) => {
   try {
-    if (!fs.existsSync(filePath)) return;
+    originals?.warn?.(...args);
+  } catch {
+  }
+};
+
+const getFileSize = (filePath) => {
+  try {
     const stat = fs.statSync(filePath);
-    if (!stat.isFile() || stat.size < MAX_LOG_BYTES) return;
+    return stat.isFile() ? stat.size : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const rotateLogs = (filePath, { force = false } = {}) => {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile() || (!force && stat.size < MAX_LOG_BYTES)) return false;
 
     for (let index = MAX_ROTATED_LOGS; index >= 1; index -= 1) {
       const source = `${filePath}.${index}`;
@@ -73,21 +93,112 @@ const rotateLogs = (filePath) => {
     }
 
     fs.renameSync(filePath, `${filePath}.1`);
+    return true;
   } catch (error) {
+    warnLoggingFailure('[Logging] Failed to rotate log file:', error);
+    return false;
+  }
+};
+
+const listManagedLogFiles = () => {
+  try {
+    return fs.readdirSync(logDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && MANAGED_LOG_FILE_PATTERN.test(entry.name))
+      .map((entry) => {
+        const filePath = path.join(logDir, entry.name);
+        const stat = fs.statSync(filePath);
+        return {
+          filePath,
+          sessionPath: filePath.replace(/\.\d+$/, ''),
+          size: stat.size,
+          mtimeMs: stat.mtimeMs,
+        };
+      });
+  } catch (error) {
+    warnLoggingFailure('[Logging] Failed to list log files for cleanup:', error);
+    return [];
+  }
+};
+
+const pruneLogFolder = ({ preservePaths = [] } = {}) => {
+  const preserved = new Set(
+    preservePaths
+      .filter(Boolean)
+      .map((filePath) => path.resolve(filePath))
+  );
+
+  const deleteLogFile = (filePath) => {
+    if (preserved.has(path.resolve(filePath))) return false;
     try {
-      originals?.warn?.('[Logging] Failed to rotate log file:', error);
-    } catch {
+      fs.rmSync(filePath, { force: true });
+      return true;
+    } catch (error) {
+      warnLoggingFailure('[Logging] Failed to delete old log file:', filePath, error);
+      return false;
+    }
+  };
+
+  let files = listManagedLogFiles();
+  const sessions = new Map();
+  files.forEach((file) => {
+    const previous = sessions.get(file.sessionPath);
+    sessions.set(file.sessionPath, {
+      sessionPath: file.sessionPath,
+      latestMtimeMs: Math.max(previous?.latestMtimeMs || 0, file.mtimeMs),
+    });
+  });
+
+  const keptSessions = new Set(
+    [...sessions.values()]
+      .sort((a, b) => b.latestMtimeMs - a.latestMtimeMs)
+      .slice(MAX_LOG_SESSIONS)
+      .map((session) => session.sessionPath)
+  );
+
+  files
+    .filter((file) => !keptSessions.has(file.sessionPath))
+    .forEach(({ filePath }) => deleteLogFile(filePath));
+
+  files = listManagedLogFiles()
+    .sort((a, b) => a.mtimeMs - b.mtimeMs);
+
+  let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  for (const file of files) {
+    if (totalBytes <= MAX_LOG_DIR_BYTES) break;
+    if (deleteLogFile(file.filePath)) {
+      totalBytes -= file.size;
     }
   }
 };
 
+const appendToLogFile = (text) => {
+  if (!fileLoggingReady || !logFilePath) return;
+
+  const byteLength = Buffer.byteLength(text, 'utf8');
+  if (currentLogBytes > 0 && currentLogBytes + byteLength > MAX_LOG_BYTES) {
+    if (rotateLogs(logFilePath, { force: true })) {
+      currentLogBytes = 0;
+    } else {
+      currentLogBytes = getFileSize(logFilePath);
+    }
+  }
+
+  try {
+    fs.appendFileSync(logFilePath, text, 'utf8');
+    currentLogBytes += byteLength;
+  } catch (error) {
+    fileLoggingReady = false;
+    warnLoggingFailure('[Logging] Failed to write log file:', error);
+  }
+};
+
 const writeLine = (level, message) => {
-  if (!logStream) return;
+  if (!fileLoggingReady) return;
   const normalized = String(message || '').replace(/\r?\n/g, '\n');
   const lines = normalized.split('\n');
   for (const line of lines) {
     if (line.length === 0) continue;
-    logStream.write(`[${timestamp()}] [${level}] ${line}\n`);
+    appendToLogFile(`[${timestamp()}] [${level}] ${line}\n`);
   }
 };
 
@@ -178,8 +289,10 @@ export function initFileLogging() {
     logFilePath = path.join(logDir, createSessionLogFileName());
     latestLogFilePath = path.join(logDir, 'latest.log');
     rotateLogs(logFilePath);
-    rotateLogs(latestLogFilePath);
-    logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+    fs.closeSync(fs.openSync(logFilePath, 'a'));
+    currentLogBytes = getFileSize(logFilePath);
+    pruneLogFolder({ preservePaths: [logFilePath] });
+    fileLoggingReady = true;
     try {
       fs.writeFileSync(latestLogFilePath, logFilePath, 'utf8');
     } catch (error) {
