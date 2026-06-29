@@ -10,7 +10,7 @@ import { logDebug, logError, logWarn } from '../utils/logger';
 const LONG_BACKOFF_WARNING_MS = 4000;
 
 const useSocket = (role = 'output', options = {}) => {
-  const { enabled = true, preview = false } = options;
+  const { enabled = true, preview = false, purpose = role } = options;
   const socketRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
@@ -29,7 +29,7 @@ const useSocket = (role = 'output', options = {}) => {
 
   const {
     registerAuthenticatedHandlers,
-  } = useSocketEvents(role);
+  } = useSocketEvents(role, purpose);
 
   const getClientType = useCallback(() => {
     if (role.startsWith('output')) return role;
@@ -232,7 +232,7 @@ const useSocket = (role = 'output', options = {}) => {
         timeout: settings.connectionTimeout,
         reconnection: false,
         forceNew: true,
-        auth: { token, preview: Boolean(preview) },
+        auth: { token, preview: Boolean(preview), purpose },
       };
 
       socketRef.current = io(socketUrl, socketOptions);
@@ -312,7 +312,8 @@ const useSocket = (role = 'output', options = {}) => {
     emitBackoffWarning,
     clearBackoffWarning,
     enabled,
-    preview
+    preview,
+    purpose
   ]);
 
   const scheduleRetry = useCallback(() => {

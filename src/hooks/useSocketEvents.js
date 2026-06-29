@@ -55,7 +55,7 @@ const normalizeOutputRegistry = (payload) => {
   return { outputs: uniqueOutputs };
 };
 
-const useSocketEvents = (role) => {
+const useSocketEvents = (role, clientPurpose = role) => {
   const {
     setLyrics,
     setLyricsTimestamps,
@@ -695,7 +695,10 @@ const useSocketEvents = (role) => {
       }
 
       startHeartbeat();
-      socket.emit('clientConnect', { type: clientType });
+      const confirmedPurpose = typeof clientPurpose === 'string' && clientPurpose.trim()
+        ? clientPurpose.trim()
+        : role;
+      socket.emit('clientConnect', { type: clientType, purpose: confirmedPurpose });
 
       setTimeout(() => {
         socket.emit('requestCurrentState');
@@ -816,7 +819,7 @@ const useSocketEvents = (role) => {
     });
 
     setupApplicationEventHandlers(socket, clientType, isDesktopApp);
-  }, [setIsDesktopApp, setupApplicationEventHandlers]);
+  }, [setIsDesktopApp, setupApplicationEventHandlers, role, clientPurpose]);
 
   return {
     setupApplicationEventHandlers,

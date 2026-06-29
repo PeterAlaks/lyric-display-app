@@ -9,7 +9,7 @@ import {
 import { registerConnectionHandlers } from '../server/realtime/handlers/connectionHandlers.js';
 import { registerOutputHandlers } from '../server/realtime/handlers/outputHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
-import { state } from '../server/realtime/state.js';
+import { buildCurrentState, state } from '../server/realtime/state.js';
 
 function createSocketHarness() {
   const handlers = new Map();
@@ -415,6 +415,73 @@ test('preview output connection does not broadcast production readiness presence
   }
 });
 
+test('generic stage clientConnect does not downgrade authenticated time-display purpose', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousRawLyricsContent = state.currentRawLyricsContent;
+  const previousSetlistFiles = state.setlistFiles;
+  const previousStageTimerState = state.currentStageTimerState;
+
+  state.connectedClients = new Map();
+  state.currentRawLyricsContent = 'raw lyrics should not be sent to time display';
+  state.setlistFiles = [{ id: 'song-1', displayName: 'Song One' }];
+  state.currentStageTimerState = { running: true, remaining: '29:59' };
+
+  try {
+    const handlers = new Map();
+    const socketEvents = [];
+    const socket = {
+      id: 'socket-time-display',
+      connected: true,
+      userData: {
+        permissions: ['lyrics:read'],
+        connectedAt: Date.now(),
+      },
+      broadcast: {
+        emit() {},
+      },
+      on(eventName, handler) {
+        if (!handlers.has(eventName)) handlers.set(eventName, []);
+        handlers.get(eventName).push(handler);
+      },
+      emit(eventName, payload) {
+        socketEvents.push({ eventName, payload });
+      },
+      disconnect() {},
+    };
+    const io = {
+      emit() {},
+    };
+
+    const connected = registerConnectionHandlers({
+      io,
+      socket,
+      clientType: 'stage',
+      deviceId: 'time-display-device',
+      sessionId: 'time-display-session',
+      clientPurpose: 'time-display',
+    });
+
+    assert.equal(connected, true);
+    assert.equal(state.connectedClients.get('socket-time-display').purpose, 'time-display');
+
+    handlers.get('clientConnect')?.[0]?.({ type: 'stage', purpose: 'stage' });
+
+    assert.equal(state.connectedClients.get('socket-time-display').purpose, 'time-display');
+    const currentStateEvents = socketEvents.filter((event) => event.eventName === 'currentState');
+    const latestState = currentStateEvents[currentStateEvents.length - 1].payload;
+    assert.deepEqual(latestState.stageTimerState, state.currentStageTimerState);
+    assert.equal('rawLyricsContent' in latestState, false);
+    assert.equal('setlistFiles' in latestState, false);
+
+    handlers.get('disconnect')?.forEach((handler) => handler('test cleanup'));
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.currentRawLyricsContent = previousRawLyricsContent;
+    state.setlistFiles = previousSetlistFiles;
+    state.currentStageTimerState = previousStageTimerState;
+  }
+});
+
 test('preview output metrics are ignored by production readiness tracking', () => {
   const previousOutputInstances = state.outputInstances;
   const previousOutputSettings = state.outputSettings;
@@ -469,5 +536,95 @@ test('preview output metrics are ignored by production readiness tracking', () =
     state.outputInstances = previousOutputInstances;
     state.outputSettings = previousOutputSettings;
     state.outputEnabled = previousOutputEnabled;
+  }
+});
+
+test('current state is trimmed for timer, time display, and output clients', () => {
+  const previousLyrics = state.currentLyrics;
+  const previousTimestamps = state.currentLyricsTimestamps;
+  const previousFileName = state.currentLyricsFileName;
+  const previousRawLyricsContent = state.currentRawLyricsContent;
+  const previousLyricsSource = state.currentLyricsSource;
+  const previousSongMetadata = state.currentSongMetadata;
+  const previousSections = state.currentLyricsSections;
+  const previousLineToSection = state.currentLineToSection;
+  const previousOutputSettings = state.outputSettings;
+  const previousOutputEnabled = state.outputEnabled;
+  const previousIsOutputOn = state.currentIsOutputOn;
+  const previousStageSettings = state.currentStageSettings;
+  const previousStageEnabled = state.currentStageEnabled;
+  const previousSetlist = state.setlistFiles;
+  const previousStageTimerState = state.currentStageTimerState;
+  const previousStageMessages = state.currentStageMessages;
+
+  state.currentLyrics = ['Line one', 'Line two'];
+  state.currentLyricsTimestamps = [1000, 2000];
+  state.currentLyricsFileName = 'Service Song';
+  state.currentRawLyricsContent = 'raw source that should stay off passive display clients';
+  state.currentLyricsSource = { content: state.currentRawLyricsContent, fileType: 'txt', fileName: 'Service Song.txt' };
+  state.currentSongMetadata = { title: 'Service Song', artists: ['Artist'] };
+  state.currentLyricsSections = [{ id: 'verse-1', label: 'Verse 1', startIndex: 0 }];
+  state.currentLineToSection = { 0: 'verse-1' };
+  state.outputSettings = new Map([
+    ['output1', { fontSize: 72 }],
+    ['output2', { fontSize: 96 }],
+  ]);
+  state.outputEnabled = new Map([
+    ['output1', true],
+    ['output2', false],
+  ]);
+  state.currentIsOutputOn = true;
+  state.currentStageSettings = { showTime: true };
+  state.currentStageEnabled = true;
+  state.setlistFiles = [{ id: 'next-song', displayName: 'Next Song' }];
+  state.currentStageTimerState = { running: true, remaining: '1:00', display: { label: 'Time Left' } };
+  state.currentStageMessages = [{ text: 'Welcome' }];
+
+  try {
+    const timerState = buildCurrentState({ type: 'desktop', purpose: 'timer-control', permissions: ['admin:full'] });
+    assert.equal(timerState.stageTimerState.remaining, '1:00');
+    assert.equal(Object.hasOwn(timerState, 'lyrics'), false);
+    assert.equal(Object.hasOwn(timerState, 'rawLyricsContent'), false);
+    assert.equal(Object.hasOwn(timerState, 'output1Settings'), false);
+
+    const timeDisplayState = buildCurrentState({ type: 'stage', purpose: 'time-display', permissions: ['lyrics:read'] });
+    assert.equal(timeDisplayState.stageTimerState.remaining, '1:00');
+    assert.equal(Object.hasOwn(timeDisplayState, 'lyrics'), false);
+    assert.equal(Object.hasOwn(timeDisplayState, 'stageMessages'), false);
+
+    const outputState = buildCurrentState({ type: 'output1', purpose: 'output1', permissions: ['lyrics:read'] });
+    assert.deepEqual(outputState.lyrics, ['Line one', 'Line two']);
+    assert.deepEqual(outputState.output1Settings, { fontSize: 72 });
+    assert.equal(outputState.output1Enabled, true);
+    assert.equal(outputState.isOutputOn, true);
+    assert.equal(Object.hasOwn(outputState, 'output2Settings'), false);
+    assert.equal(Object.hasOwn(outputState, 'rawLyricsContent'), false);
+    assert.equal(Object.hasOwn(outputState, 'lyricsSource'), false);
+    assert.equal(Object.hasOwn(outputState, 'songMetadata'), false);
+    assert.equal(Object.hasOwn(outputState, 'setlistFiles'), false);
+
+    const stageState = buildCurrentState({ type: 'stage', purpose: 'stage-display', permissions: ['lyrics:read'] });
+    assert.deepEqual(stageState.lyrics, ['Line one', 'Line two']);
+    assert.deepEqual(stageState.setlistFiles, [{ id: 'next-song', displayName: 'Next Song' }]);
+    assert.deepEqual(stageState.stageMessages, [{ text: 'Welcome' }]);
+    assert.equal(Object.hasOwn(stageState, 'rawLyricsContent'), false);
+    assert.equal(Object.hasOwn(stageState, 'lyricsSource'), false);
+  } finally {
+    state.currentLyrics = previousLyrics;
+    state.currentLyricsTimestamps = previousTimestamps;
+    state.currentLyricsFileName = previousFileName;
+    state.currentRawLyricsContent = previousRawLyricsContent;
+    state.currentLyricsSource = previousLyricsSource;
+    state.currentSongMetadata = previousSongMetadata;
+    state.currentLyricsSections = previousSections;
+    state.currentLineToSection = previousLineToSection;
+    state.outputSettings = previousOutputSettings;
+    state.outputEnabled = previousOutputEnabled;
+    state.currentIsOutputOn = previousIsOutputOn;
+    state.currentStageSettings = previousStageSettings;
+    state.currentStageEnabled = previousStageEnabled;
+    state.setlistFiles = previousSetlist;
+    state.currentStageTimerState = previousStageTimerState;
+    state.currentStageMessages = previousStageMessages;
   }
 });

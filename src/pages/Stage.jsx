@@ -138,7 +138,7 @@ const Stage = () => {
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
-  useSocket('stage', { preview: isPreviewMode });
+  useSocket('stage', { preview: isPreviewMode, purpose: 'stage-display' });
   const { lyrics, selectedLine, lyricsFileName } = useLyricsState();
   const { isOutputOn } = useOutputState();
   const { settings: stageSettings } = useStageSettings();

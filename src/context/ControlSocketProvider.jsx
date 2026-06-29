@@ -211,7 +211,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 timeout: 10000,
                 reconnection: false,
                 forceNew: true,
-                auth: { token },
+                auth: { token, purpose: role },
             });
 
             if (socketRef.current) {
@@ -346,7 +346,8 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         setAuthStatus,
         setConnectionStatus,
         emitBackoffWarning,
-        clearBackoffWarning
+        clearBackoffWarning,
+        role
     ]);
 
     const scheduleRetry = useCallback(() => {

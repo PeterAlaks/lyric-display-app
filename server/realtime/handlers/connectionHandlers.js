@@ -6,8 +6,13 @@ import {
 } from '../state.js';
 import { getPrimaryOutputInstance, isOutputClientType, isOutputDiscoveryClientType, isPlainObject } from '../utils.js';
 
-export function registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId, isPreview = false }) {
-  console.log(`Authenticated user connected: ${clientType} (${deviceId}) - Socket: ${socket.id}`);
+const normalizePurpose = (value) => (
+  typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null
+);
+
+export function registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId, clientPurpose = null, isPreview = false }) {
+  const purpose = normalizePurpose(clientPurpose);
+  console.log(`Authenticated user connected: ${clientType}${purpose ? `/${purpose}` : ''} (${deviceId}) - Socket: ${socket.id}`);
 
   const isOutputClient = isOutputClientType(clientType) && !isOutputDiscoveryClientType(clientType);
   const tracksOutputPresence = isOutputClient && !isPreview;
@@ -25,6 +30,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     type: clientType,
     deviceId,
     sessionId,
+    purpose,
     socket,
     permissions: socket.userData.permissions,
     connectedAt: socket.userData.connectedAt
@@ -61,6 +67,17 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     }
 
     console.log(`Client ${socket.id} confirmed as: ${type}`);
+    const nextPurpose = normalizePurpose(payload.purpose);
+    if (nextPurpose) {
+      const clientInfo = state.connectedClients.get(socket.id);
+      if (clientInfo) {
+        const wouldDowngradeSpecificPurpose =
+          clientInfo.purpose && clientInfo.purpose !== nextPurpose && nextPurpose === clientInfo.type;
+        if (!wouldDowngradeSpecificPurpose) {
+          clientInfo.purpose = nextPurpose;
+        }
+      }
+    }
     socket.emit('currentState', buildCurrentState(state.connectedClients.get(socket.id)));
     socket.emit('outputsRegistry', { outputs: buildOutputList() });
   });
@@ -147,11 +164,16 @@ export function startConnectionStatsLogger() {
     const stats = {
       totalConnections: state.connectedClients.size,
       clientTypes: {},
+      clientPurposes: {},
       timestamp: Date.now()
     };
 
     state.connectedClients.forEach(client => {
       stats.clientTypes[client.type] = (stats.clientTypes[client.type] || 0) + 1;
+      if (client.purpose) {
+        const key = `${client.type}/${client.purpose}`;
+        stats.clientPurposes[key] = (stats.clientPurposes[key] || 0) + 1;
+      }
     });
 
     console.log('Connection statistics:', stats);

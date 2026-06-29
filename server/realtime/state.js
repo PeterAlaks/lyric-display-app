@@ -119,9 +119,79 @@ export const hasOutput = (outputId) => {
 export const isKnownOutput = (output) => output === 'output1' || output === 'output2' || state.registeredOutputs.has(output);
 export const isKnownOrStageOutput = (output) => output === 'stage' || isKnownOutput(output);
 
+const isOutputClientType = (type) => typeof type === 'string' && type.startsWith('output');
+
+const buildBaseState = (clientInfo, timestamp) => ({
+  isDesktopClient: clientInfo?.type === 'desktop',
+  clientPermissions: clientInfo?.permissions || [],
+  liveSafety: state.liveSafety,
+  timestamp,
+  syncTimestamp: timestamp,
+});
+
+const appendOutputState = (target, outputId) => {
+  if (!isOutputClientType(outputId)) return target;
+  target[`${outputId}Settings`] = state.outputSettings.get(outputId) || {};
+  target[`${outputId}Enabled`] = state.outputEnabled.has(outputId)
+    ? state.outputEnabled.get(outputId)
+    : true;
+  return target;
+};
+
 export function buildCurrentState(clientInfo) {
   const timestamp = Date.now();
+  const clientType = clientInfo?.type;
+  const clientPurpose = typeof clientInfo?.purpose === 'string' ? clientInfo.purpose : '';
+  const baseState = buildBaseState(clientInfo, timestamp);
+
+  if (clientPurpose === 'timer-control') {
+    return {
+      ...baseState,
+      stageTimerState: state.currentStageTimerState,
+    };
+  }
+
+  if (clientPurpose === 'time-display') {
+    return {
+      ...baseState,
+      stageTimerState: state.currentStageTimerState,
+    };
+  }
+
+  if (isOutputClientType(clientType)) {
+    return appendOutputState({
+      ...baseState,
+      lyrics: state.currentLyrics,
+      lyricsTimestamps: state.currentLyricsTimestamps,
+      selectedLine: state.currentSelectedLine,
+      lyricsSections: state.currentLyricsSections,
+      lineToSection: state.currentLineToSection,
+      isOutputOn: state.currentIsOutputOn,
+      lyricsFileName: state.currentLyricsFileName || '',
+      stageTimerState: state.currentStageTimerState,
+    }, clientType);
+  }
+
+  if (clientType === 'stage') {
+    return {
+      ...baseState,
+      lyrics: state.currentLyrics,
+      lyricsTimestamps: state.currentLyricsTimestamps,
+      selectedLine: state.currentSelectedLine,
+      lyricsSections: state.currentLyricsSections,
+      lineToSection: state.currentLineToSection,
+      stageSettings: state.currentStageSettings,
+      isOutputOn: state.currentIsOutputOn,
+      stageEnabled: state.currentStageEnabled,
+      setlistFiles: state.setlistFiles,
+      lyricsFileName: state.currentLyricsFileName || '',
+      stageTimerState: state.currentStageTimerState,
+      stageMessages: state.currentStageMessages,
+    };
+  }
+
   const currentState = {
+    ...baseState,
     lyrics: state.currentLyrics,
     lyricsTimestamps: state.currentLyricsTimestamps,
     selectedLine: state.currentSelectedLine,
@@ -135,11 +205,6 @@ export function buildCurrentState(clientInfo) {
     rawLyricsContent: state.currentRawLyricsContent || '',
     lyricsSource: state.currentLyricsSource || null,
     songMetadata: state.currentSongMetadata || null,
-    isDesktopClient: clientInfo?.type === 'desktop',
-    clientPermissions: clientInfo?.permissions || [],
-    liveSafety: state.liveSafety,
-    timestamp,
-    syncTimestamp: timestamp,
   };
 
   for (const [outputId, settings] of state.outputSettings) {

@@ -98,8 +98,11 @@ const TimeDisplay = () => {
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
-  useSocket('stage', { preview: isPreviewMode });
-  const { timerState, displayValue, intensity, now, progress } = useSharedTimer({ controller: false });
+  useSocket('stage', { preview: isPreviewMode, purpose: 'time-display' });
+  const { timerState, displayValue, intensity, now, progress } = useSharedTimer({
+    controller: false,
+    renderTickIntervalMs: 1000,
+  });
   const { settings: timerDisplaySettings } = useTimerDisplaySettings();
 
   const display = React.useMemo(() => {
@@ -237,7 +240,7 @@ const TimeDisplay = () => {
             }}
           >
             <div
-              className="h-full rounded-full transition-all"
+              className="h-full rounded-full"
               style={{
                 width: `${Math.max(0, Math.min(1, progress)) * 100}%`,
                 backgroundColor: accentColor,

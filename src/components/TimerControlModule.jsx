@@ -241,10 +241,35 @@ const usePreviewClock = (enabled, intervalMs = 1000) => {
   return now;
 };
 
+const useWindowActive = () => {
+  const getActive = React.useCallback(() => {
+    if (typeof document === 'undefined') return true;
+    return document.visibilityState !== 'hidden' && document.hasFocus();
+  }, []);
+  const [active, setActive] = React.useState(getActive);
+
+  React.useEffect(() => {
+    const updateActive = () => setActive(getActive());
+    window.addEventListener('focus', updateActive);
+    window.addEventListener('blur', updateActive);
+    document.addEventListener('visibilitychange', updateActive);
+    updateActive();
+
+    return () => {
+      window.removeEventListener('focus', updateActive);
+      window.removeEventListener('blur', updateActive);
+      document.removeEventListener('visibilitychange', updateActive);
+    };
+  }, [getActive]);
+
+  return active;
+};
+
 const TimerPreview = React.memo(({ timerState, displaySettings }) => {
   const showSecondaryText = displaySettings.showSecondaryText !== false;
   const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
-  const now = usePreviewClock(needsClock, 1000);
+  const windowActive = useWindowActive();
+  const now = usePreviewClock(needsClock, windowActive ? 1000 : 5000);
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
   const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
   const progress = React.useMemo(() => getTimerProgress(timerState, now), [timerState, now]);
@@ -259,7 +284,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
   return (
     <>
       <div
-        className="rounded-lg min-h-63.75 flex flex-col items-center justify-center px-6"
+        className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
         style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
       >
         {showSecondaryText && (
@@ -291,7 +316,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
         )}
         {displaySettings.showProgress && (
           <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
+            <div className="h-full rounded-full" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
           </div>
         )}
       </div>

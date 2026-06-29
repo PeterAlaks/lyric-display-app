@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createTimerSlice } from '../src/context/lyricsStore/timerSlice.js';
 import {
   MAX_TIMER_SETS,
   getTimerProgress,
@@ -8,6 +9,24 @@ import {
   normalizeTimerDisplaySettings,
   normalizeTimerState,
 } from '../src/utils/timerUtils.js';
+
+function createTimerStoreHarness() {
+  let currentState;
+  let updateCount = 0;
+  const set = (update) => {
+    const next = typeof update === 'function' ? update(currentState) : update;
+    if (!next || Object.keys(next).length === 0) return;
+    updateCount += 1;
+    currentState = { ...currentState, ...next };
+  };
+
+  currentState = createTimerSlice(set, (settings) => settings);
+
+  return {
+    getState: () => currentState,
+    getUpdateCount: () => updateCount,
+  };
+}
 
 test('timer progress advances for normalized stage panel countdown state', () => {
   const startTime = 1_000_000;
@@ -142,6 +161,24 @@ test('timer state display normalization migrates untouched legacy scale', () => 
 
   assert.equal(state.display.otherItemsScale, 0.1);
   assert.equal(state.display.globalClockScale, 0.1);
+});
+
+test('timer display sync ignores equal timestamped settings', () => {
+  const store = createTimerStoreHarness();
+  const firstSettings = normalizeTimerDisplaySettings({
+    label: 'Service Timer',
+    accentColor: '#22C55E',
+    displayUpdatedAt: 1_000_000,
+  });
+
+  store.getState().updateTimerDisplaySettings(firstSettings, { touch: false });
+  assert.equal(store.getUpdateCount(), 1);
+  const syncedSettingsRef = store.getState().timerDisplaySettings;
+
+  store.getState().updateTimerDisplaySettings(firstSettings, { touch: false });
+
+  assert.equal(store.getUpdateCount(), 1);
+  assert.equal(store.getState().timerDisplaySettings, syncedSettingsRef);
 });
 
 test('timer control settings cap timer sets at ten', () => {

@@ -1,3 +1,9 @@
+const normalizeClientPurpose = (value) => {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return /^[a-z0-9-]{1,48}$/.test(normalized) ? normalized : null;
+};
+
 export function createSocketAuthenticator({ verifyToken }) {
   return (socket, next) => {
     if (socket.handshake.query?.token) {
@@ -29,6 +35,7 @@ export function createSocketAuthenticator({ verifyToken }) {
       sessionId: decoded.sessionId,
       permissions: decoded.permissions,
       connectedAt: Date.now(),
+      clientPurpose: normalizeClientPurpose(socket.handshake.auth?.purpose),
       isPreview: socket.handshake.auth?.preview === true
     };
 

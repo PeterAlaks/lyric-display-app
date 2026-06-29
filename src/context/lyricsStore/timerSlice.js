@@ -1,4 +1,9 @@
-import { DEFAULT_TIMER_CONTROL_SETTINGS, DEFAULT_TIMER_DISPLAY, normalizeTimerControlSettings } from '../../utils/timerUtils';
+import {
+  DEFAULT_TIMER_CONTROL_SETTINGS,
+  DEFAULT_TIMER_DISPLAY,
+  normalizeTimerControlSettings,
+  normalizeTimerDisplaySettings,
+} from '../../utils/timerUtils.js';
 
 export const createTimerSlice = (set, normalizePaintSettingUpdates) => ({
   timerControlSettings: { ...DEFAULT_TIMER_CONTROL_SETTINGS },
@@ -38,7 +43,8 @@ export const createTimerSlice = (set, normalizePaintSettingUpdates) => ({
     const incomingSettings = settings && typeof settings === 'object'
       ? normalizePaintSettingUpdates(settings)
       : {};
-    const currentUpdatedAt = Number(state.timerDisplaySettings?.displayUpdatedAt) || 0;
+    const currentSettings = normalizeTimerDisplaySettings(state.timerDisplaySettings);
+    const currentUpdatedAt = Number(currentSettings.displayUpdatedAt) || 0;
     const incomingUpdatedAt = Number(incomingSettings.displayUpdatedAt) || 0;
 
     if (incomingUpdatedAt > 0 && currentUpdatedAt > incomingUpdatedAt) {
@@ -49,13 +55,18 @@ export const createTimerSlice = (set, normalizePaintSettingUpdates) => ({
     }
 
     const shouldTouch = options?.touch !== false && incomingUpdatedAt === 0;
+    const nextSettings = normalizeTimerDisplaySettings({
+      ...currentSettings,
+      ...incomingSettings,
+      displayUpdatedAt: incomingUpdatedAt || (shouldTouch ? Date.now() : currentUpdatedAt),
+    });
+
+    if (JSON.stringify(currentSettings) === JSON.stringify(nextSettings)) {
+      return {};
+    }
 
     return {
-      timerDisplaySettings: {
-        ...state.timerDisplaySettings,
-        ...incomingSettings,
-        displayUpdatedAt: incomingUpdatedAt || (shouldTouch ? Date.now() : currentUpdatedAt),
-      },
+      timerDisplaySettings: nextSettings,
     };
   }),
 });
