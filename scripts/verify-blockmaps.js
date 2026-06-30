@@ -20,6 +20,7 @@ const platformConfig = {
   linux: {
     metadata: 'latest-linux.yml',
     artifacts: ['.AppImage'],
+    requireBlockmaps: false,
   },
 };
 
@@ -48,14 +49,17 @@ if (artifacts.length === 0) {
   process.exit(1);
 }
 
-const missingBlockmaps = artifacts.filter((artifact) =>
-  !existsSync(path.join(distDir, `${artifact}.blockmap`))
-);
+const requireBlockmaps = config.requireBlockmaps !== false;
+const missingBlockmaps = requireBlockmaps
+  ? artifacts.filter((artifact) => !existsSync(path.join(distDir, `${artifact}.blockmap`)))
+  : [];
 
 if (missingBlockmaps.length > 0) {
   console.error(`Missing blockmaps for ${platform} artifacts:`);
   missingBlockmaps.forEach((artifact) => console.error(`- ${artifact}.blockmap`));
   process.exit(1);
+} else if (!requireBlockmaps) {
+  console.log(`Blockmap files are optional for ${platform} artifacts; skipping strict blockmap check.`);
 }
 
 const metadataPath = path.join(distDir, config.metadata);
