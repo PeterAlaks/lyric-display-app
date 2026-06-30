@@ -232,7 +232,7 @@ jobs:
             dist-artifacts/linux-installer/*
           fail_on_unmatched_files: false
           body: |
-            ## LyricDisplay v${{ steps.get_version.outputs.VERSION }}
+            ## LyricDisplay ${{ steps.get_version.outputs.VERSION }}
             
             ${{ steps.release_notes.outputs.CUSTOM_NOTES }}
             

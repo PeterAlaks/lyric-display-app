@@ -170,27 +170,39 @@ export default function UpdaterBridge() {
             label: 'Update Now',
             variant: 'default',
             value: 'update',
-            onSelect: async () => {
-              const result = await window.electronAPI.requestUpdateDownload?.();
-              if (result && result.success === false) {
-                showToast({
-                  title: 'Unable to download update',
-                  message: result.error || 'The update download could not be started. Please try again.',
-                  variant: 'error',
-                  duration: 8000,
-                  dedupeKey: 'app-update-download-error',
-                });
-              } else if (result?.alreadyDownloaded) {
-                showUpdateReadyToast();
-              } else if (result?.inProgress) {
-                showToast({
-                  title: 'Update download already running',
-                  message: 'The download is already in progress.',
-                  variant: 'info',
-                  duration: 4000,
-                  dedupeKey: 'app-update-download-running',
-                });
-              }
+            onSelect: () => {
+              void (async () => {
+                try {
+                  const result = await window.electronAPI.requestUpdateDownload?.();
+                  if (result && result.success === false) {
+                    showToast({
+                      title: 'Unable to download update',
+                      message: result.error || 'The update download could not be started. Please try again.',
+                      variant: 'error',
+                      duration: 8000,
+                      dedupeKey: 'app-update-download-error',
+                    });
+                  } else if (result?.alreadyDownloaded) {
+                    showUpdateReadyToast();
+                  } else if (result?.inProgress) {
+                    showToast({
+                      title: 'Update download already running',
+                      message: 'The download is already in progress.',
+                      variant: 'info',
+                      duration: 4000,
+                      dedupeKey: 'app-update-download-running',
+                    });
+                  }
+                } catch (error) {
+                  showToast({
+                    title: 'Unable to download update',
+                    message: error?.message || 'The update download could not be started. Please try again.',
+                    variant: 'error',
+                    duration: 8000,
+                    dedupeKey: 'app-update-download-error',
+                  });
+                }
+              })();
             }
           },
         ],
