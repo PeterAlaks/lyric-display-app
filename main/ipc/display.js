@@ -414,6 +414,7 @@ export function registerDisplayHandlers({ getMainWindow }) {
           projection: true,
           backgroundColor: '#000000',
           projectionFocusable: keyboardFocusable,
+          deferShow: true,
         });
       } else if (!isProjectionUrl(projectionWindow.webContents.getURL())) {
         projectionWindow.loadURL(projectionWindow.webContents.getURL().replace(route, projectionRoute));

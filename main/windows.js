@@ -380,6 +380,7 @@ export function createWindow(route = '/', options = {}) {
     minHeight = 650,
     title = null,
     projectionFocusable = false,
+    deferShow = false,
   } = options;
   const isTimerControlWindow = route.startsWith('/timer-control');
   const isObsSetupWindow = route.startsWith('/obs-setup');
@@ -397,7 +398,9 @@ export function createWindow(route = '/', options = {}) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js')
+      preload: resolveProductionPath('preload.js'),
+      backgroundThrottling: projection ? false : true,
+      spellcheck: projection ? false : true,
     },
     show: false,
     icon: path.join(appRoot, 'public', 'favicon.ico'),
@@ -431,6 +434,8 @@ export function createWindow(route = '/', options = {}) {
   }
 
   win.once('ready-to-show', () => {
+    if (deferShow) return;
+
     setTimeout(() => {
       try {
         if (projection && typeof win.showInactive === 'function') {

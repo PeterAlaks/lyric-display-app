@@ -16,14 +16,13 @@ export async function showDisplayDetectionModal(displayOrDisplays, isStartupChec
 
   try {
     const displaysInfo = displaysArray.map((display, index) => {
-      let displayName = display.name || display.label || 'External Display';
-      if (displaysArray.length > 1) {
-        displayName = `Display ${index + 1}`;
-      }
+      const nativeName = display.name || display.label;
+      const displayName = nativeName || (displaysArray.length > 1 ? `External Display ${index + 1}` : 'External Display');
 
       return {
         id: display.id,
         name: displayName,
+        label: display.label || null,
         bounds: display.bounds,
       };
     });

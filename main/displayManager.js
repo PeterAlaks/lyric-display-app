@@ -125,6 +125,7 @@ export function getAllDisplays() {
     return screen.getAllDisplays().map(display => ({
       id: display.id,
       name: getDisplayName(display),
+      label: getDisplayLabel(display),
       bounds: display.bounds,
       workArea: display.workArea,
       scaleFactor: display.scaleFactor,
@@ -149,6 +150,7 @@ export function getPrimaryDisplay() {
     return {
       id: primary.id,
       name: getDisplayName(primary),
+      label: getDisplayLabel(primary),
       bounds: primary.bounds,
       workArea: primary.workArea,
       scaleFactor: primary.scaleFactor,
@@ -179,6 +181,7 @@ export function getDisplayById(displayId) {
     return {
       id: display.id,
       name: getDisplayName(display),
+      label: getDisplayLabel(display),
       bounds: display.bounds,
       workArea: display.workArea,
       scaleFactor: display.scaleFactor,
@@ -192,12 +195,20 @@ export function getDisplayById(displayId) {
   }
 }
 
+function getDisplayLabel(display) {
+  const label = typeof display?.label === 'string' ? display.label.trim() : '';
+  return label || null;
+}
+
 function getDisplayName(display) {
   if (!app.isReady()) {
     return 'Display';
   }
 
   try {
+    const label = getDisplayLabel(display);
+    if (label) return label;
+
     const primary = screen.getPrimaryDisplay();
 
     if (display.id === primary.id) {
@@ -334,6 +345,7 @@ export function getWindowDisplay(window) {
         return {
           id: display.id,
           name: getDisplayName(display),
+          label: getDisplayLabel(display),
           bounds: display.bounds,
           workArea: display.workArea,
           scaleFactor: display.scaleFactor,

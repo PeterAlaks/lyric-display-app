@@ -121,10 +121,14 @@ export function registerMediaRoutes(app, {
   });
 
   app.use('/media', express.static(uploadsRoot, {
-    maxAge: '1d',
+    acceptRanges: true,
+    immutable: true,
+    maxAge: '30d',
     setHeaders: (res) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
     },
   }));
 }
-

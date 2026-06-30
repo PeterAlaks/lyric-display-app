@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getLineOutputText } from '../../utils/parseLyrics';
 import { resolveBackendUrl } from '../../utils/network';
@@ -18,6 +18,17 @@ const positionJustifyMap = {
   center: 'center',
   lower: 'flex-end',
 };
+
+const VIDEO_MEDIA_EXTENSION_PATTERN = /\.(mp4|webm|ogg|ogv|m4v|mov)$/i;
+
+const isVideoMedia = (media = {}) => (
+  media?.mimeType?.startsWith?.('video/')
+  || (!media?.mimeType && typeof media?.url === 'string' && VIDEO_MEDIA_EXTENSION_PATTERN.test(media.url))
+);
+
+const getMediaCacheKey = (media) => (
+  media?.uploadedAt || media?.url || media?.dataUrl?.slice?.(0, 64) || 'media'
+);
 
 export default function LyricVisualFrame({
   line,
@@ -172,54 +183,136 @@ export default function LyricVisualFrame({
       : 'transparent';
   const windowBackgroundColor = isProjectionMode ? '#000000' : fullScreenBackgroundColorValue;
 
-  const resolveBackgroundMediaSource = () => {
+  const backgroundMediaSource = useMemo(() => {
     if (!shouldRenderFullScreenBackgroundLayer || !fullScreenBackgroundMedia) return null;
     if (fullScreenBackgroundMedia.dataUrl) return fullScreenBackgroundMedia.dataUrl;
     if (!fullScreenBackgroundMedia.url) return null;
     if (fullScreenBackgroundMedia.bundled) return fullScreenBackgroundMedia.url;
 
     return resolveBackendUrl(fullScreenBackgroundMedia.url);
-  };
+  }, [
+    fullScreenBackgroundMedia,
+    shouldRenderFullScreenBackgroundLayer,
+  ]);
+
+  const backgroundMediaIsVideo = useMemo(
+    () => isVideoMedia(fullScreenBackgroundMedia),
+    [fullScreenBackgroundMedia]
+  );
+
+  const backgroundMediaCacheKey = useMemo(
+    () => getMediaCacheKey(fullScreenBackgroundMedia),
+    [fullScreenBackgroundMedia]
+  );
+
+  const isBackgroundVideoPlaybackManaged = typeof backgroundVideoPlaying === 'boolean';
+  const shouldPlayBackgroundVideo = backgroundMediaIsVideo
+    && Boolean(backgroundMediaSource)
+    && shouldRenderFullScreenBackgroundLayer
+    && (!isBackgroundVideoPlaybackManaged || backgroundVideoPlaying);
 
   useEffect(() => {
-    if (typeof backgroundVideoPlaying !== 'boolean') return;
-
     const video = backgroundVideoRef.current;
     if (!video) return;
 
-    if (backgroundVideoPlaying) {
-      const playPromise = video.play();
-      playPromise?.catch?.(() => { });
-    } else {
+    if (!shouldPlayBackgroundVideo) {
       video.pause();
+      return;
     }
-  }, [backgroundVideoPlaying, fullScreenBackgroundMedia?.url, fullScreenBackgroundMedia?.uploadedAt]);
+
+    let retryTimeout = null;
+
+    const clearRetry = () => {
+      if (retryTimeout) {
+        window.clearTimeout(retryTimeout);
+        retryTimeout = null;
+      }
+    };
+
+    const requestPlayback = () => {
+      if (!backgroundVideoRef.current || !shouldPlayBackgroundVideo) return;
+      const currentVideo = backgroundVideoRef.current;
+      currentVideo.muted = true;
+      currentVideo.loop = true;
+      currentVideo.playsInline = true;
+      const playPromise = currentVideo.play();
+      playPromise?.catch?.(() => { });
+    };
+
+    const schedulePlaybackRetry = () => {
+      clearRetry();
+      retryTimeout = window.setTimeout(requestPlayback, 250);
+    };
+
+    const handleEnded = () => {
+      if (!backgroundVideoRef.current) return;
+      try {
+        backgroundVideoRef.current.currentTime = 0;
+      } catch { }
+      requestPlayback();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) schedulePlaybackRetry();
+    };
+
+    requestPlayback();
+
+    video.addEventListener('ended', handleEnded);
+    video.addEventListener('pause', schedulePlaybackRetry);
+    video.addEventListener('stalled', schedulePlaybackRetry);
+    video.addEventListener('waiting', schedulePlaybackRetry);
+    video.addEventListener('suspend', schedulePlaybackRetry);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearRetry();
+      video.removeEventListener('ended', handleEnded);
+      video.removeEventListener('pause', schedulePlaybackRetry);
+      video.removeEventListener('stalled', schedulePlaybackRetry);
+      video.removeEventListener('waiting', schedulePlaybackRetry);
+      video.removeEventListener('suspend', schedulePlaybackRetry);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [
+    backgroundMediaCacheKey,
+    backgroundMediaSource,
+    shouldPlayBackgroundVideo,
+  ]);
 
   const renderFullScreenMedia = () => {
     if (!shouldRenderFullScreenBackgroundLayer || fullScreenBackgroundType !== 'media') return null;
 
     const media = fullScreenBackgroundMedia;
-    const mediaSource = resolveBackgroundMediaSource();
+    const mediaSource = backgroundMediaSource;
     if (!media || !mediaSource) return null;
 
-    const isVideo = media.mimeType?.startsWith('video/') ||
-      (!media.mimeType && typeof media.url === 'string' && /\.(mp4|webm|ogg|m4v|mov)$/i.test(media.url));
-    const cacheKey = media.uploadedAt || media.url || 'media';
-
-    if (isVideo) {
+    if (backgroundMediaIsVideo) {
       return (
         <video
-          key={`video-${cacheKey}`}
+          key={`video-${backgroundMediaCacheKey}`}
           ref={backgroundVideoRef}
           data-lyric-background-video="true"
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay={typeof backgroundVideoPlaying === 'boolean' ? false : true}
+          className="absolute inset-0 w-full h-full object-cover bg-black pointer-events-none select-none"
+          autoPlay={!isBackgroundVideoPlaybackManaged}
           loop
           muted
           playsInline
-          preload={typeof backgroundVideoPlaying === 'boolean' ? 'metadata' : 'auto'}
+          preload="auto"
           src={mediaSource}
+          disablePictureInPicture
+          disableRemotePlayback
+          controls={false}
+          controlsList="nodownload noplaybackrate noremoteplayback"
+          style={{
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            willChange: 'transform',
+          }}
+          onCanPlay={shouldPlayBackgroundVideo ? (event) => {
+            event.currentTarget.play()?.catch?.(() => { });
+          } : undefined}
           onError={() => logError(`${label}: Failed to load background video:`, mediaSource)}
         />
       );
@@ -227,11 +320,13 @@ export default function LyricVisualFrame({
 
     return (
       <img
-        key={`image-${cacheKey}`}
+        key={`image-${backgroundMediaCacheKey}`}
         aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
         src={mediaSource}
         alt="Full screen lyric background"
+        decoding="async"
+        draggable={false}
         onError={() => logError(`${label}: Failed to load background image:`, mediaSource)}
       />
     );
@@ -472,7 +567,14 @@ export default function LyricVisualFrame({
   };
 
   return (
-    <div className={className} style={{ background: windowBackgroundColor }}>
+    <div
+      className={className}
+      style={{
+        background: windowBackgroundColor,
+        contain: 'layout style paint',
+        isolation: 'isolate',
+      }}
+    >
       {renderFullScreenMedia()}
       {renderFullScreenElement()}
       <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
