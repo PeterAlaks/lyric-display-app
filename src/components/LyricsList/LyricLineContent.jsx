@@ -41,12 +41,12 @@ export default function LyricLineContent({
   if (line.type === 'group') {
     return (
       <div className={compact ? 'space-y-0.5' : 'space-y-1'}>
-        <div className="font-medium text-sm">
+        <div className="font-medium text-[15px]">
           {highlightSearchTerm(line.mainLine, searchQuery, darkMode, compact)}
         </div>
         {line.translation && (
           <div
-            className={`${compact ? 'text-[12px]' : 'text-sm'} italic ${darkMode ? 'text-gray-300' : 'text-gray-600'
+            className={`${compact ? 'text-[12px]' : 'text-[15px]'} italic ${darkMode ? 'text-gray-300' : 'text-gray-600'
               }`}
           >
             {highlightSearchTerm(line.translation, searchQuery, darkMode, compact)}
@@ -63,7 +63,7 @@ export default function LyricLineContent({
         {normalLines.map((groupLine, groupIndex) => (
           <div
             key={`${line.id || index}_${groupIndex}`}
-            className={`${groupIndex === 0 ? 'font-medium text-sm' : compact ? 'text-[12px]' : 'text-sm'} ${groupIndex === 0 ? '' : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}
+            className={`${groupIndex === 0 ? 'font-medium text-[15px]' : compact ? 'text-[12px]' : 'text-[15px]'} ${groupIndex === 0 ? '' : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}
           >
             {highlightSearchTerm(groupLine, searchQuery, darkMode, compact)}
           </div>
@@ -72,5 +72,5 @@ export default function LyricLineContent({
     );
   }
 
-  return <div className="text-sm">{highlightSearchTerm(line, searchQuery, darkMode, compact)}</div>;
+  return <div className="text-[15px]">{highlightSearchTerm(line, searchQuery, darkMode, compact)}</div>;
 }

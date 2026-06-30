@@ -10,9 +10,9 @@ This reflects the current release flow (tag-driven builds on GitHub Actions).
 5) GitHub Actions workflow (`.github/workflows/build-release.yml`) builds Windows, macOS, and Linux installers and publishes a GitHub Release with artifacts.
 
 ## CI artifact outputs
-- Windows: `LyricDisplay-${version}-Windows-Setup.exe` (+ `latest.yml`)
-- macOS: `LyricDisplay-${version}-macOS-arm64.dmg`, `LyricDisplay-${version}-macOS-x64.dmg`, plus `.zip` exports and `latest-mac.yml`
-- Linux: `LyricDisplay-${version}-Linux.AppImage`, `LyricDisplay-${version}.deb`, `LyricDisplay-${version}.rpm`, plus `latest-linux.yml`
+- Windows: `LyricDisplay-${version}-Windows-Setup.exe`, its `.blockmap`, and `latest.yml`
+- macOS: `LyricDisplay-${version}-macOS-arm64.dmg`, `LyricDisplay-${version}-macOS-x64.dmg`, `.zip` update exports, matching update `.blockmap` files, and `latest-mac.yml`
+- Linux: `LyricDisplay-${version}-Linux.AppImage`, its `.blockmap`, and `latest-linux.yml`
 Artifacts are attached to the GitHub Release; no MEGA upload step remains.
 
 ## Manual builds (per-OS)

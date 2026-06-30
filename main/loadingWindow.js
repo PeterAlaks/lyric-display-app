@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, shell } from 'electron';
 import path from 'path';
 import { resolveProductionPath, appRoot } from './paths.js';
 import { readFileSync } from 'fs';
@@ -24,8 +24,8 @@ export function createLoadingWindow() {
   const version = getAppVersion();
 
   loadingWindow = new BrowserWindow({
-    width: 630,
-    height: 345,
+    width: 760,
+    height: 440,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -43,7 +43,9 @@ export function createLoadingWindow() {
   });
 
   const logoPath = path.join(appRoot, 'public', 'logos', 'LyricDisplay logo-white.png');
+  const photoPath = path.join(appRoot, 'public', 'images', 'elianna-gill-d5mw4DMHPBI-unsplash.jpg');
   let logoUrl = '';
+  let photoUrl = '';
   try {
     const logoBuffer = readFileSync(logoPath);
     const logoBase64 = logoBuffer.toString('base64');
@@ -51,6 +53,14 @@ export function createLoadingWindow() {
   } catch (error) {
     console.error('[LoadingWindow] Failed to load logo:', error);
     logoUrl = '';
+  }
+  try {
+    const photoBuffer = readFileSync(photoPath);
+    const photoBase64 = photoBuffer.toString('base64');
+    photoUrl = `data:image/jpeg;base64,${photoBase64}`;
+  } catch (error) {
+    console.error('[LoadingWindow] Failed to load loading photo:', error);
+    photoUrl = '';
   }
 
   const loadingHTML = `
@@ -76,11 +86,11 @@ export function createLoadingWindow() {
         body {
           font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           overflow: hidden;
-          width: 630px;
-          height: 345px;
+          width: 760px;
+          height: 440px;
           background: transparent;
           -webkit-app-region: drag;
-          padding: 15px;
+          padding: 16px;
           box-sizing: border-box;
         }
         
@@ -88,58 +98,94 @@ export function createLoadingWindow() {
           width: 100%;
           height: 100%;
           background: linear-gradient(135deg, #000000 0%, #1F2937 50%, #111827 100%);
-          border-radius: 18px;
+          border-radius: 22px;
+          display: flex;
+          overflow: hidden;
+          box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.42);
+          position: relative;
+        }
+
+        .photo-panel {
+          width: 44%;
+          min-width: 320px;
+          height: 100%;
+          background: #111827;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .photo-panel img {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: cover;
+          object-position: center;
+        }
+
+        .photo-panel::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, rgba(0, 0, 0, 0) 72%, rgba(17, 24, 39, 0.18) 100%);
+          pointer-events: none;
+        }
+
+        .content-panel {
+          flex: 1;
+          min-width: 0;
           display: flex;
           flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          padding: 35px;
-          box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.25);
-          position: relative;
+          padding: 42px 40px 28px;
+          background: linear-gradient(135deg, #000000 0%, #1F2937 50%, #111827 100%);
         }
         
         .center-content {
           display: flex;
           flex-direction: column;
-          align-items: center;
-          gap: 12px;
+          align-items: flex-start;
+          justify-content: center;
+          gap: 24px;
+          flex: 1;
         }
         
         .logo-group {
           display: flex;
           flex-direction: column;
-          align-items: flex-end;
-          gap: 6px;
+          align-items: flex-start;
+          gap: 8px;
         }
         
         .logo {
-          width: 350px;
+          width: 260px;
           height: auto;
           object-fit: contain;
           flex-shrink: 0;
         }
         
         .tagline {
+          max-width: 280px;
           font-size: 12px;
           color: #9CA3AF;
           font-weight: 400;
-          line-height: 1.4;
+          line-height: 1.5;
         }
         
-        .footer {
-          position: absolute;
-          bottom: 30px;
-          left: 35px;
-          right: 35px;
+        .meta-stack {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .bottom-content {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
         }
         
         .version-info {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 6px;
         }
         
         .version {
@@ -155,20 +201,40 @@ export function createLoadingWindow() {
           letter-spacing: 0.28em;
           text-transform: uppercase;
           font-weight: 500;
+          line-height: 1.5;
         }
         
         .status-container {
           display: flex;
           flex-direction: column;
-          align-items: flex-end;
+          align-items: flex-start;
           gap: 6px;
         }
         
         .status-text {
           font-size: 11px;
           color: #D1D5DB;
-          text-align: right;
+          text-align: left;
           font-weight: 400;
+        }
+
+        .photo-credit {
+          color: #6B7280;
+          font-size: 10px;
+          line-height: 1.5;
+          -webkit-app-region: no-drag;
+        }
+
+        .photo-credit a {
+          color: #A7B3C5;
+          text-decoration: none;
+          transition: color 140ms ease;
+        }
+
+        .photo-credit a:hover,
+        .photo-credit a:focus-visible {
+          color: #FFFFFF;
+          outline: none;
         }
         
         .loading-dots {
@@ -207,22 +273,31 @@ export function createLoadingWindow() {
     </head>
     <body>
       <div class="container">
-        <div class="center-content">
-          <div class="logo-group">
-            <img src="${logoUrl}" alt="LyricDisplay Logo" class="logo">
-            <div class="tagline">Powering worship experiences worldwide...</div>
-          </div>
+        <div class="photo-panel">
+          ${photoUrl ? `<img src="${photoUrl}" alt="">` : ''}
         </div>
-        
-        <div class="footer">
-          <div class="version-info">
-            <div class="version">v${version}</div>
-            <div class="credits">BUILT BY PETER ALAKEMBI AND DAVID OKALIWE</div>
+        <div class="content-panel">
+          <div class="center-content">
+            <div class="logo-group">
+              <img src="${logoUrl}" alt="LyricDisplay Logo" class="logo">
+              <div class="tagline">Powering worship experiences worldwide...</div>
+            </div>
+            
+            <div class="meta-stack">
+              <div class="status-container">
+                <div class="status-text" id="statusText">
+                  Initializing<span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div class="status-container">
-            <div class="status-text" id="statusText">
-              Initializing<span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+          <div class="bottom-content">
+            <div class="version-info">
+              <div class="version">v${version}</div>
+              <div class="credits">BUILT BY PETER ALAKEMBI AND DAVID OKALIWE</div>
+            </div>
+            <div class="photo-credit">
+              Photo by <a href="https://unsplash.com/@elianna_gill03?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Elianna Gill</a> on <a href="https://unsplash.com/?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>
             </div>
           </div>
         </div>
@@ -245,6 +320,15 @@ export function createLoadingWindow() {
   `;
 
   loadingWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(loadingHTML));
+
+  loadingWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      shell.openExternal(url);
+    } catch (error) {
+      console.error('[LoadingWindow] Failed to open external URL:', url, error);
+    }
+    return { action: 'deny' };
+  });
 
   loadingWindow.once('ready-to-show', () => {
     if (loadingWindow && !loadingWindow.isDestroyed()) {

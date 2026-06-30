@@ -50,12 +50,16 @@ jobs:
       - name: Build Windows installer
         run: npx electron-builder --win --publish never
 
+      - name: Verify Windows blockmaps
+        run: node scripts/verify-blockmaps.js --windows
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: |
             dist/*.exe
+            dist/*.blockmap
             dist/latest.yml
           retention-days: 5
 
@@ -102,6 +106,9 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      - name: Verify macOS blockmaps
+        run: node scripts/verify-blockmaps.js --macos
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -109,6 +116,7 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.zip
+            dist/*.blockmap
             dist/latest-mac.yml
           retention-days: 5
 
@@ -158,6 +166,9 @@ jobs:
       - name: Build Linux installers
         run: npx electron-builder --linux --publish never
 
+      - name: Verify Linux blockmaps
+        run: node scripts/verify-blockmaps.js --linux
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -166,6 +177,7 @@ jobs:
             dist/*.AppImage
             dist/*.deb
             dist/*.rpm
+            dist/*.blockmap
             dist/latest-linux.yml
           retention-days: 5
 

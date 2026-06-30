@@ -84,7 +84,7 @@ export default function QuickParserPopover({
       type="button"
       onClick={handleReloadWithQuickParser}
       disabled={reloadingWithParser}
-      className={`w-full rounded-md py-2 text-sm font-medium transition-colors ${reloadingWithParser
+      className={`w-full rounded-full py-2 text-sm font-medium transition-colors ${reloadingWithParser
         ? 'bg-gray-400 text-gray-700 cursor-wait'
         : darkMode
           ? 'bg-blue-500 hover:bg-blue-400 text-white'
@@ -108,7 +108,7 @@ export default function QuickParserPopover({
               if (event.target === event.currentTarget) setQuickParserOpen(false);
             }}
           >
-            <div className={`flex h-full flex-col overflow-hidden rounded-lg border shadow-2xl ${darkMode ? 'border-gray-800 bg-gray-950 text-gray-100' : 'border-gray-200 bg-white text-gray-900'}`}>
+            <div className={`flex h-full flex-col overflow-hidden rounded-3xl border shadow-2xl ${darkMode ? 'border-gray-800 bg-gray-950 text-gray-100' : 'border-gray-200 bg-white text-gray-900'}`}>
               <div className={`flex items-center justify-between border-b px-4 py-3 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold">Quick Parser</div>
@@ -125,10 +125,10 @@ export default function QuickParserPopover({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-6">
                 {controls}
               </div>
-              <div className={`border-t p-3 ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
+              <div className={`border-t p-5 ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
                 {reloadButton}
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function QuickParserPopover({
         align="end"
         side="bottom"
         sideOffset={6}
-        className={`w-80 p-3 ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'}`}
+        className={`w-80 rounded-xl p-5 ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'}`}
       >
         <div className="space-y-3">
           {controls}
