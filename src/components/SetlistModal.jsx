@@ -531,7 +531,7 @@ const SetlistModal = () => {
 
       {/* Modal */}
       <div className={`
-        relative w-full max-w-4xl mx-4 max-h-[90vh] rounded-2xl border shadow-2xl ring-1 overflow-hidden
+        relative flex min-h-0 w-full max-w-4xl flex-col mx-4 max-h-[90vh] rounded-2xl border shadow-2xl ring-1 overflow-hidden
         ${darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20'}
         md:mx-auto md:w-full md:max-w-3xl md:max-h-[80vh] md:rounded-2xl
         sm:mx-2 sm:max-w-full sm:h-full sm:max-h-full sm:rounded-none
@@ -541,7 +541,7 @@ const SetlistModal = () => {
 
         {/* Fixed Header */}
         <div className={`
-          px-6 py-4 border-b flex items-center justify-between gap-4
+          shrink-0 px-6 py-4 border-b flex items-center justify-between gap-4
           ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}
         `}>
           <div className="min-w-0">
@@ -720,7 +720,7 @@ const SetlistModal = () => {
 
         {/* Fixed Search Bar */}
         <div className={`
-          px-6 py-4 border-b
+          shrink-0 px-6 py-4 border-b
           ${darkMode ? 'border-gray-800 bg-gray-950/35' : 'border-gray-200 bg-[#f8fafc]'}
         `}>
           <div className="relative">
@@ -759,7 +759,7 @@ const SetlistModal = () => {
         </div>
 
         {/* Scrollable Content */}
-        <div className={`flex-1 overflow-y-auto p-5 max-h-96 ${darkMode ? 'bg-gray-950/20' : 'bg-white'}`}>
+        <div className={`min-h-0 flex-1 overflow-y-auto p-5 ${darkMode ? 'bg-gray-950/20' : 'bg-white'}`}>
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -829,6 +829,21 @@ const SetlistModal = () => {
               </SortableContext>
             </DndContext>
           )}
+        </div>
+
+        {/* Fixed Footer */}
+        <div className={`
+          shrink-0 px-6 py-4 border-t flex items-center justify-end
+          ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}
+        `}>
+          <Button
+            type="button"
+            variant={darkMode ? 'outline' : 'default'}
+            onClick={closeModal}
+            className={darkMode ? 'min-w-[96px] border-gray-500 bg-transparent text-white hover:border-gray-400 hover:bg-gray-800/40 hover:text-white' : 'min-w-[96px]'}
+          >
+            Close
+          </Button>
         </div>
       </div>
     </div>

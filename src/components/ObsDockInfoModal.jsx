@@ -40,18 +40,28 @@ function CopyField({ label, value, darkMode }) {
     }
   };
 
+  const cardClass = darkMode
+    ? 'border-gray-700/80 bg-gray-900/65 shadow-sm shadow-black/10'
+    : 'border-gray-200 bg-gray-50';
+  const codeClass = darkMode
+    ? 'border-gray-700/70 bg-gray-800/80 text-blue-200'
+    : 'border-gray-200 bg-white text-blue-700';
+  const copyButtonClass = darkMode
+    ? 'border-gray-600 bg-gray-800/80 text-gray-100 hover:border-gray-500 hover:bg-gray-700 hover:text-white'
+    : '';
+
   return (
-    <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
+    <div className={`rounded-lg border p-3 ${cardClass}`}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           {label}
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
+        <Button type="button" variant="outline" size="sm" onClick={handleCopy} className={copyButtonClass}>
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           {copied ? 'Copied' : 'Copy'}
         </Button>
       </div>
-      <code className={`block break-all rounded border px-2 py-2 text-xs ${darkMode ? 'border-gray-800 bg-gray-900 text-blue-200' : 'border-gray-200 bg-white text-blue-700'}`}>
+      <code className={`block break-all rounded border px-2 py-2 text-xs ${codeClass}`}>
         {value}
       </code>
     </div>
@@ -84,18 +94,28 @@ function CopyDisplayField({ label, displayValue, copyValue, darkMode, hint }) {
     }
   };
 
+  const cardClass = darkMode
+    ? 'border-gray-700/80 bg-gray-900/65 shadow-sm shadow-black/10'
+    : 'border-gray-200 bg-gray-50';
+  const codeClass = darkMode
+    ? 'border-gray-700/70 bg-gray-800/80 text-blue-200'
+    : 'border-gray-200 bg-white text-blue-700';
+  const copyButtonClass = darkMode
+    ? 'border-gray-600 bg-gray-800/80 text-gray-100 hover:border-gray-500 hover:bg-gray-700 hover:text-white'
+    : '';
+
   return (
-    <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
+    <div className={`rounded-lg border p-3 ${cardClass}`}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           {label}
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
+        <Button type="button" variant="outline" size="sm" onClick={handleCopy} className={copyButtonClass}>
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           {copied ? 'Copied' : 'Copy'}
         </Button>
       </div>
-      <code className={`block break-all rounded border px-2 py-2 text-xs ${darkMode ? 'border-gray-800 bg-gray-900 text-blue-200' : 'border-gray-200 bg-white text-blue-700'}`}>
+      <code className={`block break-all rounded border px-2 py-2 text-xs ${codeClass}`}>
         {displayValue}
       </code>
       {hint && (
@@ -180,7 +200,7 @@ export default function ObsDockInfoModal({ darkMode }) {
       />
       <CopyField label={commandLabel} value={info?.headlessCommand} darkMode={darkMode} />
 
-      <div className={`rounded-lg border p-4 text-sm ${darkMode ? 'border-gray-700 bg-gray-900 text-gray-200' : 'border-gray-200 bg-white text-gray-700'}`}>
+      <div className={`rounded-lg border p-4 text-sm ${darkMode ? 'border-gray-700/80 bg-gray-900/65 text-gray-200 shadow-sm shadow-black/10' : 'border-gray-200 bg-white text-gray-700'}`}>
         <div className={`mb-2 font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Setup Steps</div>
         <ol className="list-decimal space-y-2 pl-5">
           {info?.isDev ? (
@@ -203,7 +223,7 @@ export default function ObsDockInfoModal({ darkMode }) {
         </ol>
       </div>
 
-      <div className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${darkMode ? 'border-gray-700 bg-gray-950 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+      <div className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${darkMode ? 'border-blue-400/20 bg-blue-500/10 text-blue-100' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
         <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
           Use one LyricDisplay Dock entry in OBS. The setup page stays as the home page and opens the controller only after LyricDisplay is ready.

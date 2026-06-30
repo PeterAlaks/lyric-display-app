@@ -285,7 +285,7 @@ const AuthStatusIndicator = ({
 
     const actions = [
       {
-        label: 'Connection Diagnostics',
+        label: 'Diagnostics',
         variant: 'default',
         onSelect: () => {
           showModal({

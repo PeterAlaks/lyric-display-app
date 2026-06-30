@@ -6,7 +6,7 @@ import useLyricsStore from '@/context/LyricsStore';
 
 let globalActiveTooltip = null;
 
-export function Tooltip({ children, content, delay = 1000, side = 'top', className }) {
+export function Tooltip({ children, content, delay = 1000, side = 'top', className, disabled = false }) {
     const showTooltips = useLyricsStore((state) => state.showTooltips);
     const [visible, setVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -75,18 +75,23 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
         }
     }, [childTitle]);
 
-    // When tooltips are disabled, dismiss any visible tooltip and render children directly
+    const suppressed = !showTooltips || disabled;
+
+    // When tooltips are suppressed, dismiss any visible tooltip and render children directly
     useEffect(() => {
-        if (!showTooltips && visible) {
+        if (suppressed) {
             setVisible(false);
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
                 timeoutRef.current = null;
             }
+            if (globalActiveTooltip === instanceId.current) {
+                globalActiveTooltip = null;
+            }
         }
-    }, [showTooltips, visible]);
+    }, [suppressed]);
 
-    if (!showTooltips) {
+    if (suppressed) {
         return children;
     }
 

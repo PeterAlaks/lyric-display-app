@@ -254,7 +254,7 @@
 .lyric-video-range::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  width: 14px;
+  width: 24px;
   height: 14px;
   margin-top: -4px;
   border: 0;
@@ -287,7 +287,7 @@
 }
 
 .lyric-video-range::-moz-range-thumb {
-  width: 14px;
+  width: 24px;
   height: 14px;
   border: 0;
   border-radius: 999px;

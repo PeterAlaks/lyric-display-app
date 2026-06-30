@@ -98,7 +98,7 @@ export default function QuickParserPopover({
   if (presentation === 'sheet') {
     return (
       <>
-        <Tooltip content="Quick parser controls" side="bottom">
+        <Tooltip content="Quick parser controls" side="bottom" disabled={quickParserOpen}>
           {renderTriggerButton({ onClick: () => setQuickParserOpen(true) })}
         </Tooltip>
         {quickParserOpen && typeof document !== 'undefined' && createPortal(
@@ -141,7 +141,7 @@ export default function QuickParserPopover({
 
   return (
     <Popover open={quickParserOpen} onOpenChange={setQuickParserOpen}>
-      <Tooltip content="Quick parser controls" side="bottom">
+      <Tooltip content="Quick parser controls" side="bottom" disabled={quickParserOpen}>
         <PopoverTrigger asChild>
           {renderTriggerButton()}
         </PopoverTrigger>

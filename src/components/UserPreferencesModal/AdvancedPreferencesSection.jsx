@@ -110,7 +110,7 @@ const AdvancedPreferencesSection = ({
             </span>
           </div>
           <p className={`mt-1 text-xs ${mutedClass}`}>
-            Control LyricDisplay from an OBS dock while LyricDisplay runs quietly in the background.
+            Control LyricDisplay from an OBS dock while it runs quietly in the background.
           </p>
         </div>
       </div>
