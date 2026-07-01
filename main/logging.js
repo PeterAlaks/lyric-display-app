@@ -224,6 +224,44 @@ export const getLogPaths = () => ({
   latestLogFilePath,
 });
 
+function logUserDataMigrationStatus() {
+  const status = getUserDataMigrationResult();
+  if (!status) return;
+
+  const conflicts = [
+    ...(Array.isArray(status.conflicts) ? status.conflicts : []),
+    ...(Array.isArray(status.legacyNdi?.conflicts) ? status.legacyNdi.conflicts : []),
+    ...(Array.isArray(status.legacyUserDataNdi?.conflicts) ? status.legacyUserDataNdi.conflicts : []),
+  ];
+  const errors = [
+    ...(Array.isArray(status.errors) ? status.errors : []),
+    ...(Array.isArray(status.legacyNdi?.errors) ? status.legacyNdi.errors : []),
+    ...(Array.isArray(status.legacyUserDataNdi?.errors) ? status.legacyUserDataNdi.errors : []),
+  ];
+  const didMigrationWork = Boolean(
+    status.attempted ||
+    status.reconciliationAttempted ||
+    status.legacyNdi?.attempted ||
+    status.legacyUserDataNdi?.attempted ||
+    conflicts.length ||
+    errors.length
+  );
+
+  if (didMigrationWork) {
+    writeLog('INFO', 'User data migration run status', status);
+    return;
+  }
+
+  writeLog('INFO', 'User data migration already complete', {
+    migratedAt: status.migratedAt,
+    sourcePath: status.sourcePath,
+    targetPath: status.targetPath,
+    deletedLegacy: status.deletedLegacy,
+    legacyNdiDeleted: status.legacyNdi?.deletedLegacy,
+    legacyUserDataNdiDeleted: status.legacyUserDataNdi?.deletedLegacy,
+  });
+}
+
 function summarizeAppMetrics() {
   try {
     return app.getAppMetrics().map((metric) => ({
@@ -353,7 +391,7 @@ export function initFileLogging() {
     pid: process.pid,
     logFilePath,
   });
-  writeLog('INFO', 'User data migration status', getUserDataMigrationResult());
+  logUserDataMigrationStatus();
   startResourceDiagnostics();
 
   return getLogPaths();

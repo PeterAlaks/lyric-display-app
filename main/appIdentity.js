@@ -23,6 +23,46 @@ function pathExists(filePath) {
   }
 }
 
+function recordConflict(summary, sourcePath, targetPath, message) {
+  if (!Array.isArray(summary.conflicts)) {
+    summary.conflicts = [];
+  }
+  summary.conflicts.push({ sourcePath, targetPath, message });
+}
+
+function filesHaveSameContent(sourcePath, targetPath, sourceStat) {
+  let targetStat;
+  try {
+    targetStat = fs.lstatSync(targetPath);
+  } catch {
+    return false;
+  }
+
+  if (!targetStat.isFile() || sourceStat.size !== targetStat.size) {
+    return false;
+  }
+
+  if (sourceStat.size === 0) {
+    return true;
+  }
+
+  try {
+    return fs.readFileSync(sourcePath).equals(fs.readFileSync(targetPath));
+  } catch {
+    return false;
+  }
+}
+
+function symlinksHaveSameTarget(sourcePath, targetPath) {
+  try {
+    const targetStat = fs.lstatSync(targetPath);
+    return targetStat.isSymbolicLink() &&
+      fs.readlinkSync(sourcePath) === fs.readlinkSync(targetPath);
+  } catch {
+    return false;
+  }
+}
+
 function copyMissingRecursive(sourcePath, targetPath, summary) {
   let stat;
   try {
@@ -34,7 +74,16 @@ function copyMissingRecursive(sourcePath, targetPath, summary) {
 
   if (stat.isSymbolicLink()) {
     if (pathExists(targetPath)) {
-      summary.skippedExisting += 1;
+      if (symlinksHaveSameTarget(sourcePath, targetPath)) {
+        summary.skippedExisting += 1;
+      } else {
+        recordConflict(
+          summary,
+          sourcePath,
+          targetPath,
+          'Target path already exists for a different symbolic link'
+        );
+      }
       return;
     }
 
@@ -81,7 +130,16 @@ function copyMissingRecursive(sourcePath, targetPath, summary) {
   }
 
   if (pathExists(targetPath)) {
-    summary.skippedExisting += 1;
+    if (filesHaveSameContent(sourcePath, targetPath, stat)) {
+      summary.skippedExisting += 1;
+    } else {
+      recordConflict(
+        summary,
+        sourcePath,
+        targetPath,
+        'Target file already exists with different contents'
+      );
+    }
     return;
   }
 
@@ -114,6 +172,9 @@ function migrateUserData(appDataPath) {
     skippedOther: 0,
     deletedLegacy: false,
     legacyDeleteSkippedReason: null,
+    migratedAt: null,
+    reconciliationAttempted: false,
+    conflicts: [],
     legacyNdi: createLegacyNdiSummary(legacyNdiPath, targetNdiPath),
     legacyUserDataNdi: createLegacyNdiSummary(legacyUserDataNdiPath, targetNdiPath),
     errors: [],
@@ -129,6 +190,7 @@ function migrateUserData(appDataPath) {
       applyExistingMarker(markerPath, summary);
       summary.deletedLegacy = true;
       summary.legacyDeleteSkippedReason = null;
+      summary.conflicts = [];
       summary.errors = getMigrationErrors(summary);
     }
     migrateLegacyNdiFolders(summary);
@@ -139,10 +201,18 @@ function migrateUserData(appDataPath) {
   }
 
   if (pathExists(markerPath)) {
-    summary.attempted = false;
     applyExistingMarker(markerPath, summary);
-    if (!summary.legacyDeleteSkippedReason) {
-      summary.legacyDeleteSkippedReason = 'Migration marker already exists';
+    summary.reconciliationAttempted = true;
+    summary.legacyDeleteSkippedReason = null;
+    summary.conflicts = [];
+    try {
+      fs.mkdirSync(targetPath, { recursive: true });
+      withAsarDisabled(() => {
+        copyMissingRecursive(sourcePath, targetPath, summary);
+      });
+    } catch (error) {
+      summary.errors.push({ path: targetPath, message: error.message });
+      summary.legacyDeleteSkippedReason = 'Migration reconciliation failed';
     }
     deleteLegacyUserData(sourcePath, summary);
     updateMigrationMarker(markerPath, summary);
@@ -159,21 +229,8 @@ function migrateUserData(appDataPath) {
     });
 
     if (isMigrationComplete(summary)) {
-      fs.writeFileSync(
-        markerPath,
-        JSON.stringify({
-          migratedAt: new Date().toISOString(),
-          sourcePath,
-          targetPath,
-          copiedFiles: summary.copiedFiles,
-          skippedExisting: summary.skippedExisting,
-          skippedSymlinks: summary.skippedSymlinks,
-          skippedOther: summary.skippedOther,
-          deletedLegacy: false,
-          errors: summary.errors,
-        }, null, 2),
-        'utf8'
-      );
+      summary.migratedAt = new Date().toISOString();
+      updateMigrationMarker(markerPath, summary);
       deleteLegacyUserData(sourcePath, summary);
       migrateLegacyNdiFolders(summary);
       updateMigrationMarker(markerPath, summary);
@@ -201,6 +258,8 @@ function createLegacyNdiSummary(sourcePath, targetPath) {
     skippedOther: 0,
     deletedLegacy: false,
     legacyDeleteSkippedReason: null,
+    previouslyAttempted: false,
+    conflicts: [],
     errors: [],
   };
 }
@@ -215,6 +274,7 @@ function migrateLegacyNdiFolder(ndi) {
     if (ndi && !pathExists(ndi.sourcePath)) {
       ndi.deletedLegacy = true;
       ndi.legacyDeleteSkippedReason = null;
+      ndi.conflicts = [];
       ndi.errors = [];
     }
     return;
@@ -243,6 +303,7 @@ function migrateLegacyNdiFolder(ndi) {
 
 function isLegacyNdiMigrationComplete(ndi) {
   return getLegacyNdiMigrationErrors(ndi).length === 0 &&
+    (!Array.isArray(ndi.conflicts) || ndi.conflicts.length === 0) &&
     ndi.skippedSymlinks === 0 &&
     ndi.skippedOther === 0;
 }
@@ -288,6 +349,7 @@ function withAsarDisabled(callback) {
 
 function isMigrationComplete(summary) {
   return getMigrationErrors(summary).length === 0 &&
+    (!Array.isArray(summary.conflicts) || summary.conflicts.length === 0) &&
     summary.skippedSymlinks === 0 &&
     summary.skippedOther === 0;
 }
@@ -299,12 +361,14 @@ function getMigrationErrors(summary) {
 function applyExistingMarker(markerPath, summary) {
   try {
     const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    summary.migratedAt = marker.migratedAt || null;
     summary.copiedFiles = Number(marker.copiedFiles) || 0;
     summary.skippedExisting = Number(marker.skippedExisting) || 0;
     summary.skippedSymlinks = Number(marker.skippedSymlinks) || 0;
     summary.skippedOther = Number(marker.skippedOther) || 0;
     summary.deletedLegacy = Boolean(marker.deletedLegacy);
     summary.legacyDeleteSkippedReason = marker.legacyDeleteSkippedReason || null;
+    summary.conflicts = Array.isArray(marker.conflicts) ? marker.conflicts : [];
     summary.errors = Array.isArray(marker.errors) ? marker.errors : [];
     if (marker.legacyNdi && typeof marker.legacyNdi === 'object') {
       applyLegacyNdiMarker(summary.legacyNdi, marker.legacyNdi);
@@ -319,17 +383,22 @@ function applyExistingMarker(markerPath, summary) {
 }
 
 function applyLegacyNdiMarker(targetSummary, marker) {
-  targetSummary.attempted = Boolean(marker.attempted);
+  targetSummary.previouslyAttempted = Boolean(marker.previouslyAttempted || marker.attempted);
   targetSummary.copiedFiles = Number(marker.copiedFiles) || 0;
   targetSummary.skippedExisting = Number(marker.skippedExisting) || 0;
   targetSummary.skippedSymlinks = Number(marker.skippedSymlinks) || 0;
   targetSummary.skippedOther = Number(marker.skippedOther) || 0;
   targetSummary.deletedLegacy = Boolean(marker.deletedLegacy);
   targetSummary.legacyDeleteSkippedReason = marker.legacyDeleteSkippedReason || null;
+  targetSummary.conflicts = Array.isArray(marker.conflicts) ? marker.conflicts : [];
   targetSummary.errors = Array.isArray(marker.errors) ? marker.errors : [];
 }
 
 function deleteLegacyUserData(sourcePath, summary) {
+  if (pathExists(sourcePath)) {
+    summary.deletedLegacy = false;
+  }
+
   if (!isMigrationComplete(summary)) {
     if (!summary.legacyDeleteSkippedReason) {
       summary.legacyDeleteSkippedReason = 'Migration did not complete cleanly';
@@ -356,18 +425,23 @@ function deleteLegacyUserData(sourcePath, summary) {
 
 function updateMigrationMarker(markerPath, summary) {
   try {
+    const updatedAt = new Date().toISOString();
     fs.writeFileSync(
       markerPath,
       JSON.stringify({
-        migratedAt: new Date().toISOString(),
+        migratedAt: summary.migratedAt || updatedAt,
+        updatedAt,
         sourcePath: summary.sourcePath,
         targetPath: summary.targetPath,
+        attempted: summary.attempted,
+        reconciliationAttempted: summary.reconciliationAttempted,
         copiedFiles: summary.copiedFiles,
         skippedExisting: summary.skippedExisting,
         skippedSymlinks: summary.skippedSymlinks,
         skippedOther: summary.skippedOther,
         deletedLegacy: summary.deletedLegacy,
         legacyDeleteSkippedReason: summary.legacyDeleteSkippedReason,
+        conflicts: summary.conflicts,
         legacyNdi: summary.legacyNdi,
         legacyUserDataNdi: summary.legacyUserDataNdi,
         errors: summary.errors,
@@ -421,6 +495,10 @@ export function configureAppIdentity() {
 
 export function getUserDataMigrationResult() {
   return migrationResult;
+}
+
+export function migrateUserDataForTests(appDataPath) {
+  return migrateUserData(appDataPath);
 }
 
 configureAppIdentity();
