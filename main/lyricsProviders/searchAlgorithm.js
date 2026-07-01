@@ -671,6 +671,7 @@ export function calculateRelevanceScore(item, queryAnalysis, options = {}) {
     const signals = {};
     let isExact = false;
     const quality = getProviderQualitySignals(item);
+    const explicitSearchMatch = getExplicitSearchMatch(item);
 
     // ===== TIER 1: Exact Matches (Highest Priority) =====
     if (titleNorm === normalizedQuery) {
@@ -704,6 +705,19 @@ export function calculateRelevanceScore(item, queryAnalysis, options = {}) {
             },
             isExact: true,
         };
+    }
+
+    if (explicitSearchMatch?.field === 'lyrics') {
+        const lyricScore = clampScore(explicitSearchMatch.score);
+        score += 0.62 * lyricScore;
+        signals.lyricTextMatch = {
+            score: lyricScore,
+            exactPhrase: Boolean(explicitSearchMatch.exactPhrase),
+        };
+        if (explicitSearchMatch.exactPhrase) {
+            score += 0.18;
+            isExact = true;
+        }
     }
 
     // ===== TIER 2: Substring Matches =====
@@ -956,6 +970,17 @@ function getProviderQualitySignals(item) {
     }
 
     return { scoreDelta, signals };
+}
+
+function getExplicitSearchMatch(item) {
+    const match = item?.metadata?.searchMatch;
+    if (!match || typeof match !== 'object') return null;
+
+    return {
+        field: match.field || null,
+        score: Number.isFinite(match.score) ? match.score : 0,
+        exactPhrase: Boolean(match.exactPhrase),
+    };
 }
 
 function summarizeInterpretation(interpretation) {
