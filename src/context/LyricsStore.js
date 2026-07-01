@@ -179,6 +179,7 @@ const useLyricsStore = create(
           timerDisplaySettings: state.timerDisplaySettings,
           autoplaySettings: state.autoplaySettings,
           lyricsTimestamps: state.lyricsTimestamps,
+          lyricsEnhancedTimestamps: state.lyricsEnhancedTimestamps,
           hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
           ...partializeOutputState(state),
         };

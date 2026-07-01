@@ -32,6 +32,7 @@ const summarizeSnapshotForLog = (state) => {
   return {
     lyrics: Array.isArray(state.lyrics) ? state.lyrics.length : undefined,
     lyricsTimestamps: Array.isArray(state.lyricsTimestamps) ? state.lyricsTimestamps.length : undefined,
+    lyricsEnhancedTimestamps: Array.isArray(state.lyricsEnhancedTimestamps) ? state.lyricsEnhancedTimestamps.length : undefined,
     lyricsSections: Array.isArray(state.lyricsSections) ? state.lyricsSections.length : undefined,
     setlistFiles: Array.isArray(state.setlistFiles) ? state.setlistFiles.length : undefined,
     rawLyricsContentBytes: typeof state.rawLyricsContent === 'string' ? state.rawLyricsContent.length : undefined,
@@ -60,6 +61,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
   const {
     setLyrics,
     setLyricsTimestamps,
+    setLyricsEnhancedTimestamps,
     selectLine,
     updateOutputSettings,
     setSetlistFiles,
@@ -224,6 +226,13 @@ const useSocketEvents = (role, clientPurpose = role) => {
           setLyricsTimestamps(nextTimestamps);
         }
       }
+      if (hasOwn(state, 'lyricsEnhancedTimestamps') && !preserveHydratedLyrics && !isPassiveDisplayRole(role)) {
+        const nextEnhancedTimestamps = Array.isArray(state.lyricsEnhancedTimestamps) ? state.lyricsEnhancedTimestamps : [];
+        const currentEnhancedTimestamps = useLyricsStore.getState().lyricsEnhancedTimestamps;
+        if (!shallowArrayEqual(currentEnhancedTimestamps, nextEnhancedTimestamps)) {
+          setLyricsEnhancedTimestamps(nextEnhancedTimestamps);
+        }
+      }
       if (hasOwn(state, 'lyricsFileName') && typeof state.lyricsFileName === 'string' && !preserveHydratedLyrics) {
         if (shouldIgnoreEmptyRemoteFileName(state.lyricsFileName)) {
           logDebug(`Ignoring empty ${source} lyricsFileName to preserve local desktop state`);
@@ -336,6 +345,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       setLyrics(lyrics);
       if (!isPassiveDisplayRole(role)) {
         setLyricsTimestamps(Array.isArray(payloadObject?.lyricsTimestamps) ? payloadObject.lyricsTimestamps : []);
+        setLyricsEnhancedTimestamps(Array.isArray(payloadObject?.lyricsEnhancedTimestamps) ? payloadObject.lyricsEnhancedTimestamps : []);
       }
       if (typeof payloadObject?.fileName === 'string') {
         setLyricsFileName(payloadObject.fileName);
@@ -680,7 +690,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     socket.on('periodicStateSync', (state) => {
       applySnapshot(state, 'periodicStateSync');
     });
-  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata]);
+  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,
@@ -784,6 +794,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
               lyricsSource: currentState.lyricsSource || null,
               songMetadata: currentState.songMetadata || null,
               lyricsTimestamps: currentState.lyricsTimestamps || [],
+              lyricsEnhancedTimestamps: currentState.lyricsEnhancedTimestamps || [],
               sections: currentState.lyricsSections || [],
               lineToSection: currentState.lineToSection || {},
             });

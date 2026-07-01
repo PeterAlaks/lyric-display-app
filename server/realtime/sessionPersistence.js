@@ -24,6 +24,7 @@ const createSnapshot = () => ({
   savedAt: Date.now(),
   currentLyrics: Array.isArray(state.currentLyrics) ? state.currentLyrics : [],
   currentLyricsTimestamps: Array.isArray(state.currentLyricsTimestamps) ? state.currentLyricsTimestamps : [],
+  currentLyricsEnhancedTimestamps: Array.isArray(state.currentLyricsEnhancedTimestamps) ? state.currentLyricsEnhancedTimestamps : [],
   currentLyricsFileName: state.currentLyricsFileName || '',
   currentRawLyricsContent: state.currentRawLyricsContent || '',
   currentLyricsSource: state.currentLyricsSource || null,
@@ -47,6 +48,7 @@ const applySnapshot = (snapshot) => {
 
   state.currentLyrics = Array.isArray(snapshot.currentLyrics) ? snapshot.currentLyrics : [];
   state.currentLyricsTimestamps = Array.isArray(snapshot.currentLyricsTimestamps) ? snapshot.currentLyricsTimestamps : [];
+  state.currentLyricsEnhancedTimestamps = Array.isArray(snapshot.currentLyricsEnhancedTimestamps) ? snapshot.currentLyricsEnhancedTimestamps : [];
   state.currentLyricsFileName = typeof snapshot.currentLyricsFileName === 'string' ? snapshot.currentLyricsFileName : '';
   state.currentRawLyricsContent = typeof snapshot.currentRawLyricsContent === 'string' ? snapshot.currentRawLyricsContent : '';
   state.currentLyricsSource = snapshot.currentLyricsSource && typeof snapshot.currentLyricsSource === 'object'

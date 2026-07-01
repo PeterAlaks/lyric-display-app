@@ -7,7 +7,7 @@ import { detectArtistFromFilename } from '../utils/artistDetection';
 import useLyricsStore from '../context/LyricsStore';
 
 const useFileUpload = () => {
-  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps } = useLyricsState();
+  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps } = useLyricsState();
   const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
   const maxFileSize = useLyricsStore((state) => state.maxFileSizeLimit);
@@ -55,9 +55,8 @@ const useFileUpload = () => {
         setRawLyricsContent(parsed.rawText);
       }
 
-      if (parsed.timestamps) {
-        setLyricsTimestamps(parsed.timestamps);
-      }
+      setLyricsTimestamps(parsed.timestamps || []);
+      setLyricsEnhancedTimestamps(parsed.enhancedTimestamps || []);
 
       selectLine(null);
 
@@ -95,6 +94,7 @@ const useFileUpload = () => {
         },
         songMetadata: metadata,
         lyricsTimestamps: parsed.timestamps || [],
+        lyricsEnhancedTimestamps: parsed.enhancedTimestamps || [],
         sections: parsed.sections || [],
         lineToSection: parsed.lineToSection || {},
       });
@@ -129,7 +129,7 @@ const useFileUpload = () => {
       showToast({ title: 'Failed to load file', message: 'Please check the file and try again.', variant: 'error' });
       return false;
     }
-  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, emitLyricsLoad, socket, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
+  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, emitLyricsLoad, socket, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
 
   return handleFileUpload;
 };

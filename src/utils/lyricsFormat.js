@@ -51,7 +51,7 @@ const normalizeMetadataTag = (line) => {
  */
 const isMetadataTag = (line) => {
   if (!line) return false;
-  return /^\s*\[(ti|ar|al|by|offset|length|au|lr|re|tool|ve|#):.*\]\s*$/i.test(line.trim());
+  return /^\s*\[\s*(ti|ar|al|by|offset|length|au|lr|re|tool|ve|#)\s*:.*\]\s*$/i.test(line.trim());
 };
 
 /**
@@ -195,7 +195,8 @@ const normalizePunctuation = (line) => {
     .replace(/^[.,\-]+/, '')
     .replace(/^\.+/, '')
     .replace(/^[\u2024\u2025\u2026]+/, '')
-    .replace(/[.\u2024\u2025\u2026]/g, '');
+    .replace(/(?:\.{2,}|[\u2024\u2025\u2026]+)$/g, '')
+    .replace(/[ \t]{2,}/g, ' ');
 
   timestamps.forEach((timestamp) => {
     workingLine = workingLine.replace('<<<TIMESTAMP>>>', timestamp);
@@ -207,6 +208,13 @@ const normalizePunctuation = (line) => {
 const capitalizeFirstCharacter = (line) => {
   if (!line) return line;
   const corrected = line.replace(/\bi\b/g, 'I');
+  const timestampPrefixMatch = corrected.match(/^((?:\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+)(\s*)/);
+  if (timestampPrefixMatch) {
+    const prefix = `${timestampPrefixMatch[1]}${timestampPrefixMatch[2] || ''}`;
+    const rest = corrected.slice(timestampPrefixMatch[0].length);
+    if (!rest) return corrected;
+    return prefix + rest.charAt(0).toUpperCase() + rest.slice(1);
+  }
   return corrected.charAt(0).toUpperCase() + corrected.slice(1);
 };
 
@@ -364,26 +372,20 @@ const moveTimestampsToStart = (line) => {
   if (!line || typeof line !== 'string') return line;
 
   const standardTimestampRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
-  const enhancedTimestampRegex = /<(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?>/g;
 
   const standardTimestamps = [];
-  const enhancedTimestamps = [];
   let match;
 
   while ((match = standardTimestampRegex.exec(line)) !== null) {
     standardTimestamps.push(match[0]);
   }
 
-  while ((match = enhancedTimestampRegex.exec(line)) !== null) {
-    enhancedTimestamps.push(match[0]);
-  }
-
-  if (standardTimestamps.length === 0 && enhancedTimestamps.length === 0) {
+  if (standardTimestamps.length === 0) {
     return line;
   }
 
-  let lineWithoutTimestamps = line.replace(standardTimestampRegex, '').replace(enhancedTimestampRegex, '').trim();
-  const allTimestamps = standardTimestamps.join('') + enhancedTimestamps.join('');
+  let lineWithoutTimestamps = line.replace(standardTimestampRegex, '').trim();
+  const allTimestamps = standardTimestamps.join('');
 
   if (lineWithoutTimestamps) {
     return allTimestamps + ' ' + lineWithoutTimestamps;
@@ -454,7 +456,7 @@ export const formatLyrics = (text, options = {}) => {
       linesToProcess = splitLongLine(punctuationNormalized, splitConfig);
     }
 
-    for (const processLine of linesToProcess) {
+    linesToProcess.forEach((processLine, processLineIndex) => {
       const segments = splitInlineTranslation(processLine)
         .map((segment) => segment.trim())
         .filter(Boolean)
@@ -465,16 +467,17 @@ export const formatLyrics = (text, options = {}) => {
           return result;
         });
 
-      if (segments.length === 0) continue;
+      if (segments.length === 0) return;
 
       segments.forEach((segment) => {
         formattedLines.push(segment);
       });
 
-      if (!shouldNotAddBlankLine && !nextAndNextNextFormTranslation) {
+      const isLastSplitSegment = processLineIndex === linesToProcess.length - 1;
+      if (isLastSplitSegment && !shouldNotAddBlankLine && !nextAndNextNextFormTranslation) {
         formattedLines.push('');
       }
-    }
+    });
   }
 
   while (formattedLines[formattedLines.length - 1] === '') {

@@ -11,7 +11,7 @@ function isPlaceholderLine(line) {
   if (!line || typeof line !== 'string') return false;
   const trimmed = line.trim();
 
-  return /^\[\s*[\?\*\.~â€¦]+\s*\]$/.test(trimmed) || /^\[\s*\.{3,}\s*\]$/.test(trimmed);
+  return /^\[\s*[\?\*\.~\u2026]+\s*\]$/.test(trimmed) || /^\[\s*\.{3,}\s*\]$/.test(trimmed);
 }
 
 /**

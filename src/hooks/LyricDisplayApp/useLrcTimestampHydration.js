@@ -8,6 +8,7 @@ export const useLrcTimestampHydration = ({
   lyricsTimestamps,
   rawLyricsContent,
   setLineToSection,
+  setLyricsEnhancedTimestamps = () => { },
   setLyricsSections,
   setLyricsTimestamps,
 }) => {
@@ -16,7 +17,7 @@ export const useLrcTimestampHydration = ({
     if (hasValidTimestamps(lyricsTimestamps)) return;
     if (!rawLyricsContent) return;
 
-    const looksLikeLrc = /\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(rawLyricsContent);
+    const looksLikeLrc = /[\[<]\d{1,2}:\d{2}(?:\.\d{1,3})?[\]>]/.test(rawLyricsContent);
     if (!looksLikeLrc) return;
 
     try {
@@ -25,6 +26,7 @@ export const useLrcTimestampHydration = ({
 
       if (lengthsMatch && Array.isArray(parsed.timestamps) && parsed.timestamps.length > 0) {
         setLyricsTimestamps(parsed.timestamps);
+        setLyricsEnhancedTimestamps(parsed.enhancedTimestamps || []);
         if (parsed.sections && parsed.lineToSection) {
           setLyricsSections(parsed.sections);
           setLineToSection(parsed.lineToSection);
@@ -33,5 +35,5 @@ export const useLrcTimestampHydration = ({
     } catch (err) {
       console.warn('Failed to regenerate timestamps from stored lyrics:', err);
     }
-  }, [hasLyrics, lyrics, lyricsTimestamps, rawLyricsContent, setLineToSection, setLyricsSections, setLyricsTimestamps]);
+  }, [hasLyrics, lyrics, lyricsTimestamps, rawLyricsContent, setLineToSection, setLyricsEnhancedTimestamps, setLyricsSections, setLyricsTimestamps]);
 };

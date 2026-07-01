@@ -1,9 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import { isNormalGroupCandidate } from '../../../shared/lyricsParsing.js';
+import useLyricsStore from '../../context/LyricsStore';
+import { buildLyricsSyncPayload } from '../../utils/lyricsSyncPayload.js';
 
 export default function useLyricsListGrouping({
   lyrics,
   lyricsTimestamps,
+  lyricsEnhancedTimestamps,
   selectedLine,
   selectedIndicesArray,
   effectiveMaxLinesPerGroup,
@@ -16,6 +19,7 @@ export default function useLyricsListGrouping({
   tutorialMutationRef,
   setLyrics,
   setLyricsTimestamps,
+  setLyricsEnhancedTimestamps,
   setSelectedIndices,
   selectionAnchorRef,
   selectLine,
@@ -84,6 +88,16 @@ export default function useLyricsListGrouping({
     return current;
   };
 
+  const emitLyricsPayload = useCallback((nextLyrics, nextTimestamps, nextEnhancedTimestamps) => {
+    if (!emitLyricsLoad) return;
+    emitLyricsLoad(buildLyricsSyncPayload({
+      ...useLyricsStore.getState(),
+      lyrics: nextLyrics,
+      lyricsTimestamps: Array.isArray(nextTimestamps) ? nextTimestamps : [],
+      lyricsEnhancedTimestamps: Array.isArray(nextEnhancedTimestamps) ? nextEnhancedTimestamps : [],
+    }, nextLyrics));
+  }, [emitLyricsLoad]);
+
   const handleGroupSelected = useCallback(() => {
     if (!canGroupSelected) return;
     const [first, second] = selectedIndicesArray;
@@ -95,6 +109,7 @@ export default function useLyricsListGrouping({
 
     const hasTimestampData = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length > 0;
     const timestampsAligned = hasTimestampData && lyricsTimestamps.length === lyrics.length;
+    const enhancedTimestampsAligned = Array.isArray(lyricsEnhancedTimestamps) && lyricsEnhancedTimestamps.length === lyrics.length;
     const firstTimestamp = timestampsAligned ? lyricsTimestamps[first] : null;
     const secondTimestamp = timestampsAligned ? lyricsTimestamps[second] : null;
     const timestampsMatch = timestampsAligned && firstTimestamp === secondTimestamp;
@@ -104,6 +119,7 @@ export default function useLyricsListGrouping({
     const newLyrics = [...lyrics];
     newLyrics.splice(first, 2, grouped);
     let nextTimestamps = timestampsAligned ? [...lyricsTimestamps] : lyricsTimestamps;
+    let nextEnhancedTimestamps = enhancedTimestampsAligned ? [...lyricsEnhancedTimestamps] : lyricsEnhancedTimestamps;
     let disabledIntelligentAutoplay = false;
 
     if (timestampsAligned) {
@@ -111,8 +127,15 @@ export default function useLyricsListGrouping({
         nextTimestamps.splice(first, 2, firstTimestamp ?? null);
       } else {
         nextTimestamps = [];
+        nextEnhancedTimestamps = [];
         disabledIntelligentAutoplay = true;
       }
+    }
+    if (enhancedTimestampsAligned && !disabledIntelligentAutoplay) {
+      nextEnhancedTimestamps.splice(first, 2, [
+        lyricsEnhancedTimestamps[first] || [],
+        lyricsEnhancedTimestamps[second] || [],
+      ]);
     }
 
     const nextSelectedLine = remapSelectedLineAfterGroup(selectedLine, first);
@@ -125,7 +148,10 @@ export default function useLyricsListGrouping({
     if (timestampsAligned || disabledIntelligentAutoplay) {
       setLyricsTimestamps(nextTimestamps);
     }
-    if (emitLyricsLoad) emitLyricsLoad(newLyrics);
+    if (enhancedTimestampsAligned || disabledIntelligentAutoplay) {
+      setLyricsEnhancedTimestamps(nextEnhancedTimestamps);
+    }
+    emitLyricsPayload(newLyrics, nextTimestamps, nextEnhancedTimestamps);
 
     if (typeof nextSelectedLine === 'number') {
       selectLine(nextSelectedLine);
@@ -149,7 +175,7 @@ export default function useLyricsListGrouping({
         variant: 'success',
       });
     }
-  }, [buildGroup, canGroupSelected, closeContextMenu, effectiveMaxLinesPerGroup, emitLyricsLoad, emitLineUpdate, getNormalGroupLines, historyMutationRef, isGroupableLine, lyrics, lyricsTimestamps, pushHistorySnapshot, selectedIndicesArray, selectedLine, selectLine, selectionAnchorRef, setLyrics, setLyricsTimestamps, setSelectedIndices, showToast, suppressScrollResetRef, takeSnapshot, tutorialMutationRef]);
+  }, [buildGroup, canGroupSelected, closeContextMenu, effectiveMaxLinesPerGroup, emitLineUpdate, emitLyricsPayload, getNormalGroupLines, historyMutationRef, isGroupableLine, lyrics, lyricsEnhancedTimestamps, lyricsTimestamps, pushHistorySnapshot, selectedIndicesArray, selectedLine, selectLine, selectionAnchorRef, setLyrics, setLyricsEnhancedTimestamps, setLyricsTimestamps, setSelectedIndices, showToast, suppressScrollResetRef, takeSnapshot, tutorialMutationRef]);
 
   const performUngroup = useCallback((index) => {
     const line = lyrics[index];
@@ -161,10 +187,19 @@ export default function useLyricsListGrouping({
     const newLyrics = [...lyrics];
     newLyrics.splice(index, 1, ...groupLines);
     const timestampsAligned = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length === lyrics.length;
+    const enhancedTimestampsAligned = Array.isArray(lyricsEnhancedTimestamps) && lyricsEnhancedTimestamps.length === lyrics.length;
     const nextTimestamps = timestampsAligned ? [...lyricsTimestamps] : lyricsTimestamps;
+    const nextEnhancedTimestamps = enhancedTimestampsAligned ? [...lyricsEnhancedTimestamps] : lyricsEnhancedTimestamps;
     if (timestampsAligned) {
       const groupTimestamp = lyricsTimestamps[index];
       nextTimestamps.splice(index, 1, ...groupLines.map(() => groupTimestamp ?? null));
+    }
+    if (enhancedTimestampsAligned) {
+      const groupEnhanced = lyricsEnhancedTimestamps[index];
+      const expandedEnhanced = Array.isArray(groupEnhanced) && groupEnhanced.every(Array.isArray)
+        ? groupEnhanced.slice(0, groupLines.length)
+        : groupLines.map(() => []);
+      nextEnhancedTimestamps.splice(index, 1, ...expandedEnhanced);
     }
     const nextSelectedLine = remapSelectedLineAfterUngroup(selectedLine, index, groupLines.length);
 
@@ -176,6 +211,9 @@ export default function useLyricsListGrouping({
     if (timestampsAligned) {
       setLyricsTimestamps(nextTimestamps);
     }
+    if (enhancedTimestampsAligned) {
+      setLyricsEnhancedTimestamps(nextEnhancedTimestamps);
+    }
 
     if (emitSplitNormalGroup) {
       emitSplitNormalGroup({
@@ -185,7 +223,7 @@ export default function useLyricsListGrouping({
         line2: groupLines[1] || '',
       });
     } else if (emitLyricsLoad) {
-      emitLyricsLoad(newLyrics);
+      emitLyricsPayload(newLyrics, nextTimestamps, nextEnhancedTimestamps);
     }
 
     if (typeof nextSelectedLine === 'number') {
@@ -206,7 +244,7 @@ export default function useLyricsListGrouping({
       message: 'The grouped lines have been separated',
       variant: 'success',
     });
-  }, [closeContextMenu, emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup, getNormalGroupLines, historyMutationRef, lyrics, lyricsTimestamps, pushHistorySnapshot, selectedLine, selectLine, selectionAnchorRef, setHoveredLineIndex, setLyrics, setLyricsTimestamps, setSelectedIndices, showToast, suppressScrollResetRef, takeSnapshot, tutorialMutationRef]);
+  }, [closeContextMenu, emitLineUpdate, emitLyricsLoad, emitLyricsPayload, emitSplitNormalGroup, getNormalGroupLines, historyMutationRef, lyrics, lyricsEnhancedTimestamps, lyricsTimestamps, pushHistorySnapshot, selectedLine, selectLine, selectionAnchorRef, setHoveredLineIndex, setLyrics, setLyricsEnhancedTimestamps, setLyricsTimestamps, setSelectedIndices, showToast, suppressScrollResetRef, takeSnapshot, tutorialMutationRef]);
 
   const handleSplitGroup = useCallback(
     (event, index) => {

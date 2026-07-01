@@ -1,4 +1,4 @@
-import { META_TAG_REGEX, TIME_TAG_REGEX } from './constants.js';
+import { ENHANCED_TIME_TAG_REGEX, META_TAG_REGEX, TIME_TAG_REGEX } from './constants.js';
 import { preprocessText, splitLongLine } from './lineSplitting.js';
 import {
   clearRuntimeGroupingConfig,
@@ -31,28 +31,56 @@ function applyIntelligentSplittingWithTimestamps(entries = [], options = {}) {
 
     const trimmed = entry.text.trim();
     if (!trimmed) {
-      result.push({ text: '', t: entry.t });
+      result.push({ text: '', t: entry.t, enhancedTimestamps: entry.enhancedTimestamps || [] });
       continue;
     }
 
     if (isTranslationLine(trimmed)) {
-      result.push({ text: trimmed, t: entry.t });
+      result.push({ text: trimmed, t: entry.t, enhancedTimestamps: entry.enhancedTimestamps || [] });
       continue;
     }
 
     const nextEntry = entries[i + 1];
     const nextIsTrans = nextEntry && isTranslationLine(String(nextEntry.text || '').trim());
 
-    if (nextIsTrans) {
-      result.push({ text: trimmed, t: entry.t });
+    if (nextIsTrans || (Array.isArray(entry.enhancedTimestamps) && entry.enhancedTimestamps.length > 0)) {
+      result.push({ text: trimmed, t: entry.t, enhancedTimestamps: entry.enhancedTimestamps || [] });
       continue;
     }
 
     const segments = splitLongLine(trimmed, splitConfig);
-    segments.forEach((seg) => result.push({ text: seg, t: entry.t }));
+    segments.forEach((seg) => result.push({ text: seg, t: entry.t, enhancedTimestamps: [] }));
   }
 
   return result;
+}
+
+function parseTimeMatch(match) {
+  const mm = parseInt(match?.[1], 10) || 0;
+  const ss = parseInt(match?.[2], 10) || 0;
+  const cs = match?.[3] ? parseInt(match[3].slice(0, 2).padEnd(2, '0'), 10) : 0;
+  return mm * 60 * 100 + ss * 100 + cs;
+}
+
+function stripEnhancedTimestamps(text = '') {
+  const enhancedTimestamps = [];
+  let match;
+
+  ENHANCED_TIME_TAG_REGEX.lastIndex = 0;
+  while ((match = ENHANCED_TIME_TAG_REGEX.exec(text)) !== null) {
+    const afterMarker = text.slice(ENHANCED_TIME_TAG_REGEX.lastIndex);
+    const wordMatch = afterMarker.match(/^\s*(\S+)/);
+    enhancedTimestamps.push({
+      time: parseTimeMatch(match),
+      text: wordMatch?.[1] || '',
+    });
+  }
+
+  ENHANCED_TIME_TAG_REGEX.lastIndex = 0;
+  return {
+    text: text.replace(ENHANCED_TIME_TAG_REGEX, '').trim(),
+    enhancedTimestamps,
+  };
 }
 
 /**
@@ -82,22 +110,21 @@ export function parseLrcContent(rawText = '', options = {}) {
       TIME_TAG_REGEX.lastIndex = 0;
 
       while ((match = TIME_TAG_REGEX.exec(line)) !== null) {
-        const mm = parseInt(match[1], 10) || 0;
-        const ss = parseInt(match[2], 10) || 0;
-        const cs = match[3] ? parseInt(match[3].slice(0, 2).padEnd(2, '0'), 10) : 0;
-        const t = mm * 60 * 100 + ss * 100 + cs;
-        times.push(t);
+        times.push(parseTimeMatch(match));
       }
 
-      let text = line.replace(TIME_TAG_REGEX, '').trim();
+      const stripped = stripEnhancedTimestamps(line.replace(TIME_TAG_REGEX, '').trim());
+      let text = stripped.text;
       text = preprocessText(text);
+      const enhancedTimestamps = stripped.enhancedTimestamps;
 
-      if (!text && times.length === 0) continue;
+      if (!text && times.length === 0 && enhancedTimestamps.length === 0) continue;
 
       if (times.length === 0) {
-        entries.push({ t: null, text });
+        const firstEnhancedTimestamp = enhancedTimestamps.length > 0 ? enhancedTimestamps[0].time : null;
+        entries.push({ t: firstEnhancedTimestamp, text, enhancedTimestamps });
       } else {
-        times.forEach((t) => entries.push({ t, text }));
+        times.forEach((t) => entries.push({ t, text, enhancedTimestamps }));
       }
     }
 
@@ -111,7 +138,8 @@ export function parseLrcContent(rawText = '', options = {}) {
     const uniqueEntries = [];
     const seen = new Set();
     for (const entry of entries) {
-      const key = `${entry.t}|${entry.text}`;
+      const enhancedKey = JSON.stringify(entry.enhancedTimestamps || []);
+      const key = `${entry.t}|${entry.text}|${enhancedKey}`;
       if (seen.has(key)) continue;
       seen.add(key);
       uniqueEntries.push(entry);
@@ -126,6 +154,7 @@ export function parseLrcContent(rawText = '', options = {}) {
 
     const grouped = [];
     const groupedTimestamps = [];
+    const groupedEnhancedTimestamps = [];
     for (let i = 0; i < splitEntries.length; i += 1) {
       const main = splitEntries[i];
       const next = splitEntries[i + 1];
@@ -143,6 +172,10 @@ export function parseLrcContent(rawText = '', options = {}) {
           originalIndex: i,
         });
         groupedTimestamps.push(main.t !== undefined ? main.t : null);
+        groupedEnhancedTimestamps.push({
+          main: main.enhancedTimestamps || [],
+          translation: next.enhancedTimestamps || [],
+        });
         i += 1;
       } else if (
         enableAutoLineGrouping &&
@@ -184,20 +217,32 @@ export function parseLrcContent(rawText = '', options = {}) {
         if (groupedLines.length >= 2) {
           grouped.push(createNormalGroup(groupedLines, 'lrc_normal_group', i));
           groupedTimestamps.push(groupTimestamp);
+          groupedEnhancedTimestamps.push(
+            splitEntries.slice(i, i + groupedLines.length).map((candidate) => candidate.enhancedTimestamps || [])
+          );
           i += groupedLines.length - 1;
         } else {
           grouped.push(main.text);
           groupedTimestamps.push(groupTimestamp);
+          groupedEnhancedTimestamps.push(main.enhancedTimestamps || []);
         }
       } else {
         grouped.push(main.text);
         groupedTimestamps.push(main.t !== undefined ? main.t : null);
+        groupedEnhancedTimestamps.push(main.enhancedTimestamps || []);
       }
     }
 
     const visibleRawText = splitEntries.map((entry) => entry.text).join('\n');
     const { sections, lineToSection } = deriveSectionsFromProcessedLines(grouped);
-    return { rawText: visibleRawText, processedLines: grouped, timestamps: groupedTimestamps, sections, lineToSection };
+    return {
+      rawText: visibleRawText,
+      processedLines: grouped,
+      timestamps: groupedTimestamps,
+      enhancedTimestamps: groupedEnhancedTimestamps,
+      sections,
+      lineToSection
+    };
   } finally {
     clearRuntimeGroupingConfig();
   }

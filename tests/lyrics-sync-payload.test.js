@@ -15,6 +15,7 @@ test('buildLyricsSyncPayload includes source content needed to add synced lyrics
     },
     songMetadata: { title: 'Service Song', artists: ['Writer'] },
     lyricsTimestamps: [1000, 2000],
+    lyricsEnhancedTimestamps: [[{ time: 1000, text: 'First' }], []],
     lyricsSections: [{ id: 'verse-1', label: 'Verse 1', startIndex: 0 }],
     lineToSection: { 0: 'verse-1' },
   });
@@ -31,6 +32,7 @@ test('buildLyricsSyncPayload includes source content needed to add synced lyrics
     },
     songMetadata: { title: 'Service Song', artists: ['Writer'] },
     lyricsTimestamps: [1000, 2000],
+    lyricsEnhancedTimestamps: [[{ time: 1000, text: 'First' }], []],
     sections: [{ id: 'verse-1', label: 'Verse 1', startIndex: 0 }],
     lineToSection: { 0: 'verse-1' },
   });
@@ -47,6 +49,7 @@ test('buildLyricsSyncPayload falls back to caller lyrics when store has no lyric
   assert.equal(payload.lyricsSource, null);
   assert.equal(payload.songMetadata, null);
   assert.deepEqual(payload.lyricsTimestamps, []);
+  assert.deepEqual(payload.lyricsEnhancedTimestamps, []);
   assert.deepEqual(payload.sections, []);
   assert.deepEqual(payload.lineToSection, {});
 });

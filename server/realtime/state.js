@@ -3,6 +3,7 @@ import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 export const state = {
   currentLyrics: [],
   currentLyricsTimestamps: [],
+  currentLyricsEnhancedTimestamps: [],
   currentLyricsFileName: '',
   currentRawLyricsContent: '',
   currentLyricsSource: {
@@ -197,6 +198,7 @@ export function buildCurrentState(clientInfo) {
     ...baseState,
     lyrics: state.currentLyrics,
     lyricsTimestamps: state.currentLyricsTimestamps,
+    lyricsEnhancedTimestamps: state.currentLyricsEnhancedTimestamps,
     selectedLine: state.currentSelectedLine,
     lyricsSections: state.currentLyricsSections,
     lineToSection: state.currentLineToSection,

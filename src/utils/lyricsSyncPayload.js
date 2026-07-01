@@ -21,6 +21,7 @@ export function buildLyricsSyncPayload(storeState = {}, fallbackLyrics = []) {
     lyricsSource,
     songMetadata,
     lyricsTimestamps: Array.isArray(storeState.lyricsTimestamps) ? storeState.lyricsTimestamps : [],
+    lyricsEnhancedTimestamps: Array.isArray(storeState.lyricsEnhancedTimestamps) ? storeState.lyricsEnhancedTimestamps : [],
     sections: Array.isArray(storeState.lyricsSections) ? storeState.lyricsSections : [],
     lineToSection: isPlainObject(storeState.lineToSection) ? storeState.lineToSection : {},
   };

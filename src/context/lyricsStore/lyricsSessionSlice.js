@@ -52,6 +52,7 @@ export const createLyricsSessionSlice = (set) => ({
     fileName: '',
   },
   lyricsTimestamps: [],
+  lyricsEnhancedTimestamps: [],
   pendingSavedVersion: null,
 
   setLyrics: (lines) => set((state) => (stateValueEqual(state.lyrics, lines) ? state : { lyrics: lines })),
@@ -72,6 +73,7 @@ export const createLyricsSessionSlice = (set) => ({
     return stateValueEqual(state.lyricsSource, next) ? state : { lyricsSource: next };
   }),
   setLyricsTimestamps: (timestamps) => set((state) => (stateValueEqual(state.lyricsTimestamps, timestamps) ? state : { lyricsTimestamps: timestamps })),
+  setLyricsEnhancedTimestamps: (timestamps) => set((state) => (stateValueEqual(state.lyricsEnhancedTimestamps, timestamps) ? state : { lyricsEnhancedTimestamps: timestamps })),
   setPendingSavedVersion: (payload) => set({ pendingSavedVersion: payload || null }),
   clearPendingSavedVersion: () => set({ pendingSavedVersion: null }),
 });

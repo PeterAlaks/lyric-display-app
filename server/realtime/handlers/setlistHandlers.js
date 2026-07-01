@@ -172,7 +172,8 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
       let processedLines;
       let timestamps = [];
-      let sanitizedRawContent = file.content;
+      let enhancedTimestamps = [];
+      let editableRawContent = file.content;
       let sections = [];
       let lineToSection = {};
       const isLrc = (file.fileType === 'lrc') ||
@@ -182,7 +183,8 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         const parsed = parseLrcContent(file.content);
         processedLines = parsed.processedLines;
         timestamps = parsed.timestamps || [];
-        sanitizedRawContent = parsed.rawText;
+        enhancedTimestamps = parsed.enhancedTimestamps || [];
+        editableRawContent = file.content;
         sections = parsed.sections || [];
         lineToSection = parsed.lineToSection || {};
       } else {
@@ -197,11 +199,12 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
       state.currentLyrics = processedLines;
       state.currentLyricsTimestamps = timestamps;
+      state.currentLyricsEnhancedTimestamps = enhancedTimestamps;
       state.currentSelectedLine = null;
       state.currentLyricsFileName = cleanDisplayName;
-      state.currentRawLyricsContent = sanitizedRawContent;
+      state.currentRawLyricsContent = editableRawContent;
       state.currentLyricsSource = {
-        content: file.content || sanitizedRawContent || '',
+        content: file.content || editableRawContent || '',
         fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
         filePath: file.metadata?.filePath || null,
         fileName: file.originalName || cleanDisplayName || '',
@@ -233,10 +236,11 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       emitLyricsLoad(io, {
         lyrics: processedLines,
         fileName: cleanDisplayName,
-        rawLyricsContent: sanitizedRawContent,
+        rawLyricsContent: editableRawContent,
         lyricsSource: state.currentLyricsSource,
         songMetadata: state.currentSongMetadata,
         lyricsTimestamps: timestamps,
+        lyricsEnhancedTimestamps: enhancedTimestamps,
         sections,
         lineToSection,
       });
@@ -248,7 +252,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         originalName: file.originalName,
         fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
         linesCount: processedLines.length,
-        rawContent: sanitizedRawContent,
+        rawContent: editableRawContent,
         loadedBy: clientType,
         metadata: {
           ...(file.metadata || {}),

@@ -34,11 +34,13 @@ export default function LyricsList({
     lyricsSections = [],
     lineToSection = {},
     lyricsTimestamps = [],
+    lyricsEnhancedTimestamps = [],
     selectedLine,
     lyricsFileName,
     selectLine,
     setLyrics,
-    setLyricsTimestamps
+    setLyricsTimestamps,
+    setLyricsEnhancedTimestamps
   } = useLyricsState();
   const { darkMode: storedDarkMode } = useDarkModeState();
   const darkMode = forceDarkMode ? true : storedDarkMode;
@@ -137,10 +139,12 @@ export default function LyricsList({
   } = useLyricsListHistory({
     lyrics,
     lyricsTimestamps,
+    lyricsEnhancedTimestamps,
     selectedLine,
     selectedIndicesArray,
     setLyrics,
     setLyricsTimestamps,
+    setLyricsEnhancedTimestamps,
     selectLine,
     emitLyricsLoad,
     setSelectedIndices,
@@ -159,6 +163,7 @@ export default function LyricsList({
   } = useLyricsListGrouping({
     lyrics,
     lyricsTimestamps,
+    lyricsEnhancedTimestamps,
     selectedLine,
     selectedIndicesArray,
     effectiveMaxLinesPerGroup,
@@ -171,6 +176,7 @@ export default function LyricsList({
     tutorialMutationRef,
     setLyrics,
     setLyricsTimestamps,
+    setLyricsEnhancedTimestamps,
     setSelectedIndices,
     selectionAnchorRef,
     selectLine,
@@ -185,6 +191,7 @@ export default function LyricsList({
   const rowPropsData = useMemo(
     () => ({
       lyrics,
+      lyricsTimestamps,
       virtualized: true,
       getLineClassName,
       handleRowClick,
@@ -213,7 +220,7 @@ export default function LyricsList({
       getNormalGroupLines,
       density,
     }),
-    [lyrics, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, isStructureTagLine, getNormalGroupLines, density]
+    [lyrics, lyricsTimestamps, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, isStructureTagLine, getNormalGroupLines, density]
   );
 
   const itemCount = useMemo(() => lyrics.length, [lyrics]);
@@ -266,6 +273,7 @@ export default function LyricsList({
           key={line?.id || `line_${i}`}
           index={i}
           line={line}
+          lyricsTimestamps={lyricsTimestamps}
           virtualized={false}
           getLineClassName={getLineClassName}
           handleRowClick={handleRowClick}

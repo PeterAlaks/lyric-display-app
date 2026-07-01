@@ -8,6 +8,7 @@ export const useLyricsLoader = ({
   setLineToSection = () => { },
   setRawLyricsContent,
   setLyricsTimestamps,
+  setLyricsEnhancedTimestamps = () => { },
   selectLine,
   setLyricsFileName,
   setLyricsSource,
@@ -51,6 +52,7 @@ export const useLyricsLoader = ({
       const processedLines = parsed.processedLines;
       const rawText = parsed.rawText ?? (content || '');
       const timestamps = parsed.timestamps || [];
+      const enhancedTimestamps = parsed.enhancedTimestamps || [];
       const sections = parsed.sections || [];
       const lineToSection = parsed.lineToSection || {};
       const finalBaseName = (finalFileName || '').replace(/\.(txt|lrc)$/i, '');
@@ -60,6 +62,7 @@ export const useLyricsLoader = ({
       if (setLineToSection) setLineToSection(lineToSection);
       setRawLyricsContent(finalType === 'lrc' ? (content || rawText) : rawText);
       setLyricsTimestamps(timestamps);
+      setLyricsEnhancedTimestamps(enhancedTimestamps);
       selectLine(null);
       setLyricsFileName(finalBaseName);
       setLyricsSource({
@@ -98,6 +101,7 @@ export const useLyricsLoader = ({
         },
         songMetadata: metadata,
         lyricsTimestamps: timestamps,
+        lyricsEnhancedTimestamps: enhancedTimestamps,
         sections,
         lineToSection,
       });
@@ -138,7 +142,7 @@ export const useLyricsLoader = ({
       });
       return false;
     }
-  }, [emitLyricsLoad, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, showToast, socket]);
+  }, [emitLyricsLoad, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, showToast, socket]);
 
   const handleImportFromLibrary = useCallback(async ({ providerId, providerName, lyric }, lyrics) => {
     if (!lyric || typeof lyric.content !== 'string' || !lyric.content.trim()) {

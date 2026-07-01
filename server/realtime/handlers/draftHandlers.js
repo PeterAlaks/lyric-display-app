@@ -72,6 +72,8 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
     }
 
     state.currentLyrics = processedLines || [];
+    state.currentLyricsTimestamps = [];
+    state.currentLyricsEnhancedTimestamps = [];
     state.currentSelectedLine = null;
     state.currentLyricsFileName = title || '';
     const derived = deriveSectionsFromProcessedLines(state.currentLyrics);
@@ -108,6 +110,7 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
         lyricLines: state.currentLyrics.length,
       },
       lyricsTimestamps: [],
+      lyricsEnhancedTimestamps: [],
       sections: state.currentLyricsSections,
       lineToSection: state.currentLineToSection,
     });

@@ -48,7 +48,7 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, pendingSavedVersion, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, clearPendingSavedVersion } = useLyricsState();
+  const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, lyricsEnhancedTimestamps, pendingSavedVersion, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, clearPendingSavedVersion } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
@@ -132,6 +132,7 @@ const LyricDisplayApp = () => {
     lyricsTimestamps,
     rawLyricsContent,
     setLineToSection,
+    setLyricsEnhancedTimestamps,
     setLyricsSections,
     setLyricsTimestamps,
   });
@@ -190,6 +191,7 @@ const LyricDisplayApp = () => {
     setLineToSection,
     setRawLyricsContent,
     setLyricsTimestamps,
+    setLyricsEnhancedTimestamps,
     selectLine,
     setLyricsFileName,
     setLyricsSource,
@@ -620,6 +622,7 @@ const LyricDisplayApp = () => {
           lyricsContainerRef={lyricsContainerRef}
           lyricsFileName={lyricsFileName}
           lyricsTimestamps={lyricsTimestamps}
+          lyricsEnhancedTimestamps={lyricsEnhancedTimestamps}
           navigateToNextMatch={navigateToNextMatch}
           navigateToPreviousMatch={navigateToPreviousMatch}
           quickParserLoading={quickParserLoading}

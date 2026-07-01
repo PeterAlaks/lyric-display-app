@@ -74,11 +74,12 @@ function createOutputStore() {
   };
 }
 
-test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized raw content', () => {
+test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and editable raw content', () => {
   const previousConnectedClients = state.connectedClients;
   const previousSetlist = state.setlistFiles;
   const previousLyrics = state.currentLyrics;
   const previousTimestamps = state.currentLyricsTimestamps;
+  const previousEnhancedTimestamps = state.currentLyricsEnhancedTimestamps;
   const previousFileName = state.currentLyricsFileName;
   const previousRawLyricsContent = state.currentRawLyricsContent;
   const previousLyricsSource = state.currentLyricsSource;
@@ -115,8 +116,9 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
 
     assert.deepEqual(state.currentLyrics, ['[Verse 1]', 'First line', 'Second line']);
     assert.deepEqual(state.currentLyricsTimestamps, [500, 1000, 2000]);
+    assert.deepEqual(state.currentLyricsEnhancedTimestamps, [[], [], []]);
     assert.equal(state.currentLyricsFileName, 'Service Song');
-    assert.equal(state.currentRawLyricsContent, '[Verse 1]\nFirst line\nSecond line');
+    assert.equal(state.currentRawLyricsContent, state.setlistFiles[0].content);
     assert.deepEqual(state.currentLyricsSource, {
       content: state.setlistFiles[0].content,
       fileType: 'lrc',
@@ -138,12 +140,13 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     const success = ioEvents.find((event) => event.eventName === 'setlistLoadSuccess')?.payload;
     const load = ioEvents.find((event) => event.eventName === 'lyricsLoad')?.payload;
     assert.equal(load.fileName, 'Service Song');
-    assert.equal(load.rawLyricsContent, '[Verse 1]\nFirst line\nSecond line');
+    assert.equal(load.rawLyricsContent, state.setlistFiles[0].content);
     assert.deepEqual(load.lyricsTimestamps, [500, 1000, 2000]);
+    assert.deepEqual(load.lyricsEnhancedTimestamps, [[], [], []]);
     assert.equal(load.lyricsSource.fileName, 'Service Song.lrc');
     assert.equal(load.songMetadata.title, 'Service Song');
     assert.equal(success.fileName, 'Service Song');
-    assert.equal(success.rawContent, '[Verse 1]\nFirst line\nSecond line');
+    assert.equal(success.rawContent, state.setlistFiles[0].content);
     assert.equal(success.linesCount, 3);
     assert.equal(success.metadata.source, 'test');
     assert.ok(Array.isArray(success.metadata.sections));
@@ -152,6 +155,7 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and sanitized r
     state.setlistFiles = previousSetlist;
     state.currentLyrics = previousLyrics;
     state.currentLyricsTimestamps = previousTimestamps;
+    state.currentLyricsEnhancedTimestamps = previousEnhancedTimestamps;
     state.currentLyricsFileName = previousFileName;
     state.currentRawLyricsContent = previousRawLyricsContent;
     state.currentLyricsSource = previousLyricsSource;
@@ -236,6 +240,82 @@ test('lyricsLoad fanout sends render-only payloads to displays and skips timer c
     state.connectedClients = previousConnectedClients;
     state.currentLyrics = previousLyrics;
     state.currentLyricsTimestamps = previousTimestamps;
+    state.currentLyricsFileName = previousFileName;
+    state.currentRawLyricsContent = previousRawLyricsContent;
+    state.currentLyricsSource = previousLyricsSource;
+    state.currentSongMetadata = previousSongMetadata;
+    state.currentLyricsSections = previousSections;
+    state.currentLineToSection = previousLineToSection;
+  }
+});
+
+test('splitNormalGroup preserves aligned line and enhanced timestamps', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousLyrics = state.currentLyrics;
+  const previousTimestamps = state.currentLyricsTimestamps;
+  const previousEnhancedTimestamps = state.currentLyricsEnhancedTimestamps;
+  const previousFileName = state.currentLyricsFileName;
+  const previousRawLyricsContent = state.currentRawLyricsContent;
+  const previousLyricsSource = state.currentLyricsSource;
+  const previousSongMetadata = state.currentSongMetadata;
+  const previousSections = state.currentLyricsSections;
+  const previousLineToSection = state.currentLineToSection;
+
+  state.connectedClients = new Map();
+  state.currentLyrics = [
+    {
+      type: 'normal-group',
+      id: 'group_1',
+      lines: ['Hello world', 'Next line'],
+      line1: 'Hello world',
+      line2: 'Next line',
+      displayText: 'Hello world\nNext line',
+      searchText: 'Hello world Next line',
+    },
+    'Final line',
+  ];
+  state.currentLyricsTimestamps = [100, 300];
+  state.currentLyricsEnhancedTimestamps = [
+    [[{ time: 100, text: 'Hello' }], [{ time: 150, text: 'Next' }]],
+    [{ time: 300, text: 'Final' }],
+  ];
+  state.currentLyricsFileName = 'Enhanced Song';
+  state.currentRawLyricsContent = '';
+  state.currentLyricsSource = null;
+  state.currentSongMetadata = null;
+  state.currentLyricsSections = [];
+  state.currentLineToSection = {};
+
+  try {
+    const { handlers, ioEvents, socketEvents, socket } = createSocketHarness();
+    registerLyricsHandlers({
+      io: { emit(eventName, payload) { ioEvents.push({ eventName, payload }); } },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'output:control',
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    handlers.get('splitNormalGroup')?.({ index: 0 });
+
+    assert.deepEqual(state.currentLyrics, ['Hello world', 'Next line', 'Final line']);
+    assert.deepEqual(state.currentLyricsTimestamps, [100, 100, 300]);
+    assert.deepEqual(state.currentLyricsEnhancedTimestamps, [
+      [{ time: 100, text: 'Hello' }],
+      [{ time: 150, text: 'Next' }],
+      [{ time: 300, text: 'Final' }],
+    ]);
+
+    const load = ioEvents.find((event) => event.eventName === 'lyricsLoad')?.payload;
+    assert.deepEqual(load.lyricsTimestamps, [100, 100, 300]);
+    assert.deepEqual(load.lyricsEnhancedTimestamps, state.currentLyricsEnhancedTimestamps);
+    assert.deepEqual(socketEvents.at(-1), { eventName: 'lyricsSplitSuccess', payload: { index: 0 } });
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.currentLyrics = previousLyrics;
+    state.currentLyricsTimestamps = previousTimestamps;
+    state.currentLyricsEnhancedTimestamps = previousEnhancedTimestamps;
     state.currentLyricsFileName = previousFileName;
     state.currentRawLyricsContent = previousRawLyricsContent;
     state.currentLyricsSource = previousLyricsSource;
