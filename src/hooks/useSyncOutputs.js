@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 import useLyricsStore from '../context/LyricsStore';
+import { buildLyricsSyncPayload } from '../utils/lyricsSyncPayload.js';
 
 export const useSyncOutputs = ({
   isConnected,
@@ -30,7 +31,7 @@ export const useSyncOutputs = ({
 
       if (lyrics && lyrics.length > 0) {
         const storeState = useLyricsStore.getState();
-        if (!emitLyricsLoad({ lyrics, fileName: storeState.lyricsFileName })) {
+        if (!emitLyricsLoad(buildLyricsSyncPayload(storeState, lyrics))) {
           syncSuccess = false;
         }
         if (selectedLine !== null && selectedLine !== undefined) {
