@@ -6,6 +6,7 @@ import { getUserDataMigrationResult } from './appIdentity.js';
 
 const MAX_LOG_BYTES = 5 * 1024 * 1024;
 const MAX_ROTATED_LOGS = 3;
+const MIN_LOG_SESSIONS = 5;
 const MAX_LOG_SESSIONS = 20;
 const MAX_LOG_DIR_BYTES = 100 * 1024 * 1024;
 const RESOURCE_LOG_INTERVAL_MS = 60_000;
@@ -148,10 +149,16 @@ const pruneLogFolder = ({ preservePaths = [] } = {}) => {
     });
   });
 
+  const newestSessions = [...sessions.values()]
+    .sort((a, b) => b.latestMtimeMs - a.latestMtimeMs);
   const keptSessions = new Set(
-    [...sessions.values()]
-      .sort((a, b) => b.latestMtimeMs - a.latestMtimeMs)
-      .slice(MAX_LOG_SESSIONS)
+    newestSessions
+      .slice(0, MAX_LOG_SESSIONS)
+      .map((session) => session.sessionPath)
+  );
+  const protectedSessions = new Set(
+    newestSessions
+      .slice(0, MIN_LOG_SESSIONS)
       .map((session) => session.sessionPath)
   );
 
@@ -165,6 +172,7 @@ const pruneLogFolder = ({ preservePaths = [] } = {}) => {
   let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
   for (const file of files) {
     if (totalBytes <= MAX_LOG_DIR_BYTES) break;
+    if (protectedSessions.has(file.sessionPath)) continue;
     if (deleteLogFile(file.filePath)) {
       totalBytes -= file.size;
     }
