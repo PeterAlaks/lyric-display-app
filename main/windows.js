@@ -426,7 +426,11 @@ export function createWindow(route = '/', options = {}) {
     try {
       win.setMenuBarVisibility(false);
       win.setAlwaysOnTop(false);
-      win.setIgnoreMouseEvents(true, { forward: true });
+      if (projectionFocusable) {
+        win.setIgnoreMouseEvents(false);
+      } else {
+        win.setIgnoreMouseEvents(true, { forward: true });
+      }
       win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true });
       win.setFullScreenable(true);
       win.setFocusable(Boolean(projectionFocusable));

@@ -25,6 +25,10 @@ const shouldMakeDesktopProjectionFocusable = (targetType) => (
   targetType === 'desktop' && process.platform !== 'win32'
 );
 
+const shouldMakeProjectionFocusable = (targetType) => (
+  targetType === 'display' || shouldMakeDesktopProjectionFocusable(targetType)
+);
+
 const buildProjectionRoute = (route, { escapeHint = false } = {}) => (
   `${route}?projection=1${escapeHint ? '&escapeHint=1' : ''}`
 );
@@ -163,15 +167,21 @@ const waitForWindowLoad = async (win) => {
   });
 };
 
-const applyProjectionWindowBehavior = (win, { keyboardFocusable = false } = {}) => {
+const applyProjectionWindowBehavior = (win, { keyboardFocusable = false, coverShell = false } = {}) => {
   if (!win || win.isDestroyed()) return;
 
   try { win.setMenuBarVisibility(false); } catch { }
   try { win.setBackgroundColor('#000000'); } catch { }
-  try { win.setAlwaysOnTop(false); } catch { }
+  try { win.setAlwaysOnTop(Boolean(coverShell), 'screen-saver'); } catch { }
   try { win.setSkipTaskbar(true); } catch { }
   try { win.setFocusable(Boolean(keyboardFocusable)); } catch { }
-  try { win.setIgnoreMouseEvents(true, { forward: true }); } catch { }
+  try {
+    if (keyboardFocusable) {
+      win.setIgnoreMouseEvents(false);
+    } else {
+      win.setIgnoreMouseEvents(true, { forward: true });
+    }
+  } catch { }
   try { win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true }); } catch { }
   try { win.setFullScreenable(true); } catch { }
   try { win.setResizable(false); } catch { }
@@ -364,7 +374,8 @@ export function registerDisplayHandlers({ getMainWindow }) {
       const outputKey = normalizeOutputKey(payload?.outputKey);
       const targetType = payload?.targetType === 'display' ? 'display' : 'desktop';
       const displayId = normalizeDisplayId(payload?.displayId);
-      const keyboardFocusable = shouldMakeDesktopProjectionFocusable(targetType);
+      const keyboardFocusable = shouldMakeProjectionFocusable(targetType);
+      const coverShell = targetType === 'display';
 
       const route = resolveOutputRoute(outputKey);
       if (!route) {
@@ -421,7 +432,7 @@ export function registerDisplayHandlers({ getMainWindow }) {
       }
 
       await waitForWindowLoad(projectionWindow);
-      applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable });
+      applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable, coverShell });
 
       displayManager.removeAssignmentsByOutput(outputKey);
 
@@ -437,6 +448,8 @@ export function registerDisplayHandlers({ getMainWindow }) {
           return { success: false, error: 'Failed to project to primary display' };
         }
       }
+
+      applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable, coverShell });
 
       try {
         if (typeof projectionWindow.showInactive === 'function') {
