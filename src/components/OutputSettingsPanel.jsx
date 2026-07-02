@@ -26,7 +26,7 @@ import FullscreenSettingsSection from './OutputSettingsPanel/FullscreenSettingsS
 import PanelHeaderActions from './OutputSettingsPanel/PanelHeaderActions';
 import TransitionSettingsSection from './OutputSettingsPanel/TransitionSettingsSection';
 import TypographySpacingSection from './OutputSettingsPanel/TypographySpacingSection';
-import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
+import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 import { outputTemplates } from '../utils/outputTemplates';
 
@@ -507,12 +507,11 @@ const OutputSettingsPanel = ({
     fullScreenBackgroundColorValue,
     fullScreenBackgroundPaintValue,
     backgroundDisabledTooltip,
-    fullScreenOptionsWrapperClass,
     handleLyricsPositionChange,
     handleFullScreenToggle,
     handleFullScreenBackgroundTypeChange,
     handleFullScreenPaintChange
-  } = useFullscreenModeState({ settings, applySettings, expand: fullScreenAdvancedExpanded });
+  } = useFullscreenModeState({ settings, applySettings });
 
   const {
     translationFontSizeMode,
@@ -1209,35 +1208,30 @@ const OutputSettingsPanel = ({
         translationFontSizeMode={translationFontSizeMode}
         update={update}
       />
-      {/* Font Color */}
-      <FontColorSection
-        darkMode={darkMode}
-        fontColor={settings.fontColor}
-        onChange={(val) => update('fontColor', val)}
-        fontColorAdvancedExpanded={fontColorAdvancedExpanded}
-        setFontColorAdvancedExpanded={setFontColorAdvancedExpanded}
-      />
+      <div>
+        {/* Font Color */}
+        <FontColorSection
+          darkMode={darkMode}
+          fontColor={settings.fontColor}
+          onChange={(val) => update('fontColor', val)}
+          fontColorAdvancedExpanded={fontColorAdvancedExpanded}
+          setFontColorAdvancedExpanded={setFontColorAdvancedExpanded}
+        />
 
-      {/* Font Color Advanced Settings Row */}
-      <div
-        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${fontColorAdvancedExpanded
-          ? 'max-h-20 opacity-100 translate-y-0 pointer-events-auto mt-1'
-          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-          }`}
-        aria-hidden={!fontColorAdvancedExpanded}
-        style={{ marginTop: fontColorAdvancedExpanded ? undefined : 0 }}
-      >
-        <div className="flex items-center justify-between w-full">
-          <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-            Translation Colour
-          </label>
-          <ColorPicker
-            value={translationLineColor}
-            onChange={(val) => update('translationLineColor', val)}
-            darkMode={darkMode}
-            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
-          />
-        </div>
+        {/* Font Color Advanced Settings Row */}
+        <AdvancedCollapse expanded={fontColorAdvancedExpanded}>
+          <div className="flex items-center justify-between w-full">
+            <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+              Translation Colour
+            </label>
+            <ColorPicker
+              value={translationLineColor}
+              onChange={(val) => update('translationLineColor', val)}
+              darkMode={darkMode}
+              className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+            />
+          </div>
+        </AdvancedCollapse>
       </div>
 
       {/* Bold / Italic / Underline / All Caps */}
@@ -1278,34 +1272,36 @@ const OutputSettingsPanel = ({
         settings={settings}
         update={update}
       />
-      {/* Background */}
-      <BackgroundSection
-        applySettings={applySettings}
-        darkMode={darkMode}
-        settings={settings}
-        update={update}
-        backgroundAdvancedExpanded={backgroundAdvancedExpanded}
-        setBackgroundAdvancedExpanded={setBackgroundAdvancedExpanded}
-        fullScreenModeChecked={fullScreenModeChecked}
-        backgroundDisabledTooltip={backgroundDisabledTooltip}
-      />
+      <div>
+        {/* Background */}
+        <BackgroundSection
+          applySettings={applySettings}
+          darkMode={darkMode}
+          settings={settings}
+          update={update}
+          backgroundAdvancedExpanded={backgroundAdvancedExpanded}
+          setBackgroundAdvancedExpanded={setBackgroundAdvancedExpanded}
+          fullScreenModeChecked={fullScreenModeChecked}
+          backgroundDisabledTooltip={backgroundDisabledTooltip}
+        />
 
-      <BackgroundBandSettingsSection
-        applySettings={applySettings}
-        backgroundAdvancedExpanded={backgroundAdvancedExpanded}
-        backgroundBandCustomLines={backgroundBandCustomLines}
-        backgroundBandHeightMode={backgroundBandHeightMode}
-        backgroundBandLockedToMaxLines={backgroundBandLockedToMaxLines}
-        backgroundBandVerticalPadding={backgroundBandVerticalPadding}
-        darkMode={darkMode}
-        fullScreenModeChecked={fullScreenModeChecked}
-        handleBackgroundHeightModeChange={handleBackgroundHeightModeChange}
-        handleCustomLinesChange={handleCustomLinesChange}
-        maxLinesEnabled={maxLinesEnabled}
-        maxLinesValue={maxLinesValue}
-        settings={settings}
-        update={update}
-      />
+        <BackgroundBandSettingsSection
+          applySettings={applySettings}
+          backgroundAdvancedExpanded={backgroundAdvancedExpanded}
+          backgroundBandCustomLines={backgroundBandCustomLines}
+          backgroundBandHeightMode={backgroundBandHeightMode}
+          backgroundBandLockedToMaxLines={backgroundBandLockedToMaxLines}
+          backgroundBandVerticalPadding={backgroundBandVerticalPadding}
+          darkMode={darkMode}
+          fullScreenModeChecked={fullScreenModeChecked}
+          handleBackgroundHeightModeChange={handleBackgroundHeightModeChange}
+          handleCustomLinesChange={handleCustomLinesChange}
+          maxLinesEnabled={maxLinesEnabled}
+          maxLinesValue={maxLinesValue}
+          settings={settings}
+          update={update}
+        />
+      </div>
       {/* X and Y Margins */}
       <MarginsSection
         darkMode={darkMode}
@@ -1327,7 +1323,6 @@ const OutputSettingsPanel = ({
         fullScreenModeChecked={fullScreenModeChecked}
         handleFullScreenToggleWithExpand={handleFullScreenToggleWithExpand}
         fullScreenAdvancedRef={fullScreenAdvancedRef}
-        fullScreenOptionsWrapperClass={fullScreenOptionsWrapperClass}
         fullScreenAdvancedVisible={fullScreenAdvancedVisible}
         fullScreenControlsDisabled={fullScreenControlsDisabled}
         fullScreenBackgroundTypeValue={fullScreenBackgroundTypeValue}

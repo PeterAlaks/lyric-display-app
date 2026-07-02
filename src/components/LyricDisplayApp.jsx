@@ -491,8 +491,15 @@ const LyricDisplayApp = () => {
                       : "data-[state=checked]:bg-black"}
           `}
                 />
-                <span className={`text-sm ml-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}
+                <span className={`ml-5 inline-flex items-center gap-3 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <span className="inline-block w-[152px] shrink-0">{isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}</span>
+                  <span
+                    className={`h-2 w-2 rounded-full ${isOutputOn
+                      ? 'bg-emerald-500'
+                      : darkMode ? 'bg-gray-500' : 'bg-gray-400'
+                      }`}
+                    aria-hidden="true"
+                  />
                 </span>
               </div>
 

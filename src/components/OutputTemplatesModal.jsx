@@ -190,10 +190,10 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
   return (
     <div className="space-y-3 text-sm">
       {/* Tab Switcher */}
-      <div className={`flex rounded-lg p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+      <div className={`flex min-h-12 rounded-lg p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
         <button
           onClick={() => setActiveTab('presets')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeTab === 'presets'
+          className={`flex-1 flex min-h-10 items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${activeTab === 'presets'
             ? darkMode
               ? 'bg-gray-700 text-white'
               : 'bg-white text-gray-900 shadow-sm'
@@ -207,7 +207,7 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
         </button>
         <button
           onClick={() => setActiveTab('saved')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeTab === 'saved'
+          className={`flex-1 flex min-h-10 items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${activeTab === 'saved'
             ? darkMode
               ? 'bg-gray-700 text-white'
               : 'bg-white text-gray-900 shadow-sm'

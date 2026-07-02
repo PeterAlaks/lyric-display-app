@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp, TextCursorInput, PaintBucket, Bold, Italic, Underline, CaseUpper, AlignVerticalSpaceAround, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,49 @@ export const AdvancedToggle = ({ expanded, onToggle, darkMode, ariaLabel, disabl
     )}
   </button>
 );
+
+const advancedCollapseTransition = {
+  gridTemplateRows: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  marginTop: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  opacity: { duration: 0.2, ease: 'easeOut' },
+  y: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+};
+
+export const AdvancedCollapse = React.forwardRef(({
+  expanded,
+  children,
+  className = '',
+  contentClassName = '',
+  openMarginTop = 16,
+}, ref) => {
+  const isOpen = Boolean(expanded);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={false}
+      animate={{
+        gridTemplateRows: isOpen ? '1fr' : '0fr',
+        marginTop: isOpen ? openMarginTop : 0,
+        opacity: isOpen ? 1 : 0,
+        y: isOpen ? 0 : -3,
+      }}
+      transition={advancedCollapseTransition}
+      className={`grid overflow-hidden ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${className}`}
+      aria-hidden={!isOpen}
+      style={{
+        marginBlockEnd: 0,
+        willChange: 'grid-template-rows, margin, opacity, transform',
+      }}
+    >
+      <div className={`min-h-0 overflow-hidden ${contentClassName}`}>
+        {children}
+      </div>
+    </motion.div>
+  );
+});
+
+AdvancedCollapse.displayName = 'AdvancedCollapse';
 
 export const FontSettingsRow = ({
   darkMode,

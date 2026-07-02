@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PaintPicker } from '@/components/ui/paint-picker';
-import { AdvancedToggle, LabelWithIcon } from '../OutputSettingsShared';
+import { AdvancedCollapse, AdvancedToggle, LabelWithIcon } from '../OutputSettingsShared';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../../utils/numberInput';
 
 const FULLSCREEN_ELEMENT_POSITIONS = [
@@ -29,7 +29,6 @@ const FullscreenSettingsSection = ({
   fullScreenModeChecked,
   handleFullScreenToggleWithExpand,
   fullScreenAdvancedRef,
-  fullScreenOptionsWrapperClass,
   fullScreenAdvancedVisible,
   fullScreenControlsDisabled,
   fullScreenBackgroundTypeValue,
@@ -47,7 +46,7 @@ const FullscreenSettingsSection = ({
   fullScreenElementMediaName,
   handleFullScreenElementToggle,
 }) => (
-  <>
+  <div>
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-2">
         <Tooltip content="Enable full screen display with custom background settings" side="right">
@@ -79,11 +78,9 @@ const FullscreenSettingsSection = ({
       </div>
     </div>
 
-    <div
+    <AdvancedCollapse
       ref={fullScreenAdvancedRef}
-      className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${fullScreenOptionsWrapperClass}`}
-      aria-hidden={!fullScreenAdvancedVisible}
-      style={{ marginTop: fullScreenAdvancedVisible ? undefined : 0 }}
+      expanded={fullScreenAdvancedVisible}
     >
       <div className={`flex items-center gap-3 justify-between w-full pt-2 ${fullScreenControlsDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         <Select
@@ -317,8 +314,8 @@ const FullscreenSettingsSection = ({
           </div>
         </div>
       )}
-    </div>
-  </>
+    </AdvancedCollapse>
+  </div>
 );
 
 export default FullscreenSettingsSection;

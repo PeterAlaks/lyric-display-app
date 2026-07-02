@@ -777,12 +777,6 @@ const SetlistModal = () => {
               }
             </p>
           )}
-
-          {isDesktopApp && filteredFiles.length > 1 && !searchQuery && (
-            <p className={`mt-2 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              Drag the grip handle to reorder songs. Changes sync to all clients.
-            </p>
-          )}
         </div>
 
         {/* Scrollable Content */}

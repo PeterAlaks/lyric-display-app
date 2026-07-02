@@ -218,7 +218,7 @@ const useMenuHandlers = (closeMenu) => {
     closeMenu();
     showModal({
       title: 'Preview Outputs',
-      headerDescription: 'Live preview of both output displays side-by-side',
+      headerDescription: 'Preview output, stage, time and custom displays with current output visibility.',
       component: 'PreviewOutputs',
       variant: 'info',
       size: 'large',
@@ -477,6 +477,7 @@ const useMenuHandlers = (closeMenu) => {
       component: 'IntegrationInstructions',
       variant: 'info',
       size: 'lg',
+      customLayout: true,
       dismissLabel: 'Close'
     });
   }, [closeMenu, showModal]);

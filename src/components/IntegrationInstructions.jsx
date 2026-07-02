@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Monitor, Video, Cast, Check, Network, Copy, ExternalLink } from 'lucide-react';
+import { Monitor, Check, Network, Copy, ExternalLink } from 'lucide-react';
 import { createRoutePath, createRouteUrl } from '@/integrations/sourceUrls';
 import { getAllRoutableOutputIds } from '../../shared/outputRegistry.js';
 
@@ -20,6 +20,7 @@ function usePlatform() {
 export function IntegrationInstructions({ darkMode, onRequestClose }) {
     const [localIP, setLocalIP] = useState('localhost');
     const [activeTab, setActiveTab] = useState('obs');
+    const scrollContainerRef = React.useRef(null);
     const platform = usePlatform();
 
     useEffect(() => {
@@ -40,34 +41,38 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
         if (activeTab === 'wirecast' && !showWirecast) setActiveTab('obs');
     }, [platform, activeTab, showVmix, showWirecast]);
 
+    const handleTabChange = (nextTab) => {
+        setActiveTab(nextTab);
+        requestAnimationFrame(() => {
+            scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+        });
+    };
+
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex min-h-0 flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 190px)' }}>
             {/* Fixed Header with Tabs */}
-            <div className={`shrink-0 pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className={`shrink-0 border-b px-6 py-4 ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+                <Tabs value={activeTab} onValueChange={handleTabChange}>
                     <TabsList className={`w-full h-12 p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                         <TabsTrigger
                             value="obs"
-                            className={`flex-1 h-10 gap-2 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                            className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
                         >
-                            <Monitor className="w-4 h-4" />
                             <span className="font-medium">OBS Studio</span>
                         </TabsTrigger>
                         {showVmix && (
                             <TabsTrigger
                                 value="vmix"
-                                className={`flex-1 h-10 gap-2 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
                             >
-                                <Video className="w-4 h-4" />
                                 <span className="font-medium">vMix</span>
                             </TabsTrigger>
                         )}
                         {showWirecast && (
                             <TabsTrigger
                                 value="wirecast"
-                                className={`flex-1 h-10 gap-2 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
                             >
-                                <Cast className="w-4 h-4" />
                                 <span className="font-medium">Wirecast</span>
                             </TabsTrigger>
                         )}
@@ -76,7 +81,11 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto pt-6 px-1 min-h-0">
+            <div
+                ref={scrollContainerRef}
+                className="min-h-0 flex-1 overflow-y-auto px-6 pb-24 pt-5"
+                style={{ maxHeight: 'calc(100vh - 285px)' }}
+            >
                 <Tabs value={activeTab}>
                     <TabsContent value="obs" className="mt-0">
                         <OBSInstructions darkMode={darkMode} localIP={localIP} platform={platform} onRequestClose={onRequestClose} />

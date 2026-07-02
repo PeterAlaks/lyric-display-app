@@ -614,6 +614,7 @@ export function ModalProvider({ children, isDark = false }) {
                               component: 'IntegrationInstructions',
                               variant: 'info',
                               size: 'lg',
+                              customLayout: true,
                               dismissLabel: 'Close'
                             });
                           }}

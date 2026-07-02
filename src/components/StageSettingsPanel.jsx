@@ -9,7 +9,7 @@ import { PaintPicker } from "@/components/ui/paint-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
 import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge, Save, BetweenVerticalEnd, ListIndentIncrease, Eye } from 'lucide-react';
 import FontSelect from './FontSelect';
-import { blurInputOnEnter, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
+import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
 import { Slider } from '@/components/ui/slider';
 import useToast from '../hooks/useToast';
 import { sanitizeIntegerInput } from '../utils/numberInput';
@@ -603,84 +603,79 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         />
       </div>
 
-      {/* Upcoming Song */}
-      <div className="flex items-center justify-between gap-4">
-        <Tooltip content="Configure upcoming song display mode" side="right">
-          <LabelWithIcon icon={ListMusic} text="Upcoming Song" darkMode={darkMode} />
-        </Tooltip>
-        <div className="flex items-center gap-2 justify-end w-full">
-          <Tooltip content={(upcomingSongAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
-            <AdvancedToggle
-              expanded={upcomingSongAdvancedExpanded}
-              onToggle={() => setUpcomingSongAdvancedExpanded(!upcomingSongAdvancedExpanded)}
-              darkMode={darkMode}
-              ariaLabel="Toggle upcoming song advanced settings"
-            />
+      <div>
+        {/* Upcoming Song */}
+        <div className="flex items-center justify-between gap-4">
+          <Tooltip content="Configure upcoming song display mode" side="right">
+            <LabelWithIcon icon={ListMusic} text="Upcoming Song" darkMode={darkMode} />
           </Tooltip>
-          <Select
-            value={settings.upcomingSongMode || 'automatic'}
-            onValueChange={(val) => update('upcomingSongMode', val)}
-          >
-            <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
-              <SelectItem value="automatic">Automatic</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Upcoming Song Advanced Settings Row */}
-      <div
-        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${upcomingSongAdvancedExpanded
-          ? 'max-h-40 opacity-100 translate-y-0 pointer-events-auto mt-1'
-          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-          }`}
-        aria-hidden={!upcomingSongAdvancedExpanded}
-        style={{ marginTop: upcomingSongAdvancedExpanded ? undefined : 0 }}
-      >
-        <div className="space-y-3">
-          {/* Custom Name Input with OK Button */}
-          <div className="flex items-center justify-between w-full gap-2">
-            <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50' : ''}`}>
-              Custom Name
-            </label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                value={customUpcomingSongName}
-                onChange={(e) => handleCustomUpcomingSongNameChange(e.target.value)}
-                placeholder="Enter song name..."
-                disabled={settings.upcomingSongMode !== 'custom'}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && hasUnsavedUpcomingSongName && settings.upcomingSongMode === 'custom') {
-                    handleConfirmUpcomingSongName();
-                  }
-                }}
-                className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          <div className="flex items-center gap-2 justify-end w-full">
+            <Tooltip content={(upcomingSongAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
+              <AdvancedToggle
+                expanded={upcomingSongAdvancedExpanded}
+                onToggle={() => setUpcomingSongAdvancedExpanded(!upcomingSongAdvancedExpanded)}
+                darkMode={darkMode}
+                ariaLabel="Toggle upcoming song advanced settings"
               />
-              {hasUnsavedUpcomingSongName && settings.upcomingSongMode === 'custom' && (
-                <Button
-                  size="sm"
-                  onClick={handleConfirmUpcomingSongName}
-                  className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 h-9`}
-                >
-                  OK
-                </Button>
-              )}
-            </div>
+            </Tooltip>
+            <Select
+              value={settings.upcomingSongMode || 'automatic'}
+              onValueChange={(val) => update('upcomingSongMode', val)}
+            >
+              <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
+                <SelectItem value="automatic">Automatic</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-
-          <FullScreenToggleRow
-            label="Send Full Screen"
-            checked={settings.upcomingSongFullScreen || false}
-            onChange={(checked) => handleFullScreenToggle('upcomingSong', checked)}
-            disabled={settings.timerFullScreen || settings.customMessagesFullScreen}
-            ariaLabel="Toggle upcoming song full screen"
-          />
         </div>
+
+        {/* Upcoming Song Advanced Settings Row */}
+        <AdvancedCollapse expanded={upcomingSongAdvancedExpanded}>
+          <div className="space-y-3">
+            {/* Custom Name Input with OK Button */}
+            <div className="flex items-center justify-between w-full gap-2">
+              <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50' : ''}`}>
+                Custom Name
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={customUpcomingSongName}
+                  onChange={(e) => handleCustomUpcomingSongNameChange(e.target.value)}
+                  placeholder="Enter song name..."
+                  disabled={settings.upcomingSongMode !== 'custom'}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && hasUnsavedUpcomingSongName && settings.upcomingSongMode === 'custom') {
+                      handleConfirmUpcomingSongName();
+                    }
+                  }}
+                  className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${settings.upcomingSongMode !== 'custom' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                />
+                {hasUnsavedUpcomingSongName && settings.upcomingSongMode === 'custom' && (
+                  <Button
+                    size="sm"
+                    onClick={handleConfirmUpcomingSongName}
+                    className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 h-9`}
+                  >
+                    OK
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <FullScreenToggleRow
+              label="Send Full Screen"
+              checked={settings.upcomingSongFullScreen || false}
+              onChange={(checked) => handleFullScreenToggle('upcomingSong', checked)}
+              disabled={settings.timerFullScreen || settings.customMessagesFullScreen}
+              ariaLabel="Toggle upcoming song full screen"
+            />
+          </div>
+        </AdvancedCollapse>
       </div>
 
       <div className={`border-t my-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
@@ -742,51 +737,46 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         </div>
       </div>
 
-      {/* Timer Controls */}
-      <div className="flex items-center justify-between gap-4">
-        <Tooltip content="Set countdown timer duration in minutes" side="right">
-          <LabelWithIcon icon={Timer} text="Countdown Timer" darkMode={darkMode} />
-        </Tooltip>
-        <div className="flex items-center gap-2 justify-end">
-          <Tooltip content={(timerAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
-            <AdvancedToggle
-              expanded={timerAdvancedExpanded}
-              onToggle={() => setTimerAdvancedExpanded(!timerAdvancedExpanded)}
-              darkMode={darkMode}
-              ariaLabel="Toggle timer advanced settings"
-            />
+      <div>
+        {/* Timer Controls */}
+        <div className="flex items-center justify-between gap-4">
+          <Tooltip content="Set countdown timer duration in minutes" side="right">
+            <LabelWithIcon icon={Timer} text="Countdown Timer" darkMode={darkMode} />
           </Tooltip>
-          <Input
-            type="number"
-            value={timerDuration}
-            onChange={(e) => handleTimerDurationChange(e.target.value)}
-            min="0"
-            max="180"
-            placeholder="Minutes"
-            disabled={timerRunning}
-            className={`w-24 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${timerRunning ? 'opacity-60 cursor-not-allowed' : ''}`}
-          />
+          <div className="flex items-center gap-2 justify-end">
+            <Tooltip content={(timerAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
+              <AdvancedToggle
+                expanded={timerAdvancedExpanded}
+                onToggle={() => setTimerAdvancedExpanded(!timerAdvancedExpanded)}
+                darkMode={darkMode}
+                ariaLabel="Toggle timer advanced settings"
+              />
+            </Tooltip>
+            <Input
+              type="number"
+              value={timerDuration}
+              onChange={(e) => handleTimerDurationChange(e.target.value)}
+              min="0"
+              max="180"
+              placeholder="Minutes"
+              disabled={timerRunning}
+              className={`w-24 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'} ${timerRunning ? 'opacity-60 cursor-not-allowed' : ''}`}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Timer Advanced Settings Row */}
-      <div
-        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${timerAdvancedExpanded
-          ? 'max-h-40 opacity-100 translate-y-0 pointer-events-auto mt-1'
-          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-          }`}
-        aria-hidden={!timerAdvancedExpanded}
-        style={{ marginTop: timerAdvancedExpanded ? undefined : 0 }}
-      >
-        <div className="space-y-3">
-          <FullScreenToggleRow
-            label="Send Full Screen"
-            checked={settings.timerFullScreen || false}
-            onChange={(checked) => handleFullScreenToggle('timer', checked)}
-            disabled={settings.upcomingSongFullScreen || settings.customMessagesFullScreen}
-            ariaLabel="Toggle timer full screen"
-          />
-        </div>
+        {/* Timer Advanced Settings Row */}
+        <AdvancedCollapse expanded={timerAdvancedExpanded}>
+          <div className="space-y-3">
+            <FullScreenToggleRow
+              label="Send Full Screen"
+              checked={settings.timerFullScreen || false}
+              onChange={(checked) => handleFullScreenToggle('timer', checked)}
+              disabled={settings.upcomingSongFullScreen || settings.customMessagesFullScreen}
+              ariaLabel="Toggle timer full screen"
+            />
+          </div>
+        </AdvancedCollapse>
       </div>
 
       {/* Timer Control Buttons Row */}
@@ -863,56 +853,51 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       {/* Custom Messages */}
       <h4 className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-2`}>Custom Messages</h4>
 
-      <div className="flex items-center justify-between gap-4 mt-4">
-        <Tooltip content="Time between message transitions (1000-10000ms)" side="right">
-          <LabelWithIcon icon={GalleryVerticalEnd} text="Scroll Speed (ms)" darkMode={darkMode} />
-        </Tooltip>
-        <div className="flex items-center gap-2 justify-end">
-          <Tooltip content={(customMessagesAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
-            <AdvancedToggle
-              expanded={customMessagesAdvancedExpanded}
-              onToggle={() => setCustomMessagesAdvancedExpanded(!customMessagesAdvancedExpanded)}
-              darkMode={darkMode}
-              ariaLabel="Toggle custom messages advanced settings"
-            />
+      <div>
+        <div className="flex items-center justify-between gap-4 mt-4">
+          <Tooltip content="Time between message transitions (1000-10000ms)" side="right">
+            <LabelWithIcon icon={GalleryVerticalEnd} text="Scroll Speed (ms)" darkMode={darkMode} />
           </Tooltip>
-          <Input
-            type="number"
-            value={settings.messageScrollSpeed}
-            onChange={(e) => update(
-              'messageScrollSpeed',
-              sanitizeIntegerInput(
-                e.target.value,
-                settings.messageScrollSpeed ?? 3000,
-                { min: 1000, max: 10000, clampMin: false }
-              )
-            )}
-            min="1000"
-            max="10000"
-            step="500"
-            className={`w-24 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-          />
+          <div className="flex items-center gap-2 justify-end">
+            <Tooltip content={(customMessagesAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
+              <AdvancedToggle
+                expanded={customMessagesAdvancedExpanded}
+                onToggle={() => setCustomMessagesAdvancedExpanded(!customMessagesAdvancedExpanded)}
+                darkMode={darkMode}
+                ariaLabel="Toggle custom messages advanced settings"
+              />
+            </Tooltip>
+            <Input
+              type="number"
+              value={settings.messageScrollSpeed}
+              onChange={(e) => update(
+                'messageScrollSpeed',
+                sanitizeIntegerInput(
+                  e.target.value,
+                  settings.messageScrollSpeed ?? 3000,
+                  { min: 1000, max: 10000, clampMin: false }
+                )
+              )}
+              min="1000"
+              max="10000"
+              step="500"
+              className={`w-24 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Custom Messages Advanced Settings Row */}
-      <div
-        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${customMessagesAdvancedExpanded
-          ? 'max-h-40 opacity-100 translate-y-0 pointer-events-auto mt-1'
-          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-          }`}
-        aria-hidden={!customMessagesAdvancedExpanded}
-        style={{ marginTop: customMessagesAdvancedExpanded ? undefined : 0 }}
-      >
-        <div className="space-y-3">
-          <FullScreenToggleRow
-            label="Send Full Screen"
-            checked={settings.customMessagesFullScreen || false}
-            onChange={(checked) => handleFullScreenToggle('customMessages', checked)}
-            disabled={settings.upcomingSongFullScreen || settings.timerFullScreen}
-            ariaLabel="Toggle custom messages full screen"
-          />
-        </div>
+        {/* Custom Messages Advanced Settings Row */}
+        <AdvancedCollapse expanded={customMessagesAdvancedExpanded}>
+          <div className="space-y-3">
+            <FullScreenToggleRow
+              label="Send Full Screen"
+              checked={settings.customMessagesFullScreen || false}
+              onChange={(checked) => handleFullScreenToggle('customMessages', checked)}
+              disabled={settings.upcomingSongFullScreen || settings.timerFullScreen}
+              ariaLabel="Toggle custom messages full screen"
+            />
+          </div>
+        </AdvancedCollapse>
       </div>
 
       <div className="space-y-2">

@@ -2,7 +2,7 @@ import { ArrowRightLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
-import { AdvancedToggle } from '../OutputSettingsShared';
+import { AdvancedCollapse, AdvancedToggle } from '../OutputSettingsShared';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
@@ -24,7 +24,7 @@ const TransitionSettingsSection = ({
   transitionAdvancedExpanded,
   update,
 }) => (
-  <>
+  <div>
     <SettingRow
       icon={ArrowRightLeft}
       label="Transition Style"
@@ -62,14 +62,7 @@ const TransitionSettingsSection = ({
       </Select>
     </SettingRow>
 
-    <div
-      className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${transitionAdvancedExpanded
-        ? 'max-h-20 opacity-100 translate-y-0 pointer-events-auto mt-1'
-        : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-        }`}
-      aria-hidden={!transitionAdvancedExpanded}
-      style={{ marginTop: transitionAdvancedExpanded ? undefined : 0 }}
-    >
+    <AdvancedCollapse expanded={transitionAdvancedExpanded}>
       <div className="flex items-center justify-between w-full">
         <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50' : ''}`}>
           Transition Speed (ms)
@@ -92,11 +85,11 @@ const TransitionSettingsSection = ({
           className={`w-24 ${darkMode
             ? 'bg-gray-700 border-gray-600 text-gray-200'
             : 'bg-white border-gray-300'
-            } ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
       </div>
-    </div>
-  </>
+    </AdvancedCollapse>
+  </div>
 );
 
 export default TransitionSettingsSection;

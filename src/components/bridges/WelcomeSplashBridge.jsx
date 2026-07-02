@@ -30,6 +30,7 @@ export default function WelcomeSplashBridge() {
                 component: 'IntegrationInstructions',
                 variant: 'info',
                 size: 'lg',
+                customLayout: true,
                 dismissLabel: 'Close'
               });
             }

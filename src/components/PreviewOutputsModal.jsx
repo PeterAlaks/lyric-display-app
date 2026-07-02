@@ -29,6 +29,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
   const customOutputIds = useLyricsStore((state) => state.customOutputIds || []);
   const previewCustomOutputId = useLyricsStore((state) => state.previewCustomOutputId);
   const setPreviewCustomOutputId = useLyricsStore((state) => state.setPreviewCustomOutputId);
+  const isOutputOn = useLyricsStore((state) => state.isOutputOn);
 
   const [output1Resolution, setOutput1Resolution] = useState(RESOLUTION_OPTIONS[0]);
   const [output2Resolution, setOutput2Resolution] = useState(RESOLUTION_OPTIONS[0]);
@@ -226,20 +227,30 @@ const PreviewOutputsModal = ({ darkMode }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Monitor className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            Live preview of output, stage, and timer displays
-          </p>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <span className="grid shrink-0">
+              <span className="invisible col-start-1 row-start-1 whitespace-nowrap">Display Output is OFF</span>
+              <span className="col-start-1 row-start-1 whitespace-nowrap">{isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}</span>
+            </span>
+            <span
+              className={`h-2 w-2 rounded-full ${isOutputOn
+                ? 'bg-emerald-500'
+                : darkMode ? 'bg-gray-500' : 'bg-gray-400'
+                }`}
+              aria-hidden="true"
+            />
+          </span>
         </div>
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${darkMode
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-medium transition-colors ${darkMode
             ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 disabled:opacity-50'
             : 'bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50'
             }`}
           title="Refresh all previews"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>

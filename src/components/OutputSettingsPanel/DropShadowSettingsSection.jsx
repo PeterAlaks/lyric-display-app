@@ -2,7 +2,7 @@ import { Contrast, MoveHorizontal, MoveVertical, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from '@/components/ui/color-picker';
-import { AdvancedToggle } from '../OutputSettingsShared';
+import { AdvancedCollapse, AdvancedToggle } from '../OutputSettingsShared';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
@@ -27,7 +27,7 @@ const DropShadowSettingsSection = ({
   settings,
   update,
 }) => (
-  <>
+  <div>
     <SettingRow
       icon={Contrast}
       label="Drop Shadow"
@@ -65,14 +65,7 @@ const DropShadowSettingsSection = ({
       />
     </SettingRow>
 
-    <div
-      className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${dropShadowAdvancedExpanded
-        ? 'max-h-32 opacity-100 translate-y-0 pointer-events-auto mt-1'
-        : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-        }`}
-      aria-hidden={!dropShadowAdvancedExpanded}
-      style={{ marginTop: dropShadowAdvancedExpanded ? undefined : 0 }}
-    >
+    <AdvancedCollapse expanded={dropShadowAdvancedExpanded}>
       <div className="flex items-center justify-between w-full">
         <Tooltip content="Horizontal shadow offset in pixels (negative = left, positive = right)" side="top">
           <div className="flex items-center gap-2">
@@ -134,8 +127,8 @@ const DropShadowSettingsSection = ({
           </div>
         </Tooltip>
       </div>
-    </div>
-  </>
+    </AdvancedCollapse>
+  </div>
 );
 
 export default DropShadowSettingsSection;
