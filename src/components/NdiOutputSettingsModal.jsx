@@ -5,11 +5,13 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cast, Zap } from 'lucide-react';
+import { Cast, Settings, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import useToast from '../hooks/useToast';
+import useModal from '../hooks/useModal';
 import useNdiStore from '../context/NdiStore';
 import { formatOutputLabel } from '../utils/outputLabels';
 
@@ -29,11 +31,12 @@ const FRAMERATE_OPTIONS = [
   { value: 60, label: '60 fps' },
 ];
 
-const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
+const NdiOutputSettingsModal = ({ darkMode, outputKey, onClose }) => {
   const [settings, setSettings] = useState(null);
   const companionRunning = useNdiStore((s) => s.companionRunning);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
+  const { showModal } = useModal();
 
   const outputLabel = formatOutputLabel(outputKey);
 
@@ -94,6 +97,26 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
       showToast({ title: 'Setting Failed', message: 'Could not update custom resolution.', variant: 'error' });
     }
   }, [outputKey, showToast]);
+
+  const handleOpenNdiPreferences = useCallback(() => {
+    const openPreferences = () => showModal({
+      title: 'Preferences',
+      component: 'UserPreferences',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      initialCategory: 'ndi',
+      actions: []
+    });
+
+    if (onClose) {
+      onClose();
+      window.setTimeout(openPreferences, 240);
+      return;
+    }
+
+    openPreferences();
+  }, [onClose, showModal]);
 
   if (loading || !settings) {
     return (
@@ -239,9 +262,24 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
         {settings.enabled && !companionRunning && (
           <div className={`flex items-start gap-2 p-3 rounded-lg ${darkMode ? 'bg-yellow-900/20 border border-yellow-600/30' : 'bg-yellow-50 border border-yellow-200'}`}>
             <Zap className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
-            <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-              The NDI companion is not running. Launch it from Preferences -&gt; NDI to start broadcasting.
-            </p>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                The NDI companion is not running. Launch it from Preferences -&gt; NDI to start broadcasting.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleOpenNdiPreferences}
+                className={`h-8 rounded-lg px-3 text-xs ${darkMode
+                  ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 hover:text-yellow-100'
+                  : 'border-yellow-300 bg-white text-yellow-800 hover:bg-yellow-100 hover:text-yellow-900'
+                  }`}
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Open NDI Preferences
+              </Button>
+            </div>
           </div>
         )}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings, Film, Music2, SlidersHorizontal } from 'lucide-react';
+import { Globe, List, ListMusic, RefreshCw, Shield, FolderOpen, FileText, FilePlusCorner, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings, Film, Music2, SlidersHorizontal } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -28,7 +28,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
         />
 
         <HelpSection
-            icon={List}
+            icon={ListMusic}
             title="Setlist Manager"
             description="Build and organize your service setlist. Add songs up to your configured limit, reorder with drag-and-drop, and load lyrics instantly during live events. Perfect for planning your worship services."
             darkMode={darkMode}
@@ -56,7 +56,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
         />
 
         <HelpSection
-            icon={FileText}
+            icon={FilePlusCorner}
             title="Create New Song"
             description="Open the song canvas to compose lyrics from scratch. Includes formatting tools, translation support, line duplication, and cleanup utilities. Save locally or load directly to the control panel."
             darkMode={darkMode}
