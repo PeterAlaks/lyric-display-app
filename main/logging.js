@@ -3,14 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import util from 'util';
 import { getUserDataMigrationResult } from './appIdentity.js';
+import {
+  LOG_RETENTION,
+  MANAGED_LOG_FILE_PATTERN,
+  buildLogPrunePlan,
+  getLogSessionPath,
+} from './logRetention.js';
 
-const MAX_LOG_BYTES = 5 * 1024 * 1024;
-const MAX_ROTATED_LOGS = 3;
-const MIN_LOG_SESSIONS = 5;
-const MAX_LOG_SESSIONS = 20;
-const MAX_LOG_DIR_BYTES = 100 * 1024 * 1024;
 const RESOURCE_LOG_INTERVAL_MS = 60_000;
-const MANAGED_LOG_FILE_PATTERN = /^lyricdisplay-.+\.log(?:\.\d+)?$/;
 
 let initialized = false;
 let logDir = null;
@@ -79,12 +79,12 @@ const rotateLogs = (filePath, { force = false } = {}) => {
   try {
     if (!fs.existsSync(filePath)) return false;
     const stat = fs.statSync(filePath);
-    if (!stat.isFile() || (!force && stat.size < MAX_LOG_BYTES)) return false;
+    if (!stat.isFile() || (!force && stat.size < LOG_RETENTION.maxLogBytes)) return false;
 
-    for (let index = MAX_ROTATED_LOGS; index >= 1; index -= 1) {
+    for (let index = LOG_RETENTION.maxRotatedLogs; index >= 1; index -= 1) {
       const source = `${filePath}.${index}`;
       const target = `${filePath}.${index + 1}`;
-      if (index === MAX_ROTATED_LOGS && fs.existsSync(source)) {
+      if (index === LOG_RETENTION.maxRotatedLogs && fs.existsSync(source)) {
         fs.rmSync(source, { force: true });
         continue;
       }
@@ -110,7 +110,7 @@ const listManagedLogFiles = () => {
         const stat = fs.statSync(filePath);
         return {
           filePath,
-          sessionPath: filePath.replace(/\.\d+$/, ''),
+          sessionPath: getLogSessionPath(filePath),
           size: stat.size,
           mtimeMs: stat.mtimeMs,
         };
@@ -122,14 +122,7 @@ const listManagedLogFiles = () => {
 };
 
 const pruneLogFolder = ({ preservePaths = [] } = {}) => {
-  const preserved = new Set(
-    preservePaths
-      .filter(Boolean)
-      .map((filePath) => path.resolve(filePath))
-  );
-
   const deleteLogFile = (filePath) => {
-    if (preserved.has(path.resolve(filePath))) return false;
     try {
       fs.rmSync(filePath, { force: true });
       return true;
@@ -139,51 +132,16 @@ const pruneLogFolder = ({ preservePaths = [] } = {}) => {
     }
   };
 
-  let files = listManagedLogFiles();
-  const sessions = new Map();
-  files.forEach((file) => {
-    const previous = sessions.get(file.sessionPath);
-    sessions.set(file.sessionPath, {
-      sessionPath: file.sessionPath,
-      latestMtimeMs: Math.max(previous?.latestMtimeMs || 0, file.mtimeMs),
-    });
-  });
-
-  const newestSessions = [...sessions.values()]
-    .sort((a, b) => b.latestMtimeMs - a.latestMtimeMs);
-  const keptSessions = new Set(
-    newestSessions
-      .slice(0, MAX_LOG_SESSIONS)
-      .map((session) => session.sessionPath)
-  );
-  const protectedSessions = new Set(
-    newestSessions
-      .slice(0, MIN_LOG_SESSIONS)
-      .map((session) => session.sessionPath)
-  );
-
-  files
-    .filter((file) => !keptSessions.has(file.sessionPath))
-    .forEach(({ filePath }) => deleteLogFile(filePath));
-
-  files = listManagedLogFiles()
-    .sort((a, b) => a.mtimeMs - b.mtimeMs);
-
-  let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-  for (const file of files) {
-    if (totalBytes <= MAX_LOG_DIR_BYTES) break;
-    if (protectedSessions.has(file.sessionPath)) continue;
-    if (deleteLogFile(file.filePath)) {
-      totalBytes -= file.size;
-    }
-  }
+  const plan = buildLogPrunePlan(listManagedLogFiles(), { preservePaths });
+  plan.deletePaths.forEach(deleteLogFile);
+  return plan.stats;
 };
 
 const appendToLogFile = (text) => {
   if (!fileLoggingReady || !logFilePath) return;
 
   const byteLength = Buffer.byteLength(text, 'utf8');
-  if (currentLogBytes > 0 && currentLogBytes + byteLength > MAX_LOG_BYTES) {
+  if (currentLogBytes > 0 && currentLogBytes + byteLength > LOG_RETENTION.maxLogBytes) {
     if (rotateLogs(logFilePath, { force: true })) {
       currentLogBytes = 0;
     } else {
@@ -337,8 +295,11 @@ export function initFileLogging() {
     rotateLogs(logFilePath);
     fs.closeSync(fs.openSync(logFilePath, 'a'));
     currentLogBytes = getFileSize(logFilePath);
-    pruneLogFolder({ preservePaths: [logFilePath] });
     fileLoggingReady = true;
+    const pruneStats = pruneLogFolder({ preservePaths: [logFilePath] });
+    if (pruneStats?.deletedFiles > 0) {
+      writeLog('INFO', 'Log retention pruning completed', pruneStats);
+    }
     try {
       fs.writeFileSync(latestLogFilePath, logFilePath, 'utf8');
     } catch (error) {
