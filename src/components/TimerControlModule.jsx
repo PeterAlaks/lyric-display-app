@@ -269,7 +269,8 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
   const showSecondaryText = displaySettings.showSecondaryText !== false;
   const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
   const windowActive = useWindowActive();
-  const now = usePreviewClock(needsClock, windowActive ? 1000 : 5000);
+  const timerActive = timerState.running || timerState.paused;
+  const now = usePreviewClock(needsClock, timerActive || windowActive ? 1000 : 5000);
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
   const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
   const progress = React.useMemo(() => getTimerProgress(timerState, now), [timerState, now]);
