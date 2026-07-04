@@ -106,7 +106,7 @@ export function createLoadingWindow() {
         }
 
         .photo-panel {
-          width: 44%;
+          width: 50%;
           min-width: 320px;
           height: 100%;
           background: #111827;
