@@ -12,6 +12,31 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { SCRIPTURE_TRANSLATIONS } from '../../constants/scripture.js';
 import useScriptureSearch from '../../hooks/useScriptureSearch.js';
 
+// Memoized so typing in the search box (which re-renders ScripturePanel on
+// every keystroke, well before the debounced result changes) doesn't force
+// React to re-diff every verse row in long chapters (Psalm 119 has 176).
+// Only the row(s) whose own props actually changed re-render.
+const VerseRow = React.memo(function VerseRow({ verse, selected, darkMode, mutedTextClass, onToggle }) {
+  return (
+    <button
+      type="button"
+      data-verse={verse.verse}
+      role="option"
+      aria-selected={selected}
+      onClick={() => onToggle(verse.verse)}
+      className={`w-full text-left px-3 py-2 rounded-lg text-xs leading-5 transition-colors ${selected
+        ? 'bg-blue-500 text-white'
+        : darkMode
+          ? 'bg-gray-800/80 text-gray-200 hover:bg-blue-500/10 hover:text-blue-300'
+          : 'bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+        }`}
+    >
+      <sup className={`font-bold mr-1 text-[9px] ${selected ? 'text-blue-100' : mutedTextClass}`}>{verse.verse}</sup>
+      {verse.text}
+    </button>
+  );
+});
+
 export default function ScripturePanel({ darkMode, translationId, onTranslationChange, onProject, projecting = false, expandedResults = false }) {
   const {
     query,
@@ -200,28 +225,16 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
             </div>
 
             <div ref={versesContainerRef} className={`${resultsHeightClass} overflow-y-auto space-y-1 pr-1`} role="listbox" aria-label="Search results" aria-multiselectable="true">
-              {result.verses.map((verse) => {
-                const selected = selectedVerses.has(verse.verse);
-                return (
-                  <button
-                    key={verse.verse}
-                    type="button"
-                    data-verse={verse.verse}
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => toggleVerse(verse.verse)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs leading-5 transition-colors ${selected
-                      ? 'bg-blue-500 text-white'
-                      : darkMode
-                        ? 'bg-gray-800/80 text-gray-200 hover:bg-blue-500/10 hover:text-blue-300'
-                        : 'bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600'
-                      }`}
-                  >
-                    <sup className={`font-bold mr-1 text-[9px] ${selected ? 'text-blue-100' : mutedTextClass}`}>{verse.verse}</sup>
-                    {verse.text}
-                  </button>
-                );
-              })}
+              {result.verses.map((verse) => (
+                <VerseRow
+                  key={verse.verse}
+                  verse={verse}
+                  selected={selectedVerses.has(verse.verse)}
+                  darkMode={darkMode}
+                  mutedTextClass={mutedTextClass}
+                  onToggle={toggleVerse}
+                />
+              ))}
             </div>
           </>
         )}
