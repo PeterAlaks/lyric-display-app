@@ -116,6 +116,7 @@ const OutputPage = ({ outputId }) => {
       showProjectionExitHint={showProjectionExitHint}
       className="relative w-screen h-screen overflow-hidden"
       onAutosizeChange={handleAutosizeChange}
+      idlePlaceholderText={isPreviewMode ? 'Waiting for lyrics...' : null}
     />
   );
 };

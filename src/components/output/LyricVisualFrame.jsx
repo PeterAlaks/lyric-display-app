@@ -48,6 +48,7 @@ export default function LyricVisualFrame({
   backgroundVideoPlaying,
   renderBackgroundLayer = true,
   renderFullScreenElementLayer = true,
+  idlePlaceholderText = null,
 }) {
   const [adjustedFontSize, setAdjustedFontSize] = useState(null);
   const backgroundVideoRef = useRef(null);
@@ -590,6 +591,16 @@ export default function LyricVisualFrame({
       {renderFullScreenMedia()}
       {renderFullScreenElement()}
       <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
+      {!isVisible && idlePlaceholderText && (
+        <div className="absolute inset-0 flex items-center justify-center px-8 z-0">
+          <div
+            className="text-center opacity-30 leading-none"
+            style={{ fontSize: `${fontSize}px`, color: fontColor }}
+          >
+            {idlePlaceholderText}
+          </div>
+        </div>
+      )}
       <div
         className="relative z-10 flex w-full h-full"
         style={{
