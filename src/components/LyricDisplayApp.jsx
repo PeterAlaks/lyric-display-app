@@ -334,12 +334,12 @@ const LyricDisplayApp = () => {
     trackAction,
   });
 
-  const handleLineSelect = (index) => {
+  const handleLineSelect = React.useCallback((index) => {
     selectLine(index);
     setSelectedLines(null);
     emitLineUpdate(index);
     trackAction('lyrics_edited');
-  };
+  }, [selectLine, setSelectedLines, emitLineUpdate, trackAction]);
 
   const { handleClearOutput, handleOutputTabSwitch, handleToggle } = useOutputControlActions({
     allOutputIds,
