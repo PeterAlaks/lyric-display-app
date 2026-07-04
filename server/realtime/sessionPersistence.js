@@ -19,20 +19,25 @@ const objectToMap = (value, fallback = []) => {
   return new Map(Object.entries(value));
 };
 
-const createSnapshot = () => ({
+const createSnapshot = () => {
+  // Scripture projections are ephemeral - never persist them so a restart
+  // reopens on a clean slate instead of the last passage.
+  const isScripture = typeof state.currentSongMetadata?.origin === 'string'
+    && state.currentSongMetadata.origin.startsWith('Scripture');
+  return {
   version: 1,
   savedAt: Date.now(),
-  currentLyrics: Array.isArray(state.currentLyrics) ? state.currentLyrics : [],
-  currentLyricsTimestamps: Array.isArray(state.currentLyricsTimestamps) ? state.currentLyricsTimestamps : [],
-  currentLyricsEnhancedTimestamps: Array.isArray(state.currentLyricsEnhancedTimestamps) ? state.currentLyricsEnhancedTimestamps : [],
-  currentLyricsFileName: state.currentLyricsFileName || '',
-  currentRawLyricsContent: state.currentRawLyricsContent || '',
-  currentLyricsSource: state.currentLyricsSource || null,
-  currentSongMetadata: state.currentSongMetadata || null,
-  currentSelectedLine: Number.isInteger(state.currentSelectedLine) ? state.currentSelectedLine : null,
-  currentSelectedLines: Array.isArray(state.currentSelectedLines) ? state.currentSelectedLines : null,
-  currentLyricsSections: Array.isArray(state.currentLyricsSections) ? state.currentLyricsSections : [],
-  currentLineToSection: state.currentLineToSection || {},
+  currentLyrics: !isScripture && Array.isArray(state.currentLyrics) ? state.currentLyrics : [],
+  currentLyricsTimestamps: !isScripture && Array.isArray(state.currentLyricsTimestamps) ? state.currentLyricsTimestamps : [],
+  currentLyricsEnhancedTimestamps: !isScripture && Array.isArray(state.currentLyricsEnhancedTimestamps) ? state.currentLyricsEnhancedTimestamps : [],
+  currentLyricsFileName: isScripture ? '' : (state.currentLyricsFileName || ''),
+  currentRawLyricsContent: isScripture ? '' : (state.currentRawLyricsContent || ''),
+  currentLyricsSource: isScripture ? null : (state.currentLyricsSource || null),
+  currentSongMetadata: isScripture ? null : (state.currentSongMetadata || null),
+  currentSelectedLine: !isScripture && Number.isInteger(state.currentSelectedLine) ? state.currentSelectedLine : null,
+  currentSelectedLines: !isScripture && Array.isArray(state.currentSelectedLines) ? state.currentSelectedLines : null,
+  currentLyricsSections: !isScripture && Array.isArray(state.currentLyricsSections) ? state.currentLyricsSections : [],
+  currentLineToSection: isScripture ? {} : (state.currentLineToSection || {}),
   outputSettings: mapToObject(state.outputSettings),
   outputEnabled: mapToObject(state.outputEnabled),
   currentStageSettings: state.currentStageSettings || {},
@@ -42,7 +47,8 @@ const createSnapshot = () => ({
   currentStageMessages: Array.isArray(state.currentStageMessages) ? state.currentStageMessages : [],
   registeredOutputs: Array.from(state.registeredOutputs || []),
   liveSafety: state.liveSafety || null,
-});
+  };
+};
 
 const applySnapshot = (snapshot) => {
   if (!snapshot || typeof snapshot !== 'object') return false;

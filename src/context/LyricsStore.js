@@ -162,15 +162,19 @@ const useLyricsStore = create(
     {
       name: 'lyrics-store',
       partialize: (state) => {
+        // Scripture projections are ephemeral: never persist them, so the app
+        // always reopens on a clean Songs tab instead of the last passage.
+        const isScripture = typeof state.songMetadata?.origin === 'string'
+          && state.songMetadata.origin.startsWith('Scripture');
         const persisted = {
-          lyrics: state.lyrics,
-          rawLyricsContent: state.rawLyricsContent,
-          selectedLine: state.selectedLine,
-          lyricsFileName: state.lyricsFileName,
-          lyricsSource: state.lyricsSource,
-          songMetadata: state.songMetadata,
-          lyricsSections: state.lyricsSections,
-          lineToSection: state.lineToSection,
+          lyrics: isScripture ? [] : state.lyrics,
+          rawLyricsContent: isScripture ? '' : state.rawLyricsContent,
+          selectedLine: isScripture ? null : state.selectedLine,
+          lyricsFileName: isScripture ? '' : state.lyricsFileName,
+          lyricsSource: isScripture ? { content: '', fileType: 'txt', filePath: null, fileName: '' } : state.lyricsSource,
+          songMetadata: isScripture ? { title: '', artists: [], album: '', year: null, origin: '', filePath: '' } : state.songMetadata,
+          lyricsSections: isScripture ? [] : state.lyricsSections,
+          lineToSection: isScripture ? {} : state.lineToSection,
           stageEnabled: state.stageEnabled,
           darkMode: state.darkMode,
           themeMode: state.themeMode,
@@ -180,8 +184,8 @@ const useLyricsStore = create(
           timerControlSettings: state.timerControlSettings,
           timerDisplaySettings: state.timerDisplaySettings,
           autoplaySettings: state.autoplaySettings,
-          lyricsTimestamps: state.lyricsTimestamps,
-          lyricsEnhancedTimestamps: state.lyricsEnhancedTimestamps,
+          lyricsTimestamps: isScripture ? [] : state.lyricsTimestamps,
+          lyricsEnhancedTimestamps: isScripture ? [] : state.lyricsEnhancedTimestamps,
           hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
           scriptureTranslation: state.scriptureTranslation,
           ...partializeOutputState(state),
