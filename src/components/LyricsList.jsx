@@ -39,6 +39,7 @@ export default function LyricsList({
     selectedLines,
     lyricsFileName,
     selectLine,
+    setSelectedLines,
     setLyrics,
     setLyricsTimestamps,
     setLyricsEnhancedTimestamps
@@ -125,6 +126,7 @@ export default function LyricsList({
     clickAwayIgnoreRefs,
     onLineSelect: handleLineClickPlain,
     selectLine,
+    setSelectedLines,
     emitLineUpdate,
     getNormalGroupLines,
     showToast,
