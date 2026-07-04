@@ -201,6 +201,23 @@ const SUPERSCRIPT_DIGITS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷',
 export const toSuperscriptNumber = (value) =>
   String(value).replace(/\d/g, (digit) => SUPERSCRIPT_DIGITS[Number(digit)]);
 
+// Matches the superscript verse number (and the space after it) that
+// buildScriptureProjection prefixes onto each verse's text line, e.g. "⁸ ".
+const LEADING_SUPERSCRIPT_NUMBER_REGEX = /^([⁰¹²³⁴⁵⁶⁷⁸⁹]+)(\s*)/;
+
+/**
+ * Split a leading superscript verse number off a projected verse line, so
+ * outputs can size the number separately (to match the reference line size)
+ * while leaving the underlying text unchanged for plain-text consumers.
+ * @param {string} text
+ * @returns {{ verseNumber: string, rest: string } | null}
+ */
+export function splitLeadingSuperscriptNumber(text) {
+  const match = typeof text === 'string' ? text.match(LEADING_SUPERSCRIPT_NUMBER_REGEX) : null;
+  if (!match) return null;
+  return { verseNumber: match[1], rest: text.slice(match[0].length) };
+}
+
 // Parser overrides for projected scripture: each verse block (separated by a
 // blank line) collapses into a single group, and nothing merges across verses.
 export const SCRIPTURE_GROUPING_CONFIG = {

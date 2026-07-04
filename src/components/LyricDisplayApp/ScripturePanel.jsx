@@ -98,7 +98,7 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
 
   const showBookSuggestions = parsed && !chapter && bookMatches.length > 0;
   const showNoBookMatch = parsed && bookMatches.length === 0;
-  const resultsHeightClass = expandedResults ? 'max-h-[44vh]' : 'max-h-56';
+  const resultsHeightClass = 'max-h-[44vh]';
 
   return (
     <div className="mb-6">
@@ -145,7 +145,9 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
         </Select>
       </div>
 
-      {/* Results */}
+      {/* Results - hidden (not cleared) while formatting is shown, so they
+          reappear as-is once formatting is hidden again. */}
+      {expandedResults && (
       <div className="mb-3">
         {showNoBookMatch && (
           <p className={`text-xs px-1 ${mutedTextClass}`}>No book matches “{parsed.bookQuery}”.</p>
@@ -239,6 +241,7 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
           </>
         )}
       </div>
+      )}
 
       {/* Project button */}
       {hasResults && (
