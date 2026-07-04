@@ -166,9 +166,57 @@ export async function fetchScriptureChapter({ translationId, bookName, chapter, 
   return result;
 }
 
+// Matches the reference lines emitted by buildScriptureProjection, with or
+// without the surrounding brackets, e.g. "[John 3:16 KJV]" or
+// "1 Corinthians 13:4 WEBBE".
+const REFERENCE_LINE_REGEX = /^\[?[123]?\s?[A-Za-z][A-Za-z .]* \d{1,3}:\d{1,3} [A-Z][A-Z-]{1,9}\]?$/;
+
+export const isScriptureReferenceLine = (text) =>
+  typeof text === 'string' && REFERENCE_LINE_REGEX.test(text.trim());
+
+/**
+ * Combine several lines' output texts into one display block. Scripture
+ * reference lines are dropped from every block except the last, so a
+ * multi-verse selection shows a single reference at the bottom.
+ * @param {string[]} texts - per-line output texts (may contain newlines)
+ * @returns {string}
+ */
+export function combineOutputTexts(texts) {
+  const blocks = (texts || []).filter((text) => typeof text === 'string' && text.length > 0);
+  return blocks
+    .map((text, index) => (
+      index === blocks.length - 1
+        ? text
+        : text
+          .split('\n')
+          .filter((line) => !isScriptureReferenceLine(line))
+          .join('\n')
+    ))
+    .filter((text) => text.length > 0)
+    .join('\n');
+}
+
+const SUPERSCRIPT_DIGITS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+
+export const toSuperscriptNumber = (value) =>
+  String(value).replace(/\d/g, (digit) => SUPERSCRIPT_DIGITS[Number(digit)]);
+
+// Parser overrides for projected scripture: each verse block (separated by a
+// blank line) collapses into a single group, and nothing merges across verses.
+export const SCRIPTURE_GROUPING_CONFIG = {
+  enableAutoLineGrouping: true,
+  enableTranslationGrouping: false,
+  enableCrossBlankLineGrouping: false,
+  maxLinesPerGroup: 12,
+  maxLineLength: 1000,
+};
+
 /**
  * Build the lyrics-pipeline payload for a set of verses so scripture is
- * displayed, grouped, and styled exactly like loaded lyrics.
+ * displayed, grouped, and styled exactly like loaded lyrics. Each verse is
+ * emitted as its own blank-line-separated block — verse text (with a
+ * superscript verse number) followed by its reference (e.g. "John 3:16 KJV")
+ * — so the parser groups every verse, and its reference, into one line group.
  * @param {{bookName: string, chapter: number, verses: Array<{verse: number, text: string}>, wholeChapter?: boolean, translationId: string, translationName?: string}} params
  * @returns {{content: string, label: string, title: string, origin: string}}
  */
@@ -179,8 +227,14 @@ export function buildScriptureProjection({ bookName, chapter, verses, wholeChapt
     ? `${bookName} ${chapter}`
     : `${bookName} ${chapter}:${compressVerseRanges(verses.map((verse) => verse.verse))}`;
 
+  // The reference is stored without brackets so it stays a plain line the
+  // parser groups with its verse; the outputs add brackets at render time.
+  const content = verses
+    .map((verse) => `${toSuperscriptNumber(verse.verse)} ${verse.text}\n${bookName} ${chapter}:${verse.verse} ${abbreviation}`)
+    .join('\n\n');
+
   return {
-    content: verses.map((verse) => `${verse.verse} ${verse.text}`).join('\n'),
+    content,
     label: `${referenceLabel} (${abbreviation})`,
     title: `${referenceLabel} (${abbreviation})`,
     origin: `Scripture · ${translationName || translation?.name || abbreviation}`,

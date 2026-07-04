@@ -10,6 +10,7 @@ export const useLyricsLoader = ({
   setLyricsTimestamps,
   setLyricsEnhancedTimestamps = () => { },
   selectLine,
+  setSelectedLines = () => { },
   setLyricsFileName,
   setLyricsSource,
   setSongMetadata,
@@ -64,6 +65,7 @@ export const useLyricsLoader = ({
       setLyricsTimestamps(timestamps);
       setLyricsEnhancedTimestamps(enhancedTimestamps);
       selectLine(null);
+      setSelectedLines(null);
       setLyricsFileName(finalBaseName);
       setLyricsSource({
         content: content || rawText || '',
@@ -142,7 +144,7 @@ export const useLyricsLoader = ({
       });
       return false;
     }
-  }, [emitLyricsLoad, selectLine, setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, showToast, socket]);
+  }, [emitLyricsLoad, selectLine, setSelectedLines, setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, showToast, socket]);
 
   const handleImportFromLibrary = useCallback(async ({ providerId, providerName, lyric }, lyrics) => {
     if (!lyric || typeof lyric.content !== 'string' || !lyric.content.trim()) {

@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle, SlidersHorizontal } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences, useAppModeState, useScriptureState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -45,13 +45,13 @@ import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
 import AppModeToggle from './LyricDisplayApp/AppModeToggle';
 import ScripturePanel from './LyricDisplayApp/ScripturePanel';
-import { buildScriptureProjection } from '../utils/scripture.js';
+import { buildScriptureProjection, SCRIPTURE_GROUPING_CONFIG } from '../utils/scripture.js';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, lyricsEnhancedTimestamps, pendingSavedVersion, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, clearPendingSavedVersion } = useLyricsState();
+  const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, lyricsEnhancedTimestamps, pendingSavedVersion, selectLine, setSelectedLines, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, clearPendingSavedVersion } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
@@ -112,6 +112,7 @@ const LyricDisplayApp = () => {
   }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
+  const isScriptureContent = typeof songMetadata?.origin === 'string' && songMetadata.origin.startsWith('Scripture');
   const quickSwitchClassName = `!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
     ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
     : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -198,6 +199,7 @@ const LyricDisplayApp = () => {
     setLyricsTimestamps,
     setLyricsEnhancedTimestamps,
     selectLine,
+    setSelectedLines,
     setLyricsFileName,
     setLyricsSource,
     setSongMetadata,
@@ -215,6 +217,8 @@ const LyricDisplayApp = () => {
   }, [baseHandleImportFromLibrary, lyrics, trackAction]);
 
   const [projectingScripture, setProjectingScripture] = React.useState(false);
+  const [showScriptureFormatting, setShowScriptureFormatting] = React.useState(false);
+  const showFormattingPanels = appMode === 'song' || showScriptureFormatting;
   const handleProjectScripture = React.useCallback(async (payload) => {
     const projection = buildScriptureProjection(payload);
     setProjectingScripture(true);
@@ -222,9 +226,10 @@ const LyricDisplayApp = () => {
       const success = await processLoadedLyrics(
         { content: projection.content, fileName: projection.label, fileType: 'txt' },
         {
-          // Keep every verse on its own line; grouping stays a manual action,
-          // exactly like grouping loaded lyrics.
-          groupingConfig: { enableAutoLineGrouping: false },
+          // Each verse (with its reference line) becomes one line group;
+          // splitting keeps long verses wrapped at a readable width.
+          groupingConfig: SCRIPTURE_GROUPING_CONFIG,
+          enableOnlineLyricsSplitting: true,
           songMetadata: {
             title: projection.title,
             artists: [],
@@ -243,12 +248,26 @@ const LyricDisplayApp = () => {
       if (success) {
         clearSearch();
         trackAction('song_loaded');
+        // Automatically send the projected verses to the outputs. Scripture
+        // grouping guarantees one line group per verse, so the line count
+        // matches the number of verses.
+        const lineCount = payload.verses.length;
+        if (lineCount > 1) {
+          const indices = Array.from({ length: lineCount }, (_, i) => i);
+          setSelectedLines(indices);
+          selectLine(0);
+          emitLineUpdate({ index: 0, indices });
+        } else {
+          setSelectedLines(null);
+          selectLine(0);
+          emitLineUpdate(0);
+        }
       }
       return success;
     } finally {
       setProjectingScripture(false);
     }
-  }, [processLoadedLyrics, clearSearch, trackAction]);
+  }, [processLoadedLyrics, clearSearch, trackAction, setSelectedLines, selectLine, emitLineUpdate]);
 
   const {
     quickParserOpen,
@@ -315,6 +334,7 @@ const LyricDisplayApp = () => {
 
   const handleLineSelect = (index) => {
     selectLine(index);
+    setSelectedLines(null);
     emitLineUpdate(index);
     trackAction('lyrics_edited');
   };
@@ -329,6 +349,7 @@ const LyricDisplayApp = () => {
     ready,
     scrollableSettingsRef,
     selectLine,
+    setSelectedLines,
     setActiveTab,
     setIsOutputOn,
     showToast,
@@ -459,6 +480,9 @@ const LyricDisplayApp = () => {
         <div className="control-panel-sidebar-texture w-[420px] shrink-0 shadow-lg flex flex-col h-full">
           {/* Fixed Header Section */}
           <div className="shrink-0 pt-4 px-5 pb-0 bg-transparent">
+            {/* Song / Scripture mode switcher */}
+            <AppModeToggle appMode={appMode} setAppMode={setAppMode} darkMode={darkMode} />
+
             <ControlPanelHeaderActions
               authStatus={authStatus}
               connectionStatus={connectionStatus}
@@ -479,9 +503,6 @@ const LyricDisplayApp = () => {
               showModal={showModal}
               themeMode={themeMode}
             />
-
-            {/* Song / Scripture mode switcher */}
-            <AppModeToggle appMode={appMode} setAppMode={setAppMode} darkMode={darkMode} />
 
             {appMode === 'song' ? (
               /* Load and Create Buttons */
@@ -515,6 +536,7 @@ const LyricDisplayApp = () => {
                 onTranslationChange={setScriptureTranslation}
                 onProject={handleProjectScripture}
                 projecting={projectingScripture}
+                expandedResults={!showScriptureFormatting}
               />
             )}
             <input
@@ -525,8 +547,9 @@ const LyricDisplayApp = () => {
               onChange={handleFileChange}
             />
 
-            {/* Current File Indicator */}
-            {hasLyrics && (
+            {/* Current File Indicator - hidden in song mode when the loaded
+                content came from the scripture module. */}
+            {hasLyrics && !(appMode === 'song' && isScriptureContent) && (
               <div className={`mb-6 text-xs font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 <FileMusic className="w-4 h-4 shrink-0" />
                 <span className="truncate">{lyricsFileName}</span>
@@ -583,9 +606,26 @@ const LyricDisplayApp = () => {
               </Tooltip>
             </div>
 
-            <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+            <div className={`border-t ${appMode === 'scripture' ? 'mt-2' : 'my-8'} ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+
+            {/* Formatting visibility toggle (scripture mode keeps results front and centre) */}
+            {appMode === 'scripture' && (
+              <button
+                type="button"
+                onClick={() => setShowScriptureFormatting((visible) => !visible)}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 mb-4 rounded-lg text-xs font-medium transition-colors ${darkMode
+                  ? 'text-gray-400 hover:bg-blue-500/10 hover:text-blue-300'
+                  : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                  }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                {showScriptureFormatting ? 'Hide formatting' : 'Show formatting'}
+                {showScriptureFormatting ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+            )}
 
             {/* Output Tabs */}
+            {showFormattingPanels && (
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
               <TabsList className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
                 {allOutputIds.map((id) => {
@@ -616,47 +656,53 @@ const LyricDisplayApp = () => {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            )}
           </div>
 
           {/* Scrollable Settings Panel */}
-          <div
-            ref={scrollableSettingsRef}
-            className="flex-1 overflow-y-auto px-6 relative"
-            onScroll={(e) => {
-              const scrollTop = e.currentTarget.scrollTop;
-              const shadow = e.currentTarget.previousElementSibling;
-              if (shadow) {
-                if (scrollTop > 10) {
-                  shadow.classList.add('shadow-md');
-                } else {
-                  shadow.classList.remove('shadow-md');
+          {showFormattingPanels ? (
+            <div
+              ref={scrollableSettingsRef}
+              className="flex-1 overflow-y-auto px-6 relative"
+              onScroll={(e) => {
+                const scrollTop = e.currentTarget.scrollTop;
+                const shadow = e.currentTarget.previousElementSibling;
+                if (shadow) {
+                  if (scrollTop > 10) {
+                    shadow.classList.add('shadow-md');
+                  } else {
+                    shadow.classList.remove('shadow-md');
+                  }
                 }
-              }
-            }}
-          >
-            {/* Tab Content */}
-            <div>
-              {activeTab.startsWith('output') && allOutputIds.includes(activeTab) && (
-                <OutputSettingsPanel
-                  key={activeTab}
-                  outputKey={activeTab}
-                  onDeleteOutput={activeTab !== 'output1' && activeTab !== 'output2' ? handleDeleteOutput : undefined}
-                />
-              )}
+              }}
+            >
+              {/* Tab Content */}
+              <div>
+                {activeTab.startsWith('output') && allOutputIds.includes(activeTab) && (
+                  <OutputSettingsPanel
+                    key={activeTab}
+                    outputKey={activeTab}
+                    onDeleteOutput={activeTab !== 'output1' && activeTab !== 'output2' ? handleDeleteOutput : undefined}
+                  />
+                )}
 
-              {activeTab === 'stage' && (
-                <OutputSettingsPanel
-                  outputKey="stage"
-                />
-              )}
+                {activeTab === 'stage' && (
+                  <OutputSettingsPanel
+                    outputKey="stage"
+                  />
+                )}
+              </div>
+              <div className="m-10"></div>
             </div>
-            <div className="m-10"></div>
-          </div>
+          ) : (
+            <div className="flex-1" />
+          )}
         </div>
 
         <LyricsWorkspace
           addDisabled={addDisabled}
           addTitle={addTitle}
+          appMode={appMode}
           autoplayActive={autoplayActive}
           clampGroupSize={clampGroupSize}
           clearSearch={clearSearch}

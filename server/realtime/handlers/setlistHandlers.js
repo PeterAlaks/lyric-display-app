@@ -201,6 +201,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       state.currentLyricsTimestamps = timestamps;
       state.currentLyricsEnhancedTimestamps = enhancedTimestamps;
       state.currentSelectedLine = null;
+      state.currentSelectedLines = null;
       state.currentLyricsFileName = cleanDisplayName;
       state.currentRawLyricsContent = editableRawContent;
       state.currentLyricsSource = {

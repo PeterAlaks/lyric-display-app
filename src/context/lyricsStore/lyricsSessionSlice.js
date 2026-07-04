@@ -34,6 +34,9 @@ export const createLyricsSessionSlice = (set) => ({
   lyrics: [],
   rawLyricsContent: '',
   selectedLine: null,
+  // When set (array of 2+ indices), outputs display all of these lines at
+  // once; cleared whenever an ordinary single-line update arrives.
+  selectedLines: null,
   lyricsFileName: '',
   lyricsSections: [],
   lineToSection: {},
@@ -67,6 +70,13 @@ export const createLyricsSessionSlice = (set) => ({
   setRawLyricsContent: (content) => set((state) => (state.rawLyricsContent === content ? state : { rawLyricsContent: content })),
   setLyricsFileName: (name) => set((state) => (state.lyricsFileName === name ? state : { lyricsFileName: name })),
   selectLine: (index) => set((state) => (Object.is(state.selectedLine, index) ? state : { selectedLine: index })),
+  setSelectedLines: (indices) => set((state) => {
+    const next = Array.isArray(indices) && indices.length > 1
+      ? indices.filter((i) => Number.isInteger(i) && i >= 0)
+      : null;
+    const normalized = next && next.length > 1 ? next : null;
+    return stateValueEqual(state.selectedLines, normalized) ? state : { selectedLines: normalized };
+  }),
   setSongMetadata: (metadata) => set((state) => (stateValueEqual(state.songMetadata, metadata) ? state : { songMetadata: metadata })),
   setLyricsSource: (source) => set((state) => {
     const next = normalizeLyricsSource(source);

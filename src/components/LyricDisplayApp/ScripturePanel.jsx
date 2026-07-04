@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { BookOpen, Loader2, MonitorUp, Search, X } from 'lucide-react';
+import { Loader2, MonitorUp, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -12,7 +12,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { SCRIPTURE_TRANSLATIONS } from '../../constants/scripture.js';
 import useScriptureSearch from '../../hooks/useScriptureSearch.js';
 
-export default function ScripturePanel({ darkMode, translationId, onTranslationChange, onProject, projecting = false }) {
+export default function ScripturePanel({ darkMode, translationId, onTranslationChange, onProject, projecting = false, expandedResults = false }) {
   const {
     query,
     setQuery,
@@ -73,15 +73,16 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
 
   const showBookSuggestions = parsed && !chapter && bookMatches.length > 0;
   const showNoBookMatch = parsed && bookMatches.length === 0;
+  const resultsHeightClass = expandedResults ? 'max-h-[44vh]' : 'max-h-56';
 
   return (
     <div className="mb-6">
       {/* Search bar */}
-      <div className="relative mb-3">
+      <div className="relative mb-2">
         <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
         <Input
           type="text"
-          placeholder="Search scripture (e.g. John 3:16-20)"
+          placeholder="Search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           aria-label="Search scripture"
@@ -99,13 +100,12 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
         )}
       </div>
 
-      {/* Translation selector */}
-      <div className="flex items-center gap-2 mb-3">
-        <BookOpen className={`h-4 w-4 shrink-0 ${mutedTextClass}`} />
+      {/* Translation selector — plain text with a chevron, no bounding box */}
+      <div className="flex items-center mb-2 px-1">
         <Select value={translationId} onValueChange={onTranslationChange}>
           <SelectTrigger
             aria-label="Bible translation"
-            className={`flex-1 ${darkMode ? 'border-gray-700/70 bg-gray-800/90 text-gray-200' : ''}`}
+            className={`h-auto w-auto border-0 bg-transparent px-0 py-1 shadow-none gap-1 justify-start text-xs font-medium focus:ring-0 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
           >
             <SelectValue placeholder="Translation" />
           </SelectTrigger>
@@ -122,19 +122,12 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
 
       {/* Results */}
       <div className="mb-3">
-        {!parsed && (
-          <p className={`text-xs px-1 ${mutedTextClass}`}>
-            Search by book, chapter, or verses — e.g. <span className="font-medium">John</span>,{' '}
-            <span className="font-medium">John 3</span>, or <span className="font-medium">John 3:16-20</span>.
-          </p>
-        )}
-
         {showNoBookMatch && (
           <p className={`text-xs px-1 ${mutedTextClass}`}>No book matches “{parsed.bookQuery}”.</p>
         )}
 
         {showBookSuggestions && (
-          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+          <div className={`${resultsHeightClass} overflow-y-auto space-y-1 pr-1`}>
             {bookMatches.slice(0, 10).map((book) => (
               <button
                 key={book.name}
@@ -206,7 +199,7 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
               </span>
             </div>
 
-            <div ref={versesContainerRef} className="max-h-64 overflow-y-auto space-y-1 pr-1" role="listbox" aria-label="Search results" aria-multiselectable="true">
+            <div ref={versesContainerRef} className={`${resultsHeightClass} overflow-y-auto space-y-1 pr-1`} role="listbox" aria-label="Search results" aria-multiselectable="true">
               {result.verses.map((verse) => {
                 const selected = selectedVerses.has(verse.verse);
                 return (
@@ -224,7 +217,7 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
                         : 'bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                   >
-                    <span className={`font-bold mr-1.5 ${selected ? 'text-blue-100' : mutedTextClass}`}>{verse.verse}</span>
+                    <sup className={`font-bold mr-1 text-[9px] ${selected ? 'text-blue-100' : mutedTextClass}`}>{verse.verse}</sup>
                     {verse.text}
                   </button>
                 );

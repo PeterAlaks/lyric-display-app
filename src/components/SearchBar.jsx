@@ -12,6 +12,7 @@ const SearchBar = ({
   onNext,
   onClear,
   density = 'default',
+  placeholder = 'Search loaded lyrics...',
 }) => {
   const compact = density === 'dock' || density === 'compact';
   const inputHeightClass = compact ? 'h-8 text-xs' : 'h-10 text-[13px]';
@@ -31,7 +32,7 @@ const SearchBar = ({
         <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${searchIconClass}`} />
         <Input
           type="text"
-          placeholder="Search loaded lyrics..."
+          placeholder={placeholder}
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           data-search-input

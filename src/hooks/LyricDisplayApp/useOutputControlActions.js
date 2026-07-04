@@ -10,6 +10,7 @@ export const useOutputControlActions = ({
   ready,
   scrollableSettingsRef,
   selectLine,
+  setSelectedLines,
   setActiveTab,
   setIsOutputOn,
   showToast,
@@ -34,8 +35,9 @@ export const useOutputControlActions = ({
 
   const handleClearOutput = useCallback(() => {
     selectLine(null);
+    setSelectedLines?.(null);
     emitLineUpdate(null);
-  }, [emitLineUpdate, selectLine]);
+  }, [emitLineUpdate, selectLine, setSelectedLines]);
 
   const handleOutputTabSwitch = useCallback((tab) => {
     if (tab === 'stage') {

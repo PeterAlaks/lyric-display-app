@@ -21,8 +21,15 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     }
 
     const { index } = payload;
+    // Optional multi-line selection: an array of 2+ valid indices means the
+    // outputs should display all of those lines at once.
+    const indices = Array.isArray(payload.indices)
+      ? payload.indices.filter((value) => Number.isInteger(value) && value >= 0)
+      : null;
+    const selectedLines = indices && indices.length > 1 ? indices : null;
     const changed = state.currentSelectedLine !== index;
     state.currentSelectedLine = index;
+    state.currentSelectedLines = selectedLines;
     schedulePersistSessionState();
     console.log(`Line updated to ${index} by ${clientType} client`);
     if (changed) {
@@ -35,7 +42,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
         metadata: { index },
       });
     }
-    emitLyricsRenderEvent(io, 'lineUpdate', { index });
+    emitLyricsRenderEvent(io, 'lineUpdate', selectedLines ? { index, indices: selectedLines } : { index });
   });
 
   socket.on('lyricsLoad', (payload) => {
@@ -63,6 +70,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     state.currentLyricsSections = incomingSections || derived?.sections || [];
     state.currentLineToSection = incomingLineToSection || derived?.lineToSection || {};
     state.currentSelectedLine = null;
+    state.currentSelectedLines = null;
     state.currentLyricsFileName = fileName;
     state.currentRawLyricsContent = typeof payloadObject?.rawLyricsContent === 'string' ? payloadObject.rawLyricsContent : '';
     state.currentLyricsSource = isPlainObject(payloadObject?.lyricsSource)
@@ -219,6 +227,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     emitLyricsRenderEvent(io, 'lyricsTimestampsUpdate', state.currentLyricsTimestamps);
     emitLyricsRenderEvent(io, 'lyricsSectionsUpdate', { sections: state.currentLyricsSections, lineToSection: state.currentLineToSection });
 
+    state.currentSelectedLines = null;
     if (typeof state.currentSelectedLine === 'number') {
       emitLyricsRenderEvent(io, 'lineUpdate', { index: state.currentSelectedLine });
     }

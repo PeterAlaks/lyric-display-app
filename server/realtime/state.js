@@ -21,6 +21,7 @@ export const state = {
     filePath: '',
   },
   currentSelectedLine: null,
+  currentSelectedLines: null,
   currentLyricsSections: [],
   currentLineToSection: {},
   outputSettings: new Map([
@@ -173,6 +174,7 @@ export function buildCurrentState(clientInfo) {
       ...baseState,
       lyrics: state.currentLyrics,
       selectedLine: state.currentSelectedLine,
+      selectedLines: state.currentSelectedLines,
       isOutputOn: state.currentIsOutputOn,
       lyricsFileName: state.currentLyricsFileName || '',
       stageTimerState: state.currentStageTimerState,
@@ -184,6 +186,7 @@ export function buildCurrentState(clientInfo) {
       ...baseState,
       lyrics: state.currentLyrics,
       selectedLine: state.currentSelectedLine,
+      selectedLines: state.currentSelectedLines,
       stageSettings: state.currentStageSettings,
       isOutputOn: state.currentIsOutputOn,
       stageEnabled: state.currentStageEnabled,
@@ -200,6 +203,7 @@ export function buildCurrentState(clientInfo) {
     lyricsTimestamps: state.currentLyricsTimestamps,
     lyricsEnhancedTimestamps: state.currentLyricsEnhancedTimestamps,
     selectedLine: state.currentSelectedLine,
+    selectedLines: state.currentSelectedLines,
     lyricsSections: state.currentLyricsSections,
     lineToSection: state.currentLineToSection,
     stageSettings: state.currentStageSettings,
@@ -245,6 +249,7 @@ export function buildPeriodicState(clientInfo) {
     return appendOutputState({
       ...baseState,
       selectedLine: state.currentSelectedLine,
+      selectedLines: state.currentSelectedLines,
       isOutputOn: state.currentIsOutputOn,
     }, clientType);
   }
