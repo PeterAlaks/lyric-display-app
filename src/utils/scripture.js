@@ -166,9 +166,10 @@ export async function fetchScriptureChapter({ translationId, bookName, chapter, 
   return result;
 }
 
-// Matches the reference lines emitted by buildScriptureProjection,
-// e.g. "John 3:16 KJV" or "1 Corinthians 13:4 WEBBE".
-const REFERENCE_LINE_REGEX = /^[123]?\s?[A-Za-z][A-Za-z .]* \d{1,3}:\d{1,3} [A-Z][A-Z-]{1,9}$/;
+// Matches the reference lines emitted by buildScriptureProjection, with or
+// without the surrounding brackets, e.g. "[John 3:16 KJV]" or
+// "1 Corinthians 13:4 WEBBE".
+const REFERENCE_LINE_REGEX = /^\[?[123]?\s?[A-Za-z][A-Za-z .]* \d{1,3}:\d{1,3} [A-Z][A-Z-]{1,9}\]?$/;
 
 export const isScriptureReferenceLine = (text) =>
   typeof text === 'string' && REFERENCE_LINE_REGEX.test(text.trim());
@@ -226,6 +227,8 @@ export function buildScriptureProjection({ bookName, chapter, verses, wholeChapt
     ? `${bookName} ${chapter}`
     : `${bookName} ${chapter}:${compressVerseRanges(verses.map((verse) => verse.verse))}`;
 
+  // The reference is stored without brackets so it stays a plain line the
+  // parser groups with its verse; the outputs add brackets at render time.
   const content = verses
     .map((verse) => `${toSuperscriptNumber(verse.verse)} ${verse.text}\n${bookName} ${chapter}:${verse.verse} ${abbreviation}`)
     .join('\n\n');

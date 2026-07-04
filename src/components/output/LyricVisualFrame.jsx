@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getLineOutputText } from '../../utils/parseLyrics';
+import { isScriptureReferenceLine } from '../../utils/scripture';
 import { resolveBackendUrl } from '../../utils/network';
 import { calculateOptimalFontSize } from '../../utils/maxLinesCalculator';
 import { paintToCss } from '../../utils/paint';
@@ -465,30 +466,41 @@ export default function LyricVisualFrame({
   ]);
 
   const renderContent = () => {
-    const processedText = processDisplayText(displayLine);
+    // Detect scripture reference lines on the raw text (before all-caps) so
+    // they render smaller and wrapped in brackets.
+    const rawLines = displayLine.split('\n');
 
-    if (processedText.includes('\n')) {
-      const lines = processedText.split('\n');
-      const isTranslationGroup = currentLine?.type === 'group' && lines.length === 2;
+    if (rawLines.length > 1) {
+      const isTranslationGroup = currentLine?.type === 'group' && rawLines.length === 2;
       const effectiveTranslationSize = translationFontSizeMode === 'custom'
         ? translationFontSize
         : (adjustedFontSize ?? fontSize);
+      const referenceFontSize = Math.max(12, Math.round((adjustedFontSize ?? fontSize) * 0.5));
 
       return (
         <div className="space-y-1">
-          {lines.map((lineText, index) => {
-            const lineDisplayText = (isTranslationGroup && index > 0)
-              ? lineText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim()
-              : lineText;
+          {rawLines.map((rawLineText, index) => {
+            const isReference = isScriptureReferenceLine(rawLineText);
+            const isTranslationLine = isTranslationGroup && index > 0;
+
+            let lineDisplayText = processDisplayText(rawLineText);
+            if (isTranslationLine) {
+              lineDisplayText = lineDisplayText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim();
+            } else if (isReference) {
+              lineDisplayText = `[${processDisplayText(rawLineText.trim())}]`;
+            }
 
             return (
               <div
                 key={index}
                 style={{
                   ...textStrokeStyles,
-                  color: (isTranslationGroup && index > 0) ? translationLineColor : 'inherit',
-                  fontSize: (isTranslationGroup && index > 0) ? `${effectiveTranslationSize}px` : 'inherit',
-                  fontWeight: bold ? 'bold' : 'normal',
+                  color: isTranslationLine ? translationLineColor : 'inherit',
+                  fontSize: isTranslationLine
+                    ? `${effectiveTranslationSize}px`
+                    : isReference ? `${referenceFontSize}px` : 'inherit',
+                  fontWeight: (bold && !isReference) ? 'bold' : 'normal',
+                  opacity: isReference ? 0.85 : undefined,
                 }}
               >
                 {lineDisplayText}
@@ -499,7 +511,7 @@ export default function LyricVisualFrame({
       );
     }
 
-    return processedText;
+    return processDisplayText(displayLine);
   };
 
   const textStyles = {

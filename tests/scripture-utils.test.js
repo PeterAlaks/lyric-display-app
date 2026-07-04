@@ -105,6 +105,7 @@ test('cleans verse whitespace', () => {
 
 test('detects scripture reference lines', () => {
   assert.equal(isScriptureReferenceLine('John 3:16 KJV'), true);
+  assert.equal(isScriptureReferenceLine('[John 3:16 KJV]'), true);
   assert.equal(isScriptureReferenceLine('1 Corinthians 13:4 WEBBE'), true);
   assert.equal(isScriptureReferenceLine('Song of Solomon 2:1 OEB'), true);
   assert.equal(isScriptureReferenceLine('For God so loved the world'), false);
