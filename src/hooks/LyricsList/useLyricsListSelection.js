@@ -286,15 +286,28 @@ export default function useLyricsListSelection({
   }, [closeContextMenu, getCopyTextForLine, hasSelection, lyrics, selectedIndicesArray, showToast]);
 
   const handleSendSelectionToOutput = useCallback(() => {
-    if (selectedIndicesArray.length !== 1) {
+    if (!selectedIndicesArray.length) {
       closeContextMenu();
       return;
     }
-    const target = selectedIndicesArray[0];
-    setSelection([target], target);
-    onLineSelect(target);
+
+    if (selectedIndicesArray.length === 1) {
+      const target = selectedIndicesArray[0];
+      setSelection([target], target);
+      onLineSelect(target);
+      closeContextMenu();
+      return;
+    }
+
+    // Multiple lines: show them all on the outputs at once. The last index
+    // stays the anchor for keyboard navigation.
+    const sorted = [...selectedIndicesArray].sort((a, b) => a - b);
+    const anchor = sorted[sorted.length - 1];
+    setSelection(sorted, anchor);
+    selectLine(anchor);
+    emitLineUpdate({ index: anchor, indices: sorted });
     closeContextMenu();
-  }, [closeContextMenu, onLineSelect, selectedIndicesArray, setSelection]);
+  }, [closeContextMenu, emitLineUpdate, onLineSelect, selectLine, selectedIndicesArray, setSelection]);
 
   const clearSelection = useCallback(() => {
     setSelectedIndices(new Set());

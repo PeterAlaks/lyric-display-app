@@ -63,6 +63,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     setLyricsTimestamps,
     setLyricsEnhancedTimestamps,
     selectLine,
+    setSelectedLines,
     updateOutputSettings,
     setSetlistFiles,
     setIsDesktopApp,
@@ -270,6 +271,9 @@ const useSocketEvents = (role, clientPurpose = role) => {
           }
         }
       }
+      if (hasOwn(state, 'selectedLines')) {
+        setSelectedLines(Array.isArray(state.selectedLines) ? state.selectedLines : null);
+      }
 
       applyOutputSettingsFromSnapshot(state);
       if (isPlainObject(state.stageSettings) && role === 'stage') {
@@ -322,6 +326,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       if (index === null || (typeof index === 'number' && index >= 0)) {
         logDebug('Received line update:', index);
         selectLine(index);
+        setSelectedLines(Array.isArray(payload.indices) ? payload.indices : null);
       }
     });
 
@@ -361,6 +366,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       }
       if (!isSameLyrics) {
         selectLine(null);
+        setSelectedLines(null);
       }
       if (!isPassiveDisplayRole(role)) {
         applySections(sections, lineToSection, lyrics);
@@ -535,6 +541,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       logDebug(`Setlist file loaded: ${fileName} (${linesCount} lines) by ${loadedBy}`);
       setLyricsFileName(fileName);
       selectLine(null);
+      setSelectedLines(null);
       if (rawContent) {
         setRawLyricsContent(rawContent);
       }
@@ -690,7 +697,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     socket.on('periodicStateSync', (state) => {
       applySnapshot(state, 'periodicStateSync');
     });
-  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata]);
+  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, setSelectedLines, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,

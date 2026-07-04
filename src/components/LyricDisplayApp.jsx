@@ -683,6 +683,7 @@ const LyricDisplayApp = () => {
         <LyricsWorkspace
           addDisabled={addDisabled}
           addTitle={addTitle}
+          appMode={appMode}
           autoplayActive={autoplayActive}
           clampGroupSize={clampGroupSize}
           clearSearch={clearSearch}

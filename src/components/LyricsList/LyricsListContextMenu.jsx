@@ -31,11 +31,11 @@ const LyricsListContextMenu = React.forwardRef(({
   >
     <ContextMenuItem
       onClick={onSendSelectionToOutput}
-      disabled={selectedIndicesArray.length !== 1}
+      disabled={selectedIndicesArray.length === 0}
       icon={<ArrowRight className="w-4 h-4" />}
       darkMode={darkMode}
     >
-      Send to output
+      {selectedIndicesArray.length > 1 ? `Send ${selectedIndicesArray.length} lines to output` : 'Send to output'}
     </ContextMenuItem>
     <ContextMenuItem
       onClick={onDeselectFromMenu}

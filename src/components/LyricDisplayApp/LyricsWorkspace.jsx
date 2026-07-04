@@ -9,6 +9,7 @@ import QuickParserPopover from './QuickParserPopover';
 const LyricsWorkspace = ({
   addDisabled,
   addTitle,
+  appMode = 'song',
   autoplayActive,
   clampGroupSize,
   clearSearch,
@@ -60,6 +61,7 @@ const LyricsWorkspace = ({
     ? 'bg-transparent text-gray-600 cursor-not-allowed opacity-60'
     : 'bg-transparent text-gray-400 cursor-not-allowed opacity-60';
   const actionPadding = useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2';
+  const isScriptureMode = appMode === 'scripture';
 
   return (
     <div className={`flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full ${darkMode ? '' : 'bg-[#f8fafc]'}`}>
@@ -76,7 +78,7 @@ const LyricsWorkspace = ({
           )}
         </div>
 
-        {hasLyrics && (
+        {hasLyrics && !isScriptureMode && (
           <div className="flex items-center gap-2 shrink-0">
             {hasValidTimestamps(lyricsTimestamps) && (
               <Tooltip content={
@@ -207,21 +209,24 @@ const LyricsWorkspace = ({
                 onPrev={navigateToPreviousMatch}
                 onNext={navigateToNextMatch}
                 onClear={clearSearch}
+                placeholder={isScriptureMode ? 'Search loaded scripture...' : 'Search loaded lyrics...'}
               />
             </div>
-            <QuickParserPopover
-              clampGroupSize={clampGroupSize}
-              darkMode={darkMode}
-              handleReloadWithQuickParser={handleReloadWithQuickParser}
-              quickParserLoading={quickParserLoading}
-              quickParserOpen={quickParserOpen}
-              quickParserSettings={quickParserSettings}
-              quickSwitchClassName={quickSwitchClassName}
-              quickSwitchThumbClassName={quickSwitchThumbClassName}
-              reloadingWithParser={reloadingWithParser}
-              setQuickParserOpen={setQuickParserOpen}
-              updateQuickParserSetting={updateQuickParserSetting}
-            />
+            {!isScriptureMode && (
+              <QuickParserPopover
+                clampGroupSize={clampGroupSize}
+                darkMode={darkMode}
+                handleReloadWithQuickParser={handleReloadWithQuickParser}
+                quickParserLoading={quickParserLoading}
+                quickParserOpen={quickParserOpen}
+                quickParserSettings={quickParserSettings}
+                quickSwitchClassName={quickSwitchClassName}
+                quickSwitchThumbClassName={quickSwitchThumbClassName}
+                reloadingWithParser={reloadingWithParser}
+                setQuickParserOpen={setQuickParserOpen}
+                updateQuickParserSetting={updateQuickParserSetting}
+              />
+            )}
           </div>
         </div>
       )}

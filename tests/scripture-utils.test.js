@@ -3,7 +3,9 @@ import test from 'node:test';
 import {
   buildScriptureProjection,
   cleanVerseText,
+  combineOutputTexts,
   compressVerseRanges,
+  isScriptureReferenceLine,
   matchBooks,
   parseScriptureQuery,
   toSuperscriptNumber,
@@ -99,6 +101,34 @@ test('compresses verse numbers into ranges', () => {
 test('cleans verse whitespace', () => {
   assert.equal(cleanVerseText('For God so loved\nthe world  '), 'For God so loved the world');
   assert.equal(cleanVerseText(null), '');
+});
+
+test('detects scripture reference lines', () => {
+  assert.equal(isScriptureReferenceLine('John 3:16 KJV'), true);
+  assert.equal(isScriptureReferenceLine('1 Corinthians 13:4 WEBBE'), true);
+  assert.equal(isScriptureReferenceLine('Song of Solomon 2:1 OEB'), true);
+  assert.equal(isScriptureReferenceLine('For God so loved the world'), false);
+  assert.equal(isScriptureReferenceLine('¹⁶ For God so loved the world'), false);
+  assert.equal(isScriptureReferenceLine('Meet me at 3:16 KJV cafe today'), false);
+});
+
+test('combines output texts keeping only the final reference', () => {
+  const combined = combineOutputTexts([
+    '⁸ Jesus Christ the same yesterday, and to day, and for ever.\nHebrews 13:8 KJV',
+    '⁹ Be not carried about with divers and strange doctrines.\nHebrews 13:9 KJV',
+    '¹⁰ We have an altar.\nHebrews 13:10 KJV',
+  ]);
+
+  assert.equal(
+    combined,
+    '⁸ Jesus Christ the same yesterday, and to day, and for ever.\n'
+    + '⁹ Be not carried about with divers and strange doctrines.\n'
+    + '¹⁰ We have an altar.\nHebrews 13:10 KJV'
+  );
+
+  assert.equal(combineOutputTexts(['only one\nJohn 3:16 KJV']), 'only one\nJohn 3:16 KJV');
+  assert.equal(combineOutputTexts([]), '');
+  assert.equal(combineOutputTexts(['plain line', 'another line']), 'plain line\nanother line');
 });
 
 test('converts numbers to unicode superscripts', () => {

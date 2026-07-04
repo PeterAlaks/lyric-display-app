@@ -30,6 +30,7 @@ const createSnapshot = () => ({
   currentLyricsSource: state.currentLyricsSource || null,
   currentSongMetadata: state.currentSongMetadata || null,
   currentSelectedLine: Number.isInteger(state.currentSelectedLine) ? state.currentSelectedLine : null,
+  currentSelectedLines: Array.isArray(state.currentSelectedLines) ? state.currentSelectedLines : null,
   currentLyricsSections: Array.isArray(state.currentLyricsSections) ? state.currentLyricsSections : [],
   currentLineToSection: state.currentLineToSection || {},
   outputSettings: mapToObject(state.outputSettings),
@@ -63,6 +64,7 @@ const applySnapshot = (snapshot) => {
     ? snapshot.currentSongMetadata
     : state.currentSongMetadata;
   state.currentSelectedLine = Number.isInteger(snapshot.currentSelectedLine) ? snapshot.currentSelectedLine : null;
+  state.currentSelectedLines = Array.isArray(snapshot.currentSelectedLines) && snapshot.currentSelectedLines.length > 1 ? snapshot.currentSelectedLines : null;
   state.currentLyricsSections = Array.isArray(snapshot.currentLyricsSections) ? snapshot.currentLyricsSections : [];
   state.currentLineToSection = snapshot.currentLineToSection && typeof snapshot.currentLineToSection === 'object'
     ? snapshot.currentLineToSection

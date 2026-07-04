@@ -166,6 +166,35 @@ export async function fetchScriptureChapter({ translationId, bookName, chapter, 
   return result;
 }
 
+// Matches the reference lines emitted by buildScriptureProjection,
+// e.g. "John 3:16 KJV" or "1 Corinthians 13:4 WEBBE".
+const REFERENCE_LINE_REGEX = /^[123]?\s?[A-Za-z][A-Za-z .]* \d{1,3}:\d{1,3} [A-Z][A-Z-]{1,9}$/;
+
+export const isScriptureReferenceLine = (text) =>
+  typeof text === 'string' && REFERENCE_LINE_REGEX.test(text.trim());
+
+/**
+ * Combine several lines' output texts into one display block. Scripture
+ * reference lines are dropped from every block except the last, so a
+ * multi-verse selection shows a single reference at the bottom.
+ * @param {string[]} texts - per-line output texts (may contain newlines)
+ * @returns {string}
+ */
+export function combineOutputTexts(texts) {
+  const blocks = (texts || []).filter((text) => typeof text === 'string' && text.length > 0);
+  return blocks
+    .map((text, index) => (
+      index === blocks.length - 1
+        ? text
+        : text
+          .split('\n')
+          .filter((line) => !isScriptureReferenceLine(line))
+          .join('\n')
+    ))
+    .filter((text) => text.length > 0)
+    .join('\n');
+}
+
 const SUPERSCRIPT_DIGITS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
 
 export const toSuperscriptNumber = (value) =>

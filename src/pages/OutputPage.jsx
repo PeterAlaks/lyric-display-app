@@ -9,6 +9,7 @@ import {
 } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
+import { combineOutputTexts } from '../utils/scripture';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
 
 /**
@@ -41,11 +42,20 @@ const OutputPage = ({ outputId }) => {
   });
   const { settings: outputSettings, updateSettings: updateOutputSettings } = useOutputSettings(outputId);
   const outputEnabled = useOutputEnabled(outputId);
-  const { lyrics, selectedLine } = useLyricsState();
+  const { lyrics, selectedLine, selectedLines } = useLyricsState();
   const { isOutputOn } = useOutputState();
 
-  const currentLine = lyrics[selectedLine];
-  const line = getLineOutputText(currentLine) || '';
+  // A multi-line selection (e.g. several scripture verses) shows every
+  // selected line at once; scripture references collapse to a single one at
+  // the bottom via combineOutputTexts.
+  const multiSelection = Array.isArray(selectedLines) && selectedLines.length > 1
+    ? selectedLines.filter((index) => Number.isInteger(index) && index >= 0 && index < lyrics.length)
+    : null;
+  const isMultiLine = Boolean(multiSelection && multiSelection.length > 1);
+  const currentLine = isMultiLine ? null : lyrics[selectedLine];
+  const line = isMultiLine
+    ? combineOutputTexts(multiSelection.map((index) => getLineOutputText(lyrics[index])))
+    : (getLineOutputText(currentLine) || '');
 
   useEffect(() => {
     const modeStyle = isProjectionMode
@@ -100,7 +110,7 @@ const OutputPage = ({ outputId }) => {
       visible={Boolean(isOutputActive && line)}
       active={isOutputActive}
       previewMode={isPreviewMode}
-      frameKey={selectedLine ?? 'none'}
+      frameKey={isMultiLine ? `multi-${multiSelection.join('-')}` : (selectedLine ?? 'none')}
       label={label}
       isProjectionMode={isProjectionMode}
       showProjectionExitHint={showProjectionExitHint}
