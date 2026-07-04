@@ -166,9 +166,27 @@ export async function fetchScriptureChapter({ translationId, bookName, chapter, 
   return result;
 }
 
+const SUPERSCRIPT_DIGITS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+
+export const toSuperscriptNumber = (value) =>
+  String(value).replace(/\d/g, (digit) => SUPERSCRIPT_DIGITS[Number(digit)]);
+
+// Parser overrides for projected scripture: each verse block (separated by a
+// blank line) collapses into a single group, and nothing merges across verses.
+export const SCRIPTURE_GROUPING_CONFIG = {
+  enableAutoLineGrouping: true,
+  enableTranslationGrouping: false,
+  enableCrossBlankLineGrouping: false,
+  maxLinesPerGroup: 12,
+  maxLineLength: 1000,
+};
+
 /**
  * Build the lyrics-pipeline payload for a set of verses so scripture is
- * displayed, grouped, and styled exactly like loaded lyrics.
+ * displayed, grouped, and styled exactly like loaded lyrics. Each verse is
+ * emitted as its own blank-line-separated block — verse text (with a
+ * superscript verse number) followed by its reference (e.g. "John 3:16 KJV")
+ * — so the parser groups every verse, and its reference, into one line group.
  * @param {{bookName: string, chapter: number, verses: Array<{verse: number, text: string}>, wholeChapter?: boolean, translationId: string, translationName?: string}} params
  * @returns {{content: string, label: string, title: string, origin: string}}
  */
@@ -179,8 +197,12 @@ export function buildScriptureProjection({ bookName, chapter, verses, wholeChapt
     ? `${bookName} ${chapter}`
     : `${bookName} ${chapter}:${compressVerseRanges(verses.map((verse) => verse.verse))}`;
 
+  const content = verses
+    .map((verse) => `${toSuperscriptNumber(verse.verse)} ${verse.text}\n${bookName} ${chapter}:${verse.verse} ${abbreviation}`)
+    .join('\n\n');
+
   return {
-    content: verses.map((verse) => `${verse.verse} ${verse.text}`).join('\n'),
+    content,
     label: `${referenceLabel} (${abbreviation})`,
     title: `${referenceLabel} (${abbreviation})`,
     origin: `Scripture · ${translationName || translation?.name || abbreviation}`,

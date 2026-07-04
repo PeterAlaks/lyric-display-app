@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle, SlidersHorizontal } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences, useAppModeState, useScriptureState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -45,7 +45,7 @@ import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
 import AppModeToggle from './LyricDisplayApp/AppModeToggle';
 import ScripturePanel from './LyricDisplayApp/ScripturePanel';
-import { buildScriptureProjection } from '../utils/scripture.js';
+import { buildScriptureProjection, SCRIPTURE_GROUPING_CONFIG } from '../utils/scripture.js';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -215,6 +215,8 @@ const LyricDisplayApp = () => {
   }, [baseHandleImportFromLibrary, lyrics, trackAction]);
 
   const [projectingScripture, setProjectingScripture] = React.useState(false);
+  const [showScriptureFormatting, setShowScriptureFormatting] = React.useState(false);
+  const showFormattingPanels = appMode === 'song' || showScriptureFormatting;
   const handleProjectScripture = React.useCallback(async (payload) => {
     const projection = buildScriptureProjection(payload);
     setProjectingScripture(true);
@@ -222,9 +224,10 @@ const LyricDisplayApp = () => {
       const success = await processLoadedLyrics(
         { content: projection.content, fileName: projection.label, fileType: 'txt' },
         {
-          // Keep every verse on its own line; grouping stays a manual action,
-          // exactly like grouping loaded lyrics.
-          groupingConfig: { enableAutoLineGrouping: false },
+          // Each verse (with its reference line) becomes one line group;
+          // splitting keeps long verses wrapped at a readable width.
+          groupingConfig: SCRIPTURE_GROUPING_CONFIG,
+          enableOnlineLyricsSplitting: true,
           songMetadata: {
             title: projection.title,
             artists: [],
@@ -459,6 +462,9 @@ const LyricDisplayApp = () => {
         <div className="control-panel-sidebar-texture w-[420px] shrink-0 shadow-lg flex flex-col h-full">
           {/* Fixed Header Section */}
           <div className="shrink-0 pt-4 px-5 pb-0 bg-transparent">
+            {/* Song / Scripture mode switcher */}
+            <AppModeToggle appMode={appMode} setAppMode={setAppMode} darkMode={darkMode} />
+
             <ControlPanelHeaderActions
               authStatus={authStatus}
               connectionStatus={connectionStatus}
@@ -479,9 +485,6 @@ const LyricDisplayApp = () => {
               showModal={showModal}
               themeMode={themeMode}
             />
-
-            {/* Song / Scripture mode switcher */}
-            <AppModeToggle appMode={appMode} setAppMode={setAppMode} darkMode={darkMode} />
 
             {appMode === 'song' ? (
               /* Load and Create Buttons */
@@ -515,6 +518,7 @@ const LyricDisplayApp = () => {
                 onTranslationChange={setScriptureTranslation}
                 onProject={handleProjectScripture}
                 projecting={projectingScripture}
+                expandedResults={!showScriptureFormatting}
               />
             )}
             <input
@@ -583,9 +587,26 @@ const LyricDisplayApp = () => {
               </Tooltip>
             </div>
 
-            <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+            <div className={`border-t ${appMode === 'scripture' ? 'mt-2' : 'my-8'} ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+
+            {/* Formatting visibility toggle (scripture mode keeps results front and centre) */}
+            {appMode === 'scripture' && (
+              <button
+                type="button"
+                onClick={() => setShowScriptureFormatting((visible) => !visible)}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 mb-4 rounded-lg text-xs font-medium transition-colors ${darkMode
+                  ? 'text-gray-400 hover:bg-blue-500/10 hover:text-blue-300'
+                  : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                  }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                {showScriptureFormatting ? 'Hide formatting' : 'Show formatting'}
+                {showScriptureFormatting ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+            )}
 
             {/* Output Tabs */}
+            {showFormattingPanels && (
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
               <TabsList className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
                 {allOutputIds.map((id) => {
@@ -616,42 +637,47 @@ const LyricDisplayApp = () => {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            )}
           </div>
 
           {/* Scrollable Settings Panel */}
-          <div
-            ref={scrollableSettingsRef}
-            className="flex-1 overflow-y-auto px-6 relative"
-            onScroll={(e) => {
-              const scrollTop = e.currentTarget.scrollTop;
-              const shadow = e.currentTarget.previousElementSibling;
-              if (shadow) {
-                if (scrollTop > 10) {
-                  shadow.classList.add('shadow-md');
-                } else {
-                  shadow.classList.remove('shadow-md');
+          {showFormattingPanels ? (
+            <div
+              ref={scrollableSettingsRef}
+              className="flex-1 overflow-y-auto px-6 relative"
+              onScroll={(e) => {
+                const scrollTop = e.currentTarget.scrollTop;
+                const shadow = e.currentTarget.previousElementSibling;
+                if (shadow) {
+                  if (scrollTop > 10) {
+                    shadow.classList.add('shadow-md');
+                  } else {
+                    shadow.classList.remove('shadow-md');
+                  }
                 }
-              }
-            }}
-          >
-            {/* Tab Content */}
-            <div>
-              {activeTab.startsWith('output') && allOutputIds.includes(activeTab) && (
-                <OutputSettingsPanel
-                  key={activeTab}
-                  outputKey={activeTab}
-                  onDeleteOutput={activeTab !== 'output1' && activeTab !== 'output2' ? handleDeleteOutput : undefined}
-                />
-              )}
+              }}
+            >
+              {/* Tab Content */}
+              <div>
+                {activeTab.startsWith('output') && allOutputIds.includes(activeTab) && (
+                  <OutputSettingsPanel
+                    key={activeTab}
+                    outputKey={activeTab}
+                    onDeleteOutput={activeTab !== 'output1' && activeTab !== 'output2' ? handleDeleteOutput : undefined}
+                  />
+                )}
 
-              {activeTab === 'stage' && (
-                <OutputSettingsPanel
-                  outputKey="stage"
-                />
-              )}
+                {activeTab === 'stage' && (
+                  <OutputSettingsPanel
+                    outputKey="stage"
+                  />
+                )}
+              </div>
+              <div className="m-10"></div>
             </div>
-            <div className="m-10"></div>
-          </div>
+          ) : (
+            <div className="flex-1" />
+          )}
         </div>
 
         <LyricsWorkspace

@@ -6,6 +6,7 @@ import {
   compressVerseRanges,
   matchBooks,
   parseScriptureQuery,
+  toSuperscriptNumber,
 } from '../src/utils/scripture.js';
 import { BIBLE_BOOKS, SCRIPTURE_TRANSLATIONS, DEFAULT_SCRIPTURE_TRANSLATION } from '../src/constants/scripture.js';
 
@@ -100,6 +101,11 @@ test('cleans verse whitespace', () => {
   assert.equal(cleanVerseText(null), '');
 });
 
+test('converts numbers to unicode superscripts', () => {
+  assert.equal(toSuperscriptNumber(16), '¹⁶');
+  assert.equal(toSuperscriptNumber(105), '¹⁰⁵');
+});
+
 test('builds projection payload for a verse selection', () => {
   const projection = buildScriptureProjection({
     bookName: 'John',
@@ -114,7 +120,10 @@ test('builds projection payload for a verse selection', () => {
   });
 
   assert.equal(projection.title, 'John 3:16-17 (KJV)');
-  assert.equal(projection.content, '16 For God so loved the world…\n17 For God sent not his Son…');
+  assert.equal(
+    projection.content,
+    '¹⁶ For God so loved the world…\nJohn 3:16 KJV\n\n¹⁷ For God sent not his Son…\nJohn 3:17 KJV'
+  );
   assert.match(projection.origin, /King James Version/);
 });
 
@@ -128,5 +137,35 @@ test('builds projection payload for a whole chapter', () => {
   });
 
   assert.equal(projection.title, 'Psalms 23 (WEB)');
-  assert.equal(projection.content, '1 The LORD is my shepherd; I shall not want.');
+  assert.equal(projection.content, '¹ The LORD is my shepherd; I shall not want.\nPsalms 23:1 WEB');
+});
+
+test('projected verse blocks parse into one line group per verse', async () => {
+  const { parseTxtContent } = await import('../shared/lyricsParsing/index.js');
+  const { SCRIPTURE_GROUPING_CONFIG } = await import('../src/utils/scripture.js');
+
+  const projection = buildScriptureProjection({
+    bookName: 'John',
+    chapter: 3,
+    verses: [
+      { verse: 16, text: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.' },
+      { verse: 17, text: 'For God sent not his Son into the world to condemn the world; but that the world through him might be saved.' },
+    ],
+    wholeChapter: false,
+    translationId: 'kjv',
+  });
+
+  const parsed = parseTxtContent(projection.content, {
+    enableSplitting: true,
+    groupingConfig: SCRIPTURE_GROUPING_CONFIG,
+  });
+
+  assert.equal(parsed.processedLines.length, 2);
+  for (const line of parsed.processedLines) {
+    assert.equal(line.type, 'normal-group');
+    assert.ok(line.lines.length >= 2);
+  }
+  assert.match(parsed.processedLines[0].lines.at(-1), /^John 3:16 KJV$/);
+  assert.match(parsed.processedLines[1].lines.at(-1), /^John 3:17 KJV$/);
+  assert.ok(parsed.processedLines[0].lines[0].startsWith('¹⁶ '));
 });
