@@ -15,6 +15,7 @@ import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 import { createStageSlice } from './lyricsStore/stageSlice.js';
 import { createTimerSlice } from './lyricsStore/timerSlice.js';
+import i18n, { normalizeLanguageCode } from '../i18n';
 
 export { createDefaultOutputSettings, defaultOutput1Settings, defaultOutput2Settings } from './lyricsStore/outputSlice.js';
 export { defaultStageSettings } from './lyricsStore/stageSlice.js';
@@ -59,6 +60,17 @@ export async function loadPreferencesIntoStore(store) {
       if (result.success && result.settings) {
         store.getState().updateMaxFileSize(result.settings.maxFileSize ?? 2);
         store.getState().updateMaxSetlistFiles(result.settings.maxSetlistFiles ?? DEFAULT_SETLIST_ITEMS);
+      }
+    }
+
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('general.appLanguage');
+      if (result.success && typeof result.value === 'string') {
+        const language = normalizeLanguageCode(result.value);
+        store.getState().setAppLanguage(language);
+        if (i18n.language !== language) {
+          await i18n.changeLanguage(language);
+        }
       }
     }
 
@@ -171,6 +183,7 @@ const useLyricsStore = create(
           lineToSection: state.lineToSection,
           stageEnabled: state.stageEnabled,
           darkMode: state.darkMode,
+          appLanguage: state.appLanguage,
           themeMode: state.themeMode,
           skipSectionTitlesOnKeyboard: state.skipSectionTitlesOnKeyboard,
           hasSeenWelcome: state.hasSeenWelcome,
@@ -188,6 +201,11 @@ const useLyricsStore = create(
       onRehydrateStorage: () => (state) => {
         if (state) {
           rehydrateOutputState(state);
+          const language = normalizeLanguageCode(state.appLanguage);
+          state.appLanguage = language;
+          if (i18n.language !== language) {
+            i18n.changeLanguage(language);
+          }
           state.timerDisplaySettings = normalizeTimerDisplaySettings(state.timerDisplaySettings);
           state.timerControlSettings = normalizeTimerControlSettings(state.timerControlSettings);
         }

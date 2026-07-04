@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, Loader2, Music, Radio, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ const ExternalControlPreferencesSection = ({
   preferenceFieldLabelClass,
   setMidiMappingsExpanded,
 }) => {
+  const { t } = useTranslation();
   const noteEntries = Object.entries(midiStatus?.mappings?.notes || {})
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([note, mapping]) => ({
@@ -49,25 +51,48 @@ const ExternalControlPreferencesSection = ({
   const allEntries = [...noteEntries, ...ccEntries];
   const visibleEntries = midiMappingsExpanded ? allEntries : allEntries.slice(0, 5);
   const hiddenCount = Math.max(0, allEntries.length - visibleEntries.length);
+  const quickAssignActions = [
+    ['prev-line', t('preferences.externalControl.midi.quickAssign.actions.previousLine')],
+    ['next-line', t('preferences.externalControl.midi.quickAssign.actions.nextLine')],
+    ['toggle-output', t('preferences.externalControl.midi.quickAssign.actions.toggleOutput')],
+    ['clear-output', t('preferences.externalControl.midi.quickAssign.actions.clearOutput')],
+  ];
+
+  const formatLastLearnedMidi = () => {
+    if (!lastLearnedMidi) return '';
+    const channel = ((lastLearnedMidi.channel ?? 0) + 1);
+    if (lastLearnedMidi.type === 'note') {
+      return t('preferences.externalControl.midi.noteLastLearned', {
+        note: lastLearnedMidi.note,
+        velocity: lastLearnedMidi.velocity ?? '--',
+        channel,
+      });
+    }
+    return t('preferences.externalControl.midi.ccLastLearned', {
+      controller: lastLearnedMidi.controller,
+      value: lastLearnedMidi.value ?? '--',
+      channel,
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Music className={`w-4 h-4 ${mutedClass}`} />
-          <h4 className={`text-sm font-semibold ${labelClass}`}>MIDI Control</h4>
+          <h4 className={`text-sm font-semibold ${labelClass}`}>{t('preferences.externalControl.midi.title')}</h4>
         </div>
 
         {!midiStatus?.initialized ? (
           <div className={`text-center py-4 ${mutedClass}`}>
-            <p className="text-sm">MIDI support requires the @julusian/midi package.</p>
+            <p className="text-sm">{t('preferences.externalControl.midi.supportMissing')}</p>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Enable MIDI</label>
-                <p className={`text-xs ${mutedClass}`}>Process incoming MIDI messages</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.externalControl.midi.enable.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.externalControl.midi.enable.description')}</p>
               </div>
               <Switch
                 checked={midiStatus?.enabled || false}
@@ -83,7 +108,7 @@ const ExternalControlPreferencesSection = ({
 
             <div className="space-y-2">
               <div className="mb-1.5 flex items-center justify-between">
-                <label className={`text-sm font-medium ${labelClass}`}>MIDI Input Device</label>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.externalControl.midi.inputDevice')}</label>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -92,7 +117,7 @@ const ExternalControlPreferencesSection = ({
                   className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
                 >
                   <RefreshCw className={`w-4 h-4 mr-1 ${midiRefreshing ? 'animate-spin' : ''}`} />
-                  {midiRefreshing ? 'Refreshing...' : 'Refresh'}
+                  {midiRefreshing ? t('preferences.externalControl.midi.refreshing') : t('preferences.externalControl.midi.refresh')}
                 </Button>
               </div>
               <Select
@@ -100,10 +125,10 @@ const ExternalControlPreferencesSection = ({
                 onValueChange={handleMidiSelectPort}
               >
                 <SelectTrigger className={inputClass}>
-                  <SelectValue placeholder="Select MIDI device..." />
+                  <SelectValue placeholder={t('preferences.externalControl.midi.selectDevicePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
-                  <SelectItem value="-1">None</SelectItem>
+                  <SelectItem value="-1">{t('preferences.externalControl.midi.none')}</SelectItem>
                   {midiStatus?.availablePorts?.map((port) => (
                     <SelectItem key={port.index} value={String(port.index)}>
                       {port.name}
@@ -115,13 +140,11 @@ const ExternalControlPreferencesSection = ({
 
             <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-white'}`}>
               <div className={`px-3 py-2 flex items-center justify-between gap-3 ${darkMode ? 'bg-gray-800/60 border-b border-gray-700' : 'bg-gray-50 border-b border-gray-200'}`}>
-                <p className={`text-xs font-semibold tracking-wide ${labelClass}`}>MIDI Mappings</p>
+                <p className={`text-xs font-semibold tracking-wide ${labelClass}`}>{t('preferences.externalControl.midi.mappings')}</p>
                 <div className="flex items-center gap-2 shrink-0">
                   {lastLearnedMidi && (
                     <span className={`text-[11px] ${mutedClass}`}>
-                      Last learned: {lastLearnedMidi.type === 'note'
-                        ? `Note ${lastLearnedMidi.note} (vel ${lastLearnedMidi.velocity ?? '--'}) ch ${((lastLearnedMidi.channel ?? 0) + 1)}`
-                        : `CC ${lastLearnedMidi.controller} (val ${lastLearnedMidi.value ?? '--'}) ch ${((lastLearnedMidi.channel ?? 0) + 1)}`}
+                      {t('preferences.externalControl.midi.lastLearned', { value: formatLastLearnedMidi() })}
                     </span>
                   )}
 
@@ -132,7 +155,7 @@ const ExternalControlPreferencesSection = ({
                       onClick={() => setMidiMappingsExpanded(true)}
                       className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
                     >
-                      Expand ({hiddenCount} more)
+                      {t('preferences.externalControl.midi.expand', { count: hiddenCount })}
                     </Button>
                   )}
 
@@ -143,20 +166,20 @@ const ExternalControlPreferencesSection = ({
                       onClick={() => setMidiMappingsExpanded(false)}
                       className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
                     >
-                      Collapse
+                      {t('preferences.externalControl.midi.collapse')}
                     </Button>
                   )}
                 </div>
               </div>
 
               <div className={`grid grid-cols-12 gap-0 text-[11px] ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>Type</div>
-                <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>Key</div>
-                <div className={`col-span-8 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>Action</div>
+                <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>{t('preferences.externalControl.table.type')}</div>
+                <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>{t('preferences.externalControl.table.key')}</div>
+                <div className={`col-span-8 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>{t('preferences.externalControl.table.action')}</div>
 
                 {visibleEntries.length === 0 ? (
                   <div className={`col-span-12 px-3 py-3 border-t ${darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-                    No mappings found.
+                    {t('preferences.externalControl.midi.noMappings')}
                   </div>
                 ) : (
                   visibleEntries.map((entry) => (
@@ -177,7 +200,7 @@ const ExternalControlPreferencesSection = ({
                         <p className="font-medium truncate">{entry.mapping?.description || entry.mapping?.action || '--'}</p>
                         {entry.mapping?.action && (
                           <p className={`text-[10px] mt-0.5 ${mutedClass} truncate`}>
-                            Action key: {entry.mapping.action}
+                            {t('preferences.externalControl.midi.actionKey', { action: entry.mapping.action })}
                             {entry.type === 'NOTE' && typeof entry.mapping?.line === 'number' ? ` (line ${entry.mapping.line + 1})` : ''}
                           </p>
                         )}
@@ -190,18 +213,13 @@ const ExternalControlPreferencesSection = ({
 
             <div className="space-y-3">
               <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'}`}>
-                <p className={`text-xs font-medium ${labelClass}`}>Quick assign</p>
+                <p className={`text-xs font-medium ${labelClass}`}>{t('preferences.externalControl.midi.quickAssign.label')}</p>
                 <p className={`text-[11px] mt-0.5 ${mutedClass}`}>
-                  Choose an action, then press a button/pedal/knob on your MIDI device. (Listens for an unmapped control.)
+                  {t('preferences.externalControl.midi.quickAssign.description')}
                 </p>
 
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  {[
-                    ['prev-line', 'Previous Line'],
-                    ['next-line', 'Next Line'],
-                    ['toggle-output', 'Toggle Output'],
-                    ['clear-output', 'Clear Output'],
-                  ].map(([key, label]) => (
+                  {quickAssignActions.map(([key, label]) => (
                     <Button
                       key={key}
                       variant="outline"
@@ -212,7 +230,7 @@ const ExternalControlPreferencesSection = ({
                       {midiAssigningAction?.key === key && midiLearnActive ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Waiting...
+                          {t('preferences.externalControl.midi.waiting')}
                         </>
                       ) : (
                         label
@@ -229,12 +247,12 @@ const ExternalControlPreferencesSection = ({
                     className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
                   >
                     {midiLearnActive ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Waiting...
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t('preferences.externalControl.midi.waiting')}
                       </>
                     ) : (
-                      'Learn MIDI (show last input)'
+                      t('preferences.externalControl.midi.learn')
                     )}
                   </Button>
 
@@ -243,7 +261,7 @@ const ExternalControlPreferencesSection = ({
                     onClick={handleMidiResetMappings}
                     className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
                   >
-                    Reset Defaults
+                    {t('preferences.externalControl.midi.resetDefaults')}
                   </Button>
                 </div>
               </div>
@@ -257,19 +275,19 @@ const ExternalControlPreferencesSection = ({
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Radio className={`w-4 h-4 ${mutedClass}`} />
-          <h4 className={`text-sm font-semibold ${labelClass}`}>OSC Control</h4>
+          <h4 className={`text-sm font-semibold ${labelClass}`}>{t('preferences.externalControl.osc.title')}</h4>
         </div>
 
         {!oscStatus?.initialized ? (
           <div className={`text-center py-4 ${mutedClass}`}>
-            <p className="text-sm">OSC server failed to start. Check if port is in use.</p>
+            <p className="text-sm">{t('preferences.externalControl.osc.serverFailed')}</p>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Enable OSC</label>
-                <p className={`text-xs ${mutedClass}`}>Process incoming OSC messages</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.externalControl.osc.enable.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.externalControl.osc.enable.description')}</p>
               </div>
               <Switch
                 checked={oscStatus?.enabled || false}
@@ -283,7 +301,7 @@ const ExternalControlPreferencesSection = ({
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Listening Port</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.externalControl.osc.listeningPort')}</label>
               <Input
                 type="number"
                 value={oscStatus?.port || 8000}
@@ -292,13 +310,13 @@ const ExternalControlPreferencesSection = ({
                 max="65535"
                 className={inputClass}
               />
-              <p className={`text-xs ${mutedClass}`}>Requires restart to take effect</p>
+              <p className={`text-xs ${mutedClass}`}>{t('preferences.externalControl.osc.requiresRestart')}</p>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Send Feedback</label>
-                <p className={`text-xs ${mutedClass}`}>Send state updates to OSC clients</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.externalControl.osc.sendFeedback.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.externalControl.osc.sendFeedback.description')}</p>
               </div>
               <Switch
                 checked={oscStatus?.feedbackEnabled || false}
@@ -313,7 +331,7 @@ const ExternalControlPreferencesSection = ({
 
             {oscStatus?.feedbackEnabled && (
               <div className="space-y-2">
-                <label className={preferenceFieldLabelClass}>Feedback Port</label>
+                <label className={preferenceFieldLabelClass}>{t('preferences.externalControl.osc.feedbackPort')}</label>
                 <Input
                   type="number"
                   value={oscStatus?.feedbackPort || 9000}
@@ -328,7 +346,7 @@ const ExternalControlPreferencesSection = ({
             {oscStatus?.connectedClients > 0 && (
               <div className={`flex items-center gap-2 text-sm ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                 <Check className="w-4 h-4" />
-                {oscStatus.connectedClients} client{oscStatus.connectedClients !== 1 ? 's' : ''} connected
+                {t('preferences.externalControl.osc.connectedClients', { count: oscStatus.connectedClients })}
               </div>
             )}
           </div>

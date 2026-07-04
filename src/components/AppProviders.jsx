@@ -13,9 +13,15 @@ export default function AppProviders({ children, effectiveDarkMode, isDockRuntim
   useEffect(() => {
     if (!window.electronAPI) return;
 
-    loadPreferencesIntoStore(useLyricsStore);
-    loadAdvancedSettings();
-    loadDebugLoggingPreference();
+    const loadAppPreferences = async () => {
+      await loadPreferencesIntoStore(useLyricsStore);
+      await loadAdvancedSettings();
+      await loadDebugLoggingPreference();
+    };
+
+    loadAppPreferences().catch((error) => {
+      console.warn('[AppProviders] Failed to load app preferences:', error);
+    });
   }, []);
 
   useEffect(() => {

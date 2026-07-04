@@ -1,4 +1,5 @@
 import { Download, Loader2, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -22,6 +23,7 @@ const NdiPreferencesSection = ({
   ndiUpdating,
   preferenceFieldLabelClass,
 }) => {
+  const { t } = useTranslation();
   const stats = ndiTelemetry?.stats || null;
   const health = ndiTelemetry?.health || null;
   const formatMetric = (value, digits = 1) => (
@@ -34,7 +36,7 @@ const NdiPreferencesSection = ({
   return (
     <div className="space-y-6">
       <p className={`text-sm ${mutedClass}`}>
-        The NDI companion broadcasts your lyric outputs as NDI video sources, allowing integration with OBS, vMix, and other NDI-compatible software.
+        {t('preferences.ndi.description')}
       </p>
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -44,7 +46,7 @@ const NdiPreferencesSection = ({
           }`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${ndiStatus.installed ? 'bg-green-400' : 'bg-gray-400'}`} />
-          {ndiStatus.installed ? 'Installed' : 'Not Installed'}
+          {ndiStatus.installed ? t('preferences.ndi.status.installed') : t('preferences.ndi.status.notInstalled')}
         </span>
         {ndiStatus.installed && ndiStatus.version && (
           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${darkMode
@@ -62,7 +64,7 @@ const NdiPreferencesSection = ({
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${companionRunning ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
-            {companionRunning ? 'Running' : 'Stopped'}
+            {companionRunning ? t('preferences.ndi.status.running') : t('preferences.ndi.status.stopped')}
           </span>
         )}
       </div>
@@ -70,50 +72,50 @@ const NdiPreferencesSection = ({
       {ndiStatus.installed && companionRunning && (
         <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}>
           <div className="flex items-center justify-between gap-2 mb-2">
-            <p className={`text-xs font-medium ${labelClass}`}>Runtime Telemetry</p>
+            <p className={`text-xs font-medium ${labelClass}`}>{t('preferences.ndi.telemetry.title')}</p>
             {telemetryAgeSeconds !== null && (
               <span className={`text-[11px] ${mutedClass}`}>
-                Updated {telemetryAgeSeconds}s ago
+                {t('preferences.ndi.telemetry.updatedAgo', { seconds: telemetryAgeSeconds })}
               </span>
             )}
           </div>
           {stats ? (
             <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 text-xs ${mutedClass}`}>
               <div>
-                <p className={labelClass}>Render FPS</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.renderFps')}</p>
                 <p>{formatMetric(stats.render_fps)}</p>
               </div>
               <div>
-                <p className={labelClass}>Send FPS</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.sendFps')}</p>
                 <p>{formatMetric(stats.send_fps)}</p>
               </div>
               <div>
-                <p className={labelClass}>Dropped Frames</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.droppedFrames')}</p>
                 <p>{typeof stats.dropped_frames === 'number' ? stats.dropped_frames : '--'}</p>
               </div>
               <div>
-                <p className={labelClass}>Send Failures</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.sendFailures')}</p>
                 <p>{typeof stats.ndi_send_failures === 'number' ? stats.ndi_send_failures : '--'}</p>
               </div>
               <div>
-                <p className={labelClass}>Avg Frame (ms)</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.avgFrame')}</p>
                 <p>{formatMetric(stats.avg_frame_ms, 2)}</p>
               </div>
               <div>
-                <p className={labelClass}>P95 Frame (ms)</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.p95Frame')}</p>
                 <p>{formatMetric(stats.p95_frame_ms, 2)}</p>
               </div>
               <div>
-                <p className={labelClass}>Backend</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.backend')}</p>
                 <p>{health?.ndi_backend || '--'}</p>
               </div>
               <div>
-                <p className={labelClass}>Warnings</p>
-                <p>{Array.isArray(health?.warning_flags) && health.warning_flags.length > 0 ? health.warning_flags.join(', ') : 'none'}</p>
+                <p className={labelClass}>{t('preferences.ndi.telemetry.warnings')}</p>
+                <p>{Array.isArray(health?.warning_flags) && health.warning_flags.length > 0 ? health.warning_flags.join(', ') : t('preferences.ndi.telemetry.none')}</p>
               </div>
             </div>
           ) : (
-            <p className={`text-xs ${mutedClass}`}>Waiting for telemetry data from companion...</p>
+            <p className={`text-xs ${mutedClass}`}>{t('preferences.ndi.telemetry.waiting')}</p>
           )}
         </div>
       )}
@@ -123,10 +125,10 @@ const NdiPreferencesSection = ({
           <Download className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
-              Update available: v{ndiUpdateInfo.latestVersion}
+              {t('preferences.ndi.update.available', { version: ndiUpdateInfo.latestVersion })}
             </p>
             <p className={`text-xs mt-0.5 ${darkMode ? 'text-blue-400/80' : 'text-blue-600'}`}>
-              You have v{ndiUpdateInfo.currentVersion}
+              {t('preferences.ndi.update.current', { version: ndiUpdateInfo.currentVersion })}
             </p>
           </div>
           <Button
@@ -138,7 +140,7 @@ const NdiPreferencesSection = ({
             {ndiUpdating ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              'Update'
+              t('preferences.ndi.update.label')
             )}
           </Button>
         </div>
@@ -155,8 +157,8 @@ const NdiPreferencesSection = ({
           <div className="flex items-center justify-between">
             <p className={`text-xs ${mutedClass}`}>
               {downloadProgress.status === 'extracting'
-                ? `Extracting... ${downloadProgress.percent || 0}%`
-                : `Downloading... ${downloadProgress.percent || 0}%`}
+                ? t('preferences.ndi.extracting', { percent: downloadProgress.percent || 0 })
+                : t('preferences.ndi.download.progress', { percent: downloadProgress.percent || 0 })}
             </p>
             {downloadProgress.status !== 'extracting' && (
               <Button
@@ -166,7 +168,7 @@ const NdiPreferencesSection = ({
                 className={`h-6 px-2 text-xs ${darkMode ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-500' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'}`}
               >
                 <X className="w-3 h-3 mr-1" />
-                Cancel
+                {t('preferences.ndi.cancel')}
               </Button>
             )}
           </div>
@@ -177,7 +179,7 @@ const NdiPreferencesSection = ({
         <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
           <div className="space-y-4">
             <p className={`text-sm ${labelClass}`}>
-              Download the NDI companion to enable video broadcasting from your lyric outputs.
+              {t('preferences.ndi.download.description')}
             </p>
 
             <Button
@@ -188,12 +190,12 @@ const NdiPreferencesSection = ({
               {isDownloading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Downloading...
+                  {t('preferences.ndi.download.progress', { percent: downloadProgress?.percent || 0 })}
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4 mr-2" />
-                  Download NDI Companion
+                  {t('preferences.ndi.download.label')}
                 </>
               )}
             </Button>
@@ -202,7 +204,7 @@ const NdiPreferencesSection = ({
       ) : (
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className={preferenceFieldLabelClass}>Install Location</label>
+            <label className={preferenceFieldLabelClass}>{t('preferences.ndi.installLocation')}</label>
             <Input
               value={ndiStatus.installPath || ''}
               readOnly
@@ -212,8 +214,8 @@ const NdiPreferencesSection = ({
 
           <div className="flex items-center justify-between">
             <div>
-              <label className={`text-sm font-medium ${labelClass}`}>Start with LyricDisplay</label>
-              <p className={`text-xs ${mutedClass}`}>Launch NDI companion when LyricDisplay opens</p>
+              <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.ndi.autoLaunch.label')}</label>
+              <p className={`text-xs ${mutedClass}`}>{t('preferences.ndi.autoLaunch.description')}</p>
             </div>
             <Switch
               checked={ndiAutoLaunch}
@@ -230,7 +232,7 @@ const NdiPreferencesSection = ({
 
       <div className={`pt-4 mt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <p className={`text-[11px] leading-relaxed ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-          NDI is a registered trademark of Vizrt NDI AB. This application is not affiliated with or endorsed by Vizrt NDI AB. Learn more at{' '}
+          {t('preferences.ndi.trademark')}{' '}
           <a
             href="https://ndi.video"
             target="_blank"

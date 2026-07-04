@@ -1,0 +1,370 @@
+{
+  "preferences": {
+    "categories": {
+      "advanced": "Avance",
+      "appearance": "Apparence",
+      "autoplay": "Lecture automatique",
+      "externalControl": "Controle externe",
+      "fileHandling": "Gestion des fichiers",
+      "formatting": "Mise en forme des paroles",
+      "general": "General",
+      "lineSplitting": "Division des lignes",
+      "ndi": "NDI",
+      "parsing": "Analyse des paroles"
+    },
+    "general": {
+      "appLanguage": {
+        "description": "Choisissez la langue utilisee pour les controles et les messages de l'application.",
+        "label": "Langue de l'application"
+      },
+      "autoCheckForUpdates": {
+        "description": "Verifier automatiquement toutes les mises a jour disponibles",
+        "label": "Verifier les mises a jour au demarrage"
+      },
+      "confirmOnClose": {
+        "description": "Afficher une confirmation a la fermeture avec des modifications non enregistrees",
+        "label": "Confirmer a la fermeture"
+      },
+      "liveSafetyMode": {
+        "description": "Limiter les controleurs secondaires a la navigation des lignes pendant le service",
+        "label": "Mode securite en direct"
+      },
+      "skipSectionTitlesOnKeyboard": {
+        "description": "Passer entre les lignes de paroles tout en gardant les titres de section disponibles dans l'editeur",
+        "label": "Ignorer les titres de section avec les fleches"
+      },
+      "toastSounds": {
+        "description": "Lire des sons lorsque les notifications apparaissent",
+        "label": "Sons de notification"
+      }
+    },
+    "appearance": {
+      "appTheme": {
+        "description": "Choisissez le theme de couleur de l'application. \"Par defaut du systeme\" suit le theme du systeme d'exploitation.",
+        "label": "Theme de l'application",
+        "systemNote": "Avec Par defaut du systeme, le bouton du mode sombre dans le panneau de controle et le menu Affichage seront desactives. L'application basculera automatiquement entre clair et sombre selon les preferences du systeme."
+      },
+      "showCanvasQuickActions": {
+        "description": "Afficher les boutons d'ajout de traduction et d'horodatage pres du curseur dans l'editeur",
+        "label": "Afficher les actions rapides du canvas"
+      },
+      "showTooltips": {
+        "description": "Afficher des aides au survol des controles",
+        "label": "Afficher les aides"
+      },
+      "showTutorialPopovers": {
+        "description": "Afficher de courts guides pour les reperes et fonctions utiles",
+        "label": "Afficher les bulles de tutoriel"
+      },
+      "themeOptions": {
+        "dark": "Mode sombre",
+        "light": "Mode clair",
+        "system": "Par defaut du systeme"
+      }
+    },
+    "advanced": {
+      "actionLog": {
+        "description": "Consulter les actions recentes de lignes, listes, sorties, scene, securite et controleurs distants.",
+        "modalDescription": "Consultez les actions recentes de controle en direct et exportez une copie texte",
+        "title": "Journal des actions operateur",
+        "view": "Voir le journal"
+      },
+      "connectionTimeout": "Delai de connexion (ms)",
+      "debugLogging": {
+        "description": "Activer les journaux detailles pour le depannage",
+        "label": "Journalisation de debogage"
+      },
+      "dock": {
+        "beta": "Beta",
+        "description": "Controlez LyricDisplay depuis un dock OBS pendant qu'il fonctionne en arriere-plan.",
+        "devHelp": "En developpement, demarrez Dock Mode avec npm run electron-dev:headless depuis le dossier de l'application.",
+        "modalDescription": "Copiez l'URL du dock OBS et examinez les options de demarrage de Dock Mode",
+        "setup": "Configurer",
+        "startAtSignIn": {
+          "description": "Rendre LyricDisplay Dock pret automatiquement apres la connexion.",
+          "label": "Demarrer a la connexion",
+          "notAvailable": "L'enregistrement au demarrage n'est pas disponible sur ce systeme."
+        },
+        "switch": "Passer au Dock",
+        "title": "LyricDisplay Dock",
+        "toast": {
+          "disabledMessage": "LyricDisplay Dock ne demarrera plus automatiquement a la connexion.",
+          "disabledTitle": "Demarrage de Dock Mode desactive",
+          "enabledMessage": "LyricDisplay Dock sera pret apres votre connexion, sans ouvrir la fenetre de bureau.",
+          "enabledTitle": "Dock Mode demarrera a la connexion",
+          "failedMessage": "Impossible de mettre a jour Demarrer a la connexion pour LyricDisplay Dock.",
+          "failedTitle": "Echec du parametre de demarrage"
+        }
+      },
+      "dockMode": {
+        "cancel": "Annuler",
+        "close": "Fermer",
+        "confirmBody": "Enregistrez tout travail non sauvegarde avant de continuer. Apres le changement, utilisez LyricDisplay Dock dans OBS pour controler les paroles et les reglages de sortie.",
+        "confirmDescription": "LyricDisplay continuera a fonctionner pour le dock OBS sans la fenetre de bureau.",
+        "confirmTitle": "Passer en Dock Mode ?",
+        "errorFallback": "LyricDisplay n'a pas pu passer en Dock Mode.",
+        "errorTitle": "Dock Mode n'a pas pu demarrer",
+        "switchToDock": "Passer en Dock Mode"
+      },
+      "hardwareAcceleration": {
+        "description": "Forcer le rendu sur le CPU au lieu du GPU (necessite un redemarrage)",
+        "label": "Desactiver l'acceleration materielle"
+      },
+      "heartbeatInterval": "Intervalle de pulsation (ms)",
+      "intro": {
+        "description": "Ces reglages sont destines aux utilisateurs avances. Les modifier peut affecter la stabilite de l'application.",
+        "title": "Reglages avances"
+      },
+      "maxConnectionAttempts": "Tentatives de connexion maximum",
+      "resetDefaults": "Restaurer les reglages avances par defaut",
+      "restart": {
+        "action": "Redemarrer",
+        "message": "Les changements d'acceleration materielle necessitent de redemarrer l'application.",
+        "title": "Redemarrage requis"
+      },
+      "security": {
+        "age": "Age",
+        "ageValue": "{{days}} jours sur {{maxDays}}",
+        "checking": "Verification",
+        "graceActive": "Actif jusqu'au {{date}}",
+        "graceInactive": "Inactif",
+        "gracePeriod": "Periode de grace",
+        "healthy": "Sain",
+        "lastRotated": "Derniere rotation",
+        "notAvailable": "Non disponible",
+        "refresh": "Actualiser",
+        "rotateAndRestart": "Faire tourner et redemarrer",
+        "rotationDue": "Rotation requise",
+        "storage": "Stockage",
+        "title": "Cle de jeton de securite",
+        "unknown": "Inconnu",
+        "usage": "Utilisee par cette application pour signer les jetons d'authentification locaux. Les anciennes cles tournent automatiquement au demarrage."
+      }
+    },
+    "autoplay": {
+      "defaultInterval": {
+        "description": "Temps par defaut entre les transitions automatiques de ligne",
+        "label": "Intervalle par defaut (secondes)"
+      },
+      "loopAtEnd": {
+        "description": "Revenir a la premiere ligne apres la fin",
+        "label": "Boucler a la fin"
+      },
+      "skipBlankLines": {
+        "description": "Ignorer automatiquement les lignes vides pendant la lecture",
+        "label": "Ignorer les lignes vides"
+      },
+      "startFromFirstLine": {
+        "description": "Demarrer la lecture automatique depuis la premiere ligne",
+        "label": "Demarrer a la premiere ligne"
+      }
+    },
+    "externalControl": {
+      "midi": {
+        "actionKey": "Cle d'action : {{action}}",
+        "ccLastLearned": "CC {{controller}} (val {{value}}) ch {{channel}}",
+        "collapse": "Reduire",
+        "enable": {
+          "description": "Traiter les messages MIDI entrants",
+          "label": "Activer MIDI"
+        },
+        "expand": "Developper ({{count}} de plus)",
+        "inputDevice": "Peripherique d'entree MIDI",
+        "lastLearned": "Dernier appris : {{value}}",
+        "learn": "Apprendre MIDI (afficher la derniere entree)",
+        "mappings": "Associations MIDI",
+        "noMappings": "Aucune association trouvee.",
+        "none": "Aucun",
+        "noteLastLearned": "Note {{note}} (vel {{velocity}}) ch {{channel}}",
+        "quickAssign": {
+          "actions": {
+            "clearOutput": "Effacer la sortie",
+            "nextLine": "Ligne suivante",
+            "previousLine": "Ligne precedente",
+            "toggleOutput": "Basculer la sortie"
+          },
+          "description": "Choisissez une action, puis appuyez sur un bouton, une pedale ou un bouton rotatif de votre peripherique MIDI. (Ecoute un controle non associe.)",
+          "label": "Association rapide"
+        },
+        "refresh": "Actualiser",
+        "refreshing": "Actualisation...",
+        "resetDefaults": "Restaurer les valeurs",
+        "selectDevicePlaceholder": "Selectionnez un peripherique MIDI...",
+        "supportMissing": "Le support MIDI necessite le paquet @julusian/midi.",
+        "title": "Controle MIDI",
+        "waiting": "Attente..."
+      },
+      "osc": {
+        "connectedClients_one": "{{count}} client connecte",
+        "connectedClients_other": "{{count}} clients connectes",
+        "enable": {
+          "description": "Traiter les messages OSC entrants",
+          "label": "Activer OSC"
+        },
+        "feedbackPort": "Port de retour",
+        "listeningPort": "Port d'ecoute",
+        "requiresRestart": "Necessite un redemarrage pour prendre effet",
+        "sendFeedback": {
+          "description": "Envoyer les mises a jour d'etat aux clients OSC",
+          "label": "Envoyer le retour"
+        },
+        "serverFailed": "Le serveur OSC n'a pas pu demarrer. Verifiez si le port est utilise.",
+        "title": "Controle OSC"
+      },
+      "table": {
+        "action": "Action",
+        "key": "Touche",
+        "type": "Type"
+      }
+    },
+    "fileHandling": {
+      "defaultLyricsFolder": {
+        "description": "Ce dossier s'ouvrira par defaut lors du chargement des paroles (Ctrl+O). Desactive quand \"Memoriser le dernier chemin ouvert\" est active.",
+        "label": "Dossier de paroles par defaut",
+        "placeholder": "Selectionnez un dossier par defaut..."
+      },
+      "maxFileSize": {
+        "description": "Taille maximale des fichiers de paroles (les gros fichiers peuvent ralentir l'analyse)",
+        "label": "Taille maximale du fichier (Mo)"
+      },
+      "maxRecentFiles": {
+        "description": "Nombre maximal de fichiers a afficher dans la liste recente",
+        "label": "Fichiers recents maximum"
+      },
+      "maxSetlistFiles": {
+        "description": "Nombre maximal de chants autorises dans une liste ({{min}}-{{max}})",
+        "label": "Fichiers de liste maximum",
+        "warning": "Les grandes listes peuvent affecter les performances lors du chargement ou du changement de chant"
+      },
+      "rememberLastOpenedPath": {
+        "description": "Utiliser le dernier dossier ouvert au lieu du dossier par defaut",
+        "label": "Memoriser le dernier chemin ouvert"
+      }
+    },
+    "formatting": {
+      "autoCleanupOnPaste": {
+        "description": "Mettre en forme et nettoyer automatiquement les paroles collees dans le canvas",
+        "label": "Nettoyage automatique au collage"
+      },
+      "capitalizeFirstLetter": {
+        "description": "Mettre automatiquement en majuscule la premiere lettre de chaque ligne pendant le nettoyage",
+        "label": "Majuscule initiale"
+      },
+      "capitalizeReligiousTerms": {
+        "description": "Mettre en majuscule les mots comme Jesus, Dieu, Saint-Esprit, Alleluia, etc.",
+        "label": "Majuscules pour termes religieux"
+      },
+      "normalizeTypographicChars": {
+        "description": "Convertir les guillemets typographiques, tirets longs et autres caracteres en equivalents simples",
+        "label": "Normaliser les caracteres typographiques"
+      }
+    },
+    "lineSplitting": {
+      "enableLineSplitting": {
+        "description": "Diviser automatiquement les longues lignes pour un meilleur affichage",
+        "label": "Activer la division des lignes"
+      },
+      "maxLength": {
+        "description": "Nombre maximal de caracteres avant de forcer un saut de ligne",
+        "label": "Longueur maximale de ligne"
+      },
+      "minLength": {
+        "description": "Nombre minimal de caracteres avant d'autoriser un saut de ligne",
+        "label": "Longueur minimale de ligne"
+      },
+      "overflowTolerance": {
+        "description": "Caracteres supplementaires autorises pour trouver un bon point de coupe",
+        "label": "Tolerance de depassement"
+      },
+      "targetLength": {
+        "description": "Nombre ideal de caracteres par ligne",
+        "label": "Longueur cible de ligne"
+      }
+    },
+    "ndi": {
+      "autoLaunch": {
+        "description": "Lancer le companion NDI lorsque LyricDisplay s'ouvre",
+        "label": "Demarrer avec LyricDisplay"
+      },
+      "cancel": "Annuler",
+      "description": "Le companion NDI diffuse vos sorties de paroles comme sources video NDI pour l'integration avec OBS, vMix et d'autres logiciels compatibles NDI.",
+      "download": {
+        "description": "Telechargez le companion NDI pour activer la diffusion video depuis vos sorties de paroles.",
+        "label": "Telecharger le companion NDI",
+        "progress": "Telechargement... {{percent}}%"
+      },
+      "extracting": "Extraction... {{percent}}%",
+      "installLocation": "Emplacement d'installation",
+      "status": {
+        "installed": "Installe",
+        "notInstalled": "Non installe",
+        "running": "En cours",
+        "stopped": "Arrete"
+      },
+      "telemetry": {
+        "avgFrame": "Image moyenne (ms)",
+        "backend": "Backend",
+        "droppedFrames": "Images perdues",
+        "none": "aucun",
+        "p95Frame": "Image P95 (ms)",
+        "renderFps": "FPS rendu",
+        "sendFailures": "Echecs d'envoi",
+        "sendFps": "FPS envoi",
+        "title": "Telemetrie d'execution",
+        "updatedAgo": "Mis a jour il y a {{seconds}}s",
+        "waiting": "En attente des donnees de telemetrie du companion...",
+        "warnings": "Avertissements"
+      },
+      "toolbar": {
+        "checkUpdatesTooltip": "Verifier les mises a jour du companion",
+        "launch": "Lancer",
+        "launchTooltip": "Lancer le processus companion NDI",
+        "stop": "Arreter",
+        "stopTooltip": "Arreter le processus companion NDI",
+        "uninstallTooltip": "Desinstaller le companion NDI"
+      },
+      "trademark": "NDI est une marque deposee de Vizrt NDI AB. Cette application n'est pas affiliee a Vizrt NDI AB et n'est pas approuvee par celle-ci. En savoir plus sur",
+      "update": {
+        "available": "Mise a jour disponible : v{{version}}",
+        "current": "Vous avez v{{version}}",
+        "label": "Mettre a jour"
+      }
+    },
+    "parsing": {
+      "autoLineGrouping": {
+        "description": "Grouper automatiquement les lignes courtes consecutives",
+        "label": "Groupement automatique des lignes"
+      },
+      "crossBlankLineGrouping": {
+        "description": "Autoriser le groupement de lignes separees par des lignes vides",
+        "label": "Grouper entre lignes vides"
+      },
+      "maxLineLength": {
+        "description": "Les lignes plus courtes que cette valeur seront considerees pour le groupement automatique",
+        "label": "Longueur maximale pour le groupement"
+      },
+      "maxLinesPerGroup": {
+        "description": "L'analyseur groupe jusqu'a ce nombre de lignes normales consecutives",
+        "label": "Nombre maximal de lignes a grouper"
+      },
+      "structureTagHandling": {
+        "description": "Comment gerer les balises [Verse], [Chorus], etc.",
+        "label": "Gestion des balises de structure",
+        "options": {
+          "isolate": "Isoler (ligne separee)",
+          "keep": "Garder (laisser tel quel)",
+          "strip": "Supprimer (retirer les balises)"
+        }
+      },
+      "translationGrouping": {
+        "description": "Grouper les lignes entre crochets comme traductions avec les lignes principales",
+        "label": "Groupement des traductions"
+      }
+    },
+    "status": {
+      "autoSaved": "Les modifications sont enregistrees automatiquement",
+      "saved": "Parametres enregistres",
+      "saving": "Enregistrement..."
+    }
+  }
+}

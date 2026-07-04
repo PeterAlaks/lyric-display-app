@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Settings, FolderOpen, FileText, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Loader2,
@@ -34,6 +35,7 @@ import AdvancedPreferencesSection from './UserPreferencesModal/AdvancedPreferenc
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
+import i18n, { normalizeLanguageCode, SUPPORTED_LANGUAGES } from '../i18n';
 
 // Category definitions
 const CATEGORIES = [
@@ -50,6 +52,7 @@ const CATEGORIES = [
 ];
 
 const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
   const { showToast } = useToast();
   const { showModal } = useModal();
@@ -127,6 +130,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     ndiUpdating,
   } = useNdiPreferences({ showModal, showToast });
 
+  const categories = CATEGORIES.map((category) => ({
+    ...category,
+    label: t(`preferences.categories.${category.id}`),
+  }));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[500px]">
@@ -155,10 +163,37 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'general':
         return (
           <div className="space-y-6">
+            <div className="space-y-2">
+              <label className={preferenceFieldLabelClass}>{t('preferences.general.appLanguage.label')}</label>
+              <Select
+                value={normalizeLanguageCode(preferences.general?.appLanguage)}
+                onValueChange={(language) => {
+                  const normalizedLanguage = normalizeLanguageCode(language);
+                  updatePreference('general', 'appLanguage', normalizedLanguage);
+                  useLyricsStore.getState().setAppLanguage(normalizedLanguage);
+                  i18n.changeLanguage(normalizedLanguage);
+                }}
+              >
+                <SelectTrigger className={inputClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                  {SUPPORTED_LANGUAGES.map((language) => (
+                    <SelectItem key={language.code} value={language.code}>
+                      {language.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className={`text-xs ${mutedClass}`}>
+                {t('preferences.general.appLanguage.description')}
+              </p>
+            </div>
+
             <div className={preferenceToggleRowClass}>
               <div className={preferenceToggleTextClass}>
-                <label className={`text-sm font-medium ${labelClass}`}>Live Safety Mode</label>
-                <p className={`text-xs ${mutedClass}`}>Limit secondary controllers to line navigation during service</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.general.liveSafetyMode.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.general.liveSafetyMode.description')}</p>
               </div>
               <Switch
                 checked={Boolean(liveSafety?.enabled)}
@@ -174,8 +209,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className={preferenceToggleRowClass}>
               <div className={preferenceToggleTextClass}>
-                <label className={`text-sm font-medium ${labelClass}`}>Confirm on Close</label>
-                <p className={`text-xs ${mutedClass}`}>Show confirmation when closing with unsaved changes</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.general.confirmOnClose.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.general.confirmOnClose.description')}</p>
               </div>
               <Switch
                 checked={preferences.general?.confirmOnClose ?? true}
@@ -190,8 +225,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className={preferenceToggleRowClass}>
               <div className={preferenceToggleTextClass}>
-                <label className={`text-sm font-medium ${labelClass}`}>Auto-check for updates on startup</label>
-                <p className={`text-xs ${mutedClass}`}>Automatically check for all available updates</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.general.autoCheckForUpdates.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.general.autoCheckForUpdates.description')}</p>
               </div>
               <Switch
                 checked={preferences.general?.autoCheckForUpdates ?? true}
@@ -206,8 +241,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className={preferenceToggleRowClass}>
               <div className={preferenceToggleTextClass}>
-                <label className={`text-sm font-medium ${labelClass}`}>Toast Sounds</label>
-                <p className={`text-xs ${mutedClass}`}>Play notification sounds when toast messages appear</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.general.toastSounds.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.general.toastSounds.description')}</p>
               </div>
               <Switch
                 checked={!(preferences.general?.toastSoundsMuted ?? false)}
@@ -227,8 +262,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className={preferenceToggleRowClass}>
               <div className={preferenceToggleTextClass}>
-                <label className={`text-sm font-medium ${labelClass}`}>Skip Section Titles with Arrow Keys</label>
-                <p className={`text-xs ${mutedClass}`}>Move between lyric lines while keeping section headers available in the editor</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.general.skipSectionTitlesOnKeyboard.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.general.skipSectionTitlesOnKeyboard.description')}</p>
               </div>
               <Switch
                 checked={preferences.general?.skipSectionTitlesOnKeyboard ?? true}
@@ -279,7 +314,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>App Theme</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.appearance.appTheme.label')}</label>
               <Select
                 value={currentThemeMode}
                 onValueChange={handleThemeModeChange}
@@ -288,18 +323,18 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
-                  <SelectItem value="light">Light Mode</SelectItem>
-                  <SelectItem value="dark">Dark Mode</SelectItem>
-                  <SelectItem value="system">System Default</SelectItem>
+                  <SelectItem value="light">{t('preferences.appearance.themeOptions.light')}</SelectItem>
+                  <SelectItem value="dark">{t('preferences.appearance.themeOptions.dark')}</SelectItem>
+                  <SelectItem value="system">{t('preferences.appearance.themeOptions.system')}</SelectItem>
                 </SelectContent>
               </Select>
               <p className={`text-xs ${mutedClass}`}>
-                Choose the application color theme. "System Default" follows your operating system's theme setting.
+                {t('preferences.appearance.appTheme.description')}
               </p>
               {currentThemeMode === 'system' && (
                 <div className={`flex items-start gap-2 p-3 rounded-lg mt-3 ${darkMode ? 'bg-blue-900/20 border border-blue-600/30' : 'bg-blue-50 border border-blue-200'}`}>
                   <p className={`text-xs ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
-                    When using System Default, the dark mode toggle in the control panel and the View menu will be disabled. The app will automatically switch between light and dark mode based on your system preferences.
+                    {t('preferences.appearance.appTheme.systemNote')}
                   </p>
                 </div>
               )}
@@ -307,8 +342,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Show Tooltips</label>
-                <p className={`text-xs ${mutedClass}`}>Display helpful tooltips when hovering over controls</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.appearance.showTooltips.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.appearance.showTooltips.description')}</p>
               </div>
               <Switch
                 checked={preferences.appearance?.showTooltips ?? true}
@@ -327,8 +362,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Show Tutorial Popovers</label>
-                <p className={`text-xs ${mutedClass}`}>Show short guidance popovers for helpful app markers and features</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.appearance.showTutorialPopovers.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.appearance.showTutorialPopovers.description')}</p>
               </div>
               <Switch
                 checked={preferences.appearance?.showTutorialPopovers ?? true}
@@ -349,8 +384,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Show Canvas Quick Actions</label>
-                <p className={`text-xs ${mutedClass}`}>Show Add Translation and Add Timestamp buttons near the cursor in the song editor</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.appearance.showCanvasQuickActions.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.appearance.showCanvasQuickActions.description')}</p>
               </div>
               <Switch
                 checked={preferences.appearance?.showCanvasFloatingToolbar ?? true}
@@ -374,8 +409,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Auto Line Grouping</label>
-                <p className={`text-xs ${mutedClass}`}>Automatically group consecutive short lines together</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.parsing.autoLineGrouping.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.parsing.autoLineGrouping.description')}</p>
               </div>
               <Switch
                 checked={preferences.parsing?.enableAutoLineGrouping ?? true}
@@ -390,7 +425,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             {(preferences.parsing?.enableAutoLineGrouping ?? true) && (
               <div className="space-y-2">
-                <label className={preferenceFieldLabelClass}>Maximum Number of Lines to Group</label>
+                <label className={preferenceFieldLabelClass}>{t('preferences.parsing.maxLinesPerGroup.label')}</label>
                 <Input
                   type="number"
                   min="2"
@@ -407,15 +442,15 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   className={inputClass}
                 />
                 <p className={`text-xs ${mutedClass}`}>
-                  Parser groups up to this many consecutive normal lines
+                  {t('preferences.parsing.maxLinesPerGroup.description')}
                 </p>
               </div>
             )}
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Translation Grouping</label>
-                <p className={`text-xs ${mutedClass}`}>Group bracketed lines as translations with main lines</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.parsing.translationGrouping.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.parsing.translationGrouping.description')}</p>
               </div>
               <Switch
                 checked={preferences.parsing?.enableTranslationGrouping ?? true}
@@ -429,7 +464,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Max Line Length for Grouping</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.parsing.maxLineLength.label')}</label>
               <Input
                 type="number"
                 min="20"
@@ -446,14 +481,14 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Lines shorter than this will be considered for auto-grouping
+                {t('preferences.parsing.maxLineLength.description')}
               </p>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Cross Blank Line Grouping</label>
-                <p className={`text-xs ${mutedClass}`}>Allow grouping lines separated by blank lines</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.parsing.crossBlankLineGrouping.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.parsing.crossBlankLineGrouping.description')}</p>
               </div>
               <Switch
                 checked={preferences.parsing?.enableCrossBlankLineGrouping ?? true}
@@ -467,7 +502,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Structure Tag Handling</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.parsing.structureTagHandling.label')}</label>
               <Select
                 value={preferences.parsing?.structureTagMode ?? 'isolate'}
                 onValueChange={(val) => updatePreference('parsing', 'structureTagMode', val)}
@@ -476,13 +511,13 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
-                  <SelectItem value="isolate">Isolate (separate line)</SelectItem>
-                  <SelectItem value="strip">Strip (remove tags)</SelectItem>
-                  <SelectItem value="keep">Keep (leave as-is)</SelectItem>
+                  <SelectItem value="isolate">{t('preferences.parsing.structureTagHandling.options.isolate')}</SelectItem>
+                  <SelectItem value="strip">{t('preferences.parsing.structureTagHandling.options.strip')}</SelectItem>
+                  <SelectItem value="keep">{t('preferences.parsing.structureTagHandling.options.keep')}</SelectItem>
                 </SelectContent>
               </Select>
               <p className={`text-xs ${mutedClass}`}>
-                How to handle [Verse], [Chorus], etc. tags
+                {t('preferences.parsing.structureTagHandling.description')}
               </p>
             </div>
           </div>
@@ -493,8 +528,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Auto Cleanup on Paste</label>
-                <p className={`text-xs ${mutedClass}`}>Automatically format and clean up lyrics when pasting into the song canvas</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.autoCleanupOnPaste.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.autoCleanupOnPaste.description')}</p>
               </div>
               <Switch
                 checked={preferences.formatting?.enableCleanupOnPaste ?? true}
@@ -512,8 +547,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Capitalize First Letter</label>
-                <p className={`text-xs ${mutedClass}`}>Automatically capitalize the first letter of each lyric line during cleanup</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.capitalizeFirstLetter.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.capitalizeFirstLetter.description')}</p>
               </div>
               <Switch
                 checked={preferences.formatting?.capitalizeFirstLetter ?? true}
@@ -531,8 +566,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Capitalize Religious Terms</label>
-                <p className={`text-xs ${mutedClass}`}>Auto-capitalize words like Jesus, God, Holy Spirit, Hallelujah, etc.</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.capitalizeReligiousTerms.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.capitalizeReligiousTerms.description')}</p>
               </div>
               <Switch
                 checked={preferences.formatting?.capitalizeReligiousTerms ?? true}
@@ -550,8 +585,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Normalize Typographic Characters</label>
-                <p className={`text-xs ${mutedClass}`}>Convert smart quotes, em dashes, and other typographic characters to plain equivalents</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.normalizeTypographicChars.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.normalizeTypographicChars.description')}</p>
               </div>
               <Switch
                 checked={preferences.formatting?.normalizeTypographicChars ?? true}
@@ -574,8 +609,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Enable Line Splitting</label>
-                <p className={`text-xs ${mutedClass}`}>Automatically split long lines for better display</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.lineSplitting.enableLineSplitting.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.lineSplitting.enableLineSplitting.description')}</p>
               </div>
               <Switch
                 checked={preferences.lineSplitting?.enabled ?? true}
@@ -589,7 +624,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Target Line Length</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.lineSplitting.targetLength.label')}</label>
               <Input
                 type="number"
                 min="30"
@@ -607,12 +642,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 disabled={!preferences.lineSplitting?.enabled}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Ideal character count per line
+                {t('preferences.lineSplitting.targetLength.description')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Minimum Line Length</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.lineSplitting.minLength.label')}</label>
               <Input
                 type="number"
                 min="20"
@@ -630,12 +665,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 disabled={!preferences.lineSplitting?.enabled}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Minimum characters before allowing a line break
+                {t('preferences.lineSplitting.minLength.description')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Maximum Line Length</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.lineSplitting.maxLength.label')}</label>
               <Input
                 type="number"
                 min="50"
@@ -653,12 +688,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 disabled={!preferences.lineSplitting?.enabled}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Maximum characters before forcing a line break
+                {t('preferences.lineSplitting.maxLength.description')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Overflow Tolerance</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.lineSplitting.overflowTolerance.label')}</label>
               <Input
                 type="number"
                 min="5"
@@ -676,7 +711,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 disabled={!preferences.lineSplitting?.enabled}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Extra characters allowed when finding a good break point
+                {t('preferences.lineSplitting.overflowTolerance.description')}
               </p>
             </div>
           </div>
@@ -687,8 +722,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Remember Last Opened Path</label>
-                <p className={`text-xs ${mutedClass}`}>Use the last opened folder instead of default</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.fileHandling.rememberLastOpenedPath.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.fileHandling.rememberLastOpenedPath.description')}</p>
               </div>
               <Switch
                 checked={preferences.fileHandling?.rememberLastOpenedPath ?? true}
@@ -702,12 +737,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Default Lyrics Folder</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.fileHandling.defaultLyricsFolder.label')}</label>
               <div className="flex gap-2">
                 <Input
                   value={preferences.fileHandling?.defaultLyricsPath || ''}
                   onChange={(e) => updatePreference('fileHandling', 'defaultLyricsPath', e.target.value)}
-                  placeholder="Select a default folder..."
+                  placeholder={t('preferences.fileHandling.defaultLyricsFolder.placeholder')}
                   className={`flex-1 ${inputClass}`}
                   disabled={preferences.fileHandling?.rememberLastOpenedPath ?? true}
                 />
@@ -721,11 +756,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 </Button>
               </div>
               <p className={`text-xs ${mutedClass}`}>
-                This folder will open by default when loading lyrics files (Ctrl+O). Disabled when "Remember Last Opened Path" is enabled.
+                {t('preferences.fileHandling.defaultLyricsFolder.description')}
               </p>
             </div>
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Max Recent Files</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.fileHandling.maxRecentFiles.label')}</label>
               <Input
                 type="number"
                 min="5"
@@ -742,12 +777,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Maximum number of files to show in the recent files list
+                {t('preferences.fileHandling.maxRecentFiles.description')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Max Setlist Files</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.fileHandling.maxSetlistFiles.label')}</label>
               <Input
                 type="number"
                 min={MIN_SETLIST_ITEMS}
@@ -764,20 +799,20 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Maximum number of songs allowed in a setlist ({MIN_SETLIST_ITEMS}-{MAX_SETLIST_ITEMS})
+                {t('preferences.fileHandling.maxSetlistFiles.description', { min: MIN_SETLIST_ITEMS, max: MAX_SETLIST_ITEMS })}
               </p>
               {(preferences.fileHandling?.maxSetlistFiles ?? DEFAULT_SETLIST_ITEMS) > SETLIST_PERFORMANCE_WARNING_ITEMS && (
                 <div className={`flex items-start gap-2 p-2 rounded ${darkMode ? 'bg-yellow-900/20 border border-yellow-600/30' : 'bg-yellow-50 border border-yellow-200'}`}>
                   <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                   <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-                    Large setlists may impact performance when loading or switching between songs
+                    {t('preferences.fileHandling.maxSetlistFiles.warning')}
                   </p>
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Max File Size (MB)</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.fileHandling.maxFileSize.label')}</label>
               <Input
                 type="number"
                 min="1"
@@ -795,7 +830,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Maximum size for lyrics files (larger files may slow down parsing)
+                {t('preferences.fileHandling.maxFileSize.description')}
               </p>
             </div>
           </div>
@@ -875,7 +910,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Default Interval (seconds)</label>
+              <label className={preferenceFieldLabelClass}>{t('preferences.autoplay.defaultInterval.label')}</label>
               <Input
                 type="number"
                 min="1"
@@ -892,14 +927,14 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Default time between automatic line transitions
+                {t('preferences.autoplay.defaultInterval.description')}
               </p>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Loop at End</label>
-                <p className={`text-xs ${mutedClass}`}>Return to first line after reaching the end</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.autoplay.loopAtEnd.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.autoplay.loopAtEnd.description')}</p>
               </div>
               <Switch
                 checked={preferences.autoplay?.defaultLoop ?? true}
@@ -914,8 +949,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Start from First Line</label>
-                <p className={`text-xs ${mutedClass}`}>Begin autoplay from the first line</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.autoplay.startFromFirstLine.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.autoplay.startFromFirstLine.description')}</p>
               </div>
               <Switch
                 checked={preferences.autoplay?.defaultStartFromFirst ?? true}
@@ -930,8 +965,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Skip Blank Lines</label>
-                <p className={`text-xs ${mutedClass}`}>Automatically skip empty lines during playback</p>
+                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.autoplay.skipBlankLines.label')}</label>
+                <p className={`text-xs ${mutedClass}`}>{t('preferences.autoplay.skipBlankLines.description')}</p>
               </div>
               <Switch
                 checked={preferences.autoplay?.defaultSkipBlankLines ?? true}
@@ -981,7 +1016,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     <UserPreferencesLayout
       activeCategory={activeCategory}
       activeCategoryBg={activeCategoryBg}
-      categories={CATEGORIES}
+      categories={categories}
       companionRunning={companionRunning}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}

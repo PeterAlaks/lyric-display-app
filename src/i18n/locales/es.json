@@ -1,0 +1,370 @@
+{
+  "preferences": {
+    "categories": {
+      "advanced": "Avanzado",
+      "appearance": "Apariencia",
+      "autoplay": "Reproduccion automatica",
+      "externalControl": "Control externo",
+      "fileHandling": "Gestion de archivos",
+      "formatting": "Formato de letras",
+      "general": "General",
+      "lineSplitting": "Division de lineas",
+      "ndi": "NDI",
+      "parsing": "Analisis de letras"
+    },
+    "general": {
+      "appLanguage": {
+        "description": "Elige el idioma usado para controles y mensajes de la aplicacion.",
+        "label": "Idioma de la aplicacion"
+      },
+      "autoCheckForUpdates": {
+        "description": "Buscar automaticamente todas las actualizaciones disponibles",
+        "label": "Buscar actualizaciones al iniciar"
+      },
+      "confirmOnClose": {
+        "description": "Mostrar confirmacion al cerrar con cambios sin guardar",
+        "label": "Confirmar al cerrar"
+      },
+      "liveSafetyMode": {
+        "description": "Limitar los controladores secundarios a navegar lineas durante el servicio",
+        "label": "Modo de seguridad en vivo"
+      },
+      "skipSectionTitlesOnKeyboard": {
+        "description": "Moverse entre lineas de letras manteniendo los encabezados disponibles en el editor",
+        "label": "Omitir titulos de seccion con flechas"
+      },
+      "toastSounds": {
+        "description": "Reproducir sonidos cuando aparezcan notificaciones",
+        "label": "Sonidos de notificacion"
+      }
+    },
+    "appearance": {
+      "appTheme": {
+        "description": "Elige el tema de color de la aplicacion. \"Predeterminado del sistema\" sigue el tema del sistema operativo.",
+        "label": "Tema de la aplicacion",
+        "systemNote": "Al usar Predeterminado del sistema, el interruptor de modo oscuro en el panel de control y el menu Ver estaran desactivados. La aplicacion cambiara automaticamente entre claro y oscuro segun las preferencias del sistema."
+      },
+      "showCanvasQuickActions": {
+        "description": "Mostrar botones para agregar traduccion y marca de tiempo cerca del cursor en el editor",
+        "label": "Mostrar acciones rapidas del canvas"
+      },
+      "showTooltips": {
+        "description": "Mostrar ayudas al pasar el cursor sobre los controles",
+        "label": "Mostrar ayudas"
+      },
+      "showTutorialPopovers": {
+        "description": "Mostrar pequenas guias para marcadores y funciones utiles",
+        "label": "Mostrar tutoriales emergentes"
+      },
+      "themeOptions": {
+        "dark": "Modo oscuro",
+        "light": "Modo claro",
+        "system": "Predeterminado del sistema"
+      }
+    },
+    "advanced": {
+      "actionLog": {
+        "description": "Revisar acciones recientes de lineas, listas, salidas, escenario, seguridad y controladores remotos.",
+        "modalDescription": "Revisa acciones recientes de control en vivo y exporta una copia de texto",
+        "title": "Registro de acciones del operador",
+        "view": "Ver registro"
+      },
+      "connectionTimeout": "Tiempo de espera de conexion (ms)",
+      "debugLogging": {
+        "description": "Activar registros detallados para solucionar problemas",
+        "label": "Registro de depuracion"
+      },
+      "dock": {
+        "beta": "Beta",
+        "description": "Controla LyricDisplay desde un dock de OBS mientras se ejecuta en segundo plano.",
+        "devHelp": "En desarrollo, inicia Dock Mode con npm run electron-dev:headless desde la carpeta de la app.",
+        "modalDescription": "Copia la URL del dock de OBS y revisa las opciones de inicio de Dock Mode",
+        "setup": "Configurar",
+        "startAtSignIn": {
+          "description": "Preparar LyricDisplay Dock automaticamente despues de iniciar sesion.",
+          "label": "Iniciar al iniciar sesion",
+          "notAvailable": "El registro de inicio no esta disponible en este sistema."
+        },
+        "switch": "Cambiar a Dock",
+        "title": "LyricDisplay Dock",
+        "toast": {
+          "disabledMessage": "LyricDisplay Dock ya no se iniciara automaticamente al iniciar sesion.",
+          "disabledTitle": "Inicio de Dock Mode desactivado",
+          "enabledMessage": "LyricDisplay Dock estara listo despues de iniciar sesion, sin abrir la ventana de escritorio.",
+          "enabledTitle": "Dock Mode se iniciara al iniciar sesion",
+          "failedMessage": "No se pudo actualizar Iniciar al iniciar sesion para LyricDisplay Dock.",
+          "failedTitle": "Error en configuracion de inicio"
+        }
+      },
+      "dockMode": {
+        "cancel": "Cancelar",
+        "close": "Cerrar",
+        "confirmBody": "Guarda cualquier trabajo sin guardar antes de continuar. Despues del cambio, usa LyricDisplay Dock en OBS para controlar letras y ajustes de salida.",
+        "confirmDescription": "LyricDisplay seguira ejecutandose para el dock de OBS sin la ventana de escritorio.",
+        "confirmTitle": "Cambiar a Dock Mode?",
+        "errorFallback": "LyricDisplay no pudo cambiar a Dock Mode.",
+        "errorTitle": "Dock Mode no pudo iniciar",
+        "switchToDock": "Cambiar a Dock Mode"
+      },
+      "hardwareAcceleration": {
+        "description": "Forzar renderizado en CPU en lugar de GPU (requiere reinicio)",
+        "label": "Desactivar aceleracion por hardware"
+      },
+      "heartbeatInterval": "Intervalo de latido (ms)",
+      "intro": {
+        "description": "Estos ajustes son para usuarios avanzados. Cambiarlos puede afectar la estabilidad de la aplicacion.",
+        "title": "Ajustes avanzados"
+      },
+      "maxConnectionAttempts": "Intentos maximos de conexion",
+      "resetDefaults": "Restablecer ajustes avanzados",
+      "restart": {
+        "action": "Reiniciar",
+        "message": "Los cambios de aceleracion por hardware requieren reiniciar la app.",
+        "title": "Reinicio requerido"
+      },
+      "security": {
+        "age": "Edad",
+        "ageValue": "{{days}} dias de {{maxDays}}",
+        "checking": "Comprobando",
+        "graceActive": "Activo hasta {{date}}",
+        "graceInactive": "Inactivo",
+        "gracePeriod": "Periodo de gracia",
+        "healthy": "Correcto",
+        "lastRotated": "Ultima rotacion",
+        "notAvailable": "No disponible",
+        "refresh": "Actualizar",
+        "rotateAndRestart": "Rotar y reiniciar app",
+        "rotationDue": "Rotacion pendiente",
+        "storage": "Almacenamiento",
+        "title": "Clave de token de seguridad",
+        "unknown": "Desconocido",
+        "usage": "Esta app la usa para firmar tokens de autenticacion locales. Las claves antiguas se rotan automaticamente al iniciar."
+      }
+    },
+    "autoplay": {
+      "defaultInterval": {
+        "description": "Tiempo predeterminado entre cambios automaticos de linea",
+        "label": "Intervalo predeterminado (segundos)"
+      },
+      "loopAtEnd": {
+        "description": "Volver a la primera linea al llegar al final",
+        "label": "Repetir al final"
+      },
+      "skipBlankLines": {
+        "description": "Omitir automaticamente lineas vacias durante la reproduccion",
+        "label": "Omitir lineas vacias"
+      },
+      "startFromFirstLine": {
+        "description": "Iniciar reproduccion automatica desde la primera linea",
+        "label": "Comenzar desde la primera linea"
+      }
+    },
+    "externalControl": {
+      "midi": {
+        "actionKey": "Clave de accion: {{action}}",
+        "ccLastLearned": "CC {{controller}} (val {{value}}) ch {{channel}}",
+        "collapse": "Contraer",
+        "enable": {
+          "description": "Procesar mensajes MIDI entrantes",
+          "label": "Activar MIDI"
+        },
+        "expand": "Expandir ({{count}} mas)",
+        "inputDevice": "Dispositivo de entrada MIDI",
+        "lastLearned": "Ultimo aprendido: {{value}}",
+        "learn": "Aprender MIDI (mostrar ultima entrada)",
+        "mappings": "Asignaciones MIDI",
+        "noMappings": "No se encontraron asignaciones.",
+        "none": "Ninguno",
+        "noteLastLearned": "Nota {{note}} (vel {{velocity}}) ch {{channel}}",
+        "quickAssign": {
+          "actions": {
+            "clearOutput": "Limpiar salida",
+            "nextLine": "Linea siguiente",
+            "previousLine": "Linea anterior",
+            "toggleOutput": "Alternar salida"
+          },
+          "description": "Elige una accion y luego presiona un boton, pedal o perilla en tu dispositivo MIDI. (Escucha un control sin asignar.)",
+          "label": "Asignacion rapida"
+        },
+        "refresh": "Actualizar",
+        "refreshing": "Actualizando...",
+        "resetDefaults": "Restablecer valores",
+        "selectDevicePlaceholder": "Selecciona dispositivo MIDI...",
+        "supportMissing": "El soporte MIDI requiere el paquete @julusian/midi.",
+        "title": "Control MIDI",
+        "waiting": "Esperando..."
+      },
+      "osc": {
+        "connectedClients_one": "{{count}} cliente conectado",
+        "connectedClients_other": "{{count}} clientes conectados",
+        "enable": {
+          "description": "Procesar mensajes OSC entrantes",
+          "label": "Activar OSC"
+        },
+        "feedbackPort": "Puerto de respuesta",
+        "listeningPort": "Puerto de escucha",
+        "requiresRestart": "Requiere reinicio para aplicar cambios",
+        "sendFeedback": {
+          "description": "Enviar actualizaciones de estado a clientes OSC",
+          "label": "Enviar respuesta"
+        },
+        "serverFailed": "El servidor OSC no pudo iniciar. Comprueba si el puerto esta en uso.",
+        "title": "Control OSC"
+      },
+      "table": {
+        "action": "Accion",
+        "key": "Tecla",
+        "type": "Tipo"
+      }
+    },
+    "fileHandling": {
+      "defaultLyricsFolder": {
+        "description": "Esta carpeta se abrira de forma predeterminada al cargar letras (Ctrl+O). Se desactiva cuando \"Recordar ultima ruta abierta\" esta activado.",
+        "label": "Carpeta predeterminada de letras",
+        "placeholder": "Selecciona una carpeta predeterminada..."
+      },
+      "maxFileSize": {
+        "description": "Tamano maximo para archivos de letras (los archivos grandes pueden ralentizar el analisis)",
+        "label": "Tamano maximo de archivo (MB)"
+      },
+      "maxRecentFiles": {
+        "description": "Numero maximo de archivos para mostrar en la lista de recientes",
+        "label": "Archivos recientes maximos"
+      },
+      "maxSetlistFiles": {
+        "description": "Numero maximo de canciones permitidas en una lista ({{min}}-{{max}})",
+        "label": "Archivos maximos de lista",
+        "warning": "Las listas grandes pueden afectar el rendimiento al cargar o cambiar canciones"
+      },
+      "rememberLastOpenedPath": {
+        "description": "Usar la ultima carpeta abierta en lugar de la predeterminada",
+        "label": "Recordar ultima ruta abierta"
+      }
+    },
+    "formatting": {
+      "autoCleanupOnPaste": {
+        "description": "Formatear y limpiar automaticamente las letras al pegarlas en el canvas",
+        "label": "Limpieza automatica al pegar"
+      },
+      "capitalizeFirstLetter": {
+        "description": "Poner en mayuscula automaticamente la primera letra de cada linea durante la limpieza",
+        "label": "Mayuscula inicial"
+      },
+      "capitalizeReligiousTerms": {
+        "description": "Poner en mayuscula palabras como Jesus, Dios, Espiritu Santo, Aleluya, etc.",
+        "label": "Mayusculas en terminos religiosos"
+      },
+      "normalizeTypographicChars": {
+        "description": "Convertir comillas tipograficas, guiones largos y otros caracteres a equivalentes simples",
+        "label": "Normalizar caracteres tipograficos"
+      }
+    },
+    "lineSplitting": {
+      "enableLineSplitting": {
+        "description": "Dividir automaticamente lineas largas para mejorar la visualizacion",
+        "label": "Activar division de lineas"
+      },
+      "maxLength": {
+        "description": "Caracteres maximos antes de forzar un salto de linea",
+        "label": "Longitud maxima de linea"
+      },
+      "minLength": {
+        "description": "Caracteres minimos antes de permitir un salto de linea",
+        "label": "Longitud minima de linea"
+      },
+      "overflowTolerance": {
+        "description": "Caracteres extra permitidos al buscar un buen punto de corte",
+        "label": "Tolerancia de exceso"
+      },
+      "targetLength": {
+        "description": "Cantidad ideal de caracteres por linea",
+        "label": "Longitud objetivo de linea"
+      }
+    },
+    "ndi": {
+      "autoLaunch": {
+        "description": "Iniciar el companion NDI cuando se abra LyricDisplay",
+        "label": "Iniciar con LyricDisplay"
+      },
+      "cancel": "Cancelar",
+      "description": "El companion NDI transmite las salidas de letras como fuentes de video NDI para integrarlas con OBS, vMix y otro software compatible con NDI.",
+      "download": {
+        "description": "Descarga el companion NDI para activar la transmision de video desde tus salidas de letras.",
+        "label": "Descargar companion NDI",
+        "progress": "Descargando... {{percent}}%"
+      },
+      "extracting": "Extrayendo... {{percent}}%",
+      "installLocation": "Ubicacion de instalacion",
+      "status": {
+        "installed": "Instalado",
+        "notInstalled": "No instalado",
+        "running": "En ejecucion",
+        "stopped": "Detenido"
+      },
+      "telemetry": {
+        "avgFrame": "Promedio de cuadro (ms)",
+        "backend": "Backend",
+        "droppedFrames": "Cuadros perdidos",
+        "none": "ninguna",
+        "p95Frame": "P95 de cuadro (ms)",
+        "renderFps": "FPS de render",
+        "sendFailures": "Fallos de envio",
+        "sendFps": "FPS de envio",
+        "title": "Telemetria en ejecucion",
+        "updatedAgo": "Actualizado hace {{seconds}}s",
+        "waiting": "Esperando datos de telemetria del companion...",
+        "warnings": "Advertencias"
+      },
+      "toolbar": {
+        "checkUpdatesTooltip": "Buscar actualizaciones del companion",
+        "launch": "Iniciar",
+        "launchTooltip": "Iniciar el proceso companion NDI",
+        "stop": "Detener",
+        "stopTooltip": "Detener el proceso companion NDI",
+        "uninstallTooltip": "Desinstalar companion NDI"
+      },
+      "trademark": "NDI es una marca registrada de Vizrt NDI AB. Esta aplicacion no esta afiliada ni respaldada por Vizrt NDI AB. Mas informacion en",
+      "update": {
+        "available": "Actualizacion disponible: v{{version}}",
+        "current": "Tienes v{{version}}",
+        "label": "Actualizar"
+      }
+    },
+    "parsing": {
+      "autoLineGrouping": {
+        "description": "Agrupar automaticamente lineas cortas consecutivas",
+        "label": "Agrupacion automatica de lineas"
+      },
+      "crossBlankLineGrouping": {
+        "description": "Permitir agrupar lineas separadas por lineas vacias",
+        "label": "Agrupar entre lineas vacias"
+      },
+      "maxLineLength": {
+        "description": "Las lineas mas cortas que esto se consideraran para agrupacion automatica",
+        "label": "Longitud maxima para agrupacion"
+      },
+      "maxLinesPerGroup": {
+        "description": "El analizador agrupa hasta esta cantidad de lineas normales consecutivas",
+        "label": "Numero maximo de lineas por grupo"
+      },
+      "structureTagHandling": {
+        "description": "Como manejar etiquetas como [Verse], [Chorus], etc.",
+        "label": "Manejo de etiquetas de estructura",
+        "options": {
+          "isolate": "Aislar (linea separada)",
+          "keep": "Mantener (sin cambios)",
+          "strip": "Quitar (eliminar etiquetas)"
+        }
+      },
+      "translationGrouping": {
+        "description": "Agrupar lineas entre corchetes como traducciones de lineas principales",
+        "label": "Agrupacion de traducciones"
+      }
+    },
+    "status": {
+      "autoSaved": "Los cambios se guardan automaticamente",
+      "saved": "Configuracion guardada",
+      "saving": "Guardando..."
+    }
+  }
+}

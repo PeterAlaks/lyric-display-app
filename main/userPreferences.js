@@ -14,6 +14,7 @@ const preferencesStore = new Store({
   defaults: {
     // General Settings
     general: {
+      appLanguage: 'en',
       autoCheckForUpdates: true,
       confirmOnClose: true,
       liveSafetyMode: false,

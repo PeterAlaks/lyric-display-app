@@ -1,4 +1,5 @@
 import { Check, ChevronRight, Loader2, Power, RefreshCw, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 
@@ -21,8 +22,11 @@ const UserPreferencesLayout = ({
   panelBg,
   saving,
   setActiveCategory,
-}) => (
-  <div className="flex flex-col h-[500px]">
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-col h-[500px]">
     <div className="flex flex-1 min-h-0">
       <div className={`w-52 shrink-0 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${panelBg}`}>
         <nav className="p-2 space-y-1">
@@ -36,7 +40,7 @@ const UserPreferencesLayout = ({
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${isActive
                   ? `${activeCategoryBg} ${darkMode ? 'text-white' : 'text-gray-900'} shadow-sm`
                   : `${darkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`
-                  }`}
+                }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="text-sm font-medium truncate">{category.label}</span>
@@ -55,21 +59,21 @@ const UserPreferencesLayout = ({
           {activeCategory === 'ndi' && ndiStatus.installed && (
             <div className="flex items-center gap-2 shrink-0">
               {!companionRunning ? (
-                <Tooltip content="Launch the NDI companion process" side="bottom">
+                <Tooltip content={t('preferences.ndi.toolbar.launchTooltip')} side="bottom">
                   <Button size="sm" onClick={handleNdiLaunch} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
                     <Power className="w-3.5 h-3.5 mr-1.5" />
-                    Launch
+                    {t('preferences.ndi.toolbar.launch')}
                   </Button>
                 </Tooltip>
               ) : (
-                <Tooltip content="Stop the NDI companion process" side="bottom">
+                <Tooltip content={t('preferences.ndi.toolbar.stopTooltip')} side="bottom">
                   <Button size="sm" onClick={handleNdiStop} className={`${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}>
                     <Power className="w-3.5 h-3.5 mr-1.5" />
-                    Stop
+                    {t('preferences.ndi.toolbar.stop')}
                   </Button>
                 </Tooltip>
               )}
-              <Tooltip content="Check for companion updates" side="bottom">
+              <Tooltip content={t('preferences.ndi.toolbar.checkUpdatesTooltip')} side="bottom">
                 <Button
                   size="sm"
                   variant="outline"
@@ -80,7 +84,7 @@ const UserPreferencesLayout = ({
                   {ndiCheckingUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                 </Button>
               </Tooltip>
-              <Tooltip content="Uninstall NDI companion" side="bottom">
+              <Tooltip content={t('preferences.ndi.toolbar.uninstallTooltip')} side="bottom">
                 <Button
                   size="sm"
                   variant="outline"
@@ -102,19 +106,20 @@ const UserPreferencesLayout = ({
         {saving ? (
           <>
             <Loader2 className="w-3 h-3 animate-spin" />
-            <span>Saving...</span>
+            <span>{t('preferences.status.saving')}</span>
           </>
         ) : lastSaved ? (
           <>
             <Check className={`w-3 h-3 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
-            <span className={darkMode ? 'text-green-400' : 'text-green-600'}>Settings saved</span>
+            <span className={darkMode ? 'text-green-400' : 'text-green-600'}>{t('preferences.status.saved')}</span>
           </>
         ) : (
-          <span>Changes are saved automatically</span>
+          <span>{t('preferences.status.autoSaved')}</span>
         )}
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default UserPreferencesLayout;

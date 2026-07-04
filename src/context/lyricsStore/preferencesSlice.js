@@ -2,6 +2,7 @@ let maxFileSizeLimit = 2;
 
 export const createPreferencesSlice = (set) => ({
   showTooltips: true,
+  appLanguage: 'en',
   showTutorialPopovers: true,
   showCanvasFloatingToolbar: true,
   toastSoundsMuted: false,
@@ -13,6 +14,7 @@ export const createPreferencesSlice = (set) => ({
   maxFileSizeLimit: 2,
 
   setShowTooltips: (show) => set({ showTooltips: show }),
+  setAppLanguage: (language) => set({ appLanguage: language }),
   setShowTutorialPopovers: (show) => set({ showTutorialPopovers: show }),
   setShowCanvasFloatingToolbar: (show) => set({ showCanvasFloatingToolbar: show }),
   setToastSoundsMuted: (muted) => set({ toastSoundsMuted: muted }),

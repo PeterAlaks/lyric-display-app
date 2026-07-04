@@ -1,0 +1,370 @@
+{
+  "preferences": {
+    "categories": {
+      "advanced": "Advanced",
+      "appearance": "Appearance",
+      "autoplay": "Autoplay",
+      "externalControl": "External Control",
+      "fileHandling": "File Handling",
+      "formatting": "Lyrics Formatting",
+      "general": "General",
+      "lineSplitting": "Line Splitting",
+      "ndi": "NDI",
+      "parsing": "Lyrics Parsing"
+    },
+    "general": {
+      "appLanguage": {
+        "description": "Choose the language used for application controls and messages.",
+        "label": "App Language"
+      },
+      "autoCheckForUpdates": {
+        "description": "Automatically check for all available updates",
+        "label": "Auto-check for updates on startup"
+      },
+      "confirmOnClose": {
+        "description": "Show confirmation when closing with unsaved changes",
+        "label": "Confirm on Close"
+      },
+      "liveSafetyMode": {
+        "description": "Limit secondary controllers to line navigation during service",
+        "label": "Live Safety Mode"
+      },
+      "skipSectionTitlesOnKeyboard": {
+        "description": "Move between lyric lines while keeping section headers available in the editor",
+        "label": "Skip Section Titles with Arrow Keys"
+      },
+      "toastSounds": {
+        "description": "Play notification sounds when toast messages appear",
+        "label": "Toast Sounds"
+      }
+    },
+    "appearance": {
+      "appTheme": {
+        "description": "Choose the application color theme. \"System Default\" follows your operating system's theme setting.",
+        "label": "App Theme",
+        "systemNote": "When using System Default, the dark mode toggle in the control panel and the View menu will be disabled. The app will automatically switch between light and dark mode based on your system preferences."
+      },
+      "showCanvasQuickActions": {
+        "description": "Show Add Translation and Add Timestamp buttons near the cursor in the song editor",
+        "label": "Show Canvas Quick Actions"
+      },
+      "showTooltips": {
+        "description": "Display helpful tooltips when hovering over controls",
+        "label": "Show Tooltips"
+      },
+      "showTutorialPopovers": {
+        "description": "Show short guidance popovers for helpful app markers and features",
+        "label": "Show Tutorial Popovers"
+      },
+      "themeOptions": {
+        "dark": "Dark Mode",
+        "light": "Light Mode",
+        "system": "System Default"
+      }
+    },
+    "advanced": {
+      "actionLog": {
+        "description": "Review recent line, setlist, output, stage, safety, and remote controller actions.",
+        "modalDescription": "Review recent live-control actions and export a text copy",
+        "title": "Operator Action Log",
+        "view": "View Log"
+      },
+      "connectionTimeout": "Connection Timeout (ms)",
+      "debugLogging": {
+        "description": "Enable verbose logging for troubleshooting",
+        "label": "Debug Logging"
+      },
+      "dock": {
+        "beta": "Beta",
+        "description": "Control LyricDisplay from an OBS dock while LyricDisplay runs quietly in the background.",
+        "devHelp": "In development, start Dock Mode with npm run electron-dev:headless from the app folder.",
+        "modalDescription": "Copy the OBS dock URL and review Dock Mode startup options",
+        "setup": "LyricDisplay Dock Setup",
+        "startAtSignIn": {
+          "description": "Make LyricDisplay Dock ready automatically after you sign in.",
+          "label": "Start at Sign In",
+          "notAvailable": "Startup registration is not available on this system."
+        },
+        "switch": "Switch to Dock Mode",
+        "title": "LyricDisplay Dock",
+        "toast": {
+          "disabledMessage": "LyricDisplay Dock will no longer start automatically when you sign in.",
+          "disabledTitle": "Dock Mode Sign-In Start Disabled",
+          "enabledMessage": "LyricDisplay Dock will be ready after you sign in, without opening the desktop window.",
+          "enabledTitle": "Dock Mode Will Start at Sign-In",
+          "failedMessage": "Could not update Start at Sign-In for LyricDisplay Dock.",
+          "failedTitle": "Startup Setting Failed"
+        }
+      },
+      "dockMode": {
+        "cancel": "Cancel",
+        "close": "Close",
+        "confirmBody": "Save any unsaved work before continuing. After the switch, use LyricDisplay Dock in OBS to control lyrics and output settings.",
+        "confirmDescription": "LyricDisplay will keep running for the OBS dock without the desktop window.",
+        "confirmTitle": "Switch to Dock Mode?",
+        "errorFallback": "LyricDisplay could not switch to Dock Mode.",
+        "errorTitle": "Dock Mode Could Not Start",
+        "switchToDock": "Switch to Dock Mode"
+      },
+      "hardwareAcceleration": {
+        "description": "Force rendering on the CPU instead of the GPU (requires restart)",
+        "label": "Disable Hardware Acceleration"
+      },
+      "heartbeatInterval": "Heartbeat Interval (ms)",
+      "intro": {
+        "description": "These settings are for advanced users. Changing them may affect application stability.",
+        "title": "Advanced Settings"
+      },
+      "maxConnectionAttempts": "Max Connection Attempts",
+      "resetDefaults": "Reset Advanced Settings to Defaults",
+      "restart": {
+        "action": "Restart",
+        "message": "Changes to hardware acceleration require restarting the app.",
+        "title": "Restart Required"
+      },
+      "security": {
+        "age": "Age",
+        "ageValue": "{{days}} days of {{maxDays}}",
+        "checking": "Checking",
+        "graceActive": "Active until {{date}}",
+        "graceInactive": "Inactive",
+        "gracePeriod": "Grace period",
+        "healthy": "Healthy",
+        "lastRotated": "Last rotated",
+        "notAvailable": "Not available",
+        "refresh": "Refresh",
+        "rotateAndRestart": "Rotate and Restart App",
+        "rotationDue": "Rotation due",
+        "storage": "Storage",
+        "title": "Security Token Key",
+        "unknown": "Unknown",
+        "usage": "Used by this app to sign local authentication tokens. Stale keys rotate automatically on startup."
+      }
+    },
+    "autoplay": {
+      "defaultInterval": {
+        "description": "Default time between automatic line transitions",
+        "label": "Default Interval (seconds)"
+      },
+      "loopAtEnd": {
+        "description": "Return to first line after reaching the end",
+        "label": "Loop at End"
+      },
+      "skipBlankLines": {
+        "description": "Automatically skip empty lines during playback",
+        "label": "Skip Blank Lines"
+      },
+      "startFromFirstLine": {
+        "description": "Begin autoplay from the first line",
+        "label": "Start from First Line"
+      }
+    },
+    "externalControl": {
+      "midi": {
+        "actionKey": "Action key: {{action}}",
+        "ccLastLearned": "CC {{controller}} (val {{value}}) ch {{channel}}",
+        "collapse": "Collapse",
+        "enable": {
+          "description": "Process incoming MIDI messages",
+          "label": "Enable MIDI"
+        },
+        "expand": "Expand ({{count}} more)",
+        "inputDevice": "MIDI Input Device",
+        "lastLearned": "Last learned: {{value}}",
+        "learn": "Learn MIDI (show last input)",
+        "mappings": "MIDI Mappings",
+        "noMappings": "No mappings found.",
+        "none": "None",
+        "noteLastLearned": "Note {{note}} (vel {{velocity}}) ch {{channel}}",
+        "quickAssign": {
+          "actions": {
+            "clearOutput": "Clear Output",
+            "nextLine": "Next Line",
+            "previousLine": "Previous Line",
+            "toggleOutput": "Toggle Output"
+          },
+          "description": "Choose an action, then press a button/pedal/knob on your MIDI device. (Listens for an unmapped control.)",
+          "label": "Quick assign"
+        },
+        "refresh": "Refresh",
+        "refreshing": "Refreshing...",
+        "resetDefaults": "Reset Defaults",
+        "selectDevicePlaceholder": "Select MIDI device...",
+        "supportMissing": "MIDI support requires the @julusian/midi package.",
+        "title": "MIDI Control",
+        "waiting": "Waiting..."
+      },
+      "osc": {
+        "connectedClients_one": "{{count}} client connected",
+        "connectedClients_other": "{{count}} clients connected",
+        "enable": {
+          "description": "Process incoming OSC messages",
+          "label": "Enable OSC"
+        },
+        "feedbackPort": "Feedback Port",
+        "listeningPort": "Listening Port",
+        "requiresRestart": "Requires restart to take effect",
+        "sendFeedback": {
+          "description": "Send state updates to OSC clients",
+          "label": "Send Feedback"
+        },
+        "serverFailed": "OSC server failed to start. Check if port is in use.",
+        "title": "OSC Control"
+      },
+      "table": {
+        "action": "Action",
+        "key": "Key",
+        "type": "Type"
+      }
+    },
+    "fileHandling": {
+      "defaultLyricsFolder": {
+        "description": "This folder will open by default when loading lyrics files (Ctrl+O). Disabled when \"Remember Last Opened Path\" is enabled.",
+        "label": "Default Lyrics Folder",
+        "placeholder": "Select a default folder..."
+      },
+      "maxFileSize": {
+        "description": "Maximum size for lyrics files (larger files may slow down parsing)",
+        "label": "Max File Size (MB)"
+      },
+      "maxRecentFiles": {
+        "description": "Maximum number of files to show in the recent files list",
+        "label": "Max Recent Files"
+      },
+      "maxSetlistFiles": {
+        "description": "Maximum number of songs allowed in a setlist ({{min}}-{{max}})",
+        "label": "Max Setlist Files",
+        "warning": "Large setlists may impact performance when loading or switching between songs"
+      },
+      "rememberLastOpenedPath": {
+        "description": "Use the last opened folder instead of default",
+        "label": "Remember Last Opened Path"
+      }
+    },
+    "formatting": {
+      "autoCleanupOnPaste": {
+        "description": "Automatically format and clean up lyrics when pasting into the song canvas",
+        "label": "Auto Cleanup on Paste"
+      },
+      "capitalizeFirstLetter": {
+        "description": "Automatically capitalize the first letter of each lyric line during cleanup",
+        "label": "Capitalize First Letter"
+      },
+      "capitalizeReligiousTerms": {
+        "description": "Auto-capitalize words like Jesus, God, Holy Spirit, Hallelujah, etc.",
+        "label": "Capitalize Religious Terms"
+      },
+      "normalizeTypographicChars": {
+        "description": "Convert smart quotes, em dashes, and other typographic characters to plain equivalents",
+        "label": "Normalize Typographic Characters"
+      }
+    },
+    "lineSplitting": {
+      "enableLineSplitting": {
+        "description": "Automatically split long lines for better display",
+        "label": "Enable Line Splitting"
+      },
+      "maxLength": {
+        "description": "Maximum characters before forcing a line break",
+        "label": "Maximum Line Length"
+      },
+      "minLength": {
+        "description": "Minimum characters before allowing a line break",
+        "label": "Minimum Line Length"
+      },
+      "overflowTolerance": {
+        "description": "Extra characters allowed when finding a good break point",
+        "label": "Overflow Tolerance"
+      },
+      "targetLength": {
+        "description": "Ideal character count per line",
+        "label": "Target Line Length"
+      }
+    },
+    "ndi": {
+      "autoLaunch": {
+        "description": "Launch NDI companion when LyricDisplay opens",
+        "label": "Start with LyricDisplay"
+      },
+      "cancel": "Cancel",
+      "description": "The NDI companion broadcasts your lyric outputs as NDI video sources, allowing integration with OBS, vMix, and other NDI-compatible software.",
+      "download": {
+        "description": "Download the NDI companion to enable video broadcasting from your lyric outputs.",
+        "label": "Download NDI Companion",
+        "progress": "Downloading... {{percent}}%"
+      },
+      "extracting": "Extracting... {{percent}}%",
+      "installLocation": "Install Location",
+      "status": {
+        "installed": "Installed",
+        "notInstalled": "Not Installed",
+        "running": "Running",
+        "stopped": "Stopped"
+      },
+      "telemetry": {
+        "avgFrame": "Avg Frame (ms)",
+        "backend": "Backend",
+        "droppedFrames": "Dropped Frames",
+        "none": "none",
+        "p95Frame": "P95 Frame (ms)",
+        "renderFps": "Render FPS",
+        "sendFailures": "Send Failures",
+        "sendFps": "Send FPS",
+        "title": "Runtime Telemetry",
+        "updatedAgo": "Updated {{seconds}}s ago",
+        "waiting": "Waiting for telemetry data from companion...",
+        "warnings": "Warnings"
+      },
+      "toolbar": {
+        "checkUpdatesTooltip": "Check for companion updates",
+        "launch": "Launch",
+        "launchTooltip": "Launch the NDI companion process",
+        "stop": "Stop",
+        "stopTooltip": "Stop the NDI companion process",
+        "uninstallTooltip": "Uninstall NDI companion"
+      },
+      "trademark": "NDI is a registered trademark of Vizrt NDI AB. This application is not affiliated with or endorsed by Vizrt NDI AB. Learn more at",
+      "update": {
+        "available": "Update available: v{{version}}",
+        "current": "You have v{{version}}",
+        "label": "Update"
+      }
+    },
+    "parsing": {
+      "autoLineGrouping": {
+        "description": "Automatically group consecutive short lines together",
+        "label": "Auto Line Grouping"
+      },
+      "crossBlankLineGrouping": {
+        "description": "Allow grouping lines separated by blank lines",
+        "label": "Cross Blank Line Grouping"
+      },
+      "maxLineLength": {
+        "description": "Lines shorter than this will be considered for auto-grouping",
+        "label": "Max Line Length for Grouping"
+      },
+      "maxLinesPerGroup": {
+        "description": "Parser groups up to this many consecutive normal lines",
+        "label": "Maximum Number of Lines to Group"
+      },
+      "structureTagHandling": {
+        "description": "How to handle [Verse], [Chorus], etc. tags",
+        "label": "Structure Tag Handling",
+        "options": {
+          "isolate": "Isolate (separate line)",
+          "keep": "Keep (leave as-is)",
+          "strip": "Strip (remove tags)"
+        }
+      },
+      "translationGrouping": {
+        "description": "Group bracketed lines as translations with main lines",
+        "label": "Translation Grouping"
+      }
+    },
+    "status": {
+      "autoSaved": "Changes are saved automatically",
+      "saved": "Settings saved",
+      "saving": "Saving..."
+    }
+  }
+}
