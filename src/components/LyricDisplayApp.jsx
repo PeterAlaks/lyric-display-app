@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
+import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences, useAppModeState, useScriptureState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useFileUpload from '../hooks/useFileUpload';
 import useMultipleFileUpload from '../hooks/useMultipleFileUpload';
@@ -43,6 +43,9 @@ import { useSetlistNavigation } from '../hooks/LyricDisplayApp/useSetlistNavigat
 import ControlPanelHeaderActions from './LyricDisplayApp/ControlPanelHeaderActions';
 import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
+import AppModeToggle from './LyricDisplayApp/AppModeToggle';
+import ScripturePanel from './LyricDisplayApp/ScripturePanel';
+import { buildScriptureProjection } from '../utils/scripture.js';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -59,6 +62,8 @@ const LyricDisplayApp = () => {
   const { settings: autoplaySettings, setSettings: setAutoplaySettings } = useAutoplaySettings();
   const { hasSeenIntelligentAutoplayInfo, setHasSeenIntelligentAutoplayInfo } = useIntelligentAutoplayState();
   const { skipSectionTitlesOnKeyboard } = useKeyboardNavigationPreferences();
+  const { appMode, setAppMode } = useAppModeState();
+  const { scriptureTranslation, setScriptureTranslation } = useScriptureState();
 
   useDarkModeSync(darkMode, setDarkMode);
 
@@ -208,6 +213,42 @@ const LyricDisplayApp = () => {
     }
     return result;
   }, [baseHandleImportFromLibrary, lyrics, trackAction]);
+
+  const [projectingScripture, setProjectingScripture] = React.useState(false);
+  const handleProjectScripture = React.useCallback(async (payload) => {
+    const projection = buildScriptureProjection(payload);
+    setProjectingScripture(true);
+    try {
+      const success = await processLoadedLyrics(
+        { content: projection.content, fileName: projection.label, fileType: 'txt' },
+        {
+          // Keep every verse on its own line; grouping stays a manual action,
+          // exactly like grouping loaded lyrics.
+          groupingConfig: { enableAutoLineGrouping: false },
+          songMetadata: {
+            title: projection.title,
+            artists: [],
+            album: null,
+            year: null,
+            lyricLines: payload.verses.length,
+            origin: projection.origin,
+            filePath: null,
+          },
+          toastTitle: 'Scripture loaded',
+          toastMessage: projection.title,
+          errorTitle: 'Failed to load scripture',
+          errorMessage: 'The selected verses could not be processed.',
+        }
+      );
+      if (success) {
+        clearSearch();
+        trackAction('song_loaded');
+      }
+      return success;
+    } finally {
+      setProjectingScripture(false);
+    }
+  }, [processLoadedLyrics, clearSearch, trackAction]);
 
   const {
     quickParserOpen,
@@ -439,29 +480,43 @@ const LyricDisplayApp = () => {
               themeMode={themeMode}
             />
 
-            {/* Load and Create Buttons */}
-            <div className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
-              <Tooltip content={<span>Load a .txt or .lrc lyrics file from your computer - <strong>Ctrl+O</strong></span>} side="right">
-                <button
-                  className="flex-1 py-3 px-4 bg-linear-to-r from-blue-400 to-purple-600 text-white rounded-2xl text-sm font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
-                  onClick={openFileDialog}
-                >
-                  <FolderOpen className="w-4 h-4" />
-                  Load lyrics file (.txt, .lrc)
-                </button>
-              </Tooltip>
-              <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="right">
-                <button
-                  className={`h-[52px] w-[52px] rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
-                    ? 'bg-gray-700 hover:bg-blue-500/10 hover:text-blue-300 text-gray-200'
-                    : 'bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700'
-                    }`}
-                  onClick={handleCreateNewSong}
-                >
-                  <FilePlusCorner className="w-4 h-4" />
-                </button>
-              </Tooltip>
-            </div>
+            {/* Song / Scripture mode switcher */}
+            <AppModeToggle appMode={appMode} setAppMode={setAppMode} darkMode={darkMode} />
+
+            {appMode === 'song' ? (
+              /* Load and Create Buttons */
+              <div className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
+                <Tooltip content={<span>Load a .txt or .lrc lyrics file from your computer - <strong>Ctrl+O</strong></span>} side="right">
+                  <button
+                    className="flex-1 py-3 px-4 bg-linear-to-r from-blue-400 to-purple-600 text-white rounded-2xl text-sm font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
+                    onClick={openFileDialog}
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    Load lyrics file (.txt, .lrc)
+                  </button>
+                </Tooltip>
+                <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="right">
+                  <button
+                    className={`h-[52px] w-[52px] rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
+                      ? 'bg-gray-700 hover:bg-blue-500/10 hover:text-blue-300 text-gray-200'
+                      : 'bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700'
+                      }`}
+                    onClick={handleCreateNewSong}
+                  >
+                    <FilePlusCorner className="w-4 h-4" />
+                  </button>
+                </Tooltip>
+              </div>
+            ) : (
+              /* Scripture search and projection controls */
+              <ScripturePanel
+                darkMode={darkMode}
+                translationId={scriptureTranslation}
+                onTranslationChange={setScriptureTranslation}
+                onProject={handleProjectScripture}
+                projecting={projectingScripture}
+              />
+            )}
             <input
               type="file"
               accept=".txt,.lrc"

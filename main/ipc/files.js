@@ -208,7 +208,11 @@ export function registerFileHandlers({ getMainWindow }) {
         return { success: false, error: 'No lyric content available for parsing' };
       }
 
-      // Get user preferences for parsing
+      // Get user preferences for parsing; explicit renderer overrides
+      // (quick parser reload, scripture projection) take precedence.
+      const rendererGroupingConfig = payload?.groupingConfig && typeof payload.groupingConfig === 'object'
+        ? payload.groupingConfig
+        : null;
       const parsingConfig = userPreferences.getParsingConfig();
       const parsingOptions = {
         enableSplitting: parsingConfig.enableSplitting ?? true,
@@ -225,6 +229,7 @@ export function registerFileHandlers({ getMainWindow }) {
           maxLinesPerGroup: parsingConfig.normalGroupConfig?.MAX_LINES_PER_GROUP ?? 2,
           enableCrossBlankLineGrouping: parsingConfig.normalGroupConfig?.CROSS_BLANK_LINE_GROUPING ?? true,
           structureTagMode: parsingConfig.structureTagsConfig?.MODE ?? 'isolate',
+          ...rendererGroupingConfig,
         }
       };
 

@@ -204,6 +204,26 @@ export const useIntelligentAutoplayState = () =>
         shallow
     );
 
+export const useAppModeState = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            appMode: state.appMode,
+            setAppMode: state.setAppMode,
+        }),
+        shallow
+    );
+
+export const useScriptureState = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => ({
+            scriptureTranslation: state.scriptureTranslation,
+            setScriptureTranslation: state.setScriptureTranslation,
+        }),
+        shallow
+    );
+
 export const useSetOutputEnabledAction = () =>
     useStoreWithEqualityFn(
         useLyricsStore,

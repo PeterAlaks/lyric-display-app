@@ -12,6 +12,7 @@ import {
   rehydrateOutputState
 } from './lyricsStore/outputSlice.js';
 import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
+import { createScriptureSlice } from './lyricsStore/scriptureSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 import { createStageSlice } from './lyricsStore/stageSlice.js';
 import { createTimerSlice } from './lyricsStore/timerSlice.js';
@@ -152,6 +153,7 @@ const useLyricsStore = create(
       ...createAppShellSlice(set),
       ...createAutoplaySlice(set),
       ...createPreferencesSlice(set),
+      ...createScriptureSlice(set),
       ...createSetlistSlice(set, get),
       ...createStageSlice(set),
       ...createTimerSlice(set, normalizePaintSettingUpdates),
@@ -181,6 +183,7 @@ const useLyricsStore = create(
           lyricsTimestamps: state.lyricsTimestamps,
           lyricsEnhancedTimestamps: state.lyricsEnhancedTimestamps,
           hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
+          scriptureTranslation: state.scriptureTranslation,
           ...partializeOutputState(state),
         };
 

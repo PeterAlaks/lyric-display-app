@@ -119,6 +119,10 @@ const parseViaElectronIPC = async (file, options) => {
     rawText,
   };
 
+  if (options.groupingConfig && typeof options.groupingConfig === 'object') {
+    payload.groupingConfig = options.groupingConfig;
+  }
+
   try {
     const response = await window.electronAPI.parseLyricsFile(payload);
     if (response?.success && response.payload) {
