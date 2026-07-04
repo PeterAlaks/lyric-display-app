@@ -51,7 +51,7 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, lyricsEnhancedTimestamps, pendingSavedVersion, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, clearPendingSavedVersion } = useLyricsState();
+  const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, lyricsEnhancedTimestamps, pendingSavedVersion, selectLine, setSelectedLines, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, clearPendingSavedVersion } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
   const { settings: stageSettings, updateSettings: updateStageSettings } = useStageSettings();
@@ -112,6 +112,7 @@ const LyricDisplayApp = () => {
   }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
+  const isScriptureContent = typeof songMetadata?.origin === 'string' && songMetadata.origin.startsWith('Scripture');
   const quickSwitchClassName = `!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
     ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
     : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -198,6 +199,7 @@ const LyricDisplayApp = () => {
     setLyricsTimestamps,
     setLyricsEnhancedTimestamps,
     selectLine,
+    setSelectedLines,
     setLyricsFileName,
     setLyricsSource,
     setSongMetadata,
@@ -246,12 +248,26 @@ const LyricDisplayApp = () => {
       if (success) {
         clearSearch();
         trackAction('song_loaded');
+        // Automatically send the projected verses to the outputs. Scripture
+        // grouping guarantees one line group per verse, so the line count
+        // matches the number of verses.
+        const lineCount = payload.verses.length;
+        if (lineCount > 1) {
+          const indices = Array.from({ length: lineCount }, (_, i) => i);
+          setSelectedLines(indices);
+          selectLine(0);
+          emitLineUpdate({ index: 0, indices });
+        } else {
+          setSelectedLines(null);
+          selectLine(0);
+          emitLineUpdate(0);
+        }
       }
       return success;
     } finally {
       setProjectingScripture(false);
     }
-  }, [processLoadedLyrics, clearSearch, trackAction]);
+  }, [processLoadedLyrics, clearSearch, trackAction, setSelectedLines, selectLine, emitLineUpdate]);
 
   const {
     quickParserOpen,
@@ -318,6 +334,7 @@ const LyricDisplayApp = () => {
 
   const handleLineSelect = (index) => {
     selectLine(index);
+    setSelectedLines(null);
     emitLineUpdate(index);
     trackAction('lyrics_edited');
   };
@@ -332,6 +349,7 @@ const LyricDisplayApp = () => {
     ready,
     scrollableSettingsRef,
     selectLine,
+    setSelectedLines,
     setActiveTab,
     setIsOutputOn,
     showToast,
@@ -529,8 +547,9 @@ const LyricDisplayApp = () => {
               onChange={handleFileChange}
             />
 
-            {/* Current File Indicator */}
-            {hasLyrics && (
+            {/* Current File Indicator - hidden in song mode when the loaded
+                content came from the scripture module. */}
+            {hasLyrics && !(appMode === 'song' && isScriptureContent) && (
               <div className={`mb-6 text-xs font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 <FileMusic className="w-4 h-4 shrink-0" />
                 <span className="truncate">{lyricsFileName}</span>

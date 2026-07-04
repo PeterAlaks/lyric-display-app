@@ -8,6 +8,7 @@ export default function useLyricsListRows({
   lyricsSections,
   lineToSection,
   selectedLine,
+  selectedLines,
   maxLinesPerGroup,
   highlightedLineIndex,
   searchQuery,
@@ -15,6 +16,10 @@ export default function useLyricsListRows({
   density = 'default',
 }) {
   const compact = density === 'dock' || density === 'compact';
+  const activeLineSet = useMemo(
+    () => (Array.isArray(selectedLines) && selectedLines.length > 1 ? new Set(selectedLines) : null),
+    [selectedLines]
+  );
   const baseRowHeight = compact ? 38 : DEFAULT_ROW_HEIGHT;
   const rowGap = compact ? 4 : ROW_GAP;
 
@@ -122,9 +127,12 @@ export default function useLyricsListRows({
     (index, isVirtualized = false, isMultiSelected = false) => {
       const padding = compact ? 'px-2.5 py-2' : 'p-3';
       let base = `${padding} ${compact ? 'rounded-md border text-[13px] leading-snug' : 'rounded'} cursor-pointer transition-colors duration-150 select-none `;
+      // Lines that are live on the outputs as part of a multi-line selection
+      // (e.g. several projected scripture verses) render like the active line.
+      const isActiveLine = index === selectedLine || Boolean(activeLineSet?.has(index));
 
       if (compact && darkMode) {
-        if (index === selectedLine) {
+        if (isActiveLine) {
           return `${base}border-blue-400 bg-blue-400 text-white shadow-sm`;
         }
         if (index === highlightedLineIndex && searchQuery) {
@@ -136,7 +144,7 @@ export default function useLyricsListRows({
         return `${base}border-gray-800 bg-gray-900/80 text-gray-200 hover:border-gray-700 hover:bg-gray-800/90`;
       }
 
-      if (index === selectedLine) base += 'bg-blue-400 text-white';
+      if (isActiveLine) base += 'bg-blue-400 text-white';
       else if (index === highlightedLineIndex && searchQuery)
         base += 'bg-orange-200 text-orange-900 border-2 border-orange-400';
       else if (isMultiSelected)
@@ -149,7 +157,7 @@ export default function useLyricsListRows({
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200';
       return base;
     },
-    [compact, selectedLine, highlightedLineIndex, searchQuery, darkMode]
+    [compact, selectedLine, activeLineSet, highlightedLineIndex, searchQuery, darkMode]
   );
 
   return {
