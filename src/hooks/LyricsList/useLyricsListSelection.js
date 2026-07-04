@@ -12,6 +12,7 @@ export default function useLyricsListSelection({
   clickAwayIgnoreRefs,
   onLineSelect,
   selectLine,
+  setSelectedLines,
   emitLineUpdate,
   getNormalGroupLines,
   showToast,
@@ -294,20 +295,25 @@ export default function useLyricsListSelection({
     if (selectedIndicesArray.length === 1) {
       const target = selectedIndicesArray[0];
       setSelection([target], target);
+      setSelectedLines?.(null);
       onLineSelect(target);
       closeContextMenu();
       return;
     }
 
     // Multiple lines: show them all on the outputs at once. The last index
-    // stays the anchor for keyboard navigation.
+    // stays the anchor for keyboard navigation. Apply the multi-line
+    // highlight locally right away instead of waiting on the server round
+    // trip - otherwise the UI briefly shows only the anchor line active
+    // before flipping to all of them once the echo arrives.
     const sorted = [...selectedIndicesArray].sort((a, b) => a - b);
     const anchor = sorted[sorted.length - 1];
     setSelection(sorted, anchor);
     selectLine(anchor);
+    setSelectedLines?.(sorted);
     emitLineUpdate({ index: anchor, indices: sorted });
     closeContextMenu();
-  }, [closeContextMenu, emitLineUpdate, onLineSelect, selectLine, selectedIndicesArray, setSelection]);
+  }, [closeContextMenu, emitLineUpdate, onLineSelect, selectLine, selectedIndicesArray, setSelection, setSelectedLines]);
 
   const clearSelection = useCallback(() => {
     setSelectedIndices(new Set());

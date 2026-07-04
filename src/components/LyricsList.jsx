@@ -14,7 +14,7 @@ import SectionChips from './LyricsList/SectionChips';
 import LyricsListContextMenu from './LyricsList/LyricsListContextMenu';
 import { HORIZONTAL_PADDING_PX, VIRTUALIZATION_THRESHOLD } from './LyricsList/layout';
 
-export default function LyricsList({
+function LyricsList({
   searchQuery = '',
   highlightedLineIndex = null,
   onSelectLine,
@@ -39,6 +39,7 @@ export default function LyricsList({
     selectedLines,
     lyricsFileName,
     selectLine,
+    setSelectedLines,
     setLyrics,
     setLyricsTimestamps,
     setLyricsEnhancedTimestamps
@@ -125,6 +126,7 @@ export default function LyricsList({
     clickAwayIgnoreRefs,
     onLineSelect: handleLineClickPlain,
     selectLine,
+    setSelectedLines,
     emitLineUpdate,
     getNormalGroupLines,
     showToast,
@@ -361,3 +363,8 @@ export default function LyricsList({
     </div>
   );
 }
+
+// Memoized so unrelated parent state changes (e.g. scripture translation
+// picker, format-panel toggle) don't force a re-render of this often-large,
+// virtualized list - only an actual prop change should.
+export default React.memo(LyricsList);

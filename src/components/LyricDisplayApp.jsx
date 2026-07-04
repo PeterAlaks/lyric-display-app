@@ -45,6 +45,7 @@ import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
 import AppModeToggle from './LyricDisplayApp/AppModeToggle';
 import ScripturePanel from './LyricDisplayApp/ScripturePanel';
+import Collapse from './ui/collapse.jsx';
 import { buildScriptureProjection, SCRIPTURE_GROUPING_CONFIG } from '../utils/scripture.js';
 
 const LyricDisplayApp = () => {
@@ -219,6 +220,7 @@ const LyricDisplayApp = () => {
   const [projectingScripture, setProjectingScripture] = React.useState(false);
   const [showScriptureFormatting, setShowScriptureFormatting] = React.useState(false);
   const showFormattingPanels = appMode === 'song' || showScriptureFormatting;
+  const showFileIndicator = !(appMode === 'scripture' && showScriptureFormatting);
   const handleProjectScripture = React.useCallback(async (payload) => {
     const projection = buildScriptureProjection(payload);
     setProjectingScripture(true);
@@ -332,12 +334,12 @@ const LyricDisplayApp = () => {
     trackAction,
   });
 
-  const handleLineSelect = (index) => {
+  const handleLineSelect = React.useCallback((index) => {
     selectLine(index);
     setSelectedLines(null);
     emitLineUpdate(index);
     trackAction('lyrics_edited');
-  };
+  }, [selectLine, setSelectedLines, emitLineUpdate, trackAction]);
 
   const { handleClearOutput, handleOutputTabSwitch, handleToggle } = useOutputControlActions({
     allOutputIds,
@@ -548,12 +550,16 @@ const LyricDisplayApp = () => {
             />
 
             {/* Current File Indicator - hidden in song mode when the loaded
-                content came from the scripture module. */}
+                content came from the scripture module, and hidden in
+                scripture mode while formatting is shown (collapses with the
+                search panel so the sidebar matches the song tab). */}
             {hasLyrics && !(appMode === 'song' && isScriptureContent) && (
-              <div className={`mb-6 text-xs font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                <FileMusic className="w-4 h-4 shrink-0" />
-                <span className="truncate">{lyricsFileName}</span>
-              </div>
+              <Collapse open={showFileIndicator} className={showFileIndicator ? 'mb-6' : ''}>
+                <div className={`text-xs font-semibold flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <FileMusic className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{lyricsFileName}</span>
+                </div>
+              </Collapse>
             )}
 
             {/* Output Toggle */}
@@ -624,8 +630,9 @@ const LyricDisplayApp = () => {
               </button>
             )}
 
-            {/* Output Tabs */}
-            {showFormattingPanels && (
+            {/* Output Tabs - animates in as the scripture search panel
+                collapses out, and vice versa. */}
+            <Collapse open={showFormattingPanels}>
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
               <TabsList className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
                 {allOutputIds.map((id) => {
@@ -656,7 +663,7 @@ const LyricDisplayApp = () => {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            )}
+            </Collapse>
           </div>
 
           {/* Scrollable Settings Panel */}

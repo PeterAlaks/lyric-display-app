@@ -11,6 +11,7 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import { SCRIPTURE_TRANSLATIONS } from '../../constants/scripture.js';
 import useScriptureSearch from '../../hooks/useScriptureSearch.js';
+import Collapse from '../ui/collapse.jsx';
 
 // Memoized so typing in the search box (which re-renders ScripturePanel on
 // every keystroke, well before the debounced result changes) doesn't force
@@ -101,7 +102,7 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
   const resultsHeightClass = 'max-h-[44vh]';
 
   return (
-    <div className="mb-6">
+    <Collapse open={expandedResults} className={expandedResults ? 'mb-6' : ''}>
       {/* Search bar */}
       <div className="relative mb-2">
         <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
@@ -145,9 +146,7 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
         </Select>
       </div>
 
-      {/* Results - hidden (not cleared) while formatting is shown, so they
-          reappear as-is once formatting is hidden again. */}
-      {expandedResults && (
+      {/* Results */}
       <div className="mb-3">
         {showNoBookMatch && (
           <p className={`text-xs px-1 ${mutedTextClass}`}>No book matches “{parsed.bookQuery}”.</p>
@@ -241,7 +240,6 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
           </>
         )}
       </div>
-      )}
 
       {/* Project button */}
       {hasResults && (
@@ -264,6 +262,6 @@ export default function ScripturePanel({ darkMode, translationId, onTranslationC
           </button>
         </Tooltip>
       )}
-    </div>
+    </Collapse>
   );
 }
