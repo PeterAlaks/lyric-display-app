@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getLineOutputText } from '../../utils/parseLyrics';
-import { isScriptureReferenceLine } from '../../utils/scripture';
+import { isScriptureReferenceLine, splitLeadingSuperscriptNumber } from '../../utils/scripture';
 import { resolveBackendUrl } from '../../utils/network';
 import { calculateOptimalFontSize } from '../../utils/maxLinesCalculator';
 import { paintToCss } from '../../utils/paint';
@@ -476,7 +476,9 @@ export default function LyricVisualFrame({
       const effectiveTranslationSize = translationFontSizeMode === 'custom'
         ? translationFontSize
         : (adjustedFontSize ?? fontSize);
-      const referenceFontSize = Math.max(12, Math.round((adjustedFontSize ?? fontSize) * 0.5));
+      // Shared by the reference line and the verse-number superscript so the
+      // two always match exactly.
+      const referenceFontSize = Math.max(12, Math.round((adjustedFontSize ?? fontSize) * 0.6));
 
       return (
         <div className="space-y-1">
@@ -485,10 +487,17 @@ export default function LyricVisualFrame({
             const isTranslationLine = isTranslationGroup && index > 0;
 
             let lineDisplayText = processDisplayText(rawLineText);
+            let versePrefix = null;
             if (isTranslationLine) {
               lineDisplayText = lineDisplayText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim();
             } else if (isReference) {
               lineDisplayText = `[${processDisplayText(rawLineText.trim())}]`;
+            } else {
+              const split = splitLeadingSuperscriptNumber(rawLineText);
+              if (split) {
+                versePrefix = split.verseNumber;
+                lineDisplayText = processDisplayText(split.rest);
+              }
             }
 
             return (
@@ -504,6 +513,12 @@ export default function LyricVisualFrame({
                   opacity: isReference ? 0.85 : undefined,
                 }}
               >
+                {versePrefix && (
+                  <>
+                    <sup style={{ fontSize: `${referenceFontSize}px` }}>{versePrefix}</sup>
+                    {' '}
+                  </>
+                )}
                 {lineDisplayText}
               </div>
             );
