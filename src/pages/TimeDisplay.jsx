@@ -30,19 +30,89 @@ const getDisplayUpdatedAt = (display) => {
   return Number.isFinite(updatedAt) ? updatedAt : 0;
 };
 
-const useAutoFitText = (text, enabled = true) => {
+const AUTO_FIT_CACHE_LIMIT = 80;
+const autoFitCache = new Map();
+
+const getTextFitShape = (text) => String(text || '')
+  .replace(/[0-9]/g, '0')
+  .replace(/[A-Z]/g, 'A')
+  .replace(/[a-z]/g, 'a');
+
+const getFontFitKey = (display) => [
+  display.timerFontFamily || display.fontFamily || 'Bebas Neue',
+  display.timerBold === false ? '400' : '700',
+  display.timerItalic ? 'italic' : 'normal',
+  display.timerUnderline ? 'underline' : 'none',
+  display.timerAlign || 'center',
+].join('|');
+
+const rememberAutoFit = (key, value) => {
+  if (autoFitCache.has(key)) {
+    autoFitCache.delete(key);
+  }
+  autoFitCache.set(key, value);
+  while (autoFitCache.size > AUTO_FIT_CACHE_LIMIT) {
+    autoFitCache.delete(autoFitCache.keys().next().value);
+  }
+};
+
+const useAutoFitText = ({ enabled = true, fitKey }) => {
   const [containerEl, setContainerEl] = React.useState(null);
   const [textEl, setTextEl] = React.useState(null);
   const [fontSize, setFontSize] = React.useState(null);
+  const [containerSize, setContainerSize] = React.useState({ width: 0, height: 0 });
+
+  React.useLayoutEffect(() => {
+    if (!enabled || !containerEl) return undefined;
+
+    const updateSize = () => {
+      const width = Math.round(containerEl.clientWidth);
+      const height = Math.round(containerEl.clientHeight);
+      setContainerSize((current) => (
+        current.width === width && current.height === height
+          ? current
+          : { width, height }
+      ));
+    };
+
+    let frame = null;
+    const scheduleSize = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        updateSize();
+      });
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(scheduleSize);
+    observer.observe(containerEl);
+    window.addEventListener('resize', scheduleSize);
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', scheduleSize);
+    };
+  }, [containerEl, enabled]);
 
   React.useLayoutEffect(() => {
     if (!enabled || !containerEl || !textEl) return undefined;
+    if (containerSize.width <= 0 || containerSize.height <= 0) return undefined;
 
     const fit = () => {
-      const availableWidth = containerEl.clientWidth * 0.995;
-      const availableHeight = containerEl.clientHeight * 0.98;
+      const availableWidth = containerSize.width * 0.995;
+      const availableHeight = containerSize.height * 0.98;
       if (availableWidth <= 0 || availableHeight <= 0) return;
 
+      const cacheKey = `${fitKey}|${Math.round(availableWidth)}x${Math.round(availableHeight)}`;
+      const cached = autoFitCache.get(cacheKey);
+      if (cached) {
+        setFontSize((current) => (current === cached ? current : cached));
+        return;
+      }
+
+      const previousFontSize = textEl.style.fontSize;
       let low = 24;
       let high = 1000;
       let best = low;
@@ -57,6 +127,8 @@ const useAutoFitText = (text, enabled = true) => {
           high = mid - 1;
         }
       }
+      textEl.style.fontSize = previousFontSize;
+      rememberAutoFit(cacheKey, best);
       setFontSize(best);
     };
 
@@ -73,16 +145,14 @@ const useAutoFitText = (text, enabled = true) => {
       frame = null;
       fit();
     });
-    const observer = new ResizeObserver(scheduleFit);
-    observer.observe(containerEl);
-    window.addEventListener('resize', scheduleFit);
+
+    const fontsReady = document.fonts?.ready;
+    fontsReady?.then?.(scheduleFit).catch?.(() => {});
 
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener('resize', scheduleFit);
     };
-  }, [containerEl, textEl, text, enabled]);
+  }, [containerEl, containerSize.height, containerSize.width, enabled, fitKey, textEl]);
 
   return {
     containerRef: setContainerEl,
@@ -139,7 +209,15 @@ const TimeDisplay = () => {
     : (display.textColor || '#FFFFFF');
   const timerFontSizeMode = display.timerFontSizeMode || 'auto';
   const autoFitEnabled = timerFontSizeMode !== 'manual';
-  const { containerRef, textRef, fontSize: autoFontSize } = useAutoFitText(value, autoFitEnabled);
+  const autoFitKey = React.useMemo(() => [
+    getTextFitShape(value),
+    getFontFitKey(display),
+    hasActiveTimer && showGlobalClock && showSecondaryText ? 'active-with-clock' : 'primary',
+  ].join('|'), [display, hasActiveTimer, showGlobalClock, showSecondaryText, value]);
+  const { containerRef, textRef, fontSize: autoFontSize } = useAutoFitText({
+    enabled: autoFitEnabled,
+    fitKey: autoFitKey,
+  });
   const mainFontSize = autoFitEnabled ? (autoFontSize || 220) : (Number(display.timerFontSize) || 180);
   const otherItemsScale = Math.min(2, Math.max(0.08, Number(display.otherItemsScale ?? display.globalClockScale) || 0.1));
   const otherItemsFontSize = Math.max(16, mainFontSize * otherItemsScale);
@@ -156,6 +234,8 @@ const TimeDisplay = () => {
       style={{
         background: paintToCss(display.backgroundPaint, display.backgroundColor || '#000000'),
         fontFamily: otherItemsFontFamily,
+        contain: 'layout paint style',
+        isolation: 'isolate',
       }}
     >
       <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
@@ -186,6 +266,7 @@ const TimeDisplay = () => {
           style={{
             alignItems,
             height: hasActiveTimer && showGlobalClock && showSecondaryText ? '70vh' : '86vh',
+            contain: 'layout paint',
           }}
         >
           <div
@@ -207,6 +288,7 @@ const TimeDisplay = () => {
               textOverflow: 'ellipsis',
               opacity: isWaitingForTime ? 0.45 : 1,
               animation: intensity === 'critical' && timerState.running ? 'timerPulse 1s infinite' : 'none',
+              contain: 'layout paint',
             }}
           >
             {value}

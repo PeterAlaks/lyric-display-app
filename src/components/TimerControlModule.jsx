@@ -265,6 +265,26 @@ const useWindowActive = () => {
   return active;
 };
 
+const usePageVisible = () => {
+  const getVisible = React.useCallback(() => {
+    if (typeof document === 'undefined') return true;
+    return document.visibilityState !== 'hidden';
+  }, []);
+  const [visible, setVisible] = React.useState(getVisible);
+
+  React.useEffect(() => {
+    const updateVisible = () => setVisible(getVisible());
+    document.addEventListener('visibilitychange', updateVisible);
+    updateVisible();
+
+    return () => {
+      document.removeEventListener('visibilitychange', updateVisible);
+    };
+  }, [getVisible]);
+
+  return visible;
+};
+
 const isTimerShortcutEditableTarget = (target) => {
   if (!target || typeof target.closest !== 'function') return false;
   return Boolean(target.closest([
@@ -290,8 +310,12 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
   const showSecondaryText = displaySettings.showSecondaryText !== false;
   const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
   const windowActive = useWindowActive();
+  const pageVisible = usePageVisible();
   const timerActive = timerState.running || timerState.paused;
-  const now = usePreviewClock(needsClock, timerActive || windowActive ? 1000 : 5000);
+  const previewTickMs = pageVisible
+    ? (timerActive ? (windowActive ? 1000 : 2000) : (windowActive ? 1000 : 5000))
+    : 15000;
+  const now = usePreviewClock(needsClock, previewTickMs);
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
   const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
   const progress = React.useMemo(() => getTimerProgress(timerState, now), [timerState, now]);

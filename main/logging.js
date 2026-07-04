@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import util from 'util';
@@ -57,6 +58,58 @@ const resolveLogDir = () => {
   } catch {
     return path.join(process.cwd(), 'logs');
   }
+};
+
+const readJsonFile = (filePath) => {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+};
+
+const runGit = (command) => {
+  if (app.isPackaged) return null;
+  try {
+    return execSync(command, {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return null;
+  }
+};
+
+const getRuntimeBuildInfo = () => {
+  const appPath = (() => {
+    try {
+      return app.getAppPath?.();
+    } catch {
+      return null;
+    }
+  })();
+
+  const candidates = [
+    appPath ? path.join(appPath, 'dist', 'build-info.json') : null,
+    path.join(process.cwd(), 'dist', 'build-info.json'),
+  ];
+  const fromFile = candidates.map(readJsonFile).find(Boolean);
+  if (fromFile) return fromFile;
+
+  const status = runGit('git status --short');
+  return {
+    version: app.getVersion?.(),
+    builtAt: null,
+    commit: runGit('git rev-parse HEAD'),
+    shortCommit: runGit('git rev-parse --short=12 HEAD'),
+    branch: runGit('git branch --show-current'),
+    tag: runGit('git describe --tags --exact-match HEAD'),
+    dirty: Boolean(status),
+    dirtySummary: status || '',
+    source: app.isPackaged ? 'packaged-no-build-info' : 'local-git-fallback',
+  };
 };
 
 const warnLoggingFailure = (...args) => {
@@ -349,6 +402,7 @@ export function initFileLogging() {
     appName: app.getName?.(),
     version: app.getVersion?.(),
     packaged: app.isPackaged,
+    build: getRuntimeBuildInfo(),
     pid: process.pid,
     logFilePath,
   });

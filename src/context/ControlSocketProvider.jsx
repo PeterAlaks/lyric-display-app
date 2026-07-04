@@ -21,11 +21,13 @@ export const useOptionalControlSocket = () => useContext(ControlSocketContext);
 
 const LONG_BACKOFF_WARNING_MS = 4000;
 const OBS_DOCK_RECOVERY_POLL_MS = 2500;
+const CURRENT_STATE_READY_TIMEOUT_MS = 15000;
 
 export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const socketRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
     const heartbeatIntervalRef = useRef(null);
+    const currentStateTimeoutRef = useRef(null);
     const clientId = useRef(`control_${Date.now()}`);
     const readyRef = useRef(false);
     const appliedSavedLiveSafetyRef = useRef(false);
@@ -92,8 +94,16 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         }
     }, [clearAuthToken, setAuthStatus]);
 
+    const clearCurrentStateTimeout = useCallback(() => {
+        if (currentStateTimeoutRef.current) {
+            clearTimeout(currentStateTimeoutRef.current);
+            currentStateTimeoutRef.current = null;
+        }
+    }, []);
+
     const cleanupSocket = useCallback(() => {
         return new Promise((resolve) => {
+            clearCurrentStateTimeout();
             if (!socketRef.current) {
                 resolve();
                 return;
@@ -126,13 +136,14 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 resolve();
             }
         });
-    }, []);
+    }, [clearCurrentStateTimeout]);
 
     const disposeCurrentSocket = useCallback((socket, reason) => {
         if (!socket || socketRef.current !== socket) {
             return false;
         }
 
+        clearCurrentStateTimeout();
         socketRef.current = null;
         readyRef.current = false;
         setReady(false);
@@ -146,7 +157,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         }
 
         return true;
-    }, [stopHeartbeat]);
+    }, [clearCurrentStateTimeout, stopHeartbeat]);
 
     const connectSocketInternal = useCallback(async () => {
         const canConnect = connectionManager.canAttemptConnection(clientId.current);
@@ -232,7 +243,25 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                     }
                     startHeartbeat();
 
+                    clearCurrentStateTimeout();
+                    currentStateTimeoutRef.current = setTimeout(() => {
+                        if (socketRef.current !== socket || readyRef.current) return;
+                        const error = new Error(`currentState not received within ${CURRENT_STATE_READY_TIMEOUT_MS}ms`);
+                        logWarn(`Control socket ready timeout for ${clientId.current}; reconnecting`, {
+                            role,
+                            socketId: socket.id,
+                            connected: socket.connected,
+                        });
+                        connectionManager.recordConnectionFailure(clientId.current, error);
+                        setConnectionStatus('error');
+                        readyRef.current = false;
+                        setReady(false);
+                        disposeCurrentSocket(socket, 'currentState-timeout');
+                        scheduleRetry();
+                    }, CURRENT_STATE_READY_TIMEOUT_MS);
+
                     socket.once('currentState', () => {
+                        clearCurrentStateTimeout();
                         readyRef.current = true;
                         setReady(true);
                         window.dispatchEvent(new CustomEvent('sync-completed'));
@@ -241,6 +270,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 };
 
                 const handleConnectError = (error) => {
+                    clearCurrentStateTimeout();
                     logError(`Control socket connection error:`, error);
                     connectionManager.recordConnectionFailure(clientId.current, error);
                     if (error?.message?.includes('Authentication') || error?.message?.includes('token')) {
@@ -254,6 +284,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 };
 
                 const handleDisconnect = (reason) => {
+                    clearCurrentStateTimeout();
                     logDebug(`Control socket disconnected: ${reason}`);
                     setConnectionStatus('disconnected');
                     readyRef.current = false;
@@ -271,6 +302,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 socket.on('disconnect', handleDisconnect);
 
                 socket.on('currentState', (state) => {
+                    clearCurrentStateTimeout();
                     const syncTime = Date.now();
                     setLastSyncTime(syncTime);
                     if (state?.liveSafety && typeof state.liveSafety.enabled === 'boolean') {
@@ -284,6 +316,8 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 });
 
                 socket.on('periodicStateSync', (state) => {
+                    const syncTime = Date.now();
+                    setLastSyncTime(syncTime);
                     if (state?.liveSafety && typeof state.liveSafety.enabled === 'boolean') {
                         setLiveSafety(state.liveSafety);
                     }
@@ -347,6 +381,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         setConnectionStatus,
         emitBackoffWarning,
         clearBackoffWarning,
+        clearCurrentStateTimeout,
         role
     ]);
 
@@ -616,6 +651,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
 
         return () => {
             clearBackoffWarning();
+            clearCurrentStateTimeout();
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
             }
@@ -623,7 +659,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
             connectionManager.cleanup(clientId.current);
             cleanupSocket();
         };
-    }, [connectSocketInternal, stopHeartbeat, cleanupSocket, clearBackoffWarning]);
+    }, [connectSocketInternal, stopHeartbeat, cleanupSocket, clearBackoffWarning, clearCurrentStateTimeout]);
 
     useEffect(() => {
         const handleDiagnosticsRequest = () => {
