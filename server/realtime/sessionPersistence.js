@@ -19,6 +19,40 @@ const objectToMap = (value, fallback = []) => {
   return new Map(Object.entries(value));
 };
 
+export const sanitizePersistedStageTimerState = (timerState) => {
+  if (!timerState || typeof timerState !== 'object' || Array.isArray(timerState)) {
+    return timerState;
+  }
+
+  const status = typeof timerState.status === 'string' ? timerState.status : '';
+  const isActiveRuntime = Boolean(timerState.running)
+    || Boolean(timerState.paused)
+    || status === 'running'
+    || status === 'paused';
+
+  if (!isActiveRuntime) return timerState;
+
+  return {
+    ...timerState,
+    status: 'idle',
+    running: false,
+    paused: false,
+    finished: false,
+    phase: 'timer',
+    durationMs: 0,
+    startTime: null,
+    endTime: null,
+    targetTime: null,
+    elapsedBeforePauseMs: 0,
+    pausedRemainingMs: null,
+    remaining: null,
+    overrunStartedAt: null,
+    sets: [],
+    activeSetIndex: 0,
+    updatedAt: Date.now(),
+  };
+};
+
 const createSnapshot = () => ({
   version: 1,
   savedAt: Date.now(),
@@ -37,7 +71,7 @@ const createSnapshot = () => ({
   currentStageSettings: state.currentStageSettings || {},
   currentIsOutputOn: Boolean(state.currentIsOutputOn),
   currentStageEnabled: state.currentStageEnabled !== false,
-  currentStageTimerState: state.currentStageTimerState || null,
+  currentStageTimerState: sanitizePersistedStageTimerState(state.currentStageTimerState || null),
   currentStageMessages: Array.isArray(state.currentStageMessages) ? state.currentStageMessages : [],
   registeredOutputs: Array.from(state.registeredOutputs || []),
   liveSafety: state.liveSafety || null,
@@ -75,7 +109,7 @@ const applySnapshot = (snapshot) => {
   state.currentIsOutputOn = typeof snapshot.currentIsOutputOn === 'boolean' ? snapshot.currentIsOutputOn : false;
   state.currentStageEnabled = typeof snapshot.currentStageEnabled === 'boolean' ? snapshot.currentStageEnabled : true;
   state.currentStageTimerState = snapshot.currentStageTimerState && typeof snapshot.currentStageTimerState === 'object'
-    ? snapshot.currentStageTimerState
+    ? sanitizePersistedStageTimerState(snapshot.currentStageTimerState)
     : state.currentStageTimerState;
   state.currentStageMessages = Array.isArray(snapshot.currentStageMessages) ? snapshot.currentStageMessages : [];
   if (Array.isArray(snapshot.registeredOutputs)) {

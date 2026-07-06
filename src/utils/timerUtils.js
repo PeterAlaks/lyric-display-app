@@ -152,6 +152,11 @@ const isValidTargetTime = (value) => {
     && minutes <= 59;
 };
 
+const normalizeNullableTimestamp = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  return Number.isFinite(Number(value)) ? Number(value) : null;
+};
+
 export const normalizeTimerControlSettings = (raw) => {
   const settings = raw && typeof raw === 'object' && !Array.isArray(raw)
     ? raw
@@ -221,15 +226,15 @@ export const normalizeTimerState = (raw) => {
     phase: raw.phase === 'indicator' ? 'indicator' : 'timer',
     label: String(raw.label || ''),
     durationMs,
-    startTime: Number.isFinite(Number(raw.startTime)) ? Number(raw.startTime) : null,
-    endTime: Number.isFinite(Number(raw.endTime)) ? Number(raw.endTime) : null,
-    targetTime: Number.isFinite(Number(raw.targetTime)) ? Number(raw.targetTime) : null,
+    startTime: normalizeNullableTimestamp(raw.startTime),
+    endTime: normalizeNullableTimestamp(raw.endTime),
+    targetTime: normalizeNullableTimestamp(raw.targetTime),
     elapsedBeforePauseMs: clampNumber(raw.elapsedBeforePauseMs, 0, 0),
     pausedRemainingMs: Number.isFinite(Number(raw.pausedRemainingMs)) ? Math.max(0, Number(raw.pausedRemainingMs)) : null,
     warningMs: clampNumber(raw.warningMs, 60000, 0),
     criticalMs: clampNumber(raw.criticalMs, 30000, 0),
     overrunMode: Boolean(raw.overrunMode),
-    overrunStartedAt: Number.isFinite(Number(raw.overrunStartedAt)) ? Number(raw.overrunStartedAt) : null,
+    overrunStartedAt: normalizeNullableTimestamp(raw.overrunStartedAt),
     sets,
     activeSetIndex: clampNumber(raw.activeSetIndex, 0, 0, Math.max(0, sets.length - 1)),
     autoStartNext: raw.autoStartNext !== false,
@@ -239,6 +244,18 @@ export const normalizeTimerState = (raw) => {
     display: normalizeTimerDisplaySettings(raw.display),
     updatedAt: Number.isFinite(Number(raw.updatedAt)) ? Number(raw.updatedAt) : Date.now(),
   };
+};
+
+export const resetActiveTimerRuntime = (raw) => {
+  const state = normalizeTimerState(raw);
+  const isActiveRuntime = state.running || state.paused || ['running', 'paused'].includes(state.status);
+
+  if (!isActiveRuntime) return state;
+
+  return normalizeTimerState({
+    ...createIdleTimerState(),
+    display: state.display,
+  });
 };
 
 export const getRemainingMs = (timerState, now = Date.now()) => {

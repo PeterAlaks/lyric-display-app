@@ -10,6 +10,7 @@ import { registerConnectionHandlers } from '../server/realtime/handlers/connecti
 import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerOutputHandlers } from '../server/realtime/handlers/outputHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
+import { sanitizePersistedStageTimerState } from '../server/realtime/sessionPersistence.js';
 import { buildCurrentState, buildPeriodicState, state } from '../server/realtime/state.js';
 
 function createSocketHarness() {
@@ -1029,4 +1030,29 @@ test('current state is trimmed for timer, time display, and output clients', () 
     state.currentStageTimerState = previousStageTimerState;
     state.currentStageMessages = previousStageMessages;
   }
+});
+
+test('persisted active stage timer runtime is reset for a new app session', () => {
+  const sanitized = sanitizePersistedStageTimerState({
+    status: 'running',
+    running: true,
+    paused: false,
+    durationMs: 60_000,
+    startTime: 1_000_000,
+    endTime: 1_060_000,
+    remaining: null,
+    display: {
+      label: 'Service Timer',
+    },
+  });
+
+  assert.equal(sanitized.status, 'idle');
+  assert.equal(sanitized.running, false);
+  assert.equal(sanitized.paused, false);
+  assert.equal(sanitized.finished, false);
+  assert.equal(sanitized.durationMs, 0);
+  assert.equal(sanitized.startTime, null);
+  assert.equal(sanitized.endTime, null);
+  assert.equal(sanitized.remaining, null);
+  assert.deepEqual(sanitized.display, { label: 'Service Timer' });
 });

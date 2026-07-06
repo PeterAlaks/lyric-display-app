@@ -8,7 +8,13 @@ import {
   normalizeStageMessageText,
   MAX_STAGE_MESSAGES
 } from '../../utils/stageMessages';
-import { TIMER_STORAGE_KEY, formatDuration, getTimerDisplay, normalizeTimerState } from '../../utils/timerUtils';
+import {
+  TIMER_STORAGE_KEY,
+  formatDuration,
+  getTimerDisplay,
+  normalizeTimerState,
+  resetActiveTimerRuntime,
+} from '../../utils/timerUtils';
 
 const STORAGE_KEYS = {
   customUpcomingSongName: 'stage_custom_upcoming_song_name',
@@ -212,7 +218,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     try {
       const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
       if (!raw) return false;
-      applyTimerState(JSON.parse(raw));
+      applyTimerState(resetActiveTimerRuntime(JSON.parse(raw)));
       return true;
     } catch {
       return false;

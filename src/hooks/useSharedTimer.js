@@ -10,6 +10,7 @@ import {
   getTimerIntensity,
   getTimerProgress,
   normalizeTimerState,
+  resetActiveTimerRuntime,
 } from '../utils/timerUtils';
 
 const getDisplayUpdatedAt = (display) => {
@@ -33,7 +34,7 @@ const readStoredTimerState = () => {
   if (typeof window === 'undefined') return createIdleTimerState();
   try {
     const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
-    return raw ? normalizeTimerState(JSON.parse(raw)) : createIdleTimerState();
+    return raw ? resetActiveTimerRuntime(JSON.parse(raw)) : createIdleTimerState();
   } catch {
     return createIdleTimerState();
   }

@@ -8,6 +8,7 @@ import {
   normalizeTimerControlSettings,
   normalizeTimerDisplaySettings,
   normalizeTimerState,
+  resetActiveTimerRuntime,
 } from '../src/utils/timerUtils.js';
 
 function createTimerStoreHarness() {
@@ -200,4 +201,29 @@ test('timer state normalization caps runtime timer sets at ten', () => {
 
   assert.equal(state.sets.length, MAX_TIMER_SETS);
   assert.equal(state.activeSetIndex, MAX_TIMER_SETS - 1);
+});
+
+test('active timer runtime is reset when hydrating a new app session', () => {
+  const startTime = 1_000_000;
+  const state = resetActiveTimerRuntime({
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    durationMs: 5 * 60_000,
+    startTime,
+    endTime: startTime + (5 * 60_000),
+    display: {
+      label: 'Service Timer',
+      displayUpdatedAt: 10,
+    },
+  });
+
+  assert.equal(state.status, 'idle');
+  assert.equal(state.running, false);
+  assert.equal(state.paused, false);
+  assert.equal(state.endTime, null);
+  assert.equal(state.remaining, null);
+  assert.equal(state.durationMs, 0);
+  assert.equal(state.display.label, 'Service Timer');
 });
