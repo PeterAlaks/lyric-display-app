@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeLyricFileType } from '../../../shared/lyricImportRegistry.js';
 
 const DEFAULT_PARSER_SETTINGS = {
   enableAutoLineGrouping: true,
@@ -99,11 +100,11 @@ export const useQuickParserControls = ({
     if (!hasLyrics || reloadingWithParser || typeof processLoadedLyrics !== 'function') return;
 
     const inferredType = (() => {
-      const sourceType = (lyricsSource?.fileType || '').toLowerCase();
-      if (sourceType === 'lrc' || sourceType === 'txt') return sourceType;
-      const pathLower = (lyricsSource?.filePath || songFilePath || '').toLowerCase();
-      if (pathLower.endsWith('.lrc')) return 'lrc';
-      return 'txt';
+      return normalizeLyricFileType({
+        fileType: lyricsSource?.fileType,
+        fileName: lyricsSource?.fileName || lyricsSource?.filePath || songFilePath,
+        fallback: 'txt',
+      });
     })();
 
     const sourceContent = lyricsSource?.content || rawLyricsContent || '';

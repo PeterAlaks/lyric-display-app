@@ -257,7 +257,7 @@ const LyricsWorkspace = ({
               <FolderOpen className={`w-10 h-10 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} />
             </div>
             <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Drag and drop lyric files (.txt, .lrc) or setlists (.ldset) here
+              Drag and drop lyric files or setlists (.ldset) here
             </p>
           </div>
         </div>

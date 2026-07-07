@@ -1,4 +1,9 @@
 import path from 'path';
+import { extractLyricTextFromSource } from '../shared/documentTextExtraction.js';
+import {
+  isSupportedLyricsImportFile,
+  normalizeLyricFileType,
+} from '../shared/lyricImportRegistry.js';
 
 let pendingFileToOpen = null;
 
@@ -16,9 +21,7 @@ export function setPendingFile(filePath) {
 }
 
 export function isSupportedLyricsFile(filePath) {
-  if (!filePath) return false;
-  const ext = path.extname(filePath).toLowerCase();
-  return ext === '.txt' || ext === '.lrc';
+  return isSupportedLyricsImportFile(filePath);
 }
 
 export function isSupportedSetlistFile(filePath) {
@@ -63,7 +66,7 @@ export async function handleFileOpen(filePath, mainWindow) {
     return;
   }
 
-  if (ext !== '.txt' && ext !== '.lrc') {
+  if (!isSupportedLyricsImportFile(filePath)) {
     console.warn('[FileHandler] Unsupported file type:', ext);
     return;
   }
@@ -83,9 +86,14 @@ export async function handleFileOpen(filePath, mainWindow) {
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
     try {
       const fs = await import('fs/promises');
-      const content = await fs.readFile(filePath, 'utf-8');
       const fileName = path.basename(filePath);
-      const fileType = ext.substring(1);
+      const fileType = normalizeLyricFileType({ fileName });
+      const content = await extractLyricTextFromSource({
+        fileType,
+        fileName,
+        path: filePath,
+        readFile: fs.readFile,
+      });
 
       console.log('[FileHandler] Sending file to renderer:', fileName);
 

@@ -62,7 +62,7 @@ npm run electron-dev
 ### Load Lyrics
 
 - Use `File > Load Lyrics File`.
-- Drag and drop `.txt` or `.lrc` files into the main panel.
+- Drag and drop `.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, or `.docx` files into the main panel.
 - Use the new song canvas to create lyrics from scratch.
 - Use online lyric search where available.
 
@@ -88,7 +88,7 @@ npm run electron-dev
 
 ## Lyric File Format
 
-LyricDisplay accepts plain text (`.txt`) and LRC (`.lrc`) files.
+LyricDisplay accepts plain text (`.txt`), LRC (`.lrc`), Markdown (`.md`, `.markdown`), Rich Text (`.rtf`), and Word (`.docx`) files.
 
 Formatting behavior:
 

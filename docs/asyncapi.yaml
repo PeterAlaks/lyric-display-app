@@ -284,7 +284,7 @@ components:
           type: integer
         fileType:
           type: string
-          enum: ['lrc', 'txt']
+          enum: ['lrc', 'txt', 'md', 'rtf', 'docx']
         metadata:
           type: object
           nullable: true

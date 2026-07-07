@@ -41,6 +41,7 @@
     "fuse.js": "^7.1.0",
     "jszip": "^3.10.1",
     "keytar": "^7.9.0",
+    "mammoth": "^1.12.0",
     "paradox-reader": "^1.3.0",
     "pdfkit": "^0.19.1"
   },
@@ -159,6 +160,34 @@
           "role": "Editor"
         },
         {
+          "ext": "md",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "rtf",
+          "name": "Rich Text Lyric File",
+          "description": "Rich text lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "docx",
+          "name": "Word Lyric Document",
+          "description": "Word lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
           "ext": "ldset",
           "name": "LyricDisplay Setlist",
           "description": "LyricDisplay setlist file",
@@ -213,6 +242,30 @@
           "role": "Editor"
         },
         {
+          "ext": "md",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "role": "Editor"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "role": "Editor"
+        },
+        {
+          "ext": "rtf",
+          "name": "Rich Text Lyric File",
+          "description": "Rich text lyric document",
+          "role": "Editor"
+        },
+        {
+          "ext": "docx",
+          "name": "Word Lyric Document",
+          "description": "Word lyric document",
+          "role": "Editor"
+        },
+        {
           "ext": "ldset",
           "name": "LyricDisplay Setlist",
           "description": "LyricDisplay setlist file",
@@ -260,6 +313,30 @@
           "name": "Text File",
           "description": "Plain text lyric file",
           "mimeType": "text/plain"
+        },
+        {
+          "ext": "md",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "mimeType": "text/markdown"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "mimeType": "text/markdown"
+        },
+        {
+          "ext": "rtf",
+          "name": "Rich Text Lyric File",
+          "description": "Rich text lyric document",
+          "mimeType": "application/rtf"
+        },
+        {
+          "ext": "docx",
+          "name": "Word Lyric Document",
+          "description": "Word lyric document",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         },
         {
           "ext": "ldset",

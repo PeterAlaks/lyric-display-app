@@ -30,6 +30,12 @@ import SearchBar from './SearchBar';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import QuickParserPopover from './LyricDisplayApp/QuickParserPopover';
 import { Tooltip } from '@/components/ui/tooltip';
+import {
+  getLyricFormatLabel,
+  getLyricImportFormatForType,
+  getLyricsAcceptAttribute,
+  normalizeLyricFileType,
+} from '../../shared/lyricImportRegistry.js';
 
 const outputLabel = (outputId) => {
   if (outputId === 'stage') return 'Stage';
@@ -81,7 +87,7 @@ function SetlistItem({ file, index, total, darkMode, onLoad, onRemove, onMove })
       <button type="button" onClick={() => onLoad(file.id)} className="min-w-0 flex-1 text-left">
         <div className="truncate text-sm font-semibold">{file.displayName || file.originalName}</div>
         <div className={`truncate text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-          {file.fileType === 'lrc' ? 'LRC' : 'Text'}
+          {getLyricFormatLabel(file.fileType)}
         </div>
       </button>
       <div className="flex items-center gap-1">
@@ -465,10 +471,14 @@ export default function ObsDockLayout() {
       return;
     }
 
-    const extension = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length > 0 ? '.lrc' : '.txt';
+    const fileType = Array.isArray(lyricsTimestamps) && lyricsTimestamps.length > 0
+      ? 'lrc'
+      : normalizeLyricFileType({ fileType: lyricsSource?.fileType, fileName: lyricsSource?.fileName, fallback: 'txt' });
+    const extension = `.${getLyricImportFormatForType(fileType)?.extensions?.[0] || 'txt'}`;
     const emitted = emitSetlistAdd([{
       name: `${lyricsFileName}${extension}`,
       content: rawLyricsContent,
+      fileType,
       lastModified: Date.now(),
       metadata: songMetadata || null,
     }]);
@@ -476,7 +486,7 @@ export default function ObsDockLayout() {
     if (!emitted) {
       showToast({ title: 'Setlist unavailable', message: 'Connection is not ready yet.', variant: 'warn' });
     }
-  }, [emitSetlistAdd, hasLyrics, isSetlistFull, lyricsFileName, lyricsTimestamps, maxSetlistFiles, rawLyricsContent, showToast, songMetadata]);
+  }, [emitSetlistAdd, hasLyrics, isSetlistFull, lyricsFileName, lyricsSource?.fileName, lyricsSource?.fileType, lyricsTimestamps, maxSetlistFiles, rawLyricsContent, showToast, songMetadata]);
 
   const openCreateEditor = React.useCallback(() => {
     setEditorState({ mode: 'create', title: '', content: '' });
@@ -578,8 +588,8 @@ export default function ObsDockLayout() {
               <Power className="h-4.5 w-4.5" />
             </button>
           </div>
-          <input ref={fileInputRef} type="file" accept=".txt,.lrc" className="hidden" onChange={handleMainFileInput} />
-          <input ref={setlistInputRef} type="file" accept=".txt,.lrc" multiple className="hidden" onChange={handleSetlistFilesInput} />
+          <input ref={fileInputRef} type="file" accept={getLyricsAcceptAttribute()} className="hidden" onChange={handleMainFileInput} />
+          <input ref={setlistInputRef} type="file" accept={getLyricsAcceptAttribute()} multiple className="hidden" onChange={handleSetlistFilesInput} />
           <div className={`truncate text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             {lyricsFileName || 'No lyrics loaded'}
             {typeof selectedLine === 'number' && hasLyrics ? ` - Line ${selectedLine + 1}/${lyrics.length}` : ''}

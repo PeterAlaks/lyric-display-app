@@ -25,7 +25,7 @@ All contributors and community participants are expected to follow the [Code of 
 - Styling: Tailwind utility classes and the small UI kit in `components/ui`. Reuse shared components (e.g., `Switch`, `Tabs`, tooltip) instead of ad-hoc DOM.
 - State: Pull selectors from `hooks/useStoreSelectors` to avoid redundant subscription logic. Keep persistence-friendly shapes (avoid storing transient DOM data).
 - Sockets: Use `useSocket` / `useControlSocket` emitters. Never bypass permission checks on the server—mirror existing event names/payload shapes in `server/events.js`.
-- Parsing: Use `shared/lyricsParsing.js`/`shared/lineSplitting.js` helpers for TXT/LRC handling to keep desktop, backend, and renderer in sync.
+- Parsing: Use `shared/lyricsParsing.js`/`shared/lineSplitting.js` for lyric parsing and `shared/documentTextExtraction.js`/`shared/lyricImportRegistry.js` for document imports to keep desktop, backend, and renderer in sync.
 - File I/O and dialogs: Go through IPC handlers in `main/ipc.js`; avoid accessing Node APIs directly from the renderer.
 - Logging: Use `utils/logger.js` helpers. Avoid logging tokens, admin keys, or raw JWTs.
 

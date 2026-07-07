@@ -10,7 +10,7 @@ export const detectArtistFromFilename = (fileName) => {
     return { artist: null, title: '' };
   }
 
-  const nameWithoutExt = fileName.replace(/\.(txt|lrc)$/i, '');
+  const nameWithoutExt = fileName.replace(/\.(txt|lrc|md|markdown|rtf|docx)$/i, '');
   const normalized = nameWithoutExt.toLowerCase();
 
   for (const artist of knownArtistsData) {

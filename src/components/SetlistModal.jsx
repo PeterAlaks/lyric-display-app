@@ -13,6 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
+import {
+  getLyricFormatLabel,
+  normalizeLyricFileType,
+  stripLyricImportExtension,
+} from '../../shared/lyricImportRegistry.js';
 
 const SETLIST_DROP_ANIMATION = {
   duration: 180,
@@ -139,9 +144,8 @@ const SetlistModal = () => {
       }
 
       pendingAddRef.current = files.map((file) => {
-        const lower = file.name.toLowerCase();
-        const fileType = lower.endsWith('.lrc') ? 'lrc' : 'txt';
-        const displayName = file.name.replace(/\.(txt|lrc)$/i, '') || file.name;
+        const fileType = normalizeLyricFileType({ fileType: file.fileType, fileName: file.name });
+        const displayName = stripLyricImportExtension(file.name) || file.name;
         return {
           displayName,
           originalName: file.name,
@@ -152,6 +156,7 @@ const SetlistModal = () => {
       const filesWithMetadata = files.map((file) => ({
         name: file.name,
         content: file.content,
+        fileType: file.fileType,
         lastModified: file.lastModified,
         metadata: file.filePath ? { filePath: file.filePath } : null
       }));
@@ -192,8 +197,7 @@ const SetlistModal = () => {
     const target = list.find((file) => file.id === fileId);
     const displayName = target?.displayName || target?.name || '';
     const originalName = target?.originalName || '';
-    const normalizedOriginal = originalName.toLowerCase();
-    const fileType = target?.fileType || (normalizedOriginal.endsWith('.lrc') ? 'lrc' : 'txt');
+    const fileType = normalizeLyricFileType({ fileType: target?.fileType, fileName: originalName });
     pendingLoadRef.current = { id: fileId, displayName, originalName, fileType };
     const emitted = emitSetlistLoad(fileId);
     if (!emitted) {
@@ -441,11 +445,11 @@ const SetlistModal = () => {
       if (addedCount === 1 && pending.length === 1) {
         const addedFile = pending[0];
         const rawName = addedFile?.displayName || addedFile?.originalName || '';
-        const baseName = rawName.replace(/\.(txt|lrc)$/i, '') || rawName;
-        const type = addedFile?.fileType || (addedFile?.originalName?.toLowerCase?.().endsWith('.lrc') ? 'lrc' : 'txt');
+        const baseName = stripLyricImportExtension(rawName) || rawName;
+        const type = normalizeLyricFileType({ fileType: addedFile?.fileType, fileName: addedFile?.originalName });
         showToast({
           title: 'Added to setlist',
-          message: `${type === 'lrc' ? 'LRC' : 'Text'}: ${baseName}`,
+          message: `${getLyricFormatLabel(type)}: ${baseName}`,
           variant: 'success',
         });
       }
@@ -489,12 +493,11 @@ const SetlistModal = () => {
       }
       const rawName = pending.displayName || detail.fileName || detail.originalName || '';
       const pendingOriginal = pending.originalName || detail.originalName || '';
-      const normalizedOriginal = String(pendingOriginal).toLowerCase();
-      const inferredType = pending.fileType || detail.fileType || (normalizedOriginal.endsWith('.lrc') ? 'lrc' : 'txt');
-      const baseName = rawName.replace(/\.(txt|lrc)$/i, '') || rawName;
+      const inferredType = normalizeLyricFileType({ fileType: pending.fileType || detail.fileType, fileName: pendingOriginal });
+      const baseName = stripLyricImportExtension(rawName) || rawName;
       showToast({
         title: 'File loaded',
-        message: `${inferredType === 'lrc' ? 'LRC' : 'Text'}: ${baseName}`,
+        message: `${getLyricFormatLabel(inferredType)}: ${baseName}`,
         variant: 'success',
       });
       pendingLoadRef.current = { id: null, displayName: '', originalName: '', fileType: null };

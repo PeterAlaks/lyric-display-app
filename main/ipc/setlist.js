@@ -1,5 +1,10 @@
 import { ipcMain, dialog } from 'electron';
 import { exportSetlistToPDF, exportSetlistToTXT } from '../setlistExport.js';
+import { extractLyricTextFromSource } from '../../shared/documentTextExtraction.js';
+import {
+  getLyricOpenDialogFilters,
+  normalizeLyricFileType,
+} from '../../shared/lyricImportRegistry.js';
 import {
   MAX_SETLIST_FILE_BYTES,
   hasSetlistExtension,
@@ -161,9 +166,7 @@ export function registerSetlistHandlers({ getMainWindow }) {
       const win = getMainWindow?.();
       const result = await dialog.showOpenDialog(win || undefined, {
         title: 'Add Files to Setlist',
-        filters: [
-          { name: 'Lyric Files', extensions: ['txt', 'lrc'] }
-        ],
+        filters: getLyricOpenDialogFilters(),
         properties: ['openFile', 'multiSelections']
       });
 
@@ -174,12 +177,19 @@ export function registerSetlistHandlers({ getMainWindow }) {
       const fs = await import('fs/promises');
       const files = await Promise.all(
         result.filePaths.map(async (filePath) => {
-          const content = await fs.readFile(filePath, 'utf8');
           const fileName = filePath.split(/[\\/]/).pop();
+          const fileType = normalizeLyricFileType({ fileName });
+          const extractedContent = await extractLyricTextFromSource({
+            fileType,
+            fileName,
+            path: filePath,
+            readFile: fs.readFile,
+          });
           const stats = await fs.stat(filePath);
           return {
             name: fileName,
-            content,
+            content: extractedContent,
+            fileType,
             lastModified: stats.mtimeMs,
             filePath
           };

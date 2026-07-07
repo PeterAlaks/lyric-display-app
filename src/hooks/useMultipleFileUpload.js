@@ -5,6 +5,11 @@ import { useSetlistState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
+import {
+  getLyricImportFormatForName,
+  getLyricOriginLabel,
+  stripLyricImportExtension,
+} from '../../shared/lyricImportRegistry.js';
 
 const useMultipleFileUpload = () => {
   const { getAvailableSetlistSlots, maxFileSizeLimit, maxSetlistFilesLimit } = useSetlistState();
@@ -40,11 +45,7 @@ const useMultipleFileUpload = () => {
           continue;
         }
 
-        const nameLower = (file.name || '').toLowerCase();
-        const isTxt = nameLower.endsWith('.txt');
-        const isLrc = nameLower.endsWith('.lrc');
-
-        if (!isTxt && !isLrc) {
+        if (!getLyricImportFormatForName(file.name || '')) {
           invalidFiles.push(file.name);
           continue;
         }
@@ -62,7 +63,7 @@ const useMultipleFileUpload = () => {
         } else if (invalidFiles.length > 0) {
           showToast({
             title: 'Unsupported files',
-            message: 'Only .txt or .lrc files are supported.',
+            message: 'Supported lyric files: .txt, .lrc, .md, .markdown, .rtf, .docx.',
             variant: 'warn'
           });
         }
@@ -77,11 +78,12 @@ const useMultipleFileUpload = () => {
 
       for (const file of filesToProcess) {
         try {
-          const nameLower = file.name.toLowerCase();
-          const isLrc = nameLower.endsWith('.lrc');
+          const format = getLyricImportFormatForName(file.name || '');
+          const fileType = format?.fileType || 'txt';
+          const isLrc = fileType === 'lrc';
 
           const parsed = await parseLyricsFileAsync(file, {
-            fileType: isLrc ? 'lrc' : 'txt'
+            fileType
           });
 
           if (!parsed || !Array.isArray(parsed.processedLines)) {
@@ -89,7 +91,7 @@ const useMultipleFileUpload = () => {
             continue;
           }
 
-          const baseName = file.name.replace(/\.(txt|lrc)$/i, '');
+          const baseName = stripLyricImportExtension(file.name);
           const detected = detectArtistFromFilename(baseName);
 
           const metadata = {
@@ -98,7 +100,7 @@ const useMultipleFileUpload = () => {
             album: null,
             year: null,
             lyricLines: parsed.processedLines.length,
-            origin: isLrc ? 'Local (.lrc)' : 'Local (.txt)',
+            origin: getLyricOriginLabel(fileType),
             filePath: file?.path || null
           };
 
@@ -116,6 +118,7 @@ const useMultipleFileUpload = () => {
           processedFiles.push({
             name: file.name,
             content: rawContent,
+            fileType,
             lastModified: file.lastModified || Date.now(),
             metadata: metadata
           });

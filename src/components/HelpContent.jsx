@@ -51,7 +51,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
         <HelpSection
             icon={FolderOpen}
             title="Load Lyrics File"
-            description="Import .txt or .lrc files from your computer. Supports plain text lyrics and timestamped LRC format. Files are automatically formatted with smart capitalization and religious term handling."
+            description="Import .txt, .lrc, Markdown, RTF, or DOCX files from your computer. Document formats are converted to editable lyric text before display."
             darkMode={darkMode}
         />
 

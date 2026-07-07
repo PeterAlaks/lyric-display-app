@@ -1,7 +1,11 @@
 import { ipcMain, dialog } from 'electron';
 import { readFile, stat, writeFile } from 'fs/promises';
 import path from 'path';
-import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
+import { parseLyricImportContent, extractLyricTextFromSource } from '../../shared/documentTextExtraction.js';
+import {
+  getLyricOpenDialogFilters,
+  normalizeLyricFileType,
+} from '../../shared/lyricImportRegistry.js';
 import { addRecent } from '../recents.js';
 import * as userPreferences from '../userPreferences.js';
 import { grantLyricVideoMediaFile, revokeLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
@@ -109,19 +113,25 @@ export function registerFileHandlers({ getMainWindow }) {
 
       const result = await dialog.showOpenDialog(win || undefined, {
         properties: ['openFile'],
-        filters: [{ name: 'Text Files', extensions: ['txt', 'lrc'] }],
+        filters: getLyricOpenDialogFilters(),
         defaultPath: defaultPath || undefined
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
         const filePath = result.filePaths[0];
-        const content = await readFile(filePath, 'utf8');
         const fileName = filePath.split(/[\\/]/).pop();
+        const fileType = normalizeLyricFileType({ fileName });
+        const content = await extractLyricTextFromSource({
+          fileType,
+          fileName,
+          path: filePath,
+          readFile,
+        });
         grantWritePath(filePath);
         try {
           await addRecent(filePath);
         } catch { }
-        return { success: true, content, fileName, filePath };
+        return { success: true, content, fileName, filePath, fileType };
       }
       return { success: false, canceled: true };
     } catch (error) {
@@ -195,16 +205,11 @@ export function registerFileHandlers({ getMainWindow }) {
 
   ipcMain.handle('parse-lyrics-file', async (_event, payload = {}) => {
     try {
-      const { fileType = 'txt', path: filePath, rawText } = payload || {};
-      let content = typeof rawText === 'string' ? rawText : null;
-      let readFromPath = false;
+      const { fileType = 'txt', name, path: filePath, rawText, rawBytes } = payload || {};
+      const content = typeof rawText === 'string' ? rawText : null;
+      const finalFileType = normalizeLyricFileType({ fileType, fileName: name || filePath });
 
-      if (!content && filePath) {
-        content = await readFile(filePath, 'utf8');
-        readFromPath = true;
-      }
-
-      if (typeof content !== 'string') {
+      if (typeof content !== 'string' && !rawBytes && !filePath) {
         return { success: false, error: 'No lyric content available for parsing' };
       }
 
@@ -228,9 +233,16 @@ export function registerFileHandlers({ getMainWindow }) {
         }
       };
 
-      const parser = fileType === 'lrc' ? parseLrcContent : parseTxtContent;
-      const result = parser(content, parsingOptions);
-      if (readFromPath && filePath) {
+      const result = await parseLyricImportContent({
+        fileType: finalFileType,
+        fileName: name || filePath,
+        rawText: content,
+        rawBytes,
+        path: filePath,
+        readFile,
+        parsingOptions,
+      });
+      if (filePath) {
         grantWritePath(filePath);
       }
 

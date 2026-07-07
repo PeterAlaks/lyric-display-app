@@ -81,6 +81,7 @@ const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitS
       const processedFiles = items.map((item) => ({
         name: item.originalName || `${item.displayName}.${item.fileType || 'txt'}`,
         content: item.content,
+        fileType: item.fileType || 'txt',
         lastModified: item.lastModified || Date.now(),
         metadata: item.metadata || null
       }));

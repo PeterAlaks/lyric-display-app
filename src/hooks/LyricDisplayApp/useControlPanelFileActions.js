@@ -26,7 +26,7 @@ export const useControlPanelFileActions = ({
       if (window?.electronAPI?.loadLyricsFile) {
         const result = await window.electronAPI.loadLyricsFile();
         if (result && result.success && result.content) {
-          const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath };
+          const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath, fileType: result.fileType };
           window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
           trackAction('song_loaded');
           return;

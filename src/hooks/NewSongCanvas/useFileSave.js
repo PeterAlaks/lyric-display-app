@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
 
 /**
  * Hook for handling file save operations (Save, Save & Load)
@@ -31,7 +32,7 @@ const useFileSave = ({
 
   const resolveBaseName = useCallback(() => {
     const rawBase = (title && title.trim()) || fileName || 'lyrics';
-    const cleaned = rawBase.replace(/\.(txt|lrc)$/i, '');
+    const cleaned = stripLyricImportExtension(rawBase);
     return cleaned || 'lyrics';
   }, [fileName, title]);
 
@@ -39,7 +40,9 @@ const useFileSave = ({
     if (!editMode) return null;
     const normalizedPath = (existingFilePath || '').trim();
     if (!normalizedPath) return null;
-    const extension = normalizedPath.toLowerCase().endsWith('.lrc') ? 'lrc' : 'txt';
+    const lowerPath = normalizedPath.toLowerCase();
+    if (!lowerPath.endsWith('.txt') && !lowerPath.endsWith('.lrc')) return null;
+    const extension = lowerPath.endsWith('.lrc') ? 'lrc' : 'txt';
     return { path: normalizedPath, extension };
   }, [editMode, existingFilePath]);
 

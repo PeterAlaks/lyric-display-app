@@ -1,6 +1,13 @@
 import { useCallback } from 'react';
 import { parseLyricsFileAsync } from '../../utils/asyncLyricsParser';
 import { detectArtistFromFilename } from '../../utils/artistDetection';
+import {
+  getLyricFormatLabel,
+  getLyricImportFormatForType,
+  getLyricOriginLabel,
+  normalizeLyricFileType,
+  stripLyricImportExtension,
+} from '../../../shared/lyricImportRegistry.js';
 
 export const useLyricsLoader = ({
   setLyrics,
@@ -24,14 +31,13 @@ export const useLyricsLoader = ({
       .trim();
 
     try {
-      const requestedType = (fileType || '').toLowerCase() === 'lrc' ? 'lrc' : ((fileType || '').toLowerCase() === 'txt' ? 'txt' : null);
       const providedName = sanitize(fileName);
       const fallbackName = sanitize(context.fallbackFileName);
       const baseName = providedName || fallbackName || 'Imported Lyrics';
       const hasExtension = /\.[a-z0-9]{2,5}$/i.test(providedName);
-      const inferredType = (!requestedType && providedName && providedName.toLowerCase().endsWith('.lrc')) ? 'lrc' : 'txt';
-      const finalType = requestedType || inferredType;
-      const extension = finalType === 'lrc' ? '.lrc' : '.txt';
+      const finalType = normalizeLyricFileType({ fileType, fileName: providedName, fallback: 'txt' });
+      const primaryExtension = getLyricImportFormatForType(finalType)?.extensions?.[0] || 'txt';
+      const extension = `.${primaryExtension}`;
       const finalFileName = hasExtension ? providedName : `${baseName}${extension}`;
 
       const enableSplitting = Boolean(context.enableOnlineLyricsSplitting || context.enableIntelligentSplitting);
@@ -55,18 +61,19 @@ export const useLyricsLoader = ({
       const enhancedTimestamps = parsed.enhancedTimestamps || [];
       const sections = parsed.sections || [];
       const lineToSection = parsed.lineToSection || {};
-      const finalBaseName = (finalFileName || '').replace(/\.(txt|lrc)$/i, '');
+      const finalBaseName = stripLyricImportExtension(finalFileName || '');
+      const sourceContent = finalType === 'lrc' ? (content || rawText) : rawText;
 
       setLyrics(processedLines);
       if (setLyricsSections) setLyricsSections(sections);
       if (setLineToSection) setLineToSection(lineToSection);
-      setRawLyricsContent(finalType === 'lrc' ? (content || rawText) : rawText);
+      setRawLyricsContent(sourceContent);
       setLyricsTimestamps(timestamps);
       setLyricsEnhancedTimestamps(enhancedTimestamps);
       selectLine(null);
       setLyricsFileName(finalBaseName);
       setLyricsSource({
-        content: content || rawText || '',
+        content: sourceContent || '',
         fileType: finalType,
         filePath: filePath || null,
         fileName: finalFileName,
@@ -83,7 +90,7 @@ export const useLyricsLoader = ({
           album: null,
           year: null,
           lyricLines: processedLines.length,
-          origin: finalType === 'lrc' ? 'Local (.lrc)' : 'Local (.txt)',
+          origin: getLyricOriginLabel(finalType),
           filePath: filePath || null
         };
         setSongMetadata(metadata);
@@ -92,9 +99,9 @@ export const useLyricsLoader = ({
       emitLyricsLoad({
         lyrics: processedLines,
         fileName: finalBaseName,
-        rawLyricsContent: finalType === 'lrc' ? (content || rawText) : rawText,
+        rawLyricsContent: sourceContent,
         lyricsSource: {
-          content: content || rawText || '',
+          content: sourceContent || '',
           fileType: finalType,
           filePath: filePath || null,
           fileName: finalFileName,
@@ -128,7 +135,7 @@ export const useLyricsLoader = ({
 
       showToast({
         title: context.toastTitle || 'Lyrics loaded',
-        message: context.toastMessage || `${finalType === 'lrc' ? 'LRC' : 'Text'}: ${finalBaseName}`,
+        message: context.toastMessage || `${getLyricFormatLabel(finalType)}: ${finalBaseName}`,
         variant: context.toastVariant || 'success',
       });
 

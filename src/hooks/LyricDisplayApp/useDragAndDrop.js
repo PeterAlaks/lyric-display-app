@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { isSupportedLyricsImportFile } from '../../../shared/lyricImportRegistry.js';
 
 export const useDragAndDrop = ({
   handleFileUpload,
@@ -71,14 +72,13 @@ export const useDragAndDrop = ({
     }
 
     const lyricFiles = files.filter(f => {
-      const name = f.name.toLowerCase();
-      return name.endsWith('.txt') || name.endsWith('.lrc');
+      return isSupportedLyricsImportFile(f.name);
     });
 
     if (lyricFiles.length === 0) {
       showToast({
         title: 'No valid files',
-        message: 'Please drop .txt, .lrc, or .ldset files.',
+        message: 'Please drop supported lyric files or .ldset setlists.',
         variant: 'warn'
       });
       return;

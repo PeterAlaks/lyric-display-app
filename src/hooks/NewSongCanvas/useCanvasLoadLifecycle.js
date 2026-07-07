@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { reconstructEditableText } from '../../utils/lyricsFormat';
+import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
 
 const resetCanvasState = ({ baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setFileName, setTitle }) => {
   resetHistory('');
@@ -54,7 +55,7 @@ export const useCanvasLoadLifecycle = ({
 
       if (!content) return;
 
-      const baseName = fileName ? fileName.replace(/\.(txt|lrc)$/i, '') : 'Untitled';
+      const baseName = fileName ? stripLyricImportExtension(fileName) : 'Untitled';
 
       resetHistory(content);
       setTitle(baseName);

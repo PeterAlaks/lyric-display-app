@@ -1,5 +1,10 @@
 import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
 import { MAX_SETLIST_ITEMS } from '../../../shared/setlistLimits.js';
+import {
+  isSupportedLyricFileType,
+  normalizeLyricFileType,
+  stripLyricImportExtension,
+} from '../../../shared/lyricImportRegistry.js';
 import { appendActionLog } from '../actionLog.js';
 import { emitControllerEvent, emitLyricsLoad, emitLyricsRenderEvent, emitSetlistUpdate } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
@@ -47,16 +52,18 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         return;
       }
 
-      const normalizeName = (value = '') => String(value).trim().replace(/\.(txt|lrc)$/i, '').toLowerCase();
+      const normalizeName = (value = '') => stripLyricImportExtension(String(value).trim()).toLowerCase();
 
       const newFiles = files.map((file, index) => {
         if (!file.name || !file.content) {
           throw new Error(`File ${index + 1} is missing name or content`);
         }
 
-        const lowerName = file.name.toLowerCase();
-        const isLrc = lowerName.endsWith('.lrc');
-        const displayName = file.name.replace(/\.(txt|lrc)$/i, '');
+        const fileType = normalizeLyricFileType({ fileType: file.fileType, fileName: file.name, fallback: 'txt' });
+        if (!isSupportedLyricFileType(fileType)) {
+          throw new Error(`File "${file.name}" has an unsupported file type`);
+        }
+        const displayName = stripLyricImportExtension(file.name);
         const normalizedIncoming = normalizeName(file.name);
         const alreadyExists = state.setlistFiles.some((existing) => {
           const candidate = existing?.displayName ?? existing?.originalName ?? '';
@@ -73,7 +80,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
           content: file.content,
           lastModified: file.lastModified || Date.now(),
           addedAt: Date.now(),
-          fileType: isLrc ? 'lrc' : 'txt',
+          fileType,
           metadata: file.metadata || null,
           addedBy: {
             clientType,
@@ -176,8 +183,12 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       let editableRawContent = file.content;
       let sections = [];
       let lineToSection = {};
-      const isLrc = (file.fileType === 'lrc') ||
-        (typeof file.originalName === 'string' && file.originalName.toLowerCase().endsWith('.lrc'));
+      const finalFileType = normalizeLyricFileType({
+        fileType: file.fileType,
+        fileName: file.originalName,
+        fallback: 'txt',
+      });
+      const isLrc = finalFileType === 'lrc';
 
       if (isLrc) {
         const parsed = parseLrcContent(file.content);
@@ -195,7 +206,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         lineToSection = derived.lineToSection || {};
       }
 
-      const cleanDisplayName = (file.displayName || file.originalName || '').replace(/\.(txt|lrc)$/i, '') || file.displayName;
+      const cleanDisplayName = stripLyricImportExtension(file.displayName || file.originalName || '') || file.displayName;
 
       state.currentLyrics = processedLines;
       state.currentLyricsTimestamps = timestamps;
@@ -205,7 +216,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       state.currentRawLyricsContent = editableRawContent;
       state.currentLyricsSource = {
         content: file.content || editableRawContent || '',
-        fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
+        fileType: finalFileType,
         filePath: file.metadata?.filePath || null,
         fileName: file.originalName || cleanDisplayName || '',
       };
@@ -229,7 +240,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         metadata: {
           lines: processedLines.length,
           timestamps: timestamps.length,
-          fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
+          fileType: finalFileType,
         },
       });
 
@@ -250,7 +261,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         fileId,
         fileName: cleanDisplayName,
         originalName: file.originalName,
-        fileType: file.fileType || (isLrc ? 'lrc' : 'txt'),
+        fileType: finalFileType,
         linesCount: processedLines.length,
         rawContent: editableRawContent,
         loadedBy: clientType,

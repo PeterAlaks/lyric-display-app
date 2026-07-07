@@ -169,7 +169,7 @@ Recommended OBS options:
    - Font Size: 48-60 px
    - Font Color: `#FFFFFF`
    - Drop Shadow: 5-7 opacity
-3. Load a `.txt` or `.lrc` lyric file.
+3. Load a supported lyric file (`.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, or `.docx`).
 4. Click a lyric line.
 5. Confirm the lyric appears in OBS.
 
@@ -312,14 +312,14 @@ The join code resets when the app restarts.
 ### Load an Existing File
 
 1. Click `Load Lyrics File`, or use `File > Load Lyrics File`.
-2. Select a `.txt` or `.lrc` file.
+2. Select a supported lyric file (`.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, or `.docx`).
 3. Click `Open`.
 
 Shortcut: `Ctrl/Cmd + O`
 
 ### Drag and Drop
 
-Drag a `.txt`, `.lrc`, or `.ldset` file into the LyricDisplay control panel.
+Drag a lyric file (`.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, `.docx`) or `.ldset` file into the LyricDisplay control panel.
 
 ### Create a New Lyrics File
 

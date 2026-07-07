@@ -1,5 +1,6 @@
 import path from 'path';
 import { MAX_SETLIST_ITEMS } from '../shared/setlistLimits.js';
+import { isSupportedLyricFileType } from '../shared/lyricImportRegistry.js';
 
 export const SETLIST_FILE_EXTENSION = '.ldset';
 export const MAX_SETLIST_FILE_BYTES = 10 * 1024 * 1024;
@@ -80,7 +81,7 @@ export function validateSetlistData(setlistData) {
     if (originalNameError) return { valid: false, error: originalNameError };
 
     const fileType = item.fileType || 'txt';
-    if (!['txt', 'lrc'].includes(fileType)) {
+    if (!isSupportedLyricFileType(fileType)) {
       return { valid: false, error: `Setlist item ${index + 1} has an unsupported file type` };
     }
 

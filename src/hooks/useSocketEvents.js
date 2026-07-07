@@ -3,6 +3,7 @@ import useLyricsStore from '../context/LyricsStore';
 import { logDebug, logError, logWarn } from '../utils/logger';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 import { deriveSectionsFromProcessedLines } from '../../shared/lyricsParsing.js';
+import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
 
 const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -533,6 +534,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
 
     socket.on('setlistLoadSuccess', ({ fileId, fileName, originalName, fileType, linesCount, rawContent, loadedBy, origin, draftId, metadata: savedMetadata }) => {
       logDebug(`Setlist file loaded: ${fileName} (${linesCount} lines) by ${loadedBy}`);
+      const finalFileType = normalizeLyricFileType({ fileType, fileName: originalName || fileName, fallback: 'txt' });
       setLyricsFileName(fileName);
       selectLine(null);
       if (rawContent) {
@@ -540,7 +542,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       }
       setLyricsSource({
         content: rawContent || '',
-        fileType: fileType === 'lrc' ? 'lrc' : 'txt',
+        fileType: finalFileType,
         filePath: savedMetadata?.filePath || null,
         fileName: originalName || fileName || '',
       });
@@ -553,10 +555,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
         setLineToSection(derived.lineToSection || {});
       }
 
-      let computedOrigin = 'Setlist (.txt)';
-      if (fileType === 'lrc') {
-        computedOrigin = 'Setlist (.lrc)';
-      }
+      let computedOrigin = 'Setlist';
       if (fileType === 'draft' || origin === 'draft') {
         computedOrigin = 'Secondary Controller Draft';
       }
