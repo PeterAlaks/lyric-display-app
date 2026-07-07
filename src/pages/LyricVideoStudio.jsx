@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CircleHelp, Download, FilePlus2, FileText, ScreenShare, Video } from 'lucide-react';
+import { AppWindowMac, ArrowLeft, CircleHelp, Download, FilePlus2, FileText, MonitorUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tooltip } from '../components/ui/tooltip';
 import useToast from '../hooks/useToast';
@@ -1103,12 +1103,12 @@ export default function LyricVideoStudio() {
         <div className="flex items-center gap-2">
           <Tooltip content="Project live studio preview" side="bottom">
             <Button type="button" variant="ghost" size="icon" onClick={handleOpenProjectOutput} aria-label="Project Lyric Video Studio" className="text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
-              <Video className="h-4 w-4" />
+              <MonitorUp className="h-4 w-4" />
             </Button>
           </Tooltip>
           <Tooltip content="Open live studio preview window" side="bottom">
             <Button type="button" variant="ghost" size="icon" onClick={handleOpenLiveOutput} aria-label="Open Live Studio Preview" className="text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
-              <ScreenShare className="h-4 w-4" />
+              <AppWindowMac className="h-4 w-4" />
             </Button>
           </Tooltip>
           <Tooltip content="Lyric Video Studio help" side="bottom">

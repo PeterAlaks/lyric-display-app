@@ -200,7 +200,7 @@ export default function OperatorActionLogModal({ darkMode }) {
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden" style={{ height: 'min(680px, calc(100vh - 180px))' }}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-3 dark:border-gray-700">
+      <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
         <div className="min-w-0">
           <p className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Recent operator activity</p>
           <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
+import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
 import {
   getLyricFormatLabel,
   normalizeLyricFileType,
@@ -276,6 +277,7 @@ const SetlistModal = () => {
       title: 'Clear Setlist',
       description: `Are you sure you want to clear all ${list.length} ${list.length === 1 ? 'song' : 'songs'} from the setlist? This action cannot be undone.`,
       variant: 'warn',
+      size: 'sm',
       actions: [
         {
           label: 'Cancel',
@@ -571,8 +573,8 @@ const SetlistModal = () => {
 
         {/* Fixed Header */}
         <div className={`
-          shrink-0 px-6 py-4 border-b flex items-center justify-between gap-4
-          ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}
+          shrink-0 px-6 py-4 flex items-center justify-between gap-4
+          ${darkMode ? 'bg-slate-950/45' : 'bg-[#f8fafc]'}
         `}>
           <div className="min-w-0">
             <h2 className="truncate text-xl font-semibold">Setlist Manager</h2>
@@ -750,8 +752,8 @@ const SetlistModal = () => {
 
         {/* Fixed Search Bar */}
         <div className={`
-          shrink-0 px-6 py-4 border-b
-          ${darkMode ? 'border-gray-800 bg-gray-950/35' : 'border-gray-200 bg-[#f8fafc]'}
+          shrink-0 border-b px-6 py-4
+          ${darkMode ? 'border-white/5 bg-gray-950/35' : 'border-slate-900/5 bg-[#f8fafc]'}
         `}>
           <div className="relative">
             <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${searchIconClass}`} />
@@ -859,19 +861,16 @@ const SetlistModal = () => {
         </div>
 
         {/* Fixed Footer */}
-        <div className={`
-          shrink-0 px-6 py-4 border-t flex items-center justify-end
-          ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}
-        `}>
-          <Button
+        <ModalFooter darkMode={darkMode}>
+          <ModalActionButton
             type="button"
-            variant={darkMode ? 'outline' : 'default'}
+            tone="primary"
+            darkMode={darkMode}
             onClick={closeModal}
-            className={darkMode ? 'min-w-[96px] border-gray-500 bg-transparent text-white hover:border-gray-400 hover:bg-gray-800/40 hover:text-white' : 'min-w-[96px]'}
           >
             Close
-          </Button>
-        </div>
+          </ModalActionButton>
+        </ModalFooter>
       </div>
     </div>
   );

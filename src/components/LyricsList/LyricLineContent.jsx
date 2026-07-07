@@ -30,8 +30,13 @@ export default function LyricLineContent({
   isStructureTagLine,
   getNormalGroupLines,
   density = 'default',
+  isActiveSearchMatch = false,
 }) {
   const compact = density === 'dock' || density === 'compact';
+  const secondaryTextClass = isActiveSearchMatch
+    ? ''
+    : darkMode ? 'text-gray-300' : 'text-gray-600';
+
   if (line == null) return null;
 
   if (isStructureTagLine(line)) {
@@ -46,8 +51,7 @@ export default function LyricLineContent({
         </div>
         {line.translation && (
           <div
-            className={`${compact ? 'text-[12px]' : 'text-[15px]'} italic ${darkMode ? 'text-gray-300' : 'text-gray-600'
-              }`}
+            className={`${compact ? 'text-[12px]' : 'text-[15px]'} italic ${secondaryTextClass}`}
           >
             {highlightSearchTerm(line.translation, searchQuery, darkMode, compact)}
           </div>
@@ -63,7 +67,7 @@ export default function LyricLineContent({
         {normalLines.map((groupLine, groupIndex) => (
           <div
             key={`${line.id || index}_${groupIndex}`}
-            className={`${groupIndex === 0 ? 'font-medium text-[15px]' : compact ? 'text-[12px]' : 'text-[15px]'} ${groupIndex === 0 ? '' : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}
+            className={`${groupIndex === 0 ? 'font-medium text-[15px]' : compact ? 'text-[12px]' : 'text-[15px]'} ${groupIndex === 0 ? '' : secondaryTextClass}`}
           >
             {highlightSearchTerm(groupLine, searchQuery, darkMode, compact)}
           </div>

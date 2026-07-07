@@ -216,11 +216,12 @@ export default function LyricsList({
       handleStageOnlyTutorialOpenChange,
       handleNeverShowTutorialPopovers,
       searchQuery,
+      highlightedLineIndex,
       isStructureTagLine,
       getNormalGroupLines,
       density,
     }),
-    [lyrics, lyricsTimestamps, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, isStructureTagLine, getNormalGroupLines, density]
+    [lyrics, lyricsTimestamps, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, highlightedLineIndex, isStructureTagLine, getNormalGroupLines, density]
   );
 
   const itemCount = useMemo(() => lyrics.length, [lyrics]);
@@ -298,6 +299,7 @@ export default function LyricsList({
           handleStageOnlyTutorialOpenChange={handleStageOnlyTutorialOpenChange}
           handleNeverShowTutorialPopovers={handleNeverShowTutorialPopovers}
           searchQuery={searchQuery}
+          highlightedLineIndex={highlightedLineIndex}
           isStructureTagLine={isStructureTagLine}
           getNormalGroupLines={getNormalGroupLines}
           density={density}

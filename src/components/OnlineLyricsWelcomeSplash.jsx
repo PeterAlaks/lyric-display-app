@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { X, Music, Globe, Key, CheckCircle2, ExternalLink, Search, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
+import { ModalActionButton } from '@/components/modal/modalActions';
 
 const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
     const [visible, setVisible] = useState(false);
@@ -62,7 +62,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
     const overlayClasses = `fixed inset-x-0 bottom-0 z-[2000] flex items-center justify-center p-4 transition-all duration-300 ${entering || exiting ? 'opacity-0' : 'opacity-100'
         }`;
 
-    const contentClasses = `relative w-full max-w-4xl h-[85vh] rounded-2xl shadow-2xl transform transition-all duration-300 ${darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
+    const contentClasses = `relative w-full max-w-4xl h-[85vh] overflow-hidden rounded-2xl shadow-2xl transform transition-all duration-300 ${darkMode ? 'bg-gray-900 border border-slate-800/80' : 'bg-white border border-slate-200/80'
         } ${entering || exiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`;
 
     const providers = [
@@ -126,7 +126,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
 
                 {/* Collapsed Header (shown when scrolled) */}
                 <div
-                    className={`absolute top-0 left-0 right-0 z-20 px-6 py-3 flex items-center justify-between border-b transition-opacity duration-500 ease-out ${darkMode ? 'bg-gray-900/98 border-gray-700 backdrop-blur-md' : 'bg-white/98 border-gray-200 backdrop-blur-md'
+                    className={`absolute top-0 left-0 right-0 z-20 px-6 py-3 flex items-center justify-between border-b transition-opacity duration-500 ease-out ${darkMode ? 'border-white/5 bg-slate-950/95 backdrop-blur-md' : 'border-slate-900/5 bg-[#f8fafc]/95 backdrop-blur-md'
                         } ${scrolled ? 'opacity-100 shadow-lg' : 'opacity-0 pointer-events-none'}`}
                     style={{ borderTopLeftRadius: '1rem', borderTopRightRadius: '1rem' }}
                 >
@@ -158,7 +158,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto custom-scrollbar h-full pb-24" onScroll={handleScroll}>
                     {/* Header Section */}
-                    <div className={`px-8 pt-8 pb-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <div className={`border-b px-8 pt-8 pb-6 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
                         <div className="flex items-center justify-center mb-4">
                             <div
                                 className={`w-16 h-16 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20' : 'bg-gradient-to-br from-blue-100 to-purple-100'
@@ -311,13 +311,13 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                 </div>
 
                 {/* Fixed Footer */}
-                <div className={`absolute bottom-0 left-0 right-0 px-8 py-6 border-t ${darkMode ? 'border-gray-700 bg-gray-900/98' : 'border-gray-200 bg-white/98'} backdrop-blur-md shadow-2xl`}
+                <div className={`absolute bottom-0 left-0 right-0 border-t px-8 py-6 ${darkMode ? 'border-white/5 bg-slate-950/95' : 'border-slate-900/5 bg-[#f8fafc]/95'} backdrop-blur-md shadow-2xl`}
                     style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}
                 >
                     <div className="flex justify-end">
-                        <Button onClick={handleClose} className="px-8">
+                        <ModalActionButton type="button" tone="primary" darkMode={darkMode} onClick={handleClose} className="px-8">
                             Get Started
-                        </Button>
+                        </ModalActionButton>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, Pause, Play, Plus, ScreenShare, SkipForward, Square, Timer, Trash2, Video } from 'lucide-react';
+import { AppWindowMac, ChevronDown, MonitorUp, Pause, Play, Plus, SkipForward, Square, Timer, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -761,7 +761,7 @@ const TimerControlModule = () => {
                 onClick={handleOpenProjectOutput}
                 aria-label="Project Time Display"
               >
-                <Video className="w-4 h-4" />
+                <MonitorUp className="w-4 h-4" />
               </Button>
             </Tooltip>
             <Tooltip content="Open time display window" side="bottom">
@@ -773,7 +773,7 @@ const TimerControlModule = () => {
                 onClick={handleOpenTimeDisplay}
                 aria-label="Open Time Display"
               >
-                <ScreenShare className="w-4 h-4" />
+                <AppWindowMac className="w-4 h-4" />
               </Button>
             </Tooltip>
           </div>

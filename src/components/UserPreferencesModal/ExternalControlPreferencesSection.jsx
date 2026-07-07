@@ -30,6 +30,9 @@ const ExternalControlPreferencesSection = ({
   preferenceFieldLabelClass,
   setMidiMappingsExpanded,
 }) => {
+  const selectContentClass = darkMode
+    ? 'bg-gray-700 border-gray-600 text-gray-200'
+    : 'bg-white border-gray-300';
   const noteEntries = Object.entries(midiStatus?.mappings?.notes || {})
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([note, mapping]) => ({
@@ -102,7 +105,7 @@ const ExternalControlPreferencesSection = ({
                 <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="Select MIDI device..." />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   <SelectItem value="-1">None</SelectItem>
                   {midiStatus?.availablePorts?.map((port) => (
                     <SelectItem key={port.index} value={String(port.index)}>

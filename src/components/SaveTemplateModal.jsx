@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { ModalActionButton } from '@/components/modal/modalActions';
 
 const SaveTemplateModal = ({
   darkMode,
@@ -164,28 +165,24 @@ const SaveTemplateModal = ({
 
       {/* Action Buttons */}
       <div className="flex items-center justify-end gap-3 pt-4">
-        <button
+        <ModalActionButton
           type="button"
+          tone="secondary"
+          darkMode={darkMode}
           onClick={() => close({ dismissed: true })}
           disabled={isSaving}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode
-            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Cancel
-        </button>
-        <button
+        </ModalActionButton>
+        <ModalActionButton
           type="button"
+          tone="primary"
+          darkMode={darkMode}
           onClick={handleSave}
           disabled={!canSave}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode
-            ? 'bg-white text-gray-900 hover:bg-gray-100'
-            : 'bg-black text-white hover:bg-gray-800'
-            } ${!canSave ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {isSaving ? 'Saving...' : 'Save Template'}
-        </button>
+        </ModalActionButton>
       </div>
     </div>
   );

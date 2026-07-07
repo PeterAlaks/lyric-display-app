@@ -36,6 +36,7 @@ export default function LyricRow({
   handleStageOnlyTutorialOpenChange,
   handleNeverShowTutorialPopovers,
   searchQuery,
+  highlightedLineIndex,
   isStructureTagLine,
   getNormalGroupLines,
   density = 'default',
@@ -48,6 +49,7 @@ export default function LyricRow({
   const sectionLabel = sectionId ? sectionById.get(sectionId)?.label : null;
   const isActiveSection = sectionId && sectionId === activeSectionId;
   const isBatchSelected = selectedIndices?.has(index);
+  const isActiveSearchMatch = index === highlightedLineIndex && Boolean(searchQuery);
   const timestamp = Array.isArray(lyricsTimestamps) ? lyricsTimestamps[index] : null;
   const hasTimestamp = typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp >= 0;
 
@@ -108,6 +110,7 @@ export default function LyricRow({
               isStructureTagLine={isStructureTagLine}
               getNormalGroupLines={getNormalGroupLines}
               density={density}
+              isActiveSearchMatch={isActiveSearchMatch}
             />
           </div>
         </div>

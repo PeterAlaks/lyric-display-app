@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, ListMusic, Moon, RefreshCw, Settings, Sun, Timer, Video } from 'lucide-react';
+import { Globe, ListMusic, MonitorUp, Moon, RefreshCw, Settings, Sun, Timer } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import AuthStatusIndicator from '../AuthStatusIndicator';
 
@@ -113,7 +113,7 @@ export default function ControlPanelHeaderActions({
               });
             }}
           >
-            <Video className="h-4 w-4" />
+            <MonitorUp className="h-4 w-4" />
           </button>
         </Tooltip>
 

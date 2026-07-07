@@ -21,9 +21,9 @@ import UserMediaModal from '../UserMediaModal';
 import PreServiceHealthModal from '../PreServiceHealthModal';
 import OperatorActionLogModal from '../OperatorActionLogModal';
 import ObsDockInfoModal from '../ObsDockInfoModal';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
+import { ModalActionButton, ModalFooter } from './modalActions';
 
 export const ModalContext = createContext(null);
 
@@ -450,6 +450,7 @@ export function ModalProvider({ children, isDark = false }) {
                   : 'max-w-2xl';
         const widthClass = modal.size === 'auto' ? 'w-auto max-w-full' : 'w-full';
         const anyAutoFocus = modal.actions.some((action) => action.autoFocus);
+        const defaultFocusIndex = anyAutoFocus ? -1 : Math.max(0, modal.actions.length - 1);
         const overlayStateClass = modal.entering || modal.exiting ? 'opacity-0' : 'opacity-100';
         const panelStateClass = modal.entering || modal.exiting
           ? 'translate-y-8 opacity-0 scale-95'
@@ -487,7 +488,7 @@ export function ModalProvider({ children, isDark = false }) {
               <div
                 className={cn(
                   'pointer-events-auto rounded-2xl border ring-1 transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
-                  isDark ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200',
+                  isDark ? 'bg-gray-900 text-gray-50 border-slate-800/80' : 'bg-white text-gray-900 border-slate-200/80',
                   palette.ring,
                   isTopModal ? 'shadow-2xl' : 'shadow-xl',
                   widthClass,
@@ -500,12 +501,12 @@ export function ModalProvider({ children, isDark = false }) {
               >
                 {/* Fixed Header */}
                 <div className={cn(
-                  'flex gap-4 px-6 py-5 border-b shrink-0',
+                  'flex gap-4 border-b px-6 py-5 shrink-0',
                   modal.headerDescription ? 'items-start' : 'items-center',
-                  isDark ? 'border-gray-800' : 'border-gray-200'
+                  isDark ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'
                 )}>
                   <div className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ring-1 ring-inset ring-white/25',
                     palette.badge
                   )}>
                     {modal.icon ? modal.icon : <IconComponent className={cn('h-6 w-6', palette.accent)} aria-hidden />}
@@ -739,29 +740,16 @@ export function ModalProvider({ children, isDark = false }) {
 
                 {/* Fixed Footer with Actions */}
                 {modal.actions.length > 0 && (
-                  <div className={cn(
-                    'flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t shrink-0',
-                    isDark ? 'border-gray-800' : 'border-gray-200'
-                  )}>
+                  <ModalFooter darkMode={isDark}>
                     {modal.actions.map((action, idx) => {
-                      const buttonVariant = isDark
-                        ? (action.variant || (action.destructive ? 'destructive' : 'outline'))
-                        : (action.variant || (action.destructive ? 'destructive' : idx === 0 ? 'default' : 'outline'));
-                      const darkTextClass = isDark
-                        ? buttonVariant === 'destructive'
-                          ? 'dark:text-red-200 dark:hover:text-red-100'
-                          : 'bg-transparent border border-gray-500 text-white hover:text-white hover:border-gray-400 hover:bg-gray-800/40'
-                        : '';
-                      const destructiveOverride = buttonVariant === 'destructive'
-                        ? isDark
-                          ? '!bg-red-600 hover:!bg-red-700'
-                          : '!bg-red-500 hover:!bg-red-600'
-                        : '';
                       return (
-                        <Button
+                        <ModalActionButton
                           key={`${modal.id}-action-${idx}`}
                           type="button"
-                          variant={buttonVariant}
+                          action={action}
+                          actionIndex={idx}
+                          actionCount={modal.actions.length}
+                          darkMode={isDark}
                           onClick={async () => {
                             if (!isTopModal || action.disabled) return;
                             let shouldClose = action.closeOnClick !== false;
@@ -780,15 +768,15 @@ export function ModalProvider({ children, isDark = false }) {
                               closeModal(modal.id, actionResult, { actionIndex: idx });
                             }
                           }}
-                          className={cn('min-w-[96px] justify-center', darkTextClass, destructiveOverride, action.className)}
-                          autoFocus={action.autoFocus ?? (!anyAutoFocus && idx === 0)}
+                          className={action.className}
+                          autoFocus={action.autoFocus ?? idx === defaultFocusIndex}
                           disabled={action.disabled}
                         >
                           {action.label}
-                        </Button>
+                        </ModalActionButton>
                       );
                     })}
-                  </div>
+                  </ModalFooter>
                 )}
               </div>
             </div>

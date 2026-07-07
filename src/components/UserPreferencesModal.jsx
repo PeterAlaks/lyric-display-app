@@ -138,6 +138,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const inputClass = darkMode
     ? 'bg-gray-700 border-gray-600 text-gray-300'
     : 'bg-white border-gray-300';
+  const selectContentClass = darkMode
+    ? 'bg-gray-700 border-gray-600 text-gray-200'
+    : 'bg-white border-gray-300';
 
   const labelClass = darkMode ? 'text-gray-300' : 'text-gray-700';
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
@@ -287,7 +290,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   <SelectItem value="light">Light Mode</SelectItem>
                   <SelectItem value="dark">Dark Mode</SelectItem>
                   <SelectItem value="system">System Default</SelectItem>
@@ -475,7 +478,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   <SelectItem value="isolate">Isolate (separate line)</SelectItem>
                   <SelectItem value="strip">Strip (remove tags)</SelectItem>
                   <SelectItem value="keep">Keep (leave as-is)</SelectItem>

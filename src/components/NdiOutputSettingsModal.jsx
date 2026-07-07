@@ -127,6 +127,7 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey, onClose }) => {
   }
 
   const inputClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300';
+  const selectContentClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300';
   const labelClass = darkMode ? 'text-gray-200' : 'text-gray-700';
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
   const isBroadcasting = settings.enabled && companionRunning;
@@ -193,7 +194,7 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey, onClose }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   {RESOLUTION_PRESETS.map((preset) => (
                     <SelectItem key={preset.value} value={preset.value}>
                       {preset.label}
@@ -246,7 +247,7 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey, onClose }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   {FRAMERATE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={String(opt.value)}>
                       {opt.label}

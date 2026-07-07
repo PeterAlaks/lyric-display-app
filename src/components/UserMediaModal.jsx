@@ -8,6 +8,7 @@ import { outputTemplates } from '../utils/outputTemplates';
 import useAuth from '../hooks/useAuth';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
+import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
 
 const MAX_MEDIA_SIZE_BYTES = 200 * 1024 * 1024;
 
@@ -299,7 +300,7 @@ const UserMediaModal = ({
 
   return (
     <div className={cn('flex h-full min-h-[520px] flex-col', darkMode ? 'text-gray-100' : 'text-gray-900')}>
-      <div className={cn('flex flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-gray-800' : 'border-gray-200')}>
+      <div className={cn('flex flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className={cn('h-10 p-1', darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600')}>
@@ -443,28 +444,39 @@ const UserMediaModal = ({
         )}
       </div>
 
-      <div className={cn('flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4', darkMode ? 'border-gray-800' : 'border-gray-200')}>
-        <p className={cn('min-w-0 flex-1 basis-[180px] truncate text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-          {canSelectMedia
-            ? (selectedMedia ? selectedMedia.name : 'Select a media item to continue.')
-            : `${visibleMedia.length} ${activeTab === 'image' ? 'image' : 'video'}${visibleMedia.length === 1 ? '' : 's'} in library.`}
-        </p>
+      <ModalFooter
+        darkMode={darkMode}
+        align="between"
+        leading={(
+          <p className={cn('truncate text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+            {canSelectMedia
+              ? (selectedMedia ? selectedMedia.name : 'Select a media item to continue.')
+              : `${visibleMedia.length} ${activeTab === 'image' ? 'image' : 'video'}${visibleMedia.length === 1 ? '' : 's'} in library.`}
+          </p>
+        )}
+      >
         <div className="flex shrink-0 items-center gap-3">
-          <Button
+          <ModalActionButton
             type="button"
-            variant="outline"
+            tone="secondary"
+            darkMode={darkMode}
             onClick={() => onClose?.({ dismissed: true })}
-            className={darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : ''}
           >
             {canSelectMedia ? 'Cancel' : 'Close'}
-          </Button>
+          </ModalActionButton>
           {canSelectMedia && (
-            <Button type="button" onClick={proceed} disabled={!selectedMedia || busy}>
+            <ModalActionButton
+              type="button"
+              tone="primary"
+              darkMode={darkMode}
+              onClick={proceed}
+              disabled={!selectedMedia || busy}
+            >
               Use Selected Media
-            </Button>
+            </ModalActionButton>
           )}
         </div>
-      </div>
+      </ModalFooter>
     </div>
   );
 };

@@ -51,7 +51,7 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
     return (
         <div className="flex min-h-0 flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 190px)' }}>
             {/* Fixed Header with Tabs */}
-            <div className={`shrink-0 border-b px-6 py-4 ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+            <div className={`shrink-0 border-b px-6 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
                     <TabsList className={`w-full h-12 p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                         <TabsTrigger
@@ -710,7 +710,7 @@ function SourceCreatorCallout({ darkMode, localIP, onRequestClose }) {
 
 function IntroSection({ children, darkMode }) {
     return (
-        <div className={`p-3 rounded-lg text-sm leading-relaxed ${darkMode ? 'bg-blue-500/10 text-blue-300 border border-blue-500/30' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}>
+        <div className={`p-3 rounded-lg text-xs leading-relaxed ${darkMode ? 'bg-blue-500/10 text-blue-300 border border-blue-500/30' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}>
             {children}
         </div>
     );
@@ -768,7 +768,7 @@ function Step({ number, children, darkMode }) {
             <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
                 {number}
             </div>
-            <div className={`flex-1 pt-0.5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className={`flex-1 pt-0.5 text-xs leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {children}
             </div>
         </div>

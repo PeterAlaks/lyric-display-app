@@ -1,10 +1,11 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle2, Monitor, Network, Projector, Power, ScreenShare, Tv2, Radio, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Monitor, MonitorUp, Network, Power, Tv2, Radio, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useToast from '@/hooks/useToast';
 import useLyricsStore from '@/context/LyricsStore';
 import { formatOutputLabel } from '@/utils/outputLabels';
 import { cn } from '@/lib/utils';
+import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 
 const DESKTOP_TARGET = 'desktop';
@@ -51,7 +52,7 @@ const outputHint = (value, option = {}) => {
 const outputIcon = (value) => {
   if (value === 'stage') return Radio;
   if (value === 'time') return Monitor;
-  if (value === 'lyric-video-studio') return ScreenShare;
+  if (value === 'lyric-video-studio') return MonitorUp;
   return Tv2;
 };
 
@@ -349,7 +350,7 @@ const ProjectOutputModal = ({
           <div className={cn('rounded-xl border overflow-hidden', d ? 'border-gray-800 bg-gray-900/60' : 'border-gray-200 bg-white')}>
             <div className="max-h-72 overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
               <SectionHeader
-                icon={Projector}
+                icon={MonitorUp}
                 label="Output"
                 darkMode={d}
                 aside={activeProjection ? <LiveBadge /> : null}
@@ -507,7 +508,7 @@ const ProjectOutputModal = ({
                       onClick={() => setSelectedOutput(entry.outputKey)}
                       className="flex items-center gap-1.5"
                     >
-                      <ScreenShare className="h-3.5 w-3.5 shrink-0" />
+                      <MonitorUp className="h-3.5 w-3.5 shrink-0" />
                       <span className="font-medium">{formatOutputLabel(entry.outputKey)}</span>
                       <span className={cn('text-[10px]', d ? 'text-gray-600' : 'text-gray-400')}>
                         → {projectionTargetLabel(entry)}
@@ -536,7 +537,7 @@ const ProjectOutputModal = ({
             'rounded-xl border border-dashed px-4 py-4 text-center',
             d ? 'border-gray-800 text-gray-600' : 'border-gray-200 text-gray-400'
           )}>
-            <Projector className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
+            <MonitorUp className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
             <p className="text-xs">No outputs are projecting yet</p>
           </div>
         )}
@@ -567,47 +568,47 @@ const ProjectOutputModal = ({
       </div>
 
       {/* Footer */}
-      <div className={cn(
-        'flex shrink-0 items-center justify-between gap-3 border-t px-5 py-4',
-        d ? 'border-gray-800 bg-gray-900/60' : 'border-gray-100 bg-gray-50'
-      )}>
-        <Button
-          variant="outline"
+      <ModalFooter darkMode={d} align="between" className="px-5">
+        <ModalActionButton
+          type="button"
+          tone="secondary"
+          darkMode={d}
           onClick={() => onClose?.({ dismissed: true })}
-          className={cn(d ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white bg-transparent' : '')}
         >
           Close
-        </Button>
+        </ModalActionButton>
 
         <div className="flex items-center gap-2">
           {activeProjection && (
-            <Button
-              variant="destructive"
+            <ModalActionButton
+              type="button"
+              tone="destructive"
+              darkMode={d}
               onClick={() => handleStopProjection(selectedOutput)}
               disabled={isStopping || isProjecting}
               className="gap-1.5"
             >
               <Power className="h-3.5 w-3.5" />
               {stoppingOutputKey === selectedOutput ? 'Stopping…' : 'Turn Off'}
-            </Button>
+            </ModalActionButton>
           )}
           {showProjectAction && (
-            <Button
+            <ModalActionButton
+              type="button"
+              tone="primary"
+              darkMode={d}
               onClick={handleProject}
               disabled={isProjecting || isStopping}
-              className={cn(
-                'gap-1.5',
-                d ? 'bg-blue-600 hover:bg-blue-700 text-white border-0' : 'bg-blue-600 hover:bg-blue-700 text-white'
-              )}
+              className="gap-1.5"
             >
               {isProjecting
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : <Projector className="h-3.5 w-3.5" />}
+                : <MonitorUp className="h-3.5 w-3.5" />}
               {projectActionLabel}
-            </Button>
+            </ModalActionButton>
           )}
         </div>
-      </div>
+      </ModalFooter>
     </div>
   );
 };
