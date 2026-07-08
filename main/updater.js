@@ -1,4 +1,5 @@
-import { app, dialog, BrowserWindow } from 'electron';
+import { app, dialog, BrowserWindow, shell } from 'electron';
+import https from 'node:https';
 import { requestRendererModal } from './modalBridge.js';
 import updaterPkg from 'electron-updater';
 import {
@@ -11,9 +12,14 @@ import {
 const { autoUpdater } = updaterPkg;
 
 const RETRYABLE_ERROR_RE = /(network|timeout|timed out|econnreset|etimedout|enotfound|eai_again|socket|download|sha512|checksum)/i;
+const GITHUB_OWNER = 'PeterAlaks';
+const GITHUB_REPO = 'lyric-display-app';
+const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
+const GITHUB_LATEST_RELEASE_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 
 const INITIAL_STATE = {
   status: 'idle',
+  updateMode: process.platform === 'darwin' ? 'manual' : 'auto',
   updateInfo: null,
   progress: null,
   error: null,
@@ -26,12 +32,35 @@ let downloadPromise = null;
 let state = { ...INITIAL_STATE };
 
 const normalizeVersionText = (value = '') => String(value).trim().replace(/^v/i, '');
+const isManualMacUpdater = () => process.platform === 'darwin';
+
+const compareVersions = (a, b) => {
+  const pa = normalizeVersionText(a).split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const pb = normalizeVersionText(b).split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const max = Math.max(pa.length, pb.length, 3);
+
+  for (let i = 0; i < max; i += 1) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+
+  return 0;
+};
 
 const toUpdateInfo = (info = {}) => ({
   version: info?.version ? normalizeVersionText(info.version) : null,
   releaseNotes: info?.releaseNotes ?? null,
   releaseName: info?.releaseName ?? null,
-  releaseDate: info?.releaseDate ?? null
+  releaseDate: info?.releaseDate ?? null,
+  manualDownload: Boolean(info?.manualDownload),
+  downloadUrl: info?.downloadUrl ?? null,
+  htmlUrl: info?.htmlUrl ?? null,
+  assetName: info?.assetName ?? null,
+  assetSize: Number(info?.assetSize) || 0,
+  platform: info?.platform ?? process.platform,
+  arch: info?.arch ?? process.arch
 });
 
 const toErrorPayload = (err, phase = state.status, source = 'event') => {
@@ -93,6 +122,133 @@ const showNoUpdateDialog = () => {
   });
 };
 
+const githubApiRequest = (urlPath) => new Promise((resolve, reject) => {
+  const url = urlPath.startsWith('http') ? urlPath : `${GITHUB_API_BASE}${urlPath}`;
+
+  https.get(url, {
+    headers: {
+      'User-Agent': 'LyricDisplay-App',
+      Accept: 'application/vnd.github.v3+json',
+    },
+    timeout: 10000,
+  }, (res) => {
+    let data = '';
+    res.on('data', (chunk) => { data += chunk; });
+    res.on('end', () => {
+      if (res.statusCode === 200) {
+        try {
+          resolve(JSON.parse(data));
+        } catch {
+          reject(new Error('Invalid JSON response from GitHub releases'));
+        }
+        return;
+      }
+
+      if (res.statusCode === 404) {
+        resolve(null);
+        return;
+      }
+
+      reject(new Error(`GitHub releases returned ${res.statusCode}`));
+    });
+  }).on('error', reject)
+    .on('timeout', function () {
+      this.destroy();
+      reject(new Error('GitHub releases request timed out'));
+    });
+});
+
+const findMacDmgAsset = (release, version) => {
+  const assets = Array.isArray(release?.assets) ? release.assets : [];
+  const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+  const expectedName = `LyricDisplay-${normalizeVersionText(version)}-macOS-${arch}.dmg`;
+
+  return assets.find((asset) => asset?.name === expectedName)
+    || assets.find((asset) => (
+      typeof asset?.name === 'string'
+      && asset.name.toLowerCase().endsWith('.dmg')
+      && asset.name.toLowerCase().includes('macos')
+      && asset.name.toLowerCase().includes(arch)
+    ))
+    || assets.find((asset) => (
+      typeof asset?.name === 'string'
+      && asset.name.toLowerCase().endsWith('.dmg')
+      && asset.name.toLowerCase().includes('macos')
+    ))
+    || null;
+};
+
+const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
+  if (state.status === 'checking') {
+    return getStateSnapshot();
+  }
+
+  setState({
+    status: 'checking',
+    progress: null,
+    error: null
+  });
+
+  try {
+    const release = await githubApiRequest('/releases/latest');
+    if (!release || !release.tag_name) {
+      setState({
+        status: 'idle',
+        updateInfo: null,
+        progress: null,
+        error: null,
+        downloadedAt: null
+      });
+      if (showNoUpdateDialogForResult) showNoUpdateDialog();
+      return getStateSnapshot();
+    }
+
+    const latestVersion = normalizeVersionText(release.tag_name);
+    const currentVersion = normalizeVersionText(app.getVersion());
+
+    if (compareVersions(latestVersion, currentVersion) <= 0) {
+      setState({
+        status: 'idle',
+        updateInfo: null,
+        progress: null,
+        error: null,
+        downloadedAt: null
+      });
+      if (showNoUpdateDialogForResult) showNoUpdateDialog();
+      return getStateSnapshot();
+    }
+
+    const asset = findMacDmgAsset(release, latestVersion);
+    const updateInfo = toUpdateInfo({
+      version: latestVersion,
+      releaseNotes: release.body || '',
+      releaseName: release.name || '',
+      releaseDate: release.published_at || '',
+      manualDownload: true,
+      downloadUrl: asset?.browser_download_url || release.html_url || GITHUB_LATEST_RELEASE_URL,
+      htmlUrl: release.html_url || GITHUB_LATEST_RELEASE_URL,
+      assetName: asset?.name || '',
+      assetSize: asset?.size || 0,
+      platform: 'darwin',
+      arch: process.arch
+    });
+
+    setState({
+      status: 'available',
+      updateInfo,
+      progress: null,
+      error: null,
+      downloadedAt: null
+    });
+
+    notifyAllWindows('updater:update-available', updateInfo);
+    return getStateSnapshot();
+  } catch (err) {
+    handleUpdateError(err, 'check', 'manual');
+    return getStateSnapshot();
+  }
+};
+
 const handleUpdateError = (err, phase = state.status, source = 'event') => {
   const error = toErrorPayload(err, phase, source);
   console.warn(`Updater ${phase} failed (${source}):`, error.details || error.message);
@@ -108,6 +264,8 @@ const handleUpdateError = (err, phase = state.status, source = 'event') => {
 };
 
 const ensureUpdaterConfigured = () => {
+  if (isManualMacUpdater()) return;
+
   autoUpdater.autoDownload = false;
 
   if (updaterConfigured) return;
@@ -215,6 +373,10 @@ export function getUpdaterState() {
 }
 
 export function checkForUpdates(showNoUpdateDialogForResult = false) {
+  if (isManualMacUpdater()) {
+    return checkForManualMacUpdate(showNoUpdateDialogForResult);
+  }
+
   ensureUpdaterConfigured();
 
   if (state.status === 'downloading' || state.status === 'installing') {
@@ -241,6 +403,39 @@ export function checkForUpdates(showNoUpdateDialogForResult = false) {
 }
 
 export async function downloadAvailableUpdate({ parent } = {}) {
+  if (isManualMacUpdater()) {
+    if (!state.updateInfo?.manualDownload) {
+      const error = handleUpdateError(
+        new Error('No macOS update is currently available to download. Check for updates first.'),
+        'download',
+        'guard'
+      );
+      return { success: false, error: error.message, state: getStateSnapshot() };
+    }
+
+    const url = state.updateInfo.downloadUrl || state.updateInfo.htmlUrl || GITHUB_LATEST_RELEASE_URL;
+
+    try {
+      await shell.openExternal(url);
+      setState({
+        status: 'manual-download-opened',
+        progress: null,
+        error: null
+      });
+
+      return {
+        success: true,
+        manualDownload: true,
+        openedExternal: true,
+        downloadUrl: url,
+        state: getStateSnapshot()
+      };
+    } catch (err) {
+      const error = handleUpdateError(err, 'download', 'manual');
+      return { success: false, error: error.message, state: getStateSnapshot() };
+    }
+  }
+
   ensureUpdaterConfigured();
 
   if (state.status === 'downloaded') {
@@ -305,6 +500,15 @@ export async function downloadAvailableUpdate({ parent } = {}) {
 }
 
 export function installDownloadedUpdate() {
+  if (isManualMacUpdater()) {
+    return {
+      success: false,
+      manualDownload: true,
+      error: 'macOS updates are installed manually from the downloaded DMG.',
+      state: getStateSnapshot()
+    };
+  }
+
   ensureUpdaterConfigured();
 
   if (state.status !== 'downloaded') {

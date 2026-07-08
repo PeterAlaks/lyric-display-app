@@ -13,7 +13,7 @@ export function registerUpdaterHandlers({ getMainWindow, checkForUpdates }) {
   ipcMain.handle('updater:check', async (_event, showNoUpdateDialog = false) => {
     try {
       if (typeof checkForUpdates === 'function') {
-        checkForUpdates(showNoUpdateDialog);
+        await checkForUpdates(showNoUpdateDialog);
         return { success: true, state: getUpdaterState() };
       }
       return { success: false, error: 'checkForUpdates function not available', state: getUpdaterState() };

@@ -91,6 +91,9 @@ export default function UpdaterBridge() {
       const releaseName = info?.releaseName || '';
       const releaseNotes = info?.releaseNotes || '';
       const releaseDate = info?.releaseDate || '';
+      const isManualMacUpdate = Boolean(info?.manualDownload);
+      const assetName = info?.assetName || '';
+      const hasMacDmgAsset = Boolean(assetName);
       let formattedNotes = formatReleaseNotes(releaseNotes);
       formattedNotes = trimReleaseNotes(formattedNotes);
       formattedNotes = convertMarkdownToHTML(formattedNotes);
@@ -153,8 +156,16 @@ export default function UpdaterBridge() {
             )}
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'
               }`}>
-              Would you like to download and install this update now?
+              {isManualMacUpdate
+                ? 'macOS updates currently need to be installed manually because this build is unsigned. Download the DMG, quit LyricDisplay, open the DMG, and replace the app in Applications.'
+                : 'Would you like to download and install this update now?'}
             </p>
+            {isManualMacUpdate && hasMacDmgAsset && (
+              <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'
+                }`}>
+                Download: {assetName}
+              </p>
+            )}
           </div>
         ),
         variant: 'info',
@@ -167,7 +178,9 @@ export default function UpdaterBridge() {
             value: 'later'
           },
           {
-            label: 'Update Now',
+            label: isManualMacUpdate
+              ? (hasMacDmgAsset ? 'Download DMG' : 'Open Release Page')
+              : 'Update Now',
             variant: 'default',
             value: 'update',
             onSelect: () => {
@@ -184,6 +197,14 @@ export default function UpdaterBridge() {
                     });
                   } else if (result?.alreadyDownloaded) {
                     showUpdateReadyToast();
+                  } else if (result?.manualDownload) {
+                    showToast({
+                      title: 'Update download opened',
+                      message: 'After the DMG downloads, quit LyricDisplay and replace the app in Applications.',
+                      variant: 'info',
+                      duration: 8000,
+                      dedupeKey: 'app-update-manual-download-opened',
+                    });
                   } else if (result?.inProgress) {
                     showToast({
                       title: 'Update download already running',
