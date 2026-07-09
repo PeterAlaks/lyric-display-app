@@ -14,6 +14,7 @@ import path from 'path';
 import fs from 'fs';
 import * as userPreferences from './userPreferences.js';
 import { spawn } from 'child_process';
+import { randomBytes } from 'crypto';
 import { createNdiIpcClient } from './ndi/ipcClient.js';
 import { createOutputSettingsManager } from './ndi/outputSettings.js';
 import { createNdiInstaller } from './ndi/installer.js';
@@ -72,6 +73,10 @@ let commandSeq = 0;
 let statsInterval = null;
 let companionProtocolVersion = null; // set from hello handshake
 let companionLaunchGeneration = 0;
+let companionStarting = false;
+let companionReady = false;
+let companionBootstrapError = null;
+let companionAuthToken = '';
 
 const DEFAULT_BACKEND_PORT = Number(process.env.PORT) || 4000;
 const DEFAULT_BACKEND_HOST = '127.0.0.1';
@@ -99,7 +104,11 @@ function getNextSeq() {
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-const ipcClient = createNdiIpcClient({ getIpcConfig, getNextSeq });
+const ipcClient = createNdiIpcClient({
+  getIpcConfig,
+  getNextSeq,
+  getAuthToken: () => companionAuthToken,
+});
 const outputSettingsManager = createOutputSettingsManager({
   ndiStore,
   backendHost: DEFAULT_BACKEND_HOST,
@@ -123,6 +132,8 @@ const installer = createNdiInstaller({
 });
 
 const normalizeOutputList = outputSettingsManager.normalizeOutputList;
+const normalizeOutputKey = outputSettingsManager.normalizeOutputKey;
+const normalizeOutputConfig = outputSettingsManager.normalizeOutputConfig;
 const ensureOutputSettings = outputSettingsManager.ensureOutputSettings;
 const syncOutputsFromRegistry = outputSettingsManager.syncOutputsFromRegistry;
 
@@ -282,6 +293,31 @@ function buildOutputsPayload() {
   };
 }
 
+function createCompanionAuthToken() {
+  return randomBytes(24).toString('hex');
+}
+
+function resetCompanionRuntimeState({ clearAuthToken = true } = {}) {
+  companionStarting = false;
+  companionReady = false;
+  companionBootstrapError = null;
+  companionProtocolVersion = null;
+  if (clearAuthToken) {
+    companionAuthToken = '';
+  }
+}
+
+function notifyCompanionStatus(extra = {}) {
+  notifyAllWindows('ndi:companion-status', {
+    running: companionProcess !== null,
+    starting: companionStarting,
+    ready: companionReady,
+    bootstrapError: companionBootstrapError,
+    protocolVersion: companionProtocolVersion,
+    ...extra,
+  });
+}
+
 /**
  * Send the full output configuration to the companion.
  * Used during the initial handshake after launch.
@@ -331,7 +367,10 @@ async function requestStats() {
 
   const stats = result.responses.find((e) => e?.type === 'stats');
   if (stats) {
-    notifyAllWindows('ndi:companion-telemetry', { stats: stats.payload || null });
+    notifyAllWindows('ndi:companion-telemetry', {
+      stats: stats.payload || null,
+      health: stats.payload?.health || null,
+    });
   }
 }
 
@@ -418,10 +457,15 @@ async function launchCompanion() {
 
   const entryPath = getCompanionEntryPath();
   const ipcConfig = getIpcConfig();
+  companionAuthToken = createCompanionAuthToken();
+  companionStarting = true;
+  companionReady = false;
+  companionBootstrapError = null;
 
   if (isDev) {
     // In dev mode, launch via the running Electron binary pointing at the companion source.
     if (!fs.existsSync(entryPath)) {
+      resetCompanionRuntimeState();
       return { success: false, error: `Companion source not found at ${entryPath}` };
     }
 
@@ -431,6 +475,7 @@ async function launchCompanion() {
       companionDir,
       '--host', ipcConfig.host,
       '--port', String(ipcConfig.port),
+      '--auth-token', companionAuthToken,
       '--app-url', 'http://localhost:5173',
       '--no-hash',
     ];
@@ -449,16 +494,19 @@ async function launchCompanion() {
     } catch (error) {
       console.error('[NDI] Failed to launch companion (dev):', error);
       companionProcess = null;
+      resetCompanionRuntimeState();
       return { success: false, error: error.message };
     }
   } else {
     if (!fs.existsSync(entryPath)) {
+      resetCompanionRuntimeState();
       return { success: false, error: `NDI companion not found at ${entryPath}` };
     }
 
     const args = [
       '--host', ipcConfig.host,
       '--port', String(ipcConfig.port),
+      '--auth-token', companionAuthToken,
       '--app-url', 'http://127.0.0.1:4000',
     ];
 
@@ -473,6 +521,7 @@ async function launchCompanion() {
     } catch (error) {
       console.error('[NDI] Failed to launch companion:', error);
       companionProcess = null;
+      resetCompanionRuntimeState();
       return { success: false, error: error.message };
     }
   }
@@ -491,23 +540,24 @@ async function launchCompanion() {
     console.log('[NDI] Companion exited with code:', code);
     companionLaunchGeneration += 1;
     companionProcess = null;
-    companionProtocolVersion = null;
+    resetCompanionRuntimeState();
     destroyPersistentSocket();
     stopStatsLoop();
-    notifyAllWindows('ndi:companion-status', { running: false });
+    notifyCompanionStatus();
   });
 
   companionProcess.on('error', (err) => {
     console.error('[NDI] Companion error:', err);
     companionLaunchGeneration += 1;
     companionProcess = null;
-    companionProtocolVersion = null;
+    resetCompanionRuntimeState();
+    companionBootstrapError = err.message;
     destroyPersistentSocket();
     stopStatsLoop();
-    notifyAllWindows('ndi:companion-status', { running: false, error: err.message });
+    notifyCompanionStatus({ error: err.message });
   });
 
-  notifyAllWindows('ndi:companion-status', { running: true });
+  notifyCompanionStatus();
   startStatsLoop();
   const launchGeneration = companionLaunchGeneration + 1;
   companionLaunchGeneration = launchGeneration;
@@ -515,11 +565,24 @@ async function launchCompanion() {
 
   bootstrapCompanionSession(launchGeneration).then((success) => {
     if (!success && companionProcess && launchGeneration === companionLaunchGeneration) {
+      companionStarting = false;
+      companionReady = false;
+      companionBootstrapError = companionBootstrapError || 'Companion launched but did not finish setup';
       console.warn('[NDI] Companion launched but bootstrap did not fully complete');
+      notifyCompanionStatus();
+    } else if (success && companionProcess && launchGeneration === companionLaunchGeneration) {
+      companionStarting = false;
+      companionReady = true;
+      companionBootstrapError = null;
+      notifyCompanionStatus();
     }
   }).catch((error) => {
     if (companionProcess && launchGeneration === companionLaunchGeneration) {
+      companionStarting = false;
+      companionReady = false;
+      companionBootstrapError = error?.message || String(error);
       console.warn('[NDI] Companion bootstrap error:', error?.message || error);
+      notifyCompanionStatus();
     }
   });
 
@@ -545,8 +608,8 @@ function stopCompanion() {
   stopStatsLoop();
   destroyPersistentSocket();
   companionProcess = null;
-  companionProtocolVersion = null;
-  notifyAllWindows('ndi:companion-status', { running: false });
+  resetCompanionRuntimeState();
+  notifyCompanionStatus();
   console.log('[NDI] Companion stopped');
   return { success: true };
 }
@@ -560,20 +623,37 @@ function getCompanionStatus() {
     version: ndiStore.get('version') || '',
     protocolVersion: companionProtocolVersion,
     autoLaunch: ndiStore.get('autoLaunch') || false,
+    starting: companionStarting,
+    ready: companionReady,
+    bootstrapError: companionBootstrapError,
   };
 }
 
 // ============ Settings ============
 
 function getOutputSettings(outputKey) {
-  return outputSettingsManager.getOutputSettings(outputKey, companionProcess !== null);
+  const safeOutputKey = normalizeOutputKey(outputKey);
+  if (!safeOutputKey) {
+    return { success: false, error: 'Invalid output key' };
+  }
+  return outputSettingsManager.getOutputSettings(safeOutputKey, companionProcess !== null);
 }
 
 function setOutputSetting(outputKey, key, value) {
-  ensureOutputSettings(outputKey);
-  ndiStore.set(`outputs.${outputKey}.${key}`, value);
+  const safeOutputKey = normalizeOutputKey(outputKey);
+  if (!safeOutputKey) {
+    return { success: false, error: 'Invalid output key' };
+  }
+
+  const current = ensureOutputSettings(safeOutputKey);
+  const normalized = normalizeOutputConfig(safeOutputKey, { ...current, [key]: value });
+  if (!Object.prototype.hasOwnProperty.call(normalized, key)) {
+    return { success: false, error: 'Invalid setting key' };
+  }
+
+  ndiStore.set(`outputs.${safeOutputKey}.${key}`, normalized[key]);
   if (companionProcess) {
-    syncSingleOutputWithFallback(outputKey, 'output setting change');
+    syncSingleOutputWithFallback(safeOutputKey, 'output setting change');
   }
   return { success: true };
 }
@@ -685,12 +765,23 @@ export function registerNdiIpcHandlers() {
   ipcMain.handle('ndi:set-resolution', (_, { outputKey, resolution }) => setOutputSetting(outputKey, 'resolution', resolution));
 
   ipcMain.handle('ndi:set-custom-resolution', (_, { outputKey, width, height }) => {
-    ensureOutputSettings(outputKey);
-    ndiStore.set(`outputs.${outputKey}.resolution`, 'custom');
-    ndiStore.set(`outputs.${outputKey}.customWidth`, Math.max(320, Math.min(7680, width)));
-    ndiStore.set(`outputs.${outputKey}.customHeight`, Math.max(240, Math.min(4320, height)));
+    const safeOutputKey = normalizeOutputKey(outputKey);
+    if (!safeOutputKey) {
+      return { success: false, error: 'Invalid output key' };
+    }
+
+    const current = ensureOutputSettings(safeOutputKey);
+    const normalized = normalizeOutputConfig(safeOutputKey, {
+      ...current,
+      resolution: 'custom',
+      customWidth: width,
+      customHeight: height,
+    });
+    ndiStore.set(`outputs.${safeOutputKey}.resolution`, normalized.resolution);
+    ndiStore.set(`outputs.${safeOutputKey}.customWidth`, normalized.customWidth);
+    ndiStore.set(`outputs.${safeOutputKey}.customHeight`, normalized.customHeight);
     if (companionProcess) {
-      syncSingleOutputWithFallback(outputKey, 'custom resolution change');
+      syncSingleOutputWithFallback(safeOutputKey, 'custom resolution change');
     }
     return { success: true };
   });

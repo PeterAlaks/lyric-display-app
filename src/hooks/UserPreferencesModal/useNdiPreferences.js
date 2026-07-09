@@ -8,6 +8,9 @@ export const useNdiPreferences = ({ showModal, showToast }) => {
   const downloadProgress = useNdiStore((s) => s.downloadProgress);
   const isDownloading = useNdiStore((s) => s.isDownloading);
   const companionRunning = useNdiStore((s) => s.companionRunning);
+  const companionStarting = useNdiStore((s) => s.companionStarting);
+  const companionReady = useNdiStore((s) => s.companionReady);
+  const companionBootstrapError = useNdiStore((s) => s.companionBootstrapError);
   const ndiAutoLaunch = useNdiStore((s) => s.autoLaunch);
   const ndiUpdateInfo = useNdiStore((s) => s.updateInfo);
   const ndiCheckingUpdate = useNdiStore((s) => s.checkingUpdate);
@@ -162,6 +165,9 @@ export const useNdiPreferences = ({ showModal, showToast }) => {
 
   return {
     companionRunning,
+    companionStarting,
+    companionReady,
+    companionBootstrapError,
     downloadProgress,
     handleNdiAutoLaunchToggle,
     handleNdiCancelDownload,

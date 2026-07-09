@@ -5,6 +5,9 @@ import { Switch } from '@/components/ui/switch';
 
 const NdiPreferencesSection = ({
   companionRunning,
+  companionStarting,
+  companionReady,
+  companionBootstrapError,
   darkMode,
   downloadProgress,
   handleNdiAutoLaunchToggle,
@@ -62,10 +65,26 @@ const NdiPreferencesSection = ({
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${companionRunning ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
-            {companionRunning ? 'Running' : 'Stopped'}
+            {companionStarting ? 'Starting' : companionRunning ? 'Running' : 'Stopped'}
+          </span>
+        )}
+        {ndiStatus.installed && companionRunning && (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionReady
+            ? darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700'
+            : darkMode ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${companionReady ? 'bg-green-400' : 'bg-amber-400'}`} />
+            {companionReady ? 'Ready' : 'Syncing'}
           </span>
         )}
       </div>
+
+      {ndiStatus.installed && companionBootstrapError && (
+        <div className={`rounded-lg border p-3 text-xs ${darkMode ? 'border-amber-600/30 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+          {companionBootstrapError}
+        </div>
+      )}
 
       {ndiStatus.installed && companionRunning && (
         <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}>

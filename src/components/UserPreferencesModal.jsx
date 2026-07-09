@@ -109,6 +109,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
   const {
     companionRunning,
+    companionStarting,
+    companionReady,
+    companionBootstrapError,
     downloadProgress,
     handleNdiAutoLaunchToggle,
     handleNdiCancelDownload,
@@ -836,6 +839,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <NdiPreferencesSection
             companionRunning={companionRunning}
+            companionStarting={companionStarting}
+            companionReady={companionReady}
+            companionBootstrapError={companionBootstrapError}
             darkMode={darkMode}
             downloadProgress={downloadProgress}
             handleNdiAutoLaunchToggle={handleNdiAutoLaunchToggle}
@@ -986,6 +992,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       activeCategoryBg={activeCategoryBg}
       categories={CATEGORIES}
       companionRunning={companionRunning}
+      companionStarting={companionStarting}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}

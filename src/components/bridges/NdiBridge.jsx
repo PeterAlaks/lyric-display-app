@@ -8,7 +8,7 @@ import useNdiStore from '../../context/NdiStore';
 
 export default function NdiBridge() {
   const initialize = useNdiStore((s) => s.initialize);
-  const setCompanionRunning = useNdiStore((s) => s.setCompanionRunning);
+  const setCompanionStatus = useNdiStore((s) => s.setCompanionStatus);
   const setDownloadProgress = useNdiStore((s) => s.setDownloadProgress);
   const setTelemetry = useNdiStore((s) => s.setTelemetry);
   const setUpdateInfo = useNdiStore((s) => s.setUpdateInfo);
@@ -26,9 +26,7 @@ export default function NdiBridge() {
 
     if (api.onCompanionStatus) {
       cleanups.push(api.onCompanionStatus((status) => {
-        if (typeof status?.running === 'boolean') {
-          setCompanionRunning(status.running);
-        }
+        setCompanionStatus(status || {});
       }));
     }
 

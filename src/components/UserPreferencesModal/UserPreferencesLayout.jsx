@@ -8,6 +8,7 @@ const UserPreferencesLayout = ({
   categories,
   children,
   companionRunning,
+  companionStarting,
   darkMode,
   handleNdiCheckForUpdate,
   handleNdiLaunch,
@@ -56,9 +57,9 @@ const UserPreferencesLayout = ({
             <div className="flex items-center gap-2 shrink-0">
               {!companionRunning ? (
                 <Tooltip content="Launch the NDI companion process" side="bottom">
-                  <Button size="sm" onClick={handleNdiLaunch} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
-                    <Power className="w-3.5 h-3.5 mr-1.5" />
-                    Launch
+                  <Button size="sm" onClick={handleNdiLaunch} disabled={companionStarting} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                    {companionStarting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Power className="w-3.5 h-3.5 mr-1.5" />}
+                    {companionStarting ? 'Starting' : 'Launch'}
                   </Button>
                 </Tooltip>
               ) : (
