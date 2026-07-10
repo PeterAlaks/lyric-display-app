@@ -1,12 +1,18 @@
 import { ipcMain } from 'electron';
 import { loadSystemFonts } from '../systemFonts.js';
 import { getLocalIPAddress } from '../utils.js';
+import { isDev } from '../paths.js';
+import { assertTrustedAppRenderer, normalizeBrowserUrl } from './senderValidation.js';
 
 /**
  * Register miscellaneous IPC handlers
  * Handles fonts, IP address, and in-app browser
  */
 export function registerMiscHandlers({ openInAppBrowser }) {
+  const senderOptions = {
+    development: isDev,
+    backendPort: Number(process.env.PORT) || 4000,
+  };
   
   ipcMain.handle('fonts:list', async () => {
     try {
@@ -20,7 +26,9 @@ export function registerMiscHandlers({ openInAppBrowser }) {
 
   ipcMain.handle('get-local-ip', () => getLocalIPAddress());
 
-  ipcMain.handle('open-in-app-browser', (_event, url) => {
-    openInAppBrowser?.(url || 'https://www.google.com');
+  ipcMain.handle('open-in-app-browser', (event, url) => {
+    assertTrustedAppRenderer(event, 'open-in-app-browser', senderOptions);
+    openInAppBrowser?.(normalizeBrowserUrl(url));
+    return { success: true };
   });
 }

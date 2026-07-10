@@ -28,7 +28,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeListener(channel, listener);
     }
   },
-  getAdminKey: () => ipcRenderer.invoke('get-admin-key'),
   getJoinCode: () => ipcRenderer.invoke('get-join-code'),
   getDesktopJWT: (payload) => ipcRenderer.invoke('get-desktop-jwt', payload),
   getConnectionDiagnostics: () => ipcRenderer.invoke('get-connection-diagnostics'),

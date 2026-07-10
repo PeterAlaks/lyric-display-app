@@ -1,15 +1,17 @@
 import { BrowserWindow, BrowserView, ipcMain, shell, nativeTheme } from 'electron';
 import { isDev, resolveProductionPath } from './paths.js';
+import { isExpectedWindowSender, normalizeBrowserUrl } from './ipc/senderValidation.js';
 
 let inAppBrowserWindow = null;
 let inAppBrowserView = null;
 
 export function openInAppBrowser(initialUrl) {
   try {
+    const targetUrl = normalizeBrowserUrl(initialUrl);
     if (inAppBrowserWindow && !inAppBrowserWindow.isDestroyed()) {
       inAppBrowserWindow.focus();
       if (inAppBrowserView && !inAppBrowserView.webContents.isDestroyed()) {
-        inAppBrowserView.webContents.loadURL(initialUrl || 'https://www.google.com');
+        inAppBrowserView.webContents.loadURL(targetUrl);
         return;
       }
     }
@@ -29,10 +31,10 @@ export function openInAppBrowser(initialUrl) {
     inAppBrowserView.setBounds({ x: 0, y: TOOLBAR_HEIGHT, width: winW, height: winH - TOOLBAR_HEIGHT });
     inAppBrowserView.setAutoResize({ width: true, height: true });
     inAppBrowserView.webContents.setWindowOpenHandler(({ url }) => {
-      try { inAppBrowserView.webContents.loadURL(url); } catch (e) { console.error(e); }
+      try { inAppBrowserView.webContents.loadURL(normalizeBrowserUrl(url)); } catch (e) { console.error(e); }
       return { action: 'deny' };
     });
-    inAppBrowserView.webContents.loadURL(initialUrl || 'https://www.google.com');
+    inAppBrowserView.webContents.loadURL(targetUrl);
 
     inAppBrowserWindow.webContents.on('before-input-event', (event, input) => {
       try {
@@ -206,7 +208,8 @@ export function openInAppBrowser(initialUrl) {
 }
 
 export function registerInAppBrowserIpc() {
-  ipcMain.on('browser-nav', (_event, action, value) => {
+  ipcMain.on('browser-nav', (event, action, value) => {
+    if (!isExpectedWindowSender(event, inAppBrowserWindow)) return;
     if (!inAppBrowserView || !inAppBrowserView.webContents) return;
     try {
       switch (action) {
@@ -220,7 +223,7 @@ export function registerInAppBrowserIpc() {
           inAppBrowserView.webContents.reload();
           break;
         case 'navigate':
-          if (value) inAppBrowserView.webContents.loadURL(value);
+          if (value) inAppBrowserView.webContents.loadURL(normalizeBrowserUrl(value));
           break;
         default:
           break;
@@ -230,11 +233,12 @@ export function registerInAppBrowserIpc() {
     }
   });
 
-  ipcMain.on('browser-open-external', () => {
+  ipcMain.on('browser-open-external', (event) => {
+    if (!isExpectedWindowSender(event, inAppBrowserWindow)) return;
     if (!inAppBrowserView || !inAppBrowserView.webContents) return;
     try {
       const url = inAppBrowserView.webContents.getURL();
-      if (url) shell.openExternal(url);
+      if (url) shell.openExternal(normalizeBrowserUrl(url));
     } catch (e) {
       console.error('browser-open-external error:', e);
     }
