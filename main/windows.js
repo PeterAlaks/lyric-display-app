@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import path from 'path';
 import { isDev, resolveProductionPath, appRoot } from './paths.js';
 import { getLogPaths, writeLog } from './logging.js';
+import { requestRendererModal } from './modalBridge.js';
 
 const MEMORY_LOG_INTERVAL_MS = 60_000;
 const RENDERER_SNAPSHOT_TIMEOUT_MS = 1_500;
@@ -128,9 +129,45 @@ async function getRendererRuntimeSnapshot(webContents) {
 }
 
 function shouldRecoverRenderer(route, projection, details) {
-  if (projection) return false;
+  if (!RECOVERABLE_RENDERER_REASONS.has(details?.reason)) return false;
+  if (projection) return true;
   const isControlRoute = route === '/' || route.startsWith('/new-song') || route.startsWith('/timer-control') || route.startsWith('/obs-setup');
-  return isControlRoute && RECOVERABLE_RENDERER_REASONS.has(details?.reason);
+  return isControlRoute;
+}
+
+function showProjectionRecoveryAlert(win, route, details, attemptCount) {
+  if (win.__projectionRecoveryAlertPending) return;
+  win.__projectionRecoveryAlertPending = true;
+
+  requestRendererModal({
+    title: 'Projection output stopped',
+    description: `The ${route || 'projection'} renderer crashed repeatedly and automatic recovery was paused to prevent a crash loop. The projected output may be frozen or blank.`,
+    body: `Reason: ${details?.reason || 'unknown'} · Exit code: ${details?.exitCode ?? 'unknown'} · ${attemptCount} recovery attempts`,
+    variant: 'error',
+    dedupeKey: `projection-recovery:${route || 'unknown'}`,
+    dismissible: true,
+    actions: [
+      { label: 'Dismiss', value: 'dismiss', variant: 'outline' },
+      { label: 'Retry Projection', value: 'retry', variant: 'destructive', autoFocus: true },
+    ],
+  }, {
+    timeout: false,
+    fallback: () => ({ dismissed: true }),
+  }).then((result) => {
+    if (result?.data !== 'retry' || !win || win.isDestroyed()) return;
+    win.__rendererRecoveryAttempts = [];
+    try {
+      win.reload();
+    } catch (error) {
+      console.error('[Window] Failed to retry projection renderer:', route, error);
+    }
+  }).catch((error) => {
+    console.error('[Window] Failed to show projection recovery alert:', route, error);
+  }).finally(() => {
+    if (win && !win.isDestroyed()) {
+      win.__projectionRecoveryAlertPending = false;
+    }
+  });
 }
 
 function escapeHtml(value) {
@@ -275,7 +312,11 @@ function attachRendererDiagnostics(win, route, { projection = false } = {}) {
         attempts: recovery.attempts.length,
         windowMs: RECOVERY_WINDOW_MS,
       });
-      showRendererRecoveryFallback(win, route, details, recovery.attempts.length);
+      if (projection) {
+        showProjectionRecoveryAlert(win, route, details, recovery.attempts.length);
+      } else {
+        showRendererRecoveryFallback(win, route, details, recovery.attempts.length);
+      }
       return;
     }
 

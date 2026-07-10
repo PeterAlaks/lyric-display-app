@@ -77,6 +77,9 @@ let companionStarting = false;
 let companionReady = false;
 let companionBootstrapError = null;
 let companionAuthToken = '';
+let companionStopRequested = false;
+let companionRestartTimer = null;
+let companionRestartAttempts = [];
 
 const DEFAULT_BACKEND_PORT = Number(process.env.PORT) || 4000;
 const DEFAULT_BACKEND_HOST = '127.0.0.1';
@@ -85,6 +88,68 @@ const COMPANION_BOOTSTRAP_BASE_DELAY_MS = 250;
 const COMPANION_BOOTSTRAP_MAX_DELAY_MS = 2000;
 const COMPANION_SYNC_RETRY_ATTEMPTS = 6;
 const COMPANION_SYNC_RETRY_DELAY_MS = 350;
+const COMPANION_RESTART_WINDOW_MS = 5 * 60_000;
+const COMPANION_RESTART_DELAY_MS = 2000;
+const MAX_COMPANION_RESTARTS = 3;
+
+function scheduleCompanionRestart(reason) {
+  if (companionStopRequested || companionRestartTimer) return;
+
+  const now = Date.now();
+  companionRestartAttempts = companionRestartAttempts.filter((timestamp) => (
+    now - timestamp < COMPANION_RESTART_WINDOW_MS
+  ));
+
+  if (companionRestartAttempts.length >= MAX_COMPANION_RESTARTS) {
+    console.error('[NDI] Companion restart limit reached:', reason);
+    notifyCompanionStatus({
+      unexpectedExit: true,
+      restartExhausted: true,
+      error: reason,
+      restartAttempt: companionRestartAttempts.length,
+      maxRestartAttempts: MAX_COMPANION_RESTARTS,
+    });
+    return;
+  }
+
+  companionRestartAttempts.push(now);
+  const restartAttempt = companionRestartAttempts.length;
+  notifyCompanionStatus({
+    unexpectedExit: true,
+    restartScheduled: true,
+    restartAttempt,
+    maxRestartAttempts: MAX_COMPANION_RESTARTS,
+    error: reason,
+  });
+
+  companionRestartTimer = setTimeout(async () => {
+    companionRestartTimer = null;
+    if (companionStopRequested || companionProcess) return;
+
+    const result = await launchCompanion();
+    if (!result?.success) {
+      scheduleCompanionRestart(result?.error || 'NDI companion relaunch failed');
+    }
+  }, COMPANION_RESTART_DELAY_MS);
+  companionRestartTimer.unref?.();
+}
+
+function restartAfterBootstrapFailure(reason) {
+  const failedProcess = companionProcess;
+  companionLaunchGeneration += 1;
+  companionProcess = null;
+  resetCompanionRuntimeState();
+  companionBootstrapError = reason;
+  destroyPersistentSocket();
+  stopStatsLoop();
+  notifyCompanionStatus({ unexpectedExit: true, error: reason });
+  try {
+    failedProcess?.kill();
+  } catch (error) {
+    console.warn('[NDI] Failed to stop companion after bootstrap failure:', error);
+  }
+  scheduleCompanionRestart(reason);
+}
 
 // ============ IPC Helpers ============
 
@@ -451,6 +516,7 @@ async function bootstrapCompanionSession(launchGeneration) {
 }
 
 async function launchCompanion() {
+  companionStopRequested = false;
   if (companionProcess) {
     return { success: true, message: 'Already running' };
   }
@@ -526,6 +592,8 @@ async function launchCompanion() {
     }
   }
 
+  const launchedProcess = companionProcess;
+
   companionProcess.stdout.on('data', (data) => {
     const msg = data.toString().trim();
     if (msg) console.log(`[NDI Companion] ${msg}`);
@@ -538,23 +606,33 @@ async function launchCompanion() {
 
   companionProcess.on('exit', (code) => {
     console.log('[NDI] Companion exited with code:', code);
+    if (companionProcess !== launchedProcess) return;
+    const unexpectedExit = !companionStopRequested;
     companionLaunchGeneration += 1;
     companionProcess = null;
     resetCompanionRuntimeState();
     destroyPersistentSocket();
     stopStatsLoop();
-    notifyCompanionStatus();
+    notifyCompanionStatus({ unexpectedExit, exitCode: code });
+    if (unexpectedExit) {
+      scheduleCompanionRestart(`NDI companion exited with code ${code ?? 'unknown'}`);
+    }
   });
 
   companionProcess.on('error', (err) => {
     console.error('[NDI] Companion error:', err);
+    if (companionProcess !== launchedProcess) return;
+    const unexpectedExit = !companionStopRequested;
     companionLaunchGeneration += 1;
     companionProcess = null;
     resetCompanionRuntimeState();
     companionBootstrapError = err.message;
     destroyPersistentSocket();
     stopStatsLoop();
-    notifyCompanionStatus({ error: err.message });
+    notifyCompanionStatus({ error: err.message, unexpectedExit });
+    if (unexpectedExit) {
+      scheduleCompanionRestart(err.message || 'NDI companion process error');
+    }
   });
 
   notifyCompanionStatus();
@@ -565,24 +643,22 @@ async function launchCompanion() {
 
   bootstrapCompanionSession(launchGeneration).then((success) => {
     if (!success && companionProcess && launchGeneration === companionLaunchGeneration) {
-      companionStarting = false;
-      companionReady = false;
-      companionBootstrapError = companionBootstrapError || 'Companion launched but did not finish setup';
+      const reason = companionBootstrapError || 'Companion launched but did not finish setup';
       console.warn('[NDI] Companion launched but bootstrap did not fully complete');
-      notifyCompanionStatus();
+      restartAfterBootstrapFailure(reason);
     } else if (success && companionProcess && launchGeneration === companionLaunchGeneration) {
+      const recovered = companionRestartAttempts.length > 0;
       companionStarting = false;
       companionReady = true;
       companionBootstrapError = null;
-      notifyCompanionStatus();
+      companionRestartAttempts = [];
+      notifyCompanionStatus({ recovered });
     }
   }).catch((error) => {
     if (companionProcess && launchGeneration === companionLaunchGeneration) {
-      companionStarting = false;
-      companionReady = false;
-      companionBootstrapError = error?.message || String(error);
-      console.warn('[NDI] Companion bootstrap error:', error?.message || error);
-      notifyCompanionStatus();
+      const reason = error?.message || String(error);
+      console.warn('[NDI] Companion bootstrap error:', reason);
+      restartAfterBootstrapFailure(reason);
     }
   });
 
@@ -591,6 +667,13 @@ async function launchCompanion() {
 }
 
 function stopCompanion() {
+  companionStopRequested = true;
+  companionRestartAttempts = [];
+  if (companionRestartTimer) {
+    clearTimeout(companionRestartTimer);
+    companionRestartTimer = null;
+  }
+
   if (!companionProcess) {
     return { success: true, message: 'Not running' };
   }

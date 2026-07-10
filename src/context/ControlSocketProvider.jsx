@@ -163,14 +163,6 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         const canConnect = connectionManager.canAttemptConnection(clientId.current);
 
         if (!canConnect.allowed) {
-            if (canConnect.reason === 'max_attempts_reached') {
-                logError('Max connection attempts reached');
-                setConnectionStatus('error');
-                setAuthStatus('failed');
-                clearBackoffWarning();
-                return;
-            }
-
             if (canConnect.reason === 'already_connecting') {
                 return;
             }
@@ -593,6 +585,27 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
             }, 100);
         });
     }, [cleanupSocket, connectSocketInternal, clearBackoffWarning, setAuthStatus]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const recoverConnection = () => {
+            if (connectionStatus === 'connected' || connectionStatus === 'connecting') return;
+            forceReconnect();
+        };
+        const recoverWhenVisible = () => {
+            if (document.visibilityState === 'visible') recoverConnection();
+        };
+
+        window.addEventListener('online', recoverConnection);
+        window.addEventListener('pageshow', recoverConnection);
+        document.addEventListener('visibilitychange', recoverWhenVisible);
+        return () => {
+            window.removeEventListener('online', recoverConnection);
+            window.removeEventListener('pageshow', recoverConnection);
+            document.removeEventListener('visibilitychange', recoverWhenVisible);
+        };
+    }, [connectionStatus, forceReconnect]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;

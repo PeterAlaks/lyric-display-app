@@ -14,7 +14,7 @@ import { handleDisplayChange } from './main/displayDetection.js';
 import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
-import { registerObsDockPairingToken, setBackendMessageHandler } from './main/backend.js';
+import { registerObsDockPairingToken, setBackendMessageHandler, setBackendStatusHandler } from './main/backend.js';
 import { relaunchInDesktopMode, relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
 import * as userPreferences from './main/userPreferences.js';
 import { initFileLogging } from './main/logging.js';
@@ -433,6 +433,33 @@ setBackendMessageHandler((message) => {
     }, 250);
     return { success: true };
   }
+});
+
+setBackendStatusHandler((status) => {
+  if (status?.state !== 'failed' || isHeadlessMode) return;
+
+  requestRendererModal({
+    title: 'Backend service stopped',
+    description: 'LyricDisplay could not recover its local backend after repeated attempts. Browser Sources and control synchronization may now be stale.',
+    body: `Reason: ${status.reason || 'unknown'} · Attempts: ${status.attempts || 0}/${status.maxAttempts || 0}`,
+    variant: 'error',
+    dedupeKey: 'backend-restart-exhausted',
+    dismissible: true,
+    actions: [
+      { label: 'Dismiss', value: 'dismiss', variant: 'outline' },
+      { label: 'Restart LyricDisplay', value: 'restart', variant: 'destructive', autoFocus: true },
+    ],
+  }, {
+    timeout: false,
+    fallback: () => ({ dismissed: true }),
+  }).then((result) => {
+    if (result?.data !== 'restart') return;
+    app.relaunch();
+    app.isQuitting = true;
+    app.quit();
+  }).catch((error) => {
+    console.error('[Backend] Failed to show restart exhaustion alert:', error);
+  });
 });
 
 app.whenReady().then(async () => {

@@ -1,5 +1,7 @@
-// Check if verbose logging is enabled via environment or user preferences
-let isVerbose = Boolean(import.meta.env.DEV || import.meta.env.MODE === 'development' || import.meta.env.VITE_ENABLE_VERBOSE_LOGS === 'true');
+// Check if verbose logging is enabled via environment or user preferences.
+// `import.meta.env` is supplied by Vite and is absent in direct Node-based tests.
+const buildEnv = import.meta.env || {};
+let isVerbose = Boolean(buildEnv.DEV || buildEnv.MODE === 'development' || buildEnv.VITE_ENABLE_VERBOSE_LOGS === 'true');
 let userDebugLoggingEnabled = false;
 
 /**

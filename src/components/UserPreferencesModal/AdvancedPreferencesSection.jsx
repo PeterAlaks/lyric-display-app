@@ -370,7 +370,7 @@ const AdvancedPreferencesSection = ({
     </div>
 
     <div className="space-y-2">
-      <label className={preferenceFieldLabelClass}>Max Connection Attempts</label>
+      <label className={preferenceFieldLabelClass}>Connection Attempts per Retry Cycle</label>
       <Input
         type="number"
         min="3"
@@ -386,6 +386,7 @@ const AdvancedPreferencesSection = ({
         onKeyDown={handleNumberInputKeyDown}
         className={inputClass}
       />
+      <p className={`text-xs ${mutedClass}`}>After each cycle, LyricDisplay waits briefly and continues retrying so long outages recover automatically.</p>
     </div>
 
     <Button

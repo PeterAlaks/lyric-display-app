@@ -90,6 +90,42 @@ export async function handleDisplayChange(changeType, display, requestRendererMo
       console.warn('[DisplayDetection] Falling back to display event payload:', error);
       await showDisplayDetectionModal(display, false, requestRendererModal);
     }
+    return;
+  }
+
+  if (changeType === 'removed') {
+    const outputKey = display?.removedAssignment?.outputKey || null;
+    const displayName = display?.label || `Display ${display?.id ?? ''}`.trim();
+    const assignmentText = outputKey
+      ? ` It was assigned to ${outputKey.replace(/^output/i, 'Output ')}.`
+      : '';
+
+    const result = await requestRendererModal({
+      title: 'Display disconnected',
+      description: `${displayName} is no longer available.${assignmentText} Verify the remaining projection windows before continuing.`,
+      variant: 'warning',
+      dedupeKey: `display-removed:${display?.id ?? 'unknown'}`,
+      dismissible: true,
+      actions: [
+        { label: 'Dismiss', value: 'dismiss', variant: 'outline' },
+        { label: 'Review Output Routing', value: 'review', variant: 'default', autoFocus: true },
+      ],
+    }, {
+      timeout: false,
+      fallback: () => ({ dismissed: true }),
+    }).catch((error) => {
+      console.error('[DisplayDetection] Failed to show removal alert:', error);
+      return null;
+    });
+
+    if (result?.data !== 'review') return;
+
+    try {
+      const { getAllDisplays } = await import('./displayManager.js');
+      await showDisplayDetectionModal(getAllDisplays(), false, requestRendererModal, true);
+    } catch (error) {
+      console.error('[DisplayDetection] Failed to open output routing after removal:', error);
+    }
   }
 }
 

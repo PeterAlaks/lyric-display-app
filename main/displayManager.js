@@ -100,9 +100,16 @@ function handleDisplayRemoved(event, oldDisplay) {
   const currentDisplays = screen.getAllDisplays();
   lastDisplayCount = currentDisplays.length;
 
+  const removedAssignment = getDisplayAssignment(oldDisplay.id);
   removeDisplayAssignment(oldDisplay.id);
 
-  notifyDisplayChange('removed', oldDisplay);
+  notifyDisplayChange('removed', {
+    id: oldDisplay.id,
+    label: getDisplayLabel(oldDisplay),
+    bounds: oldDisplay.bounds,
+    internal: oldDisplay.internal,
+    removedAssignment,
+  });
 }
 
 function notifyDisplayChange(changeType, display) {

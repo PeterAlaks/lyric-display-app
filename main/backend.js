@@ -10,6 +10,7 @@ let backendStopRequested = false;
 let backendRestartTimer = null;
 let lastStartOptions = {};
 let backendMessageHandler = null;
+let backendStatusHandler = null;
 const backendAppSessionId = randomUUID();
 
 const BACKEND_TAIL_LIMIT = 64 * 1024;
@@ -18,6 +19,15 @@ const BACKEND_SOFT_STARTUP_TIMEOUT_MS = 30_000;
 const BACKEND_HARD_STARTUP_TIMEOUT_MS = 120_000;
 const MAX_BACKEND_RESTARTS = 3;
 let backendRestartAttempts = [];
+
+function notifyBackendStatus(payload) {
+  if (typeof backendStatusHandler !== 'function') return;
+  try {
+    backendStatusHandler({ timestamp: Date.now(), ...payload });
+  } catch (error) {
+    console.warn('[Backend] Status handler failed:', error);
+  }
+}
 
 function appendTail(current, chunk) {
   const next = `${current}${Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk)}`;
@@ -42,6 +52,12 @@ function scheduleBackendRestart(reason) {
       attempts: attempts.length,
       windowMs: BACKEND_RESTART_WINDOW_MS,
     });
+    notifyBackendStatus({
+      state: 'failed',
+      reason,
+      attempts: attempts.length,
+      maxAttempts: MAX_BACKEND_RESTARTS,
+    });
     return;
   }
 
@@ -53,6 +69,13 @@ function scheduleBackendRestart(reason) {
     attempt: backendRestartAttempts.length,
     maxAttempts: MAX_BACKEND_RESTARTS,
     windowMs: BACKEND_RESTART_WINDOW_MS,
+  });
+  notifyBackendStatus({
+    state: 'restarting',
+    reason,
+    attempt: backendRestartAttempts.length,
+    maxAttempts: MAX_BACKEND_RESTARTS,
+    delayMs,
   });
 
   backendRestartTimer = setTimeout(() => {
@@ -73,10 +96,18 @@ async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
 
   while (attempts < maxAttempts) {
     try {
-      const response = await fetch('http://127.0.0.1:4000/api/health/ready', {
-        method: 'GET',
-        timeout: 2000,
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+      timeout.unref?.();
+      let response;
+      try {
+        response = await fetch('http://127.0.0.1:4000/api/health/ready', {
+          method: 'GET',
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -176,6 +207,10 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       }
       isResolved = true;
       clearStartupTimers();
+      notifyBackendStatus({
+        state: backendRestartAttempts.length > 0 ? 'recovered' : 'running',
+        attempts: backendRestartAttempts.length,
+      });
       resolve();
       return true;
     };
@@ -343,6 +378,10 @@ export function registerObsDockPairingToken(token) {
 
 export function setBackendMessageHandler(handler) {
   backendMessageHandler = typeof handler === 'function' ? handler : null;
+}
+
+export function setBackendStatusHandler(handler) {
+  backendStatusHandler = typeof handler === 'function' ? handler : null;
 }
 
 export function stopBackend() {

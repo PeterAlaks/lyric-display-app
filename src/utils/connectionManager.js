@@ -1,5 +1,5 @@
 // src/utils/connectionManager.js - Centralized connection management for sockets
-import { logDebug, logWarn } from './logger';
+import { logDebug, logWarn } from './logger.js';
 
 // Default settings - can be overridden by user preferences
 let advancedSettings = {
@@ -7,6 +7,8 @@ let advancedSettings = {
   heartbeatInterval: 30000,
   maxConnectionAttempts: 10,
 };
+
+export const ATTEMPT_LIMIT_COOLDOWN_MS = 30000;
 
 /**
  * Load advanced settings from user preferences
@@ -36,7 +38,7 @@ export function getAdvancedSettings() {
   return { ...advancedSettings };
 }
 
-class ConnectionManager {
+export class ConnectionManager {
   constructor() {
     this.connections = new Map();
     this.globalBackoffState = {
@@ -104,6 +106,7 @@ class ConnectionManager {
         connectionPromise: null,
         maxAttempts: advancedSettings.maxConnectionAttempts,
         isConnecting: false,
+        attemptLimitReachedAt: null,
       });
     }
     return this.connections.get(clientId);
@@ -118,7 +121,17 @@ class ConnectionManager {
     const state = this.getConnectionState(clientId);
 
     if (state.attemptCount >= state.maxAttempts) {
-      return { allowed: false, reason: 'max_attempts_reached', remainingMs: 0 };
+      const now = Date.now();
+      state.attemptLimitReachedAt ||= now;
+      const remainingMs = Math.max(0, ATTEMPT_LIMIT_COOLDOWN_MS - (now - state.attemptLimitReachedAt));
+      if (remainingMs > 0) {
+        return { allowed: false, reason: 'attempt_limit_backoff', remainingMs };
+      }
+
+      logWarn(`Connection attempt cycle exhausted for ${clientId}; starting a new retry cycle`);
+      state.attemptCount = 0;
+      state.attemptLimitReachedAt = null;
+      state.backoffUntil = null;
     }
 
     if (state.isConnecting) {
@@ -151,6 +164,7 @@ class ConnectionManager {
 
     state.status = 'connected';
     state.attemptCount = 0;
+    state.attemptLimitReachedAt = null;
     state.backoffUntil = null;
     state.isConnecting = false;
     state.connectionPromise = null;
@@ -214,6 +228,7 @@ class ConnectionManager {
         backoffRemaining: remaining,
         lastAttemptTime: state.lastAttemptTime,
         nextAttemptAt: state.backoffUntil,
+        attemptLimitReachedAt: state.attemptLimitReachedAt,
       };
     });
 
