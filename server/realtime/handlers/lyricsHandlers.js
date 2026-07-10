@@ -15,7 +15,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
       return;
     }
 
-    if (!isPlainObject(payload) || !isValidLineIndex(payload.index)) {
+    if (!isPlainObject(payload) || !isValidLineIndex(payload.index, state.currentLyrics.length)) {
       socket.emit('permissionError', 'Invalid line update payload');
       return;
     }

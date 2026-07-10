@@ -387,10 +387,14 @@ components:
       name: lineUpdate
       payload:
         type: object
+        required: [index]
         properties:
           index:
-            type: integer
-            description: Index of the selected line
+            description: Zero-based index within the active lyrics, or null to clear the selection.
+            oneOf:
+              - type: integer
+                minimum: 0
+              - type: 'null'
       x-permissions: ['output:control']
     outputToggle:
       name: outputToggle
@@ -473,7 +477,8 @@ components:
         properties:
           output:
             type: string
-            enum: ['output1', 'output2']
+            pattern: '^output'
+            description: Optional compatibility field; when present it must match the authenticated output client type.
           metrics:
             type: object
             properties:
@@ -489,10 +494,10 @@ components:
                 type: integer
       description: >
         Output instances publish autosizer and viewport metrics.
-        Only accepted from output1 or output2 client types (enforced by
-        client-type check, not permission scope).
+        Metrics are recorded under the authenticated output client type;
+        clients cannot publish metrics for another output.
       x-permissions: []
-      x-client-types: ['output1', 'output2']
+      x-client-types: ['output*']
     fileNameUpdate:
       name: fileNameUpdate
       payload:
@@ -502,49 +507,58 @@ components:
       name: lyricsDraftSubmit
       payload:
         type: object
+        required: [processedLines]
         properties:
           title:
             type: string
+            maxLength: 256
           rawText:
             type: string
           processedLines:
             type: array
+            maxItems: 10000
             items:
               $ref: '#/components/schemas/LyricLine'
-      description: Controllers submit drafts; desktop must approve.
+      description: Controllers submit bounded drafts; a desktop/admin client must approve them within ten minutes.
       x-permissions: ['lyrics:draft']
     lyricsDraftApprove:
       name: lyricsDraftApprove
       payload:
         type: object
+        required: [draftId, processedLines]
         properties:
           draftId:
             type: string
           title:
             type: string
+            maxLength: 256
           rawText:
             type: string
           processedLines:
             type: array
+            maxItems: 10000
             items:
               $ref: '#/components/schemas/LyricLine'
       description: |
         Desktop client approves a pending draft. On success the server emits
         lyricsLoad, fileNameUpdate, lyricsSectionsUpdate to all clients, and
         optionally setlistLoadSuccess (with origin 'draft') if rawText is present.
-      x-permissions: ['lyrics:write']
+      x-permissions: ['lyrics:draft:approve']
     lyricsDraftReject:
       name: lyricsDraftReject
       payload:
         type: object
+        required: [draftId]
         properties:
           draftId:
             type: string
           title:
             type: string
+            maxLength: 256
           reason:
             type: string
-      x-permissions: ['lyrics:write']
+            maxLength: 1000
+      x-permissions: ['lyrics:draft:approve']
     autoplayStateUpdate:
       name: autoplayStateUpdate
       payload:

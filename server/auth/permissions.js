@@ -4,6 +4,7 @@ export function getClientPermissions(clientType) {
   const permissions = {
     desktop: [
       'lyrics:read', 'lyrics:write', 'lyrics:delete',
+      'lyrics:draft:approve',
       'setlist:read', 'setlist:write', 'setlist:delete',
       'output:control', 'settings:write', 'admin:full'
     ],

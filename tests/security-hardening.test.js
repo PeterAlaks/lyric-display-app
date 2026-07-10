@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MAX_SETLIST_ITEMS } from '../shared/setlistLimits.js';
+import { getClientPermissions } from '../server/auth/permissions.js';
 import { localhostOnly } from '../server/middleware/localhostOnly.js';
+import { registerDraftHandlers } from '../server/realtime/handlers/draftHandlers.js';
 import { registerLiveSafetyHandlers } from '../server/realtime/handlers/liveSafetyHandlers.js';
 import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
@@ -60,6 +62,177 @@ test('localhostOnly allows loopback requests', () => {
 
   assert.equal(nextCalled, true);
   assert.equal(res.statusCode, 200);
+});
+
+test('only desktop or admin permissions can approve lyrics drafts', () => {
+  assert.equal(getClientPermissions('desktop').includes('lyrics:draft:approve'), true);
+  assert.equal(getClientPermissions('web').includes('lyrics:draft:approve'), false);
+  assert.equal(getClientPermissions('mobile').includes('lyrics:draft:approve'), false);
+  assert.equal(getClientPermissions('obsDock').includes('lyrics:draft:approve'), false);
+});
+
+test('ordinary lyric write permission cannot approve a draft', () => {
+  const previousLyrics = state.currentLyrics;
+  state.currentLyrics = ['Existing live lyric'];
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+    };
+
+    registerDraftHandlers({
+      io: { emit() {} },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'lyrics:write',
+      clientType: 'web',
+      deviceId: 'web-device',
+      sessionId: 'web-session',
+    });
+
+    handlers.get('lyricsDraftApprove')?.({
+      draftId: 'draft-1',
+      title: 'Unapproved',
+      rawText: 'Replacement',
+      processedLines: ['Replacement'],
+    });
+
+    assert.deepEqual(emitted.at(-1), {
+      eventName: 'permissionError',
+      payload: 'Insufficient permissions to approve drafts',
+    });
+    assert.deepEqual(state.currentLyrics, ['Existing live lyric']);
+  } finally {
+    state.currentLyrics = previousLyrics;
+  }
+});
+
+test('live safety blocks draft approval from a secondary controller even if permission is granted', () => {
+  const previousLiveSafety = state.liveSafety;
+  const previousPendingDrafts = state.pendingDrafts;
+  const previousLyrics = state.currentLyrics;
+
+  state.liveSafety = { enabled: true, updatedAt: Date.now(), updatedBy: { clientType: 'desktop' } };
+  state.pendingDrafts = new Map([['draft-live-safety', {
+    submitterSessionId: 'submitter-session',
+    title: 'Pending draft',
+  }]]);
+  state.currentLyrics = ['Existing live lyric'];
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+    };
+
+    registerDraftHandlers({
+      io: { emit() {} },
+      socket,
+      hasPermission: () => true,
+      clientType: 'mobile',
+      deviceId: 'mobile-device',
+      sessionId: 'mobile-session',
+    });
+
+    handlers.get('lyricsDraftApprove')?.({
+      draftId: 'draft-live-safety',
+      title: 'Pending draft',
+      rawText: 'Replacement',
+      processedLines: ['Replacement'],
+    });
+
+    assert.equal(emitted.at(-1).eventName, 'liveSafetyBlocked');
+    assert.equal(emitted.at(-1).payload.action, 'lyricsDraftApprove');
+    assert.equal(state.pendingDrafts.has('draft-live-safety'), true);
+    assert.deepEqual(state.currentLyrics, ['Existing live lyric']);
+  } finally {
+    state.liveSafety = previousLiveSafety;
+    state.pendingDrafts = previousPendingDrafts;
+    state.currentLyrics = previousLyrics;
+  }
+});
+
+test('desktop draft approval requires a pending valid draft and updates persisted lyric state', () => {
+  const previousState = {
+    connectedClients: state.connectedClients,
+    currentLyrics: state.currentLyrics,
+    currentLyricsTimestamps: state.currentLyricsTimestamps,
+    currentLyricsEnhancedTimestamps: state.currentLyricsEnhancedTimestamps,
+    currentSelectedLine: state.currentSelectedLine,
+    currentLyricsFileName: state.currentLyricsFileName,
+    currentRawLyricsContent: state.currentRawLyricsContent,
+    currentLyricsSource: state.currentLyricsSource,
+    currentSongMetadata: state.currentSongMetadata,
+    currentLyricsSections: state.currentLyricsSections,
+    currentLineToSection: state.currentLineToSection,
+    pendingDrafts: state.pendingDrafts,
+    liveSafety: state.liveSafety,
+  };
+
+  state.connectedClients = new Map();
+  state.pendingDrafts = new Map([['draft-valid', {
+    submitterSessionId: 'submitter-session',
+    title: 'Approved song',
+  }]]);
+  state.liveSafety = { enabled: false, updatedAt: null, updatedBy: null };
+
+  try {
+    const handlers = new Map();
+    const socketEvents = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        socketEvents.push({ eventName, payload });
+      },
+    };
+
+    registerDraftHandlers({
+      io: { emit() {} },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'lyrics:draft:approve',
+      clientType: 'desktop',
+      deviceId: 'desktop-device',
+      sessionId: 'desktop-session',
+    });
+
+    handlers.get('lyricsDraftApprove')?.({
+      draftId: 'draft-missing',
+      title: 'Expired song',
+      rawText: 'Expired',
+      processedLines: ['Expired'],
+    });
+    assert.equal(socketEvents.at(-1).eventName, 'draftError');
+
+    handlers.get('lyricsDraftApprove')?.({
+      draftId: 'draft-valid',
+      title: 'Approved song',
+      rawText: 'First line\nSecond line',
+      processedLines: ['First line', 'Second line'],
+    });
+
+    assert.deepEqual(state.currentLyrics, ['First line', 'Second line']);
+    assert.equal(state.currentLyricsFileName, 'Approved song');
+    assert.equal(state.currentRawLyricsContent, 'First line\nSecond line');
+    assert.equal(state.currentLyricsSource.content, 'First line\nSecond line');
+    assert.equal(state.currentSongMetadata.origin, 'draft');
+    assert.equal(state.pendingDrafts.has('draft-valid'), false);
+  } finally {
+    Object.assign(state, previousState);
+  }
 });
 
 test('setlistLoad requires live lyric write permission', () => {
@@ -246,6 +419,48 @@ test('live safety mode blocks secondary setlist loads while allowing line naviga
     assert.deepEqual(ioEvents.at(-1), { eventName: 'lineUpdate', payload: { index: 1 } });
   } finally {
     state.liveSafety = previousLiveSafety;
+    state.currentSelectedLine = previousSelectedLine;
+    state.currentLyrics = previousLyrics;
+  }
+});
+
+test('line navigation rejects indices outside the active lyrics', () => {
+  const previousSelectedLine = state.currentSelectedLine;
+  const previousLyrics = state.currentLyrics;
+  state.currentLyrics = ['Line 1', 'Line 2'];
+  state.currentSelectedLine = 0;
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const ioEvents = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+    };
+
+    registerLyricsHandlers({
+      io: { emit: (eventName, payload) => ioEvents.push({ eventName, payload }) },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'output:control',
+      clientType: 'desktop',
+      deviceId: 'desktop-device',
+      sessionId: 'desktop-session',
+    });
+
+    handlers.get('lineUpdate')?.({ index: 2 });
+
+    assert.deepEqual(emitted.at(-1), {
+      eventName: 'permissionError',
+      payload: 'Invalid line update payload',
+    });
+    assert.equal(state.currentSelectedLine, 0);
+    assert.equal(ioEvents.some((event) => event.eventName === 'lineUpdate'), false);
+  } finally {
     state.currentSelectedLine = previousSelectedLine;
     state.currentLyrics = previousLyrics;
   }

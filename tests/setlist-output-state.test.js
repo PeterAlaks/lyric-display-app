@@ -903,6 +903,69 @@ test('preview output metrics are ignored by production readiness tracking', () =
   }
 });
 
+test('output metrics cannot target a different authenticated output', () => {
+  const previousOutputInstances = state.outputInstances;
+  const previousOutputSettings = state.outputSettings;
+  const previousOutputEnabled = state.outputEnabled;
+
+  state.outputInstances = new Map([
+    ['output1', new Map()],
+    ['output2', new Map()],
+  ]);
+  state.outputSettings = new Map([
+    ['output1', {}],
+    ['output2', {}],
+  ]);
+  state.outputEnabled = new Map([
+    ['output1', true],
+    ['output2', true],
+  ]);
+
+  try {
+    const handlers = new Map();
+    const socketEvents = [];
+    const ioEvents = [];
+    const socket = {
+      id: 'socket-output1',
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        socketEvents.push({ eventName, payload });
+      },
+    };
+
+    registerOutputHandlers({
+      io: { emit: (eventName, payload) => ioEvents.push({ eventName, payload }) },
+      socket,
+      hasPermission: () => true,
+      clientType: 'output1',
+      deviceId: 'output-device',
+      sessionId: 'output-session',
+    });
+
+    handlers.get('outputMetrics')?.({
+      output: 'output2',
+      metrics: {
+        viewportWidth: 1920,
+        viewportHeight: 1080,
+      },
+    });
+
+    assert.deepEqual(socketEvents.at(-1), {
+      eventName: 'permissionError',
+      payload: 'Output metrics target does not match authenticated output',
+    });
+    assert.equal(state.outputInstances.get('output1').size, 0);
+    assert.equal(state.outputInstances.get('output2').size, 0);
+    assert.equal(ioEvents.some((event) => event.eventName === 'outputMetrics'), false);
+  } finally {
+    state.outputInstances = previousOutputInstances;
+    state.outputSettings = previousOutputSettings;
+    state.outputEnabled = previousOutputEnabled;
+  }
+});
+
 test('current state is trimmed for timer, time display, and output clients', () => {
   const previousLyrics = state.currentLyrics;
   const previousTimestamps = state.currentLyricsTimestamps;

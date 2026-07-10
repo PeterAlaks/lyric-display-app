@@ -229,11 +229,17 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       socket.emit('permissionError', 'Insufficient permissions to publish metrics');
       return;
     }
-    if (!isPlainObject(payload) || !isOutputClientType(payload.output) || !isPlainObject(payload.metrics)) {
+    if (!isPlainObject(payload) || !isPlainObject(payload.metrics)) {
       return;
     }
 
-    const { output, metrics } = payload;
+    if (Object.hasOwn(payload, 'output') && payload.output !== clientType) {
+      socket.emit('permissionError', 'Output metrics target does not match authenticated output');
+      return;
+    }
+
+    const output = clientType;
+    const { metrics } = payload;
 
     if (!state.outputSettings.has(output) && !state.outputEnabled.has(output)) {
       return;

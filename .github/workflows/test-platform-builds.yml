@@ -7,8 +7,36 @@ permissions:
   contents: read
 
 jobs:
+  quality:
+    name: Static and unit checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Run static checks
+        run: npm run check:static
+
+      - name: Run unit tests
+        run: npm run test:unit
+
   build-windows:
     name: Build Windows
+    needs: quality
     runs-on: windows-2022
 
     steps:
@@ -55,6 +83,7 @@ jobs:
 
   build-macos:
     name: Build macOS
+    needs: quality
     runs-on: macos-latest
 
     steps:
@@ -100,6 +129,7 @@ jobs:
 
   build-linux:
     name: Build Linux
+    needs: quality
     runs-on: ubuntu-latest
 
     steps:
