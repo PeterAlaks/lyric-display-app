@@ -15,7 +15,10 @@ const ExternalControlPreferencesSection = ({
   handleMidiToggle,
   handleOscFeedbackPortChange,
   handleOscFeedbackToggle,
+  handleOscAllowedSourcesChange,
   handleOscPortChange,
+  handleOscRateLimitChange,
+  handleOscRemoteAccessToggle,
   handleOscToggle,
   inputClass,
   labelClass,
@@ -296,6 +299,51 @@ const ExternalControlPreferencesSection = ({
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>Requires restart to take effect</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Allow OSC from LAN</label>
+                <p className={`text-xs ${mutedClass}`}>Off binds OSC to this computer only. Interface changes require restart.</p>
+              </div>
+              <Switch
+                checked={oscStatus?.remoteAccessEnabled || false}
+                onCheckedChange={handleOscRemoteAccessToggle}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-amber-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-amber-600 data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            {oscStatus?.remoteAccessEnabled && (
+              <div className="space-y-2">
+                <label className={preferenceFieldLabelClass}>Allowed Source IPs</label>
+                <Input
+                  key={(oscStatus?.allowedSources || []).join(',')}
+                  type="text"
+                  defaultValue={(oscStatus?.allowedSources || []).join(', ')}
+                  placeholder="Empty allows any LAN source"
+                  onBlur={(event) => handleOscAllowedSourcesChange(event.target.value)}
+                  className={inputClass}
+                />
+                <p className={`text-xs ${mutedClass}`}>Comma-separated IPv4 addresses. Leave empty only on a trusted production network.</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className={preferenceFieldLabelClass}>Messages per Second</label>
+              <Input
+                key={oscStatus?.rateLimit || 30}
+                type="number"
+                defaultValue={oscStatus?.rateLimit || 30}
+                onBlur={(event) => handleOscRateLimitChange(event.target.value)}
+                min="5"
+                max="200"
+                className={inputClass}
+              />
+              <p className={`text-xs ${mutedClass}`}>Per-source limit; excess packets are dropped before reaching live controls.</p>
             </div>
 
             <div className="flex items-center justify-between">

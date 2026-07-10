@@ -71,7 +71,8 @@ const ndiStore = new Store({
 let companionProcess = null;
 let commandSeq = 0;
 let statsInterval = null;
-let companionProtocolVersion = null; // set from hello handshake
+let companionProtocolVersion = null;
+let companionAppVersion = null;
 let companionLaunchGeneration = 0;
 let companionStarting = false;
 let companionReady = false;
@@ -91,6 +92,8 @@ const COMPANION_SYNC_RETRY_DELAY_MS = 350;
 const COMPANION_RESTART_WINDOW_MS = 5 * 60_000;
 const COMPANION_RESTART_DELAY_MS = 2000;
 const MAX_COMPANION_RESTARTS = 3;
+const MIN_COMPANION_PROTOCOL_VERSION = 1;
+const MAX_COMPANION_PROTOCOL_VERSION = 2;
 
 function scheduleCompanionRestart(reason) {
   if (companionStopRequested || companionRestartTimer) return;
@@ -367,6 +370,7 @@ function resetCompanionRuntimeState({ clearAuthToken = true } = {}) {
   companionReady = false;
   companionBootstrapError = null;
   companionProtocolVersion = null;
+  companionAppVersion = null;
   if (clearAuthToken) {
     companionAuthToken = '';
   }
@@ -379,6 +383,7 @@ function notifyCompanionStatus(extra = {}) {
     ready: companionReady,
     bootstrapError: companionBootstrapError,
     protocolVersion: companionProtocolVersion,
+    companionVersion: companionAppVersion,
     ...extra,
   });
 }
@@ -456,16 +461,24 @@ function stopStatsLoop() {
 }
 
 function applyHelloMetadata(helloResponse) {
-  const version = helloResponse?.payload?.version;
-  if (!version) return;
+  const version = helloResponse?.payload?.version || '';
+  const protocolVersion = Number(helloResponse?.payload?.protocolVersion || 1);
+  if (!Number.isInteger(protocolVersion)
+    || protocolVersion < MIN_COMPANION_PROTOCOL_VERSION
+    || protocolVersion > MAX_COMPANION_PROTOCOL_VERSION) {
+    console.error(`[NDI] Unsupported companion protocol version: ${protocolVersion}`);
+    return false;
+  }
 
-  companionProtocolVersion = version;
-  console.log(`[NDI] Companion protocol version: ${companionProtocolVersion}`);
+  companionProtocolVersion = protocolVersion;
+  companionAppVersion = version || null;
+  console.log(`[NDI] Companion v${version || 'unknown'}, protocol v${companionProtocolVersion}`);
 
   const expectedVersion = ndiStore.get('version') || '';
-  if (expectedVersion && companionProtocolVersion !== expectedVersion) {
-    console.warn(`[NDI] Version mismatch: expected v${expectedVersion}, companion reports v${companionProtocolVersion}`);
+  if (expectedVersion && version && version !== expectedVersion) {
+    console.warn(`[NDI] Version mismatch: expected v${expectedVersion}, companion reports v${version}`);
   }
+  return true;
 }
 
 async function bootstrapCompanionSession(launchGeneration) {
@@ -492,7 +505,7 @@ async function bootstrapCompanionSession(launchGeneration) {
     return false;
   }
 
-  applyHelloMetadata(helloResponse);
+  if (!applyHelloMetadata(helloResponse)) return false;
 
   if (isStaleLaunch()) return false;
   connectPersistentSocket();
@@ -666,7 +679,7 @@ async function launchCompanion() {
   return { success: true };
 }
 
-function stopCompanion() {
+async function stopCompanion() {
   companionStopRequested = true;
   companionRestartAttempts = [];
   if (companionRestartTimer) {
@@ -680,17 +693,36 @@ function stopCompanion() {
 
   companionLaunchGeneration += 1;
 
-  sendCommand('shutdown', {}).catch((error) => {
-    console.warn('[NDI] Graceful shutdown request failed:', error?.message || error);
-  });
+  const processToStop = companionProcess;
+  const shutdownResult = await sendCommand('shutdown', {}, { timeoutMs: 2000 }).catch((error) => ({
+    success: false,
+    error: error?.message || String(error),
+  }));
+  if (!shutdownResult?.success) {
+    console.warn('[NDI] Graceful shutdown request failed:', shutdownResult?.error || 'No acknowledgement');
+  } else {
+    await new Promise((resolve) => {
+      if (processToStop.exitCode !== null) {
+        resolve();
+        return;
+      }
+      const timer = setTimeout(resolve, 2500);
+      processToStop.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
 
-  try { companionProcess.kill(); } catch (error) {
-    console.warn('[NDI] Error killing companion process:', error);
+  if (processToStop.exitCode === null && processToStop.signalCode === null) {
+    try { processToStop.kill(); } catch (error) {
+      console.warn('[NDI] Error killing companion process:', error);
+    }
   }
 
   stopStatsLoop();
   destroyPersistentSocket();
-  companionProcess = null;
+  if (companionProcess === processToStop) companionProcess = null;
   resetCompanionRuntimeState();
   notifyCompanionStatus();
   console.log('[NDI] Companion stopped');
@@ -813,7 +845,7 @@ export function registerNdiIpcHandlers() {
   ipcMain.handle('ndi:update-companion', async () => {
     try {
       const updateInfo = await checkForCompanionUpdate();
-      stopCompanion();
+      await stopCompanion();
       return await downloadCompanion(updateInfo);
     } catch (err) {
       console.error('[NDI] Update handler error:', err);

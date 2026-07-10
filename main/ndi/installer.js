@@ -1,7 +1,14 @@
 import https from 'https';
 import http from 'http';
+import { createHash } from 'crypto';
 
 const RELEASE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
+const CHECKSUM_REQUIRED_FROM_VERSION = '1.0.6';
+
+function parseSha256Checksum(value) {
+  const match = /^[ \t]*([a-f0-9]{64})(?:[ \t]+[*]?[^\r\n]*)?[ \t]*(?:\r?\n)?$/i.exec(String(value || ''));
+  return match ? match[1].toLowerCase() : null;
+}
 
 function createNdiInstaller({
   app,
@@ -154,13 +161,20 @@ function createNdiInstaller({
 
       const expectedAssetName = getPlatformAssetName();
       const asset = release.assets?.find((a) => a.name === expectedAssetName)
-        || release.assets?.find((a) => a.name.includes(process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux'));
+        || release.assets?.find((a) => (
+          a.name.endsWith('.zip')
+          && a.name.includes(process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux')
+        ));
+      const checksumAsset = asset
+        ? release.assets?.find((candidate) => candidate.name === `${asset.name}.sha256`)
+        : null;
 
       const result = {
         updateAvailable: installed && currentVersion && compareVersions(latestVersion, currentVersion) > 0,
         latestVersion,
         currentVersion,
         downloadUrl: asset?.browser_download_url || null,
+        checksumUrl: checksumAsset?.browser_download_url || null,
         downloadSize: asset?.size || 0,
         releaseNotes: release.body || '',
         releaseName: release.name || '',
@@ -255,6 +269,55 @@ function createNdiInstaller({
     });
   }
 
+  function fetchText(url, maxBytes = 4096) {
+    return followRedirects(url).then((response) => new Promise((resolve, reject) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        body += chunk;
+        if (Buffer.byteLength(body, 'utf8') > maxBytes) {
+          response.destroy();
+          reject(new Error('Checksum response is too large'));
+        }
+      });
+      response.on('end', () => resolve(body));
+      response.on('error', reject);
+    }));
+  }
+
+  function calculateFileSha256(filePath) {
+    return new Promise((resolve, reject) => {
+      const hash = createHash('sha256');
+      const stream = fs.createReadStream(filePath);
+      stream.on('data', (chunk) => hash.update(chunk));
+      stream.on('end', () => resolve(hash.digest('hex')));
+      stream.on('error', reject);
+    });
+  }
+
+  async function verifyDownloadedCompanion(zipPath, checksumUrl, version) {
+    const checksumRequired = !version
+      || compareVersions(version, CHECKSUM_REQUIRED_FROM_VERSION) >= 0;
+
+    if (!checksumUrl) {
+      if (checksumRequired) {
+        throw new Error(`Companion v${version} is missing its SHA-256 checksum asset`);
+      }
+      console.warn('[NDI] Installing legacy companion without a published checksum');
+      return { verified: false, legacy: true };
+    }
+
+    const expected = parseSha256Checksum(await fetchText(checksumUrl));
+    if (!expected) throw new Error('Companion checksum asset is invalid');
+
+    const actual = await calculateFileSha256(zipPath);
+    if (actual !== expected) {
+      throw new Error('Companion download failed SHA-256 verification');
+    }
+    console.log('[NDI] Companion download SHA-256 verified');
+    return { verified: true, legacy: false };
+  }
+
   async function extractZip(zipPath, destPath) {
     const extract = (await import('extract-zip')).default;
 
@@ -340,6 +403,7 @@ function createNdiInstaller({
 
     const operation = (async () => {
       let downloadUrl;
+      let checksumUrl = updateInfo?.checksumUrl || null;
       let resolvedVersion = updateInfo?.latestVersion || '';
 
       if (updateInfo?.downloadUrl) {
@@ -349,6 +413,7 @@ function createNdiInstaller({
           const releaseInfo = await checkForCompanionUpdate();
           if (releaseInfo?.downloadUrl) {
             downloadUrl = releaseInfo.downloadUrl;
+            checksumUrl = releaseInfo.checksumUrl || null;
             resolvedVersion = releaseInfo.latestVersion || '';
           }
         } catch { /* fallback below */ }
@@ -367,8 +432,9 @@ function createNdiInstaller({
         const response = await followRedirects(downloadUrl);
 
         await streamToFile(response, zipPath, abortController);
+        await verifyDownloadedCompanion(zipPath, checksumUrl, resolvedVersion);
 
-        stopCompanion();
+        await stopCompanion();
         await extractZip(zipPath, installPath);
         removeLegacyInstallPaths();
         try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
@@ -445,8 +511,8 @@ function createNdiInstaller({
     return { success: false, error: 'No active download to cancel' };
   }
 
-  function uninstallCompanion() {
-    stopCompanion();
+  async function uninstallCompanion() {
+    await stopCompanion();
     const installPaths = [getInstallPath(), ...getLegacyInstallPaths()];
 
     if (isDev) {
@@ -570,4 +636,4 @@ function createNdiInstaller({
   };
 }
 
-export { createNdiInstaller };
+export { createNdiInstaller, parseSha256Checksum };

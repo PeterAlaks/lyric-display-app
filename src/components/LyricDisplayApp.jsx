@@ -67,7 +67,7 @@ const LyricDisplayApp = () => {
   const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitIndividualOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, replaceSetlist, emitAutoplayStateUpdate, emitOutputRemove, emitOutputsRegister, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
+  const { socket, emitOutputToggle, emitIndividualOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, replaceSetlist, emitAutoplayStateUpdate, emitOutputRemove, emitOutputsRegister, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready, liveSafety } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
   const handleMultipleFileUpload = useMultipleFileUpload();
@@ -394,7 +394,8 @@ const LyricDisplayApp = () => {
     handleSyncOutputs,
     showToast,
     songName: lyricsFileName,
-    enabled: isDesktopApp
+    enabled: isDesktopApp,
+    liveSafetyEnabled: Boolean(liveSafety?.enabled),
   });
 
   const iconButtonClass = (disabled = false) => {

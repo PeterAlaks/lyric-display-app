@@ -7,6 +7,16 @@ import { EventEmitter } from 'events';
 import Store from 'electron-store';
 import dgram from 'dgram';
 import './appIdentity.js';
+import {
+  DEFAULT_OSC_DUPLICATE_WINDOW_MS,
+  DEFAULT_OSC_RATE_LIMIT,
+  OSC_ALL_INTERFACES_ADDRESS,
+  OSC_LOOPBACK_ADDRESS,
+  OscMessageGuard,
+  isOscSourceAllowed,
+  normalizeOscAllowedSources,
+  normalizeOscBindAddress,
+} from './oscSecurity.js';
 
 // OSC message types
 const OSC_TYPE_INT = 'i';
@@ -154,6 +164,10 @@ class OSCController extends EventEmitter {
     this.port = 8000;
     this.feedbackPort = 9000;
     this.addressPrefix = '/lyricdisplay';
+    this.bindAddress = OSC_LOOPBACK_ADDRESS;
+    this.allowedSources = [];
+    this.blockedMessages = 0;
+    this.lastBlockedSource = null;
 
     this.store = new Store({
       name: 'osc-settings',
@@ -162,13 +176,34 @@ class OSCController extends EventEmitter {
         port: 8000,
         feedbackPort: 9000,
         addressPrefix: '/lyricdisplay',
-        feedbackEnabled: true
+        feedbackEnabled: true,
+        bindAddress: OSC_LOOPBACK_ADDRESS,
+        allowedSources: [],
+        rateLimit: DEFAULT_OSC_RATE_LIMIT,
+        duplicateWindowMs: DEFAULT_OSC_DUPLICATE_WINDOW_MS
       }
     });
+
+    if (this.store.get('securityDefaultsVersion') !== 1) {
+      const preserveActiveLanSetup = this.store.get('enabled') === true;
+      this.store.set({
+        bindAddress: preserveActiveLanSetup ? OSC_ALL_INTERFACES_ADDRESS : OSC_LOOPBACK_ADDRESS,
+        allowedSources: [],
+        rateLimit: DEFAULT_OSC_RATE_LIMIT,
+        duplicateWindowMs: DEFAULT_OSC_DUPLICATE_WINDOW_MS,
+        securityDefaultsVersion: 1,
+      });
+    }
 
     this.port = this.store.get('port');
     this.feedbackPort = this.store.get('feedbackPort');
     this.addressPrefix = this.store.get('addressPrefix');
+    this.bindAddress = normalizeOscBindAddress(this.store.get('bindAddress'));
+    this.allowedSources = normalizeOscAllowedSources(this.store.get('allowedSources'));
+    this.messageGuard = new OscMessageGuard({
+      rateLimit: this.store.get('rateLimit'),
+      duplicateWindowMs: this.store.get('duplicateWindowMs'),
+    });
 
     this.currentState = {
       line: null,
@@ -246,7 +281,7 @@ class OSCController extends EventEmitter {
         };
         this.server.once('error', onError);
         this.server.once('listening', onListening);
-        this.server.bind(this.port, '0.0.0.0');
+        this.server.bind(this.port, this.bindAddress);
       });
 
       // Restore enabled state
@@ -270,13 +305,31 @@ class OSCController extends EventEmitter {
     if (!this.isEnabled) return;
 
     try {
+      if (!isOscSourceAllowed(rinfo.address, {
+        bindAddress: this.bindAddress,
+        allowedSources: this.allowedSources,
+      })) {
+        this.recordBlockedMessage(rinfo.address, 'source_not_allowed');
+        return;
+      }
+
       const message = parseOSCMessage(buffer);
       if (!message) {
         console.warn('[OSC] Failed to parse message from', rinfo.address);
         return;
       }
 
-      console.log('[OSC] Received:', message.address, 'args:', message.args.map(a => a.value));
+      const guardResult = this.messageGuard.evaluate({
+        sourceAddress: rinfo.address,
+        address: message.address,
+        args: message.args,
+      });
+      if (!guardResult.allowed) {
+        this.recordBlockedMessage(rinfo.address, guardResult.reason);
+        return;
+      }
+
+      console.log('[OSC] Received:', message.address, 'from:', rinfo.address, 'args:', message.args.map(a => a.value));
 
       // Track client for feedback
       this.feedbackClients.set(`${rinfo.address}:${this.feedbackPort}`, {
@@ -288,7 +341,12 @@ class OSCController extends EventEmitter {
       // Find and execute handler
       const handler = this.addressHandlers[message.address];
       if (handler) {
-        handler(message.args, rinfo);
+        this.currentMessageSource = rinfo;
+        try {
+          handler(message.args, rinfo);
+        } finally {
+          this.currentMessageSource = null;
+        }
       } else {
         console.log('[OSC] Unhandled address:', message.address);
         this.emit('unhandled', { address: message.address, args: message.args, rinfo });
@@ -296,6 +354,15 @@ class OSCController extends EventEmitter {
     } catch (error) {
       console.error('[OSC] Error handling message:', error);
     }
+  }
+
+  recordBlockedMessage(sourceAddress, reason) {
+    this.blockedMessages += 1;
+    this.lastBlockedSource = { address: sourceAddress, reason, timestamp: Date.now() };
+    if (this.blockedMessages === 1 || this.blockedMessages % 25 === 0) {
+      console.warn(`[OSC] Blocked ${reason} message from ${sourceAddress} (${this.blockedMessages} total)`);
+    }
+    this.emit('blocked', this.lastBlockedSource);
   }
 
   // ============ Address Handlers ============
@@ -415,6 +482,8 @@ class OSCController extends EventEmitter {
     const action = {
       type,
       source: 'osc',
+      sourceAddress: this.currentMessageSource?.address || null,
+      sourcePort: this.currentMessageSource?.port || null,
       ...data
     };
     console.log('[OSC] Action:', type, data);
@@ -561,6 +630,36 @@ class OSCController extends EventEmitter {
     return { success: true };
   }
 
+  setRemoteAccessEnabled(enabled) {
+    this.bindAddress = enabled ? OSC_ALL_INTERFACES_ADDRESS : OSC_LOOPBACK_ADDRESS;
+    this.store.set('bindAddress', this.bindAddress);
+    return { success: true, bindAddress: this.bindAddress, requiresRestart: true };
+  }
+
+  setAllowedSources(sources) {
+    const normalized = normalizeOscAllowedSources(sources);
+    const supplied = Array.isArray(sources) ? sources : String(sources || '').split(',');
+    const nonEmptySupplied = supplied.map((item) => String(item || '').trim()).filter(Boolean);
+    if (normalized.length !== nonEmptySupplied.length) {
+      return { success: false, error: 'Allowed OSC sources must be valid IPv4 addresses' };
+    }
+    this.allowedSources = normalized;
+    this.store.set('allowedSources', normalized);
+    return { success: true, allowedSources: normalized };
+  }
+
+  setRateLimit(rateLimit) {
+    this.messageGuard.configure({ rateLimit });
+    this.store.set('rateLimit', this.messageGuard.rateLimit);
+    return { success: true, rateLimit: this.messageGuard.rateLimit };
+  }
+
+  setDuplicateWindow(duplicateWindowMs) {
+    this.messageGuard.configure({ duplicateWindowMs });
+    this.store.set('duplicateWindowMs', this.messageGuard.duplicateWindowMs);
+    return { success: true, duplicateWindowMs: this.messageGuard.duplicateWindowMs };
+  }
+
   /**
    * Get current status
    */
@@ -572,6 +671,14 @@ class OSCController extends EventEmitter {
       feedbackPort: this.feedbackPort,
       addressPrefix: this.addressPrefix,
       feedbackEnabled: this.store.get('feedbackEnabled'),
+      bindAddress: this.bindAddress,
+      remoteAccessEnabled: this.bindAddress === OSC_ALL_INTERFACES_ADDRESS,
+      allowedSources: [...this.allowedSources],
+      rateLimit: this.messageGuard.rateLimit,
+      duplicateWindowMs: this.messageGuard.duplicateWindowMs,
+      blockedMessages: this.blockedMessages,
+      guardStats: this.messageGuard.getStats(),
+      lastBlockedSource: this.lastBlockedSource,
       connectedClients: this.feedbackClients.size,
       currentState: this.currentState
     };

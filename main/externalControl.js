@@ -290,6 +290,38 @@ export function registerExternalControlIPC() {
     }
   });
 
+  ipcMain.handle('osc:set-remote-access', (_event, { enabled }) => {
+    try {
+      return getOSCController().setRemoteAccessEnabled(Boolean(enabled));
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('osc:set-allowed-sources', (_event, { sources }) => {
+    try {
+      return getOSCController().setAllowedSources(sources);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('osc:set-rate-limit', (_event, { rateLimit }) => {
+    try {
+      return getOSCController().setRateLimit(rateLimit);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('osc:set-duplicate-window', (_event, { duplicateWindowMs }) => {
+    try {
+      return getOSCController().setDuplicateWindow(duplicateWindowMs);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('osc:get-supported-addresses', () => {
     try {
       const controller = getOSCController();

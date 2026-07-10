@@ -43,6 +43,22 @@ export function resolveSetlistItemIdByIndex(setlistFiles, index) {
   return setlistFiles[itemIndex]?.id || null;
 }
 
+const LIVE_SAFETY_ALLOWED_OSC_ACTIONS = new Set([
+  'select-line',
+  'next-line',
+  'prev-line',
+  'clear-output',
+  'scroll-lines',
+]);
+
+export function shouldBlockExternalActionForLiveSafety(action, liveSafetyEnabled) {
+  return Boolean(
+    liveSafetyEnabled
+    && action?.source === 'osc'
+    && !LIVE_SAFETY_ALLOWED_OSC_ACTIONS.has(action?.type)
+  );
+}
+
 export function useExternalControl({
   lyrics = [],
   selectedLine,
@@ -67,7 +83,8 @@ export function useExternalControl({
   handleSyncOutputs,
   showToast,
   songName = '',
-  enabled = true
+  enabled = true,
+  liveSafetyEnabled = false,
 }) {
   const lyricsRef = useRef(lyrics);
   const selectedLineRef = useRef(selectedLine);
@@ -75,6 +92,8 @@ export function useExternalControl({
   const autoplayActiveRef = useRef(autoplayActive);
   const intelligentAutoplayActiveRef = useRef(intelligentAutoplayActive);
   const setlistFilesRef = useRef(setlistFiles);
+  const liveSafetyEnabledRef = useRef(liveSafetyEnabled);
+  const lastLiveSafetyToastAtRef = useRef(0);
 
   // Keep refs updated
   useEffect(() => { lyricsRef.current = lyrics; }, [lyrics]);
@@ -83,6 +102,7 @@ export function useExternalControl({
   useEffect(() => { autoplayActiveRef.current = autoplayActive; }, [autoplayActive]);
   useEffect(() => { intelligentAutoplayActiveRef.current = intelligentAutoplayActive; }, [intelligentAutoplayActive]);
   useEffect(() => { setlistFilesRef.current = setlistFiles; }, [setlistFiles]);
+  useEffect(() => { liveSafetyEnabledRef.current = liveSafetyEnabled; }, [liveSafetyEnabled]);
 
   /**
    * Handle line selection with bounds checking
@@ -189,6 +209,20 @@ export function useExternalControl({
    */
   const processAction = useCallback((action) => {
     if (!action || !action.type) return;
+
+    if (shouldBlockExternalActionForLiveSafety(action, liveSafetyEnabledRef.current)) {
+      console.warn('[ExternalControl] Live Safety blocked OSC action:', action.type, action.sourceAddress || 'unknown source');
+      const now = Date.now();
+      if (now - lastLiveSafetyToastAtRef.current >= 3000) {
+        lastLiveSafetyToastAtRef.current = now;
+        showToast?.({
+          title: 'Live Safety blocked OSC control',
+          message: `${action.type} is unavailable while Live Safety is enabled.`,
+          variant: 'info',
+        });
+      }
+      return;
+    }
 
     console.log('[ExternalControl] Processing action:', action.type, action);
 
@@ -363,7 +397,8 @@ export function useExternalControl({
     handleScrollLines,
     emitOutput1Toggle,
     emitOutput2Toggle,
-    emitStageToggle
+    emitStageToggle,
+    showToast,
   ]);
 
   /**

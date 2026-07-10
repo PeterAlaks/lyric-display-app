@@ -103,9 +103,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const {
     handleOscFeedbackPortChange,
     handleOscFeedbackToggle,
+    handleOscAllowedSourcesChange,
     handleOscPortChange,
+    handleOscRateLimitChange,
+    handleOscRemoteAccessToggle,
     handleOscToggle,
-  } = useOscPreferences({ oscStatus, setOscStatus, updateNestedPreference });
+  } = useOscPreferences({ oscStatus, setOscStatus, updateNestedPreference, showToast });
 
   const {
     companionRunning,
@@ -819,7 +822,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             handleMidiToggle={handleMidiToggle}
             handleOscFeedbackPortChange={handleOscFeedbackPortChange}
             handleOscFeedbackToggle={handleOscFeedbackToggle}
+            handleOscAllowedSourcesChange={handleOscAllowedSourcesChange}
             handleOscPortChange={handleOscPortChange}
+            handleOscRateLimitChange={handleOscRateLimitChange}
+            handleOscRemoteAccessToggle={handleOscRemoteAccessToggle}
             handleOscToggle={handleOscToggle}
             inputClass={inputClass}
             labelClass={labelClass}

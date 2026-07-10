@@ -334,6 +334,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setFeedbackPort: (port) => ipcRenderer.invoke('osc:set-feedback-port', { port }),
     setAddressPrefix: (prefix) => ipcRenderer.invoke('osc:set-address-prefix', { prefix }),
     setFeedbackEnabled: (enabled) => ipcRenderer.invoke('osc:set-feedback-enabled', { enabled }),
+    setRemoteAccessEnabled: (enabled) => ipcRenderer.invoke('osc:set-remote-access', { enabled }),
+    setAllowedSources: (sources) => ipcRenderer.invoke('osc:set-allowed-sources', { sources }),
+    setRateLimit: (rateLimit) => ipcRenderer.invoke('osc:set-rate-limit', { rateLimit }),
+    setDuplicateWindow: (duplicateWindowMs) => ipcRenderer.invoke('osc:set-duplicate-window', { duplicateWindowMs }),
     getSupportedAddresses: () => ipcRenderer.invoke('osc:get-supported-addresses'),
     sendFeedback: (address, args) => ipcRenderer.invoke('osc:send-feedback', { address, args })
   },

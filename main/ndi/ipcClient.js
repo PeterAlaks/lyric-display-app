@@ -1,5 +1,7 @@
 import net from 'net';
 
+const MAX_IPC_RESPONSE_BUFFER_BYTES = 256 * 1024;
+
 function createNdiIpcClient({ getIpcConfig, getNextSeq, getAuthToken = () => '' }) {
   let persistentSocket = null;
   let persistentBuffer = '';
@@ -55,6 +57,11 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq, getAuthToken = () => '' 
 
     socket.on('data', (chunk) => {
       persistentBuffer += chunk.toString('utf8');
+      if (Buffer.byteLength(persistentBuffer, 'utf8') > MAX_IPC_RESPONSE_BUFFER_BYTES) {
+        console.warn('[NDI] Companion IPC response exceeded the buffer limit');
+        socket.destroy(new Error('IPC response too large'));
+        return;
+      }
       let idx = persistentBuffer.indexOf('\n');
       while (idx >= 0) {
         const line = persistentBuffer.slice(0, idx).trim();
@@ -189,6 +196,11 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq, getAuthToken = () => '' 
 
       socket.on('data', (chunk) => {
         buffer += chunk.toString('utf8');
+        if (Buffer.byteLength(buffer, 'utf8') > MAX_IPC_RESPONSE_BUFFER_BYTES) {
+          clearTimeout(timeout);
+          finish({ success: false, responses, error: 'IPC response too large' });
+          return;
+        }
         let idx = buffer.indexOf('\n');
         while (idx >= 0) {
           const line = buffer.slice(0, idx).trim();
