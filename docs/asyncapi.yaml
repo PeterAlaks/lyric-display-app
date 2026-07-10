@@ -31,6 +31,8 @@ channels:
         $ref: '#/components/messages/requestSetlist'
       setlistAdd:
         $ref: '#/components/messages/setlistAdd'
+      setlistReplace:
+        $ref: '#/components/messages/setlistReplace'
       setlistRemove:
         $ref: '#/components/messages/setlistRemove'
       setlistLoad:
@@ -149,6 +151,7 @@ operations:
       - $ref: '#/channels/socketChannel/messages/splitNormalGroup'
       - $ref: '#/channels/socketChannel/messages/requestSetlist'
       - $ref: '#/channels/socketChannel/messages/setlistAdd'
+      - $ref: '#/channels/socketChannel/messages/setlistReplace'
       - $ref: '#/channels/socketChannel/messages/setlistRemove'
       - $ref: '#/channels/socketChannel/messages/setlistLoad'
       - $ref: '#/channels/socketChannel/messages/setlistClear'
@@ -345,8 +348,26 @@ components:
         type: array
         items:
           $ref: '#/components/schemas/SetlistItemInput'
-      description: Adds up to 50 items total; rejects duplicates by normalized name.
+      description: Adds up to 100 items total; rejects duplicates by normalized name.
       x-permissions: ['setlist:write']
+    setlistReplace:
+      name: setlistReplace
+      payload:
+        type: object
+        required: [files]
+        properties:
+          files:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items:
+              $ref: '#/components/schemas/SetlistItemInput'
+      description: >
+        Validates the complete replacement before atomically replacing the live setlist.
+        The Socket.IO acknowledgement returns success, replacedCount, and totalCount,
+        or success false with an error. Recovery persistence is scoped to the current
+        Electron app session and is not restored after a normal app relaunch.
+      x-permissions: ['setlist:write', 'setlist:delete']
     setlistRemove:
       name: setlistRemove
       payload:

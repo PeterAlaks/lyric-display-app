@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { state, registerOutputs } from './state.js';
+import { validatePersistedSetlistFiles } from './setlistValidation.js';
 
 const SESSION_FILE_NAME = 'realtime-session-state.json';
 const SAVE_DEBOUNCE_MS = 250;
@@ -9,6 +10,7 @@ let sessionFilePath = null;
 let saveTimer = null;
 let saveInFlight = null;
 let saveQueued = false;
+let sessionAppId = null;
 
 const mapToObject = (map) => Object.fromEntries(map instanceof Map ? map.entries() : []);
 
@@ -53,9 +55,10 @@ export const sanitizePersistedStageTimerState = (timerState) => {
   };
 };
 
-const createSnapshot = () => ({
+export const createSessionSnapshot = ({ appSessionId = sessionAppId } = {}) => ({
   version: 1,
   savedAt: Date.now(),
+  appSessionId: appSessionId || null,
   currentLyrics: Array.isArray(state.currentLyrics) ? state.currentLyrics : [],
   currentLyricsTimestamps: Array.isArray(state.currentLyricsTimestamps) ? state.currentLyricsTimestamps : [],
   currentLyricsEnhancedTimestamps: Array.isArray(state.currentLyricsEnhancedTimestamps) ? state.currentLyricsEnhancedTimestamps : [],
@@ -73,11 +76,12 @@ const createSnapshot = () => ({
   currentStageEnabled: state.currentStageEnabled !== false,
   currentStageTimerState: sanitizePersistedStageTimerState(state.currentStageTimerState || null),
   currentStageMessages: Array.isArray(state.currentStageMessages) ? state.currentStageMessages : [],
+  setlistFiles: appSessionId && Array.isArray(state.setlistFiles) ? state.setlistFiles : [],
   registeredOutputs: Array.from(state.registeredOutputs || []),
   liveSafety: state.liveSafety || null,
 });
 
-const applySnapshot = (snapshot) => {
+export const applySessionSnapshot = (snapshot, { appSessionId = sessionAppId } = {}) => {
   if (!snapshot || typeof snapshot !== 'object') return false;
 
   state.currentLyrics = Array.isArray(snapshot.currentLyrics) ? snapshot.currentLyrics : [];
@@ -112,6 +116,12 @@ const applySnapshot = (snapshot) => {
     ? sanitizePersistedStageTimerState(snapshot.currentStageTimerState)
     : state.currentStageTimerState;
   state.currentStageMessages = Array.isArray(snapshot.currentStageMessages) ? snapshot.currentStageMessages : [];
+  const persistedSetlist = snapshot.appSessionId
+    && appSessionId
+    && snapshot.appSessionId === appSessionId
+    ? validatePersistedSetlistFiles(snapshot.setlistFiles)
+    : { valid: true, files: [] };
+  state.setlistFiles = persistedSetlist.valid ? persistedSetlist.files : [];
   if (Array.isArray(snapshot.registeredOutputs)) {
     registerOutputs(snapshot.registeredOutputs);
     for (const [outputId, settings] of objectToMap(snapshot.outputSettings)) {
@@ -132,15 +142,16 @@ const applySnapshot = (snapshot) => {
   return true;
 };
 
-export async function loadPersistedSessionState({ dataRoot } = {}) {
+export async function loadPersistedSessionState({ dataRoot, appSessionId = process.env.LYRICDISPLAY_APP_SESSION_ID || null } = {}) {
   if (!dataRoot) return false;
 
+  sessionAppId = appSessionId;
   sessionFilePath = path.join(dataRoot, SESSION_FILE_NAME);
 
   try {
     const raw = await fs.readFile(sessionFilePath, 'utf8');
     const snapshot = JSON.parse(raw);
-    const applied = applySnapshot(snapshot);
+    const applied = applySessionSnapshot(snapshot, { appSessionId });
     if (applied) {
       console.log(`Loaded persisted realtime session state from ${sessionFilePath}`);
     }
@@ -161,7 +172,7 @@ async function writeSnapshot() {
   }
 
   saveInFlight = (async () => {
-    const snapshot = createSnapshot();
+    const snapshot = createSessionSnapshot();
     await fs.mkdir(path.dirname(sessionFilePath), { recursive: true });
     const tmpPath = `${sessionFilePath}.${process.pid}.tmp`;
     await fs.writeFile(tmpPath, JSON.stringify(snapshot), 'utf8');

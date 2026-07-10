@@ -10,7 +10,11 @@ import { registerConnectionHandlers } from '../server/realtime/handlers/connecti
 import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerOutputHandlers } from '../server/realtime/handlers/outputHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
-import { sanitizePersistedStageTimerState } from '../server/realtime/sessionPersistence.js';
+import {
+  applySessionSnapshot,
+  createSessionSnapshot,
+  sanitizePersistedStageTimerState,
+} from '../server/realtime/sessionPersistence.js';
 import { buildCurrentState, buildPeriodicState, state } from '../server/realtime/state.js';
 
 function createSocketHarness() {
@@ -452,6 +456,122 @@ test('setlistUpdate fanout sends full setlist to controllers and names only to s
   } finally {
     state.connectedClients = previousConnectedClients;
     state.setlistFiles = previousSetlist;
+  }
+});
+
+test('setlist replacement validates the complete batch before mutating live state', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousSetlist = state.setlistFiles;
+  const previousLiveSafety = state.liveSafety;
+
+  state.connectedClients = new Map();
+  state.setlistFiles = [{
+    id: 'existing-song',
+    displayName: 'Existing Song',
+    originalName: 'Existing Song.txt',
+    content: 'Keep this lyric unless replacement succeeds',
+    fileType: 'txt',
+  }];
+  state.liveSafety = { enabled: false, updatedAt: null, updatedBy: null };
+
+  try {
+    const { handlers, io, ioEvents, socket } = createSocketHarness();
+    registerSetlistHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'setlist:write' || permission === 'setlist:delete',
+      clientType: 'desktop',
+      deviceId: 'desktop-device',
+      sessionId: 'desktop-session',
+    });
+
+    let invalidResult = null;
+    handlers.get('setlistReplace')?.({
+      files: [
+        { name: 'Duplicate.txt', content: 'First' },
+        { name: 'Duplicate.lrc', content: 'Second' },
+      ],
+    }, (result) => {
+      invalidResult = result;
+    });
+
+    assert.equal(invalidResult.success, false);
+    assert.match(invalidResult.error, /already exists/i);
+    assert.equal(state.setlistFiles.length, 1);
+    assert.equal(state.setlistFiles[0].id, 'existing-song');
+
+    let successResult = null;
+    handlers.get('setlistReplace')?.({
+      files: [
+        { name: 'Song One.txt', content: 'First lyric' },
+        { name: 'Song Two.lrc', content: '[00:01.00]Second lyric', fileType: 'lrc' },
+      ],
+    }, (result) => {
+      successResult = result;
+    });
+
+    assert.deepEqual(successResult, {
+      success: true,
+      replacedCount: 1,
+      totalCount: 2,
+    });
+    assert.deepEqual(state.setlistFiles.map((file) => file.displayName), ['Song One', 'Song Two']);
+    assert.equal(ioEvents.some((event) => event.eventName === 'setlistUpdate'), true);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.setlistFiles = previousSetlist;
+    state.liveSafety = previousLiveSafety;
+  }
+});
+
+test('setlist recovery is limited to the current Electron app session', () => {
+  const previousState = {
+    currentLyrics: state.currentLyrics,
+    currentLyricsTimestamps: state.currentLyricsTimestamps,
+    currentLyricsEnhancedTimestamps: state.currentLyricsEnhancedTimestamps,
+    currentLyricsFileName: state.currentLyricsFileName,
+    currentRawLyricsContent: state.currentRawLyricsContent,
+    currentLyricsSource: state.currentLyricsSource,
+    currentSongMetadata: state.currentSongMetadata,
+    currentSelectedLine: state.currentSelectedLine,
+    currentLyricsSections: state.currentLyricsSections,
+    currentLineToSection: state.currentLineToSection,
+    outputSettings: state.outputSettings,
+    outputEnabled: state.outputEnabled,
+    currentStageSettings: state.currentStageSettings,
+    currentIsOutputOn: state.currentIsOutputOn,
+    currentStageEnabled: state.currentStageEnabled,
+    currentStageTimerState: state.currentStageTimerState,
+    currentStageMessages: state.currentStageMessages,
+    registeredOutputs: state.registeredOutputs,
+    liveSafety: state.liveSafety,
+    setlistFiles: state.setlistFiles,
+  };
+
+  state.setlistFiles = [{
+    id: 'session-song',
+    displayName: 'Session Song',
+    originalName: 'Session Song.txt',
+    content: 'Session lyric',
+    lastModified: 123,
+    addedAt: 456,
+    fileType: 'txt',
+    metadata: null,
+    addedBy: { clientType: 'desktop', deviceId: 'device', sessionId: 'session' },
+  }];
+
+  try {
+    const snapshot = createSessionSnapshot({ appSessionId: 'app-session-a' });
+    assert.equal(snapshot.setlistFiles.length, 1);
+
+    state.setlistFiles = [];
+    assert.equal(applySessionSnapshot(snapshot, { appSessionId: 'app-session-a' }), true);
+    assert.equal(state.setlistFiles[0].id, 'session-song');
+
+    assert.equal(applySessionSnapshot(snapshot, { appSessionId: 'app-session-b' }), true);
+    assert.deepEqual(state.setlistFiles, []);
+  } finally {
+    Object.assign(state, previousState);
   }
 });
 

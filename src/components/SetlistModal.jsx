@@ -32,8 +32,8 @@ const SetlistModal = () => {
   const isDesktopApp = useIsDesktopApp();
   const maxSetlistFiles = getMaxSetlistFiles();
 
-  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad, emitSetlistReorder, emitSetlistClear } = useControlSocket();
-  const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
+  const { emitSetlistAdd, emitSetlistRemove, emitSetlistLoad, emitSetlistReorder, emitSetlistClear, replaceSetlist } = useControlSocket();
+  const loadSetlist = useSetlistLoader({ setlistFiles, replaceSetlist });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -336,9 +336,7 @@ const SetlistModal = () => {
         return;
       }
 
-      const blob = new Blob([JSON.stringify(result.setlistData)], { type: 'application/json' });
-      const file = new File([blob], 'setlist.ldset', { type: 'application/json' });
-      await loadSetlist(file);
+      await loadSetlist(result.setlistData);
     } catch (error) {
       console.error('Error loading setlist:', error);
       showToast({

@@ -8,11 +8,9 @@ export const useElectronListeners = ({
   setEasyWorshipModalOpen,
   setPresentationModalOpen,
   setlistFiles,
-  setSetlistFiles,
-  emitSetlistAdd,
-  emitSetlistClear
+  replaceSetlist
 }) => {
-  const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
+  const loadSetlist = useSetlistLoader({ setlistFiles, replaceSetlist });
 
   useEffect(() => {
     if (!window?.electronAPI?.onOpenLyricsFromPath) return;
@@ -94,10 +92,7 @@ export const useElectronListeners = ({
         const result = await window.electronAPI.setlist.loadFromPath(filePath);
 
         if (result.success && result.setlistData) {
-          const blob = new Blob([JSON.stringify(result.setlistData)], { type: 'application/json' });
-          const file = new File([blob], 'setlist.ldset', { type: 'application/json' });
-
-          await loadSetlist(file);
+          await loadSetlist(result.setlistData);
         } else {
           showToast({
             title: 'Load failed',

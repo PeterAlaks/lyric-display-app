@@ -67,11 +67,11 @@ const LyricDisplayApp = () => {
   const scrollableSettingsRef = useRef(null);
   useMenuShortcuts(navigate, fileInputRef);
 
-  const { socket, emitOutputToggle, emitIndividualOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, emitAutoplayStateUpdate, emitOutputRemove, emitOutputsRegister, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
+  const { socket, emitOutputToggle, emitIndividualOutputToggle, emitLineUpdate, emitLyricsLoad, emitStyleUpdate, emitSetlistAdd, emitSetlistClear, emitSetlistLoad, replaceSetlist, emitAutoplayStateUpdate, emitOutputRemove, emitOutputsRegister, connectionStatus, authStatus, forceReconnect, refreshAuthToken, isConnected, isAuthenticated, ready } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
   const handleMultipleFileUpload = useMultipleFileUpload();
-  const loadSetlist = useSetlistLoader({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear });
+  const loadSetlist = useSetlistLoader({ setlistFiles, replaceSetlist });
 
   const allOutputIds = useAllOutputIds();
   const customOutputIds = React.useMemo(
@@ -236,8 +236,7 @@ const LyricDisplayApp = () => {
     setPresentationModalOpen,
     setlistFiles,
     setSetlistFiles,
-    emitSetlistAdd,
-    emitSetlistClear
+    replaceSetlist
   });
 
   usePendingLyricsLoad(processLoadedLyrics);

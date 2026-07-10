@@ -415,6 +415,30 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         };
     }, [authStatus]);
 
+    const replaceSetlist = useCallback((files) => new Promise((resolve) => {
+        const socket = socketRef.current;
+        if (!socket?.connected || !readyRef.current || authStatus !== 'authenticated') {
+            resolve({ success: false, error: 'Setlist service is not connected' });
+            return;
+        }
+
+        let settled = false;
+        const finish = (result) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            resolve(result?.success
+                ? result
+                : { success: false, error: result?.error || 'Setlist replacement failed' });
+        };
+        const timeoutId = setTimeout(() => {
+            finish({ success: false, error: 'Setlist replacement timed out' });
+        }, 10000);
+
+        socket.emit('setlistReplace', { files }, finish);
+        logDebug(`Emitted setlistReplace for ${Array.isArray(files) ? files.length : 0} files`);
+    }), [authStatus]);
+
     useEffect(() => {
         if (readyRef.current && socketRef.current?.connected && authStatus === 'authenticated') {
             pendingEmissionsRef.current.forEach((emission, eventName) => {
@@ -684,6 +708,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         emitRequestSetlist,
         emitSetlistClear,
         emitSetlistReorder,
+        replaceSetlist,
         emitLyricsDraftSubmit,
         emitLyricsDraftApprove,
         emitLyricsDraftReject,

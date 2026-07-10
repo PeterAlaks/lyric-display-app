@@ -87,7 +87,13 @@ export function registerSetlistHandlers({ getMainWindow }) {
         return { success: false, error: 'Setlist file is too large' };
       }
 
-      await fs.writeFile(normalizedPath, jsonContent, 'utf8');
+      const temporaryPath = `${normalizedPath}.${process.pid}.${Date.now()}.tmp`;
+      try {
+        await fs.writeFile(temporaryPath, jsonContent, 'utf8');
+        await fs.rename(temporaryPath, normalizedPath);
+      } finally {
+        await fs.rm(temporaryPath, { force: true }).catch(() => {});
+      }
 
       console.log('[Setlist] Saved setlist to:', normalizedPath);
       return { success: true, filePath: normalizedPath };

@@ -2,58 +2,45 @@ import { useCallback } from 'react';
 import useToast from '../useToast';
 import useModal from '../useModal';
 import useLyricsStore from '../../context/LyricsStore';
-import { normalizeSetlistItemLimit } from '../../../shared/setlistLimits.js';
+import {
+  MAX_SETLIST_FILE_BYTES,
+  normalizeSetlistItemLimit,
+} from '../../../shared/setlistLimits.js';
 
-const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear }) => {
+const readSetlistData = async (source) => {
+  if (source && typeof source === 'object' && !Array.isArray(source) && Array.isArray(source.items)) {
+    return source;
+  }
+
+  if (!(source instanceof File)) {
+    throw new Error('Invalid setlist source');
+  }
+  if (source.size > MAX_SETLIST_FILE_BYTES) {
+    throw new Error('Setlist file is too large');
+  }
+
+  const content = await source.text();
+  return JSON.parse(content);
+};
+
+const useSetlistLoader = ({ setlistFiles, replaceSetlist }) => {
   const { showToast } = useToast();
   const { showModal } = useModal();
   const configuredMaxSetlistFiles = useLyricsStore((state) => state.maxSetlistFilesLimit);
   const maxSetlistFiles = normalizeSetlistItemLimit(configuredMaxSetlistFiles);
 
-  const loadSetlist = useCallback(async (file) => {
-    if (!window?.electronAPI?.setlist?.loadFromPath) {
+  const loadSetlist = useCallback(async (source) => {
+    if (typeof replaceSetlist !== 'function') {
       showToast({
         title: 'Not supported',
-        message: 'Setlist loading is only available in desktop app',
+        message: 'Setlist replacement is not available',
         variant: 'warn',
       });
       return false;
     }
 
     try {
-      const content = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-
-      const setlistData = JSON.parse(content);
-
-      if (setlistFiles && setlistFiles.length > 0) {
-        const result = await showModal({
-          title: 'Load Setlist',
-          description: `Loading a saved setlist will clear the ${setlistFiles.length} ${setlistFiles.length === 1 ? 'song' : 'songs'} currently on the setlist. Do you want to proceed?`,
-          variant: 'warn',
-          actions: [
-            {
-              label: 'Cancel',
-              value: 'cancel',
-              variant: 'outline',
-            },
-            {
-              label: 'Proceed',
-              value: 'proceed',
-              variant: 'default',
-              autoFocus: true,
-            },
-          ],
-        });
-
-        if (result !== 'proceed') {
-          return false;
-        }
-      }
+      const setlistData = await readSetlistData(source);
 
       if (!setlistData || !Array.isArray(setlistData.items)) {
         throw new Error('Invalid setlist format');
@@ -86,14 +73,36 @@ const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitS
         metadata: item.metadata || null
       }));
 
-      emitSetlistClear();
-      setSetlistFiles([]);
+      if (setlistFiles && setlistFiles.length > 0) {
+        const result = await showModal({
+          title: 'Load Setlist',
+          description: `Loading a saved setlist will clear the ${setlistFiles.length} ${setlistFiles.length === 1 ? 'song' : 'songs'} currently on the setlist. Do you want to proceed?`,
+          variant: 'warn',
+          actions: [
+            {
+              label: 'Cancel',
+              value: 'cancel',
+              variant: 'outline',
+            },
+            {
+              label: 'Proceed',
+              value: 'proceed',
+              variant: 'default',
+              autoFocus: true,
+            },
+          ],
+        });
 
-      const emitted = emitSetlistAdd(processedFiles);
-      if (!emitted) {
+        if (result !== 'proceed') {
+          return false;
+        }
+      }
+
+      const result = await replaceSetlist(processedFiles);
+      if (!result?.success) {
         showToast({
           title: 'Load failed',
-          message: 'Unable to load setlist. Check your connection and try again.',
+          message: result?.error || 'Unable to load setlist. Check your connection and try again.',
           variant: 'error',
         });
         return false;
@@ -115,7 +124,7 @@ const useSetlistLoader = ({ setlistFiles, setSetlistFiles, emitSetlistAdd, emitS
       });
       return false;
     }
-  }, [setlistFiles, setSetlistFiles, emitSetlistAdd, emitSetlistClear, showModal, showToast, maxSetlistFiles]);
+  }, [setlistFiles, replaceSetlist, showModal, showToast, maxSetlistFiles]);
 
   return loadSetlist;
 };

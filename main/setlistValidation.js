@@ -1,11 +1,18 @@
 import path from 'path';
-import { MAX_SETLIST_ITEMS } from '../shared/setlistLimits.js';
+import {
+  MAX_SETLIST_FILE_BYTES,
+  MAX_SETLIST_ITEM_CONTENT_BYTES,
+  MAX_SETLIST_ITEMS,
+  MAX_SETLIST_STRING_LENGTH,
+} from '../shared/setlistLimits.js';
 import { isSupportedLyricFileType } from '../shared/lyricImportRegistry.js';
 
 export const SETLIST_FILE_EXTENSION = '.ldset';
-export const MAX_SETLIST_FILE_BYTES = 10 * 1024 * 1024;
-export const MAX_SETLIST_ITEM_CONTENT_BYTES = 2 * 1024 * 1024;
-export const MAX_SETLIST_STRING_LENGTH = 512;
+export {
+  MAX_SETLIST_FILE_BYTES,
+  MAX_SETLIST_ITEM_CONTENT_BYTES,
+  MAX_SETLIST_STRING_LENGTH,
+};
 
 export function normalizeSetlistPath(filePath) {
   if (typeof filePath !== 'string' || !filePath.trim()) {

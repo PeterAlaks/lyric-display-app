@@ -1,7 +1,5 @@
 import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
-import { MAX_SETLIST_ITEMS } from '../../../shared/setlistLimits.js';
 import {
-  isSupportedLyricFileType,
   normalizeLyricFileType,
   stripLyricImportExtension,
 } from '../../../shared/lyricImportRegistry.js';
@@ -9,6 +7,7 @@ import { appendActionLog } from '../actionLog.js';
 import { emitControllerEvent, emitLyricsLoad, emitLyricsRenderEvent, emitSetlistUpdate } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
+import { normalizeIncomingSetlistFiles } from '../setlistValidation.js';
 import { state, summarizeSetlistForDisplay } from '../state.js';
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
@@ -39,58 +38,18 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
     }
 
     try {
-      if (!Array.isArray(files)) {
-        console.error('setlistAdd: files must be an array');
-        socket.emit('setlistError', 'Invalid file data');
-        return;
-      }
-
-      const totalAfterAdd = state.setlistFiles.length + files.length;
-      if (totalAfterAdd > MAX_SETLIST_ITEMS) {
-        console.error(`setlistAdd: Would exceed ${MAX_SETLIST_ITEMS} file limit`);
-        socket.emit('setlistError', `Cannot add ${files.length} files. Maximum ${MAX_SETLIST_ITEMS} files allowed.`);
-        return;
-      }
-
-      const normalizeName = (value = '') => stripLyricImportExtension(String(value).trim()).toLowerCase();
-
-      const newFiles = files.map((file, index) => {
-        if (!file.name || !file.content) {
-          throw new Error(`File ${index + 1} is missing name or content`);
-        }
-
-        const fileType = normalizeLyricFileType({ fileType: file.fileType, fileName: file.name, fallback: 'txt' });
-        if (!isSupportedLyricFileType(fileType)) {
-          throw new Error(`File "${file.name}" has an unsupported file type`);
-        }
-        const displayName = stripLyricImportExtension(file.name);
-        const normalizedIncoming = normalizeName(file.name);
-        const alreadyExists = state.setlistFiles.some((existing) => {
-          const candidate = existing?.displayName ?? existing?.originalName ?? '';
-          return normalizeName(candidate) === normalizedIncoming;
-        });
-        if (alreadyExists) {
-          throw new Error(`File "${displayName}" already exists in setlist`);
-        }
-
-        return {
-          id: `setlist_${Date.now()}_${index}`,
-          displayName,
-          originalName: file.name,
-          content: file.content,
-          lastModified: file.lastModified || Date.now(),
-          addedAt: Date.now(),
-          fileType,
-          metadata: file.metadata || null,
-          addedBy: {
-            clientType,
-            deviceId,
-            sessionId
-          }
-        };
+      const normalized = normalizeIncomingSetlistFiles(files, {
+        existingFiles: state.setlistFiles,
+        actor,
       });
+      if (!normalized.valid) {
+        socket.emit('setlistError', normalized.error);
+        return;
+      }
+      const newFiles = normalized.entries;
 
       state.setlistFiles.push(...newFiles);
+      schedulePersistSessionState();
       console.log(`${clientType} client added ${newFiles.length} files to setlist. Total: ${state.setlistFiles.length}`);
       appendActionLog(io, {
         type: 'setlist',
@@ -140,6 +99,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       state.setlistFiles = state.setlistFiles.filter(file => file.id !== fileId);
 
       if (state.setlistFiles.length < initialCount) {
+        schedulePersistSessionState();
         console.log(`${clientType} client removed file ${fileId} from setlist. Remaining: ${state.setlistFiles.length}`);
         appendActionLog(io, {
           type: 'setlist',
@@ -290,6 +250,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
 
     const previousCount = state.setlistFiles.length;
     state.setlistFiles = [];
+    schedulePersistSessionState();
     console.log(`Setlist cleared by ${clientType} client`);
     appendActionLog(io, {
       type: 'setlist',
@@ -348,6 +309,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
     }
 
     state.setlistFiles = reordered;
+    schedulePersistSessionState();
     console.log(`${clientType} client reordered setlist (${state.setlistFiles.length} items)`);
     appendActionLog(io, {
       type: 'setlist',
@@ -361,6 +323,58 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
     emitSetlistUpdate(io, state.setlistFiles);
     socket.emit('setlistReorderSuccess', {
       orderedIds,
+      totalCount: state.setlistFiles.length,
+    });
+  });
+
+  socket.on('setlistReplace', (payload, acknowledge) => {
+    const respond = (result) => {
+      if (typeof acknowledge === 'function') {
+        acknowledge(result);
+      } else if (!result.success) {
+        socket.emit('setlistError', result.error);
+      }
+    };
+
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistReplace' })) {
+      respond({ success: false, error: 'Live safety mode is active' });
+      return;
+    }
+
+    if (!hasPermission(socket, 'setlist:write') || !hasPermission(socket, 'setlist:delete')) {
+      socket.emit('permissionError', 'Insufficient permissions to replace setlist');
+      respond({ success: false, error: 'Insufficient permissions to replace setlist' });
+      return;
+    }
+
+    const files = payload?.files;
+    const normalized = normalizeIncomingSetlistFiles(files, { actor });
+    if (!normalized.valid) {
+      respond({ success: false, error: normalized.error });
+      return;
+    }
+
+    const previousCount = state.setlistFiles.length;
+    state.setlistFiles = normalized.entries;
+    schedulePersistSessionState();
+
+    appendActionLog(io, {
+      type: 'setlist',
+      label: 'Setlist replaced',
+      detail: `Replaced ${previousCount} song${previousCount === 1 ? '' : 's'} with ${state.setlistFiles.length}`,
+      actor,
+      target: 'setlist',
+      metadata: {
+        previousCount,
+        total: state.setlistFiles.length,
+        songs: state.setlistFiles.map((file) => file.displayName),
+      },
+    });
+
+    emitSetlistUpdate(io, state.setlistFiles);
+    respond({
+      success: true,
+      replacedCount: previousCount,
       totalCount: state.setlistFiles.length,
     });
   });

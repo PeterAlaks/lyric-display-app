@@ -1,4 +1,5 @@
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { fork } from 'child_process';
 import { resolveProductionPath } from './paths.js';
 import { app } from 'electron';
@@ -9,6 +10,7 @@ let backendStopRequested = false;
 let backendRestartTimer = null;
 let lastStartOptions = {};
 let backendMessageHandler = null;
+const backendAppSessionId = randomUUID();
 
 const BACKEND_TAIL_LIMIT = 64 * 1024;
 const BACKEND_RESTART_WINDOW_MS = 5 * 60_000;
@@ -132,6 +134,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         NODE_ENV: app.isPackaged ? 'production' : 'development',
         LYRICDISPLAY_DATA_DIR: backendDataDir,
         LYRICDISPLAY_USER_DATA_DIR: userDataDir,
+        LYRICDISPLAY_APP_SESSION_ID: backendAppSessionId,
         LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
         LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },

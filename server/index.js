@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
+import { MAX_SETLIST_SOCKET_PAYLOAD_BYTES } from '../shared/setlistLimits.js';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import registerSocketEvents, { getOutputRegistry, hasOutput } from './events.js';
@@ -120,6 +121,7 @@ registerMediaRoutes(app, {
 registerAdminSecretRoutes(app, { localhostOnly, secretManager });
 
 const io = new Server(server, {
+  maxHttpBufferSize: MAX_SETLIST_SOCKET_PAYLOAD_BYTES,
   cors: {
     origin: '*',
   }
