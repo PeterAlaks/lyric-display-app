@@ -1,24 +1,38 @@
 import fs from 'fs';
 import path from 'path';
+import { normalizeBackgroundOutputKey, parseBackgroundMediaFilename } from './backgroundMediaFilename.js';
 
 export function createBackgroundMediaService({ backgroundMediaDir }) {
-  const cleanupOldMediaFiles = async (outputKey) => {
+  const cleanupOldMediaFiles = async (outputKey, { keepFilename = null } = {}) => {
+    const normalizedOutput = normalizeBackgroundOutputKey(outputKey);
+    if (!normalizedOutput) return { deleted: 0, skipped: 0 };
+
+    let deleted = 0;
+    let skipped = 0;
     try {
       const files = await fs.promises.readdir(backgroundMediaDir);
-      const pattern = new RegExp(`^${outputKey}-(output[12])-\\d+-[a-f0-9-]+\\.(jpg|jpeg|png|gif|webp|avif|mp4|webm|ogg|mov)$`, 'i');
 
       for (const file of files) {
-        if (pattern.test(file)) {
-          const filePath = path.join(backgroundMediaDir, file);
+        const parsed = parseBackgroundMediaFilename(file);
+        if (!parsed || parsed.outputKey !== normalizedOutput || parsed.filename === keepFilename) {
+          skipped += 1;
+          continue;
+        }
+
+        const filePath = path.join(backgroundMediaDir, parsed.filename);
+        try {
           await fs.promises.unlink(filePath);
-          console.log(`Cleaned up old media file: ${file}`);
+          deleted += 1;
+          console.log(`Cleaned up old media file: ${parsed.filename}`);
+        } catch (error) {
+          if (error?.code !== 'ENOENT') throw error;
         }
       }
     } catch (error) {
       console.warn('Media cleanup warning (non-critical):', error.message);
     }
+    return { deleted, skipped };
   };
 
   return { cleanupOldMediaFiles };
 }
-

@@ -2,14 +2,24 @@ import crypto from 'crypto';
 import path from 'path';
 import multer from 'multer';
 import { allowedMediaTypes, inferMediaKind } from './mediaTypes.js';
+import {
+  buildBackgroundMediaFilename,
+  normalizeBackgroundOutputKey,
+} from './backgroundMediaFilename.js';
 
 export function createUploadMiddleware({ backgroundMediaDir, getMediaDirectory }) {
   const backgroundStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, backgroundMediaDir),
     filename: (req, file, cb) => {
-      const outputKey = req.body.outputKey || 'output1';
-      const ext = path.extname(file.originalname || '').slice(0, 16) || '.bin';
-      const uniqueName = `bg-${outputKey}-${Date.now()}-${crypto.randomUUID()}${ext}`;
+      const outputKey = normalizeBackgroundOutputKey(req.body.outputKey || 'output1');
+      const uniqueName = buildBackgroundMediaFilename({
+        outputKey,
+        timestamp: Date.now(),
+        uuid: crypto.randomUUID(),
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+      });
+      if (!uniqueName) return cb(new Error('Invalid background media filename or output key'));
       cb(null, uniqueName);
     }
   });
@@ -66,4 +76,3 @@ export function createUploadMiddleware({ backgroundMediaDir, getMediaDirectory }
     userMediaUpload,
   };
 }
-

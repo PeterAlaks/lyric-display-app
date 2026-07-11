@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { isOutputClientType } from '../config/clientTypes.js';
+import { parseBackgroundMediaFilename } from '../media/backgroundMediaFilename.js';
 import { inferMediaKind } from '../media/mediaTypes.js';
 
 export function registerMediaRoutes(app, {
@@ -29,9 +30,9 @@ export function registerMediaRoutes(app, {
 
         const relativePath = `/media/backgrounds/${req.file.filename}`;
 
-        const outputKey = req.body.outputKey;
+        const outputKey = parseBackgroundMediaFilename(req.file.filename)?.outputKey;
         if (outputKey && isOutputClientType(outputKey)) {
-          backgroundMediaService.cleanupOldMediaFiles(outputKey).catch(err =>
+          backgroundMediaService.cleanupOldMediaFiles(outputKey, { keepFilename: req.file.filename }).catch(err =>
             console.warn('Background cleanup failed (non-blocking):', err.message)
           );
         }
