@@ -1,3 +1,5 @@
+import { emitToClients } from './broadcast.js';
+
 const DEFAULT_LIMIT = 750;
 const MAX_TEXT_LENGTH = 240;
 
@@ -47,7 +49,9 @@ export function appendActionLog(io, entry = {}) {
     entries.shift();
   }
 
-  io?.emit?.('actionLogUpdate', nextEntry);
+  emitToClients(io, 'actionLogUpdate', nextEntry, (client) => (
+    Array.isArray(client?.permissions) && client.permissions.includes('admin:full')
+  ));
   return nextEntry;
 }
 

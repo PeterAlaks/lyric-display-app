@@ -3,6 +3,7 @@ import { getJoinCodeGuardSnapshot } from '../auth/joinCodeGuard.js';
 export function registerHealthRoutes(app, {
   io,
   port,
+  authenticateRequest,
   secretManager,
   startupSecretRotation,
   tokenRateLimit,
@@ -10,19 +11,9 @@ export function registerHealthRoutes(app, {
   const isDev = process.env.NODE_ENV === 'development';
 
   app.get('/api/health', async (req, res) => {
-    const secretsStatus = await secretManager.getSecretsStatus();
-    const joinCodeMetrics = getJoinCodeGuardSnapshot();
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      environment: isDev ? 'development' : 'production',
-      security: {
-        secretsLoaded: secretsStatus.exists,
-        daysSinceRotation: secretsStatus.daysSinceRotation,
-        needsRotation: secretsStatus.needsRotation,
-        autoRotatedAtStartup: startupSecretRotation.rotated,
-        joinCodeGuard: joinCodeMetrics,
-      }
     });
   });
 
@@ -44,22 +35,12 @@ export function registerHealthRoutes(app, {
           status: 'ready',
           serverListening: true,
           timestamp: new Date().toISOString(),
-          checks,
-          uptime: process.uptime(),
-          port,
-          autoRotatedSecretsAtStartup: startupSecretRotation.rotated,
-          secretsStatus,
         });
       } else {
         res.status(503).json({
           status: 'not_ready',
           serverListening: true,
           timestamp: new Date().toISOString(),
-          checks,
-          failedChecks: Object.entries(checks)
-            .filter(([_, passed]) => !passed)
-            .map(([check]) => check),
-          secretsStatus,
         });
       }
     } catch (error) {
@@ -68,7 +49,44 @@ export function registerHealthRoutes(app, {
         status: 'error',
         serverListening: true,
         timestamp: new Date().toISOString(),
-        error: error.message
+      });
+    }
+  });
+
+  app.get('/api/health/details', authenticateRequest('admin:full'), async (req, res) => {
+    try {
+      const secretsStatus = await secretManager.getSecretsStatus();
+      const checks = {
+        serverListening: true,
+        secretsLoaded: Boolean(secretsStatus?.exists),
+        joinCodeGenerated: Boolean(global.controllerJoinCode),
+        socketIOReady: Boolean(io && io.engine),
+        rateLimiterActive: Boolean(tokenRateLimit),
+      };
+
+      res.json({
+        status: Object.values(checks).every(Boolean) ? 'ready' : 'not_ready',
+        timestamp: new Date().toISOString(),
+        environment: isDev ? 'development' : 'production',
+        port,
+        uptime: process.uptime(),
+        checks,
+        security: {
+          secretsLoaded: Boolean(secretsStatus?.exists),
+          daysSinceRotation: secretsStatus?.daysSinceRotation ?? null,
+          needsRotation: Boolean(secretsStatus?.needsRotation),
+          autoRotatedAtStartup: Boolean(startupSecretRotation.rotated),
+          joinCodeGuard: getJoinCodeGuardSnapshot(),
+          storageBackend: secretsStatus?.storageBackend || null,
+          configPath: secretsStatus?.configPath || null,
+        },
+      });
+    } catch (error) {
+      console.error('Detailed health check error:', error);
+      res.status(503).json({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        error: 'Detailed health diagnostics are unavailable',
       });
     }
   });

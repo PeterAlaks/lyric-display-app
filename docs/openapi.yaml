@@ -256,7 +256,7 @@ paths:
   /api/connection/clients:
     get:
       summary: Get connected clients
-      description: Requires 'lyrics:read' permission
+      description: Requires desktop administrator permission
       security:
         - BearerAuth: []
       responses:
@@ -408,22 +408,6 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
-                  environment:
-                    type: string
-                    enum: [development, production]
-                  security:
-                    type: object
-                    properties:
-                      secretsLoaded:
-                        type: boolean
-                      daysSinceRotation:
-                        type: integer
-                        nullable: true
-                      needsRotation:
-                        type: boolean
-                      joinCodeGuard:
-                        type: object
-                        description: Join code rate-limiting metrics snapshot
 
   /api/health/ready:
     get:
@@ -453,8 +437,40 @@ paths:
                       timestamp:
                         type: string
                         format: date-time
-                      error:
-                        type: string
+
+  /api/health/details:
+    get:
+      summary: Detailed administrator health diagnostics
+      description: Includes internal readiness, security rotation, and storage diagnostics.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Detailed health diagnostics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  environment:
+                    type: string
+                  port:
+                    type: integer
+                  uptime:
+                    type: number
+                  checks:
+                    type: object
+                  security:
+                    type: object
+        '401':
+          description: Authentication required
+        '403':
+          description: Administrator permission required
 
 components:
   securitySchemes:
@@ -511,26 +527,3 @@ components:
           type: boolean
         timestamp:
           type: string
-        checks:
-          type: object
-          properties:
-            serverListening:
-              type: boolean
-            secretsLoaded:
-              type: boolean
-            joinCodeGenerated:
-              type: boolean
-            socketIOReady:
-              type: boolean
-            rateLimiterActive:
-              type: boolean
-        uptime:
-          type: number
-        port:
-          type: integer
-        secretsStatus:
-          $ref: '#/components/schemas/SecretsStatus'
-        failedChecks:
-          type: array
-          items:
-            type: string

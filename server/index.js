@@ -136,6 +136,7 @@ registerSocketEvents(io, { hasPermission });
 registerHealthRoutes(app, {
   io,
   port: PORT,
+  authenticateRequest,
   secretManager,
   startupSecretRotation,
   tokenRateLimit,
