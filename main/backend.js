@@ -11,7 +11,7 @@ let backendRestartTimer = null;
 let lastStartOptions = {};
 let backendMessageHandler = null;
 let backendStatusHandler = null;
-const backendAppSessionId = randomUUID();
+export const backendAppSessionId = randomUUID();
 
 const BACKEND_TAIL_LIMIT = 64 * 1024;
 const BACKEND_RESTART_WINDOW_MS = 5 * 60_000;
@@ -177,8 +177,9 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     let stdoutTail = '';
     let stderrTail = '';
 
-    mirrorStreamToLog(child.stdout, 'BACKEND', process.stdout);
-    mirrorStreamToLog(child.stderr, 'BACKEND_ERROR', process.stderr);
+    const backendLogContext = { process: 'backend', pid: child.pid, source: 'child-process' };
+    mirrorStreamToLog(child.stdout, 'BACKEND', process.stdout, backendLogContext);
+    mirrorStreamToLog(child.stderr, 'BACKEND_ERROR', process.stderr, backendLogContext);
     child.stdout?.on('data', (chunk) => {
       stdoutTail = appendTail(stdoutTail, chunk);
     });

@@ -7,6 +7,7 @@
 import { ipcMain } from 'electron';
 import { getMIDIController, initializeMIDI, destroyMIDI } from './midiController.js';
 import { getOSCController, initializeOSC, destroyOSC } from './oscController.js';
+import { correlateExternalAction } from './externalControlCorrelation.js';
 
 let isInitialized = false;
 let getMainWindowFn = null;
@@ -22,7 +23,14 @@ function sendToRenderer(action) {
   }
 
   try {
-    mainWindow.webContents.send('external-control:action', action);
+    const correlatedAction = correlateExternalAction(action);
+    mainWindow.webContents.send('external-control:action', correlatedAction);
+    console.log('[ExternalControl] Dispatched action', {
+      commandId: correlatedAction.commandId,
+      action: correlatedAction.type,
+      source: correlatedAction.source,
+      sourceAddress: correlatedAction.sourceAddress || null,
+    });
     return true;
   } catch (error) {
     console.error('[ExternalControl] Error sending action to renderer:', error);
@@ -34,7 +42,6 @@ function sendToRenderer(action) {
  * Handle actions from MIDI controller
  */
 function handleMIDIAction(action) {
-  console.log('[ExternalControl] MIDI action:', action.type);
   sendToRenderer(action);
 }
 
@@ -42,7 +49,6 @@ function handleMIDIAction(action) {
  * Handle actions from OSC controller
  */
 function handleOSCAction(action) {
-  console.log('[ExternalControl] OSC action:', action.type);
   sendToRenderer(action);
 }
 

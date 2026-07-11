@@ -14,11 +14,11 @@ import { handleDisplayChange } from './main/displayDetection.js';
 import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
-import { registerObsDockPairingToken, setBackendMessageHandler, setBackendStatusHandler } from './main/backend.js';
+import { backendAppSessionId, registerObsDockPairingToken, setBackendMessageHandler, setBackendStatusHandler } from './main/backend.js';
 import { setAdminKeyFromBackend } from './main/adminKey.js';
 import { relaunchInDesktopMode, relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
 import * as userPreferences from './main/userPreferences.js';
-import { initFileLogging } from './main/logging.js';
+import { flushFileLogs, initFileLogging } from './main/logging.js';
 import { createAppTray, destroyAppTray } from './main/tray.js';
 
 const APP_PROTOCOL = 'lyricdisplay';
@@ -370,7 +370,7 @@ if (!hasLock) {
   process.exit(0);
 }
 
-initFileLogging();
+initFileLogging({ sessionId: backendAppSessionId });
 registerLyricVideoMediaScheme();
 
 if (process.platform === 'win32' && process.argv.length >= 2) {
@@ -531,9 +531,17 @@ app.on('window-all-closed', () => {
   }
 });
 
+let quitLogsFlushed = false;
 app.on('before-quit', (event) => {
   app.isQuitting = true;
-  performCleanup();
+  if (!quitLogsFlushed) {
+    event.preventDefault();
+    performCleanup();
+    void flushFileLogs().finally(() => {
+      quitLogsFlushed = true;
+      app.quit();
+    });
+  }
 });
 
 app.on('will-quit', () => {

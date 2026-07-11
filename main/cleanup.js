@@ -34,7 +34,6 @@ let isCleaningUp = false;
 
 export function performCleanup() {
   if (isCleaningUp) {
-    console.log('[Cleanup] Already cleaning up, skipping duplicate call');
     return;
   }
 

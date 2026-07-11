@@ -329,8 +329,6 @@ class OSCController extends EventEmitter {
         return;
       }
 
-      console.log('[OSC] Received:', message.address, 'from:', rinfo.address, 'args:', message.args.map(a => a.value));
-
       // Track client for feedback
       this.feedbackClients.set(`${rinfo.address}:${this.feedbackPort}`, {
         address: rinfo.address,
@@ -486,7 +484,6 @@ class OSCController extends EventEmitter {
       sourcePort: this.currentMessageSource?.port || null,
       ...data
     };
-    console.log('[OSC] Action:', type, data);
     this.emit('action', action);
   }
 
