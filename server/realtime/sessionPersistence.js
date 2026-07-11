@@ -139,6 +139,11 @@ export const applySessionSnapshot = (snapshot, { appSessionId = sessionAppId } =
     };
   }
 
+  state.sessionAuthority = {
+    snapshotLoaded: true,
+    initialized: true,
+  };
+
   return true;
 };
 
@@ -193,6 +198,10 @@ async function writeSnapshot() {
 }
 
 export function schedulePersistSessionState() {
+  state.sessionAuthority = {
+    snapshotLoaded: Boolean(state.sessionAuthority?.snapshotLoaded),
+    initialized: true,
+  };
   if (!sessionFilePath) return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {

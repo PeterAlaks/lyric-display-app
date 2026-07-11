@@ -655,6 +655,16 @@ components:
             type: array
             items:
               type: string
+          sessionAuthority:
+            type: object
+            description: Server session ownership metadata used during reconnect reconciliation.
+            properties:
+              source:
+                type: string
+                enum: [new, restored]
+              bootstrapAllowed:
+                type: boolean
+                description: True only until a new server session receives its first authoritative mutation.
           timestamp:
             type: integer
           syncTimestamp:

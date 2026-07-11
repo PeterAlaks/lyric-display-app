@@ -391,14 +391,16 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         }, retryDelay);
     }, [connectSocketInternal]);
 
-    const pendingEmissionsRef = useRef(new Map());
-
     const createEmitFunction = useCallback((eventName) => {
         return (...args) => {
             if (!socketRef.current?.connected || !readyRef.current || authStatus !== 'authenticated') {
-
-                pendingEmissionsRef.current.set(eventName, { args });
-                return true;
+                window.dispatchEvent(new CustomEvent('command-rejected', {
+                    detail: {
+                        eventName,
+                        message: 'The action was not sent because live control is disconnected. Reconnect and try again.',
+                    },
+                }));
+                return false;
             }
 
             socketRef.current.emit(eventName, ...args);
@@ -430,16 +432,6 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         socket.emit('setlistReplace', { files }, finish);
         logDebug(`Emitted setlistReplace for ${Array.isArray(files) ? files.length : 0} files`);
     }), [authStatus]);
-
-    useEffect(() => {
-        if (readyRef.current && socketRef.current?.connected && authStatus === 'authenticated') {
-            pendingEmissionsRef.current.forEach((emission, eventName) => {
-                socketRef.current.emit(eventName, ...emission.args);
-                logDebug(`Emitted queued ${eventName}:`, ...emission.args);
-            });
-            pendingEmissionsRef.current.clear();
-        }
-    }, [readyRef.current, authStatus]);
 
     const emitLineUpdate = useCallback((value) => {
         const payload = (value && typeof value === 'object' && !Array.isArray(value))

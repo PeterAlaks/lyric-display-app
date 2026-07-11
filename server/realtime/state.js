@@ -60,6 +60,10 @@ export const state = {
     updatedAt: null,
     updatedBy: null,
   },
+  sessionAuthority: {
+    snapshotLoaded: false,
+    initialized: false,
+  },
 };
 
 export const ensureOutputExists = (outputId) => {
@@ -142,6 +146,10 @@ const buildBaseState = (clientInfo, timestamp) => ({
   isDesktopClient: clientInfo?.type === 'desktop',
   clientPermissions: clientInfo?.permissions || [],
   liveSafety: state.liveSafety,
+  sessionAuthority: {
+    source: state.sessionAuthority?.snapshotLoaded ? 'restored' : 'new',
+    bootstrapAllowed: state.sessionAuthority?.initialized !== true,
+  },
   timestamp,
   syncTimestamp: timestamp,
 });

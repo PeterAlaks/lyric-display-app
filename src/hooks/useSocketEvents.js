@@ -5,6 +5,11 @@ import { detectArtistFromFilename } from '../utils/artistDetection';
 import { deriveSectionsFromProcessedLines } from '../../shared/lyricsParsing.js';
 import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
 import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
+import {
+  emitDesktopSessionBootstrap,
+  getDesktopBootstrapOutputIds,
+  shouldBootstrapDesktopSession,
+} from '../../shared/sessionReconciliation.js';
 
 const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -94,8 +99,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
   } = useLyricsStore();
 
   const setlistNameRef = useRef(new Map());
-  const registrySyncPendingRef = useRef(false);
-  const pendingRegisteredOutputsRef = useRef(null);
+  const desktopBootstrapSocketRef = useRef(null);
 
   const setupApplicationEventHandlers = useCallback((socket, clientType, isDesktopApp) => {
     if (role === 'timer-control') {
@@ -166,17 +170,6 @@ const useSocketEvents = (role, clientPurpose = role) => {
       }
     };
 
-    const shouldIgnoreEmptyRemoteFileName = (incomingFileName) => {
-      if (!isDesktopApp) return false;
-      if (typeof incomingFileName !== 'string' || incomingFileName.trim().length > 0) return false;
-
-      const store = useLyricsStore.getState();
-      return typeof store.lyricsFileName === 'string'
-        && store.lyricsFileName.trim().length > 0
-        && Array.isArray(store.lyrics)
-        && store.lyrics.length > 0;
-    };
-
     const applyOutputSettingsFromSnapshot = (state) => {
       for (const key of Object.keys(state)) {
         if (!key.startsWith('output') || !key.endsWith('Settings') || !isPlainObject(state[key])) continue;
@@ -197,10 +190,8 @@ const useSocketEvents = (role, clientPurpose = role) => {
         customIds.add(outputId);
       }
       const store = useLyricsStore.getState();
-      if (typeof store.setCustomOutputs === 'function' && customIds.size > 0) {
-        const existing = Array.isArray(store.customOutputIds) ? store.customOutputIds : [];
-        const merged = Array.from(new Set([...existing, ...Array.from(customIds)]));
-        store.setCustomOutputs(merged);
+      if (typeof store.setCustomOutputs === 'function') {
+        store.setCustomOutputs(Array.from(customIds));
       }
     };
 
@@ -210,76 +201,54 @@ const useSocketEvents = (role, clientPurpose = role) => {
         return;
       }
       const state = rawState;
-      const storeAtStart = useLyricsStore.getState();
-      const incomingLyrics = hasOwn(state, 'lyrics') && Array.isArray(state.lyrics) ? state.lyrics : null;
-      const preserveHydratedLyrics = Boolean(
-        (isDesktopApp || clientType === 'obsDock') &&
-        source === 'currentState' &&
-        Array.isArray(incomingLyrics) &&
-        incomingLyrics.length === 0 &&
-        Array.isArray(storeAtStart.lyrics) &&
-        storeAtStart.lyrics.length > 0
-      );
+      const preserveLocalDesktopState = source === 'currentState'
+        && shouldBootstrapDesktopSession({ snapshot: state, isDesktopApp });
 
       logDebug(`Received ${source}:`, summarizeSnapshotForLog(state));
       if (window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('sync-completed'));
       }
 
-      if (!isDesktopApp) {
+      if (!preserveLocalDesktopState) {
         reconcileCustomOutputsFromSnapshot(state);
       }
 
-      if (hasOwn(state, 'lyrics') && Array.isArray(state.lyrics) && !preserveHydratedLyrics) {
+      if (hasOwn(state, 'lyrics') && Array.isArray(state.lyrics) && !preserveLocalDesktopState) {
         const currentLyrics = useLyricsStore.getState().lyrics;
         if (!shallowArrayEqual(currentLyrics, state.lyrics)) {
           setLyrics(state.lyrics);
         }
       }
-      if (hasOwn(state, 'lyricsTimestamps') && !preserveHydratedLyrics) {
+      if (hasOwn(state, 'lyricsTimestamps') && !preserveLocalDesktopState) {
         const nextTimestamps = Array.isArray(state.lyricsTimestamps) ? state.lyricsTimestamps : [];
         const currentTimestamps = useLyricsStore.getState().lyricsTimestamps;
         if (!shallowArrayEqual(currentTimestamps, nextTimestamps)) {
           setLyricsTimestamps(nextTimestamps);
         }
       }
-      if (hasOwn(state, 'lyricsEnhancedTimestamps') && !preserveHydratedLyrics && !isPassiveDisplayRole(role)) {
+      if (hasOwn(state, 'lyricsEnhancedTimestamps') && !preserveLocalDesktopState && !isPassiveDisplayRole(role)) {
         const nextEnhancedTimestamps = Array.isArray(state.lyricsEnhancedTimestamps) ? state.lyricsEnhancedTimestamps : [];
         const currentEnhancedTimestamps = useLyricsStore.getState().lyricsEnhancedTimestamps;
         if (!shallowArrayEqual(currentEnhancedTimestamps, nextEnhancedTimestamps)) {
           setLyricsEnhancedTimestamps(nextEnhancedTimestamps);
         }
       }
-      if (hasOwn(state, 'lyricsFileName') && typeof state.lyricsFileName === 'string' && !preserveHydratedLyrics) {
-        if (shouldIgnoreEmptyRemoteFileName(state.lyricsFileName)) {
-          logDebug(`Ignoring empty ${source} lyricsFileName to preserve local desktop state`);
-        } else {
-          setLyricsFileName(state.lyricsFileName);
-        }
+      if (hasOwn(state, 'lyricsFileName') && typeof state.lyricsFileName === 'string' && !preserveLocalDesktopState) {
+        setLyricsFileName(state.lyricsFileName);
       }
-      if (hasOwn(state, 'rawLyricsContent') && typeof state.rawLyricsContent === 'string' && !preserveHydratedLyrics) {
+      if (hasOwn(state, 'rawLyricsContent') && typeof state.rawLyricsContent === 'string' && !preserveLocalDesktopState) {
         setRawLyricsContent(state.rawLyricsContent);
       }
-      if (hasOwn(state, 'lyricsSource') && isPlainObject(state.lyricsSource) && !preserveHydratedLyrics) {
+      if (hasOwn(state, 'lyricsSource') && isPlainObject(state.lyricsSource) && !preserveLocalDesktopState) {
         setLyricsSource(state.lyricsSource);
       }
-      if (hasOwn(state, 'songMetadata') && isPlainObject(state.songMetadata) && !preserveHydratedLyrics) {
+      if (hasOwn(state, 'songMetadata') && isPlainObject(state.songMetadata) && !preserveLocalDesktopState) {
         setSongMetadata(state.songMetadata);
       }
 
-      const isDesktop = state.isDesktopClient === true;
-      if (hasOwn(state, 'selectedLine')) {
+      if (hasOwn(state, 'selectedLine') && !preserveLocalDesktopState) {
         if (state.selectedLine === null) {
-          if (!isDesktop) {
-            selectLine(null);
-          } else {
-            const persisted = useLyricsStore.getState().selectedLine;
-            if (typeof persisted !== 'number' || persisted < 0) {
-              selectLine(null);
-            } else {
-              logDebug('Preserving persisted selectedLine:', persisted);
-            }
-          }
+          selectLine(null);
         } else if (typeof state.selectedLine === 'number' && state.selectedLine >= 0) {
           const currentLyrics = useLyricsStore.getState().lyrics;
           if (!Array.isArray(currentLyrics) || state.selectedLine < currentLyrics.length) {
@@ -288,17 +257,17 @@ const useSocketEvents = (role, clientPurpose = role) => {
         }
       }
 
-      applyOutputSettingsFromSnapshot(state);
-      if (isPlainObject(state.stageSettings) && role === 'stage') {
+      if (!preserveLocalDesktopState) applyOutputSettingsFromSnapshot(state);
+      if (isPlainObject(state.stageSettings) && !preserveLocalDesktopState) {
         updateOutputSettings('stage', state.stageSettings);
       }
       if (Array.isArray(state.setlistFiles)) setSetlistFiles(state.setlistFiles);
       if (typeof state.isDesktopClient === 'boolean') setIsDesktopApp(state.isDesktopClient);
-      if (typeof state.isOutputOn === 'boolean' && !isDesktopApp) {
+      if (typeof state.isOutputOn === 'boolean' && !preserveLocalDesktopState) {
         useLyricsStore.getState().setIsOutputOn(state.isOutputOn);
       }
 
-      if (!isDesktopApp) {
+      if (!preserveLocalDesktopState) {
         for (const key of Object.keys(state)) {
           if (!key.startsWith('output') || !key.endsWith('Enabled')) continue;
           const outputId = key.slice(0, -'Enabled'.length);
@@ -310,7 +279,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
         }
       }
 
-      if (!preserveHydratedLyrics && !isPassiveDisplayRole(role)) {
+      if (!preserveLocalDesktopState && !isPassiveDisplayRole(role)) {
         applySections(state.lyricsSections || state.sections, state.lineToSection, state.lyrics);
       }
 
@@ -324,6 +293,12 @@ const useSocketEvents = (role, clientPurpose = role) => {
             detail: state.stageMessages,
           }));
         }
+      }
+
+      if (preserveLocalDesktopState && desktopBootstrapSocketRef.current !== socket.id) {
+        desktopBootstrapSocketRef.current = socket.id;
+        emitDesktopSessionBootstrap(socket, useLyricsStore.getState());
+        logDebug('Bootstrapped a new backend session from the hydrated desktop store');
       }
     };
 
@@ -435,25 +410,16 @@ const useSocketEvents = (role, clientPurpose = role) => {
         .filter((id) => isCustomOutputId(id));
       const store = useLyricsStore.getState();
       if (typeof store.setCustomOutputs === 'function') {
-        if (clientType === 'desktop' && registrySyncPendingRef.current) {
-          const localCustomOutputs = (Array.isArray(store.customOutputIds) ? store.customOutputIds : [])
-            .filter((id) => isCustomOutputId(id));
-          const matchesLocal =
-            localCustomOutputs.length === customOutputs.length
-            && localCustomOutputs.every((id) => customOutputs.includes(id));
-
-          if (!matchesLocal) {
-            logDebug('Ignoring stale outputsRegistry while sync is pending', {
-              expected: localCustomOutputs,
-              received: customOutputs,
-            });
+        if (isDesktopApp && desktopBootstrapSocketRef.current === socket.id) {
+          const expectedOutputs = getDesktopBootstrapOutputIds(store);
+          const matchesBootstrap = expectedOutputs.length === customOutputs.length
+            && expectedOutputs.every((id) => customOutputs.includes(id));
+          if (!matchesBootstrap) {
+            logDebug('Waiting for the bootstrapped output registry acknowledgement');
             return;
           }
-
-          registrySyncPendingRef.current = false;
-          pendingRegisteredOutputsRef.current = null;
+          desktopBootstrapSocketRef.current = null;
         }
-
         store.setCustomOutputs(customOutputs);
       }
     });
@@ -735,91 +701,6 @@ const useSocketEvents = (role, clientPurpose = role) => {
         socket.emit('requestCurrentState');
       }, 500);
 
-      const isOutputRole = typeof role === 'string' && role.startsWith('output');
-      const shouldSyncOutputSettings = !isOutputRole && role !== 'stage' && role !== 'timer-control';
-
-      if (shouldSyncOutputSettings && clientType === 'desktop') {
-        const syncOutputSettingsFromStore = () => {
-          try {
-            const storeState = useLyricsStore.getState();
-            const customOutputs = Array.isArray(storeState.customOutputIds) ? storeState.customOutputIds : [];
-            registrySyncPendingRef.current = true;
-            pendingRegisteredOutputsRef.current = new Set(customOutputs);
-            socket.emit('outputsRegister', { outputs: storeState.customOutputIds || [] });
-
-            for (const key of Object.keys(storeState)) {
-              if (key.startsWith('output') && key.endsWith('Settings') && storeState[key]) {
-                const outputId = key.slice(0, -'Settings'.length);
-                socket.emit('styleUpdate', { output: outputId, settings: storeState[key] });
-              }
-            }
-
-            if (storeState.stageSettings) {
-              socket.emit('styleUpdate', { output: 'stage', settings: storeState.stageSettings });
-            }
-
-            logDebug('Synced output settings to server after reconnect');
-          } catch (error) {
-            registrySyncPendingRef.current = false;
-            pendingRegisteredOutputsRef.current = null;
-            logError('Failed to sync output settings after reconnect:', error);
-          }
-        };
-
-        const persistApi = useLyricsStore.persist;
-        if (persistApi?.hasHydrated?.()) {
-          syncOutputSettingsFromStore();
-        } else if (persistApi?.onFinishHydration) {
-          persistApi.onFinishHydration(() => {
-            syncOutputSettingsFromStore();
-          });
-        } else {
-          syncOutputSettingsFromStore();
-        }
-      } else {
-        registrySyncPendingRef.current = false;
-        pendingRegisteredOutputsRef.current = null;
-      }
-
-      if ((isDesktopApp || clientType === 'obsDock') && role !== 'timer-control') {
-        setTimeout(() => {
-          const currentState = useLyricsStore.getState();
-
-          if (isDesktopApp) {
-            socket.emit('outputToggle', currentState.isOutputOn);
-            for (const key of Object.keys(currentState)) {
-              if (key.startsWith('output') && key.endsWith('Enabled') && typeof currentState[key] === 'boolean') {
-                const outputId = key.slice(0, -'Enabled'.length);
-                socket.emit('individualOutputToggle', { output: outputId, enabled: currentState[key] });
-              }
-            }
-            if (typeof currentState.stageEnabled === 'boolean') {
-              socket.emit('individualOutputToggle', { output: 'stage', enabled: currentState.stageEnabled });
-            }
-          }
-
-          if (currentState.lyrics.length > 0) {
-            socket.emit('lyricsLoad', {
-              lyrics: currentState.lyrics,
-              fileName: currentState.lyricsFileName || '',
-              rawLyricsContent: currentState.rawLyricsContent || '',
-              lyricsSource: currentState.lyricsSource || null,
-              songMetadata: currentState.songMetadata || null,
-              lyricsTimestamps: currentState.lyricsTimestamps || [],
-              lyricsEnhancedTimestamps: currentState.lyricsEnhancedTimestamps || [],
-              sections: currentState.lyricsSections || [],
-              lineToSection: currentState.lineToSection || {},
-            });
-            if (Array.isArray(currentState.lyricsTimestamps) && currentState.lyricsTimestamps.length > 0) {
-              socket.emit('lyricsTimestampsUpdate', currentState.lyricsTimestamps);
-            }
-            if (currentState.lyricsFileName) {
-              socket.emit('fileNameUpdate', currentState.lyricsFileName);
-            }
-            socket.emit('lineUpdate', { index: currentState.selectedLine });
-          }
-        }, 1000);
-      }
     });
 
     socket.on('disconnect', (reason) => {

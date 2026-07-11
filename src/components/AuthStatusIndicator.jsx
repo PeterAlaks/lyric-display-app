@@ -98,6 +98,12 @@ const AuthStatusIndicator = ({
   useEffect(() => {
     const handleAuthError = (e) => showToast({ title: 'Authentication Error', message: e.detail.message || 'Authentication failed', variant: 'error' });
     const handlePermissionError = (e) => showToast({ title: 'Permission Denied', message: e.detail.message || 'Insufficient permissions', variant: 'warning' });
+    const handleCommandRejected = (e) => showToast({
+      title: 'Action not sent',
+      message: e.detail?.message || 'Live control is disconnected. Reconnect and try again.',
+      variant: 'warning',
+      dedupeKey: 'disconnected-command-rejected',
+    });
     const handleSetlistError = (e) => showToast({ title: 'Setlist Error', message: e.detail.message || 'Operation failed', variant: 'error' });
     const handleSetlistSuccess = (e) => {
       const { addedCount, totalCount } = e.detail;
@@ -107,11 +113,13 @@ const AuthStatusIndicator = ({
     };
     window.addEventListener('auth-error', handleAuthError);
     window.addEventListener('permission-error', handlePermissionError);
+    window.addEventListener('command-rejected', handleCommandRejected);
     window.addEventListener('setlist-error', handleSetlistError);
     window.addEventListener('setlist-add-success', handleSetlistSuccess);
     return () => {
       window.removeEventListener('auth-error', handleAuthError);
       window.removeEventListener('permission-error', handlePermissionError);
+      window.removeEventListener('command-rejected', handleCommandRejected);
       window.removeEventListener('setlist-error', handleSetlistError);
       window.removeEventListener('setlist-add-success', handleSetlistSuccess);
     };
