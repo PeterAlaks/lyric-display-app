@@ -82,21 +82,19 @@ const normalizeOutputRegistry = (payload) => {
 };
 
 const useSocketEvents = (role, clientPurpose = role) => {
-  const {
-    setLyrics,
-    setLyricsTimestamps,
-    setLyricsEnhancedTimestamps,
-    selectLine,
-    updateOutputSettings,
-    setSetlistFiles,
-    setIsDesktopApp,
-    setLyricsFileName,
-    setRawLyricsContent,
-    setLyricsSource,
-    setSongMetadata,
-    setLyricsSections,
-    setLineToSection,
-  } = useLyricsStore();
+  const setLyrics = useLyricsStore((state) => state.setLyrics);
+  const setLyricsTimestamps = useLyricsStore((state) => state.setLyricsTimestamps);
+  const setLyricsEnhancedTimestamps = useLyricsStore((state) => state.setLyricsEnhancedTimestamps);
+  const selectLine = useLyricsStore((state) => state.selectLine);
+  const updateOutputSettings = useLyricsStore((state) => state.updateOutputSettings);
+  const setSetlistFiles = useLyricsStore((state) => state.setSetlistFiles);
+  const setIsDesktopApp = useLyricsStore((state) => state.setIsDesktopApp);
+  const setLyricsFileName = useLyricsStore((state) => state.setLyricsFileName);
+  const setRawLyricsContent = useLyricsStore((state) => state.setRawLyricsContent);
+  const setLyricsSource = useLyricsStore((state) => state.setLyricsSource);
+  const setSongMetadata = useLyricsStore((state) => state.setSongMetadata);
+  const setLyricsSections = useLyricsStore((state) => state.setLyricsSections);
+  const setLineToSection = useLyricsStore((state) => state.setLineToSection);
 
   const setlistNameRef = useRef(new Map());
   const desktopBootstrapSocketRef = useRef(null);
