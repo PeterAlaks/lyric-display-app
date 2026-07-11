@@ -1,5 +1,6 @@
 import { state, summarizeSetlistForDisplay } from './state.js';
 import { isOutputClientType, isOutputDiscoveryClientType } from './utils.js';
+import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 
 const CONTROLLER_TYPES = new Set(['desktop', 'web', 'mobile', 'obsDock']);
 
@@ -126,7 +127,7 @@ export const emitIndividualOutputEvent = (io, eventName, payload = {}) => (
 );
 
 export const emitOutputRegistry = (io, payload) => (
-  emitToClients(io, 'outputsRegistry', payload, (client) => (
+  emitToClients(io, REALTIME_EVENTS.outputsRegistry, payload, (client) => (
     isControllerClient(client) ||
     isOutputDisplayClient(client) ||
     isOutputDiscoveryClient(client)

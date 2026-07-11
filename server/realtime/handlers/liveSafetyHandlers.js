@@ -1,10 +1,11 @@
 import { appendActionLog } from '../actionLog.js';
 import { getLiveSafetySnapshot, setLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
+import { REALTIME_EVENTS, REALTIME_PERMISSIONS } from '../../../shared/apiContractRegistry.js';
 
 export function registerLiveSafetyHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
-  socket.on('liveSafetySet', (payload = {}) => {
-    if (!hasPermission(socket, 'admin:full')) {
+  socket.on(REALTIME_EVENTS.liveSafetySet, (payload = {}) => {
+    if (!hasPermission(socket, REALTIME_PERMISSIONS.liveSafetySet)) {
       socket.emit('permissionError', 'Only the desktop controller can change live safety mode');
       return;
     }
@@ -26,10 +27,10 @@ export function registerLiveSafetyHandlers({ io, socket, hasPermission, clientTy
       target: 'live safety',
       metadata: { enabled },
     });
-    io.emit('liveSafetyUpdate', snapshot);
+    io.emit(REALTIME_EVENTS.liveSafetyUpdate, snapshot);
   });
 
-  socket.on('requestLiveSafetyState', () => {
-    socket.emit('liveSafetyUpdate', getLiveSafetySnapshot());
+  socket.on(REALTIME_EVENTS.requestLiveSafetyState, () => {
+    socket.emit(REALTIME_EVENTS.liveSafetyUpdate, getLiveSafetySnapshot());
   });
 }

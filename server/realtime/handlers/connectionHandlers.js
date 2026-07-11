@@ -13,6 +13,7 @@ import {
   isStatePayloadNoteworthy,
   shouldSamplePeriodicState,
 } from '../stateDiagnostics.js';
+import { REALTIME_EVENTS } from '../../../shared/apiContractRegistry.js';
 
 const normalizePurpose = (value) => (
   typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null
@@ -43,7 +44,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
 
   if (isOutputClient) {
     if (!state.registeredOutputs.has(clientType)) {
-      socket.emit('outputUnavailable', { output: clientType });
+      socket.emit(REALTIME_EVENTS.outputUnavailable, { output: clientType });
       socket.disconnect(true);
       return false;
     }
@@ -103,7 +104,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
       }
     }
     emitCurrentState(socket, state.connectedClients.get(socket.id), 'clientConnect', true);
-    socket.emit('outputsRegistry', { outputs: buildOutputList() });
+    socket.emit(REALTIME_EVENTS.outputsRegistry, { outputs: buildOutputList() });
   });
 
   socket.on('heartbeat', () => {
@@ -151,7 +152,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
       const clientInfo = state.connectedClients.get(socket.id);
       if (!clientInfo) return;
       emitCurrentState(socket, clientInfo, 'initial-sync', true);
-      socket.emit('outputsRegistry', { outputs: buildOutputList() });
+      socket.emit(REALTIME_EVENTS.outputsRegistry, { outputs: buildOutputList() });
     }
   }, 100);
 
@@ -191,7 +192,7 @@ export function registerCurrentStateHandler({ socket, hasPermission }) {
     console.log('State requested by authenticated client:', socket.id);
     const clientInfo = state.connectedClients.get(socket.id);
     if (!emitCurrentState(socket, clientInfo, 'requestCurrentState', true)) return;
-    socket.emit('outputsRegistry', { outputs: buildOutputList() });
+    socket.emit(REALTIME_EVENTS.outputsRegistry, { outputs: buildOutputList() });
   });
 }
 

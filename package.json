@@ -24,6 +24,7 @@
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "audit:server": "npm --prefix server audit --omit=dev --audit-level=moderate",
     "check:static": "node scripts/check-static.js",
+    "check:contracts": "node scripts/validate-api-contracts.js",
     "test:unit": "node --test tests/*.test.js",
     "test:lyrics-canary": "node --test tests/*.canary.js",
     "test:security": "node --test tests/security-hardening.test.js",

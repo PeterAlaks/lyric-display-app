@@ -1,4 +1,5 @@
 import { appendActionLog } from './actionLog.js';
+import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 import { state } from './state.js';
 
 const LIVE_SAFETY_BLOCK_REASON = 'Live safety mode is active. Secondary controllers can only change lyric lines.';
@@ -41,7 +42,7 @@ export function blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId,
     timestamp: Date.now(),
   };
 
-  socket.emit('liveSafetyBlocked', payload);
+  socket.emit(REALTIME_EVENTS.liveSafetyBlocked, payload);
   appendActionLog(io, {
     type: 'safety',
     label: 'Live safety blocked action',

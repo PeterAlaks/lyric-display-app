@@ -1,6 +1,6 @@
 import { emitToClients } from './broadcast.js';
+import { ACTION_LOG_MAX_ENTRIES, REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 
-const DEFAULT_LIMIT = 750;
 const MAX_TEXT_LENGTH = 240;
 
 const entries = [];
@@ -45,20 +45,20 @@ export function appendActionLog(io, entry = {}) {
   };
 
   entries.push(nextEntry);
-  while (entries.length > DEFAULT_LIMIT) {
+  while (entries.length > ACTION_LOG_MAX_ENTRIES) {
     entries.shift();
   }
 
-  emitToClients(io, 'actionLogUpdate', nextEntry, (client) => (
+  emitToClients(io, REALTIME_EVENTS.actionLogUpdate, nextEntry, (client) => (
     Array.isArray(client?.permissions) && client.permissions.includes('admin:full')
   ));
   return nextEntry;
 }
 
-export function getActionLogSnapshot({ limit = DEFAULT_LIMIT } = {}) {
+export function getActionLogSnapshot({ limit = ACTION_LOG_MAX_ENTRIES } = {}) {
   const resolvedLimit = Number.isFinite(limit)
-    ? Math.max(1, Math.min(DEFAULT_LIMIT, Math.floor(limit)))
-    : DEFAULT_LIMIT;
+    ? Math.max(1, Math.min(ACTION_LOG_MAX_ENTRIES, Math.floor(limit)))
+    : ACTION_LOG_MAX_ENTRIES;
   return entries.slice(-resolvedLimit);
 }
 

@@ -13,6 +13,7 @@ import {
   emitOutputVisibilityEvent
 } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
+import { REALTIME_EVENTS, REALTIME_PERMISSIONS } from '../../../shared/apiContractRegistry.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { getPrimaryOutputInstance, isOutputClientType, isPlainObject } from '../utils.js';
 
@@ -147,12 +148,12 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     emitIndividualOutputEvent(io, 'styleUpdate', { output, settings });
   });
 
-  socket.on('outputRemove', (payload) => {
+  socket.on(REALTIME_EVENTS.outputRemove, (payload) => {
     if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'outputRemove' })) {
       return;
     }
 
-    if (!hasPermission(socket, 'settings:write')) {
+    if (!hasPermission(socket, REALTIME_PERMISSIONS.outputRemove)) {
       socket.emit('permissionError', 'Insufficient permissions to remove outputs');
       return;
     }
@@ -187,16 +188,16 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       actor,
       target: output,
     });
-    emitIndividualOutputEvent(io, 'outputRemoved', { output });
+    emitIndividualOutputEvent(io, REALTIME_EVENTS.outputRemoved, { output });
     emitOutputRegistry(io, { outputs: buildOutputList() });
   });
 
-  socket.on('outputsRegister', (payload) => {
+  socket.on(REALTIME_EVENTS.outputsRegister, (payload) => {
     if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'outputsRegister' })) {
       return;
     }
 
-    if (!hasPermission(socket, 'settings:write')) {
+    if (!hasPermission(socket, REALTIME_PERMISSIONS.outputsRegister)) {
       socket.emit('permissionError', 'Insufficient permissions to register outputs');
       return;
     }

@@ -203,6 +203,26 @@ paths:
         '401':
           description: Invalid token
 
+  /api/app/capabilities:
+    get:
+      summary: Get local Electron app-control capabilities
+      description: Local-only capability discovery used by LyricDisplay Dock.
+      security: []
+      responses:
+        '200':
+          description: Available app-control capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  switchToDesktopMode:
+                    type: boolean
+                  obsDockLocalAuth:
+                    type: boolean
+        '403':
+          description: Request did not come from a local application page
+
   /api/app/switch-to-desktop-mode:
     post:
       summary: Ask Electron to restart Dock Mode as the desktop app
@@ -225,6 +245,26 @@ paths:
                     type: boolean
         '403':
           description: Request did not come from a local dock page
+        '503':
+          description: Backend is not running under Electron
+
+  /api/app/switch-to-dock-mode:
+    post:
+      summary: Ask Electron to restart the desktop app in Dock Mode
+      description: Local-only endpoint used by the desktop application and dock setup flow.
+      security: []
+      responses:
+        '200':
+          description: Dock Mode switch accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '403':
+          description: Request did not come from a local application page
         '503':
           description: Backend is not running under Electron
 
@@ -298,6 +338,54 @@ paths:
           description: Insufficient permissions
         '500':
           description: Failed to fetch connected clients
+
+  /api/outputs:
+    get:
+      summary: Get the registered output capability list
+      security: []
+      responses:
+        '200':
+          description: Registered built-in and custom outputs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, outputs, stageEnabled]
+                properties:
+                  success:
+                    type: boolean
+                  outputs:
+                    type: array
+                    items:
+                      type: string
+                  stageEnabled:
+                    type: boolean
+
+  /api/outputs/{outputId}:
+    get:
+      summary: Check whether an output identifier is registered
+      security: []
+      parameters:
+        - in: path
+          name: outputId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Output capability result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, output, exists]
+                properties:
+                  success:
+                    type: boolean
+                  output:
+                    type: string
+                  exists:
+                    type: boolean
 
   /api/media/backgrounds:
     post:

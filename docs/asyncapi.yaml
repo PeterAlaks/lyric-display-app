@@ -47,6 +47,10 @@ channels:
         $ref: '#/components/messages/outputToggle'
       individualOutputToggle:
         $ref: '#/components/messages/individualOutputToggle'
+      outputRemove:
+        $ref: '#/components/messages/outputRemove'
+      outputsRegister:
+        $ref: '#/components/messages/outputsRegister'
       lyricsLoad:
         $ref: '#/components/messages/lyricsLoad'
       lyricsTimestampsUpdate:
@@ -69,6 +73,14 @@ channels:
         $ref: '#/components/messages/lyricsDraftReject'
       autoplayStateUpdate:
         $ref: '#/components/messages/autoplayStateUpdate'
+      liveSafetySet:
+        $ref: '#/components/messages/liveSafetySet'
+      requestLiveSafetyState:
+        $ref: '#/components/messages/requestLiveSafetyState'
+      requestActionLog:
+        $ref: '#/components/messages/requestActionLog'
+      actionLogClear:
+        $ref: '#/components/messages/actionLogClear'
       heartbeat:
         $ref: '#/components/messages/heartbeat'
       disconnect:
@@ -139,6 +151,20 @@ channels:
         $ref: '#/components/messages/clientDisconnected'
       periodicStateSync:
         $ref: '#/components/messages/periodicStateSync'
+      outputsRegistry:
+        $ref: '#/components/messages/outputsRegistry'
+      outputRemoved:
+        $ref: '#/components/messages/outputRemoved'
+      outputUnavailable:
+        $ref: '#/components/messages/outputUnavailable'
+      liveSafetyUpdate:
+        $ref: '#/components/messages/liveSafetyUpdate'
+      liveSafetyBlocked:
+        $ref: '#/components/messages/liveSafetyBlocked'
+      actionLogSnapshot:
+        $ref: '#/components/messages/actionLogSnapshot'
+      actionLogUpdate:
+        $ref: '#/components/messages/actionLogUpdate'
 
 operations:
   clientEvents:
@@ -159,6 +185,8 @@ operations:
       - $ref: '#/channels/socketChannel/messages/lineUpdate'
       - $ref: '#/channels/socketChannel/messages/outputToggle'
       - $ref: '#/channels/socketChannel/messages/individualOutputToggle'
+      - $ref: '#/channels/socketChannel/messages/outputRemove'
+      - $ref: '#/channels/socketChannel/messages/outputsRegister'
       - $ref: '#/channels/socketChannel/messages/lyricsLoad'
       - $ref: '#/channels/socketChannel/messages/lyricsTimestampsUpdate'
       - $ref: '#/channels/socketChannel/messages/styleUpdate'
@@ -170,6 +198,10 @@ operations:
       - $ref: '#/channels/socketChannel/messages/lyricsDraftApprove'
       - $ref: '#/channels/socketChannel/messages/lyricsDraftReject'
       - $ref: '#/channels/socketChannel/messages/autoplayStateUpdate'
+      - $ref: '#/channels/socketChannel/messages/liveSafetySet'
+      - $ref: '#/channels/socketChannel/messages/requestLiveSafetyState'
+      - $ref: '#/channels/socketChannel/messages/requestActionLog'
+      - $ref: '#/channels/socketChannel/messages/actionLogClear'
       - $ref: '#/channels/socketChannel/messages/heartbeat'
       - $ref: '#/channels/socketChannel/messages/disconnect'
   
@@ -210,6 +242,13 @@ operations:
       - $ref: '#/channels/socketChannel/messages/heartbeat_ack'
       - $ref: '#/channels/socketChannel/messages/clientDisconnected'
       - $ref: '#/channels/socketChannel/messages/periodicStateSync'
+      - $ref: '#/channels/socketChannel/messages/outputsRegistry'
+      - $ref: '#/channels/socketChannel/messages/outputRemoved'
+      - $ref: '#/channels/socketChannel/messages/outputUnavailable'
+      - $ref: '#/channels/socketChannel/messages/liveSafetyUpdate'
+      - $ref: '#/channels/socketChannel/messages/liveSafetyBlocked'
+      - $ref: '#/channels/socketChannel/messages/actionLogSnapshot'
+      - $ref: '#/channels/socketChannel/messages/actionLogUpdate'
 
 components:
   schemas:
@@ -309,6 +348,38 @@ components:
             sessionId:
               type: string
 
+    ActionLogEntry:
+      type: object
+      required: [id, type, label, actor, createdAt]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        label:
+          type: string
+        detail:
+          type: string
+        actor:
+          type: object
+          properties:
+            clientType:
+              type: string
+            deviceId:
+              type: string
+              nullable: true
+            sessionId:
+              type: string
+              nullable: true
+        target:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
+          type: integer
+
   messages:
     # Client -> Server
     clientConnect:
@@ -346,6 +417,7 @@ components:
       name: setlistAdd
       payload:
         type: array
+        maxItems: 100
         items:
           $ref: '#/components/schemas/SetlistItemInput'
       description: Adds up to 100 items total; rejects duplicates by normalized name.
@@ -433,6 +505,31 @@ components:
           enabled:
             type: boolean
       x-permissions: ['output:control']
+    outputRemove:
+      name: outputRemove
+      payload:
+        type: object
+        required: [output]
+        properties:
+          output:
+            type: string
+            pattern: '^output'
+      description: Removes a custom output. Built-in output1 and output2 cannot be removed.
+      x-permissions: ['settings:write']
+    outputsRegister:
+      name: outputsRegister
+      payload:
+        type: object
+        required: [outputs]
+        properties:
+          outputs:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+              pattern: '^output'
+      description: Replaces the registered custom-output list while retaining built-in outputs.
+      x-permissions: ['settings:write']
     lyricsLoad:
       name: lyricsLoad
       payload:
@@ -593,6 +690,37 @@ components:
         Updates autoplay state. The server broadcasts this to all clients
         except the sender (socket.broadcast.emit).
       x-permissions: ['output:control']
+    liveSafetySet:
+      name: liveSafetySet
+      payload:
+        oneOf:
+          - type: boolean
+          - type: object
+            required: [enabled]
+            properties:
+              enabled:
+                type: boolean
+      x-permissions: ['admin:full']
+    requestLiveSafetyState:
+      name: requestLiveSafetyState
+      payload:
+        type: 'null'
+      x-permissions: ['lyrics:read']
+    requestActionLog:
+      name: requestActionLog
+      payload:
+        type: object
+        properties:
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 750
+      x-permissions: ['admin:full']
+    actionLogClear:
+      name: actionLogClear
+      payload:
+        type: 'null'
+      x-permissions: ['admin:full']
     heartbeat:
       name: heartbeat
       payload:
@@ -604,6 +732,66 @@ components:
         description: Reason for disconnection
 
     # Server -> Client
+    outputsRegistry:
+      name: outputsRegistry
+      payload:
+        type: object
+        required: [outputs]
+        properties:
+          outputs:
+            type: array
+            items:
+              type: string
+    outputRemoved:
+      name: outputRemoved
+      payload:
+        type: object
+        required: [output]
+        properties:
+          output:
+            type: string
+    outputUnavailable:
+      name: outputUnavailable
+      payload:
+        type: object
+        required: [output]
+        properties:
+          output:
+            type: string
+    liveSafetyUpdate:
+      name: liveSafetyUpdate
+      payload:
+        type: object
+        required: [enabled]
+        properties:
+          enabled:
+            type: boolean
+          updatedAt:
+            type: integer
+            nullable: true
+          updatedBy:
+            type: object
+            nullable: true
+    liveSafetyBlocked:
+      name: liveSafetyBlocked
+      payload:
+        type: object
+        properties:
+          action:
+            type: string
+          liveSafety:
+            $ref: '#/components/messages/liveSafetyUpdate/payload'
+    actionLogSnapshot:
+      name: actionLogSnapshot
+      payload:
+        type: array
+        maxItems: 750
+        items:
+          $ref: '#/components/schemas/ActionLogEntry'
+    actionLogUpdate:
+      name: actionLogUpdate
+      payload:
+        $ref: '#/components/schemas/ActionLogEntry'
     authError:
       name: authError
       payload:

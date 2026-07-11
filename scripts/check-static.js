@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateApiContracts } from './validate-api-contracts.js';
 
 const root = process.cwd();
 const checkDirs = ['main', 'preloads', 'server', 'shared', 'scripts', 'src', 'tests'];
@@ -56,6 +57,11 @@ for (const file of conflictFiles) {
     failed = true;
     console.error(`Conflict marker found: ${path.relative(root, file)}`);
   }
+}
+
+for (const error of validateApiContracts(root)) {
+  failed = true;
+  console.error(`API contract validation failed: ${error}`);
 }
 
 if (failed) {
