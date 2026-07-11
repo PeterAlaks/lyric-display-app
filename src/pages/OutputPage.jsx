@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   useCustomOutputIds,
@@ -43,6 +43,7 @@ const OutputPage = ({ outputId }) => {
   const outputEnabled = useOutputEnabled(outputId);
   const { lyrics, selectedLine } = useLyricsState();
   const { isOutputOn } = useOutputState();
+  const adjustedFontSizeRef = useRef(null);
 
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
@@ -69,28 +70,36 @@ const OutputPage = ({ outputId }) => {
   const isOutputActive = Boolean(outputSettings)
     && (isPreviewMode || Boolean(isOutputOn && (outputEnabled !== false)));
 
-  const handleAutosizeChange = useCallback(({ adjustedFontSize, autosizerActive }) => {
-    updateOutputSettings({ autosizerActive });
-
+  const publishOutputMetrics = useCallback((metrics = {}) => {
     if (!isPreviewMode && emitOutputMetrics && isConnected && isAuthenticated) {
       try {
         emitOutputMetrics(outputId, {
-          adjustedFontSize,
-          autosizerActive,
+          adjustedFontSize: adjustedFontSizeRef.current,
+          autosizerActive: Boolean(outputSettings?.autosizerActive),
           viewportWidth: window.innerWidth,
           viewportHeight: window.innerHeight,
           timestamp: Date.now(),
+          ...metrics,
         });
       } catch { }
     }
+  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode, outputId, outputSettings?.autosizerActive]);
+
+  const handleAutosizeChange = useCallback(({ adjustedFontSize, autosizerActive }) => {
+    adjustedFontSizeRef.current = adjustedFontSize;
+    updateOutputSettings({ autosizerActive });
+    publishOutputMetrics({ adjustedFontSize, autosizerActive });
   }, [
-    emitOutputMetrics,
-    isAuthenticated,
-    isConnected,
-    isPreviewMode,
-    outputId,
+    publishOutputMetrics,
     updateOutputSettings,
   ]);
+
+  useEffect(() => {
+    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
+    publishOutputMetrics();
+    const interval = window.setInterval(publishOutputMetrics, 5000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, isConnected, isPreviewMode, publishOutputMetrics]);
 
   return (
     <LyricVisualFrame

@@ -19,8 +19,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { resolveBackendUrl } from '../utils/network';
 import useLyricsStore from '../context/LyricsStore';
+import useNdiStore from '../context/NdiStore';
 import { useLiveSafetyBridge } from '../hooks/useLiveSafetyBridge';
 import useToast from '../hooks/useToast';
+import {
+  evaluateNdiReadiness,
+  evaluateOutputReadiness,
+  evaluateProjectionReadiness,
+} from '../../shared/productionReadiness';
 
 const statusIcon = {
   pass: CheckCircle2,
@@ -140,42 +146,27 @@ export default function PreServiceHealthModal({ darkMode }) {
     });
 
     const outputIds = ['output1', 'output2', ...(storeState.customOutputIds || [])];
-    const connectedOutputs = outputIds.filter((id) => Number(storeState[`${id}Settings`]?.instanceCount || 0) > 0);
-    nextChecks.push({
-      id: 'outputs',
-      label: 'Output Browser Sources',
-      status: connectedOutputs.length > 0 ? 'pass' : 'warn',
-      detail: connectedOutputs.length > 0
-        ? `${connectedOutputs.length}/${outputIds.length} output(s) reporting metrics`
-        : 'No output browser source has reported metrics yet',
-    });
+    nextChecks.push(evaluateOutputReadiness({ storeState }));
 
     try {
       const projection = await window.electronAPI?.display?.getProjectionState?.();
-      nextChecks.push({
-        id: 'displays',
-        label: 'Displays',
-        status: projection?.success ? 'pass' : 'warn',
-        detail: projection?.success
-          ? `${projection.displays?.length || 0} display(s), ${projection.projections?.length || 0} projection window(s)`
-          : 'Display state unavailable',
-      });
+      nextChecks.push(evaluateProjectionReadiness({ projection, storeState }));
     } catch (error) {
-      nextChecks.push({ id: 'displays', label: 'Displays', status: 'warn', detail: error.message });
+      nextChecks.push(evaluateProjectionReadiness({ projection: { success: false, error: error.message }, storeState }));
     }
 
     try {
       const ndi = await window.electronAPI?.ndi?.getCompanionStatus?.();
-      nextChecks.push({
-        id: 'ndi',
-        label: 'NDI Companion',
-        status: ndi?.running ? 'pass' : (ndi?.installed ? 'warn' : 'warn'),
-        detail: ndi?.running
-          ? `Running${ndi.version ? `, v${ndi.version}` : ''}`
-          : (ndi?.installed ? 'Installed but not running' : 'Not installed'),
-      });
+      const ndiSettingsEntries = await Promise.all(outputIds.map(async (outputId) => (
+        [outputId, await window.electronAPI?.ndi?.getOutputSettings?.(outputId)]
+      )));
+      nextChecks.push(evaluateNdiReadiness({
+        companionStatus: ndi,
+        outputSettings: Object.fromEntries(ndiSettingsEntries),
+        telemetry: useNdiStore.getState().telemetry,
+      }));
     } catch (error) {
-      nextChecks.push({ id: 'ndi', label: 'NDI Companion', status: 'warn', detail: error.message });
+      nextChecks.push({ id: 'ndi', label: 'NDI Routes', status: 'warn', detail: error.message });
     }
 
     try {
