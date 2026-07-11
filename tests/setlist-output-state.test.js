@@ -911,7 +911,12 @@ test('generic stage clientConnect does not downgrade authenticated time-display 
     assert.equal(state.connectedClients.get('socket-time-display').purpose, 'time-display');
     const currentStateEvents = socketEvents.filter((event) => event.eventName === 'currentState');
     const latestState = currentStateEvents[currentStateEvents.length - 1].payload;
-    assert.deepEqual(latestState.stageTimerState, state.currentStageTimerState);
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(latestState.stageTimerState).filter(([key]) => !['serverNow', 'clockBasis'].includes(key))),
+      Object.fromEntries(Object.entries(state.currentStageTimerState).filter(([key]) => key !== 'clockBasis'))
+    );
+    assert.equal(Number.isFinite(latestState.stageTimerState.serverNow), true);
+    assert.equal(latestState.stageTimerState.clockBasis, 'server');
     assert.equal('rawLyricsContent' in latestState, false);
     assert.equal('setlistFiles' in latestState, false);
 

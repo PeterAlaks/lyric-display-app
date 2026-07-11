@@ -1,0 +1,104 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  advanceAuthoritativeTimerBoundary,
+  applyAuthoritativeTimerUpdate,
+  localizeAuthoritativeTimerState,
+} from '../shared/timerAuthority.js';
+
+test('authoritative timer updates rebase controller timestamps onto the server clock', () => {
+  const result = applyAuthoritativeTimerUpdate({ revision: 0 }, {
+    running: true,
+    mode: 'countdown',
+    durationMs: 60_000,
+    startTime: 1_000_000,
+    endTime: 1_060_000,
+    clientSentAt: 1_000_000,
+    baseRevision: 0,
+  }, 2_000_000);
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.state.revision, 1);
+  assert.equal(result.state.startTime, 2_000_000);
+  assert.equal(result.state.endTime, 2_060_000);
+  assert.equal(result.state.serverNow, 2_000_000);
+  assert.equal(result.state.clockBasis, 'server');
+});
+
+test('authoritative timer rejects an update based on an older revision', () => {
+  const result = applyAuthoritativeTimerUpdate({ revision: 4 }, {
+    running: false,
+    baseRevision: 3,
+  }, 2_000_000);
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.stale, true);
+  assert.match(result.error, /another controller/i);
+});
+
+test('authoritative timer snapshots are localized without changing their duration', () => {
+  const localized = localizeAuthoritativeTimerState({
+    clockBasis: 'server',
+    serverNow: 2_000_000,
+    startTime: 1_900_000,
+    endTime: 2_060_000,
+    overrunStartedAt: null,
+  }, 1_000_000);
+
+  assert.equal(localized.startTime, 900_000);
+  assert.equal(localized.endTime, 1_060_000);
+  assert.equal(localized.endTime - localized.startTime, 160_000);
+  assert.equal(localized.clockBasis, 'local');
+});
+
+test('authoritative timer advances sets through an indicator using boundary continuity', () => {
+  const base = {
+    revision: 1,
+    status: 'running',
+    running: true,
+    paused: false,
+    finished: false,
+    mode: 'countdown',
+    phase: 'timer',
+    label: 'First',
+    startTime: 900_000,
+    endTime: 1_000_000,
+    durationMs: 100_000,
+    activeSetIndex: 0,
+    sets: [
+      { id: 'first', label: 'First', durationMs: 100_000 },
+      { id: 'second', label: 'Second', durationMs: 60_000 },
+    ],
+    autoStartNext: true,
+    indicatorEnabled: true,
+    indicatorDurationMs: 10_000,
+    indicatorLabel: 'Up next',
+  };
+
+  const indicator = advanceAuthoritativeTimerBoundary(base, 1_005_000);
+  assert.equal(indicator.phase, 'indicator');
+  assert.equal(indicator.startTime, 1_000_000);
+  assert.equal(indicator.endTime, 1_010_000);
+
+  const second = advanceAuthoritativeTimerBoundary(indicator, 1_015_000);
+  assert.equal(second.phase, 'timer');
+  assert.equal(second.activeSetIndex, 1);
+  assert.equal(second.startTime, 1_010_000);
+  assert.equal(second.endTime, 1_070_000);
+
+  const finished = advanceAuthoritativeTimerBoundary(second, 1_070_000);
+  assert.equal(finished.status, 'finished');
+  assert.equal(finished.running, false);
+  assert.equal(finished.remaining, '0:00');
+});
+
+test('authoritative timer rejects cyclic and oversized controller payloads', () => {
+  const cyclic = { running: false };
+  cyclic.self = cyclic;
+  assert.equal(applyAuthoritativeTimerUpdate({}, cyclic).accepted, false);
+
+  const oversized = { running: false, label: 'x'.repeat(70 * 1024) };
+  const result = applyAuthoritativeTimerUpdate({}, oversized);
+  assert.equal(result.accepted, false);
+  assert.match(result.error, /too large/i);
+});

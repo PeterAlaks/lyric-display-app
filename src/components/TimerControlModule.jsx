@@ -10,6 +10,7 @@ import { PaintPicker } from '@/components/ui/paint-picker';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
 import useSharedTimer from '../hooks/useSharedTimer';
+import useToast from '../hooks/useToast';
 import {
   DEFAULT_TIMER_CONTROL_SETTINGS,
   DEFAULT_TIMER_DISPLAY,
@@ -397,6 +398,7 @@ TimerPreview.displayName = 'TimerPreview';
 const TimerControlModule = () => {
   const { emitStageTimerUpdate } = useControlSocket();
   const { showModal } = useModal();
+  const { showToast } = useToast();
   const { darkMode } = useDarkModeState();
   const { settings: timerControlSettings, updateSettings: updateTimerControlSettings } = useTimerControlSettings();
   const { settings: timerDisplaySettings, updateSettings: updateTimerDisplaySettings } = useTimerDisplaySettings();
@@ -413,6 +415,18 @@ const TimerControlModule = () => {
   const [styleControlsExpanded, setStyleControlsExpanded] = React.useState(false);
   const [globalTimeFormatExpanded, setGlobalTimeFormatExpanded] = React.useState(false);
   const controlSettings = timerControlSettings || DEFAULT_TIMER_CONTROL_SETTINGS;
+
+  React.useEffect(() => {
+    const handleTimerRejected = (event) => {
+      showToast({
+        title: 'Timer update not applied',
+        message: event?.detail?.reason || 'The timer changed on another controller. The latest state has been restored.',
+        variant: 'warning',
+      });
+    };
+    window.addEventListener('stage-timer-rejected', handleTimerRejected);
+    return () => window.removeEventListener('stage-timer-rejected', handleTimerRejected);
+  }, [showToast]);
 
   const {
     mode,

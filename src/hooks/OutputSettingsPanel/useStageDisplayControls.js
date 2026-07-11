@@ -112,10 +112,13 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
   }, []);
 
   const publishTimerState = useCallback((updates) => {
+    const storedTimer = getStoredTimerState();
+    const clientSentAt = Date.now();
+    const baseRevision = Math.max(0, Number(storedTimer.revision) || 0);
     const normalized = normalizeTimerState({
-      ...getStoredTimerState(),
+      ...storedTimer,
       ...updates,
-      updatedAt: Date.now(),
+      updatedAt: clientSentAt,
     });
 
     try {
@@ -127,7 +130,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     }
 
     if (emitStageTimerUpdate) {
-      emitStageTimerUpdate(normalized);
+      emitStageTimerUpdate({ ...normalized, baseRevision, clientSentAt });
     }
 
     return normalized;
@@ -152,6 +155,9 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     if (!timerData || timerData.type === 'upcomingSongUpdate') return;
 
     const nextTimer = normalizeTimerState(timerData);
+    const nextRevision = Math.max(0, Number(nextTimer.revision) || 0);
+    const currentRevision = Math.max(0, Number(latestTimerSnapshotRef.current?.revision) || 0);
+    if (nextRevision > 0 && nextRevision < currentRevision) return;
     const nextRunning = Boolean(nextTimer.running);
     const nextPaused = Boolean(nextTimer.paused);
     const nextEndTime = nextTimer.endTime || null;
@@ -159,6 +165,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
       ? nextTimer.pausedRemainingMs
       : null;
     const nextSnapshot = {
+      revision: nextRevision,
       running: nextRunning,
       paused: nextPaused,
       endTime: nextEndTime,
@@ -426,46 +433,6 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
       variant: 'success',
     });
   };
-
-  useEffect(() => {
-    if (!timerRunning) return;
-
-    if (timerPaused) {
-      return;
-    }
-
-    if (!timerEndTime) return;
-
-    const finishTimerIfExpired = () => {
-      const now = Date.now();
-      const remaining = timerEndTime - now;
-
-      if (remaining <= 0) {
-        setTimerRunning(false);
-        setTimerPaused(false);
-        setTimerEndTime(null);
-        setPausedRemainingMs(null);
-        setTimeRemaining('0:00');
-        sessionStorage.removeItem(STORAGE_KEYS.timerEndTime);
-        sessionStorage.removeItem(STORAGE_KEYS.timerRemainingMs);
-        sessionStorage.removeItem(STORAGE_KEYS.timerRunning);
-        sessionStorage.removeItem(STORAGE_KEYS.timerPaused);
-        publishTimerState({
-          status: 'finished',
-          running: false,
-          paused: false,
-          finished: true,
-          endTime: null,
-          pausedRemainingMs: null,
-          remaining: '0:00',
-        });
-      }
-    };
-
-    finishTimerIfExpired();
-    const interval = setInterval(finishTimerIfExpired, 1000);
-    return () => clearInterval(interval);
-  }, [publishTimerState, timerEndTime, timerPaused, timerRunning]);
 
   const handleStartTimer = () => {
     if (timerDuration <= 0) return;

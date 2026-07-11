@@ -12,6 +12,7 @@ import {
   normalizeTimerState,
   resetActiveTimerRuntime,
 } from '../utils/timerUtils';
+import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
 
 const getDisplayUpdatedAt = (display) => {
   const updatedAt = Number(display?.displayUpdatedAt);
@@ -58,10 +59,14 @@ const getPausedRemainingLabel = (state) => (
 
 const stripVolatileTimerFields = (state) => {
   if (!state || typeof state !== 'object') return state;
-  return {
-    ...state,
-    updatedAt: 0,
-  };
+  const comparable = { ...state };
+  delete comparable.updatedAt;
+  delete comparable.serverUpdatedAt;
+  delete comparable.serverNow;
+  delete comparable.clockOffsetMs;
+  delete comparable.localizedAt;
+  delete comparable.clockBasis;
+  return comparable;
 };
 
 const timerStatesAreEquivalent = (a, b) => {
@@ -74,7 +79,6 @@ const timerStatesAreEquivalent = (a, b) => {
 
 export const useSharedTimer = ({
   emitTimerUpdate,
-  controller = false,
   tickIntervalMs = 250,
   renderTickIntervalMs = tickIntervalMs,
 } = {}) => {
@@ -94,12 +98,14 @@ export const useSharedTimer = ({
   }, [emitTimerUpdate]);
 
   const commitTimerState = React.useCallback((nextState, { emit = true } = {}) => {
-    const normalized = normalizeTimerState({ ...nextState, updatedAt: Date.now() });
+    const clientSentAt = Date.now();
+    const baseRevision = Math.max(0, Number(latestStateRef.current?.revision) || 0);
+    const normalized = normalizeTimerState({ ...nextState, updatedAt: clientSentAt });
     setTimerState(normalized);
     latestStateRef.current = normalized;
     writeStoredTimerState(normalized);
     if (emit && typeof emitRef.current === 'function') {
-      emitRef.current(normalized);
+      emitRef.current({ ...normalized, baseRevision, clientSentAt });
     }
     return normalized;
   }, []);
@@ -108,7 +114,10 @@ export const useSharedTimer = ({
     const handleTimerEvent = (event) => {
       const detail = event?.detail;
       if (!detail || detail.type === 'upcomingSongUpdate') return;
-      const normalized = normalizeTimerState(detail);
+      const normalized = normalizeTimerState(localizeAuthoritativeTimerState(detail));
+      const incomingRevision = Math.max(0, Number(normalized.revision) || 0);
+      const currentRevision = Math.max(0, Number(latestStateRef.current?.revision) || 0);
+      if (incomingRevision > 0 && incomingRevision < currentRevision) return;
       applyIncomingDisplaySettings(normalized.display);
       if (timerStatesAreEquivalent(normalized, latestStateRef.current)) return;
       setTimerState(normalized);
@@ -300,87 +309,6 @@ export const useSharedTimer = ({
       overrunStartedAt: null,
     });
   }, [commitTimerState]);
-
-  const processTimerBoundary = React.useCallback((timestamp = Date.now()) => {
-    const current = latestStateRef.current;
-    if (!current.running || current.paused || current.mode === 'countup') return;
-
-    const remainingMs = getRemainingMs(current, timestamp);
-    if (!Number.isFinite(remainingMs) || remainingMs > 0) return;
-
-    if (current.overrunMode && current.phase === 'timer') {
-      if (!current.overrunStartedAt) {
-        commitTimerState({ ...current, overrunStartedAt: current.endTime || timestamp });
-      }
-      return;
-    }
-
-    const nextIndex = current.activeSetIndex + 1;
-    const nextSet = current.sets?.[nextIndex];
-
-    if (current.phase === 'timer' && nextSet && current.autoStartNext) {
-      const startTime = Date.now();
-      if (current.indicatorEnabled && current.indicatorDurationMs > 0) {
-        commitTimerState({
-          ...current,
-          phase: 'indicator',
-          label: current.indicatorLabel,
-          durationMs: current.indicatorDurationMs,
-          startTime,
-          endTime: startTime + current.indicatorDurationMs,
-          pausedRemainingMs: null,
-          remaining: null,
-        });
-      } else {
-        commitTimerState({
-          ...current,
-          phase: 'timer',
-          label: nextSet.label,
-          activeSetIndex: nextIndex,
-          durationMs: nextSet.durationMs,
-          startTime,
-          endTime: startTime + nextSet.durationMs,
-          pausedRemainingMs: null,
-          remaining: null,
-        });
-      }
-      return;
-    }
-
-    if (current.phase === 'indicator' && nextSet) {
-      const startTime = Date.now();
-      commitTimerState({
-        ...current,
-        phase: 'timer',
-        label: nextSet.label,
-        activeSetIndex: nextIndex,
-        durationMs: nextSet.durationMs,
-        startTime,
-        endTime: startTime + nextSet.durationMs,
-        pausedRemainingMs: null,
-        remaining: null,
-      });
-      return;
-    }
-
-    commitTimerState({
-      ...current,
-      status: 'finished',
-      running: false,
-      paused: false,
-      finished: true,
-      endTime: null,
-      pausedRemainingMs: null,
-      remaining: '0:00',
-    });
-  }, [commitTimerState]);
-
-  React.useEffect(() => {
-    if (!controller) return;
-    processTimerBoundary();
-    const interval = window.setInterval(() => processTimerBoundary(), activeTickIntervalMs);
-    return () => window.clearInterval(interval);
-  }, [activeTickIntervalMs, controller, processTimerBoundary]);
 
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
   const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);

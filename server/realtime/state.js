@@ -41,7 +41,17 @@ export const state = {
     ['output2', new Map()],
     ['stage', new Map()],
   ]),
-  currentStageTimerState: { running: false, paused: false, endTime: null, remaining: null },
+  currentStageTimerState: {
+    version: 2,
+    revision: 0,
+    status: 'idle',
+    running: false,
+    paused: false,
+    finished: false,
+    endTime: null,
+    remaining: null,
+    clockBasis: 'server',
+  },
   currentStageMessages: [],
   pendingDrafts: new Map(),
   registeredOutputs: new Set(DEFAULT_OUTPUT_IDS),
@@ -105,6 +115,12 @@ export const buildOutputList = () => {
   return [...DEFAULT_OUTPUT_IDS, ...custom];
 };
 
+export const getStageTimerSnapshot = (timestamp = Date.now()) => ({
+  ...(state.currentStageTimerState || {}),
+  serverNow: timestamp,
+  clockBasis: 'server',
+});
+
 export const getOutputRegistry = () => ({
   outputs: buildOutputList(),
   stageEnabled: state.currentStageEnabled,
@@ -157,14 +173,14 @@ export function buildCurrentState(clientInfo) {
   if (clientPurpose === 'timer-control') {
     return {
       ...baseState,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     };
   }
 
   if (clientPurpose === 'time-display') {
     return {
       ...baseState,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     };
   }
 
@@ -175,7 +191,7 @@ export function buildCurrentState(clientInfo) {
       selectedLine: state.currentSelectedLine,
       isOutputOn: state.currentIsOutputOn,
       lyricsFileName: state.currentLyricsFileName || '',
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     }, clientType);
   }
 
@@ -189,7 +205,7 @@ export function buildCurrentState(clientInfo) {
       stageEnabled: state.currentStageEnabled,
       setlistFiles: summarizeSetlistForDisplay(state.setlistFiles),
       lyricsFileName: state.currentLyricsFileName || '',
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
       stageMessages: state.currentStageMessages,
     };
   }
@@ -219,7 +235,7 @@ export function buildCurrentState(clientInfo) {
     currentState[`${outputId}Enabled`] = enabled;
   }
 
-  currentState.stageTimerState = state.currentStageTimerState;
+  currentState.stageTimerState = getStageTimerSnapshot(timestamp);
 
   if (clientInfo?.type === 'stage') {
     currentState.stageMessages = state.currentStageMessages;
@@ -237,7 +253,7 @@ export function buildPeriodicState(clientInfo) {
   if (clientPurpose === 'timer-control' || clientPurpose === 'time-display') {
     return {
       ...baseState,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     };
   }
 
@@ -254,7 +270,7 @@ export function buildPeriodicState(clientInfo) {
       ...baseState,
       isOutputOn: state.currentIsOutputOn,
       stageEnabled: state.currentStageEnabled,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     };
   }
 

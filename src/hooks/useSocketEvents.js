@@ -4,6 +4,7 @@ import { logDebug, logError, logWarn } from '../utils/logger';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 import { deriveSectionsFromProcessedLines } from '../../shared/lyricsParsing.js';
 import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
+import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
 
 const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -11,6 +12,23 @@ const isOutputId = (value) => typeof value === 'string' && value.startsWith('out
 const isRoutableOutput = (value) => value === 'stage' || isOutputId(value);
 const isCustomOutputId = (value) => isOutputId(value) && value !== 'output1' && value !== 'output2';
 const isPassiveDisplayRole = (role) => role === 'stage' || isOutputId(role);
+const localizeTimerState = (timerState, serverNow = null) => (
+  localizeAuthoritativeTimerState(timerState, Date.now(), serverNow)
+);
+const dispatchTimerState = (timerState, serverNow = null) => {
+  if (!timerState || !window.dispatchEvent) return;
+  window.dispatchEvent(new CustomEvent('stage-timer-update', {
+    detail: localizeTimerState(timerState, serverNow),
+  }));
+};
+const dispatchTimerRejection = (payload) => {
+  const detail = {
+    ...payload,
+    timerState: localizeTimerState(payload?.timerState),
+  };
+  window.dispatchEvent(new CustomEvent('stage-timer-rejected', { detail }));
+  dispatchTimerState(payload?.timerState);
+};
 const shallowArrayEqual = (a, b) => {
   if (!Array.isArray(a) || !Array.isArray(b)) return false;
   if (a.length !== b.length) return false;
@@ -92,9 +110,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
         }
 
         if (state.stageTimerState) {
-          window.dispatchEvent(new CustomEvent('stage-timer-update', {
-            detail: state.stageTimerState,
-          }));
+          dispatchTimerState(state.stageTimerState, state.timestamp || state.syncTimestamp);
         }
       };
 
@@ -108,10 +124,10 @@ const useSocketEvents = (role, clientPurpose = role) => {
 
       socket.on('stageTimerUpdate', (timerData) => {
         logDebug('Received stage timer update:', timerData);
-        window.dispatchEvent(new CustomEvent('stage-timer-update', {
-          detail: timerData,
-        }));
+        dispatchTimerState(timerData);
       });
+
+      socket.on('stageTimerRejected', dispatchTimerRejection);
 
       socket.on('heartbeat_ack', ({ timestamp }) => {
         logDebug('Heartbeat acknowledged, server time:', new Date(timestamp));
@@ -299,9 +315,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       }
 
       if (state.stageTimerState) {
-        window.dispatchEvent(new CustomEvent('stage-timer-update', {
-          detail: state.stageTimerState,
-        }));
+        dispatchTimerState(state.stageTimerState, state.timestamp || state.syncTimestamp);
       }
 
       if (role === 'stage') {
@@ -496,10 +510,9 @@ const useSocketEvents = (role, clientPurpose = role) => {
 
     socket.on('stageTimerUpdate', (timerData) => {
       logDebug('Received stage timer update:', timerData);
-      window.dispatchEvent(new CustomEvent('stage-timer-update', {
-        detail: timerData,
-      }));
+      dispatchTimerState(timerData);
     });
+    socket.on('stageTimerRejected', dispatchTimerRejection);
 
     if (role === 'stage') {
       socket.on('stageMessagesUpdate', (messages) => {
