@@ -43,6 +43,10 @@ test('secure token IPC validates account keys and token size', () => {
     token: 'x'.repeat(32),
     expiresAt: 1234,
   }, { requireToken: true }).token.length, 32);
+  assert.equal(normalizeTokenStorePayload({
+    clientType: 'output-discovery',
+    deviceId: 'device_123456',
+  }).clientType, 'output-discovery');
   assert.throws(() => normalizeTokenStorePayload({ clientType: '../desktop', deviceId: 'device_123456' }), /client type/);
   assert.throws(() => normalizeTokenStorePayload({
     clientType: 'desktop',

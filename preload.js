@@ -87,17 +87,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
 
-  onProgressUpdate: (callback) => {
-    ipcRenderer.removeAllListeners('progress-update');
-    ipcRenderer.on('progress-update', (event, progress) => callback(progress));
-  },
-
-  onLoadingStatus: (callback) => {
-    ipcRenderer.removeAllListeners('loading-status');
-    ipcRenderer.on('loading-status', (event, status) => callback(status));
-  },
-
-
   onAdminKeyAvailable: (callback) => {
     const channel = 'admin-key:available';
     const handler = (_event, payload) => callback?.(payload);
@@ -217,16 +206,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners(channel);
     ipcRenderer.on(channel, (_e, payload) => callback(payload));
     return () => ipcRenderer.removeAllListeners(channel);
-  },
-
-  browserBack: () => ipcRenderer.send('browser-nav', 'back'),
-  browserForward: () => ipcRenderer.send('browser-nav', 'forward'),
-  browserReload: () => ipcRenderer.send('browser-nav', 'reload'),
-  browserNavigate: (url) => ipcRenderer.send('browser-nav', 'navigate', url),
-  browserOpenExternal: () => ipcRenderer.send('browser-open-external'),
-  onBrowserLocation: (callback) => {
-    ipcRenderer.removeAllListeners('browser-location');
-    ipcRenderer.on('browser-location', (_e, url) => callback(url));
   },
 
   removeAllListeners: (channel) => {

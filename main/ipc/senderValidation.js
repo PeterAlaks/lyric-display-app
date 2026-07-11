@@ -47,7 +47,7 @@ export function normalizeAuthIdentity(payload = {}) {
 
 export function normalizeTokenStorePayload(payload = {}, { requireToken = false } = {}) {
   const clientType = String(payload.clientType || '').trim();
-  if (!/^(desktop|stage|output\d+|obsDock)$/.test(clientType)) {
+  if (!/^(desktop|stage|output\d+|output-discovery|obsDock)$/.test(clientType)) {
     throw new Error('Invalid token client type');
   }
 

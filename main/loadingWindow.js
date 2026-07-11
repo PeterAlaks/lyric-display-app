@@ -38,7 +38,7 @@ export function createLoadingWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js')
+      preload: resolveProductionPath('preloads', 'loading.cjs')
     }
   });
 

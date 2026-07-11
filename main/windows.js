@@ -3,6 +3,8 @@ import path from 'path';
 import { isDev, resolveProductionPath, appRoot } from './paths.js';
 import { getLogPaths, writeLog } from './logging.js';
 import { requestRendererModal } from './modalBridge.js';
+import { isTrustedAppRendererUrl, normalizeBrowserUrl } from './ipc/senderValidation.js';
+import { getWindowPreloadRole } from './windowSecurity.js';
 
 const MEMORY_LOG_INTERVAL_MS = 60_000;
 const RENDERER_SNAPSHOT_TIMEOUT_MS = 1_500;
@@ -425,6 +427,7 @@ export function createWindow(route = '/', options = {}) {
   } = options;
   const isTimerControlWindow = route.startsWith('/timer-control');
   const isObsSetupWindow = route.startsWith('/obs-setup');
+  const preloadRole = getWindowPreloadRole(route);
   const isControlWindow = route === '/' || route.startsWith('/new-song') || isTimerControlWindow || isObsSetupWindow;
   const windowTitle = title || (isTimerControlWindow ? 'LyricDisplay Timer' : isObsSetupWindow ? 'LyricDisplay OBS Source Creator' : 'LyricDisplay');
   const defaultBackground = projection
@@ -439,7 +442,11 @@ export function createWindow(route = '/', options = {}) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js'),
+      preload: preloadRole === 'none'
+        ? undefined
+        : (preloadRole === 'passive'
+          ? resolveProductionPath('preloads', 'passive.cjs')
+          : resolveProductionPath('preload.js')),
       backgroundThrottling: projection ? false : true,
       spellcheck: projection ? false : true,
     },
@@ -492,8 +499,21 @@ export function createWindow(route = '/', options = {}) {
     }, 100);
   });
 
+  const senderValidationOptions = {
+    development: isDev,
+    backendPort: Number(process.env.PORT) || 4000,
+  };
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isTrustedAppRendererUrl(url, senderValidationOptions)) return;
+    event.preventDefault();
+    try { shell.openExternal(normalizeBrowserUrl(url)); } catch (error) {
+      console.warn('Blocked renderer navigation:', url, error.message);
+    }
+  });
+
   win.webContents.setWindowOpenHandler(({ url }) => {
-    try { shell.openExternal(url); } catch (e) { console.error('Failed to open external URL:', url, e); }
+    try { shell.openExternal(normalizeBrowserUrl(url)); } catch (e) { console.error('Failed to open external URL:', url, e); }
     return { action: 'deny' };
   });
 

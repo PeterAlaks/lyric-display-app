@@ -100,12 +100,14 @@
       "public/**/*",
       "main.js",
       "preload.js",
+      "preloads/**/*",
       "package.json"
     ],
     "asarUnpack": [
       "dist/**/*",
       "server/**/*",
       "preload.js",
+      "preloads/**/*",
       "shared/**/*"
     ],
     "extraResources": [

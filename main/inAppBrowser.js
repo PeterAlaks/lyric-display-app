@@ -21,7 +21,7 @@ export function openInAppBrowser(initialUrl) {
       height: 800,
       show: true,
       title: 'Lyrics Browser',
-      webPreferences: { nodeIntegration: false, contextIsolation: true, preload: resolveProductionPath('preload.js') },
+      webPreferences: { nodeIntegration: false, contextIsolation: true, preload: resolveProductionPath('preloads', 'browser.cjs') },
     });
 
     inAppBrowserView = new BrowserView({ webPreferences: { nodeIntegration: false, contextIsolation: true } });

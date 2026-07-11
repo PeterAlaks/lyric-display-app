@@ -787,7 +787,6 @@ const createExportWindow = ({ width, height }) => (
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js'),
     },
   })
 );

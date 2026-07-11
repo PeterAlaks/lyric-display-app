@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
-const checkDirs = ['main', 'server', 'shared', 'scripts', 'src', 'tests'];
+const checkDirs = ['main', 'preloads', 'server', 'shared', 'scripts', 'src', 'tests'];
 const rootFiles = ['main.js', 'preload.js', 'vite.config.js', 'tailwind.config.js', 'postcss.config.js'];
-const sourceExtensions = new Set(['.js', '.jsx', '.json', '.css', '.html', '.md']);
+const sourceExtensions = new Set(['.js', '.cjs', '.jsx', '.json', '.css', '.html', '.md']);
 const conflictMarkerPattern = /^(<<<<<<<|=======|>>>>>>>)($|[\s:])/m;
 
 function walk(dir, visitor) {
@@ -33,7 +33,7 @@ for (const file of rootFiles) {
 for (const dir of checkDirs) {
   walk(path.join(root, dir), (file) => {
     const ext = path.extname(file);
-    if (ext === '.js') syntaxFiles.push(file);
+    if (ext === '.js' || ext === '.cjs') syntaxFiles.push(file);
     if (sourceExtensions.has(ext)) conflictFiles.push(file);
   });
 }
