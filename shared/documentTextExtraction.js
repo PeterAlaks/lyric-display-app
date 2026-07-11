@@ -1,5 +1,13 @@
 import { parseLrcContent, parseTxtContent } from './lyricsParsing.js';
 import { getLyricParserType, normalizeLyricFileType } from './lyricImportRegistry.js';
+import {
+  MAX_DOCX_ARCHIVE_ENTRIES,
+  MAX_DOCX_ENTRY_BYTES,
+  MAX_DOCX_UNCOMPRESSED_BYTES,
+  MAX_EXTRACTED_LYRIC_TEXT_BYTES,
+  assertLyricImportSize,
+  getBinaryByteLength,
+} from './lyricImportLimits.js';
 
 const RTF_DESTINATIONS_TO_SKIP = new Set([
   'fonttbl',
@@ -202,17 +210,73 @@ export function extractRtfText(rawRtf = '') {
     .trim();
 }
 
-async function extractDocxRawText({ path, rawBytes }) {
+export function validateDocxArchiveMetadata(entries = []) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new Error('DOCX archive is empty or invalid');
+  }
+  if (entries.length > MAX_DOCX_ARCHIVE_ENTRIES) {
+    throw new Error('DOCX archive contains too many entries');
+  }
+
+  let totalBytes = 0;
+  let hasContentTypes = false;
+  let hasDocumentXml = false;
+  for (const entry of entries) {
+    const name = String(entry?.name || '').replace(/\\/g, '/');
+    if (entry?.directory) continue;
+    const uncompressedSize = Number(entry?.uncompressedSize);
+    if (!Number.isFinite(uncompressedSize) || uncompressedSize < 0) {
+      throw new Error('DOCX archive entry size is invalid');
+    }
+    if (uncompressedSize > MAX_DOCX_ENTRY_BYTES) {
+      throw new Error(`DOCX archive entry is too large: ${name || 'unknown'}`);
+    }
+    totalBytes += uncompressedSize;
+    if (totalBytes > MAX_DOCX_UNCOMPRESSED_BYTES) {
+      throw new Error('DOCX archive expands beyond the safe limit');
+    }
+    if (name === '[Content_Types].xml') hasContentTypes = true;
+    if (name === 'word/document.xml') hasDocumentXml = true;
+  }
+
+  if (!hasContentTypes || !hasDocumentXml) {
+    throw new Error('DOCX archive is missing required document parts');
+  }
+  return { entries: entries.length, uncompressedBytes: totalBytes };
+}
+
+async function validateDocxArchiveBytes(rawBytes) {
+  const JSZip = (await import('jszip')).default;
+  const archive = await JSZip.loadAsync(rawBytes, {
+    checkCRC32: false,
+    createFolders: false,
+  });
+  const entries = Object.values(archive.files).map((entry) => ({
+    name: entry.name,
+    directory: entry.dir,
+    uncompressedSize: entry.dir ? 0 : entry?._data?.uncompressedSize,
+  }));
+  return validateDocxArchiveMetadata(entries);
+}
+
+async function extractDocxRawText({ path, rawBytes, readFile }) {
   const mammoth = await import('mammoth');
   const input = {};
 
-  if (path) {
-    input.path = path;
-  } else if (rawBytes) {
+  let bytes = rawBytes;
+  if (!bytes && path && typeof readFile === 'function') {
+    bytes = await readFile(path);
+  }
+
+  if (bytes) {
+    assertLyricImportSize(getBinaryByteLength(bytes));
+    await validateDocxArchiveBytes(bytes);
     if (typeof Buffer !== 'undefined') {
-      input.buffer = Buffer.from(rawBytes);
+      input.buffer = Buffer.from(bytes);
     } else {
-      input.arrayBuffer = rawBytes instanceof ArrayBuffer ? rawBytes : rawBytes.buffer;
+      input.arrayBuffer = bytes instanceof ArrayBuffer
+        ? bytes
+        : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     }
   }
 
@@ -221,7 +285,9 @@ async function extractDocxRawText({ path, rawBytes }) {
   }
 
   const result = await mammoth.extractRawText(input, { externalFileAccess: false });
-  return String(result?.value || '').trim();
+  const extracted = String(result?.value || '').trim();
+  assertLyricImportSize(new TextEncoder().encode(extracted).byteLength, MAX_EXTRACTED_LYRIC_TEXT_BYTES);
+  return extracted;
 }
 
 export async function extractLyricTextFromSource({
@@ -235,7 +301,7 @@ export async function extractLyricTextFromSource({
   const normalizedType = normalizeLyricFileType({ fileType, fileName, fallback: 'txt' });
 
   if (normalizedType === 'docx') {
-    return extractDocxRawText({ path, rawBytes });
+    return extractDocxRawText({ path, rawBytes, readFile });
   }
 
   let text = typeof rawText === 'string' ? rawText : null;

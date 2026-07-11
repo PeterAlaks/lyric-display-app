@@ -4,8 +4,14 @@ import path from 'path';
 import { parseLyricImportContent, extractLyricTextFromSource } from '../../shared/documentTextExtraction.js';
 import {
   getLyricOpenDialogFilters,
+  getLyricImportFormatForName,
   normalizeLyricFileType,
 } from '../../shared/lyricImportRegistry.js';
+import {
+  assertLyricImportSize,
+  getBinaryByteLength,
+  getConfiguredLyricImportByteLimit,
+} from '../../shared/lyricImportLimits.js';
 import { addRecent } from '../recents.js';
 import * as userPreferences from '../userPreferences.js';
 import { grantLyricVideoMediaFile, revokeLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
@@ -19,6 +25,25 @@ const AUDIO_MIME_TYPES = {
 };
 const MAX_WRITE_CONTENT_BYTES = 10 * 1024 * 1024;
 const writeGrantPaths = new Set();
+
+function getActiveImportByteLimit() {
+  return getConfiguredLyricImportByteLimit(
+    userPreferences.getPreference('fileHandling.maxFileSize')
+  );
+}
+
+async function validateImportPath(filePath, expectedFileType = null) {
+  const normalized = normalizeFilePath(filePath);
+  const format = normalized ? getLyricImportFormatForName(normalized) : null;
+  if (!normalized || !format) throw new Error('Unsupported lyric file type');
+  if (expectedFileType && format.fileType !== expectedFileType) {
+    throw new Error('Lyric file type does not match its extension');
+  }
+  const fileStat = await stat(normalized);
+  if (!fileStat.isFile()) throw new Error('Selected lyric path is not a file');
+  assertLyricImportSize(fileStat.size, getActiveImportByteLimit());
+  return { normalized, fileType: format.fileType };
+}
 
 function normalizeFilePath(filePath) {
   if (typeof filePath !== 'string' || !filePath.trim()) {
@@ -120,11 +145,12 @@ export function registerFileHandlers({ getMainWindow }) {
       if (!result.canceled && result.filePaths.length > 0) {
         const filePath = result.filePaths[0];
         const fileName = filePath.split(/[\\/]/).pop();
-        const fileType = normalizeLyricFileType({ fileName });
+        const validated = await validateImportPath(filePath);
+        const fileType = validated.fileType;
         const content = await extractLyricTextFromSource({
           fileType,
           fileName,
-          path: filePath,
+          path: validated.normalized,
           readFile,
         });
         grantWritePath(filePath);
@@ -205,12 +231,25 @@ export function registerFileHandlers({ getMainWindow }) {
 
   ipcMain.handle('parse-lyrics-file', async (_event, payload = {}) => {
     try {
-      const { fileType = 'txt', name, path: filePath, rawText, rawBytes } = payload || {};
+      const { fileType, name, path: filePath, rawText, rawBytes } = payload || {};
       const content = typeof rawText === 'string' ? rawText : null;
       const finalFileType = normalizeLyricFileType({ fileType, fileName: name || filePath });
+      const maxImportBytes = getActiveImportByteLimit();
 
       if (typeof content !== 'string' && !rawBytes && !filePath) {
         return { success: false, error: 'No lyric content available for parsing' };
+      }
+
+      let validatedFilePath = null;
+      if (filePath) {
+        const validated = await validateImportPath(filePath, finalFileType);
+        validatedFilePath = validated.normalized;
+      }
+      if (content !== null) {
+        assertLyricImportSize(Buffer.byteLength(content, 'utf8'), maxImportBytes);
+      }
+      if (rawBytes) {
+        assertLyricImportSize(getBinaryByteLength(rawBytes), maxImportBytes);
       }
 
       // Get user preferences for parsing
@@ -238,12 +277,12 @@ export function registerFileHandlers({ getMainWindow }) {
         fileName: name || filePath,
         rawText: content,
         rawBytes,
-        path: filePath,
+        path: validatedFilePath,
         readFile,
         parsingOptions,
       });
-      if (filePath) {
-        grantWritePath(filePath);
+      if (validatedFilePath) {
+        grantWritePath(validatedFilePath);
       }
 
       return { success: true, payload: result };
