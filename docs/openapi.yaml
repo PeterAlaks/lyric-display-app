@@ -511,11 +511,22 @@ components:
           nullable: true
         needsRotation:
           type: boolean
+        rotationMaxAgeDays:
+          type: integer
+        previousSecretExpiry:
+          type: string
+          nullable: true
         configPath:
           type: string
+          nullable: true
         storageBackend:
           type: string
+          enum: [keytar, encrypted-file-fallback]
+        legacyBackupPresent:
+          type: boolean
         hasGraceSecret:
+          type: boolean
+        graceActive:
           type: boolean
 
     ReadinessStatus:

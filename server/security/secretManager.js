@@ -90,6 +90,30 @@ function getOrCreateAesKey(configDir) {
   return key;
 }
 
+function readAesKey(configDir) {
+  const keyPath = getKeyPath(configDir);
+  if (!fs.existsSync(keyPath)) throw new Error('Encrypted secrets key is missing');
+  const key = fs.readFileSync(keyPath);
+  if (!key || key.length !== 32) throw new Error('Encrypted secrets key is invalid');
+  return key;
+}
+
+function removeEncryptedFallback(configDir, secretsPath) {
+  const paths = [secretsPath, getKeyPath(configDir)];
+  const failures = [];
+  let removed = 0;
+  for (const filePath of paths) {
+    try {
+      if (!fs.existsSync(filePath)) continue;
+      fs.unlinkSync(filePath);
+      removed += 1;
+    } catch (error) {
+      failures.push({ filePath, error });
+    }
+  }
+  return { success: failures.length === 0, removed, failures };
+}
+
 function encryptJson(payload, key) {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
@@ -163,9 +187,11 @@ export { getDefaultConfigDir };
 
 // ---------- Secret Manager ----------
 class SimpleSecretManager {
-  constructor() {
+  constructor(options = {}) {
     let configDir;
-    if (process.env.CONFIG_PATH) {
+    if (options.configDir) {
+      configDir = options.configDir;
+    } else if (process.env.CONFIG_PATH) {
       configDir = process.env.CONFIG_PATH;
     } else {
       configDir = getDefaultConfigDir();
@@ -173,10 +199,12 @@ class SimpleSecretManager {
 
     this.configDir = configDir;
     this.secretsPath = getEncPath(this.configDir);
+    this.keytar = Object.prototype.hasOwnProperty.call(options, 'keytarImpl') ? options.keytarImpl : keytar;
+    this.lastStorageBackend = null;
 
     console.log('Config directory resolved to:', this.configDir);
     console.log('Secrets path (encrypted):', this.secretsPath);
-    console.log('Keytar available:', !!keytar);
+    console.log('Keytar available:', !!this.keytar);
   }
   ensureConfigDir() {
     ensureDir700(this.configDir);
@@ -203,9 +231,18 @@ class SimpleSecretManager {
 
   _normalizeSecrets(obj) {
     const now = new Date().toISOString();
+    let adminAccessKey;
+    if (obj?.ADMIN_ACCESS_KEY == null || obj.ADMIN_ACCESS_KEY === '') {
+      adminAccessKey = crypto.randomBytes(32).toString('hex');
+    } else if (typeof obj.ADMIN_ACCESS_KEY === 'string' && /^[a-fA-F0-9]{64}$/.test(obj.ADMIN_ACCESS_KEY)) {
+      adminAccessKey = obj.ADMIN_ACCESS_KEY.toLowerCase();
+    } else {
+      throw new Error('Stored admin access key is invalid');
+    }
+
     return {
       JWT_SECRET: obj?.JWT_SECRET || this.generateJWTSecret(),
-      ADMIN_ACCESS_KEY: obj?.ADMIN_ACCESS_KEY || crypto.randomBytes(32).toString('hex'),
+      ADMIN_ACCESS_KEY: adminAccessKey,
       TOKEN_EXPIRY: obj?.TOKEN_EXPIRY || DEFAULT_TOKEN_EXPIRY,
       ADMIN_TOKEN_EXPIRY: obj?.ADMIN_TOKEN_EXPIRY || DEFAULT_ADMIN_TOKEN_EXPIRY,
       RATE_LIMIT_WINDOW_MS: Number.isFinite(obj?.RATE_LIMIT_WINDOW_MS) ? obj.RATE_LIMIT_WINDOW_MS : 900000,
@@ -219,44 +256,64 @@ class SimpleSecretManager {
   }
 
   async _readFromKeytar() {
-    if (!keytar) return null;
+    if (!this.keytar) return { available: false, succeeded: false, data: null, error: null };
     try {
-      return await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
-    } catch {
-      return null;
+      return {
+        available: true,
+        succeeded: true,
+        data: await this.keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME),
+        error: null,
+      };
+    } catch (error) {
+      return { available: true, succeeded: false, data: null, error };
     }
   }
 
   async _writeToKeytar(dataStr) {
-    if (!keytar) return false;
+    if (!this.keytar) return false;
     try {
-      await keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, dataStr);
-      return true;
+      await this.keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, dataStr);
+      const verified = await this.keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
+      if (typeof verified !== 'string') return false;
+      const expectedBuffer = Buffer.from(dataStr, 'utf8');
+      const verifiedBuffer = Buffer.from(verified, 'utf8');
+      return expectedBuffer.length === verifiedBuffer.length
+        && crypto.timingSafeEqual(expectedBuffer, verifiedBuffer);
     } catch {
       return false;
     }
   }
 
-  async loadSecrets(options = {}) {
-    const refreshKeytarBackup = options.refreshKeytarBackup !== false;
+  _removeLegacyBackup() {
+    const result = removeEncryptedFallback(this.configDir, this.secretsPath);
+    if (!result.success) {
+      console.warn('Secrets are protected by keytar, but legacy backup cleanup failed:',
+        result.failures.map(({ filePath, error }) => `${filePath}: ${error.message}`).join('; '));
+    } else if (result.removed > 0) {
+      console.log(`Removed ${result.removed} legacy encrypted secret backup artifact(s) after keytar verification`);
+    }
+    return result;
+  }
 
+  _hasLegacyBackupArtifacts() {
+    return fs.existsSync(this.secretsPath) || fs.existsSync(getKeyPath(this.configDir));
+  }
+
+  async loadSecrets() {
     try {
-      const keytarData = await this._readFromKeytar();
+      const keytarRead = await this._readFromKeytar();
+      const keytarData = keytarRead.data;
+      let keytarPayloadInvalid = false;
       if (keytarData) {
         try {
           const parsed = JSON.parse(keytarData);
           const normalized = this._normalizeSecrets(parsed);
-          if (refreshKeytarBackup) {
-            const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
-            if (backupResult.success) {
-              console.log('Secrets loaded from keytar; encrypted backup refreshed');
-            } else {
-              console.warn('Secrets loaded from keytar but encrypted backup refresh failed');
-            }
-          }
+          this.lastStorageBackend = 'keytar';
+          this._removeLegacyBackup();
           return normalized;
         } catch (e) {
           console.warn('Keytar data corrupted, falling back to encrypted file');
+          keytarPayloadInvalid = true;
         }
       }
 
@@ -264,19 +321,32 @@ class SimpleSecretManager {
 
       if (fs.existsSync(this.secretsPath)) {
         const wrapped = JSON.parse(fs.readFileSync(this.secretsPath, 'utf8'));
-        const key = getOrCreateAesKey(this.configDir);
+        const key = readAesKey(this.configDir);
         const decrypted = decryptJson(wrapped, key);
         const normalized = this._normalizeSecrets(decrypted);
 
-        await this._writeToKeytar(JSON.stringify(normalized));
-
-        console.log('Secrets loaded from encrypted file');
+        const migratedToKeytar = await this._writeToKeytar(JSON.stringify(normalized));
+        if (migratedToKeytar) {
+          this.lastStorageBackend = 'keytar';
+          this._removeLegacyBackup();
+          console.log('Secrets migrated from encrypted file to keytar');
+        } else {
+          this.lastStorageBackend = 'encrypted-file-fallback';
+          console.log('Secrets loaded from encrypted file fallback');
+        }
         return normalized;
+      }
+
+      if (keytarRead.available && !keytarRead.succeeded) {
+        throw new Error(`OS credential vault read failed and no encrypted fallback is available: ${keytarRead.error?.message || 'unknown error'}`);
+      }
+      if (keytarPayloadInvalid) {
+        throw new Error('OS credential vault payload is invalid and no encrypted fallback is available');
       }
 
       const defaults = this._defaultSecrets();
       await this.saveSecrets(defaults);
-      console.log('Created new encrypted secrets');
+      console.log(`Created new secrets using ${this.lastStorageBackend || 'available storage'}`);
       return defaults;
 
     } catch (error) {
@@ -293,14 +363,17 @@ class SimpleSecretManager {
       const dataStr = JSON.stringify(normalized);
 
       const keytarSuccess = await this._writeToKeytar(dataStr);
-
-      const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
-      console.log(`Secrets saved - Keytar: ${keytarSuccess ? 'yes' : 'no'}, File: ${backupResult.success ? 'yes' : 'no'}`);
-
-      if (!backupResult.success) {
-        throw backupResult.error || new Error('Failed to persist encrypted secrets backup');
+      if (keytarSuccess) {
+        this.lastStorageBackend = 'keytar';
+        this._removeLegacyBackup();
+        console.log('Secrets saved to keytar and verified');
+        return normalized;
       }
 
+      const backupResult = persistEncryptedSecrets(this.configDir, this.secretsPath, normalized);
+      console.log(`Secrets saved - Keytar: no, encrypted file fallback: ${backupResult.success ? 'yes' : 'no'}`);
+      if (!backupResult.success) throw backupResult.error || new Error('Failed to persist encrypted secrets fallback');
+      this.lastStorageBackend = 'encrypted-file-fallback';
       return normalized;
     } catch (error) {
       console.error('Error saving secrets:', error.message);
@@ -402,10 +475,9 @@ class SimpleSecretManager {
 
   async getSecretsStatus() {
     try {
-      const secrets = await this.loadSecrets({ refreshKeytarBackup: false });
+      const secrets = await this.loadSecrets();
       const rotationStatus = this._getRotationStatusForSecrets(secrets);
-
-      const backend = keytar ? 'keytar+encrypted-file' : 'encrypted-file';
+      const backend = this.lastStorageBackend || (this.keytar ? 'keytar' : 'encrypted-file-fallback');
 
       return {
         exists: true,
@@ -414,8 +486,9 @@ class SimpleSecretManager {
         needsRotation: rotationStatus.needsRotation,
         rotationMaxAgeDays: rotationStatus.rotationMaxAgeDays,
         previousSecretExpiry: rotationStatus.previousSecretExpiry,
-        configPath: this.secretsPath,
+        configPath: backend === 'keytar' ? null : this.secretsPath,
         storageBackend: backend,
+        legacyBackupPresent: this._hasLegacyBackupArtifacts(),
         hasGraceSecret: rotationStatus.hasGraceSecret,
         graceActive: rotationStatus.graceActive
       };

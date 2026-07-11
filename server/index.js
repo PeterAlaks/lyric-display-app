@@ -49,6 +49,14 @@ const secretManager = new SimpleSecretManager();
 const startupSecretRotation = await secretManager.rotateJWTSecretIfStale();
 const secrets = startupSecretRotation.secrets;
 
+if (typeof process.send === 'function') {
+  try {
+    process.send({ type: 'security-admin-key', adminKey: secrets.ADMIN_ACCESS_KEY });
+  } catch (error) {
+    console.warn('Failed to hand admin credentials to the Electron parent process:', error.message);
+  }
+}
+
 if (startupSecretRotation.rotated) {
   console.log('JWT secret auto-rotated during startup because it was stale');
 }

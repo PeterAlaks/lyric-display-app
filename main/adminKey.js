@@ -23,6 +23,11 @@ let lastEmittedAdminKey = null;
 
 let cachedAdminKey = null;
 
+const normalizeAdminKey = (value) => (
+  typeof value === 'string' && /^[0-9a-f]{64}$/i.test(value.trim())
+    ? value.trim().toLowerCase()
+    : null
+);
 
 function emitAdminKeyAvailable(adminKey) {
   lastEmittedAdminKey = adminKey;
@@ -71,7 +76,7 @@ function readAdminKeyFromBackup(paths) {
     const wrapped = JSON.parse(fs.readFileSync(secretsPath, 'utf8'));
     const key = fs.readFileSync(keyPath);
     const decrypted = decryptJson(wrapped, key);
-    const adminKey = decrypted?.ADMIN_ACCESS_KEY;
+    const adminKey = normalizeAdminKey(decrypted?.ADMIN_ACCESS_KEY);
     if (!adminKey) {
       console.warn(`${LOG_PREFIX} Backup payload missing ADMIN_ACCESS_KEY`);
       return null;
@@ -88,11 +93,23 @@ function parseKeytarPayload(raw) {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    return parsed?.ADMIN_ACCESS_KEY || null;
+    return normalizeAdminKey(parsed?.ADMIN_ACCESS_KEY);
   } catch (error) {
     console.warn(`${LOG_PREFIX} Keytar payload parse failed:`, error.message);
     return null;
   }
+}
+
+export function setAdminKeyFromBackend(adminKey) {
+  const normalized = normalizeAdminKey(adminKey);
+  if (!normalized) {
+    console.warn(`${LOG_PREFIX} Ignored invalid admin key handoff from backend`);
+    return false;
+  }
+  cachedAdminKey = normalized;
+  if (normalized !== lastEmittedAdminKey) emitAdminKeyAvailable(normalized);
+  console.log(`${LOG_PREFIX} Admin key received from trusted backend process`);
+  return true;
 }
 
 async function loadAdminKey() {
@@ -108,7 +125,7 @@ async function loadAdminKey() {
           console.log(`${LOG_PREFIX} Admin key loaded from keytar`);
           return adminKey;
         }
-        console.warn(`${LOG_PREFIX} Keytar data unavailable or incomplete; refreshing encrypted backup`);
+        console.warn(`${LOG_PREFIX} Keytar data unavailable or incomplete; attempting encrypted fallback`);
       } catch (error) {
         console.warn(`${LOG_PREFIX} Keytar read failed (${error.message}); attempting encrypted backup`);
       }

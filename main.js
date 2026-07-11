@@ -15,6 +15,7 @@ import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
 import { registerObsDockPairingToken, setBackendMessageHandler, setBackendStatusHandler } from './main/backend.js';
+import { setAdminKeyFromBackend } from './main/adminKey.js';
 import { relaunchInDesktopMode, relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
 import * as userPreferences from './main/userPreferences.js';
 import { initFileLogging } from './main/logging.js';
@@ -405,6 +406,10 @@ registerIpcHandlers({
 registerInAppBrowserIpc();
 
 setBackendMessageHandler((message) => {
+  if (message?.type === 'security-admin-key') {
+    return { success: setAdminKeyFromBackend(message.adminKey) };
+  }
+
   if (message?.type === 'switch-to-desktop-mode') {
     if (isHeadlessMode) {
       console.log('[Main] Desktop mode relaunch requested from Dock Mode');
