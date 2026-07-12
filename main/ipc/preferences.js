@@ -1,5 +1,6 @@
 import { ipcMain, dialog } from 'electron';
 import * as userPreferences from '../userPreferences.js';
+import { setUpdateSessionActive } from '../updater.js';
 
 /**
  * Register user preferences IPC handlers
@@ -40,6 +41,9 @@ export function registerPreferencesHandlers({ getMainWindow }) {
   ipcMain.handle('preferences:set', async (_event, { path, value }) => {
     try {
       userPreferences.setPreference(path, value);
+      if (path === 'general.liveSafetyMode') {
+        setUpdateSessionActive(Boolean(value));
+      }
       return { success: true };
     } catch (error) {
       console.error('[UserPreferences] Error setting preference:', error);
@@ -50,6 +54,9 @@ export function registerPreferencesHandlers({ getMainWindow }) {
   ipcMain.handle('preferences:save-all', async (_event, { preferences }) => {
     try {
       const result = userPreferences.saveAllPreferences(preferences);
+      if (result.success && typeof preferences?.general?.liveSafetyMode === 'boolean') {
+        setUpdateSessionActive(preferences.general.liveSafetyMode);
+      }
       return result;
     } catch (error) {
       console.error('[UserPreferences] Error saving preferences:', error);
@@ -60,6 +67,9 @@ export function registerPreferencesHandlers({ getMainWindow }) {
   ipcMain.handle('preferences:reset-category', async (_event, { category }) => {
     try {
       userPreferences.resetCategoryToDefaults(category);
+      if (category === 'general') {
+        setUpdateSessionActive(false);
+      }
       return { success: true };
     } catch (error) {
       console.error('[UserPreferences] Error resetting category:', error);
@@ -70,6 +80,9 @@ export function registerPreferencesHandlers({ getMainWindow }) {
   ipcMain.handle('preferences:reset-all', async () => {
     try {
       const result = userPreferences.resetAllToDefaults();
+      if (result.success) {
+        setUpdateSessionActive(false);
+      }
       return result;
     } catch (error) {
       console.error('[UserPreferences] Error resetting all preferences:', error);

@@ -184,7 +184,7 @@ const findMacDmgAsset = (release, version) => {
 
 const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
   const interactive = Boolean(showNoUpdateDialogForResult);
-  if (!interactive && sessionPolicy.deferAutomaticCheck()) {
+  if (sessionPolicy.deferCheck({ interactive })) {
     return getStateSnapshot();
   }
 
@@ -242,7 +242,7 @@ const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
       arch: process.arch
     });
 
-    const notificationDeferred = !interactive && sessionPolicy.deferNotification('available');
+    const notificationDeferred = sessionPolicy.deferNotification('available');
     setState({
       status: 'available',
       updateInfo,
@@ -256,7 +256,7 @@ const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
     }
     return getStateSnapshot();
   } catch (err) {
-    if (!interactive && sessionPolicy.deferAutomaticCheck()) {
+    if (sessionPolicy.deferCheck({ interactive })) {
       console.warn('Automatic macOS update check failed during Live Safety; retry deferred until the session closes.');
       setState({ status: 'idle', error: null });
       return getStateSnapshot();
@@ -281,8 +281,8 @@ const handleUpdateError = (err, phase = state.status, source = 'event') => {
 };
 
 const handleCheckError = (err, source) => {
-  if (!currentCheckIsInteractive && sessionPolicy.deferAutomaticCheck()) {
-    console.warn(`Automatic update check failed during Live Safety (${source}); retry deferred until the session closes.`);
+  if (sessionPolicy.deferCheck({ interactive: currentCheckIsInteractive })) {
+    console.warn(`Update check failed during Live Safety (${source}); retry deferred until the session closes.`);
     currentCheckIsInteractive = false;
     setState({ status: 'idle', error: null });
     return null;
@@ -294,6 +294,7 @@ const ensureUpdaterConfigured = () => {
   if (isManualMacUpdater()) return;
 
   autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
 
   if (updaterConfigured) return;
   updaterConfigured = true;
@@ -311,8 +312,7 @@ const ensureUpdaterConfigured = () => {
 
   autoUpdater.on('update-available', (info) => {
     const updateInfo = toUpdateInfo(info);
-    const notificationDeferred = !currentCheckIsInteractive
-      && sessionPolicy.deferNotification('available');
+    const notificationDeferred = sessionPolicy.deferNotification('available');
     setState({
       status: 'available',
       updateInfo,
@@ -329,13 +329,14 @@ const ensureUpdaterConfigured = () => {
 
   autoUpdater.on('update-not-available', () => {
     console.log('No updates available.');
+    const checkDeferred = sessionPolicy.deferCheck({ interactive: currentCheckIsInteractive });
     setState({
       status: 'idle',
       progress: null,
       error: null
     });
 
-    if (showNoUpdateDialogForCurrentCheck) {
+    if (showNoUpdateDialogForCurrentCheck && !checkDeferred) {
       showNoUpdateDialog();
     }
     showNoUpdateDialogForCurrentCheck = false;
@@ -417,7 +418,7 @@ export function checkForUpdates(showNoUpdateDialogForResult = false) {
   ensureUpdaterConfigured();
 
   const interactive = Boolean(showNoUpdateDialogForResult);
-  if (!interactive && sessionPolicy.deferAutomaticCheck()) {
+  if (sessionPolicy.deferCheck({ interactive })) {
     return Promise.resolve(getStateSnapshot());
   }
 
@@ -595,7 +596,7 @@ export function setUpdateSessionActive(active) {
   } else if (transition.releaseNotification === 'available' && state.updateInfo) {
     notifyAllWindows('updater:update-available', { ...state.updateInfo });
   } else if (transition.runDeferredCheck) {
-    void checkForUpdates(false);
+    void checkForUpdates(transition.deferredCheckInteractive);
   }
 
   return { success: true, state: getStateSnapshot() };

@@ -487,10 +487,18 @@ const useMenuHandlers = (closeMenu) => {
     window.dispatchEvent(new Event('open-support-dev-modal'));
   }, [closeMenu]);
 
-  const handleCheckUpdates = useCallback(() => {
+  const handleCheckUpdates = useCallback(async () => {
     closeMenu();
-    window.electronAPI?.checkForUpdates?.(true);
-  }, [closeMenu]);
+    const result = await window.electronAPI?.checkForUpdates?.(true);
+    if (result?.deferred) {
+      showToast({
+        title: 'Update check deferred',
+        message: 'LyricDisplay will check for updates when Live Safety is turned off.',
+        variant: 'info',
+        dedupeKey: 'app-update-check-deferred',
+      });
+    }
+  }, [closeMenu, showToast]);
 
   const handleAbout = useCallback(async (appVersion) => {
     closeMenu();

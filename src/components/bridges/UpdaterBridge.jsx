@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import useToast from '@/hooks/useToast';
 import useModal from '@/hooks/useModal';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from '../../utils/markdownParser';
@@ -24,16 +24,30 @@ const isDuplicateVersionLabel = (label, version) => {
 };
 
 export default function UpdaterBridge() {
-  const { showToast } = useToast();
-  const { showModal } = useModal();
+  const { showToast, removeToast } = useToast();
+  const { showModal, closeModalByDedupeKey } = useModal();
   const { liveSafety, ready } = useLiveSafetyBridge();
+  const liveSafetyEnabledRef = useRef(Boolean(liveSafety?.enabled));
+  const readyToastIdRef = useRef(null);
 
   useEffect(() => {
+    const sessionActive = Boolean(liveSafety?.enabled);
+    liveSafetyEnabledRef.current = sessionActive;
+    if (sessionActive) {
+      closeModalByDedupeKey?.('app-update-available', 'live-safety-deferred');
+      closeModalByDedupeKey?.('app-update-install', 'live-safety-deferred');
+      if (readyToastIdRef.current != null) {
+        removeToast(readyToastIdRef.current);
+        readyToastIdRef.current = null;
+      }
+      window.electronAPI?.hideUpdateProgressWindow?.();
+    }
+
     if (!ready || !window.electronAPI?.setUpdateSessionActive) return;
-    window.electronAPI.setUpdateSessionActive(Boolean(liveSafety?.enabled)).catch((error) => {
+    window.electronAPI.setUpdateSessionActive(sessionActive).catch((error) => {
       console.warn('[Updater] Failed to synchronize Live Safety state:', error);
     });
-  }, [liveSafety?.enabled, ready]);
+  }, [closeModalByDedupeKey, liveSafety?.enabled, ready, removeToast]);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -61,7 +75,18 @@ export default function UpdaterBridge() {
     };
 
     const requestInstall = async () => {
+      if (liveSafetyEnabledRef.current) {
+        showToast({
+          title: 'Update deferred by Live Safety',
+          message: 'Turn off Live Safety when the session ends to install the downloaded update.',
+          variant: 'info',
+          dedupeKey: 'app-update-live-safety-deferred',
+        });
+        return;
+      }
+
       const result = await showModal({
+        dedupeKey: 'app-update-install',
         title: 'Install Update?',
         description: 'LyricDisplay will restart to finish installing the downloaded update.',
         body: 'Save any unsaved work before continuing. Output and stage windows will close during the restart.',
@@ -73,7 +98,7 @@ export default function UpdaterBridge() {
         ],
       });
 
-      if (result !== 'install') return;
+      if (result !== 'install' || liveSafetyEnabledRef.current) return;
 
       const installResult = await window.electronAPI.requestInstallAndRestart?.();
       if (installResult && installResult.success === false) {
@@ -82,7 +107,8 @@ export default function UpdaterBridge() {
     };
 
     const showUpdateReadyToast = () => {
-      showToast({
+      if (liveSafetyEnabledRef.current) return;
+      readyToastIdRef.current = showToast({
         title: 'Update ready to install',
         message: 'Restart LyricDisplay when you are ready to finish the update.',
         variant: 'success',
@@ -96,6 +122,7 @@ export default function UpdaterBridge() {
     };
 
     const offAvail = window.electronAPI.onUpdateAvailable?.((info) => {
+      if (liveSafetyEnabledRef.current) return;
       const version = info?.version || '';
       const releaseName = info?.releaseName || '';
       const releaseNotes = info?.releaseNotes || '';
@@ -135,6 +162,7 @@ export default function UpdaterBridge() {
       const description = descriptionParts.join('\n');
 
       showModal({
+        dedupeKey: 'app-update-available',
         title: 'Update Available',
         description: description,
         body: ({ isDark }) => (

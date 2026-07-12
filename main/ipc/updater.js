@@ -15,7 +15,12 @@ export function registerUpdaterHandlers({ getMainWindow, checkForUpdates }) {
     try {
       if (typeof checkForUpdates === 'function') {
         await checkForUpdates(showNoUpdateDialog);
-        return { success: true, state: getUpdaterState() };
+        const state = getUpdaterState();
+        return {
+          success: true,
+          deferred: Boolean(state.sessionPolicy?.sessionActive && state.sessionPolicy?.checkDeferred),
+          state,
+        };
       }
       return { success: false, error: 'checkForUpdates function not available', state: getUpdaterState() };
     } catch (e) {

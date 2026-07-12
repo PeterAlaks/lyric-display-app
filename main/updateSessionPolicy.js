@@ -5,17 +5,19 @@ const NOTIFICATION_PRIORITY = {
 
 export function createUpdateSessionPolicy() {
   let sessionActive = false;
-  let automaticCheckDeferred = false;
+  let checkDeferred = false;
+  let deferredCheckInteractive = false;
   let deferredNotification = null;
 
   return {
     getSnapshot() {
-      return { sessionActive, automaticCheckDeferred, deferredNotification };
+      return { sessionActive, checkDeferred, deferredCheckInteractive, deferredNotification };
     },
 
-    deferAutomaticCheck() {
+    deferCheck({ interactive = false } = {}) {
       if (!sessionActive) return false;
-      automaticCheckDeferred = true;
+      checkDeferred = true;
+      deferredCheckInteractive = deferredCheckInteractive || Boolean(interactive);
       return true;
     },
 
@@ -41,10 +43,12 @@ export function createUpdateSessionPolicy() {
 
       const result = {
         changed: true,
-        runDeferredCheck: automaticCheckDeferred && !deferredNotification,
+        runDeferredCheck: checkDeferred && !deferredNotification,
+        deferredCheckInteractive,
         releaseNotification: deferredNotification,
       };
-      automaticCheckDeferred = false;
+      checkDeferred = false;
+      deferredCheckInteractive = false;
       deferredNotification = null;
       return result;
     },

@@ -2,6 +2,8 @@
 
 LyricDisplay updates require operator confirmation. When Live Safety is enabled, automatic checks and update notifications are deferred, and a downloaded update cannot restart the application until Live Safety is disabled.
 
+Downloaded Windows/Linux update artifacts are retained in electron-updater's checksum-validated local cache. If LyricDisplay restarts before installation, checking again and choosing **Update Now** reuses the valid cached artifact. LyricDisplay disables installation on ordinary application quit; applying an update requires the explicit **Install and Restart** confirmation.
+
 ## Before updating
 
 1. End the live session and turn off Live Safety.

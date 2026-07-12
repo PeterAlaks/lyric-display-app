@@ -367,6 +367,21 @@ export function ModalProvider({ children, isDark = false }) {
     }
   }, [finalizeRemoval, setModalStack]);
 
+  const closeModalByDedupeKey = useCallback((dedupeKey, result) => {
+    if (typeof dedupeKey !== 'string' || !dedupeKey) return false;
+    const matching = modalsRef.current.filter((modal) => modal.dedupeKey === dedupeKey);
+    matching.forEach((modal) => closeModal(modal.id, result, { reason: 'dedupe-key' }));
+
+    const queuedMatches = queuedModals.current.filter((entry) => entry.modal.dedupeKey === dedupeKey);
+    queuedModals.current = queuedModals.current.filter((entry) => entry.modal.dedupeKey !== dedupeKey);
+    queuedMatches.forEach(({ modal }) => {
+      resolverMap.current.get(modal.id)?.(result);
+      resolverMap.current.delete(modal.id);
+      modalPromises.current.delete(modal.id);
+    });
+    return matching.length + queuedMatches.length > 0;
+  }, [closeModal]);
+
   useEffect(() => () => {
     removalTimers.current.forEach((timer) => clearTimeout(timer));
     removalTimers.current.clear();
@@ -424,8 +439,8 @@ export function ModalProvider({ children, isDark = false }) {
   }, [closeModal, modals]);
 
   const contextValue = useMemo(
-    () => ({ showModal, closeModal }),
-    [showModal, closeModal]
+    () => ({ showModal, closeModal, closeModalByDedupeKey }),
+    [showModal, closeModal, closeModalByDedupeKey]
   );
 
   const modalMaxHeight = `calc(100vh - ${topMenuHeight} - 80px)`;

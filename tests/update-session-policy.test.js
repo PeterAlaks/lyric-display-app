@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { migratePreferences } from '../main/preferenceMigrations.js';
 import { createUpdateSessionPolicy } from '../main/updateSessionPolicy.js';
 import {
@@ -7,23 +10,46 @@ import {
   migrateSessionSnapshot,
 } from '../server/realtime/sessionPersistence.js';
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
 test('Live Safety defers automatic checks until the session closes', () => {
   const policy = createUpdateSessionPolicy();
-  assert.equal(policy.deferAutomaticCheck(), false);
+  assert.equal(policy.deferCheck(), false);
 
   policy.setSessionActive(true);
-  assert.equal(policy.deferAutomaticCheck(), true);
+  assert.equal(policy.deferCheck(), true);
   assert.deepEqual(policy.getSnapshot(), {
     sessionActive: true,
-    automaticCheckDeferred: true,
+    checkDeferred: true,
+    deferredCheckInteractive: false,
     deferredNotification: null,
   });
 
   assert.deepEqual(policy.setSessionActive(false), {
     changed: true,
     runDeferredCheck: true,
+    deferredCheckInteractive: false,
     releaseNotification: null,
   });
+});
+
+test('an interactive check is also deferred and retains its operator feedback intent', () => {
+  const policy = createUpdateSessionPolicy();
+  policy.setSessionActive(true);
+  assert.equal(policy.deferCheck({ interactive: true }), true);
+  assert.deepEqual(policy.setSessionActive(false), {
+    changed: true,
+    runDeferredCheck: true,
+    deferredCheckInteractive: true,
+    releaseNotification: null,
+  });
+});
+
+test('downloaded updates require explicit installation instead of installing on ordinary quit', () => {
+  const updaterSource = fs.readFileSync(path.join(root, 'main/updater.js'), 'utf8');
+  assert.match(updaterSource, /autoUpdater\.autoDownload\s*=\s*false/);
+  assert.match(updaterSource, /autoUpdater\.autoInstallOnAppQuit\s*=\s*false/);
+  assert.match(updaterSource, /autoUpdater\.quitAndInstall\(false, true\)/);
 });
 
 test('only the highest-priority bounded update notification is released', () => {
@@ -36,6 +62,7 @@ test('only the highest-priority bounded update notification is released', () => 
   assert.deepEqual(policy.setSessionActive(false), {
     changed: true,
     runDeferredCheck: false,
+    deferredCheckInteractive: false,
     releaseNotification: 'downloaded',
   });
   assert.equal(policy.getSnapshot().deferredNotification, null);
