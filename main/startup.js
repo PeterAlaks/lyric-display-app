@@ -4,7 +4,7 @@ import { prewarmCredentials } from './providerCredentials.js';
 import { isDev } from './paths.js';
 import { startBackend } from './backend.js';
 import { createWindow } from './windows.js';
-import { checkForUpdates } from './updater.js';
+import { checkForUpdates, setUpdateSessionActive } from './updater.js';
 import { getAdminKeyWithRetry } from './adminKey.js';
 import { initDisplayManager } from './displayManager.js';
 import { performStartupDisplayCheck } from './displayDetection.js';
@@ -226,6 +226,8 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
 
     setTimeout(() => {
       const autoCheck = userPreferences.getPreference('general.autoCheckForUpdates') ?? true;
+      const liveSession = userPreferences.getPreference('general.liveSafetyMode') ?? false;
+      setUpdateSessionActive(liveSession);
       if (!isDev && autoCheck) checkForUpdates(false);
     }, 2000);
 

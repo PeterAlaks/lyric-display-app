@@ -175,6 +175,8 @@ Please read the [contribution guide](CONTRIBUTING.md) and follow the [code of co
 
 ## Troubleshooting
 
+For safe update rehearsal, schema compatibility, and restoring a previously verified build, see [Release migration and recovery](docs/RELEASE_RECOVERY.md).
+
 ### Output Windows Are Not Displaying
 
 - Confirm that the backend server is running on port `4000`.

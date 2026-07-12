@@ -8,6 +8,7 @@ import {
   hideProgressWindow,
   updateProgressWindowState
 } from './progressWindow.js';
+import { createUpdateSessionPolicy } from './updateSessionPolicy.js';
 
 const { autoUpdater } = updaterPkg;
 
@@ -30,6 +31,8 @@ let updaterConfigured = false;
 let showNoUpdateDialogForCurrentCheck = false;
 let downloadPromise = null;
 let state = { ...INITIAL_STATE };
+let currentCheckIsInteractive = false;
+const sessionPolicy = createUpdateSessionPolicy();
 
 const normalizeVersionText = (value = '') => String(value).trim().replace(/^v/i, '');
 const isManualMacUpdater = () => process.platform === 'darwin';
@@ -78,6 +81,7 @@ const toErrorPayload = (err, phase = state.status, source = 'event') => {
 
 const getStateSnapshot = () => ({
   ...state,
+  sessionPolicy: sessionPolicy.getSnapshot(),
   updateInfo: state.updateInfo ? { ...state.updateInfo } : null,
   progress: state.progress ? { ...state.progress } : null,
   error: state.error ? { ...state.error } : null
@@ -179,6 +183,11 @@ const findMacDmgAsset = (release, version) => {
 };
 
 const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
+  const interactive = Boolean(showNoUpdateDialogForResult);
+  if (!interactive && sessionPolicy.deferAutomaticCheck()) {
+    return getStateSnapshot();
+  }
+
   if (state.status === 'checking') {
     return getStateSnapshot();
   }
@@ -233,6 +242,7 @@ const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
       arch: process.arch
     });
 
+    const notificationDeferred = !interactive && sessionPolicy.deferNotification('available');
     setState({
       status: 'available',
       updateInfo,
@@ -241,9 +251,16 @@ const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
       downloadedAt: null
     });
 
-    notifyAllWindows('updater:update-available', updateInfo);
+    if (!notificationDeferred) {
+      notifyAllWindows('updater:update-available', updateInfo);
+    }
     return getStateSnapshot();
   } catch (err) {
+    if (!interactive && sessionPolicy.deferAutomaticCheck()) {
+      console.warn('Automatic macOS update check failed during Live Safety; retry deferred until the session closes.');
+      setState({ status: 'idle', error: null });
+      return getStateSnapshot();
+    }
     handleUpdateError(err, 'check', 'manual');
     return getStateSnapshot();
   }
@@ -261,6 +278,16 @@ const handleUpdateError = (err, phase = state.status, source = 'event') => {
 
   notifyAllWindows('updater:update-error', error);
   return error;
+};
+
+const handleCheckError = (err, source) => {
+  if (!currentCheckIsInteractive && sessionPolicy.deferAutomaticCheck()) {
+    console.warn(`Automatic update check failed during Live Safety (${source}); retry deferred until the session closes.`);
+    currentCheckIsInteractive = false;
+    setState({ status: 'idle', error: null });
+    return null;
+  }
+  return handleUpdateError(err, 'check', source);
 };
 
 const ensureUpdaterConfigured = () => {
@@ -284,6 +311,8 @@ const ensureUpdaterConfigured = () => {
 
   autoUpdater.on('update-available', (info) => {
     const updateInfo = toUpdateInfo(info);
+    const notificationDeferred = !currentCheckIsInteractive
+      && sessionPolicy.deferNotification('available');
     setState({
       status: 'available',
       updateInfo,
@@ -292,7 +321,10 @@ const ensureUpdaterConfigured = () => {
       downloadedAt: null
     });
 
-    notifyAllWindows('updater:update-available', updateInfo);
+    if (!notificationDeferred) {
+      notifyAllWindows('updater:update-available', updateInfo);
+    }
+    currentCheckIsInteractive = false;
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -307,11 +339,13 @@ const ensureUpdaterConfigured = () => {
       showNoUpdateDialog();
     }
     showNoUpdateDialogForCurrentCheck = false;
+    currentCheckIsInteractive = false;
   });
 
   autoUpdater.on('error', (err) => {
     const phase = state.status === 'downloading' ? 'download' : state.status || 'update';
-    handleUpdateError(err, phase, 'event');
+    if (phase === 'checking') handleCheckError(err, 'event');
+    else handleUpdateError(err, phase, 'event');
     if (state.status === 'error') {
       downloadPromise = null;
     }
@@ -350,6 +384,7 @@ const ensureUpdaterConfigured = () => {
       )
     };
 
+    const notificationDeferred = sessionPolicy.deferNotification('downloaded');
     setState({
       status: 'downloaded',
       updateInfo: Object.keys(nextUpdateInfo).length > 0 ? nextUpdateInfo : state.updateInfo,
@@ -363,7 +398,9 @@ const ensureUpdaterConfigured = () => {
 
     downloadPromise = null;
     closeProgressWindow();
-    notifyAllWindows('updater:update-downloaded', getStateSnapshot());
+    if (!notificationDeferred) {
+      notifyAllWindows('updater:update-downloaded', getStateSnapshot());
+    }
   });
 };
 
@@ -379,23 +416,29 @@ export function checkForUpdates(showNoUpdateDialogForResult = false) {
 
   ensureUpdaterConfigured();
 
+  const interactive = Boolean(showNoUpdateDialogForResult);
+  if (!interactive && sessionPolicy.deferAutomaticCheck()) {
+    return Promise.resolve(getStateSnapshot());
+  }
+
   if (state.status === 'downloading' || state.status === 'installing') {
     return Promise.resolve(getStateSnapshot());
   }
 
   showNoUpdateDialogForCurrentCheck = Boolean(showNoUpdateDialogForResult);
+  currentCheckIsInteractive = interactive;
 
   let updateCheck;
   try {
     updateCheck = autoUpdater.checkForUpdates();
   } catch (err) {
-    handleUpdateError(err, 'check', 'sync');
+    handleCheckError(err, 'sync');
     return Promise.resolve(null);
   }
 
   if (updateCheck && typeof updateCheck.catch === 'function') {
     updateCheck.catch((err) => {
-      handleUpdateError(err, 'check', 'promise');
+      handleCheckError(err, 'promise');
     });
   }
 
@@ -511,6 +554,15 @@ export function installDownloadedUpdate() {
 
   ensureUpdaterConfigured();
 
+  if (sessionPolicy.getSnapshot().sessionActive) {
+    return {
+      success: false,
+      deferred: true,
+      error: 'Turn off Live Safety before installing an update. LyricDisplay will keep the downloaded update ready.',
+      state: getStateSnapshot()
+    };
+  }
+
   if (state.status !== 'downloaded') {
     return {
       success: false,
@@ -528,6 +580,25 @@ export function installDownloadedUpdate() {
     const error = handleUpdateError(err, 'install', 'sync');
     return { success: false, error: error.message, state: getStateSnapshot() };
   }
+}
+
+export function setUpdateSessionActive(active) {
+  const transition = sessionPolicy.setSessionActive(active);
+  const snapshot = getStateSnapshot();
+  if (!transition.changed) return { success: true, state: snapshot };
+
+  notifyAllWindows('updater:state-changed', snapshot);
+  updateProgressWindowState(snapshot);
+
+  if (transition.releaseNotification === 'downloaded') {
+    notifyAllWindows('updater:update-downloaded', snapshot);
+  } else if (transition.releaseNotification === 'available' && state.updateInfo) {
+    notifyAllWindows('updater:update-available', { ...state.updateInfo });
+  } else if (transition.runDeferredCheck) {
+    void checkForUpdates(false);
+  }
+
+  return { success: true, state: getStateSnapshot() };
 }
 
 export function hideUpdaterProgressWindow() {

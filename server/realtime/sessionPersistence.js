@@ -5,6 +5,7 @@ import { validatePersistedSetlistFiles } from './setlistValidation.js';
 
 const SESSION_FILE_NAME = 'realtime-session-state.json';
 const SAVE_DEBOUNCE_MS = 250;
+export const CURRENT_SESSION_SCHEMA_VERSION = 1;
 
 let sessionFilePath = null;
 let saveTimer = null;
@@ -56,7 +57,7 @@ export const sanitizePersistedStageTimerState = (timerState) => {
 };
 
 export const createSessionSnapshot = ({ appSessionId = sessionAppId } = {}) => ({
-  version: 1,
+  version: CURRENT_SESSION_SCHEMA_VERSION,
   savedAt: Date.now(),
   appSessionId: appSessionId || null,
   currentLyrics: Array.isArray(state.currentLyrics) ? state.currentLyrics : [],
@@ -81,8 +82,40 @@ export const createSessionSnapshot = ({ appSessionId = sessionAppId } = {}) => (
   liveSafety: state.liveSafety || null,
 });
 
+export const migrateSessionSnapshot = (snapshot) => {
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+    return { valid: false, error: 'Invalid realtime session snapshot' };
+  }
+
+  const sourceVersion = snapshot.version == null ? 0 : Number(snapshot.version);
+  if (!Number.isInteger(sourceVersion) || sourceVersion < 0) {
+    return { valid: false, error: 'Invalid realtime session schema version' };
+  }
+  if (sourceVersion > CURRENT_SESSION_SCHEMA_VERSION) {
+    return {
+      valid: false,
+      futureVersion: true,
+      error: `Realtime session schema ${sourceVersion} requires a newer LyricDisplay version`,
+    };
+  }
+
+  return {
+    valid: true,
+    migrated: sourceVersion !== CURRENT_SESSION_SCHEMA_VERSION,
+    sourceVersion,
+    snapshot: sourceVersion === CURRENT_SESSION_SCHEMA_VERSION
+      ? snapshot
+      : { ...snapshot, version: CURRENT_SESSION_SCHEMA_VERSION },
+  };
+};
+
 export const applySessionSnapshot = (snapshot, { appSessionId = sessionAppId } = {}) => {
-  if (!snapshot || typeof snapshot !== 'object') return false;
+  const migration = migrateSessionSnapshot(snapshot);
+  if (!migration.valid) {
+    console.warn(`[SessionPersistence] ${migration.error}; snapshot was not applied`);
+    return false;
+  }
+  snapshot = migration.snapshot;
 
   state.currentLyrics = Array.isArray(snapshot.currentLyrics) ? snapshot.currentLyrics : [];
   state.currentLyricsTimestamps = Array.isArray(snapshot.currentLyricsTimestamps) ? snapshot.currentLyricsTimestamps : [];

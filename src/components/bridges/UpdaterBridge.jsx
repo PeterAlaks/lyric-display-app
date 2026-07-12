@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import useToast from '@/hooks/useToast';
 import useModal from '@/hooks/useModal';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from '../../utils/markdownParser';
+import { useLiveSafetyBridge } from '../../hooks/useLiveSafetyBridge';
 
 const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const normalizeVersionText = (value = '') => String(value).trim().toLowerCase().replace(/^v/, '');
@@ -25,6 +26,14 @@ const isDuplicateVersionLabel = (label, version) => {
 export default function UpdaterBridge() {
   const { showToast } = useToast();
   const { showModal } = useModal();
+  const { liveSafety, ready } = useLiveSafetyBridge();
+
+  useEffect(() => {
+    if (!ready || !window.electronAPI?.setUpdateSessionActive) return;
+    window.electronAPI.setUpdateSessionActive(Boolean(liveSafety?.enabled)).catch((error) => {
+      console.warn('[Updater] Failed to synchronize Live Safety state:', error);
+    });
+  }, [liveSafety?.enabled, ready]);
 
   useEffect(() => {
     if (!window.electronAPI) return;

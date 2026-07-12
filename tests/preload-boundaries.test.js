@@ -17,6 +17,7 @@ test('passive display preload excludes control, file, NDI, and update mutation c
     'osc:enable',
     'security:rotate-jwt-and-restart',
     'updater:install',
+    'updater:set-session-active',
   ]) {
     assert.equal(source.includes(forbidden), false, forbidden);
   }

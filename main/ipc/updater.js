@@ -3,7 +3,8 @@ import {
   downloadAvailableUpdate,
   getUpdaterState,
   hideUpdaterProgressWindow,
-  installDownloadedUpdate
+  installDownloadedUpdate,
+  setUpdateSessionActive,
 } from '../updater.js';
 
 /**
@@ -42,6 +43,10 @@ export function registerUpdaterHandlers({ getMainWindow, checkForUpdates }) {
       return { success: false, error: e?.message || String(e), state: getUpdaterState() };
     }
   });
+
+  ipcMain.handle('updater:set-session-active', async (_event, active) => (
+    setUpdateSessionActive(Boolean(active))
+  ));
 
   ipcMain.handle('updater:hide-progress', async () => hideUpdaterProgressWindow());
 }

@@ -376,6 +376,8 @@ Shift + Up/Down    Navigate search results
 
 ## Troubleshooting
 
+For update rehearsal and known-good rollback procedures, see [Release migration and recovery](docs/RELEASE_RECOVERY.md).
+
 ### Browser Source Is Black or Empty
 
 - Confirm LyricDisplay is running.

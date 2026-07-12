@@ -151,6 +151,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   requestUpdateDownload: () => ipcRenderer.invoke('updater:download'),
   requestInstallAndRestart: () => ipcRenderer.invoke('updater:install'),
   hideUpdateProgressWindow: () => ipcRenderer.invoke('updater:hide-progress'),
+  setUpdateSessionActive: (active) => ipcRenderer.invoke('updater:set-session-active', Boolean(active)),
 
   onOpenShortcutsHelp: (callback) => {
     const channel = 'open-shortcuts-help';
