@@ -39,8 +39,14 @@ import { usePendingLyricsLoad } from '../hooks/LyricDisplayApp/usePendingLyricsL
 import { usePendingSavedVersionPrompt } from '../hooks/LyricDisplayApp/usePendingSavedVersionPrompt';
 import { useRegisterCustomOutputs } from '../hooks/LyricDisplayApp/useRegisterCustomOutputs';
 import { useResetLyricsScroll } from '../hooks/LyricDisplayApp/useResetLyricsScroll';
+import {
+  useArmLyricsScrollRestoreOnUnmount,
+  useLyricsScrollRestoration,
+} from '../hooks/LyricDisplayApp/useLyricsScrollRestoration';
 import { useSetlistNavigation } from '../hooks/LyricDisplayApp/useSetlistNavigation';
 import { getLyricsAcceptAttribute } from '../../shared/lyricImportRegistry.js';
+import { createLyricsScrollKey } from '../utils/lyricsScrollMemory.js';
+import { VIRTUALIZATION_THRESHOLD } from './LyricsList/layout';
 import ControlPanelHeaderActions from './LyricDisplayApp/ControlPanelHeaderActions';
 import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
@@ -89,6 +95,19 @@ const LyricDisplayApp = () => {
   const headerContainerRef = useRef(null);
 
   const { containerRef: lyricsContainerRef, searchQuery, highlightedLineIndex, currentMatchIndex, totalMatches, handleSearch: baseHandleSearch, clearSearch, navigateToNextMatch, navigateToPreviousMatch } = useSearch(lyrics);
+  const lyricsScrollKey = React.useMemo(
+    () => createLyricsScrollKey({ lyricsSource, lyricsFileName }),
+    [lyricsFileName, lyricsSource]
+  );
+  const getLyricsScrollElement = React.useCallback(() => lyricsContainerRef.current, [lyricsContainerRef]);
+
+  useArmLyricsScrollRestoreOnUnmount(lyricsScrollKey);
+  useLyricsScrollRestoration({
+    enabled: lyrics.length > 0 && lyrics.length <= VIRTUALIZATION_THRESHOLD,
+    getElement: getLyricsScrollElement,
+    lyricsKey: lyricsScrollKey,
+    scope: 'control',
+  });
 
   const trackAction = React.useCallback((actionType) => {
     window.dispatchEvent(new CustomEvent('support-dev:track-action', {

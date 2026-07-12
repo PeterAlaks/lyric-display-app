@@ -522,6 +522,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
         fileType: finalFileType,
         filePath: savedMetadata?.filePath || null,
         fileName: originalName || fileName || '',
+        setlistItemId: fileId || null,
       });
       if (savedMetadata?.sections) {
         setLyricsSections(savedMetadata.sections);

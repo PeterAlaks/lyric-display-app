@@ -1,4 +1,4 @@
-import { processRawTextToLines, parseLrcContent, deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { parseTxtContent, parseLrcContent } from '../../../shared/lyricsParsing.js';
 import {
   normalizeLyricFileType,
   stripLyricImportExtension,
@@ -7,7 +7,7 @@ import { appendActionLog } from '../actionLog.js';
 import { emitControllerEvent, emitLyricsLoad, emitLyricsRenderEvent, emitSetlistUpdate } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
-import { normalizeIncomingSetlistFiles } from '../setlistValidation.js';
+import { normalizeIncomingSetlistFiles, validatePersistedSetlistFiles } from '../setlistValidation.js';
 import { state, summarizeSetlistForDisplay } from '../state.js';
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
@@ -120,6 +120,84 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
     }
   });
 
+  socket.on('setlistItemUpdate', (payload, acknowledge) => {
+    const finish = (result) => {
+      if (typeof acknowledge === 'function') acknowledge(result);
+      if (!result.success) socket.emit('setlistError', result.error);
+    };
+
+    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistItemUpdate' })) {
+      finish({ success: false, error: 'Setlist updates are blocked while Live Safety Mode is enabled' });
+      return;
+    }
+
+    if (!hasPermission(socket, 'setlist:write')) {
+      socket.emit('permissionError', 'Insufficient permissions to modify setlist');
+      finish({ success: false, error: 'Insufficient permissions to modify setlist' });
+      return;
+    }
+
+    const fileId = typeof payload?.fileId === 'string' ? payload.fileId : '';
+    const fileIndex = state.setlistFiles.findIndex((file) => file.id === fileId);
+    if (!fileId || fileIndex < 0) {
+      finish({ success: false, error: 'Setlist item was not found' });
+      return;
+    }
+
+    const existing = state.setlistFiles[fileIndex];
+    if (!hasPermission(socket, 'admin:full') && existing?.addedBy?.sessionId !== sessionId) {
+      socket.emit('permissionError', 'You can only update files you added');
+      finish({ success: false, error: 'You can only update files you added' });
+      return;
+    }
+
+    try {
+      const otherFiles = state.setlistFiles.filter((file) => file.id !== fileId);
+      const normalized = normalizeIncomingSetlistFiles([payload?.file], {
+        existingFiles: otherFiles,
+        actor,
+      });
+      if (!normalized.valid) {
+        finish({ success: false, error: normalized.error });
+        return;
+      }
+
+      const replacement = normalized.entries[0];
+      const updated = {
+        ...existing,
+        displayName: replacement.displayName,
+        originalName: replacement.originalName,
+        content: replacement.content,
+        lastModified: replacement.lastModified,
+        fileType: replacement.fileType,
+        metadata: replacement.metadata,
+      };
+      const nextFiles = [...state.setlistFiles];
+      nextFiles[fileIndex] = updated;
+      const validated = validatePersistedSetlistFiles(nextFiles);
+      if (!validated.valid) {
+        finish({ success: false, error: 'Updated setlist data is invalid or too large' });
+        return;
+      }
+
+      state.setlistFiles = validated.files;
+      schedulePersistSessionState();
+      appendActionLog(io, {
+        type: 'setlist',
+        label: 'Setlist song updated',
+        detail: `Updated "${updated.displayName}" in the setlist`,
+        actor,
+        target: updated.displayName,
+        metadata: { fileId, fileType: updated.fileType },
+      });
+      emitSetlistUpdate(io, state.setlistFiles);
+      finish({ success: true, fileId, file: state.setlistFiles[fileIndex] });
+    } catch (error) {
+      console.error('setlistItemUpdate error:', error.message);
+      finish({ success: false, error: error.message });
+    }
+  });
+
   socket.on('setlistLoad', (fileId) => {
     if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'setlistLoad' })) {
       return;
@@ -159,11 +237,11 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         sections = parsed.sections || [];
         lineToSection = parsed.lineToSection || {};
       } else {
-        processedLines = processRawTextToLines(file.content);
+        const parsed = parseTxtContent(file.content);
+        processedLines = parsed.processedLines;
         timestamps = [];
-        const derived = deriveSectionsFromProcessedLines(processedLines);
-        sections = derived.sections || [];
-        lineToSection = derived.lineToSection || {};
+        sections = parsed.sections || [];
+        lineToSection = parsed.lineToSection || {};
       }
 
       const cleanDisplayName = stripLyricImportExtension(file.displayName || file.originalName || '') || file.displayName;
@@ -179,6 +257,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         fileType: finalFileType,
         filePath: file.metadata?.filePath || null,
         fileName: file.originalName || cleanDisplayName || '',
+        setlistItemId: file.id,
       };
       state.currentSongMetadata = {
         ...(file.metadata || {}),

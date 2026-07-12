@@ -129,6 +129,7 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and editable ra
       fileType: 'lrc',
       filePath: null,
       fileName: 'Service Song.lrc',
+      setlistItemId: 'setlist_lrc',
     });
     assert.equal(state.currentSongMetadata.title, 'Service Song');
     assert.equal(state.currentSongMetadata.source, 'test');
@@ -456,6 +457,133 @@ test('setlistUpdate fanout sends full setlist to controllers and names only to s
   } finally {
     state.connectedClients = previousConnectedClients;
     state.setlistFiles = previousSetlist;
+  }
+});
+
+test('setlistItemUpdate refreshes the stored song in place and subsequent loads use edited content', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousSetlist = state.setlistFiles;
+  const previousLyrics = state.currentLyrics;
+  const previousLyricsSource = state.currentLyricsSource;
+  const previousRawLyricsContent = state.currentRawLyricsContent;
+  const previousTimestamps = state.currentLyricsTimestamps;
+  const previousEnhancedTimestamps = state.currentLyricsEnhancedTimestamps;
+  const previousFileName = state.currentLyricsFileName;
+  const previousSongMetadata = state.currentSongMetadata;
+  const previousSelectedLine = state.currentSelectedLine;
+  const previousSections = state.currentLyricsSections;
+  const previousLineToSection = state.currentLineToSection;
+
+  state.connectedClients = new Map();
+  state.setlistFiles = [{
+    id: 'setlist_edit_target',
+    displayName: 'Editable Song',
+    originalName: 'Editable Song.txt',
+    fileType: 'txt',
+    content: 'Old first line\nOld second line',
+    lastModified: 100,
+    addedAt: 50,
+    metadata: { filePath: 'C:\\Lyrics\\Editable Song.txt', source: 'test' },
+    addedBy: { clientType: 'desktop', deviceId: 'device-test', sessionId: 'session-test' },
+  }];
+  const desktop = createTrackedClient('socket-desktop-update', { type: 'desktop', purpose: 'control', permissions: ['admin:full'] });
+
+  try {
+    const { handlers, io, socket } = createSocketHarness();
+    registerSetlistHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'setlist:write' || permission === 'admin:full' || permission === 'lyrics:write',
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    let updateResult = null;
+    handlers.get('setlistItemUpdate')?.({
+      fileId: 'setlist_edit_target',
+      file: {
+        name: 'Editable Song.txt',
+        content: '[#:LyricDisplay grouping=explicit]\nEdited first line\n\nEdited second line',
+        fileType: 'txt',
+        lastModified: 200,
+        metadata: { filePath: 'C:\\Lyrics\\Editable Song.txt', source: 'test' },
+      },
+    }, (result) => {
+      updateResult = result;
+    });
+
+    assert.equal(updateResult.success, true);
+    assert.equal(state.setlistFiles[0].id, 'setlist_edit_target');
+    assert.equal(state.setlistFiles[0].addedAt, 50);
+    assert.equal(state.setlistFiles[0].content.includes('Edited first line'), true);
+    assert.equal(desktop.events.some((event) => event.eventName === 'setlistUpdate'), true);
+
+    handlers.get('setlistLoad')?.('setlist_edit_target');
+
+    assert.deepEqual(state.currentLyrics, ['Edited first line', 'Edited second line']);
+    assert.equal(state.currentRawLyricsContent, state.setlistFiles[0].content);
+    assert.equal(state.currentLyricsSource.setlistItemId, 'setlist_edit_target');
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.setlistFiles = previousSetlist;
+    state.currentLyrics = previousLyrics;
+    state.currentLyricsSource = previousLyricsSource;
+    state.currentRawLyricsContent = previousRawLyricsContent;
+    state.currentLyricsTimestamps = previousTimestamps;
+    state.currentLyricsEnhancedTimestamps = previousEnhancedTimestamps;
+    state.currentLyricsFileName = previousFileName;
+    state.currentSongMetadata = previousSongMetadata;
+    state.currentSelectedLine = previousSelectedLine;
+    state.currentLyricsSections = previousSections;
+    state.currentLineToSection = previousLineToSection;
+  }
+});
+
+test('setlistItemUpdate rejects updates from a different non-admin session without mutation', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousSetlist = state.setlistFiles;
+  const previousLiveSafety = state.liveSafety;
+
+  state.connectedClients = new Map();
+  state.liveSafety = { enabled: false, updatedAt: null, updatedBy: null };
+  state.setlistFiles = [{
+    id: 'owned-song',
+    displayName: 'Owned Song',
+    originalName: 'Owned Song.txt',
+    fileType: 'txt',
+    content: 'Original content',
+    metadata: null,
+    addedBy: { clientType: 'desktop', deviceId: 'owner-device', sessionId: 'owner-session' },
+  }];
+
+  try {
+    const { handlers, io, socket, socketEvents } = createSocketHarness();
+    registerSetlistHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'setlist:write',
+      clientType: 'web',
+      deviceId: 'other-device',
+      sessionId: 'other-session',
+    });
+
+    let result = null;
+    handlers.get('setlistItemUpdate')?.({
+      fileId: 'owned-song',
+      file: { name: 'Owned Song.txt', content: 'Unauthorized edit', fileType: 'txt' },
+    }, (payload) => {
+      result = payload;
+    });
+
+    assert.equal(result.success, false);
+    assert.match(result.error, /only update files you added/i);
+    assert.equal(state.setlistFiles[0].content, 'Original content');
+    assert.equal(socketEvents.some((event) => event.eventName === 'permissionError'), true);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.setlistFiles = previousSetlist;
+    state.liveSafety = previousLiveSafety;
   }
 });
 

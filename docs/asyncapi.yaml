@@ -33,6 +33,8 @@ channels:
         $ref: '#/components/messages/setlistAdd'
       setlistReplace:
         $ref: '#/components/messages/setlistReplace'
+      setlistItemUpdate:
+        $ref: '#/components/messages/setlistItemUpdate'
       setlistRemove:
         $ref: '#/components/messages/setlistRemove'
       setlistLoad:
@@ -178,6 +180,7 @@ operations:
       - $ref: '#/channels/socketChannel/messages/requestSetlist'
       - $ref: '#/channels/socketChannel/messages/setlistAdd'
       - $ref: '#/channels/socketChannel/messages/setlistReplace'
+      - $ref: '#/channels/socketChannel/messages/setlistItemUpdate'
       - $ref: '#/channels/socketChannel/messages/setlistRemove'
       - $ref: '#/channels/socketChannel/messages/setlistLoad'
       - $ref: '#/channels/socketChannel/messages/setlistClear'
@@ -440,6 +443,23 @@ components:
         or success false with an error. Recovery persistence is scoped to the current
         Electron app session and is not restored after a normal app relaunch.
       x-permissions: ['setlist:write', 'setlist:delete']
+    setlistItemUpdate:
+      name: setlistItemUpdate
+      payload:
+        type: object
+        required: [fileId, file]
+        properties:
+          fileId:
+            type: string
+            description: Stable ID of the setlist item to update in place.
+          file:
+            $ref: '#/components/schemas/SetlistItemInput'
+      description: >
+        Validates and updates one existing setlist item without changing its ID,
+        position, ownership, or added timestamp. The Socket.IO acknowledgement
+        returns the updated item on success. Non-admin clients may update only
+        items they added.
+      x-permissions: ['setlist:write']
     setlistRemove:
       name: setlistRemove
       payload:

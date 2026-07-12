@@ -28,6 +28,7 @@ const normalizeLyricsSource = (source) => ({
   fileType: source?.fileType || 'txt',
   filePath: source?.filePath || null,
   fileName: source?.fileName || '',
+  setlistItemId: source?.setlistItemId || null,
 });
 
 export const createLyricsSessionSlice = (set) => ({
@@ -50,6 +51,7 @@ export const createLyricsSessionSlice = (set) => ({
     fileType: 'txt',
     filePath: null,
     fileName: '',
+    setlistItemId: null,
   },
   lyricsTimestamps: [],
   lyricsEnhancedTimestamps: [],

@@ -1,6 +1,7 @@
 import { clearRuntimeGroupingConfig, setRuntimeGroupingConfig } from './runtimeConfig.js';
 import { processRawTextToLines } from './txtProcessor.js';
 import { deriveSectionsFromProcessedLines } from './sections.js';
+import { EXPLICIT_GROUPING_MAX_LINES, extractExplicitGroupingDirective } from './groupingDirective.js';
 
 /**
  * Parse plain text lyric content into processed lines with translation and normal groupings.
@@ -10,12 +11,19 @@ import { deriveSectionsFromProcessedLines } from './sections.js';
  * @returns {{ rawText: string, processedLines: Array<string | object> }}
  */
 export function parseTxtContent(rawText = '', options = {}) {
-  if (options.groupingConfig) {
-    setRuntimeGroupingConfig(options.groupingConfig);
+  const directive = extractExplicitGroupingDirective(rawText);
+  if (options.groupingConfig || directive.explicitGrouping) {
+    setRuntimeGroupingConfig({
+      ...(options.groupingConfig || {}),
+      ...(directive.explicitGrouping ? {
+        enableCrossBlankLineGrouping: false,
+        maxLinesPerGroup: EXPLICIT_GROUPING_MAX_LINES,
+      } : {}),
+    });
   }
 
   try {
-    const processedLines = processRawTextToLines(rawText, options);
+    const processedLines = processRawTextToLines(directive.content, options);
     const { sections, lineToSection } = deriveSectionsFromProcessedLines(processedLines);
 
     const reconstructed = processedLines.map((line) => {

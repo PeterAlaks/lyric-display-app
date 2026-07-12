@@ -46,9 +46,9 @@ const NewSongCanvas = () => {
 
   const { darkMode, setDarkMode } = useDarkModeState();
   const showCanvasFloatingToolbar = useCanvasFloatingToolbarPreference();
-  const { lyrics, lyricsFileName, rawLyricsContent, songMetadata, setRawLyricsContent, setSongMetadata, setPendingSavedVersion } = useLyricsState();
+  const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, setRawLyricsContent, setSongMetadata, setPendingSavedVersion } = useLyricsState();
 
-  const { emitLyricsDraftSubmit } = useControlSocket();
+  const { emitLyricsDraftSubmit, updateSetlistItem } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
   const textareaRef = useRef(null);
@@ -190,6 +190,7 @@ const NewSongCanvas = () => {
     loadSignatureRef,
     lyrics,
     lyricsFileName,
+    lyricsSource,
     navigate,
     rawLyricsContent,
     resetHistory,
@@ -230,6 +231,8 @@ const NewSongCanvas = () => {
     setSongMetadata,
     setPendingSavedVersion,
     setSaveVersion,
+    activeSetlistItemId: lyricsSource?.setlistItemId || null,
+    updateSetlistItem,
     editMode
   });
 

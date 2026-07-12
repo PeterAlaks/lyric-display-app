@@ -9,10 +9,16 @@ import useLyricsListHistory from '../hooks/LyricsList/useLyricsListHistory';
 import useLyricsListSelection from '../hooks/LyricsList/useLyricsListSelection';
 import useLyricsListGrouping from '../hooks/LyricsList/useLyricsListGrouping';
 import useLyricsListRows from '../hooks/LyricsList/useLyricsListRows';
+import { useLyricsScrollRestoration } from '../hooks/LyricDisplayApp/useLyricsScrollRestoration';
 import LyricRow from './LyricsList/LyricRow';
 import SectionChips from './LyricsList/SectionChips';
 import LyricsListContextMenu from './LyricsList/LyricsListContextMenu';
 import { HORIZONTAL_PADDING_PX, VIRTUALIZATION_THRESHOLD } from './LyricsList/layout';
+import {
+  createLyricsScrollKey,
+  isLyricsScrollRestorePending,
+  observeLyricsScrollResetGuard,
+} from '../utils/lyricsScrollMemory.js';
 
 export default function LyricsList({
   searchQuery = '',
@@ -37,6 +43,7 @@ export default function LyricsList({
     lyricsEnhancedTimestamps = [],
     selectedLine,
     lyricsFileName,
+    lyricsSource,
     selectLine,
     setLyrics,
     setLyricsTimestamps,
@@ -227,6 +234,18 @@ export default function LyricsList({
   const itemCount = useMemo(() => lyrics.length, [lyrics]);
   const useVirtualized = itemCount > VIRTUALIZATION_THRESHOLD;
   const hasSections = (lyricsSections?.length || 0) > 0;
+  const lyricsScrollKey = useMemo(
+    () => createLyricsScrollKey({ lyricsSource, lyricsFileName }),
+    [lyricsFileName, lyricsSource]
+  );
+  const getVirtualScrollElement = useCallback(() => listRef.current?.element || null, [listRef]);
+
+  useLyricsScrollRestoration({
+    enabled: useVirtualized,
+    getElement: getVirtualScrollElement,
+    lyricsKey: lyricsScrollKey,
+    scope: compact ? 'compact' : 'control',
+  });
 
   const {
     sectionChipsContainerRef,
@@ -242,6 +261,12 @@ export default function LyricsList({
     if (!lyrics || lyrics.length === 0) return;
     const key = `${lyrics.length}|${lyrics[0]?.id || (typeof lyrics[0] === 'string' ? lyrics[0] : '')}`;
 
+    if (isLyricsScrollRestorePending(lyricsScrollKey)) {
+      lastResetKeyRef.current = key;
+      observeLyricsScrollResetGuard(lyricsScrollKey);
+      return;
+    }
+
     if (suppressScrollResetRef.current) {
       suppressScrollResetRef.current = false;
       lastResetKeyRef.current = key;
@@ -251,8 +276,13 @@ export default function LyricsList({
     if (lastResetKeyRef.current === key) return;
     lastResetKeyRef.current = key;
 
-    window.dispatchEvent(new CustomEvent('reset-lyrics-scroll'));
-  }, [lyrics]);
+    if (useVirtualized) {
+      const virtualScroller = listRef.current?.element;
+      if (virtualScroller) virtualScroller.scrollTop = 0;
+    } else {
+      window.dispatchEvent(new CustomEvent('reset-lyrics-scroll'));
+    }
+  }, [lyrics, lyricsScrollKey, listRef, useVirtualized]);
 
   const sectionChips = hasSections ? (
     <SectionChips

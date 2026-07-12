@@ -62,7 +62,7 @@ export const useLyricsLoader = ({
       const sections = parsed.sections || [];
       const lineToSection = parsed.lineToSection || {};
       const finalBaseName = stripLyricImportExtension(finalFileName || '');
-      const sourceContent = finalType === 'lrc' ? (content || rawText) : rawText;
+      const sourceContent = content || rawText;
 
       setLyrics(processedLines);
       if (setLyricsSections) setLyricsSections(sections);
@@ -77,6 +77,7 @@ export const useLyricsLoader = ({
         fileType: finalType,
         filePath: filePath || null,
         fileName: finalFileName,
+        setlistItemId: context.setlistItemId || null,
       });
 
       let metadata = context.songMetadata || null;
@@ -105,6 +106,7 @@ export const useLyricsLoader = ({
           fileType: finalType,
           filePath: filePath || null,
           fileName: finalFileName,
+          setlistItemId: context.setlistItemId || null,
         },
         songMetadata: metadata,
         lyricsTimestamps: timestamps,

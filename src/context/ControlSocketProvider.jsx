@@ -433,6 +433,30 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         logDebug(`Emitted setlistReplace for ${Array.isArray(files) ? files.length : 0} files`);
     }), [authStatus]);
 
+    const updateSetlistItem = useCallback((fileId, file) => new Promise((resolve) => {
+        const socket = socketRef.current;
+        if (!socket?.connected || !readyRef.current || authStatus !== 'authenticated') {
+            resolve({ success: false, error: 'Setlist service is not connected' });
+            return;
+        }
+
+        let settled = false;
+        const finish = (result) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            resolve(result?.success
+                ? result
+                : { success: false, error: result?.error || 'Setlist item update failed' });
+        };
+        const timeoutId = setTimeout(() => {
+            finish({ success: false, error: 'Setlist item update timed out' });
+        }, 10000);
+
+        socket.emit('setlistItemUpdate', { fileId, file }, finish);
+        logDebug(`Emitted setlistItemUpdate for ${fileId}`);
+    }), [authStatus]);
+
     const emitLineUpdate = useCallback((value) => {
         const payload = (value && typeof value === 'object' && !Array.isArray(value))
             ? ('index' in value ? value : { index: value })
@@ -714,6 +738,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         emitSetlistClear,
         emitSetlistReorder,
         replaceSetlist,
+        updateSetlistItem,
         emitLyricsDraftSubmit,
         emitLyricsDraftApprove,
         emitLyricsDraftReject,

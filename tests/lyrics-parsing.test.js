@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseLrcContent, parseTxtContent } from '../shared/lyricsParsing.js';
-import { formatLyrics, formatLyricsWithStats } from '../src/utils/lyricsFormat.js';
+import {
+  parseLrcContent,
+  parseTxtContent,
+  serializeExplicitGroupingContent,
+} from '../shared/lyricsParsing.js';
+import { formatLyrics, formatLyricsWithStats, reconstructEditableText } from '../src/utils/lyricsFormat.js';
 
 test('LRC parsing sorts timestamps, strips metadata, and deduplicates repeated timed lines', () => {
   const parsed = parseLrcContent([
@@ -59,6 +63,39 @@ test('plain text parsing keeps section metadata aligned with processed lines', (
   assert.equal(parsed.sections[1].label, 'Chorus');
   assert.equal(parsed.lineToSection[1], parsed.sections[0].id);
   assert.equal(parsed.lineToSection[3], parsed.sections[1].id);
+});
+
+test('editor-saved TXT content round-trips explicit group and ungroup boundaries', () => {
+  const manuallyGrouped = [{
+    type: 'normal-group',
+    id: 'manual-group',
+    lines: ['First line', 'Second line', 'Third line'],
+    line1: 'First line',
+    line2: 'Second line',
+    displayText: 'First line\nSecond line\nThird line',
+    searchText: 'First line Second line Third line',
+  }, 'Standalone line'];
+  const groupedPayload = serializeExplicitGroupingContent(reconstructEditableText(manuallyGrouped));
+  const groupedReload = parseTxtContent(groupedPayload, { enableSplitting: false });
+
+  assert.equal(groupedReload.processedLines[0].type, 'normal-group');
+  assert.deepEqual(groupedReload.processedLines[0].lines, ['First line', 'Second line', 'Third line']);
+  assert.equal(groupedReload.processedLines[1], 'Standalone line');
+  assert.equal(groupedReload.rawText.includes('LyricDisplay grouping=explicit'), false);
+
+  const manuallyUngrouped = ['First line', 'Second line'];
+  const ungroupedPayload = serializeExplicitGroupingContent(reconstructEditableText(manuallyUngrouped));
+  const ungroupedReload = parseTxtContent(ungroupedPayload, { enableSplitting: false });
+
+  assert.deepEqual(ungroupedReload.processedLines, manuallyUngrouped);
+});
+
+test('legacy TXT files retain cross-blank auto-grouping without the explicit directive', () => {
+  const parsed = parseTxtContent('First line\n\nSecond line', { enableSplitting: false });
+
+  assert.equal(parsed.processedLines.length, 1);
+  assert.equal(parsed.processedLines[0].type, 'normal-group');
+  assert.deepEqual(parsed.processedLines[0].lines, ['First line', 'Second line']);
 });
 
 test('formatter splits long lines without inserting blank separators between split segments', () => {

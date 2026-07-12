@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { reconstructEditableText } from '../../utils/lyricsFormat';
 import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
+import { extractExplicitGroupingDirective } from '../../../shared/lyricsParsing.js';
 
 const resetCanvasState = ({ baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setFileName, setTitle }) => {
   resetHistory('');
@@ -20,6 +21,7 @@ export const useCanvasLoadLifecycle = ({
   loadSignatureRef,
   lyrics,
   lyricsFileName,
+  lyricsSource,
   navigate,
   rawLyricsContent,
   resetHistory,
@@ -56,15 +58,16 @@ export const useCanvasLoadLifecycle = ({
       if (!content) return;
 
       const baseName = fileName ? stripLyricImportExtension(fileName) : 'Untitled';
+      const editableContent = extractExplicitGroupingDirective(content).content;
 
-      resetHistory(content);
+      resetHistory(editableContent);
       setTitle(baseName);
       setFileName(baseName);
       setCurrentFilePath(filePath || '');
-      baseContentRef.current = content;
+      baseContentRef.current = editableContent;
       baseTitleRef.current = baseName;
 
-      loadSignatureRef.current = `${baseName}::${content}`;
+      loadSignatureRef.current = `${baseName}::${editableContent}`;
 
       showToast({
         title: 'File loaded',
@@ -89,11 +92,12 @@ export const useCanvasLoadLifecycle = ({
   useEffect(() => {
     if (!editMode) return;
 
-    const nextContent = rawLyricsContent
-      ? rawLyricsContent
+    const isLrcSource = lyricsSource?.fileType === 'lrc';
+    const nextContent = isLrcSource && rawLyricsContent
+      ? extractExplicitGroupingDirective(rawLyricsContent).content
       : (lyrics && lyrics.length > 0)
         ? reconstructEditableText(lyrics)
-        : '';
+        : extractExplicitGroupingDirective(rawLyricsContent || '').content;
     const nextTitle = lyricsFileName || '';
     const loadSignature = `${nextTitle}::${nextContent}`;
     if (loadSignatureRef.current !== loadSignature) {
@@ -105,7 +109,7 @@ export const useCanvasLoadLifecycle = ({
       baseTitleRef.current = nextTitle || '';
       loadSignatureRef.current = loadSignature;
     }
-  }, [baseContentRef, baseTitleRef, editMode, loadSignatureRef, lyrics, lyricsFileName, rawLyricsContent, resetHistory, setCurrentFilePath, setFileName, setTitle, songMetadata]);
+  }, [baseContentRef, baseTitleRef, editMode, loadSignatureRef, lyrics, lyricsFileName, lyricsSource?.fileType, rawLyricsContent, resetHistory, setCurrentFilePath, setFileName, setTitle, songMetadata]);
 
   useEffect(() => {
     if (editMode) return;

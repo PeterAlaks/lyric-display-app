@@ -46,8 +46,10 @@ const useFileUpload = () => {
 
       setLyrics(parsed.processedLines);
 
-      let sourceContent = parsed.rawText || '';
-      if (isLrc && file && typeof file.text === 'function') {
+      let sourceContent = typeof additionalOptions.rawText === 'string'
+        ? additionalOptions.rawText
+        : (parsed.rawText || '');
+      if ((isLrc || fileType === 'txt') && typeof additionalOptions.rawText !== 'string' && file && typeof file.text === 'function') {
         try {
           sourceContent = await file.text();
         } catch {
@@ -55,11 +57,7 @@ const useFileUpload = () => {
         }
       }
 
-      if (isLrc) {
-        setRawLyricsContent(sourceContent);
-      } else {
-        setRawLyricsContent(parsed.rawText);
-      }
+      setRawLyricsContent(sourceContent);
 
       setLyricsTimestamps(parsed.timestamps || []);
       setLyricsEnhancedTimestamps(parsed.enhancedTimestamps || []);
@@ -74,29 +72,41 @@ const useFileUpload = () => {
         fileType,
         filePath,
         fileName: file.name,
+        setlistItemId: additionalOptions.setlistItemId || null,
       });
 
       const detected = detectArtistFromFilename(baseName);
-      const metadata = {
-        title: detected.title || baseName,
-        artists: detected.artist ? [detected.artist] : [],
-        album: null,
-        year: null,
-        lyricLines: parsed.processedLines.length,
-        origin: getLyricOriginLabel(fileType),
-        filePath
-      };
+      const providedMetadata = additionalOptions.songMetadata && typeof additionalOptions.songMetadata === 'object'
+        ? additionalOptions.songMetadata
+        : null;
+      const metadata = providedMetadata
+        ? {
+          ...providedMetadata,
+          title: providedMetadata.title || detected.title || baseName,
+          lyricLines: parsed.processedLines.length,
+          filePath,
+        }
+        : {
+          title: detected.title || baseName,
+          artists: detected.artist ? [detected.artist] : [],
+          album: null,
+          year: null,
+          lyricLines: parsed.processedLines.length,
+          origin: getLyricOriginLabel(fileType),
+          filePath
+        };
       setSongMetadata(metadata);
 
       emitLyricsLoad({
         lyrics: parsed.processedLines,
         fileName: baseName,
-        rawLyricsContent: isLrc ? sourceContent : parsed.rawText,
+        rawLyricsContent: sourceContent,
         lyricsSource: {
           content: sourceContent,
           fileType,
           filePath,
           fileName: file.name,
+          setlistItemId: additionalOptions.setlistItemId || null,
         },
         songMetadata: metadata,
         lyricsTimestamps: parsed.timestamps || [],
