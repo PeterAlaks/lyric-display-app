@@ -26,6 +26,7 @@ import {
   sanitizeLyricVideoProjectForPersistence,
   writeLyricVideoStudioState,
 } from '../utils/lyricVideoStudioState';
+import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
 
 const DEFAULT_LYRIC_VIDEO_SETTINGS = createDefaultOutputSettings({
   fontSize: 86,
@@ -910,13 +911,7 @@ export default function LyricVideoStudio() {
       if (event.code !== 'Space' || event.repeat || exportOpen || styleOpen) return;
 
       const target = event.target;
-      const isTextEntry = target && (
-        target.tagName === 'INPUT'
-        || target.tagName === 'TEXTAREA'
-        || target.tagName === 'SELECT'
-        || target.isContentEditable
-      );
-      if (isTextEntry) return;
+      if (isCommandFocusProtected(target, document.activeElement)) return;
 
       const activeModal = document.querySelector('[data-modal-root="true"]');
       if (activeModal?.contains?.(target)) return;

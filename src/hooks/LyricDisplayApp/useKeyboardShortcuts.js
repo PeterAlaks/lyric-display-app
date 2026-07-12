@@ -1,6 +1,16 @@
 import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
 import { findNavigableLyricLineIndex } from '../../utils/lyricLineNavigation';
+import { dispatchCommand, isCommandFocusProtected } from '../../../shared/commandSafetyPolicy.js';
+
+const dispatchKeyboardCommand = (event, action, execute) => dispatchCommand({
+  action,
+  source: 'keyboard',
+  focusTarget: event?.target,
+  fallbackFocusTarget: typeof document !== 'undefined' ? document.activeElement : null,
+  enforceFocus: true,
+  execute,
+});
 
 export const useKeyboardShortcuts = ({
   hasLyrics,
@@ -33,28 +43,22 @@ export const useKeyboardShortcuts = ({
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
       const activeElement = document.activeElement;
-      const isTyping = activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.isContentEditable
-      );
+      const isTyping = isCommandFocusProtected(event.target, activeElement);
+      if (isTyping) return;
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'o' || event.key === 'O')) {
-        if (isTyping) return;
         event.preventDefault();
         handleOpenFileDialog?.();
         return;
       }
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'n' || event.key === 'N')) {
-        if (isTyping) return;
         event.preventDefault();
         handleCreateNewSong?.();
         return;
       }
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'e' || event.key === 'E')) {
-        if (isTyping) return;
         if (!hasLyrics) return;
         event.preventDefault();
         handleEditLyrics?.();
@@ -74,7 +78,6 @@ export const useKeyboardShortcuts = ({
       }
 
       if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && (event.key === 's' || event.key === 'S')) {
-        if (isTyping) return;
         event.preventDefault();
         handleAddToSetlist?.();
         return;
@@ -93,7 +96,6 @@ export const useKeyboardShortcuts = ({
       }
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'i' || event.key === 'I')) {
-        if (isTyping) return;
         event.preventDefault();
         handleOpenPreferences?.();
         return;
@@ -109,38 +111,7 @@ export const useKeyboardShortcuts = ({
 
     const handleKeyDown = (event) => {
       const activeElement = document.activeElement;
-      const isTyping = activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.isContentEditable
-      );
-
-      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-        event.preventDefault();
-        const searchInput = document.querySelector('[data-search-input]');
-        if (searchInput) {
-          searchInput.focus();
-          searchInput.select();
-        }
-        return;
-      }
-
-      if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'P')) {
-        event.preventDefault();
-        if (event.shiftKey && hasValidTimestamps(lyricsTimestamps)) {
-          handleIntelligentAutoplayToggle();
-        } else {
-          handleAutoplayToggle();
-        }
-        return;
-      }
-
-      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'c' || event.key === 'C')) {
-        if (isTyping) return;
-        event.preventDefault();
-        handleClearOutput();
-        return;
-      }
+      const isTyping = isCommandFocusProtected(event.target, activeElement);
 
       if (event.key === 'Escape') {
         if (searchQuery) {
@@ -166,6 +137,31 @@ export const useKeyboardShortcuts = ({
 
       if (isTyping) return;
 
+      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+        event.preventDefault();
+        const searchInput = document.querySelector('[data-search-input]');
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'c' || event.key === 'C')) {
+        const dispatched = dispatchKeyboardCommand(event, 'clear-output', handleClearOutput);
+        if (dispatched.executed) event.preventDefault();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'P')) {
+        const useIntelligentAutoplay = event.shiftKey && hasValidTimestamps(lyricsTimestamps);
+        const action = useIntelligentAutoplay ? 'toggle-intelligent-autoplay' : 'toggle-autoplay';
+        const execute = useIntelligentAutoplay ? handleIntelligentAutoplayToggle : handleAutoplayToggle;
+        const dispatched = dispatchKeyboardCommand(event, action, execute);
+        if (dispatched.executed) event.preventDefault();
+        return;
+      }
+
       if (!event.ctrlKey && !event.metaKey && !event.altKey) {
         if (event.key === '0') {
           event.preventDefault();
@@ -185,8 +181,8 @@ export const useKeyboardShortcuts = ({
       }
 
       if (event.key === ' ' || event.code === 'Space') {
-        event.preventDefault();
-        handleToggle();
+        const dispatched = dispatchKeyboardCommand(event, 'toggle-output', handleToggle);
+        if (dispatched.executed) event.preventDefault();
         return;
       }
 
@@ -214,10 +210,12 @@ export const useKeyboardShortcuts = ({
         }
 
         if (newIndex !== null && newIndex !== currentIndex) {
-          handleLineSelect(newIndex);
-          window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-            detail: { lineIndex: newIndex }
-          }));
+          dispatchKeyboardCommand(event, 'select-line', () => {
+            handleLineSelect(newIndex);
+            window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+              detail: { lineIndex: newIndex }
+            }));
+          });
         }
       }
     };

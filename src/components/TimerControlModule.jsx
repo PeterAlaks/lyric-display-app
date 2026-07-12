@@ -27,6 +27,7 @@ import {
 import { paintToCss } from '../utils/paint';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import FontSelect from './FontSelect';
+import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
 
 const QUICK_MINUTES = [1, 3, 5, 10, 15, 30];
 const TARGET_PERIODS = ['AM', 'PM'];
@@ -284,27 +285,6 @@ const usePageVisible = () => {
   }, [getVisible]);
 
   return visible;
-};
-
-const isTimerShortcutEditableTarget = (target) => {
-  if (!target || typeof target.closest !== 'function') return false;
-  return Boolean(target.closest([
-    'input',
-    'textarea',
-    'select',
-    'button',
-    'a[href]',
-    '[contenteditable="true"]',
-    '[role="button"]',
-    '[role="checkbox"]',
-    '[role="combobox"]',
-    '[role="menuitem"]',
-    '[role="option"]',
-    '[role="slider"]',
-    '[role="spinbutton"]',
-    '[role="switch"]',
-    '[role="textbox"]',
-  ].join(',')));
 };
 
 const TimerPreview = React.memo(({ timerState, displaySettings }) => {
@@ -642,7 +622,7 @@ const TimerControlModule = () => {
       if (event.defaultPrevented || event.repeat) return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key !== ' ' && event.code !== 'Space') return;
-      if (isTimerShortcutEditableTarget(event.target)) return;
+      if (isCommandFocusProtected(event.target, document.activeElement)) return;
 
       event.preventDefault();
       toggleTimerPlayback();

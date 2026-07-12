@@ -40,7 +40,7 @@ test('Live Safety blocks OSC actions that mutate output, playback, or setlists',
   }
 });
 
-test('Live Safety OSC policy does not affect MIDI or disabled safety mode', () => {
+test('shared Live Safety policy trusts local MIDI and is inactive when disabled', () => {
   assert.equal(shouldBlockExternalActionForLiveSafety({ source: 'midi', type: 'toggle-output' }, true), false);
   assert.equal(shouldBlockExternalActionForLiveSafety({ source: 'osc', type: 'toggle-output' }, false), false);
 });

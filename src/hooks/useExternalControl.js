@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
+import { dispatchCommand, evaluateCommandSafety } from '../../shared/commandSafetyPolicy.js';
 
 /**
  * Hook to handle external control (MIDI/OSC) actions
@@ -43,20 +44,12 @@ export function resolveSetlistItemIdByIndex(setlistFiles, index) {
   return setlistFiles[itemIndex]?.id || null;
 }
 
-const LIVE_SAFETY_ALLOWED_OSC_ACTIONS = new Set([
-  'select-line',
-  'next-line',
-  'prev-line',
-  'clear-output',
-  'scroll-lines',
-]);
-
 export function shouldBlockExternalActionForLiveSafety(action, liveSafetyEnabled) {
-  return Boolean(
-    liveSafetyEnabled
-    && action?.source === 'osc'
-    && !LIVE_SAFETY_ALLOWED_OSC_ACTIONS.has(action?.type)
-  );
+  return !evaluateCommandSafety({
+    action: action?.type,
+    source: action?.source,
+    liveSafetyEnabled,
+  }).allowed;
 }
 
 export function useExternalControl({
@@ -210,169 +203,157 @@ export function useExternalControl({
   const processAction = useCallback((action) => {
     if (!action || !action.type) return;
 
-    if (shouldBlockExternalActionForLiveSafety(action, liveSafetyEnabledRef.current)) {
-      console.warn('[ExternalControl] Live Safety blocked OSC action:', action.type, action.sourceAddress || 'unknown source');
+    const dispatched = dispatchCommand({
+      action: action.type,
+      source: action.source,
+      liveSafetyEnabled: liveSafetyEnabledRef.current,
+      execute: () => {
+        console.log('[ExternalControl] Processing action:', action.type, action);
+
+        switch (action.type) {
+          case 'select-line':
+            if (typeof action.lineIndex === 'number') {
+              handleSelectLine(action.lineIndex);
+            }
+            break;
+
+          case 'next-line':
+            handleNextLine();
+            break;
+
+          case 'prev-line':
+            handlePrevLine();
+            break;
+
+          case 'toggle-output':
+            handleToggleOutput();
+            break;
+
+          case 'set-output':
+            if (typeof action.enabled === 'boolean') {
+              handleSetOutput(action.enabled);
+            }
+            break;
+
+          case 'clear-output':
+            handleClearOutput();
+            break;
+
+          case 'toggle-autoplay':
+            if (typeof handleAutoplayToggle === 'function') {
+              handleAutoplayToggle();
+            }
+            break;
+
+          case 'autoplay-start':
+            if (typeof handleAutoplayToggle === 'function' && !autoplayActiveRef.current) {
+              handleAutoplayToggle();
+            }
+            break;
+
+          case 'autoplay-stop':
+            if (typeof handleAutoplayToggle === 'function' && autoplayActiveRef.current) {
+              handleAutoplayToggle();
+            }
+            break;
+
+          case 'toggle-intelligent-autoplay':
+            if (typeof handleIntelligentAutoplayToggle === 'function') {
+              handleIntelligentAutoplayToggle();
+            }
+            break;
+
+          case 'intelligent-autoplay-start':
+            if (typeof handleIntelligentAutoplayStart === 'function' && !intelligentAutoplayActiveRef.current) {
+              handleIntelligentAutoplayStart();
+            }
+            break;
+
+          case 'intelligent-autoplay-stop':
+            if (typeof handleIntelligentAutoplayStop === 'function' && intelligentAutoplayActiveRef.current) {
+              handleIntelligentAutoplayStop();
+            }
+            break;
+
+          case 'next-song':
+            if (typeof handleSetlistNext === 'function') {
+              handleSetlistNext();
+            }
+            break;
+
+          case 'prev-song':
+            if (typeof handleSetlistPrev === 'function') {
+              handleSetlistPrev();
+            }
+            break;
+
+          case 'load-setlist-item':
+            console.log('[ExternalControl] Load setlist item:', action.index);
+            if (typeof action.index === 'number') {
+              handleLoadSetlistItem(action.index);
+            }
+            break;
+
+          case 'sync-outputs':
+            if (typeof handleSyncOutputs === 'function') {
+              handleSyncOutputs();
+            }
+            break;
+
+          case 'scroll-lines':
+            if (typeof action.percentage === 'number') {
+              handleScrollLines(action.percentage);
+            }
+            break;
+
+          case 'toggle-output-1':
+            emitOutput1Toggle?.();
+            break;
+
+          case 'set-output-1':
+            if (typeof action.enabled === 'boolean') emitOutput1Toggle?.(action.enabled);
+            break;
+
+          case 'toggle-output-2':
+            emitOutput2Toggle?.();
+            break;
+
+          case 'set-output-2':
+            if (typeof action.enabled === 'boolean') emitOutput2Toggle?.(action.enabled);
+            break;
+
+          case 'toggle-stage':
+            emitStageToggle?.();
+            break;
+
+          case 'set-stage':
+            if (typeof action.enabled === 'boolean') emitStageToggle?.(action.enabled);
+            break;
+
+          default:
+            console.log('[ExternalControl] Unknown action type:', action.type);
+        }
+      },
+    });
+
+    if (!dispatched.allowed) {
+      console.warn('[ExternalControl] Command blocked by safety policy:', {
+        commandId: action.commandId || null,
+        action: action.type,
+        source: action.source || 'unknown',
+        sourceAddress: action.sourceAddress || null,
+        reason: dispatched.reason,
+      });
       const now = Date.now();
       if (now - lastLiveSafetyToastAtRef.current >= 3000) {
         lastLiveSafetyToastAtRef.current = now;
         showToast?.({
-          title: 'Live Safety blocked OSC control',
+          title: 'Live Safety blocked external control',
           message: `${action.type} is unavailable while Live Safety is enabled.`,
           variant: 'info',
         });
       }
       return;
-    }
-
-    console.log('[ExternalControl] Processing action:', action.type, action);
-
-    switch (action.type) {
-      case 'select-line':
-        if (typeof action.lineIndex === 'number') {
-          handleSelectLine(action.lineIndex);
-        }
-        break;
-
-      case 'next-line':
-        handleNextLine();
-        break;
-
-      case 'prev-line':
-        handlePrevLine();
-        break;
-
-      case 'toggle-output':
-        handleToggleOutput();
-        break;
-
-      case 'set-output':
-        if (typeof action.enabled === 'boolean') {
-          handleSetOutput(action.enabled);
-        }
-        break;
-
-      case 'clear-output':
-        handleClearOutput();
-        break;
-
-      case 'toggle-autoplay':
-        if (typeof handleAutoplayToggle === 'function') {
-          handleAutoplayToggle();
-        }
-        break;
-
-      case 'autoplay-start':
-        if (typeof handleAutoplayToggle === 'function' && !autoplayActiveRef.current) {
-          handleAutoplayToggle();
-        }
-        break;
-
-      case 'autoplay-stop':
-        if (typeof handleAutoplayToggle === 'function' && autoplayActiveRef.current) {
-          handleAutoplayToggle();
-        }
-        break;
-
-      case 'toggle-intelligent-autoplay':
-        if (typeof handleIntelligentAutoplayToggle === 'function') {
-          handleIntelligentAutoplayToggle();
-        }
-        break;
-
-      case 'intelligent-autoplay-start':
-        if (typeof handleIntelligentAutoplayStart === 'function' && !intelligentAutoplayActiveRef.current) {
-          handleIntelligentAutoplayStart();
-        }
-        break;
-
-      case 'intelligent-autoplay-stop':
-        if (typeof handleIntelligentAutoplayStop === 'function' && intelligentAutoplayActiveRef.current) {
-          handleIntelligentAutoplayStop();
-        }
-        break;
-
-      case 'next-song':
-        if (typeof handleSetlistNext === 'function') {
-          handleSetlistNext();
-        }
-        break;
-
-      case 'prev-song':
-        if (typeof handleSetlistPrev === 'function') {
-          handleSetlistPrev();
-        }
-        break;
-
-      case 'load-setlist-item':
-        console.log('[ExternalControl] Load setlist item:', action.index);
-        if (typeof action.index === 'number') {
-          handleLoadSetlistItem(action.index);
-        }
-        break;
-
-      case 'sync-outputs':
-        if (typeof handleSyncOutputs === 'function') {
-          handleSyncOutputs();
-        }
-        break;
-
-      case 'scroll-lines':
-        if (typeof action.percentage === 'number') {
-          handleScrollLines(action.percentage);
-        }
-        break;
-
-      // Individual output controls (from OSC)
-      case 'toggle-output-1':
-        if (typeof emitOutput1Toggle === 'function') {
-          emitOutput1Toggle();
-        } else {
-          console.log('[ExternalControl] Output 1 toggle not available');
-        }
-        break;
-
-      case 'set-output-1':
-        if (typeof emitOutput1Toggle === 'function' && typeof action.enabled === 'boolean') {
-          emitOutput1Toggle(action.enabled);
-        } else {
-          console.log('[ExternalControl] Output 1 set not available');
-        }
-        break;
-
-      case 'toggle-output-2':
-        if (typeof emitOutput2Toggle === 'function') {
-          emitOutput2Toggle();
-        } else {
-          console.log('[ExternalControl] Output 2 toggle not available');
-        }
-        break;
-
-      case 'set-output-2':
-        if (typeof emitOutput2Toggle === 'function' && typeof action.enabled === 'boolean') {
-          emitOutput2Toggle(action.enabled);
-        } else {
-          console.log('[ExternalControl] Output 2 set not available');
-        }
-        break;
-
-      case 'toggle-stage':
-        if (typeof emitStageToggle === 'function') {
-          emitStageToggle();
-        } else {
-          console.log('[ExternalControl] Stage toggle not available');
-        }
-        break;
-
-      case 'set-stage':
-        if (typeof emitStageToggle === 'function' && typeof action.enabled === 'boolean') {
-          emitStageToggle(action.enabled);
-        } else {
-          console.log('[ExternalControl] Stage set not available');
-        }
-        break;
-
-      default:
-        console.log('[ExternalControl] Unknown action type:', action.type);
     }
 
     // Show feedback toast for certain actions (optional)

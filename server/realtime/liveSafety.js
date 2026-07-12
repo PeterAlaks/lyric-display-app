@@ -1,6 +1,7 @@
 import { appendActionLog } from './actionLog.js';
 import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 import { state } from './state.js';
+import { evaluateCommandSafety } from '../../shared/commandSafetyPolicy.js';
 
 const LIVE_SAFETY_BLOCK_REASON = 'Live safety mode is active. Secondary controllers can only change lyric lines.';
 
@@ -26,12 +27,13 @@ export function setLiveSafety(enabled, actor = {}) {
   return getLiveSafetySnapshot();
 }
 
-export function isSecondaryController(clientType) {
-  return clientType === 'mobile' || clientType === 'web';
-}
-
 export function blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action, reason = LIVE_SAFETY_BLOCK_REASON }) {
-  if (!state.liveSafety?.enabled || !isSecondaryController(clientType)) {
+  const decision = evaluateCommandSafety({
+    action,
+    source: clientType,
+    liveSafetyEnabled: Boolean(state.liveSafety?.enabled),
+  });
+  if (decision.allowed) {
     return false;
   }
 

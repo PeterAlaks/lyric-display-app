@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isCommandFocusProtected } from '../../../shared/commandSafetyPolicy.js';
 
 const useMenuShortcuts = (navigate, fileInputRef) => {
   useEffect(() => {
@@ -42,43 +43,34 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdOrCtrl = isMac ? event.metaKey : event.ctrlKey;
       const activeElement = document.activeElement;
-      const isTyping = activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.isContentEditable
-      );
+      const isTyping = isCommandFocusProtected(event.target, activeElement);
+      if (isTyping) return;
 
       if (cmdOrCtrl && !event.shiftKey && event.key === 'z') {
-        if (isTyping) return;
         event.preventDefault();
         window.dispatchEvent(new Event('menu-undo'));
         return;
       }
 
       if (cmdOrCtrl && event.shiftKey && (event.key === 'z' || event.key === 'Z')) {
-        if (isTyping) return;
         event.preventDefault();
         window.dispatchEvent(new Event('menu-redo'));
         return;
       }
 
       if (cmdOrCtrl && !event.shiftKey && event.key === 'x') {
-        if (!isTyping) return;
         return;
       }
 
       if (cmdOrCtrl && !event.shiftKey && event.key === 'c') {
-        if (!isTyping) return;
         return;
       }
 
       if (cmdOrCtrl && !event.shiftKey && event.key === 'v') {
-        if (!isTyping) return;
         return;
       }
 
       if (cmdOrCtrl && !event.shiftKey && event.key === 'a') {
-        if (!isTyping) return;
         return;
       }
 
@@ -95,7 +87,6 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
       }
 
       if (cmdOrCtrl && !event.shiftKey && (event.key === 'i' || event.key === 'I')) {
-        if (isTyping) return;
         event.preventDefault();
         window.dispatchEvent(new Event('open-user-preferences'));
         return;
