@@ -8,7 +8,6 @@ const removedDirectDependencies = [
   '@tailwindcss/forms',
   'archiver',
   'rollup',
-  'use-sync-external-store',
 ];
 
 test('verified unused packages are absent from direct dependency declarations', () => {
@@ -30,4 +29,25 @@ test('removed dependency trees are absent while the active Vite and Rolldown too
 
   assert.ok(packages['node_modules/vite']);
   assert.ok(packages['node_modules/rolldown']);
+});
+
+test('Zustand traditional selectors retain their required peer dependency', () => {
+  const selectorsSource = fs.readFileSync(
+    new URL('../src/hooks/useStoreSelectors.js', import.meta.url),
+    'utf8',
+  );
+  const declared = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
+  };
+
+  assert.match(selectorsSource, /from ['"]zustand\/traditional['"]/);
+  assert.ok(
+    declared['use-sync-external-store'],
+    'zustand/traditional imports use-sync-external-store/shim/with-selector at runtime',
+  );
+  assert.ok(
+    packageLock.packages?.['node_modules/use-sync-external-store'],
+    'the selector peer dependency must be installed in the locked dependency tree',
+  );
 });
