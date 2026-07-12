@@ -336,7 +336,14 @@ const SetlistModal = () => {
         return;
       }
 
-      await loadSetlist(result.setlistData);
+      const loaded = await loadSetlist(result.setlistData);
+      if (loaded && result.recoveredFromBackup) {
+        showToast({
+          title: 'Backup recovered',
+          message: result.recoveryWarning || 'Loaded the last-known-good setlist backup. Save again to repair the primary file.',
+          variant: 'warn',
+        });
+      }
     } catch (error) {
       console.error('Error loading setlist:', error);
       showToast({

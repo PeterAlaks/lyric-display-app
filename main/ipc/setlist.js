@@ -6,33 +6,11 @@ import {
   normalizeLyricFileType,
 } from '../../shared/lyricImportRegistry.js';
 import {
-  MAX_SETLIST_FILE_BYTES,
   hasSetlistExtension,
   normalizeSetlistPath,
   sanitizeSetlistDefaultName,
-  validateSetlistData,
 } from '../setlistValidation.js';
-
-async function readValidatedSetlistFile(fs, filePath) {
-  const normalizedPath = normalizeSetlistPath(filePath);
-  if (!normalizedPath || !hasSetlistExtension(normalizedPath)) {
-    return { success: false, error: 'Only .ldset files can be loaded as setlists' };
-  }
-
-  const stats = await fs.stat(normalizedPath);
-  if (stats.size > MAX_SETLIST_FILE_BYTES) {
-    return { success: false, error: 'Setlist file is too large' };
-  }
-
-  const content = await fs.readFile(normalizedPath, 'utf8');
-  const setlistData = JSON.parse(content);
-  const validation = validateSetlistData(setlistData);
-  if (!validation.valid) {
-    return { success: false, error: validation.error };
-  }
-
-  return { success: true, setlistData, filePath: normalizedPath };
-}
+import { readValidatedSetlistFile, saveSetlistFile } from '../setlistFileStorage.js';
 
 /**
  * Register setlist IPC handlers
@@ -77,23 +55,8 @@ export function registerSetlistHandlers({ getMainWindow }) {
         return { success: false, error: 'Setlists must be saved as .ldset files' };
       }
 
-      const validation = validateSetlistData(setlistData);
-      if (!validation.valid) {
-        return { success: false, error: validation.error };
-      }
-
-      const jsonContent = JSON.stringify(setlistData, null, 2);
-      if (Buffer.byteLength(jsonContent, 'utf8') > MAX_SETLIST_FILE_BYTES) {
-        return { success: false, error: 'Setlist file is too large' };
-      }
-
-      const temporaryPath = `${normalizedPath}.${process.pid}.${Date.now()}.tmp`;
-      try {
-        await fs.writeFile(temporaryPath, jsonContent, 'utf8');
-        await fs.rename(temporaryPath, normalizedPath);
-      } finally {
-        await fs.rm(temporaryPath, { force: true }).catch(() => {});
-      }
+      const saved = await saveSetlistFile(fs, normalizedPath, setlistData);
+      if (!saved.success) return saved;
 
       console.log('[Setlist] Saved setlist to:', normalizedPath);
       return { success: true, filePath: normalizedPath };
