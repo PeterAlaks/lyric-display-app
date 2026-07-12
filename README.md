@@ -1,209 +1,118 @@
+<p align="center">
+  <img src="public/logos/LyricDisplay%20logo.png" alt="LyricDisplay" width="360">
+</p>
+
 # LyricDisplay
 
-> Professional real-time lyric display application for live events, church services, and multimedia presentations.
+Real-time lyric control and multi-output display for live events, worship services, streaming, and production environments.
 
-**Version:** 6.6.2
-**Author:** Peter Alakembi
-**Co-Contributor:** David Okaliwe
+**Version:** 6.6.2 · **License:** GPL-3.0-or-later
 
-## Overview
+[Download LyricDisplay](https://github.com/PeterAlaks/lyric-display-app/releases/latest) · [Installation guide](INSTALLATION.md) · [Contributing](CONTRIBUTING.md) · [Architecture map](docs/PROJECT_STRUCTURE.md)
 
-LyricDisplay is an Electron-based desktop app for displaying lyrics across multiple live output screens. It is designed for production environments that use OBS, vMix, NDI, projectors, stage displays, or browser sources.
+## What LyricDisplay Does
 
-The app provides a control panel for loading, editing, styling, and triggering lyrics in real time while keeping each output independently configurable.
+LyricDisplay combines an Electron control application with browser-based output views and a realtime local backend. Operators can prepare lyrics, cue lines, and style independent outputs while OBS, vMix, Wirecast, projectors, stage displays, mobile controllers, and optional NDI receivers stay synchronized.
 
-## Key Features
+Key capabilities include:
 
-- Multiple lyric outputs, including Output 1, Output 2, Stage, and optional custom outputs.
-- Transparent browser-source friendly displays for OBS and vMix.
-- Real-time lyric synchronization through Socket.IO.
-- Built-in lyric editor with cleanup, formatting, search, and navigation tools.
-- Plain text and LRC lyric file support.
-- Translation line grouping for bracketed lyric lines.
-- Per-output typography, colors, shadows, padding, backgrounds, and full-screen styling.
-- Optional NDI output support for production video workflows.
-- Secondary mobile/web controllers using QR code and join-code pairing.
-- Auto-updates through GitHub releases.
-- Cross-platform packaging for Windows, macOS, and Linux.
+- Two default lyric outputs, up to four custom outputs, a stage display, and a timer display.
+- Independent typography, positioning, transitions, backgrounds, media, and full-screen styling per output.
+- Text, LRC, Markdown, RTF, and DOCX lyric imports, plus `.ldset` setlists.
+- Built-in song editing, translation grouping, timestamps, search, autoplay, and lyric video export.
+- Online lyric providers and EasyWorship/presentation import workflows.
+- OBS Browser Source creation, a compact OBS Dock mode, and generic browser URLs for other production software.
+- Join-code-protected mobile/web controllers and remote lyric draft approval.
+- Optional NDI output through the separately installed LyricDisplay NDI companion.
+- MIDI and OSC control, production-readiness checks, diagnostics, and automatic application updates.
 
-## Installation
+## Install
 
-### Pre-built Releases
+Download the appropriate package from the [GitHub releases page](https://github.com/PeterAlaks/lyric-display-app/releases/latest):
 
-1. Download the latest release from the [releases page](https://github.com/PeterAlaks/lyric-display-app/releases/latest).
-2. Run the installer for your platform.
-3. Launch LyricDisplay.
+- Windows: x64 setup executable
+- macOS: Apple Silicon or Intel DMG
+- Linux: x64 AppImage
 
-On macOS, the app may show a damaged-app warning because it is not code-signed. Run this before opening it:
+The [installation and integration guide](INSTALLATION.md) covers platform trust prompts, OBS/vMix setup, networked browser sources, LyricDisplay Dock, NDI, mobile controllers, and troubleshooting.
 
-```bash
-xattr -cr /Applications/LyricDisplay.app
+## Quick Start
+
+1. Launch LyricDisplay and load a supported lyric file, drag one into the control panel, or create a song in the canvas.
+2. Configure Output 1, Output 2, Stage, or a custom output.
+3. Open **Output > Preview Outputs** to verify the result.
+4. Enable **Display Output**, then click a lyric line to send it live.
+5. In OBS, use **Output > OBS Source Creator** or add a Browser Source manually:
+
+```text
+http://localhost:4000/#/output1
 ```
 
-See the [installation guide](INSTALLATION.md) for more details.
+LyricDisplay must remain running while browser sources or remote controllers are in use. See the [integration guide](INSTALLATION.md#browser-output-urls) for all output routes.
 
-### Development Setup
+## Development
+
+### Prerequisites
+
+- Node.js 22
+- npm
+- Platform build tools when native modules must be compiled
+
+Install both the root and backend dependency sets:
 
 ```bash
 git clone https://github.com/PeterAlaks/lyric-display-app.git
 cd lyric-display-app
-
 npm install
-
-cd server
-npm install
-cd ..
-
+npm --prefix server install
 npm run electron-dev
 ```
 
-## Quick Start
+The full development command starts Vite and Electron; Electron starts and monitors the backend. The backend uses port `4000`, and Vite uses port `5173`.
 
-### Load Lyrics
+### Common Commands
 
-- Use `File > Load Lyrics File`.
-- Drag and drop `.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, or `.docx` files into the main panel.
-- Use the new song canvas to create lyrics from scratch.
-- Use online lyric search where available.
+| Command | Purpose |
+| --- | --- |
+| `npm run electron-dev` | Full desktop development session |
+| `npm run electron-dev:headless` | Development OBS Dock/Headless session |
+| `npm run dev` | Vite renderer only; full functionality still needs the backend |
+| `npm run server` | Backend only |
+| `npm run build` | Production renderer build and build metadata |
+| `npm run electron-pack` | Build and package the desktop application |
+| `npm run check:static` | Syntax, conflict-marker, and API contract checks |
+| `npm run test:unit` | Unit test suite |
 
-### Configure Outputs
+NDI development uses the separate [lyricdisplay-ndi](https://github.com/PeterAlaks/lyricdisplay-ndi) repository. Clone it as `lyricdisplay-ndi/` inside this project only when working on the companion integration; that directory is intentionally ignored here.
 
-1. Configure Output 1, Output 2, Stage, and any custom outputs independently.
-2. Use `File > Preview Outputs` to open available output windows.
-3. Toggle `Display Output` to control whether lyrics are visible.
+## Documentation
 
-### Run a Live Session
+| Document | Use it for |
+| --- | --- |
+| [Installation and integration](INSTALLATION.md) | End-user installation, outputs, OBS/vMix, Dock mode, NDI, networking, troubleshooting |
+| [Contribution guide](CONTRIBUTING.md) | Setup expectations, conventions, verification, and pull requests |
+| [Repository and architecture map](docs/PROJECT_STRUCTURE.md) | Process boundaries, file ownership, runtime flows, and feature-to-file lookup |
+| [HTTP API](docs/openapi.yaml) | REST routes and schemas |
+| [Realtime API](docs/asyncapi.yaml) | Socket.IO events and payloads |
+| [Cross-platform builds](docs/crossplatformbuilds.md) | Platform packaging notes |
+| [Release recovery](docs/RELEASE_RECOVERY.md) | Update rehearsal, schema compatibility, and rollback |
 
-- Click a lyric line to send it to the active outputs.
-- Use search to find lyric lines quickly.
-- Navigate matches with keyboard shortcuts.
-- Clear or hide outputs from the control panel when needed.
+## Contributing
 
-### Secondary Controllers
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes and follow the [Code of Conduct](CODE_OF_CONDUCT.md). The architecture map identifies the owning files and cross-layer contracts for each feature area.
 
-1. In the desktop app, open `File > Connect Mobile Controller` or use the shield icon.
-2. Scan the QR code from a phone or tablet on the same network.
-3. Enter the 6-digit join code.
-4. Use the paired controller to trigger lines, toggle outputs, sync state, or submit lyric drafts for approval.
+Issues and focused pull requests are welcome. For UI changes, include screenshots or a short recording and describe the platforms and output routes you tested.
 
-## Lyric File Format
+## License and Attribution
 
-LyricDisplay accepts plain text (`.txt`), LRC (`.lrc`), Markdown (`.md`, `.markdown`), Rich Text (`.rtf`), and Word (`.docx`) files.
+LyricDisplay is free software licensed under the [GNU General Public License, version 3 or later](LICENSE).
 
-Formatting behavior:
+Developed by Peter Alakembi with contributions from David Okaliwe and the LyricDisplay community.
 
-- Bracketed lines such as `[translation]`, `(translation)`, or `{translation}` are treated as translation lines.
-- A normal lyric line followed by a bracketed line is grouped together.
-- Cleanup tools can remove unwanted punctuation and apply capitalization rules.
-
-## Browser Source Setup
-
-### OBS Studio
-
-1. Add a Browser Source to your scene.
-2. Use one of these URLs:
-
-```text
-http://localhost:4000/#/output1
-http://localhost:4000/#/output2
-http://localhost:4000/#/stage
-http://localhost:4000/#/output3
-```
-
-3. Replace `localhost` with the control computer's local IP address when capturing from another machine.
-4. Set the browser source dimensions to match your production canvas.
-5. Enable refresh/shutdown options in OBS as needed for your workflow.
-
-### vMix
-
-Add a Web Browser input and use the same output URL format as OBS.
-
-### LyricDisplay Dock
-
-LyricDisplay also includes a compact OBS custom dock for basic control on lower-powered streaming machines.
-
-On Windows packaged installs, add `obs-dock.html` from the LyricDisplay install folder as an OBS Custom Browser Dock:
-
-```text
-file:///C:/Program Files/LyricDisplay/obs-dock.html
-```
-
-For the most reliable LyricDisplay Dock flow in OBS, open LyricDisplay once and use `LyricDisplay Dock / Headless Mode` in Advanced Settings. `LyricDisplay Dock Setup` shows the one local HTML URL to paste into OBS. Use `Launch Headless Mode` for the current session, or enable `Start at Sign In` if you want LyricDisplay to start headless automatically. When you click `Start LyricDisplay Dock` inside OBS, that same dock loads the controller.
-
-During development, add the same local launcher file as an OBS dock:
-
-```text
-file:///D:/path/to/lyric-display-app/obs-dock.html?mode=dev
-```
-
-Run `npm run electron-dev:headless`, then click `Start LyricDisplay Dock` in the local dev launcher. The controller loads in that same dock.
-
-## Development
-
-### Tech Stack
-
-- Electron
-- React
-- Vite
-- Tailwind CSS
-- Zustand
-- Express
-- Socket.IO
-
-### Available Scripts
-
-```bash
-npm run dev              # Vite development server
-npm run server           # Backend server only
-npm run electron-dev     # Full Electron development
-npm run electron-dev:headless # Electron development without the main app window
-npm run build            # Production build
-npm run electron-pack    # Package Electron app
-```
-
-### Repository Layout
-
-The detailed repository layout lives in [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
-
-### NDI Companion
-
-NDI output support is powered by a separate companion repository: [lyricdisplay-ndi](https://github.com/PeterAlaks/lyricdisplay-ndi). Contributors who want to work on NDI features can clone that repository into the app project root and follow the setup notes in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-### Contributing
-
-Please read the [contribution guide](CONTRIBUTING.md) and follow the [code of conduct](CODE_OF_CONDUCT.md) when participating in the project.
-
-## Troubleshooting
-
-For safe update rehearsal, schema compatibility, and restoring a previously verified build, see [Release migration and recovery](docs/RELEASE_RECOVERY.md).
-
-### Output Windows Are Not Displaying
-
-- Confirm that the backend server is running on port `4000`.
-- Check that Socket.IO shows as connected in the app.
-- Refresh browser sources in OBS or vMix.
-- Confirm the output URL matches the output you want to capture.
-
-## License
-
-LyricDisplay is free software licensed under the GNU General Public License, version 3 or later. See [LICENSE](LICENSE) for the full license text.
-
-## Credits
-
-LyricDisplay includes optional integrations with public lyric providers such as LRCLIB, ChartLyrics, Lyrics.ovh, and Open Hymnal Project. Lyrics and metadata remain the property of their respective copyright holders.
-
-NDI is a trademark of Vizrt NDI AB. This project is not affiliated with or endorsed by Vizrt NDI AB.
+Lyric provider content and metadata remain the property of their respective rights holders. NDI is a trademark of Vizrt NDI AB; LyricDisplay is not affiliated with or endorsed by Vizrt NDI AB. See [TRADEMARK](TRADEMARK) for project trademark terms.
 
 ## Support
 
-For technical support, feature requests, or bug reports:
-
-- Open an issue on GitHub.
-- Check the [installation guide](INSTALLATION.md).
-- Review the troubleshooting section above.
-
-**Links:**
-
-- [Website](https://lyricdisplay.app)
-- [Developer Portfolio](https://linktr.ee/peteralaks)
-- [Support Development](https://lyricdisplay.app/donate)
+- [Report a bug or request a feature](https://github.com/PeterAlaks/lyric-display-app/issues)
+- [Project website](https://lyricdisplay.app)
+- [Support development](https://lyricdisplay.app/donate)

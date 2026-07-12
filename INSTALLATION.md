@@ -1,454 +1,343 @@
 # LyricDisplay Installation and Integration Guide
 
-Professional real-time lyric display for streaming, church services, worship services, and live events.
+Install LyricDisplay, connect production outputs, and resolve common setup problems.
 
 Version: 6.6.2
 
-## What Is LyricDisplay?
+## Contents
 
-LyricDisplay is a free desktop app for clear, sharp lyric overlays and full-screen lyric displays. It is designed for OBS Studio, vMix, NDI workflows, projectors, stage displays, and other production software that accepts browser sources.
+- [Download and platform support](#download-and-platform-support)
+- [Install on Windows](#install-on-windows)
+- [Install on macOS](#install-on-macos)
+- [Install on Linux](#install-on-linux)
+- [First launch checklist](#first-launch-checklist)
+- [Browser output URLs](#browser-output-urls)
+- [OBS Studio](#obs-studio)
+- [vMix, Wirecast, and other browser inputs](#vmix-wirecast-and-other-browser-inputs)
+- [Networked outputs](#networked-outputs)
+- [LyricDisplay Dock for OBS](#lyricdisplay-dock-for-obs)
+- [NDI output](#ndi-output)
+- [Mobile and web controllers](#mobile-and-web-controllers)
+- [Loading and operating lyrics](#loading-and-operating-lyrics)
+- [Troubleshooting](#troubleshooting)
 
-Best fit:
+## Download and Platform Support
 
-- Church worship services
-- Live concerts and events
-- Livestream lyric overlays
-- Karaoke and sing-along streams
-- Multi-language lyric presentations
+Download LyricDisplay only from the [official website](https://lyricdisplay.app) or the [GitHub releases page](https://github.com/PeterAlaks/lyric-display-app/releases/latest). The application is free and does not require an account.
 
-Key features:
+Current packages:
 
-- TXT and LRC lyric file support
-- Multiple independent outputs, including Output 1, Output 2, Stage, and optional Output 3-6
-- Transparent browser-source friendly lyric overlays
-- Real-time sync across displays
-- Built-in lyric creation and editing
-- Translation line support
-- Per-output styling controls
-- Keyboard-supported operation
-- Secondary mobile/web controllers with join-code security
-- Auto-updates through GitHub releases
-- EasyWorship song import and conversion to text files
+| Platform | Package |
+| --- | --- |
+| Windows 10/11, x64 | NSIS setup executable |
+| macOS, Apple Silicon | ARM64 DMG |
+| macOS, Intel | x64 DMG |
+| Linux, x64 | AppImage |
 
-## Download
+Direct assets for this version:
 
-Download LyricDisplay only from the official website or GitHub releases:
+- [Windows x64 installer](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-Windows-Setup.exe)
+- [macOS Apple Silicon DMG](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-macOS-arm64.dmg)
+- [macOS Intel DMG](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-macOS-x64.dmg)
+- [Linux x64 AppImage](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-Linux.AppImage)
 
-- Website: https://lyricdisplay.app
-- GitHub releases: https://github.com/PeterAlaks/lyric-display-app/releases/latest
-- Source code: https://github.com/PeterAlaks/lyric-display-app
+For a typical production workflow, 8 GB of RAM and a 1920×1080-capable display are a practical baseline. Multiple high-resolution video backgrounds, several browser sources, lyric video export, or NDI output benefit from more memory and GPU capacity. Wired Ethernet is strongly recommended when outputs or controllers run on other devices.
 
-Direct downloads for version 6.6.0:
+### Security and trust notes
 
-- Windows: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-Windows-Setup.exe
-- macOS Apple Silicon: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-macOS-arm64.dmg
-- macOS Intel: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-macOS-x64.dmg
-- Linux: https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-Linux.AppImage
+Current release packages are distributed independently:
 
-## Security and Trust Notes
+- Windows may show Microsoft Defender SmartScreen.
+- macOS packages are not currently signed with an Apple Developer certificate and may be quarantined by Gatekeeper.
+- Linux AppImages need executable permission before launch.
 
-LyricDisplay is open source and its release files are hosted on GitHub. The app is free to download and does not require an account.
-
-Current signing status:
-
-- Windows builds may show a Microsoft Defender SmartScreen warning because the app is distributed independently.
-- macOS builds are not currently signed with an Apple Developer certificate. macOS may show an "unidentified developer", "can't be verified", or "damaged" warning.
-- Linux AppImage builds may need executable permission before launch.
-
-These warnings are expected for the current release channel. To reduce risk:
-
-- Download only from `lyricdisplay.app` or `github.com/PeterAlaks/lyric-display-app`.
-- Avoid installers shared through messaging apps, mirrors, or shortened links.
-- Check that the version number in the downloaded filename matches the release page.
-- If your browser or operating system reports a different publisher, filename, or source than expected, delete the file and download again from GitHub.
-
-## System Requirements
-
-Minimum:
-
-- Windows 10/11 64-bit, macOS 11 or newer, or a modern 64-bit Linux distribution
-- 8 GB RAM
-- Dual-display capable GPU
-- 500 MB free disk space
-
-Recommended:
-
-- 16 GB RAM
-- Dedicated GPU
-- Dual monitors for control and preview
-- Wired Ethernet for networked OBS, vMix, NDI, or controller workflows
+Only bypass a platform warning after confirming that the file came from `lyricdisplay.app` or `github.com/PeterAlaks/lyric-display-app` and that its name matches the selected release.
 
 ## Install on Windows
 
-1. Download the Windows installer from the official release page.
-2. Open the installer.
-3. If Microsoft Defender SmartScreen appears, choose `More info`, then `Run anyway`.
-4. Follow the installer wizard.
-5. Keep the desktop shortcut option enabled if you want quick access.
-6. Launch LyricDisplay from the desktop shortcut or Start menu.
+1. Download the Windows setup executable.
+2. Open it.
+3. If SmartScreen appears, select **More info**, verify the filename, then select **Run anyway**.
+4. Complete the installer wizard and launch LyricDisplay from the Start menu or desktop shortcut.
 
-Administrator access is usually only needed if Windows asks for permission during installation.
+The package requests normal user-level execution. Windows may still request approval when writing to the selected installation directory.
 
 ## Install on macOS
 
-1. Download the correct `.dmg` file for your Mac:
-   - Apple Silicon for M1, M2, M3, or newer Apple chips.
-   - Intel for older Intel-based Macs.
-2. Open the `.dmg` file.
-3. Drag `LyricDisplay.app` into the Applications folder.
-4. Before opening the app for the first time, open Terminal and run:
+1. Download the DMG for Apple Silicon or Intel.
+2. Open the DMG and drag `LyricDisplay.app` into **Applications**.
+3. Try opening LyricDisplay from Applications.
+4. If macOS reports that the app is damaged or cannot be verified, confirm the download source, open Terminal, and run:
 
 ```bash
 xattr -cr /Applications/LyricDisplay.app
 ```
 
-5. Open LyricDisplay from Applications.
-6. If macOS still shows a warning, right-click `LyricDisplay.app`, choose `Open`, then confirm `Open`.
+5. Open the app again. If necessary, Control-click or right-click it, select **Open**, then confirm.
 
-Why this is needed: LyricDisplay is not currently code-signed with an Apple Developer certificate, so macOS Gatekeeper blocks or quarantines the app by default. The command above removes the download quarantine flag for this app.
-
-You only need to do this once after installing or replacing the app.
+The command removes the download quarantine attribute from this app. Repeat it after replacing LyricDisplay with a newly downloaded unsigned build if Gatekeeper quarantines the new copy.
 
 ## Install on Linux
 
-1. Download the Linux AppImage from the official release page.
-2. Open a terminal in the download folder.
-3. Make the file executable:
+1. Download the AppImage.
+2. In a terminal, make it executable:
 
 ```bash
 chmod +x LyricDisplay-*.AppImage
 ```
 
-4. Run the app:
+3. Run it:
 
 ```bash
 ./LyricDisplay-*.AppImage
 ```
 
-## First Launch
+Desktop integration varies by distribution. Keep the AppImage in a stable location before creating a launcher or menu entry.
 
-When LyricDisplay opens, the control panel appears. From there you can load lyrics, create lyrics, configure outputs, open preview windows, and connect secondary controllers.
+## First Launch Checklist
 
-If Windows Firewall asks for network access, allow LyricDisplay on private networks when you plan to use OBS/vMix on another computer, mobile controllers, NDI, or browser outputs from another device.
+1. Let LyricDisplay finish opening before adding browser sources; the local backend listens on port `4000`.
+2. If the operating system asks about network access, allow private-network access only when using another computer, mobile controllers, or network integrations.
+3. Load a lyric file or create a song.
+4. Configure an output and open **Output > Preview Outputs**.
+5. Enable **Display Output** and select a lyric line.
+6. Before a live event, open **Tools > Production Readiness** and resolve any missing or stale output warnings.
 
-## OBS Studio Setup
+LyricDisplay must remain running while browser sources, controllers, or NDI outputs are active.
 
-Use this when LyricDisplay and OBS are running on the same computer.
+## Browser Output URLs
 
-### 1. Add a Browser Source
+Use these routes in software that accepts a web/browser source:
 
-1. In OBS, open your scene.
-2. Click `+` in the Sources panel.
-3. Select `Browser`.
-4. Name it `Lyrics - Output 1`.
-5. Click `OK`.
+| View | Local URL | Notes |
+| --- | --- | --- |
+| Output 1 | `http://localhost:4000/#/output1` | Default lyric output |
+| Output 2 | `http://localhost:4000/#/output2` | Default lyric output |
+| Output 3–6 | `http://localhost:4000/#/output3` ... `output6` | Add the custom output in LyricDisplay first |
+| Stage | `http://localhost:4000/#/stage` | Confidence/stage display |
+| Timer | `http://localhost:4000/#/time` | Dedicated timer/clock display |
 
-### 2. Configure the Browser Source
+Replace `localhost` with the LyricDisplay computer's LAN address when the receiving software runs on another device. Output and Stage views support transparent production layouts; the Timer view is intended as a full display.
 
-Use these settings:
+## OBS Studio
 
-```text
-URL: http://localhost:4000/#/output1
-Width: 1920
-Height: 1080
-FPS: 30
-```
+### Recommended: OBS Source Creator
 
-Recommended OBS options:
+LyricDisplay can create or update the Browser Source through OBS WebSocket:
 
-- Enable `Shutdown source when not visible`.
-- Enable `Refresh browser when scene becomes active`.
-- Match width and height to your OBS canvas.
+1. In OBS, open **Tools > WebSocket Server Settings**.
+2. Enable the WebSocket server. The default port is `4455`; copy the password if authentication is enabled.
+3. In LyricDisplay, open **Output > OBS Source Creator**.
+4. Enter the OBS host, port, and password, then connect.
+5. Select the scene and LyricDisplay output.
+6. Choose transparent or full-screen mode, confirm the dimensions/transform, and select **Create or Update OBS Source**.
 
-### 3. Configure LyricDisplay
+For OBS on the same computer, use host `127.0.0.1`. For OBS on another computer, use that computer's LAN address and allow OBS WebSocket through its private-network firewall.
 
-1. In LyricDisplay, open the Output 1 settings tab.
-2. Start with these settings:
-   - Position: Lower Third
-   - Font: Montserrat or Open Sans
-   - Font Size: 48-60 px
-   - Font Color: `#FFFFFF`
-   - Drop Shadow: 5-7 opacity
-3. Load a supported lyric file (`.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, or `.docx`).
-4. Click a lyric line.
-5. Confirm the lyric appears in OBS.
+### Manual Browser Source
 
-### Additional Outputs
-
-Use these URLs for additional browser sources:
-
-```text
-http://localhost:4000/#/output2
-http://localhost:4000/#/output3
-http://localhost:4000/#/output4
-http://localhost:4000/#/output5
-http://localhost:4000/#/output6
-http://localhost:4000/#/stage
-```
-
-## vMix Setup
-
-1. In vMix, add a `Web Browser` input.
-2. Use the output URL you need:
+1. In OBS, select the target scene and add a **Browser** source.
+2. Enter an output URL, for example:
 
 ```text
 http://localhost:4000/#/output1
 ```
 
-3. Set the browser input size to match your production canvas.
-4. Use vMix overlay channels as needed.
+3. Match the width and height to the OBS canvas, commonly `1920 × 1080`.
+4. Use `30` FPS for normal lyric output unless the production requires otherwise.
+5. Place the source above the video layers that it should overlay.
 
-For networked setup, replace `localhost` with the IP address of the computer running LyricDisplay.
+If **Shutdown source when not visible** is enabled, OBS reconnects the source when it becomes visible again. LyricDisplay sends the current state after reconnection, but verify this transition before a live event.
 
-## Network Setup for OBS or vMix on Another Computer
+## vMix, Wirecast, and Other Browser Inputs
 
-Use this when LyricDisplay runs on one computer and OBS/vMix runs on another.
+Add a Web Browser/Web Page input and use one of the [browser output URLs](#browser-output-urls). Match the input dimensions to the production canvas and use the application's overlay/layer controls to position it.
 
-Requirements:
+The in-app **Help > Integration Guide** provides platform-specific OBS, vMix, and Wirecast instructions and shows a detected network address. vMix integration is shown on Windows; Wirecast integration is shown on Windows and macOS.
 
-- Both computers must be on the same local network.
-- Wired Ethernet is recommended.
-- LyricDisplay must be allowed through the firewall on the control computer.
+## Networked Outputs
 
-### 1. Find Your Router Gateway
+Use this setup when LyricDisplay and the receiving browser, OBS, or vMix instance are on different computers.
 
-On Windows:
-
-1. Press `Win + R`.
-2. Type `cmd` and press Enter.
-3. Run:
-
-```cmd
-ipconfig
-```
-
-4. Find `Default Gateway`. Common examples are `192.168.0.1`, `192.168.1.1`, or `192.168.8.1`.
-
-### 2. Set a Static IP on the LyricDisplay Computer
-
-On Windows:
-
-1. Press `Win + R`.
-2. Type `ncpa.cpl` and press Enter.
-3. Right-click your active network adapter.
-4. Select `Properties`.
-5. Double-click `Internet Protocol Version 4 (TCP/IPv4)`.
-6. Select `Use the following IP address`.
-7. Enter settings that match your network.
-
-Example for a `192.168.1.1` gateway:
+1. Connect both devices to the same trusted local network. Prefer wired Ethernet.
+2. In LyricDisplay, open **Help > Integration Guide** to see the detected LAN address, or check the network settings on the LyricDisplay computer.
+3. From the receiving computer, test backend health in a browser:
 
 ```text
-IP address: 192.168.1.100
-Subnet mask: 255.255.255.0
-Default gateway: 192.168.1.1
-Preferred DNS: 8.8.8.8
+http://<LYRICDISPLAY-IP>:4000/api/health
 ```
 
-Example for a `192.168.0.1` gateway:
+4. Use that address in the output URL:
 
 ```text
-IP address: 192.168.0.100
-Subnet mask: 255.255.255.0
-Default gateway: 192.168.0.1
-Preferred DNS: 8.8.8.8
+http://<LYRICDISPLAY-IP>:4000/#/output1
 ```
 
-The first three numbers of the IP address should match your router gateway.
+5. If the address changes after a restart, reserve the address in the router's DHCP settings or ask the network administrator for a stable address. This is safer than guessing and manually assigning an address that may conflict with another device.
 
-### 3. Test the Connection
+### Firewall guidance
 
-On the OBS/vMix computer, open a browser and visit:
+- Allow LyricDisplay on **private/trusted networks** when prompted.
+- On Windows, use **Windows Defender Firewall > Allow an app through firewall** and select the installed LyricDisplay executable.
+- Do not enable public-network access unless the production network and exposure are understood.
+- Port `4000` must be reachable from devices that load LyricDisplay browser views or controllers.
+- Client isolation/guest Wi-Fi can prevent devices on the same network name from communicating.
 
-```text
-http://192.168.1.100:4000
+Do not expose port `4000` directly to the public internet. Use LyricDisplay on a trusted LAN or through a deliberately secured network tunnel.
+
+## LyricDisplay Dock for OBS
+
+LyricDisplay Dock is a compact OBS Custom Browser Dock. Dock Mode keeps the backend/controller available without the full desktop window and is currently marked Beta.
+
+### Packaged application
+
+1. Open **Tools > LyricDisplay Dock Setup** in LyricDisplay.
+2. Copy the exact **LyricDisplay Dock URL** shown by the app.
+3. In OBS, open **Docks > Custom Browser Docks** and paste that URL into one dock entry.
+4. If Dock Mode is not running, select **Switch to Dock** in LyricDisplay or use the Windows Start menu shortcut where available.
+5. In the OBS dock, select **Open Controller** after the readiness message appears.
+6. In **Preferences > Advanced**, enable **Start at Sign In** if Dock Mode should be available automatically after login.
+
+Use the generated local file URL rather than typing an installation path; custom installation directories and non-Windows platforms can differ. Use the tray menu to return to the desktop application or quit Dock Mode.
+
+### Development
+
+1. Stop the normal Electron development session.
+2. Run:
+
+```bash
+npm run electron-dev:headless
 ```
 
-Replace `192.168.1.100` with the IP address of the LyricDisplay computer.
+3. In OBS, open **Docks > Custom Browser Docks** and add the repository's `obs-dock.html` as a local file URL with `?mode=dev`, for example `file:///D:/path/to/lyric-display-app/obs-dock.html?mode=dev` on Windows.
+4. Select **Open Controller** when the dock reports that the development Dock Mode is ready.
 
-If the page loads and asks for a join code, the network connection is working.
+Do not run the normal and headless Electron development sessions at the same time; the single-instance/backend port protections will prevent a second runtime.
 
-### 4. Use Network Output URLs
+## NDI Output
 
-In OBS or vMix, use URLs like:
+NDI support uses a separately downloaded LyricDisplay companion rather than bundling it into the desktop installer.
 
-```text
-http://192.168.1.100:4000/#/output1
-http://192.168.1.100:4000/#/output2
-http://192.168.1.100:4000/#/stage
-```
+1. In LyricDisplay, open **Output > NDI Preferences**.
+2. Select **Download NDI Companion** and wait for download and extraction to complete.
+3. Launch the companion, or enable **Start with LyricDisplay**.
+4. Open the NDI settings for each output or Stage view that should broadcast.
+5. Enable the output, choose a unique source name, resolution, and frame rate. `1080p` at `30 fps` is a sensible starting point for lyrics.
+6. Select that source in the NDI receiver, such as an NDI-enabled OBS or vMix input.
 
-Replace `192.168.1.100` with your actual LyricDisplay computer IP address.
+The companion status should progress through Installed, Running, and Ready. Higher resolutions and frame rates require more CPU/GPU/network capacity. If no compatible companion asset is available for the current platform, the in-app download will report that condition.
 
-## Windows Firewall Fix
+NDI discovery normally expects devices to be on the same LAN. Firewall rules, VLAN boundaries, Wi-Fi client isolation, or blocked discovery traffic can prevent a receiver from seeing a source.
 
-If network browser sources or mobile controllers cannot connect:
+NDI is a trademark of Vizrt NDI AB. LyricDisplay is not affiliated with or endorsed by Vizrt NDI AB.
 
-1. Open `Windows Defender Firewall`.
-2. Click `Allow an app through firewall`.
-3. Click `Change settings`.
-4. Click `Allow another app`.
-5. Browse to:
+## Mobile and Web Controllers
 
-```text
-C:\Program Files\LyricDisplay\LyricDisplay.exe
-```
+1. Connect the phone/tablet and LyricDisplay computer to the same trusted local network.
+2. In LyricDisplay, open **Tools > Connect Mobile Controller**.
+3. Scan the QR code or open the displayed network URL.
+4. Enter the six-digit join code.
 
-6. Check `Private`.
-7. Check `Public` only if you understand the network you are using.
-8. Click `OK`.
+The join code resets when LyricDisplay restarts. Controller permissions depend on the client role; remote lyric drafts still require desktop approval. If pairing fails, follow the [networked output](#networked-outputs) health and firewall checks first.
 
-## Secondary Mobile or Web Controllers
+## Loading and Operating Lyrics
 
-1. In LyricDisplay, open `File > Connect Mobile Controller`, or click the shield icon.
-2. Scan the QR code from a phone or tablet on the same local network.
-3. Enter the 6-digit join code.
-4. After pairing, the controller can trigger lyric lines, load setlist items, toggle outputs, sync state, or submit lyric drafts for approval on the desktop.
+Supported lyric inputs:
 
-The join code resets when the app restarts.
+| Format | Extension |
+| --- | --- |
+| Plain text | `.txt` |
+| Timestamped LRC | `.lrc` |
+| Markdown | `.md`, `.markdown` |
+| Rich Text | `.rtf` |
+| Word document | `.docx` |
+| LyricDisplay setlist | `.ldset` |
 
-## Loading Lyrics
+Load a file with **File > Load Lyrics File**, `Ctrl/Cmd + O`, or drag and drop. Create a song with **File > New Lyrics File** or `Ctrl/Cmd + N`.
 
-### Load an Existing File
+Lines wrapped in `[ ]`, `( )`, `< >`, or `{ }` can be recognized as translation/alternate lines and grouped with the preceding lyric line. Parsing, cleanup, capitalization, splitting, and grouping behavior can be adjusted in Preferences.
 
-1. Click `Load Lyrics File`, or use `File > Load Lyrics File`.
-2. Select a supported lyric file (`.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, or `.docx`).
-3. Click `Open`.
+For live operation:
 
-Shortcut: `Ctrl/Cmd + O`
-
-### Drag and Drop
-
-Drag a lyric file (`.txt`, `.lrc`, `.md`, `.markdown`, `.rtf`, `.docx`) or `.ldset` file into the LyricDisplay control panel.
-
-### Create a New Lyrics File
-
-1. Click the new song button beside `Load Lyrics File`, or use `File > New Lyrics File`.
-2. Type or paste lyrics.
-3. Use `Ctrl/Cmd + T` to add a translation line under a lyric line.
-4. Enter a song title.
-5. Click `Save` or `Save and Load`.
-
-Shortcut: `Ctrl/Cmd + N`
-
-## Lyric File Format
-
-LyricDisplay accepts plain text and LRC files.
-
-Example:
-
-```text
-First verse line
-(Translation in brackets)
-
-Second line
-
-Another line
-```
-
-Lines wrapped in `[ ]`, `( )`, `< >`, or `{ }` are treated as translation lines.
-
-## Live Operation
-
-- Click any lyric line to display it on enabled outputs.
-- Use the search bar to find lines quickly.
-- Use `Shift + Up/Down` to move through search results.
-- Toggle `Display Output` to show or hide lyrics.
-- Use `Sync Outputs` if a browser source or output window needs a manual refresh.
-
-## Keyboard Shortcuts
-
-```text
-Ctrl/Cmd + O       Load lyrics file
-Ctrl/Cmd + N       New song canvas
-Ctrl/Cmd + P       Toggle autoplay
-Ctrl/Cmd + 1       Preview Output 1
-Ctrl/Cmd + 2       Preview Output 2
-Up                 Previous lyric line
-Down               Next lyric line
-Spacebar           Toggle output display on/off
-Ctrl/Cmd + F       Search lyrics
-Ctrl/Cmd + T       Add translation line in editor
-Ctrl/Cmd + D       Duplicate line in editor
-Ctrl/Cmd + L       Select line in editor
-Shift + Up/Down    Navigate search results
-```
+- Select a line to send it to connected outputs.
+- Use Up/Down for lyric navigation and `Ctrl/Cmd + F` for search.
+- Use **Display Output** or Spacebar to show/hide the master lyric output.
+- Use **Output > Sync Outputs** when a connected display needs the full current state resent.
+- Open **Help > Keyboard Shortcuts** for the current complete shortcut list.
+- Save a `.ldset` when the running order and song collection should be reused.
 
 ## Troubleshooting
 
-For update rehearsal and known-good rollback procedures, see [Release migration and recovery](docs/RELEASE_RECOVERY.md).
+### LyricDisplay reports that port 4000 is in use
 
-### Browser Source Is Black or Empty
+Only one LyricDisplay backend can use the default port. Close other desktop/headless LyricDisplay processes, then start the intended mode. Do not run a packaged instance and development instance simultaneously unless one is configured to use a different backend port.
 
-- Confirm LyricDisplay is running.
-- Confirm the browser source URL is correct.
-- Refresh the OBS/vMix browser source.
-- Restart LyricDisplay and OBS/vMix.
-- Check Windows Firewall if using another computer.
+### Browser source is black, blank, or unavailable
 
-### Network Connection Is Not Working
+- Confirm LyricDisplay is running and fully initialized.
+- Open the exact output URL in a normal browser on the receiving computer.
+- Confirm **Display Output** is enabled and a lyric line is selected.
+- For Output 3–6, add/register the custom output in the control panel first.
+- Refresh the browser source and confirm its dimensions.
+- For a remote receiver, test `/api/health` and review private-network firewall access.
 
-- Confirm both computers are on the same network.
-- Confirm the URL uses `http://`, not `https://`.
-- Confirm the IP address belongs to the LyricDisplay computer.
-- Temporarily test with firewall disabled, then add a proper firewall exception.
-- Check whether the router blocks local device-to-device traffic.
+### Lyrics or styles are not updating
 
-### Lyrics Are Not Updating in Real Time
+- Check the connection/shield indicator in LyricDisplay.
+- Use **Output > Sync Outputs**.
+- Refresh or recreate the browser source if it no longer reconnects.
+- Open **Tools > Connection Diagnostics** to inspect client and socket state.
+- Confirm that the settings are being changed on the same output route used by the receiver.
 
-- Click `Sync Outputs` in LyricDisplay.
-- Refresh the browser source.
-- Confirm the shield/connection indicator is healthy.
-- Restart LyricDisplay if the socket connection does not recover.
+### OBS Source Creator cannot connect
 
-### OBS Performance Issues
+- In OBS, enable **Tools > WebSocket Server Settings**.
+- Confirm the host, port (normally `4455`), and password.
+- Use `127.0.0.1` only when OBS is on the same computer.
+- For remote OBS, allow OBS WebSocket through its private-network firewall.
 
-- Enable `Shutdown source when not visible`.
-- Close unused preview windows.
-- Monitor CPU and GPU usage.
-- Use a dedicated computer for LyricDisplay when running complex livestream setups.
+### Mobile controller cannot pair
 
-### Styling Changes Are Not Applying
+- Confirm both devices are on the same trusted LAN and not a guest/client-isolated network.
+- Verify `http://<LYRICDISPLAY-IP>:4000/api/health` loads on the mobile device.
+- Request a fresh QR URL/join code after restarting LyricDisplay.
+- Check the LyricDisplay computer's firewall access.
 
-- Click `Sync Outputs`.
-- Refresh the browser source.
-- Confirm you are editing the correct output tab.
-- Check browser source dimensions match your canvas.
+### NDI source is missing or stale
 
-### macOS Says the App Is Damaged or Cannot Be Verified
+- Open **Output > NDI Preferences** and confirm Installed, Running, and Ready states.
+- Confirm the intended output's NDI toggle is enabled and its source name is unique.
+- Start with `1080p`/`30 fps` and reduce resolution/frame rate if telemetry reports dropped frames.
+- Keep sender and receiver on the same LAN and check firewall/VLAN discovery restrictions.
+- Update the companion from the NDI Preferences page when an update is offered.
 
-This is expected for unsigned builds.
+### macOS blocks the app
 
-Run:
+Confirm the download source, then repeat the [`xattr` installation step](#install-on-macos). Replacing the app with a new unsigned download can reapply quarantine.
 
-```bash
-xattr -cr /Applications/LyricDisplay.app
-```
+### Performance issues
 
-Then open the app again. If needed, right-click the app, choose `Open`, then confirm.
+- Close unused preview/projection windows and browser sources.
+- Avoid unnecessary high-resolution video backgrounds.
+- Use 30 FPS for lyric sources unless higher motion fidelity is needed.
+- Reduce NDI resolution/frame rate and review its telemetry.
+- Use **Tools > Production Readiness** before the event.
 
-## OBS Tips
+### Collect diagnostics
 
-- Place the LyricDisplay browser source above your camera/video layers.
-- Use transparent output styles for lower-third lyrics.
-- Use Output 1 for broadcast and Output 2 for in-house display.
-- Use Stage for confidence monitors.
-- Keep a dedicated lyrics folder for quick access during services.
-- Test outputs before going live.
+- Open **Tools > Connection Diagnostics** for realtime client state.
+- Open **Tools > Production Readiness** for output, projection, and NDI health.
+- Enable **Preferences > Advanced > Debug Logging** only while reproducing a problem; logs can grow faster in this mode.
+- Include the LyricDisplay version, operating system, output route, and exact reproduction steps in a [GitHub issue](https://github.com/PeterAlaks/lyric-display-app/issues).
 
-## Video Tutorial
-
-Quick setup and usage guide:
-
-https://drive.google.com/file/d/1fP4fSSWSNvSocI8fK7hktdJ7dY6xnCM-/view?usp=sharing
+For update rehearsal, schema compatibility, and known-good rollback procedures, see [Release migration and recovery](docs/RELEASE_RECOVERY.md).
 
 ## Support and Resources
 
-- Website: https://lyricdisplay.app
-- Issues: https://github.com/PeterAlaks/lyric-display-app/issues
-- Source code: https://github.com/PeterAlaks/lyric-display-app
-- Contact: https://linktr.ee/peteralaks
+- [Project website](https://lyricdisplay.app)
+- [GitHub releases](https://github.com/PeterAlaks/lyric-display-app/releases)
+- [Issues and feature requests](https://github.com/PeterAlaks/lyric-display-app/issues)
+- [Source and contribution guide](https://github.com/PeterAlaks/lyric-display-app)
+- [Video tutorial](https://drive.google.com/file/d/1fP4fSSWSNvSocI8fK7hktdJ7dY6xnCM-/view?usp=sharing)
 
-Developed by Peter Alakembi and David Okaliwe.
-
-Copyright (C) 2026 Peter Alakembi and contributors.
+Developed by Peter Alakembi with contributions from David Okaliwe and the LyricDisplay community.

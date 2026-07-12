@@ -7,13 +7,16 @@ Thank you for helping build LyricDisplay. This guide captures the conventions th
 All contributors and community participants are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Getting Started
-- Use Node 18+ and npm. Install deps with `npm install`.
+- Use Node 22 and npm, matching CI. Install both dependency sets with `npm install` and `npm --prefix server install`.
 - **NDI Broadcasting (optional):** The NDI companion is a separate repo. To work on NDI features locally, clone it into the project root: `git clone https://github.com/PeterAlaks/lyricdisplay-ndi.git` then `cd lyricdisplay-ndi && npm install`. The app detects it automatically in dev mode. Without it, the NDI feature simply shows "Not Installed" — everything else works normally.
 - Development: `npm run electron-dev` (spins up Vite + Electron + backend). Frontend only: `npm run dev`. Backend only: `npm run server`.
 - Production build: `npm run build` (Vite) and `npm run electron-pack` for installers.
-- Do not commit artifacts from `dist/`, `build/`, `release/`, or `uploads/`.
+- Do not commit generated artifacts from `dist/`, `release/`, `out/`, or `uploads/`. The tracked files in `build/` are electron-builder/installer inputs, so change them only when packaging behavior changes.
 
 ## Architecture Snapshot
+
+For process boundaries, file ownership, runtime flows, the route map, and a feature-to-file index, use the [repository and architecture map](docs/PROJECT_STRUCTURE.md).
+
 - **Frontend (`src/`)**: React 19 + Vite + Tailwind. Zustand (`context/LyricsStore.js`) persists control state (lyrics, selections, styling). Routing uses HashRouter in production. Reusable UI lives in `components/ui`, modals/toasts are provided via `ModalProvider` and `ToastProvider`.
 - **Output views (`pages/Output1|Output2|Stage.jsx`)**: Socket-driven displays that render a single current line with styling/autosizing/background media, using framer-motion for transitions.
 - **Control panel (`components/LyricDisplayApp.jsx`)**: Desktop-first controller with setlists, online lyrics search, autoplay (interval and timestamp-driven), intelligent search, and styling panels for each output.
@@ -24,13 +27,13 @@ All contributors and community participants are expected to follow the [Code of 
 - Use modern ESM, functional React components, and hooks. Keep JSX readable and prefer small composable pieces.
 - Styling: Tailwind utility classes and the small UI kit in `components/ui`. Reuse shared components (e.g., `Switch`, `Tabs`, tooltip) instead of ad-hoc DOM.
 - State: Pull selectors from `hooks/useStoreSelectors` to avoid redundant subscription logic. Keep persistence-friendly shapes (avoid storing transient DOM data).
-- Sockets: Use `useSocket` / `useControlSocket` emitters. Never bypass permission checks on the server—mirror existing event names/payload shapes in `server/events.js`.
+- Sockets: Use `useSocket` / `useControlSocket` emitters. Never bypass permission checks on the server—mirror existing event names/payload shapes in `server/realtime/handlers/` and `docs/asyncapi.yaml`.
 - Parsing: Use `shared/lyricsParsing.js`/`shared/lineSplitting.js` for lyric parsing and `shared/documentTextExtraction.js`/`shared/lyricImportRegistry.js` for document imports to keep desktop, backend, and renderer in sync.
-- File I/O and dialogs: Go through IPC handlers in `main/ipc.js`; avoid accessing Node APIs directly from the renderer.
+- File I/O and dialogs: Go through the domain handlers in `main/ipc/` and the preload bridge; avoid accessing Node APIs directly from the renderer.
 - Logging: Use `utils/logger.js` helpers. Avoid logging tokens, admin keys, or raw JWTs.
 
 ## Feature-Specific Guidelines
-- **Setlists**: Max 50 items enforced in server and UI—preserve this unless you also update guardrails and UX. Keep metadata (`fileType`, `addedBy`, `sections`) intact when emitting events.
+- **Setlists**: The default is 50 items and the shared hard maximum is 100; preserve the shared limits and validation unless you also update server guardrails, preferences, tests, and UX. Keep metadata (`fileType`, `addedBy`, `sections`) intact when emitting events.
 - **Outputs**: When changing styling logic, update both control panel writers and output readers. `maxLines` autosizing is calculated client-side and mirrored to the control panel via `emitOutputMetrics`.
 - **Background media**: Uploads go to `/api/media/backgrounds` with strict MIME/size filters; cleanup code prunes old files per output. Respect these constraints if adjusting limits.
 - **Authentication**: Desktop tokens require admin key in production; controller tokens require the 6-digit join code plus rate limiting. Maintain these flows when altering auth.
