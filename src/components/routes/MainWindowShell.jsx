@@ -11,7 +11,7 @@ const QRCodeDialogBridge = React.lazy(() => import('../bridges/QRCodeDialogBridg
 const ShortcutsHelpBridge = React.lazy(() => import('../bridges/ShortcutsHelpBridge'));
 const SupportDevelopmentBridge = React.lazy(() => import('../bridges/SupportDevelopmentBridge'));
 const UpdaterBridge = React.lazy(() => import('../bridges/UpdaterBridge'));
-const WelcomeSplashBridge = React.lazy(() => import('../bridges/WelcomeSplashBridge'));
+const FirstRunTourBridge = React.lazy(() => import('../bridges/FirstRunTourBridge'));
 
 function MainWindowBridges() {
   return (
@@ -19,7 +19,7 @@ function MainWindowBridges() {
       <NdiBridge />
       <ElectronModalBridge />
       <JoinCodePromptBridge />
-      <WelcomeSplashBridge />
+      <FirstRunTourBridge />
       <UpdaterBridge />
       <NdiUpdaterBridge />
       <QRCodeDialogBridge />

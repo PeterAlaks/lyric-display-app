@@ -1,10 +1,79 @@
-import { ChevronDown, Edit, FolderOpen, Info, Play, Plus, Sparkles, Square } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronDown, Edit, FolderOpen, Info, MousePointerClick, Play, Plus, Sparkles, Square } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
 import SearchBar from '../SearchBar';
 import LyricsList from '../LyricsList';
 import LyricsDragOverlay from './LyricsDragOverlay';
 import QuickParserPopover from './QuickParserPopover';
+import { FIRST_RUN_TOUR_STEP_EVENT } from '../../utils/firstRunTour';
+
+const TOUR_PREVIEW_LINES = [
+  'Morning breaks with hope anew',
+  'Every heart can find its song',
+  'We lift our voices, clear and strong',
+];
+
+const TourLyricsPreview = ({ darkMode }) => (
+  <div className="flex-1 overflow-hidden p-5" aria-label="Sample lyrics for the product tour">
+    <div className="mx-auto flex h-full max-w-3xl flex-col">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div>
+          <p className={`text-[11px] font-bold uppercase tracking-[0.16em] ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+            Tour preview
+          </p>
+          <h3 className={`mt-1 text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>A sample song</h3>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+          3 lyric groups
+        </span>
+      </div>
+
+      <div className={`mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+        <span>Verse 1</span>
+        <span className={`h-px flex-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+      </div>
+
+      <div className="space-y-2">
+        {TOUR_PREVIEW_LINES.map((line, index) => {
+          const selected = index === 1;
+          return (
+            <div
+              key={line}
+              className={`flex items-center gap-4 rounded-xl border px-4 py-3 transition-colors ${selected
+                ? darkMode
+                  ? 'border-blue-400 bg-blue-500/20 text-white shadow-lg shadow-blue-950/20'
+                  : 'border-blue-500 bg-blue-50 text-blue-950 shadow-sm'
+                : darkMode
+                  ? 'border-gray-700 bg-gray-800/70 text-gray-300'
+                  : 'border-gray-200 bg-white text-gray-700'
+              }`}
+            >
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${selected
+                ? 'bg-blue-600 text-white'
+                : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {index + 1}
+              </span>
+              <span className="min-w-0 flex-1 text-[15px] font-medium">{line}</span>
+              {selected && (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+                  <MousePointerClick className="h-3 w-3" />
+                  Selected
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={`mt-5 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        <MousePointerClick className="h-4 w-4 text-blue-500" />
+        Click a row or use the arrow keys to change the selected lyric group.
+      </div>
+    </div>
+  </div>
+);
 
 const LyricsWorkspace = ({
   addDisabled,
@@ -53,6 +122,14 @@ const LyricsWorkspace = ({
   updateQuickParserSetting,
   useIconOnlyButtons,
 }) => {
+  const [activeTourStep, setActiveTourStep] = useState(null);
+  useEffect(() => {
+    const handleTourStepChange = (event) => setActiveTourStep(event?.detail?.stepId || null);
+    window.addEventListener(FIRST_RUN_TOUR_STEP_EVENT, handleTourStepChange);
+    return () => window.removeEventListener(FIRST_RUN_TOUR_STEP_EVENT, handleTourStepChange);
+  }, []);
+
+  const showTourLyricsPreview = !hasLyrics && activeTourStep === 'workspace';
   const blueHoverClass = darkMode
     ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
     : 'bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
@@ -62,7 +139,7 @@ const LyricsWorkspace = ({
   const actionPadding = useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2';
 
   return (
-    <div className={`flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full ${darkMode ? '' : 'bg-[#f8fafc]'}`}>
+    <div data-tour="lyrics-workspace" className={`flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full ${darkMode ? '' : 'bg-[#f8fafc]'}`}>
     <div className="mb-6 shrink-0 min-w-0" ref={headerContainerRef}>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -244,6 +321,8 @@ const LyricsWorkspace = ({
             maxLinesPerGroup={quickParserSettings.maxLinesPerGroup}
           />
         </div>
+      ) : showTourLyricsPreview ? (
+        <TourLyricsPreview darkMode={darkMode} />
       ) : (
         <div
           className="flex-1 flex items-center justify-center p-4"

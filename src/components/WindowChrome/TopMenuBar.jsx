@@ -6,6 +6,7 @@ import useLyricsStore from '@/context/LyricsStore';
 import useTopMenuState from '@/hooks/WindowChrome/useTopMenuState';
 import useSubMenuListNav from '@/hooks/WindowChrome/useSubmenuListNav';
 import useMenuHandlers from '@/hooks/WindowChrome/useMenuHandlers';
+import { START_FIRST_RUN_TOUR_EVENT } from '@/utils/firstRunTour';
 
 const dragRegion = { WebkitAppRegion: 'drag' };
 const noDrag = { WebkitAppRegion: 'no-drag' };
@@ -19,7 +20,7 @@ const TOP_MENU_CONFIG = {
   output: { count: 6, sub: [] },
   tools: { count: 8, sub: [] },
   window: { count: 3, sub: [] },
-  help: { count: 8, sub: [] },
+  help: { count: 9, sub: [] },
 };
 
 const MenuItem = React.forwardRef(({ label, shortcut, onClick, disabled, active, ...rest }, ref) => (
@@ -301,6 +302,13 @@ const TopMenuBar = () => {
   const handleAbout = () => {
     menuHandlers.handleAbout(appVersion);
   };
+
+  const handleTakeProductTour = useCallback(() => {
+    closeMenu();
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(START_FIRST_RUN_TOUR_EVENT));
+    }, 0);
+  }, [closeMenu]);
 
   const isMaxOrFull = windowState.isMaximized || windowState.isFullScreen;
 
@@ -754,12 +762,13 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('help', 0, el)} label="Documentation" onClick={menuHandlers.handleDocs} active={openMenu === 'help' && activeIndex === 0} />
                 <MenuItem ref={(el) => registerItemRef('help', 1, el)} label="Integration Guide" onClick={menuHandlers.handleIntegrationGuide} active={openMenu === 'help' && activeIndex === 1} />
                 <MenuItem ref={(el) => registerItemRef('help', 2, el)} label="Keyboard Shortcuts" onClick={menuHandlers.handleShortcuts} active={openMenu === 'help' && activeIndex === 2} />
-                <MenuItem ref={(el) => registerItemRef('help', 3, el)} label="GitHub Repository" onClick={menuHandlers.handleRepo} active={openMenu === 'help' && activeIndex === 3} />
+                <MenuItem ref={(el) => registerItemRef('help', 3, el)} label="Take the Product Tour" onClick={handleTakeProductTour} disabled={!isControlPanelRoute} active={openMenu === 'help' && activeIndex === 3} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
+                <MenuItem ref={(el) => registerItemRef('help', 4, el)} label="GitHub Repository" onClick={menuHandlers.handleRepo} active={openMenu === 'help' && activeIndex === 4} />
                 <Separator />
-                <MenuItem ref={(el) => registerItemRef('help', 4, el)} label="More About Author" onClick={() => window.open('https://linktr.ee/peteralaks', '_blank', 'noopener,noreferrer')} active={openMenu === 'help' && activeIndex === 4} />
-                <MenuItem ref={(el) => registerItemRef('help', 5, el)} label="About LyricDisplay" onClick={handleAbout} active={openMenu === 'help' && activeIndex === 5} />
-                <MenuItem ref={(el) => registerItemRef('help', 6, el)} label="Support Development" onClick={menuHandlers.handleSupportDev} active={openMenu === 'help' && activeIndex === 6} />
-                <MenuItem ref={(el) => registerItemRef('help', 7, el)} label="Check for Updates" onClick={menuHandlers.handleCheckUpdates} active={openMenu === 'help' && activeIndex === 7} />
+                <MenuItem ref={(el) => registerItemRef('help', 5, el)} label="More About Author" onClick={() => window.open('https://linktr.ee/peteralaks', '_blank', 'noopener,noreferrer')} active={openMenu === 'help' && activeIndex === 5} />
+                <MenuItem ref={(el) => registerItemRef('help', 6, el)} label="About LyricDisplay" onClick={handleAbout} active={openMenu === 'help' && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('help', 7, el)} label="Support Development" onClick={menuHandlers.handleSupportDev} active={openMenu === 'help' && activeIndex === 7} />
+                <MenuItem ref={(el) => registerItemRef('help', 8, el)} label="Check for Updates" onClick={menuHandlers.handleCheckUpdates} active={openMenu === 'help' && activeIndex === 8} />
               </div>
             )}
           </div>

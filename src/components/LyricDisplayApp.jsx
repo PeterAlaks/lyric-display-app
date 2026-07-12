@@ -460,7 +460,7 @@ const LyricDisplayApp = () => {
             />
 
             {/* Load and Create Buttons */}
-            <div className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
+            <div data-tour="load-lyrics" className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
               <Tooltip content={<span>Load a lyrics file from your computer - <strong>Ctrl+O</strong></span>} side="right">
                 <button
                   className="flex-1 py-3 px-4 bg-linear-to-r from-blue-400 to-purple-600 text-white rounded-2xl text-sm font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
@@ -499,9 +499,10 @@ const LyricDisplayApp = () => {
             )}
 
             {/* Output Toggle */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6" data-tour="master-output">
               <div className="flex items-center gap-4 pl-4">
                 <Switch
+                  aria-label="Toggle display output"
                   checked={isOutputOn}
                   onCheckedChange={handleToggle}
                   className={`
@@ -552,7 +553,7 @@ const LyricDisplayApp = () => {
 
             {/* Output Tabs */}
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
-              <TabsList className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
+              <TabsList data-tour="output-settings" className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
                 {allOutputIds.map((id) => {
                   const num = id.replace('output', '');
                   return (

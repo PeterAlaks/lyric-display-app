@@ -172,6 +172,17 @@
   scrollbar-color: rgba(75, 85, 99, 0.6) transparent;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  [data-first-run-tour="true"] *,
+  [data-first-run-tour="true"] *::before,
+  [data-first-run-tour="true"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 [data-modal-root="true"] .overflow-y-auto,
 [data-modal-root="true"] .overflow-y-scroll {
   overscroll-behavior: contain;

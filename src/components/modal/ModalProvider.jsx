@@ -4,7 +4,6 @@ import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
 import PreviewOutputsModal from '../PreviewOutputsModal';
 import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, LyricVideoStudioHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp } from '../HelpContent';
-import { WelcomeSplash } from '../WelcomeSplash';
 import { IntegrationInstructions } from '../IntegrationInstructions';
 import SongInfoModal from '../SongInfoModal';
 import ProjectOutputModal from '../ProjectOutputModal';
@@ -601,9 +600,6 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'ObsWebSocketHelp' && (
                         <ObsWebSocketHelp darkMode={isDark} />
-                      )}
-                      {modal.component === 'WelcomeSplash' && (
-                        <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />
                       )}
                       {modal.component === 'IntegrationInstructions' && (
                         <IntegrationInstructions
