@@ -7,11 +7,9 @@ import { setDebugLogging } from '../../utils/logger';
 import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '../../utils/lyricDisplayDock';
 
 const AdvancedPreferencesSection = ({
-  commitNumberPreference,
   darkMode,
   formatSecurityDate,
-  getNumberInputValue,
-  handleNumberInputKeyDown,
+  getNumberPreferenceInputProps,
   handleResetCategory,
   handleRotateSecurityTokenKey,
   inputClass,
@@ -23,7 +21,6 @@ const AdvancedPreferencesSection = ({
   securityLoading,
   securityRotating,
   securityStatus,
-  setNumberInputDraft,
   showModal,
   showToast,
   updatePreference,
@@ -336,15 +333,12 @@ const AdvancedPreferencesSection = ({
         min="5000"
         max="60000"
         step="1000"
-        value={getNumberInputValue('advanced', 'connectionTimeout', 10000)}
-        onChange={(e) => setNumberInputDraft('advanced', 'connectionTimeout', e.target.value)}
-        onBlur={() => commitNumberPreference('advanced', 'connectionTimeout', {
+        {...getNumberPreferenceInputProps('advanced', 'connectionTimeout', {
           min: 5000,
           max: 60000,
           fallbackValue: 10000,
           parse: 'int',
         })}
-        onKeyDown={handleNumberInputKeyDown}
         className={inputClass}
       />
     </div>
@@ -356,15 +350,12 @@ const AdvancedPreferencesSection = ({
         min="10000"
         max="120000"
         step="5000"
-        value={getNumberInputValue('advanced', 'heartbeatInterval', 30000)}
-        onChange={(e) => setNumberInputDraft('advanced', 'heartbeatInterval', e.target.value)}
-        onBlur={() => commitNumberPreference('advanced', 'heartbeatInterval', {
+        {...getNumberPreferenceInputProps('advanced', 'heartbeatInterval', {
           min: 10000,
           max: 120000,
           fallbackValue: 30000,
           parse: 'int',
         })}
-        onKeyDown={handleNumberInputKeyDown}
         className={inputClass}
       />
     </div>
@@ -375,15 +366,12 @@ const AdvancedPreferencesSection = ({
         type="number"
         min="3"
         max="20"
-        value={getNumberInputValue('advanced', 'maxConnectionAttempts', 10)}
-        onChange={(e) => setNumberInputDraft('advanced', 'maxConnectionAttempts', e.target.value)}
-        onBlur={() => commitNumberPreference('advanced', 'maxConnectionAttempts', {
+        {...getNumberPreferenceInputProps('advanced', 'maxConnectionAttempts', {
           min: 3,
           max: 20,
           fallbackValue: 10,
           parse: 'int',
         })}
-        onKeyDown={handleNumberInputKeyDown}
         className={inputClass}
       />
       <p className={`text-xs ${mutedClass}`}>After each cycle, LyricDisplay waits briefly and continues retrying so long outages recover automatically.</p>

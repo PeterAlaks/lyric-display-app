@@ -20,6 +20,7 @@ const ExternalControlPreferencesSection = ({
   handleOscRateLimitChange,
   handleOscRemoteAccessToggle,
   handleOscToggle,
+  getNumberPreferenceInputProps,
   inputClass,
   labelClass,
   lastLearnedMidi,
@@ -292,10 +293,15 @@ const ExternalControlPreferencesSection = ({
               <label className={preferenceFieldLabelClass}>Listening Port</label>
               <Input
                 type="number"
-                value={oscStatus?.port || 8000}
-                onChange={(e) => handleOscPortChange(e.target.value)}
                 min="1"
                 max="65535"
+                {...getNumberPreferenceInputProps('externalControl', 'oscPort', {
+                  min: 1,
+                  max: 65535,
+                  fallbackValue: 8000,
+                  currentValue: oscStatus?.port,
+                  parse: 'int',
+                }, handleOscPortChange)}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>Requires restart to take effect</p>
@@ -335,12 +341,16 @@ const ExternalControlPreferencesSection = ({
             <div className="space-y-2">
               <label className={preferenceFieldLabelClass}>Messages per Second</label>
               <Input
-                key={oscStatus?.rateLimit || 30}
                 type="number"
-                defaultValue={oscStatus?.rateLimit || 30}
-                onBlur={(event) => handleOscRateLimitChange(event.target.value)}
                 min="5"
                 max="200"
+                {...getNumberPreferenceInputProps('externalControl', 'oscRateLimit', {
+                  min: 5,
+                  max: 200,
+                  fallbackValue: 30,
+                  currentValue: oscStatus?.rateLimit,
+                  parse: 'int',
+                }, handleOscRateLimitChange)}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>Per-source limit; excess packets are dropped before reaching live controls.</p>
@@ -367,10 +377,15 @@ const ExternalControlPreferencesSection = ({
                 <label className={preferenceFieldLabelClass}>Feedback Port</label>
                 <Input
                   type="number"
-                  value={oscStatus?.feedbackPort || 9000}
-                  onChange={(e) => handleOscFeedbackPortChange(e.target.value)}
                   min="1"
                   max="65535"
+                  {...getNumberPreferenceInputProps('externalControl', 'oscFeedbackPort', {
+                    min: 1,
+                    max: 65535,
+                    fallbackValue: 9000,
+                    currentValue: oscStatus?.feedbackPort,
+                    parse: 'int',
+                  }, handleOscFeedbackPortChange)}
                   className={inputClass}
                 />
               </div>

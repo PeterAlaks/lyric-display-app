@@ -6,6 +6,7 @@ import {
   sanitizeMaxLinesPerGroup,
 } from '../../../shared/lyricsParsing.js';
 import useLyricsStore from '../../context/LyricsStore.js';
+import { RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT } from '../../utils/lyricsReloadEvents.js';
 
 export const useQuickParserControls = ({
   hasLyrics,
@@ -154,6 +155,15 @@ export const useQuickParserControls = ({
       setReloadingWithParser(false);
     }
   }, [hasLyrics, lyricsFileName, lyricsSource, processLoadedLyrics, quickParserSettings, rawLyricsContent, reloadingWithParser, showToast, songFilePath]);
+
+  React.useEffect(() => {
+    const handleReloadRequest = () => {
+      void handleReloadWithQuickParser();
+    };
+
+    window.addEventListener(RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT, handleReloadRequest);
+    return () => window.removeEventListener(RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT, handleReloadRequest);
+  }, [handleReloadWithQuickParser]);
 
   return {
     quickParserOpen,

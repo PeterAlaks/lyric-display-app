@@ -72,10 +72,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   } = usePreferencesPersistence({ showToast });
 
   const {
-    commitNumberPreference,
-    getNumberInputValue,
-    handleNumberInputKeyDown,
-    setNumberInputDraft,
+    getNumberPreferenceInputProps,
   } = useNumberPreferenceDrafts({ preferences, updatePreference });
 
   const {
@@ -425,15 +422,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="2"
                 max="12"
-                value={getNumberInputValue('parsing', 'maxLinesPerGroup', 2)}
-                onChange={(e) => setNumberInputDraft('parsing', 'maxLinesPerGroup', e.target.value)}
-                onBlur={() => commitNumberPreference('parsing', 'maxLinesPerGroup', {
+                {...getNumberPreferenceInputProps('parsing', 'maxLinesPerGroup', {
                   min: 2,
                   max: 12,
                   fallbackValue: 2,
                   parse: 'int',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -463,15 +457,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="20"
                 max="100"
-                value={getNumberInputValue('parsing', 'maxLineLength', 45)}
-                onChange={(e) => setNumberInputDraft('parsing', 'maxLineLength', e.target.value)}
-                onBlur={() => commitNumberPreference('parsing', 'maxLineLength', {
+                {...getNumberPreferenceInputProps('parsing', 'maxLineLength', {
                   min: 20,
                   max: 100,
                   fallbackValue: 45,
                   parse: 'int',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -635,15 +626,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="30"
                 max="120"
-                value={getNumberInputValue('lineSplitting', 'targetLength', 60)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'targetLength', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'targetLength', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'targetLength', {
                   min: 30,
                   max: 120,
                   fallbackValue: 60,
                   parse: 'int',
                 }, (value) => commitLineSplittingPreference('targetLength', value))}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -658,15 +646,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="20"
                 max="80"
-                value={getNumberInputValue('lineSplitting', 'minLength', 40)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'minLength', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'minLength', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'minLength', {
                   min: 20,
                   max: 80,
                   fallbackValue: 40,
                   parse: 'int',
                 }, (value) => commitLineSplittingPreference('minLength', value))}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -681,15 +666,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="50"
                 max="150"
-                value={getNumberInputValue('lineSplitting', 'maxLength', 80)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'maxLength', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'maxLength', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'maxLength', {
                   min: 50,
                   max: 150,
                   fallbackValue: 80,
                   parse: 'int',
                 }, (value) => commitLineSplittingPreference('maxLength', value))}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -704,15 +686,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="5"
                 max="30"
-                value={getNumberInputValue('lineSplitting', 'overflowTolerance', 15)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'overflowTolerance', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'overflowTolerance', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'overflowTolerance', {
                   min: 5,
                   max: 30,
                   fallbackValue: 15,
                   parse: 'int',
                 }, (value) => commitLineSplittingPreference('overflowTolerance', value))}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -771,15 +750,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="5"
                 max="50"
-                value={getNumberInputValue('fileHandling', 'maxRecentFiles', 10)}
-                onChange={(e) => setNumberInputDraft('fileHandling', 'maxRecentFiles', e.target.value)}
-                onBlur={() => commitNumberPreference('fileHandling', 'maxRecentFiles', {
+                {...getNumberPreferenceInputProps('fileHandling', 'maxRecentFiles', {
                   min: 5,
                   max: 50,
                   fallbackValue: 10,
                   parse: 'int',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -793,15 +769,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min={MIN_SETLIST_ITEMS}
                 max={MAX_SETLIST_ITEMS}
-                value={getNumberInputValue('fileHandling', 'maxSetlistFiles', DEFAULT_SETLIST_ITEMS)}
-                onChange={(e) => setNumberInputDraft('fileHandling', 'maxSetlistFiles', e.target.value)}
-                onBlur={() => commitNumberPreference('fileHandling', 'maxSetlistFiles', {
+                {...getNumberPreferenceInputProps('fileHandling', 'maxSetlistFiles', {
                   min: MIN_SETLIST_ITEMS,
                   max: MAX_SETLIST_ITEMS,
                   fallbackValue: DEFAULT_SETLIST_ITEMS,
                   parse: 'int',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -824,15 +797,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 min="1"
                 max="10"
                 step="0.5"
-                value={getNumberInputValue('fileHandling', 'maxFileSize', 2)}
-                onChange={(e) => setNumberInputDraft('fileHandling', 'maxFileSize', e.target.value)}
-                onBlur={() => commitNumberPreference('fileHandling', 'maxFileSize', {
+                {...getNumberPreferenceInputProps('fileHandling', 'maxFileSize', {
                   min: 1,
                   max: 10,
                   fallbackValue: 2,
                   parse: 'float',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -859,6 +829,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             handleOscRateLimitChange={handleOscRateLimitChange}
             handleOscRemoteAccessToggle={handleOscRemoteAccessToggle}
             handleOscToggle={handleOscToggle}
+            getNumberPreferenceInputProps={getNumberPreferenceInputProps}
             inputClass={inputClass}
             labelClass={labelClass}
             lastLearnedMidi={lastLearnedMidi}
@@ -927,15 +898,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="1"
                 max="60"
-                value={getNumberInputValue('autoplay', 'defaultInterval', 5)}
-                onChange={(e) => setNumberInputDraft('autoplay', 'defaultInterval', e.target.value)}
-                onBlur={() => commitNumberPreference('autoplay', 'defaultInterval', {
+                {...getNumberPreferenceInputProps('autoplay', 'defaultInterval', {
                   min: 1,
                   max: 60,
                   fallbackValue: 5,
                   parse: 'int',
                 }, (value) => updateAutoplaySetting('defaultInterval', value))}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -996,11 +964,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'advanced':
         return (
           <AdvancedPreferencesSection
-            commitNumberPreference={commitNumberPreference}
             darkMode={darkMode}
             formatSecurityDate={formatSecurityDate}
-            getNumberInputValue={getNumberInputValue}
-            handleNumberInputKeyDown={handleNumberInputKeyDown}
+            getNumberPreferenceInputProps={getNumberPreferenceInputProps}
             handleResetCategory={handleResetCategory}
             handleRotateSecurityTokenKey={handleRotateSecurityTokenKey}
             inputClass={inputClass}
@@ -1012,7 +978,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             securityLoading={securityLoading}
             securityRotating={securityRotating}
             securityStatus={securityStatus}
-            setNumberInputDraft={setNumberInputDraft}
             showModal={showModal}
             showToast={showToast}
             updatePreference={updatePreference}

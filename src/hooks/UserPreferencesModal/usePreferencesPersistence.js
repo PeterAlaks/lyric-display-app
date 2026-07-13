@@ -4,6 +4,7 @@ import { loadAdvancedSettings } from '../../utils/connectionManager';
 import { loadDebugLoggingPreference } from '../../utils/logger';
 import { LIVE_SAFETY_PREFERENCE_EVENT } from '../useLiveSafetyBridge';
 import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing.js';
+import { requestLyricsReloadWithCurrentParser } from '../../utils/lyricsReloadEvents.js';
 
 export const usePreferencesPersistence = ({ showToast }) => {
   const [preferences, setPreferences] = useState(null);
@@ -87,13 +88,16 @@ export const usePreferencesPersistence = ({ showToast }) => {
       if (lyricsLayoutChangedRef.current) {
         const hasLoadedLyrics = (useLyricsStore.getState().lyrics?.length || 0) > 0;
         showToastRef.current?.({
-          title: 'Lyrics parsing settings changed',
+          title: 'Lyrics parsing updated',
           message: hasLoadedLyrics
-            ? 'Reload Lyrics to apply the new grouping and splitting settings to the current song.'
-            : 'The new grouping and splitting settings will apply the next time lyrics are loaded.',
+            ? 'Apply changes to this song?'
+            : 'Applies on the next lyric load.',
           variant: 'info',
           duration: 6500,
           dedupeKey: 'lyrics-parsing-settings-changed',
+          actions: hasLoadedLyrics
+            ? [{ label: 'Reload Lyrics', onClick: requestLyricsReloadWithCurrentParser }]
+            : [],
         });
       }
     };
