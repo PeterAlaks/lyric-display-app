@@ -21,3 +21,14 @@ export function isNormalGroupCandidate(line, config = null) {
   const maxLength = effectiveConfig.maxLineLength ?? NORMAL_GROUP_CONFIG.MAX_LINE_LENGTH;
   return trimmed.length <= maxLength;
 }
+
+/**
+ * Manual grouping uses the configured eligibility limits without treating the
+ * automatic-grouping toggle as a UI lockout.
+ */
+export function isManualNormalGroupCandidate(line, config = null) {
+  return isNormalGroupCandidate(line, {
+    ...(config || getEffectiveGroupingConfig()),
+    enableAutoLineGrouping: true,
+  });
+}

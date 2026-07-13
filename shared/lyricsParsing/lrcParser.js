@@ -19,7 +19,7 @@ import { deriveSectionsFromProcessedLines } from './sections.js';
  * @returns {{ text: string, t: number|null }[]}
  */
 function applyIntelligentSplittingWithTimestamps(entries = [], options = {}) {
-  const { enableSplitting = true, splitConfig = {} } = options;
+  const { enableSplitting = true, splitConfig = {}, groupingConfig = {} } = options;
 
   if (!enableSplitting) return entries;
 
@@ -49,7 +49,26 @@ function applyIntelligentSplittingWithTimestamps(entries = [], options = {}) {
     }
 
     const segments = splitLongLine(trimmed, splitConfig);
-    segments.forEach((seg) => result.push({ text: seg, t: entry.t, enhancedTimestamps: [] }));
+    const maxLinesPerGroup = sanitizeMaxLinesPerGroup(groupingConfig.maxLinesPerGroup);
+    if (
+      segments.length < 2
+      || !groupingConfig.enableAutoLineGrouping
+      || segments.length > maxLinesPerGroup
+      || !segments.every((segment) => isNormalGroupCandidate(segment, groupingConfig))
+    ) {
+      result.push({ ...entry, text: trimmed, enhancedTimestamps: entry.enhancedTimestamps || [] });
+      continue;
+    }
+
+    const splitSourceId = `lrc_split_${i}`;
+    segments.forEach((segment, splitSegmentIndex) => result.push({
+      text: segment,
+      t: entry.t,
+      enhancedTimestamps: [],
+      splitSourceId,
+      splitSegmentIndex,
+      splitSegmentCount: segments.length,
+    }));
   }
 
   return result;
@@ -145,9 +164,12 @@ export function parseLrcContent(rawText = '', options = {}) {
       uniqueEntries.push(entry);
     }
 
-    const splitEntries = applyIntelligentSplittingWithTimestamps(uniqueEntries, { enableSplitting, splitConfig });
-
     const config = getEffectiveGroupingConfig();
+    const splitEntries = applyIntelligentSplittingWithTimestamps(uniqueEntries, {
+      enableSplitting,
+      splitConfig,
+      groupingConfig: config,
+    });
     const enableTranslationGrouping = config.enableTranslationGrouping;
     const enableAutoLineGrouping = config.enableAutoLineGrouping;
     const maxLinesPerGroup = sanitizeMaxLinesPerGroup(config.maxLinesPerGroup);
@@ -161,7 +183,26 @@ export function parseLrcContent(rawText = '', options = {}) {
       const nextIsTranslation = next && isTranslationLine(next.text);
       const sameTimestamp = next && main.t === next.t;
 
-      if (enableTranslationGrouping && next && nextIsTranslation && !isTranslationLine(main.text) && sameTimestamp) {
+      if (main.splitSourceId) {
+        const splitSiblings = [];
+        let splitIndex = i;
+        while (
+          splitIndex < splitEntries.length
+          && splitEntries[splitIndex].splitSourceId === main.splitSourceId
+        ) {
+          splitSiblings.push(splitEntries[splitIndex]);
+          splitIndex += 1;
+        }
+
+        grouped.push(createNormalGroup(
+          splitSiblings.map((entry) => entry.text),
+          'lrc_split_group',
+          i
+        ));
+        groupedTimestamps.push(main.t !== undefined ? main.t : null);
+        groupedEnhancedTimestamps.push(splitSiblings.map((entry) => entry.enhancedTimestamps || []));
+        i = splitIndex - 1;
+      } else if (enableTranslationGrouping && next && nextIsTranslation && !isTranslationLine(main.text) && sameTimestamp) {
         grouped.push({
           type: 'group',
           id: `lrc_group_${i}`,

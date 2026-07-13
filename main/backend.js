@@ -34,6 +34,15 @@ function appendTail(current, chunk) {
   return next.length > BACKEND_TAIL_LIMIT ? next.slice(-BACKEND_TAIL_LIMIT) : next;
 }
 
+function serializeParsingConfig(config) {
+  try {
+    return JSON.stringify(config && typeof config === 'object' ? config : {});
+  } catch (error) {
+    console.warn('[Backend] Failed to serialize lyrics parsing configuration:', error.message);
+    return '{}';
+  }
+}
+
 function getRecentRestartAttempts() {
   const now = Date.now();
   backendRestartAttempts = backendRestartAttempts.filter((timestamp) => now - timestamp < BACKEND_RESTART_WINDOW_MS);
@@ -129,9 +138,12 @@ async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
   return false;
 }
 
-export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false } = {}) {
+export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false, parsingConfig = null } = {}) {
   return new Promise((resolve, reject) => {
     if (backendProcess && !backendProcess.killed) {
+      if (parsingConfig) {
+        syncBackendParsingConfig(parsingConfig);
+      }
       if (obsDockPairingToken) {
         registerObsDockPairingToken(obsDockPairingToken);
       }
@@ -147,7 +159,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       return;
     }
 
-    lastStartOptions = { allowLocalObsDockAuth };
+    lastStartOptions = { allowLocalObsDockAuth, parsingConfig };
     backendStopRequested = false;
     if (backendRestartTimer) {
       clearTimeout(backendRestartTimer);
@@ -166,6 +178,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         LYRICDISPLAY_DATA_DIR: backendDataDir,
         LYRICDISPLAY_USER_DATA_DIR: userDataDir,
         LYRICDISPLAY_APP_SESSION_ID: backendAppSessionId,
+        LYRICDISPLAY_PARSING_CONFIG: serializeParsingConfig(parsingConfig),
         LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
         LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },
@@ -373,6 +386,19 @@ export function registerObsDockPairingToken(token) {
     return true;
   } catch (error) {
     console.warn('[Backend] Failed to send LyricDisplay Dock pairing token:', error);
+    return false;
+  }
+}
+
+export function syncBackendParsingConfig(config) {
+  lastStartOptions = { ...lastStartOptions, parsingConfig: config };
+  if (!backendProcess || backendProcess.killed) return false;
+
+  try {
+    backendProcess.send({ type: 'lyrics-parsing-config', config });
+    return true;
+  } catch (error) {
+    console.warn('[Backend] Failed to synchronize lyrics parsing configuration:', error);
     return false;
   }
 }

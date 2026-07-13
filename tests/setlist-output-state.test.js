@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createGroupingPlan } from '../shared/lyricsParsing.js';
 import {
   createDefaultOutputSettings,
   createOutputSlice,
@@ -10,6 +11,10 @@ import { registerConnectionHandlers } from '../server/realtime/handlers/connecti
 import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerOutputHandlers } from '../server/realtime/handlers/outputHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
+import {
+  getLyricsParsingConfig,
+  setLyricsParsingConfig,
+} from '../server/realtime/lyricsParsingConfig.js';
 import {
   applySessionSnapshot,
   createSessionSnapshot,
@@ -168,6 +173,105 @@ test('setlistLoad emits parsed LRC lyrics, timestamps, sections, and editable ra
     state.currentSongMetadata = previousSongMetadata;
     state.currentLyricsSections = previousSections;
     state.currentLineToSection = previousLineToSection;
+  }
+});
+
+test('setlistLoad applies the desktop line-length preference instead of the server default', () => {
+  const previousConfig = getLyricsParsingConfig();
+  const previousState = {
+    connectedClients: state.connectedClients,
+    setlistFiles: state.setlistFiles,
+    currentLyrics: state.currentLyrics,
+    currentLyricsTimestamps: state.currentLyricsTimestamps,
+    currentLyricsEnhancedTimestamps: state.currentLyricsEnhancedTimestamps,
+    currentLyricsFileName: state.currentLyricsFileName,
+    currentRawLyricsContent: state.currentRawLyricsContent,
+    currentLyricsSource: state.currentLyricsSource,
+    currentSongMetadata: state.currentSongMetadata,
+    currentSelectedLine: state.currentSelectedLine,
+    currentLyricsSections: state.currentLyricsSections,
+    currentLineToSection: state.currentLineToSection,
+  };
+
+  const content = [
+    'CCLI SONG #426298 CCLI LICENSE #1259902',
+    '',
+    '© 1990 MERCY / VINEYARD PUBLISHING; VINEYARD SONGS CANADA',
+    '',
+    'CHORUS',
+    '',
+    "REFINER'S FIRE MY HEART'S ONE DESIRE",
+    'IS TO BE HOLY SET APART FOR YOU LORD',
+    '',
+    'I CHOOSE TO BE HOLY SET APART FOR YOU MY MASTER',
+    '',
+    'READY TO DO YOUR WILL',
+  ].join('\n');
+
+  state.connectedClients = new Map();
+  state.setlistFiles = [{
+    id: 'setlist_refiners_fire',
+    displayName: "Refiner's Fire",
+    originalName: "Refiner's Fire.txt",
+    fileType: 'txt',
+    content,
+    metadata: null,
+  }];
+  setLyricsParsingConfig({
+    enableSplitting: false,
+    normalGroupConfig: {
+      ENABLED: true,
+      MAX_LINE_LENGTH: 60,
+      MAX_LINES_PER_GROUP: 2,
+      CROSS_BLANK_LINE_GROUPING: true,
+    },
+    enableTranslationGrouping: true,
+    structureTagsConfig: { MODE: 'isolate' },
+  });
+
+  try {
+    assert.equal(
+      buildCurrentState({ type: 'mobile', purpose: 'control' }).lyricsParsingOptions.groupingConfig.maxLineLength,
+      60
+    );
+    assert.equal(
+      buildCurrentState({ type: 'mobile', purpose: 'control' }).lyricsParsingOptions.groupingConfig.maxLinesPerGroup,
+      2
+    );
+    assert.equal(
+      buildCurrentState({ type: 'mobile', purpose: 'control' }).lyricsParsingOptions.enableSplitting,
+      false
+    );
+
+    const { handlers, io, socket } = createSocketHarness();
+    registerSetlistHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'lyrics:write',
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    handlers.get('setlistLoad')?.('setlist_refiners_fire');
+
+    assert.equal(state.currentLyrics.length, 4);
+    assert.deepEqual(state.currentLyrics[0].lines, [
+      'CCLI SONG #426298 CCLI LICENSE #1259902',
+      '© 1990 MERCY / VINEYARD PUBLISHING; VINEYARD SONGS CANADA',
+    ]);
+    assert.equal(state.currentLyrics[1], 'CHORUS');
+    assert.deepEqual(state.currentLyrics[2].lines, [
+      "REFINER'S FIRE MY HEART'S ONE DESIRE",
+      'IS TO BE HOLY SET APART FOR YOU LORD',
+    ]);
+    assert.deepEqual(state.currentLyrics[3].lines, [
+      'I CHOOSE TO BE HOLY SET APART FOR YOU MY MASTER',
+      'READY TO DO YOUR WILL',
+    ]);
+  } finally {
+    setLyricsParsingConfig(previousConfig);
+    Object.assign(state, previousState);
   }
 });
 
@@ -504,10 +608,14 @@ test('setlistItemUpdate refreshes the stored song in place and subsequent loads 
       fileId: 'setlist_edit_target',
       file: {
         name: 'Editable Song.txt',
-        content: '[#:LyricDisplay grouping=explicit]\nEdited first line\n\nEdited second line',
+        content: 'Edited first line\n\nEdited second line',
         fileType: 'txt',
         lastModified: 200,
-        metadata: { filePath: 'C:\\Lyrics\\Editable Song.txt', source: 'test' },
+        metadata: {
+          filePath: 'C:\\Lyrics\\Editable Song.txt',
+          source: 'test',
+          groupingPlan: createGroupingPlan(['Edited first line', 'Edited second line']),
+        },
       },
     }, (result) => {
       updateResult = result;

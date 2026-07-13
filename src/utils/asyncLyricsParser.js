@@ -131,6 +131,11 @@ const parseViaElectronIPC = async (file, options) => {
     path: filePath,
     rawText,
     rawBytes,
+    enableSplitting: options.enableSplitting,
+    splitConfig: options.splitConfig,
+    groupingConfig: options.groupingConfig,
+    groupingPlan: options.groupingPlan,
+    ignoreSavedGroupingPlan: options.ignoreSavedGroupingPlan,
   };
 
   try {
@@ -160,6 +165,7 @@ const parseViaWorker = (file, options) => {
       enableSplitting: options.enableSplitting,
       splitConfig: options.splitConfig,
       groupingConfig: options.groupingConfig,
+      groupingPlan: options.groupingPlan,
     },
   });
 
@@ -171,6 +177,7 @@ const parseSynchronously = async (file, options) => {
     enableSplitting: options.enableSplitting,
     splitConfig: options.splitConfig,
     groupingConfig: options.groupingConfig,
+    groupingPlan: options.groupingPlan,
   };
 
   if (!['txt', 'lrc'].includes(options.fileType)) {
@@ -225,7 +232,6 @@ export async function parseLyricsFileAsync(file, options = {}) {
     ...options,
     fileType,
     name: options.name || file?.name || '',
-    enableSplitting: options.enableSplitting ?? false,
     splitConfig: options.splitConfig || {},
   };
 

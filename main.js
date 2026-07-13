@@ -14,7 +14,13 @@ import { handleDisplayChange } from './main/displayDetection.js';
 import { performStartupSequence } from './main/startup.js';
 import { performCleanup } from './main/cleanup.js';
 import { createLoadingWindow } from './main/loadingWindow.js';
-import { backendAppSessionId, registerObsDockPairingToken, setBackendMessageHandler, setBackendStatusHandler } from './main/backend.js';
+import {
+  backendAppSessionId,
+  registerObsDockPairingToken,
+  setBackendMessageHandler,
+  setBackendStatusHandler,
+  syncBackendParsingConfig,
+} from './main/backend.js';
 import { setAdminKeyFromBackend } from './main/adminKey.js';
 import { relaunchInDesktopMode, relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
 import * as userPreferences from './main/userPreferences.js';
@@ -401,7 +407,8 @@ registerIpcHandlers({
   updateDarkModeMenu: menuAPI.updateDarkModeMenu,
   updateUndoRedoState: menuAPI.updateUndoRedoState,
   checkForUpdates,
-  requestRendererModal
+  requestRendererModal,
+  syncBackendParsingConfig,
 });
 registerInAppBrowserIpc();
 

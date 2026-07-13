@@ -1,3 +1,5 @@
+import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing.js';
+
 let maxFileSizeLimit = 2;
 
 export const createPreferencesSlice = (set) => ({
@@ -11,6 +13,7 @@ export const createPreferencesSlice = (set) => ({
   formattingCapitalizeReligiousTerms: true,
   formattingNormalizeTypographicChars: true,
   maxFileSizeLimit: 2,
+  lyricsParsingOptions: normalizeLyricsParsingOptions(),
 
   setShowTooltips: (show) => set({ showTooltips: show }),
   setShowTutorialPopovers: (show) => set({ showTutorialPopovers: show }),
@@ -21,6 +24,9 @@ export const createPreferencesSlice = (set) => ({
   setFormattingCapitalizeFirstLetter: (enabled) => set({ formattingCapitalizeFirstLetter: enabled }),
   setFormattingCapitalizeReligiousTerms: (enabled) => set({ formattingCapitalizeReligiousTerms: enabled }),
   setFormattingNormalizeTypographicChars: (enabled) => set({ formattingNormalizeTypographicChars: enabled }),
+  setLyricsParsingOptions: (options) => set({
+    lyricsParsingOptions: normalizeLyricsParsingOptions(options),
+  }),
 
   getMaxFileSize: () => maxFileSizeLimit,
 

@@ -167,6 +167,8 @@ channels:
         $ref: '#/components/messages/actionLogSnapshot'
       actionLogUpdate:
         $ref: '#/components/messages/actionLogUpdate'
+      lyricsParsingOptionsUpdate:
+        $ref: '#/components/messages/lyricsParsingOptionsUpdate'
 
 operations:
   clientEvents:
@@ -252,9 +254,60 @@ operations:
       - $ref: '#/channels/socketChannel/messages/liveSafetyBlocked'
       - $ref: '#/channels/socketChannel/messages/actionLogSnapshot'
       - $ref: '#/channels/socketChannel/messages/actionLogUpdate'
+      - $ref: '#/channels/socketChannel/messages/lyricsParsingOptionsUpdate'
 
 components:
   schemas:
+    LyricsGroupingConfig:
+      type: object
+      properties:
+        enableAutoLineGrouping:
+          type: boolean
+        enableTranslationGrouping:
+          type: boolean
+        maxLineLength:
+          type: integer
+          minimum: 20
+          maximum: 100
+        maxLinesPerGroup:
+          type: integer
+          minimum: 2
+          maximum: 12
+        enableCrossBlankLineGrouping:
+          type: boolean
+        structureTagMode:
+          type: string
+          enum: [isolate, strip, keep]
+    LyricsSplitConfig:
+      type: object
+      required: [TARGET_LENGTH, MIN_LENGTH, MAX_LENGTH, OVERFLOW_TOLERANCE]
+      properties:
+        TARGET_LENGTH:
+          type: integer
+          minimum: 20
+          maximum: 150
+        MIN_LENGTH:
+          type: integer
+          minimum: 20
+          maximum: 80
+        MAX_LENGTH:
+          type: integer
+          minimum: 50
+          maximum: 150
+        OVERFLOW_TOLERANCE:
+          type: integer
+          minimum: 5
+          maximum: 30
+    LyricsParsingOptions:
+      type: object
+      required: [enableSplitting, splitConfig, groupingConfig]
+      properties:
+        enableSplitting:
+          type: boolean
+        splitConfig:
+          $ref: '#/components/schemas/LyricsSplitConfig'
+        groupingConfig:
+          $ref: '#/components/schemas/LyricsGroupingConfig'
     LyricLine:
       oneOf:
         - type: string
@@ -812,6 +865,10 @@ components:
       name: actionLogUpdate
       payload:
         $ref: '#/components/schemas/ActionLogEntry'
+    lyricsParsingOptionsUpdate:
+      name: lyricsParsingOptionsUpdate
+      payload:
+        $ref: '#/components/schemas/LyricsParsingOptions'
     authError:
       name: authError
       payload:
@@ -857,6 +914,8 @@ components:
             type: boolean
           lyricsFileName:
             type: string
+          lyricsParsingOptions:
+            $ref: '#/components/schemas/LyricsParsingOptions'
           isDesktopClient:
             type: boolean
           clientPermissions:

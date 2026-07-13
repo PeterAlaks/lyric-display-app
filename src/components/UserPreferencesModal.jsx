@@ -34,6 +34,7 @@ import AdvancedPreferencesSection from './UserPreferencesModal/AdvancedPreferenc
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
+import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing.js';
 
 // Category definitions
 const CATEGORIES = [
@@ -67,6 +68,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     setOscStatus,
     updateNestedPreference,
     updatePreference,
+    updatePreferenceGroup,
   } = usePreferencesPersistence({ showToast });
 
   const {
@@ -155,6 +157,22 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const preferenceFieldLabelClass = `block mb-1.5 text-sm font-medium ${labelClass}`;
   const preferenceToggleRowClass = "flex items-center justify-between gap-6 [&>button]:shrink-0";
   const preferenceToggleTextClass = "min-w-0 flex-1";
+  const splitMinimum = Number(preferences?.lineSplitting?.minLength ?? 40);
+  const splitTarget = Number(preferences?.lineSplitting?.targetLength ?? 60);
+  const splitMaximum = Number(preferences?.lineSplitting?.maxLength ?? 80);
+  const hasInvalidSplitRelationship = splitMinimum > splitTarget || splitTarget > splitMaximum;
+  const commitLineSplittingPreference = (key, value) => {
+    const normalized = normalizeLineSplittingConfig({
+      ...(preferences?.lineSplitting || {}),
+      [key]: value,
+    });
+    updatePreferenceGroup('lineSplitting', {
+      targetLength: normalized.TARGET_LENGTH,
+      minLength: normalized.MIN_LENGTH,
+      maxLength: normalized.MAX_LENGTH,
+      overflowTolerance: normalized.OVERFLOW_TOLERANCE,
+    });
+  };
 
   // Render category content
   const renderCategoryContent = () => {
@@ -381,6 +399,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'parsing':
         return (
           <div className="space-y-6">
+            <div className={`rounded-lg border px-3 py-2 text-xs ${darkMode ? 'border-blue-800 bg-blue-950/30 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+              Line splitting runs first. Every resulting line must still satisfy the grouping length and group-size limits below; split fragments that do not qualify are kept separate from unrelated lyrics.
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Auto Line Grouping</label>
@@ -397,29 +419,27 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            {(preferences.parsing?.enableAutoLineGrouping ?? true) && (
-              <div className="space-y-2">
-                <label className={preferenceFieldLabelClass}>Maximum Number of Lines to Group</label>
-                <Input
-                  type="number"
-                  min="2"
-                  max="12"
-                  value={getNumberInputValue('parsing', 'maxLinesPerGroup', 2)}
-                  onChange={(e) => setNumberInputDraft('parsing', 'maxLinesPerGroup', e.target.value)}
-                  onBlur={() => commitNumberPreference('parsing', 'maxLinesPerGroup', {
-                    min: 2,
-                    max: 12,
-                    fallbackValue: 2,
-                    parse: 'int',
-                  })}
-                  onKeyDown={handleNumberInputKeyDown}
-                  className={inputClass}
-                />
-                <p className={`text-xs ${mutedClass}`}>
-                  Parser groups up to this many consecutive normal lines
-                </p>
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className={preferenceFieldLabelClass}>Maximum Number of Lines per Group</label>
+              <Input
+                type="number"
+                min="2"
+                max="12"
+                value={getNumberInputValue('parsing', 'maxLinesPerGroup', 2)}
+                onChange={(e) => setNumberInputDraft('parsing', 'maxLinesPerGroup', e.target.value)}
+                onBlur={() => commitNumberPreference('parsing', 'maxLinesPerGroup', {
+                  min: 2,
+                  max: 12,
+                  fallbackValue: 2,
+                  parse: 'int',
+                })}
+                onKeyDown={handleNumberInputKeyDown}
+                className={inputClass}
+              />
+              <p className={`text-xs ${mutedClass}`}>
+                Used by automatic parsing and manual grouping in the lyrics list
+              </p>
+            </div>
 
             <div className="flex items-center justify-between">
               <div>
@@ -455,7 +475,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Lines shorter than this will be considered for auto-grouping
+                Eligibility limit for automatic parsing and manual grouping in the lyrics list
               </p>
             </div>
 
@@ -467,6 +487,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.parsing?.enableCrossBlankLineGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableCrossBlankLineGrouping', checked)}
+                disabled={!(preferences.parsing?.enableAutoLineGrouping ?? true)}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                   : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -581,6 +602,17 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'lineSplitting':
         return (
           <div className="space-y-6">
+            <div className={`rounded-lg border px-3 py-2 text-xs ${darkMode ? 'border-blue-800 bg-blue-950/30 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+              These values are applied before lyric grouping. The parser keeps the effective order Minimum ≤ Target ≤ Maximum while preserving every setting here as user-configurable.
+            </div>
+
+            {hasInvalidSplitRelationship && (
+              <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${darkMode ? 'border-amber-700 bg-amber-950/30 text-amber-200' : 'border-amber-300 bg-amber-50 text-amber-800'}`}>
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>The current values overlap. Parsing will safely constrain the target between the configured minimum and maximum.</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Enable Line Splitting</label>
@@ -610,13 +642,13 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   max: 120,
                   fallbackValue: 60,
                   parse: 'int',
-                })}
+                }, (value) => commitLineSplittingPreference('targetLength', value))}
                 onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
               <p className={`text-xs ${mutedClass}`}>
-                Ideal character count per line
+                Ideal character count per line; related limits are reconciled when changed
               </p>
             </div>
 
@@ -633,7 +665,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   max: 80,
                   fallbackValue: 40,
                   parse: 'int',
-                })}
+                }, (value) => commitLineSplittingPreference('minLength', value))}
                 onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
@@ -656,7 +688,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   max: 150,
                   fallbackValue: 80,
                   parse: 'int',
-                })}
+                }, (value) => commitLineSplittingPreference('maxLength', value))}
                 onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
@@ -679,7 +711,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   max: 30,
                   fallbackValue: 15,
                   parse: 'int',
-                })}
+                }, (value) => commitLineSplittingPreference('overflowTolerance', value))}
                 onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}

@@ -5,6 +5,7 @@ import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 import useLyricsStore from '../context/LyricsStore';
+import { mergeLyricsParsingOptions } from '../../shared/lyricsParsing.js';
 import {
   getLyricFormatLabel,
   getLyricOriginLabel,
@@ -17,6 +18,7 @@ const useFileUpload = () => {
   const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
   const maxFileSize = useLyricsStore((state) => state.maxFileSizeLimit);
+  const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
 
   const MAX_FILE_SIZE_BYTES = maxFileSize * 1024 * 1024;
 
@@ -36,9 +38,11 @@ const useFileUpload = () => {
       const fileType = format.fileType;
       const isLrc = fileType === 'lrc';
 
+      const parsingOptions = mergeLyricsParsingOptions(lyricsParsingOptions, additionalOptions);
       const parsed = await parseLyricsFileAsync(file, {
+        ...additionalOptions,
+        ...parsingOptions,
         fileType,
-        ...additionalOptions
       });
       if (!parsed || !Array.isArray(parsed.processedLines)) {
         throw new Error('Invalid lyrics parse response');
@@ -73,6 +77,7 @@ const useFileUpload = () => {
         filePath,
         fileName: file.name,
         setlistItemId: additionalOptions.setlistItemId || null,
+        ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
       });
 
       const detected = detectArtistFromFilename(baseName);
@@ -85,6 +90,7 @@ const useFileUpload = () => {
           title: providedMetadata.title || detected.title || baseName,
           lyricLines: parsed.processedLines.length,
           filePath,
+          ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
         }
         : {
           title: detected.title || baseName,
@@ -93,7 +99,8 @@ const useFileUpload = () => {
           year: null,
           lyricLines: parsed.processedLines.length,
           origin: getLyricOriginLabel(fileType),
-          filePath
+          filePath,
+          ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
         };
       setSongMetadata(metadata);
 
@@ -107,6 +114,7 @@ const useFileUpload = () => {
           filePath,
           fileName: file.name,
           setlistItemId: additionalOptions.setlistItemId || null,
+          ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
         },
         songMetadata: metadata,
         lyricsTimestamps: parsed.timestamps || [],
@@ -145,7 +153,7 @@ const useFileUpload = () => {
       showToast({ title: 'Failed to load file', message: 'Please check the file and try again.', variant: 'error' });
       return false;
     }
-  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, emitLyricsLoad, socket, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
+  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, emitLyricsLoad, lyricsParsingOptions, socket, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
 
   return handleFileUpload;
 };

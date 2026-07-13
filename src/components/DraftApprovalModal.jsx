@@ -5,8 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useControlSocket } from '../context/ControlSocketProvider';
 import { useLyricsState } from '../hooks/useStoreSelectors';
 import useToast from '../hooks/useToast';
-import { processRawTextToLines } from '../utils/parseLyrics';
-import { parseLrcText } from '../utils/parseLrc';
+import { parseLrcContent, parseTxtContent } from '../../shared/lyricsParsing.js';
+import useLyricsStore from '../context/LyricsStore.js';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
 
@@ -28,6 +28,23 @@ const DraftApprovalModal = ({ darkMode }) => {
     const { emitLyricsDraftApprove, emitLyricsDraftReject } = useControlSocket();
     const { setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine } = useLyricsState();
     const { showToast } = useToast();
+    const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
+
+    const parseDraft = useCallback((rawText = '') => {
+        const hasLrcTimestamps = /[\[<]\d{1,2}:\d{2}(?:\.\d{1,3})?[\]>]/.test(String(rawText).trim());
+        return hasLrcTimestamps
+            ? parseLrcContent(rawText, lyricsParsingOptions)
+            : parseTxtContent(rawText, lyricsParsingOptions);
+    }, [lyricsParsingOptions]);
+
+    const resolveDraftParsing = useCallback((draft) => {
+        if (typeof draft?.rawText === 'string') return parseDraft(draft.rawText);
+        return {
+            processedLines: Array.isArray(draft?.processedLines) ? draft.processedLines : [],
+            timestamps: [],
+            enhancedTimestamps: [],
+        };
+    }, [parseDraft]);
 
     useEffect(() => {
         const handleDraftReceived = (event) => {
@@ -91,21 +108,10 @@ const DraftApprovalModal = ({ darkMode }) => {
         setIsProcessing(true);
 
         try {
-            const processedLines = currentDraft.processedLines || processRawTextToLines(currentDraft.rawText);
-
-            const hasLrcTimestamps = /[\[<]\d{1,2}:\d{2}(?:\.\d{1,3})?[\]>]/.test((currentDraft.rawText || '').trim());
-            let timestamps = [];
-            let enhancedTimestamps = [];
-
-            if (hasLrcTimestamps) {
-                try {
-                    const parsed = parseLrcText(currentDraft.rawText);
-                    timestamps = parsed.timestamps || [];
-                    enhancedTimestamps = parsed.enhancedTimestamps || [];
-                } catch (error) {
-                    console.warn('Failed to parse LRC timestamps from draft:', error);
-                }
-            }
+            const parsed = resolveDraftParsing(currentDraft);
+            const processedLines = parsed.processedLines || [];
+            const timestamps = parsed.timestamps || [];
+            const enhancedTimestamps = parsed.enhancedTimestamps || [];
 
             setLyrics(processedLines);
             setRawLyricsContent(currentDraft.rawText);
@@ -145,7 +151,7 @@ const DraftApprovalModal = ({ darkMode }) => {
         } finally {
             setIsProcessing(false);
         }
-    }, [currentDraft, isProcessing, emitLyricsDraftApprove, setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, showToast]);
+    }, [currentDraft, isProcessing, emitLyricsDraftApprove, resolveDraftParsing, setLyrics, setRawLyricsContent, setLyricsFileName, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, showToast]);
 
     const handleReject = useCallback(() => {
         if (!currentDraft || isProcessing) return;
@@ -223,7 +229,7 @@ const DraftApprovalModal = ({ darkMode }) => {
     const draft = displayDraftRef.current;
     if (!draft) return null;
 
-    const previewLines = draft.processedLines || processRawTextToLines(draft.rawText);
+    const previewLines = resolveDraftParsing(draft).processedLines || [];
     const lineCount = previewLines.length;
 
     const topMenuHeight = typeof document !== 'undefined'

@@ -85,7 +85,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
-  writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
+  writeFile: (filePath, content, options) => ipcRenderer.invoke('write-file', filePath, content, options),
 
   onAdminKeyAvailable: (callback) => {
     const channel = 'admin-key:available';

@@ -1,6 +1,7 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
+import { buildLyricsParsingOptions } from '../../shared/lyricsParsing.js';
 import { normalizeTimerControlSettings, normalizeTimerDisplaySettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
@@ -47,6 +48,13 @@ const normalizePaintSettingUpdates = (settings = {}) => {
 
 export async function loadPreferencesIntoStore(store) {
   try {
+    if (window.electronAPI?.preferences?.getParsingConfig) {
+      const result = await window.electronAPI.preferences.getParsingConfig();
+      if (result.success && result.config) {
+        store.getState().setLyricsParsingOptions(buildLyricsParsingOptions(result.config));
+      }
+    }
+
     if (window.electronAPI?.preferences?.getAutoplayDefaults) {
       const result = await window.electronAPI.preferences.getAutoplayDefaults();
       if (result.success && result.defaults) {

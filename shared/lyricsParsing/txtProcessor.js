@@ -4,6 +4,7 @@ import { extractStructureTags } from './structureTags.js';
 import { expandRepeatableSectionReferences } from './repeatableSections.js';
 import { isTranslationLine } from './translation.js';
 import { flattenClusters, mergeAcrossBlankLines } from './grouping.js';
+import { normalizeLineSplittingConfig } from './preferenceOptions.js';
 
 /**
  * Split raw text into clusters separated by blank lines and convert into processed lyric lines.
@@ -14,6 +15,7 @@ import { flattenClusters, mergeAcrossBlankLines } from './grouping.js';
  */
 export function processRawTextToLines(rawText = '', options = {}) {
   const { enableSplitting = true, splitConfig = {} } = options;
+  const normalizedSplitConfig = normalizeLineSplittingConfig(splitConfig);
 
   let cleaned = preprocessText(rawText);
   cleaned = stripTimestampPatterns(cleaned);
@@ -40,30 +42,39 @@ export function processRawTextToLines(rawText = '', options = {}) {
 
   const finalClusters = [];
 
-  for (const cluster of preClusters) {
+  for (let clusterIndex = 0; clusterIndex < preClusters.length; clusterIndex += 1) {
+    const cluster = preClusters[clusterIndex];
     const processedCluster = [];
 
     for (let i = 0; i < cluster.length; i += 1) {
       const line = cluster[i];
 
       if (isTranslationLine(line)) {
-        processedCluster.push(line);
+        processedCluster.push({ line });
         continue;
       }
 
-      if (enableSplitting && line.length > (splitConfig.MAX_LENGTH || 70)) {
-        const segments = splitLongLine(line, splitConfig);
-        for (let j = 0; j < segments.length - 1; j += 1) {
-          processedCluster.push(segments[j]);
+      const nextIsTranslation = isTranslationLine(cluster[i + 1]);
+      if (enableSplitting && !nextIsTranslation && line.length > normalizedSplitConfig.MAX_LENGTH) {
+        const segments = splitLongLine(line, normalizedSplitConfig);
+        const splitSourceId = `txt_split_${clusterIndex}_${i}`;
+        for (let j = 0; j < segments.length; j += 1) {
+          processedCluster.push({
+            line: segments[j],
+            ...(segments.length > 1 ? {
+              splitSourceId,
+              splitSegmentIndex: j,
+              splitSegmentCount: segments.length,
+            } : {}),
+          });
         }
-        processedCluster.push(segments[segments.length - 1]);
       } else {
-        processedCluster.push(line);
+        processedCluster.push({ line });
       }
     }
 
-    const indexedCluster = processedCluster.map((line, idx) => ({
-      line,
+    const indexedCluster = processedCluster.map((item, idx) => ({
+      ...item,
       originalIndex: idx,
     }));
 

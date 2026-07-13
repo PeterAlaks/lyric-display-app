@@ -1,7 +1,8 @@
 import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
-import { serializeExplicitGroupingContent } from '../../../shared/lyricsParsing.js';
+import { extractExplicitGroupingDirective, parseTxtContent } from '../../../shared/lyricsParsing.js';
+import useLyricsStore from '../../context/LyricsStore.js';
 
 /**
  * Hook for handling file save operations (Save, Save & Load)
@@ -34,8 +35,20 @@ const useFileSave = ({
   const baseTitleRef = externalBaseTitleRef || useRef('');
 
   const serializePayload = useCallback((editorContent, extension) => (
-    extension === 'txt' ? serializeExplicitGroupingContent(editorContent) : editorContent
+    extension === 'txt' ? extractExplicitGroupingDirective(editorContent).content : editorContent
   ), []);
+
+  const createEditorGroupingPlan = useCallback((editorContent, extension) => {
+    if (extension !== 'txt') return null;
+    const parsingOptions = useLyricsStore.getState().lyricsParsingOptions;
+    return parseTxtContent(editorContent, {
+      ...parsingOptions,
+      groupingConfig: {
+        ...parsingOptions.groupingConfig,
+        enableCrossBlankLineGrouping: false,
+      },
+    }).groupingPlan;
+  }, []);
 
   const resolveBaseName = useCallback(() => {
     const rawBase = (title && title.trim()) || fileName || 'lyrics';
@@ -176,8 +189,9 @@ const useFileSave = ({
     }
   }, [activeSetlistItemId, baseContentRef, baseTitleRef, setFileName, setPendingSavedVersion, setSaveVersion, setTitle, songMetadata]);
 
-  const syncActiveSetlistItem = useCallback(async ({ payload, baseName, extension, filePath }) => {
+  const syncActiveSetlistItem = useCallback(async ({ payload, baseName, extension, filePath, groupingPlan = null }) => {
     if (!activeSetlistItemId || typeof updateSetlistItem !== 'function') return true;
+    const effectiveGroupingPlan = groupingPlan || createEditorGroupingPlan(payload, extension);
 
     try {
       const result = await updateSetlistItem(activeSetlistItemId, {
@@ -189,6 +203,7 @@ const useFileSave = ({
           ...(songMetadata || {}),
           title: songMetadata?.title || baseName,
           filePath: filePath || songMetadata?.filePath || null,
+          groupingPlan: extension === 'txt' ? effectiveGroupingPlan : null,
         },
       });
       if (result?.success) return true;
@@ -208,19 +223,25 @@ const useFileSave = ({
       });
       return false;
     }
-  }, [activeSetlistItemId, showToast, songMetadata, updateSetlistItem]);
+  }, [activeSetlistItemId, createEditorGroupingPlan, showToast, songMetadata, updateSetlistItem]);
 
-  const getReloadOptions = useCallback(({ payload, extension, filePath }) => ({
-    rawText: payload,
-    fileType: extension,
-    filePath: filePath || null,
-    path: filePath || null,
-    setlistItemId: activeSetlistItemId || null,
-    songMetadata: songMetadata || null,
-  }), [activeSetlistItemId, songMetadata]);
+  const getReloadOptions = useCallback(({ payload, extension, filePath, groupingPlan = null }) => {
+    const effectiveGroupingPlan = groupingPlan || createEditorGroupingPlan(payload, extension);
+    return {
+      rawText: payload,
+      fileType: extension,
+      filePath: filePath || null,
+      path: filePath || null,
+      setlistItemId: activeSetlistItemId || null,
+      songMetadata: songMetadata || null,
+      groupingPlan: effectiveGroupingPlan,
+    };
+  }, [activeSetlistItemId, createEditorGroupingPlan, songMetadata]);
 
   const writeLyricsFile = useCallback(async (targetPath, payload) => {
-    const result = await window.electronAPI.writeFile(targetPath, payload);
+    const result = await window.electronAPI.writeFile(targetPath, payload, {
+      preserveGrouping: /\.txt$/i.test(targetPath || ''),
+    });
     if (result && result.success === false) {
       throw new Error(result.error || 'File write failed');
     }
@@ -243,17 +264,28 @@ const useFileSave = ({
 
       if (result.canceled) return { canceled: true };
 
-      await writeLyricsFile(result.filePath, filePayload);
+      const writeResult = await writeLyricsFile(result.filePath, filePayload);
       const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
       if (alsoLoad) {
         const blob = new Blob([filePayload], { type: 'text/plain' });
         const file = new File([blob], `${savedBaseName}.${extension}`, { type: 'text/plain' });
         setRawLyricsContent(filePayload);
-        await handleFileUpload(file, getReloadOptions({ payload: filePayload, extension, filePath: result.filePath }));
+        await handleFileUpload(file, getReloadOptions({
+          payload: filePayload,
+          extension,
+          filePath: result.filePath,
+          groupingPlan: writeResult?.groupingPlan,
+        }));
       }
 
-      await syncActiveSetlistItem({ payload: filePayload, baseName: savedBaseName, extension, filePath: result.filePath });
+      await syncActiveSetlistItem({
+        payload: filePayload,
+        baseName: savedBaseName,
+        extension,
+        filePath: result.filePath,
+        groupingPlan: writeResult?.groupingPlan,
+      });
 
       markSaved({
         payload: filePayload,
@@ -344,16 +376,27 @@ const useFileSave = ({
 
     try {
       const filePayload = serializePayload(payload, target.extension);
-      await writeLyricsFile(target.path, filePayload);
+      const writeResult = await writeLyricsFile(target.path, filePayload);
       const savedBaseName = target.path.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
       if (alsoLoad) {
         const blob = new Blob([filePayload], { type: 'text/plain' });
         const file = new File([blob], `${savedBaseName}.${target.extension}`, { type: 'text/plain' });
-        await handleFileUpload(file, getReloadOptions({ payload: filePayload, extension: target.extension, filePath: target.path }));
+        await handleFileUpload(file, getReloadOptions({
+          payload: filePayload,
+          extension: target.extension,
+          filePath: target.path,
+          groupingPlan: writeResult?.groupingPlan,
+        }));
       }
 
-      await syncActiveSetlistItem({ payload: filePayload, baseName: savedBaseName, extension: target.extension, filePath: target.path });
+      await syncActiveSetlistItem({
+        payload: filePayload,
+        baseName: savedBaseName,
+        extension: target.extension,
+        filePath: target.path,
+        groupingPlan: writeResult?.groupingPlan,
+      });
 
       markSaved({
         payload: filePayload,
@@ -427,10 +470,16 @@ const useFileSave = ({
         });
 
         if (!result.canceled) {
-          await writeLyricsFile(result.filePath, filePayload);
+          const writeResult = await writeLyricsFile(result.filePath, filePayload);
           const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
-          await syncActiveSetlistItem({ payload: filePayload, baseName: savedBaseName, extension, filePath: result.filePath });
+          await syncActiveSetlistItem({
+            payload: filePayload,
+            baseName: savedBaseName,
+            extension,
+            filePath: result.filePath,
+            groupingPlan: writeResult?.groupingPlan,
+          });
 
           markSaved({
             payload: filePayload,
@@ -538,15 +587,26 @@ const useFileSave = ({
         });
 
         if (!result.canceled) {
-          await writeLyricsFile(result.filePath, filePayload);
+          const writeResult = await writeLyricsFile(result.filePath, filePayload);
           const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
           const blob = new Blob([filePayload], { type: 'text/plain' });
           const file = new File([blob], `${savedBaseName}.${extension}`, { type: 'text/plain' });
 
           setRawLyricsContent(filePayload);
-          await handleFileUpload(file, getReloadOptions({ payload: filePayload, extension, filePath: result.filePath }));
-          await syncActiveSetlistItem({ payload: filePayload, baseName: savedBaseName, extension, filePath: result.filePath });
+          await handleFileUpload(file, getReloadOptions({
+            payload: filePayload,
+            extension,
+            filePath: result.filePath,
+            groupingPlan: writeResult?.groupingPlan,
+          }));
+          await syncActiveSetlistItem({
+            payload: filePayload,
+            baseName: savedBaseName,
+            extension,
+            filePath: result.filePath,
+            groupingPlan: writeResult?.groupingPlan,
+          });
 
           markSaved({
             payload: filePayload,

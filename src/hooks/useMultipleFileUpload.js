@@ -5,6 +5,7 @@ import { useSetlistState } from './useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
+import useLyricsStore from '../context/LyricsStore.js';
 import {
   getLyricImportFormatForName,
   getLyricOriginLabel,
@@ -15,6 +16,7 @@ const useMultipleFileUpload = () => {
   const { getAvailableSetlistSlots, maxFileSizeLimit, maxSetlistFilesLimit } = useSetlistState();
   const { emitSetlistAdd } = useControlSocket();
   const { showToast } = useToast();
+  const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
   const maxFileSize = maxFileSizeLimit ?? 2;
   const maxSetlistFiles = maxSetlistFilesLimit ?? DEFAULT_SETLIST_ITEMS;
 
@@ -83,7 +85,8 @@ const useMultipleFileUpload = () => {
           const isLrc = fileType === 'lrc';
 
           const parsed = await parseLyricsFileAsync(file, {
-            fileType
+            ...lyricsParsingOptions,
+            fileType,
           });
 
           if (!parsed || !Array.isArray(parsed.processedLines)) {
@@ -101,11 +104,12 @@ const useMultipleFileUpload = () => {
             year: null,
             lyricLines: parsed.processedLines.length,
             origin: getLyricOriginLabel(fileType),
-            filePath: file?.path || null
+            filePath: file?.path || null,
+            ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
           };
 
           let rawContent;
-          if (isLrc) {
+          if (isLrc || fileType === 'txt') {
             try {
               rawContent = await file.text();
             } catch {
@@ -178,7 +182,7 @@ const useMultipleFileUpload = () => {
       });
       return false;
     }
-  }, [emitSetlistAdd, getAvailableSetlistSlots, showToast, maxFileSize, maxSetlistFiles, MAX_FILE_SIZE_BYTES]);
+  }, [emitSetlistAdd, getAvailableSetlistSlots, lyricsParsingOptions, showToast, maxFileSize, maxSetlistFiles, MAX_FILE_SIZE_BYTES]);
 
   return handleMultipleFileUpload;
 };

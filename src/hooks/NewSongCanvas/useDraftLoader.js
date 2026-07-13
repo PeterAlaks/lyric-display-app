@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { formatLyrics } from '../../utils/lyricsFormat';
-import { processRawTextToLines } from '../../utils/parseLyrics';
+import { parseTxtContent } from '../../../shared/lyricsParsing.js';
+import useLyricsStore from '../../context/LyricsStore.js';
 
 export const useDraftLoader = ({
   baseContentRef,
@@ -25,8 +26,15 @@ export const useDraftLoader = ({
   }
 
   try {
-    const cleanedText = formatLyrics(content);
-    const processedLines = processRawTextToLines(cleanedText);
+    const state = useLyricsStore.getState();
+    const parsingOptions = state.lyricsParsingOptions;
+    const cleanedText = formatLyrics(content, {
+      ...parsingOptions,
+      capitalizeFirst: state.formattingCapitalizeFirstLetter,
+      capitalizeReligious: state.formattingCapitalizeReligiousTerms,
+      normalizeTypographic: state.formattingNormalizeTypographicChars,
+    });
+    const processedLines = parseTxtContent(cleanedText, parsingOptions).processedLines;
 
     const success = emitLyricsDraftSubmit({
       title: title.trim(),

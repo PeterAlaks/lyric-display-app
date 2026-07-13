@@ -30,8 +30,15 @@ self.addEventListener('message', async (event) => {
   }
 
   try {
-    const { fileType = 'txt', content, enableSplitting, splitConfig, groupingConfig } = payload || {};
-    const parseOptions = { enableSplitting, splitConfig, groupingConfig };
+    const {
+      fileType = 'txt',
+      content,
+      enableSplitting,
+      splitConfig,
+      groupingConfig,
+      groupingPlan,
+    } = payload || {};
+    const parseOptions = { enableSplitting, splitConfig, groupingConfig, groupingPlan };
     let result;
 
     if (content) {

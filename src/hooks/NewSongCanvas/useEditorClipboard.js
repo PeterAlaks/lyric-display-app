@@ -8,6 +8,9 @@ const getFormattingOptions = () => {
     capitalizeFirst: state.formattingCapitalizeFirstLetter,
     capitalizeReligious: state.formattingCapitalizeReligiousTerms,
     normalizeTypographic: state.formattingNormalizeTypographicChars,
+    enableSplitting: state.lyricsParsingOptions.enableSplitting,
+    splitConfig: state.lyricsParsingOptions.splitConfig,
+    groupingConfig: state.lyricsParsingOptions.groupingConfig,
   };
 };
 

@@ -6,7 +6,11 @@ import { setUpdateSessionActive } from '../updater.js';
  * Register user preferences IPC handlers
  * Handles getting, setting, and resetting user preferences
  */
-export function registerPreferencesHandlers({ getMainWindow }) {
+export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingConfig }) {
+  const syncParsingConfig = () => {
+    if (typeof syncBackendParsingConfig !== 'function') return;
+    syncBackendParsingConfig(userPreferences.getParsingConfig());
+  };
   
   ipcMain.handle('preferences:get-all', async () => {
     try {
@@ -44,6 +48,9 @@ export function registerPreferencesHandlers({ getMainWindow }) {
       if (path === 'general.liveSafetyMode') {
         setUpdateSessionActive(Boolean(value));
       }
+      if (typeof path === 'string' && (path.startsWith('parsing.') || path.startsWith('lineSplitting.'))) {
+        syncParsingConfig();
+      }
       return { success: true };
     } catch (error) {
       console.error('[UserPreferences] Error setting preference:', error);
@@ -56,6 +63,9 @@ export function registerPreferencesHandlers({ getMainWindow }) {
       const result = userPreferences.saveAllPreferences(preferences);
       if (result.success && typeof preferences?.general?.liveSafetyMode === 'boolean') {
         setUpdateSessionActive(preferences.general.liveSafetyMode);
+      }
+      if (result.success) {
+        syncParsingConfig();
       }
       return result;
     } catch (error) {
@@ -70,6 +80,9 @@ export function registerPreferencesHandlers({ getMainWindow }) {
       if (category === 'general') {
         setUpdateSessionActive(false);
       }
+      if (category === 'parsing' || category === 'lineSplitting') {
+        syncParsingConfig();
+      }
       return { success: true };
     } catch (error) {
       console.error('[UserPreferences] Error resetting category:', error);
@@ -82,6 +95,7 @@ export function registerPreferencesHandlers({ getMainWindow }) {
       const result = userPreferences.resetAllToDefaults();
       if (result.success) {
         setUpdateSessionActive(false);
+        syncParsingConfig();
       }
       return result;
     } catch (error) {

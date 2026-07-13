@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { isNormalGroupCandidate } from '../../../shared/lyricsParsing.js';
+import { isManualNormalGroupCandidate } from '../../../shared/lyricsParsing.js';
 import useLyricsStore from '../../context/LyricsStore';
 import { buildLyricsSyncPayload } from '../../utils/lyricsSyncPayload.js';
 
@@ -10,6 +10,7 @@ export default function useLyricsListGrouping({
   selectedLine,
   selectedIndicesArray,
   effectiveMaxLinesPerGroup,
+  groupingConfig,
   getNormalGroupLines,
   isStructureTagLine,
   takeSnapshot,
@@ -37,9 +38,9 @@ export default function useLyricsListGrouping({
       typeof entry === 'string' &&
       entry.trim().length > 0 &&
       !isStructureTagLine(entry) &&
-      isNormalGroupCandidate(entry)
+      isManualNormalGroupCandidate(entry, groupingConfig)
     ));
-  }, [getNormalGroupLines, isStructureTagLine]);
+  }, [getNormalGroupLines, groupingConfig, isStructureTagLine]);
 
   const canGroupSelected = useMemo(() => {
     if (selectedIndicesArray.length !== 2) return false;

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useDynamicRowHeight } from 'react-window';
-import { STRUCTURE_TAG_PATTERNS } from '../../../shared/lyricsParsing.js';
+import { sanitizeMaxLinesPerGroup, STRUCTURE_TAG_PATTERNS } from '../../../shared/lyricsParsing.js';
 import { DEFAULT_ROW_HEIGHT, ROW_GAP } from '../../components/LyricsList/layout';
 
 export default function useLyricsListRows({
@@ -26,9 +26,7 @@ export default function useLyricsListRows({
   }, []);
 
   const effectiveMaxLinesPerGroup = useMemo(() => {
-    const parsed = parseInt(maxLinesPerGroup, 10);
-    if (!Number.isFinite(parsed)) return 2;
-    return Math.max(2, Math.min(12, parsed));
+    return sanitizeMaxLinesPerGroup(maxLinesPerGroup);
   }, [maxLinesPerGroup]);
 
   const getNormalGroupLines = useCallback((line) => {

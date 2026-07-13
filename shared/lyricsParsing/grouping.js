@@ -5,6 +5,11 @@ import { isNormalGroupCandidate } from './normalGroupCandidates.js';
 import { createNormalGroup } from './helpers.js';
 import { isSongSeparator } from './separators.js';
 
+const PROTECTED_SPLIT_LINE_TYPE = 'parser-protected-split-line';
+const protectSplitLine = (line) => ({ type: PROTECTED_SPLIT_LINE_TYPE, line });
+const isProtectedSplitLine = (item) => item?.type === PROTECTED_SPLIT_LINE_TYPE;
+const unwrapProtectedSplitLine = (item) => isProtectedSplitLine(item) ? item.line : item;
+
 /**
  * Groups clusters of raw lines into either individual strings, translation groups, or normal groups.
  * Handles both translation grouping (bracketed) and normal grouping (two-line pairs).
@@ -46,6 +51,44 @@ export function flattenClusters(clusters) {
       while (i < cluster.length) {
         const currentItem = cluster[i];
         const nextItem = cluster[i + 1];
+
+        if (currentItem.splitSourceId) {
+          const splitItems = [];
+          let splitIndex = i;
+          while (
+            splitIndex < cluster.length
+            && cluster[splitIndex].splitSourceId === currentItem.splitSourceId
+          ) {
+            splitItems.push(cluster[splitIndex]);
+            splitIndex += 1;
+          }
+
+          const splitItemsAreEligible = splitItems.every((item) => (
+            isNormalGroupCandidate(item.line, config)
+            && !isStructureTag(item.line)
+            && !isTranslationLine(item.line)
+          ));
+
+          if (enableAutoLineGrouping && splitItemsAreEligible) {
+            for (let offset = 0; offset < splitItems.length; offset += maxLinesPerGroup) {
+              const chunk = splitItems.slice(offset, offset + maxLinesPerGroup);
+              if (chunk.length >= 2) {
+                result.push(createNormalGroup(
+                  chunk.map((item) => item.line),
+                  `split_group_${clusterIndex}`,
+                  chunk[0].originalIndex
+                ));
+              } else {
+                result.push(protectSplitLine(chunk[0].line));
+              }
+            }
+          } else {
+            splitItems.forEach((item) => result.push(protectSplitLine(item.line)));
+          }
+
+          i = splitIndex;
+          continue;
+        }
 
         // Translation grouping within clusters (only if enabled)
         if (
@@ -119,7 +162,7 @@ export function flattenClusters(clusters) {
       }
     } else {
       cluster.forEach((item) => {
-        result.push(item.line);
+        result.push(item.splitSourceId ? protectSplitLine(item.line) : item.line);
       });
     }
   });
@@ -140,7 +183,7 @@ export function mergeAcrossBlankLines(processedLines) {
   const maxLinesPerGroup = sanitizeMaxLinesPerGroup(config.maxLinesPerGroup);
 
   if (!config.enableAutoLineGrouping || !config.enableCrossBlankLineGrouping) {
-    return processedLines;
+    return processedLines.map(unwrapProtectedSplitLine);
   }
 
   const result = [];
@@ -148,6 +191,11 @@ export function mergeAcrossBlankLines(processedLines) {
 
   while (i < processedLines.length) {
     const current = processedLines[i];
+    if (isProtectedSplitLine(current)) {
+      result.push(current.line);
+      i += 1;
+      continue;
+    }
     const currentIsString = typeof current === 'string';
     const currentIsStructureTag = currentIsString && isStructureTag(current);
     const currentIsSongSeparator = currentIsString && isSongSeparator(current);
@@ -180,5 +228,5 @@ export function mergeAcrossBlankLines(processedLines) {
     i += 1;
   }
 
-  return result;
+  return result.map(unwrapProtectedSplitLine);
 }

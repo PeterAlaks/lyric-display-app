@@ -29,6 +29,9 @@ import { registerIntegrationRoutes } from './routes/integrations.js';
 import { registerAppControlRoutes } from './routes/appControl.js';
 import { registerTemplateRoutes } from './routes/templates.js';
 import { loadPersistedSessionState } from './realtime/sessionPersistence.js';
+import { setLyricsParsingConfig } from './realtime/lyricsParsingConfig.js';
+import { emitControllerEvent } from './realtime/broadcast.js';
+import { REALTIME_EVENTS } from '../shared/apiContractRegistry.js';
 
 dotenv.config();
 
@@ -161,6 +164,16 @@ process.on('message', (message) => {
 
   if (message?.type === 'obs-dock-local-auth') {
     process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH = message.enabled ? '1' : '';
+    return;
+  }
+
+  if (message?.type === 'lyrics-parsing-config') {
+    const parsingOptions = setLyricsParsingConfig(message.config);
+    emitControllerEvent(
+      io,
+      REALTIME_EVENTS.lyricsParsingOptionsUpdate,
+      parsingOptions
+    );
   }
 });
 

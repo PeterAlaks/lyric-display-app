@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { List, useListRef } from 'react-window';
 import { useLyricsState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
+import useLyricsStore from '../context/LyricsStore';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from '../hooks/useToast';
 import useStageOnlyTutorial from '../hooks/LyricsList/useStageOnlyTutorial';
@@ -29,7 +30,6 @@ export default function LyricsList({
   onSelectionStateChange,
   onContextMenuApiReady,
   clickAwayIgnoreRefs = [],
-  maxLinesPerGroup = 2,
   density = 'default',
 }) {
   const compact = density === 'dock' || density === 'compact';
@@ -54,6 +54,8 @@ export default function LyricsList({
   const isDesktopApp = useIsDesktopApp();
   const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup } = useControlSocket();
   const { showToast } = useToast();
+  const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
+  const lyricsGroupingConfig = lyricsParsingOptions.groupingConfig;
   const [hoveredLineIndex, setHoveredLineIndex] = useState(null);
   const [hoveredButtonIndex, setHoveredButtonIndex] = useState(null);
   const lastResetKeyRef = React.useRef(null);
@@ -81,7 +83,7 @@ export default function LyricsList({
     lyricsSections,
     lineToSection,
     selectedLine,
-    maxLinesPerGroup,
+    maxLinesPerGroup: lyricsGroupingConfig.maxLinesPerGroup,
     highlightedLineIndex,
     searchQuery,
     darkMode,
@@ -174,6 +176,7 @@ export default function LyricsList({
     selectedLine,
     selectedIndicesArray,
     effectiveMaxLinesPerGroup,
+    groupingConfig: lyricsGroupingConfig,
     getNormalGroupLines,
     isStructureTagLine,
     takeSnapshot,

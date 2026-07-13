@@ -318,7 +318,6 @@ const LyricsWorkspace = ({
             searchQuery={searchQuery}
             highlightedLineIndex={highlightedLineIndex}
             onSelectLine={handleLineSelect}
-            maxLinesPerGroup={quickParserSettings.maxLinesPerGroup}
           />
         </div>
       ) : showTourLyricsPreview ? (

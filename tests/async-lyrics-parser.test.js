@@ -57,6 +57,7 @@ test('dropped Electron File without path sends raw text through IPC', async () =
   assert.equal(ipcCalls, 1);
   assert.equal(payload.path, null);
   assert.equal(payload.rawText, 'First line\nSecond line');
+  assert.equal(payload.enableSplitting, undefined);
   assert.equal(parsed.rawText, 'First line\nSecond line');
   assert.equal(parsed.processedLines.length, 1);
   assert.equal(parsed.processedLines[0].displayText, 'First line\nSecond line');
@@ -87,4 +88,36 @@ test('Electron IPC parser accepts filePath alias from callers', async () => {
   assert.equal(payload.path, 'C:\\Lyrics\\song.txt');
   assert.equal(payload.rawText, null);
   assert.deepEqual(parsed.processedLines, ['Loaded from IPC']);
+});
+
+test('Electron IPC receives quick-parser overrides and grouping-plan controls', async () => {
+  let payload;
+  globalThis.window = {
+    electronAPI: {
+      parseLyricsFile: async (nextPayload) => {
+        payload = nextPayload;
+        return {
+          success: true,
+          payload: { rawText: 'Line', processedLines: ['Line'] },
+        };
+      },
+    },
+  };
+
+  const groupingPlan = { version: 1, lines: ['Line'], groups: [] };
+  await parseLyricsFileAsync(null, {
+    rawText: 'Line',
+    fileType: 'txt',
+    enableSplitting: true,
+    splitConfig: { TARGET_LENGTH: 50 },
+    groupingConfig: { maxLineLength: 60, maxLinesPerGroup: 2 },
+    groupingPlan,
+    ignoreSavedGroupingPlan: true,
+  });
+
+  assert.equal(payload.enableSplitting, true);
+  assert.equal(payload.splitConfig.TARGET_LENGTH, 50);
+  assert.equal(payload.groupingConfig.maxLineLength, 60);
+  assert.deepEqual(payload.groupingPlan, groupingPlan);
+  assert.equal(payload.ignoreSavedGroupingPlan, true);
 });

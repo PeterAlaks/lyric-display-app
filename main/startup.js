@@ -163,7 +163,11 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
   registerLyricVideoMediaProtocol();
   try {
     updateLoadingStatus('Starting backend server');
-    await startBackend({ obsDockPairingToken, allowLocalObsDockAuth: headless });
+    await startBackend({
+      obsDockPairingToken,
+      allowLocalObsDockAuth: headless,
+      parsingConfig: userPreferences.getParsingConfig(),
+    });
     console.log('[Startup] Backend started successfully');
     await new Promise(resolve => setTimeout(resolve, 1000));
 

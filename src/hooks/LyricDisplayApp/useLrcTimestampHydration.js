@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
 import { parseLrcContent } from '../../../shared/lyricsParsing.js';
+import useLyricsStore from '../../context/LyricsStore.js';
 
 export const useLrcTimestampHydration = ({
   hasLyrics,
@@ -12,6 +13,8 @@ export const useLrcTimestampHydration = ({
   setLyricsSections,
   setLyricsTimestamps,
 }) => {
+  const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
+
   useEffect(() => {
     if (!hasLyrics) return;
     if (hasValidTimestamps(lyricsTimestamps)) return;
@@ -21,7 +24,7 @@ export const useLrcTimestampHydration = ({
     if (!looksLikeLrc) return;
 
     try {
-      const parsed = parseLrcContent(rawLyricsContent);
+      const parsed = parseLrcContent(rawLyricsContent, lyricsParsingOptions);
       const lengthsMatch = Array.isArray(parsed?.processedLines) && parsed.processedLines.length === lyrics.length;
 
       if (lengthsMatch && Array.isArray(parsed.timestamps) && parsed.timestamps.length > 0) {
@@ -35,5 +38,5 @@ export const useLrcTimestampHydration = ({
     } catch (err) {
       console.warn('Failed to regenerate timestamps from stored lyrics:', err);
     }
-  }, [hasLyrics, lyrics, lyricsTimestamps, rawLyricsContent, setLineToSection, setLyricsEnhancedTimestamps, setLyricsSections, setLyricsTimestamps]);
+  }, [hasLyrics, lyrics, lyricsParsingOptions, lyricsTimestamps, rawLyricsContent, setLineToSection, setLyricsEnhancedTimestamps, setLyricsSections, setLyricsTimestamps]);
 };

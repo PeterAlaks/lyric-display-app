@@ -1,5 +1,6 @@
 // shared/lineSplitting.js
 // Enhanced utilities for intelligently breaking long lyric lines into displayable segments
+import { normalizeLineSplittingConfig } from './preferenceOptions.js';
 
 /**
  * Configuration for line splitting behavior
@@ -146,7 +147,7 @@ function capitalizeFirst(text) {
 export function splitLongLine(line, config = {}) {
     if (!line || typeof line !== 'string') return [line];
 
-    const cfg = { ...SPLIT_CONFIG, ...config };
+    const cfg = normalizeLineSplittingConfig({ ...SPLIT_CONFIG, ...config });
     const trimmed = line.trim();
 
     if (trimmed.length <= cfg.MAX_LENGTH) return [trimmed];

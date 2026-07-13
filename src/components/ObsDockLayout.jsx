@@ -667,7 +667,6 @@ export default function ObsDockLayout() {
                 highlightedLineIndex={highlightedLineIndex}
                 onSelectLine={handleLineSelect}
                 density="dock"
-                maxLinesPerGroup={quickParserSettings.maxLinesPerGroup}
               />
             ) : (
               <div className={`flex h-full items-center justify-center p-6 text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>

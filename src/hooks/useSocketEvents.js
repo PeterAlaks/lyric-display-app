@@ -5,6 +5,7 @@ import { detectArtistFromFilename } from '../utils/artistDetection';
 import { deriveSectionsFromProcessedLines } from '../../shared/lyricsParsing.js';
 import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
 import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
+import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 import {
   emitDesktopSessionBootstrap,
   getDesktopBootstrapOutputIds,
@@ -95,6 +96,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
   const setSongMetadata = useLyricsStore((state) => state.setSongMetadata);
   const setLyricsSections = useLyricsStore((state) => state.setLyricsSections);
   const setLineToSection = useLyricsStore((state) => state.setLineToSection);
+  const setLyricsParsingOptions = useLyricsStore((state) => state.setLyricsParsingOptions);
 
   const setlistNameRef = useRef(new Map());
   const desktopBootstrapSocketRef = useRef(null);
@@ -243,6 +245,9 @@ const useSocketEvents = (role, clientPurpose = role) => {
       if (hasOwn(state, 'songMetadata') && isPlainObject(state.songMetadata) && !preserveLocalDesktopState) {
         setSongMetadata(state.songMetadata);
       }
+      if (hasOwn(state, 'lyricsParsingOptions') && isPlainObject(state.lyricsParsingOptions)) {
+        setLyricsParsingOptions(state.lyricsParsingOptions);
+      }
 
       if (hasOwn(state, 'selectedLine') && !preserveLocalDesktopState) {
         if (state.selectedLine === null) {
@@ -302,6 +307,10 @@ const useSocketEvents = (role, clientPurpose = role) => {
 
     socket.on('currentState', (state) => {
       applySnapshot(state, 'currentState');
+    });
+
+    socket.on(REALTIME_EVENTS.lyricsParsingOptionsUpdate, (options) => {
+      if (isPlainObject(options)) setLyricsParsingOptions(options);
     });
 
     socket.on('lineUpdate', (payload) => {
@@ -667,7 +676,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     socket.on('periodicStateSync', (state) => {
       applySnapshot(state, 'periodicStateSync');
     });
-  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata]);
+  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata, setLyricsParsingOptions]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,

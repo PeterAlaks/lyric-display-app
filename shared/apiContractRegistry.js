@@ -12,6 +12,7 @@ export const REALTIME_EVENTS = Object.freeze({
   actionLogClear: 'actionLogClear',
   actionLogSnapshot: 'actionLogSnapshot',
   actionLogUpdate: 'actionLogUpdate',
+  lyricsParsingOptionsUpdate: 'lyricsParsingOptionsUpdate',
 });
 
 export const REALTIME_PERMISSIONS = Object.freeze({
@@ -38,6 +39,7 @@ export const AUDITED_REALTIME_CONTRACTS = Object.freeze([
   { name: REALTIME_EVENTS.liveSafetyBlocked, direction: 'server' },
   { name: REALTIME_EVENTS.actionLogSnapshot, direction: 'server' },
   { name: REALTIME_EVENTS.actionLogUpdate, direction: 'server' },
+  { name: REALTIME_EVENTS.lyricsParsingOptionsUpdate, direction: 'server' },
 ]);
 
 export const AUDITED_REST_CONTRACTS = Object.freeze([

@@ -1,4 +1,5 @@
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+import { getLyricsParsingOptions } from './lyricsParsingConfig.js';
 
 export const state = {
   currentLyrics: [],
@@ -234,6 +235,7 @@ export function buildCurrentState(clientInfo) {
     rawLyricsContent: state.currentRawLyricsContent || '',
     lyricsSource: state.currentLyricsSource || null,
     songMetadata: state.currentSongMetadata || null,
+    lyricsParsingOptions: getLyricsParsingOptions(),
   };
 
   for (const [outputId, settings] of state.outputSettings) {

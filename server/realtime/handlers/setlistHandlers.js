@@ -9,6 +9,7 @@ import { blockIfLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { normalizeIncomingSetlistFiles, validatePersistedSetlistFiles } from '../setlistValidation.js';
 import { state, summarizeSetlistForDisplay } from '../state.js';
+import { getLyricsParsingOptions } from '../lyricsParsingConfig.js';
 
 export function registerSetlistHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
   const actor = { clientType, deviceId, sessionId };
@@ -227,9 +228,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         fallback: 'txt',
       });
       const isLrc = finalFileType === 'lrc';
+      const parsingOptions = getLyricsParsingOptions();
 
       if (isLrc) {
-        const parsed = parseLrcContent(file.content);
+        const parsed = parseLrcContent(file.content, parsingOptions);
         processedLines = parsed.processedLines;
         timestamps = parsed.timestamps || [];
         enhancedTimestamps = parsed.enhancedTimestamps || [];
@@ -237,7 +239,10 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         sections = parsed.sections || [];
         lineToSection = parsed.lineToSection || {};
       } else {
-        const parsed = parseTxtContent(file.content);
+        const parsed = parseTxtContent(file.content, {
+          ...parsingOptions,
+          groupingPlan: file.metadata?.groupingPlan || null,
+        });
         processedLines = parsed.processedLines;
         timestamps = [];
         sections = parsed.sections || [];
@@ -258,6 +263,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         filePath: file.metadata?.filePath || null,
         fileName: file.originalName || cleanDisplayName || '',
         setlistItemId: file.id,
+        ...(isLrc ? {} : { groupingPlan: file.metadata?.groupingPlan || null }),
       };
       state.currentSongMetadata = {
         ...(file.metadata || {}),
