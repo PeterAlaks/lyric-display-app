@@ -20,6 +20,7 @@ import UserMediaModal from '../UserMediaModal';
 import PreServiceHealthModal from '../PreServiceHealthModal';
 import OperatorActionLogModal from '../OperatorActionLogModal';
 import ObsDockInfoModal from '../ObsDockInfoModal';
+import TelemetryConsentModal from '../TelemetryConsentModal';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { ModalActionButton, ModalFooter } from './modalActions';
@@ -729,6 +730,13 @@ export function ModalProvider({ children, isDark = false }) {
                       )}
                       {modal.component === 'ObsDockInfo' && (
                         <ObsDockInfoModal darkMode={isDark} />
+                      )}
+                      {modal.component === 'TelemetryConsent' && (
+                        <TelemetryConsentModal
+                          darkMode={isDark}
+                          onDecision={modal.onDecision}
+                          onClose={(result) => closeModal(modal.id, result)}
+                        />
                       )}
 
                       {/* Render standard description/body modals */}

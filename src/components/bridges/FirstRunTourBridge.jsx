@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import useLyricsStore from '../../context/LyricsStore';
 import { useDarkModeState } from '../../hooks/useStoreSelectors';
+import useModal from '../../hooks/useModal';
 import { shouldShowTelemetryConsent, START_FIRST_RUN_TOUR_EVENT } from '../../utils/firstRunTour';
 import FirstRunTour from '../FirstRunTour';
-import TelemetryConsentModal from '../TelemetryConsentModal';
 
 const FIRST_RUN_DELAY_MS = 900;
 
@@ -12,6 +12,7 @@ export default function FirstRunTourBridge() {
   const hasSeenWelcome = useLyricsStore((state) => state.hasSeenWelcome);
   const setHasSeenWelcome = useLyricsStore((state) => state.setHasSeenWelcome);
   const { darkMode } = useDarkModeState();
+  const { showModal } = useModal();
   const [tourSession, setTourSession] = useState(null);
   const [telemetryConsentDecided, setTelemetryConsentDecided] = useState(null);
   const [showTelemetryConsent, setShowTelemetryConsent] = useState(false);
@@ -76,6 +77,22 @@ export default function FirstRunTourBridge() {
     setShowTelemetryConsent(false);
   }, []);
 
+  useEffect(() => {
+    if (!showTelemetryConsent) return;
+
+    showModal({
+      modalKey: 'telemetry-consent',
+      title: 'Share anonymous usage data?',
+      component: 'TelemetryConsent',
+      variant: 'info',
+      size: 'sm',
+      customLayout: true,
+      dismissible: false,
+      actions: [],
+      onDecision: saveTelemetryDecision,
+    });
+  }, [saveTelemetryDecision, showModal, showTelemetryConsent]);
+
   return (
     <>
       {tourSession && (
@@ -85,9 +102,6 @@ export default function FirstRunTourBridge() {
           onFinish={closeAndRemember}
           onSkip={closeAndRemember}
         />
-      )}
-      {showTelemetryConsent && (
-        <TelemetryConsentModal darkMode={darkMode} onDecision={saveTelemetryDecision} />
       )}
     </>
   );
