@@ -29,26 +29,6 @@ export default function AppProviders({ children, effectiveDarkMode, isDockRuntim
   }, [setDarkMode]);
 
   useEffect(() => {
-    const handleStorage = (event) => {
-      if (event.key !== 'lyrics-store' || !event.newValue) return;
-      try {
-        const nextState = JSON.parse(event.newValue)?.state;
-        if (nextState?.timerDisplaySettings && typeof nextState.timerDisplaySettings === 'object') {
-          useLyricsStore.getState().updateTimerDisplaySettings(nextState.timerDisplaySettings, { touch: false });
-        }
-        if (nextState?.timerControlSettings && typeof nextState.timerControlSettings === 'object') {
-          useLyricsStore.getState().updateTimerControlSettings(nextState.timerControlSettings, { touch: false });
-        }
-      } catch {
-        // Ignore malformed persisted store updates.
-      }
-    };
-
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  useEffect(() => {
     const handleGlobalEscape = (event) => {
       if (event.key !== 'Escape' || event.repeat) return;
 
