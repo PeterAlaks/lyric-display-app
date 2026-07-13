@@ -51,3 +51,20 @@ test('Zustand traditional selectors retain their required peer dependency', () =
     'the selector peer dependency must be installed in the locked dependency tree',
   );
 });
+
+test('app tests do not import the optional NDI companion checkout', () => {
+  const testsDirectory = new URL('./', import.meta.url);
+
+  for (const entry of fs.readdirSync(testsDirectory, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.test.js') || entry.name === 'dependency-hygiene.test.js') {
+      continue;
+    }
+
+    const source = fs.readFileSync(new URL(entry.name, testsDirectory), 'utf8');
+    assert.doesNotMatch(
+      source,
+      /['"]\.\.\/lyricdisplay-ndi\//,
+      `${entry.name} must not depend on the optional, ignored lyricdisplay-ndi checkout`,
+    );
+  }
+});
