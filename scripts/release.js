@@ -260,9 +260,9 @@ async function main() {
         updateVersionNumbers(targetVersion);
         updateGitHubReleaseLinks(targetVersion);
 
-        console.log(chalk.blue('\n🔨 Building Windows installer locally...'));
-        execSync('npm run electron-pack', { stdio: 'inherit' });
-        console.log(chalk.green('✅ Local Windows build complete.'));
+        console.log(chalk.blue('\n🔨 Building Windows installer and Microsoft Store package locally...'));
+        execSync('npm run electron-pack:windows-release', { stdio: 'inherit' });
+        console.log(chalk.green('✅ Local Windows builds complete.'));
 
         console.log(chalk.blue('\n📦 Committing and Tagging...'));
 

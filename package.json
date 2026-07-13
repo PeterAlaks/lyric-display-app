@@ -20,6 +20,9 @@
     "electron": "electron .",
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run build && electron-builder",
+    "generate:appx-assets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-appx-assets.ps1",
+    "electron-pack:store": "npm run generate:appx-assets && npm run build && electron-builder --win appx --x64 --publish never",
+    "electron-pack:windows-release": "npm run generate:appx-assets && npm run build && electron-builder --win nsis appx --x64 --publish never",
     "postinstall": "electron-builder install-app-deps",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "audit:server": "npm --prefix server audit --omit=dev --audit-level=moderate",
@@ -206,6 +209,25 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "LyricDisplay"
+    },
+    "appx": {
+      "applicationId": "LyricDisplay",
+      "identityName": "PeterAlakembi.LyricDisplay",
+      "publisher": "CN=F3E198CD-5990-44B7-B90F-ED1EB321A87D",
+      "publisherDisplayName": "Peter Alakembi",
+      "displayName": "LyricDisplay",
+      "backgroundColor": "#7467E1",
+      "artifactName": "${productName}-${version}-Microsoft-Store-${arch}.${ext}",
+      "languages": [
+        "en-US"
+      ],
+      "minVersion": "10.0.17763.0",
+      "maxVersionTested": "10.0.26200.0",
+      "capabilities": [
+        "runFullTrust",
+        "internetClient",
+        "privateNetworkClientServer"
+      ]
     },
     "mac": {
       "category": "public.app-category.music",

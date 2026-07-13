@@ -17,10 +17,11 @@ const GITHUB_OWNER = 'PeterAlaks';
 const GITHUB_REPO = 'lyric-display-app';
 const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
 const GITHUB_LATEST_RELEASE_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+const isWindowsStoreUpdater = () => process.windowsStore === true;
 
 const INITIAL_STATE = {
-  status: 'idle',
-  updateMode: process.platform === 'darwin' ? 'manual' : 'auto',
+  status: isWindowsStoreUpdater() ? 'store-managed' : 'idle',
+  updateMode: isWindowsStoreUpdater() ? 'store' : (process.platform === 'darwin' ? 'manual' : 'auto'),
   updateInfo: null,
   progress: null,
   error: null,
@@ -291,7 +292,7 @@ const handleCheckError = (err, source) => {
 };
 
 const ensureUpdaterConfigured = () => {
-  if (isManualMacUpdater()) return;
+  if (isWindowsStoreUpdater() || isManualMacUpdater()) return;
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
@@ -411,6 +412,18 @@ export function getUpdaterState() {
 }
 
 export function checkForUpdates(showNoUpdateDialogForResult = false) {
+  if (isWindowsStoreUpdater()) {
+    const snapshot = setState({
+      status: 'store-managed',
+      updateMode: 'store',
+      updateInfo: null,
+      progress: null,
+      error: null,
+      downloadedAt: null,
+    });
+    return Promise.resolve(snapshot);
+  }
+
   if (isManualMacUpdater()) {
     return checkForManualMacUpdate(showNoUpdateDialogForResult);
   }
@@ -447,6 +460,15 @@ export function checkForUpdates(showNoUpdateDialogForResult = false) {
 }
 
 export async function downloadAvailableUpdate({ parent } = {}) {
+  if (isWindowsStoreUpdater()) {
+    return {
+      success: false,
+      storeManaged: true,
+      error: 'Updates for this edition are managed by Microsoft Store.',
+      state: getStateSnapshot(),
+    };
+  }
+
   if (isManualMacUpdater()) {
     if (!state.updateInfo?.manualDownload) {
       const error = handleUpdateError(
@@ -544,6 +566,15 @@ export async function downloadAvailableUpdate({ parent } = {}) {
 }
 
 export function installDownloadedUpdate() {
+  if (isWindowsStoreUpdater()) {
+    return {
+      success: false,
+      storeManaged: true,
+      error: 'Updates for this edition are installed by Microsoft Store.',
+      state: getStateSnapshot(),
+    };
+  }
+
   if (isManualMacUpdater()) {
     return {
       success: false,

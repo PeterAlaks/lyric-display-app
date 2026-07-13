@@ -50,6 +50,8 @@ test('downloaded updates require explicit installation instead of installing on 
   assert.match(updaterSource, /autoUpdater\.autoDownload\s*=\s*false/);
   assert.match(updaterSource, /autoUpdater\.autoInstallOnAppQuit\s*=\s*false/);
   assert.match(updaterSource, /autoUpdater\.quitAndInstall\(false, true\)/);
+  assert.match(updaterSource, /process\.windowsStore\s*===\s*true/);
+  assert.match(updaterSource, /updateMode:\s*isWindowsStoreUpdater\(\)\s*\?\s*'store'/);
 });
 
 test('only the highest-priority bounded update notification is released', () => {

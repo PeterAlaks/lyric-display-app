@@ -490,7 +490,14 @@ const useMenuHandlers = (closeMenu) => {
   const handleCheckUpdates = useCallback(async () => {
     closeMenu();
     const result = await window.electronAPI?.checkForUpdates?.(true);
-    if (result?.deferred) {
+    if (result?.state?.updateMode === 'store') {
+      showToast({
+        title: 'Updates managed by Microsoft Store',
+        message: 'Open Microsoft Store and select Library > Get updates to check manually.',
+        variant: 'info',
+        dedupeKey: 'app-update-store-managed',
+      });
+    } else if (result?.deferred) {
       showToast({
         title: 'Update check deferred',
         message: 'LyricDisplay will check for updates when Live Safety is turned off.',
