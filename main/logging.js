@@ -270,17 +270,20 @@ function logUserDataMigrationStatus() {
     ...(Array.isArray(status.conflicts) ? status.conflicts : []),
     ...(Array.isArray(status.legacyNdi?.conflicts) ? status.legacyNdi.conflicts : []),
     ...(Array.isArray(status.legacyUserDataNdi?.conflicts) ? status.legacyUserDataNdi.conflicts : []),
+    ...(Array.isArray(status.flatNdiInstall?.conflicts) ? status.flatNdiInstall.conflicts : []),
   ];
   const errors = [
     ...(Array.isArray(status.errors) ? status.errors : []),
     ...(Array.isArray(status.legacyNdi?.errors) ? status.legacyNdi.errors : []),
     ...(Array.isArray(status.legacyUserDataNdi?.errors) ? status.legacyUserDataNdi.errors : []),
+    ...(Array.isArray(status.flatNdiInstall?.errors) ? status.flatNdiInstall.errors : []),
   ];
   const didMigrationWork = Boolean(
     status.attempted ||
     status.reconciliationAttempted ||
     status.legacyNdi?.attempted ||
     status.legacyUserDataNdi?.attempted ||
+    status.flatNdiInstall?.attempted ||
     conflicts.length ||
     errors.length
   );
@@ -297,6 +300,7 @@ function logUserDataMigrationStatus() {
     deletedLegacy: status.deletedLegacy,
     legacyNdiDeleted: status.legacyNdi?.deletedLegacy,
     legacyUserDataNdiDeleted: status.legacyUserDataNdi?.deletedLegacy,
+    flatNdiInstallDeleted: status.flatNdiInstall?.deletedLegacy,
   });
 }
 

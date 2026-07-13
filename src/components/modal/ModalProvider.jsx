@@ -447,7 +447,7 @@ export function ModalProvider({ children, isDark = false }) {
 
   const content = modals.length > 0 ? (
     <div
-      className="pointer-events-none fixed inset-0 z-[1300] flex flex-col">
+      className="pointer-events-none fixed inset-0 z-1300 flex flex-col">
       {modals.map((modal, index) => {
         const palette = variantPalette(modal.variant, isDark);
         const IconComponent = variantIcon(modal.variant);

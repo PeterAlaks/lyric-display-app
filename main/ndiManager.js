@@ -9,7 +9,12 @@
 
 import { app, ipcMain, BrowserWindow } from 'electron';
 import Store from 'electron-store';
-import { NDI_FOLDER_NAME, LEGACY_NDI_FOLDER_NAME } from './appIdentity.js';
+import {
+  NDI_FOLDER_NAME,
+  NDI_INSTALL_FOLDER_NAME,
+  NDI_USER_DATA_FOLDER_NAME,
+  LEGACY_NDI_FOLDER_NAME,
+} from './appIdentity.js';
 import path from 'path';
 import fs from 'fs';
 import * as userPreferences from './userPreferences.js';
@@ -18,6 +23,7 @@ import { randomBytes } from 'crypto';
 import { createNdiIpcClient } from './ndi/ipcClient.js';
 import { createOutputSettingsManager } from './ndi/outputSettings.js';
 import { createNdiInstaller } from './ndi/installer.js';
+import { createCompanionLaunchConfig } from './ndi/launchConfig.js';
 import { DEFAULT_OUTPUT_IDS } from '../shared/outputRegistry.js';
 
 const isDev = !app.isPackaged;
@@ -194,6 +200,8 @@ const installer = createNdiInstaller({
   getInstallPath,
   getResolvedInstallPath,
   getLegacyInstallPaths,
+  getRemovableLegacyInstallPaths,
+  getUninstallPaths,
   getCompanionEntryPath,
   getPlatformAssetName,
   stopCompanion,
@@ -224,12 +232,37 @@ function getInstallPath() {
     return path.join(app.getAppPath(), LEGACY_NDI_FOLDER_NAME);
   }
 
+  return path.join(app.getPath('userData'), NDI_FOLDER_NAME, NDI_INSTALL_FOLDER_NAME);
+}
+
+function getNdiRootPath() {
   return path.join(app.getPath('userData'), NDI_FOLDER_NAME);
+}
+
+function getCompanionUserDataPath() {
+  return path.join(getNdiRootPath(), NDI_USER_DATA_FOLDER_NAME);
 }
 
 function getLegacyInstallPaths() {
   if (isDev) return [];
+  return [
+    getNdiRootPath(),
+    path.join(app.getPath('userData'), LEGACY_NDI_FOLDER_NAME),
+  ];
+}
+
+function getRemovableLegacyInstallPaths() {
+  if (isDev) return [];
   return [path.join(app.getPath('userData'), LEGACY_NDI_FOLDER_NAME)];
+}
+
+function getUninstallPaths() {
+  if (isDev) return [];
+  return [
+    getNdiRootPath(),
+    ...getRemovableLegacyInstallPaths(),
+    path.join(app.getPath('appData'), LEGACY_NDI_FOLDER_NAME),
+  ];
 }
 
 function getCompanionBinaryName() {
@@ -541,6 +574,15 @@ async function launchCompanion() {
   companionReady = false;
   companionBootstrapError = null;
 
+  let companionUserDataPath;
+  try {
+    companionUserDataPath = getCompanionUserDataPath();
+    fs.mkdirSync(companionUserDataPath, { recursive: true });
+  } catch (error) {
+    resetCompanionRuntimeState();
+    return { success: false, error: `Could not prepare NDI companion data directory: ${error.message}` };
+  }
+
   if (isDev) {
     // In dev mode, launch via the running Electron binary pointing at the companion source.
     if (!fs.existsSync(entryPath)) {
@@ -550,16 +592,18 @@ async function launchCompanion() {
 
     const electronBin = process.execPath;
     const companionDir = getInstallPath();
-    const args = [
-      companionDir,
-      '--host', ipcConfig.host,
-      '--port', String(ipcConfig.port),
-      '--auth-token', companionAuthToken,
-      '--app-url', 'http://localhost:5173',
-      '--no-hash',
-    ];
+    const launchConfig = createCompanionLaunchConfig({
+      userDataPath: companionUserDataPath,
+      appPath: companionDir,
+      host: ipcConfig.host,
+      port: ipcConfig.port,
+      authToken: companionAuthToken,
+      appUrl: 'http://localhost:5173',
+      hashRouting: false,
+    });
+    const args = launchConfig.args;
 
-    const childEnv = { ...process.env };
+    const childEnv = { ...process.env, ...launchConfig.env };
     delete childEnv.ELECTRON_RUN_AS_NODE;
 
     try {
@@ -582,12 +626,14 @@ async function launchCompanion() {
       return { success: false, error: `NDI companion not found at ${entryPath}` };
     }
 
-    const args = [
-      '--host', ipcConfig.host,
-      '--port', String(ipcConfig.port),
-      '--auth-token', companionAuthToken,
-      '--app-url', 'http://127.0.0.1:4000',
-    ];
+    const launchConfig = createCompanionLaunchConfig({
+      userDataPath: companionUserDataPath,
+      host: ipcConfig.host,
+      port: ipcConfig.port,
+      authToken: companionAuthToken,
+      appUrl: 'http://127.0.0.1:4000',
+    });
+    const args = launchConfig.args;
 
     try {
       console.log(`[NDI] Launching companion: ${entryPath} ${args.join(' ')}`);
@@ -595,7 +641,7 @@ async function launchCompanion() {
         detached: false,
         stdio: ['ignore', 'pipe', 'pipe'],
         cwd: path.dirname(entryPath),
-        env: { ...process.env },
+        env: { ...process.env, ...launchConfig.env },
       });
     } catch (error) {
       console.error('[NDI] Failed to launch companion:', error);

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChartNoAxesCombined } from 'lucide-react';
 import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
 
 export default function TelemetryConsentModal({ darkMode = false, onDecision, onClose }) {
@@ -20,12 +21,15 @@ export default function TelemetryConsentModal({ darkMode = false, onDecision, on
   return (
     <div className="flex h-full min-h-0 flex-col" data-telemetry-consent="true">
       <div className="space-y-3 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-gray-500 dark:text-gray-300">
-        <p>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-400/20">
+          <ChartNoAxesCombined className="h-7 w-7" aria-hidden />
+        </div>
+        <h3 className="text-base font-semibold leading-snug text-gray-900 dark:text-gray-100">
           Help improve LyricDisplay by sharing minor usage data.
-        </p>
+        </h3>
         <p>
           The payload does <strong className="font-semibold text-gray-700 dark:text-gray-100">not</strong>{' '}
-          include your name, email, lyrics, files, settings, IP address or hardware IDs.
+          include your personal information such as name, email, lyrics, files, settings or IP address.
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-400">
           You can change this anytime in Preferences → Advanced.

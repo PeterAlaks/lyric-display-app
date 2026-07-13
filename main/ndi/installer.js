@@ -1,6 +1,7 @@
 import https from 'https';
 import http from 'http';
 import { createHash } from 'crypto';
+import { NDI_MANAGED_INSTALL_MARKER } from '../appIdentity.js';
 
 const RELEASE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 const CHECKSUM_REQUIRED_FROM_VERSION = '1.0.6';
@@ -8,6 +9,39 @@ const CHECKSUM_REQUIRED_FROM_VERSION = '1.0.6';
 function parseSha256Checksum(value) {
   const match = /^[ \t]*([a-f0-9]{64})(?:[ \t]+[*]?[^\r\n]*)?[ \t]*(?:\r?\n)?$/i.exec(String(value || ''));
   return match ? match[1].toLowerCase() : null;
+}
+
+function replaceDirectoryAtomically({ fs, stagedPath, destinationPath }) {
+  const backupPath = `${destinationPath}-backup-${process.pid}-${Date.now()}`;
+  const hadExistingDestination = fs.existsSync(destinationPath);
+
+  if (hadExistingDestination) {
+    fs.renameSync(destinationPath, backupPath);
+  }
+
+  try {
+    fs.renameSync(stagedPath, destinationPath);
+  } catch (error) {
+    if (hadExistingDestination && fs.existsSync(backupPath) && !fs.existsSync(destinationPath)) {
+      try {
+        fs.renameSync(backupPath, destinationPath);
+      } catch (rollbackError) {
+        error.message += `; rollback failed: ${rollbackError.message}`;
+      }
+    }
+    throw error;
+  }
+
+  let backupCleanupError = null;
+  if (hadExistingDestination && fs.existsSync(backupPath)) {
+    try {
+      fs.rmSync(backupPath, { recursive: true, force: true });
+    } catch (error) {
+      backupCleanupError = error;
+    }
+  }
+
+  return { backupPath, backupCleanupError };
 }
 
 function createNdiInstaller({
@@ -22,6 +56,8 @@ function createNdiInstaller({
   getInstallPath,
   getResolvedInstallPath = getInstallPath,
   getLegacyInstallPaths = () => [],
+  getRemovableLegacyInstallPaths = getLegacyInstallPaths,
+  getUninstallPaths = () => [getInstallPath(), ...getRemovableLegacyInstallPaths()],
   getCompanionEntryPath,
   getPlatformAssetName,
   stopCompanion,
@@ -350,14 +386,23 @@ function createNdiInstaller({
         },
       });
 
+      fs.writeFileSync(
+        path.join(tempExtractPath, NDI_MANAGED_INSTALL_MARKER),
+        JSON.stringify({ installedAt: new Date().toISOString() }),
+        'utf8'
+      );
+
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
       console.log(`[NDI] Extraction completed in ${elapsed}s, moving to final location`);
 
-      if (fs.existsSync(destPath)) {
-        fs.rmSync(destPath, { recursive: true, force: true });
+      const replacement = replaceDirectoryAtomically({
+        fs,
+        stagedPath: tempExtractPath,
+        destinationPath: destPath,
+      });
+      if (replacement.backupCleanupError) {
+        console.warn('[NDI] Installed update but could not remove its backup directory:', replacement.backupCleanupError.message);
       }
-
-      fs.renameSync(tempExtractPath, destPath);
       console.log('[NDI] Moved extracted files to:', destPath);
     } catch (err) {
       try { fs.rmSync(tempExtractPath, { recursive: true, force: true }); } catch { /* ignore */ }
@@ -379,7 +424,7 @@ function createNdiInstaller({
   }
 
   function removeLegacyInstallPaths() {
-    for (const legacyInstallPath of getLegacyInstallPaths()) {
+    for (const legacyInstallPath of getRemovableLegacyInstallPaths()) {
       if (!legacyInstallPath || legacyInstallPath === getInstallPath()) continue;
       try {
         if (fs.existsSync(legacyInstallPath)) {
@@ -513,27 +558,44 @@ function createNdiInstaller({
 
   async function uninstallCompanion() {
     await stopCompanion();
-    const installPaths = [getInstallPath(), ...getLegacyInstallPaths()];
+    const installPaths = [...new Set(getUninstallPaths())];
 
     if (isDev) {
       console.warn('[NDI] Cannot uninstall in dev mode (source directory)');
       return { success: false, error: 'Cannot uninstall in dev mode' };
     }
 
-    try {
-      for (const installPath of installPaths) {
+    const removalErrors = [];
+    for (const installPath of installPaths) {
+      try {
         if (fs.existsSync(installPath)) {
           fs.rmSync(installPath, { recursive: true, force: true });
         }
+        if (fs.existsSync(installPath)) {
+          throw new Error('Path still exists after removal');
+        }
+      } catch (error) {
+        removalErrors.push({ path: installPath, message: error.message });
+        console.error('[NDI] Error removing companion path:', installPath, error);
       }
-    } catch (error) {
-      console.error('[NDI] Error removing companion files:', error);
     }
 
-    ndiStore.set('installed', false);
-    ndiStore.set('version', '');
-    ndiStore.set('installPath', '');
+    const stillInstalled = fs.existsSync(getCompanionEntryPath());
+    ndiStore.set('installed', stillInstalled);
+    if (!stillInstalled) {
+      ndiStore.set('version', '');
+      ndiStore.set('installPath', '');
+    }
     resetUpdateCache();
+
+    if (removalErrors.length > 0) {
+      return {
+        success: false,
+        partial: !stillInstalled,
+        error: `NDI companion cleanup failed for ${removalErrors.length} path(s)`,
+        errors: removalErrors,
+      };
+    }
 
     return { success: true };
   }
@@ -581,6 +643,44 @@ function createNdiInstaller({
   }
 
   function cleanupStaleArtifacts() {
+    if (!isDev) {
+      try {
+        const installPath = getInstallPath();
+        const parentDir = path.dirname(installPath);
+        const backupPrefix = path.basename(installPath) + '-backup-';
+        if (fs.existsSync(parentDir)) {
+          const backups = fs.readdirSync(parentDir)
+            .filter((entry) => entry.startsWith(backupPrefix))
+            .map((entry) => path.join(parentDir, entry))
+            .sort((a, b) => {
+              try {
+                return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs;
+              } catch {
+                return 0;
+              }
+            });
+
+          if (!fs.existsSync(installPath) && backups.length > 0) {
+            fs.renameSync(backups[0], installPath);
+            console.warn('[NDI] Recovered companion install after an interrupted update:', installPath);
+          }
+
+          if (fs.existsSync(installPath)) {
+            for (const backupPath of backups) {
+              if (!fs.existsSync(backupPath)) continue;
+              try {
+                fs.rmSync(backupPath, { recursive: true, force: true });
+              } catch (error) {
+                console.warn('[NDI] Failed to clean stale companion backup:', backupPath, error.message);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('[NDI] Interrupted update recovery failed:', error.message);
+      }
+    }
+
     try {
       const installPaths = [getInstallPath(), ...getLegacyInstallPaths()];
 
@@ -636,4 +736,4 @@ function createNdiInstaller({
   };
 }
 
-export { createNdiInstaller, parseSha256Checksum };
+export { createNdiInstaller, parseSha256Checksum, replaceDirectoryAtomically };

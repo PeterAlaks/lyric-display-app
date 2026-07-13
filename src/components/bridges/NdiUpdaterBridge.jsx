@@ -102,7 +102,7 @@ export default function NdiUpdaterBridge() {
         ),
         variant: 'info',
         dismissible: true,
-        size: 'lg',
+        size: 'md',
         actions: [
           {
             label: 'Later',

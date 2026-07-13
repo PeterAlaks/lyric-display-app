@@ -7,9 +7,59 @@ const { app } = typeof electron === 'object' && electron ? electron : {};
 export const APP_NAME = 'LyricDisplay';
 export const LEGACY_APP_NAME = 'lyric-display-app';
 export const NDI_FOLDER_NAME = 'NDI';
+export const NDI_INSTALL_FOLDER_NAME = 'Companion';
+export const NDI_USER_DATA_FOLDER_NAME = 'User Data';
+export const NDI_MANAGED_INSTALL_MARKER = '.managed-install-complete';
 export const LEGACY_NDI_FOLDER_NAME = 'lyricdisplay-ndi';
 
 const MIGRATION_MARKER = 'user-data-migration.json';
+const NDI_RUNTIME_ENTRY_NAMES = new Set([
+  'blob_storage',
+  'cache',
+  'code cache',
+  'cookies',
+  'cookies-journal',
+  'crashpad',
+  'dawncache',
+  'dawngraphitecache',
+  'dawnwebgpucache',
+  'dictionaries',
+  'dips',
+  'dips-journal',
+  'gpucache',
+  'grshadercache',
+  'local state',
+  'local storage',
+  'ndi-companion-settings.json',
+  'network',
+  'preferences',
+  'session storage',
+  'shared dictionary',
+  'sharedstorage',
+  'sharedstorage-wal',
+  'transportsecurity',
+  'trust tokens',
+  'trust tokens-journal',
+  'webstorage',
+]);
+const NDI_INSTALL_ENTRY_NAMES = new Set([
+  NDI_MANAGED_INSTALL_MARKER,
+  'chrome-sandbox',
+  'icudtl.dat',
+  'locales',
+  'lyricdisplay ndi',
+  'lyricdisplay ndi.app',
+  'lyricdisplay ndi.exe',
+  'lyricdisplay-ndi',
+  'package.json',
+  'resources',
+  'resources.pak',
+  'snapshot_blob.bin',
+  'swiftshader',
+  'v8_context_snapshot.bin',
+  'version',
+  'vk_swiftshader_icd.json',
+]);
 
 let configured = false;
 let migrationResult = null;
@@ -28,6 +78,18 @@ function recordConflict(summary, sourcePath, targetPath, message) {
     summary.conflicts = [];
   }
   summary.conflicts.push({ sourcePath, targetPath, message });
+}
+
+function isNdiInstallEntry(entryName) {
+  const normalizedName = String(entryName || '').toLowerCase();
+  return NDI_INSTALL_ENTRY_NAMES.has(normalizedName) ||
+    normalizedName.startsWith('license') ||
+    normalizedName.endsWith('.dll') ||
+    normalizedName.endsWith('.dylib') ||
+    normalizedName.endsWith('.exe') ||
+    normalizedName.endsWith('.pak') ||
+    normalizedName.endsWith('.so') ||
+    normalizedName.includes('.so.');
 }
 
 function filesHaveSameContent(sourcePath, targetPath, sourceStat) {
@@ -160,6 +222,8 @@ function migrateUserData(appDataPath) {
   const legacyNdiPath = path.join(appDataPath, LEGACY_NDI_FOLDER_NAME);
   const legacyUserDataNdiPath = path.join(targetPath, LEGACY_NDI_FOLDER_NAME);
   const targetNdiPath = path.join(targetPath, NDI_FOLDER_NAME);
+  const targetNdiInstallPath = path.join(targetNdiPath, NDI_INSTALL_FOLDER_NAME);
+  const targetNdiUserDataPath = path.join(targetNdiPath, NDI_USER_DATA_FOLDER_NAME);
 
   const summary = {
     sourcePath,
@@ -175,8 +239,9 @@ function migrateUserData(appDataPath) {
     migratedAt: null,
     reconciliationAttempted: false,
     conflicts: [],
-    legacyNdi: createLegacyNdiSummary(legacyNdiPath, targetNdiPath),
-    legacyUserDataNdi: createLegacyNdiSummary(legacyUserDataNdiPath, targetNdiPath),
+    legacyNdi: createLegacyNdiSummary(legacyNdiPath, targetNdiUserDataPath),
+    legacyUserDataNdi: createLegacyNdiSummary(legacyUserDataNdiPath, targetNdiInstallPath),
+    flatNdiInstall: createLegacyNdiSummary(targetNdiPath, targetNdiInstallPath),
     errors: [],
   };
 
@@ -252,6 +317,8 @@ function createLegacyNdiSummary(sourcePath, targetPath) {
     sourcePath,
     targetPath,
     attempted: false,
+    movedEntries: 0,
+    supersededEntries: 0,
     copiedFiles: 0,
     skippedExisting: 0,
     skippedSymlinks: 0,
@@ -267,6 +334,137 @@ function createLegacyNdiSummary(sourcePath, targetPath) {
 function migrateLegacyNdiFolders(summary) {
   migrateLegacyNdiFolder(summary.legacyNdi);
   migrateLegacyNdiFolder(summary.legacyUserDataNdi);
+  migrateFlatNdiInstall(
+    summary.flatNdiInstall,
+    summary.legacyNdi?.targetPath,
+    Boolean(summary.legacyNdi?.attempted && summary.legacyNdi?.deletedLegacy)
+  );
+}
+
+function migrateFlatNdiInstall(ndi, userDataPath, managedUserDataIsAuthoritative = false) {
+  if (!ndi || !pathExists(ndi.sourcePath)) {
+    if (ndi) {
+      ndi.deletedLegacy = true;
+      ndi.legacyDeleteSkippedReason = null;
+      ndi.conflicts = [];
+      ndi.errors = [];
+    }
+    return;
+  }
+
+  let entries;
+  try {
+    const reservedNames = new Set([
+      path.basename(ndi.targetPath).toLowerCase(),
+      path.basename(userDataPath || '').toLowerCase(),
+    ]);
+    entries = fs.readdirSync(ndi.sourcePath, { withFileTypes: true })
+      .filter((entry) => !reservedNames.has(entry.name.toLowerCase()));
+  } catch (error) {
+    ndi.attempted = true;
+    ndi.deletedLegacy = false;
+    ndi.legacyDeleteSkippedReason = 'Could not inspect the flat NDI install directory';
+    ndi.errors = [{ path: ndi.sourcePath, message: error.message }];
+    return;
+  }
+
+  if (entries.length === 0) {
+    ndi.deletedLegacy = true;
+    ndi.legacyDeleteSkippedReason = null;
+    ndi.conflicts = [];
+    ndi.errors = [];
+    return;
+  }
+
+  ndi.previouslyAttempted = Boolean(ndi.previouslyAttempted || ndi.attempted);
+  ndi.attempted = true;
+  ndi.movedEntries = 0;
+  ndi.supersededEntries = 0;
+  ndi.copiedFiles = 0;
+  ndi.skippedExisting = 0;
+  ndi.skippedSymlinks = 0;
+  ndi.skippedOther = 0;
+  ndi.deletedLegacy = false;
+  ndi.legacyDeleteSkippedReason = null;
+  ndi.conflicts = [];
+  ndi.errors = [];
+  const managedInstallIsAuthoritative = pathExists(
+    path.join(ndi.targetPath, NDI_MANAGED_INSTALL_MARKER)
+  );
+
+  for (const entry of entries) {
+    const normalizedName = entry.name.toLowerCase();
+    const isRuntimeEntry = NDI_RUNTIME_ENTRY_NAMES.has(normalizedName) ||
+      normalizedName.startsWith('singleton') ||
+      !isNdiInstallEntry(normalizedName);
+    const entryTargetRoot = isRuntimeEntry && userDataPath
+      ? userDataPath
+      : ndi.targetPath;
+
+    if (!isRuntimeEntry && managedInstallIsAuthoritative) {
+      const supersededPath = path.join(ndi.sourcePath, entry.name);
+      try {
+        withAsarDisabled(() => {
+          fs.rmSync(supersededPath, { recursive: true, force: true });
+        });
+        if (pathExists(supersededPath)) {
+          throw new Error('Path still exists after removal');
+        }
+        ndi.supersededEntries += 1;
+      } catch (error) {
+        ndi.errors.push({ path: supersededPath, message: error.message });
+      }
+      continue;
+    }
+
+    const entryMigration = createLegacyNdiSummary(
+      path.join(ndi.sourcePath, entry.name),
+      path.join(entryTargetRoot, entry.name)
+    );
+    migrateLegacyNdiFolder(entryMigration);
+
+    const canDiscardSupersededRuntimeEntry = isRuntimeEntry &&
+      managedUserDataIsAuthoritative &&
+      !entryMigration.deletedLegacy &&
+      entryMigration.conflicts.length > 0 &&
+      entryMigration.errors.length === 0 &&
+      entryMigration.skippedSymlinks === 0 &&
+      entryMigration.skippedOther === 0 &&
+      pathExists(entryMigration.targetPath);
+    if (canDiscardSupersededRuntimeEntry) {
+      try {
+        withAsarDisabled(() => {
+          fs.rmSync(entryMigration.sourcePath, { recursive: true, force: true });
+        });
+        if (!pathExists(entryMigration.sourcePath)) {
+          entryMigration.deletedLegacy = true;
+          entryMigration.legacyDeleteSkippedReason = null;
+          entryMigration.conflicts = [];
+          ndi.supersededEntries += 1;
+        }
+      } catch (error) {
+        entryMigration.errors.push({ path: entryMigration.sourcePath, message: error.message });
+      }
+    }
+
+    ndi.movedEntries += entryMigration.movedEntries;
+    ndi.copiedFiles += entryMigration.copiedFiles;
+    ndi.skippedExisting += entryMigration.skippedExisting;
+    ndi.skippedSymlinks += entryMigration.skippedSymlinks;
+    ndi.skippedOther += entryMigration.skippedOther;
+    ndi.conflicts.push(...entryMigration.conflicts);
+    ndi.errors.push(...entryMigration.errors);
+  }
+
+  const remainingEntries = entries.filter((entry) => (
+    pathExists(path.join(ndi.sourcePath, entry.name))
+  ));
+  ndi.deletedLegacy = remainingEntries.length === 0;
+  if (!ndi.deletedLegacy) {
+    ndi.legacyDeleteSkippedReason = ndi.conflicts.length > 0
+      ? 'Flat NDI install contains files that conflict with the Companion directory'
+      : 'Flat NDI install migration did not complete cleanly';
+  }
 }
 
 function migrateLegacyNdiFolder(ndi) {
@@ -280,10 +478,38 @@ function migrateLegacyNdiFolder(ndi) {
     return;
   }
 
+  ndi.previouslyAttempted = Boolean(ndi.previouslyAttempted || ndi.attempted);
   ndi.attempted = true;
+  ndi.movedEntries = 0;
+  ndi.copiedFiles = 0;
+  ndi.skippedExisting = 0;
+  ndi.skippedSymlinks = 0;
+  ndi.skippedOther = 0;
+  ndi.deletedLegacy = false;
+  ndi.legacyDeleteSkippedReason = null;
+  ndi.conflicts = [];
+  ndi.errors = [];
 
   try {
-    fs.mkdirSync(ndi.targetPath, { recursive: true });
+    if (!pathExists(ndi.targetPath)) {
+      try {
+        fs.mkdirSync(path.dirname(ndi.targetPath), { recursive: true });
+        withAsarDisabled(() => {
+          fs.renameSync(ndi.sourcePath, ndi.targetPath);
+        });
+        ndi.movedEntries = 1;
+        ndi.deletedLegacy = true;
+        return;
+      } catch {
+        // Locked files and interrupted migrations fall back to copy/verify/delete.
+      }
+    }
+
+    const sourceStat = fs.lstatSync(ndi.sourcePath);
+    fs.mkdirSync(
+      sourceStat.isDirectory() ? ndi.targetPath : path.dirname(ndi.targetPath),
+      { recursive: true }
+    );
     withAsarDisabled(() => {
       copyMissingRecursive(ndi.sourcePath, ndi.targetPath, ndi);
     });
@@ -376,6 +602,9 @@ function applyExistingMarker(markerPath, summary) {
     if (marker.legacyUserDataNdi && typeof marker.legacyUserDataNdi === 'object') {
       applyLegacyNdiMarker(summary.legacyUserDataNdi, marker.legacyUserDataNdi);
     }
+    if (marker.flatNdiInstall && typeof marker.flatNdiInstall === 'object') {
+      applyLegacyNdiMarker(summary.flatNdiInstall, marker.flatNdiInstall);
+    }
   } catch (error) {
     summary.errors.push({ path: markerPath, message: error.message });
     summary.legacyDeleteSkippedReason = 'Could not verify existing migration marker';
@@ -384,6 +613,8 @@ function applyExistingMarker(markerPath, summary) {
 
 function applyLegacyNdiMarker(targetSummary, marker) {
   targetSummary.previouslyAttempted = Boolean(marker.previouslyAttempted || marker.attempted);
+  targetSummary.movedEntries = Number(marker.movedEntries) || 0;
+  targetSummary.supersededEntries = Number(marker.supersededEntries) || 0;
   targetSummary.copiedFiles = Number(marker.copiedFiles) || 0;
   targetSummary.skippedExisting = Number(marker.skippedExisting) || 0;
   targetSummary.skippedSymlinks = Number(marker.skippedSymlinks) || 0;
@@ -444,6 +675,7 @@ function updateMigrationMarker(markerPath, summary) {
         conflicts: summary.conflicts,
         legacyNdi: summary.legacyNdi,
         legacyUserDataNdi: summary.legacyUserDataNdi,
+        flatNdiInstall: summary.flatNdiInstall,
         errors: summary.errors,
       }, null, 2),
       'utf8'

@@ -14,6 +14,7 @@ test('NDI companion CLI parses auth token without changing existing defaults', (
     'abc123',
     '--app-url',
     'http://localhost:5173',
+    '--user-data-dir=C:/managed/ndi-data',
     '--no-hash',
   ]);
 
@@ -22,6 +23,7 @@ test('NDI companion CLI parses auth token without changing existing defaults', (
   assert.equal(args.authToken, 'abc123');
   assert.equal(args.appUrl, 'http://localhost:5173');
   assert.equal(args.hashRouting, false);
+  assert.equal(args.userDataDir, 'C:/managed/ndi-data');
 });
 
 test('NDI companion CLI ignores invalid ports', () => {
@@ -29,4 +31,5 @@ test('NDI companion CLI ignores invalid ports', () => {
   assert.equal(args.port, 9137);
   assert.equal(args.authToken, '');
   assert.equal(args.hashRouting, true);
+  assert.equal(args.userDataDir, '');
 });

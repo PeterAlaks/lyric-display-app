@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Info } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import useLyricsStore from '../../context/LyricsStore';
 import { useDarkModeState } from '../../hooks/useStoreSelectors';
@@ -86,6 +87,8 @@ export default function FirstRunTourBridge() {
       component: 'TelemetryConsent',
       variant: 'info',
       size: 'sm',
+      className: 'max-w-lg',
+      icon: <Info className="h-6 w-6 text-blue-600 dark:text-blue-300" aria-hidden />,
       customLayout: true,
       dismissible: false,
       actions: [],
