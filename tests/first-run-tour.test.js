@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getTourCardPosition } from '../src/utils/firstRunTour.js';
+import { getTourCardPosition, shouldShowTelemetryConsent } from '../src/utils/firstRunTour.js';
 
 test('centers tour cards without a target', () => {
   const position = getTourCardPosition({
@@ -58,3 +58,41 @@ test('clamps oversized cards to the safe viewport margin', () => {
   assert.equal(position.top, 16);
 });
 
+test('existing installations see telemetry consent without replaying the welcome tour', () => {
+  assert.equal(shouldShowTelemetryConsent({
+    consentDecided: false,
+    hasSeenWelcome: true,
+    isControlPanel: true,
+    tourActive: false,
+  }), true);
+});
+
+test('new installations wait until the first-run tour has ended', () => {
+  assert.equal(shouldShowTelemetryConsent({
+    consentDecided: false,
+    hasSeenWelcome: false,
+    isControlPanel: true,
+    tourActive: true,
+  }), false);
+  assert.equal(shouldShowTelemetryConsent({
+    consentDecided: false,
+    hasSeenWelcome: true,
+    isControlPanel: true,
+    tourActive: false,
+  }), true);
+});
+
+test('replaying the welcome tour never repeats a completed telemetry choice', () => {
+  assert.equal(shouldShowTelemetryConsent({
+    consentDecided: true,
+    hasSeenWelcome: true,
+    isControlPanel: true,
+    tourActive: true,
+  }), false);
+  assert.equal(shouldShowTelemetryConsent({
+    consentDecided: true,
+    hasSeenWelcome: true,
+    isControlPanel: true,
+    tourActive: false,
+  }), false);
+});

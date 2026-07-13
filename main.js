@@ -26,6 +26,7 @@ import { relaunchInDesktopMode, relaunchInObsDockHeadlessMode } from './main/obs
 import * as userPreferences from './main/userPreferences.js';
 import { flushFileLogs, initFileLogging } from './main/logging.js';
 import { createAppTray, destroyAppTray } from './main/tray.js';
+import { recordSuccessfulAppLaunch } from './main/telemetry.js';
 
 const APP_PROTOCOL = 'lyricdisplay';
 const DEV_APP_PROTOCOL = 'lyricdisplay-dev';
@@ -491,6 +492,12 @@ app.whenReady().then(async () => {
 
   if (mainWindow) {
     attachMainWindowLifecycle(mainWindow);
+  }
+
+  if ((mainWindow || isHeadlessMode) && !app.isQuitting) {
+    void recordSuccessfulAppLaunch({
+      enabled: userPreferences.getPreference('advanced.shareAnonymousUsageData') ?? false,
+    });
   }
 
   if (isHeadlessMode || userPreferences.getPreference('general.minimizeToTray')) {

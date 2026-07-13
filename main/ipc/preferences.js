@@ -1,5 +1,6 @@
 import { ipcMain, dialog } from 'electron';
 import * as userPreferences from '../userPreferences.js';
+import { recordSuccessfulAppLaunch } from '../telemetry.js';
 import { setUpdateSessionActive } from '../updater.js';
 
 /**
@@ -44,12 +45,18 @@ export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingC
 
   ipcMain.handle('preferences:set', async (_event, { path, value }) => {
     try {
+      const usageSharingWasEnabled = path === 'advanced.shareAnonymousUsageData'
+        ? userPreferences.getPreference(path) === true
+        : false;
       userPreferences.setPreference(path, value);
       if (path === 'general.liveSafetyMode') {
         setUpdateSessionActive(Boolean(value));
       }
       if (typeof path === 'string' && (path.startsWith('parsing.') || path.startsWith('lineSplitting.'))) {
         syncParsingConfig();
+      }
+      if (path === 'advanced.shareAnonymousUsageData' && value === true && !usageSharingWasEnabled) {
+        void recordSuccessfulAppLaunch({ enabled: true });
       }
       return { success: true };
     } catch (error) {
@@ -60,12 +67,16 @@ export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingC
 
   ipcMain.handle('preferences:save-all', async (_event, { preferences }) => {
     try {
+      const usageSharingWasEnabled = userPreferences.getPreference('advanced.shareAnonymousUsageData') === true;
       const result = userPreferences.saveAllPreferences(preferences);
       if (result.success && typeof preferences?.general?.liveSafetyMode === 'boolean') {
         setUpdateSessionActive(preferences.general.liveSafetyMode);
       }
       if (result.success) {
         syncParsingConfig();
+      }
+      if (result.success && preferences?.advanced?.shareAnonymousUsageData === true && !usageSharingWasEnabled) {
+        void recordSuccessfulAppLaunch({ enabled: true });
       }
       return result;
     } catch (error) {
@@ -77,6 +88,9 @@ export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingC
   ipcMain.handle('preferences:reset-category', async (_event, { category }) => {
     try {
       userPreferences.resetCategoryToDefaults(category);
+      if (category === 'advanced') {
+        userPreferences.setPreference('advanced.telemetryConsentDecided', true);
+      }
       if (category === 'general') {
         setUpdateSessionActive(false);
       }
@@ -94,6 +108,7 @@ export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingC
     try {
       const result = userPreferences.resetAllToDefaults();
       if (result.success) {
+        userPreferences.setPreference('advanced.telemetryConsentDecided', true);
         setUpdateSessionActive(false);
         syncParsingConfig();
       }

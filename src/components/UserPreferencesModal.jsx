@@ -981,6 +981,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             showModal={showModal}
             showToast={showToast}
             updatePreference={updatePreference}
+            updatePreferenceGroup={updatePreferenceGroup}
           />
         );
 

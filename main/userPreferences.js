@@ -103,6 +103,8 @@ const preferencesStore = new Store({
       heartbeatInterval: 30000,
       maxConnectionAttempts: 10,
       ffmpegPath: '',
+      shareAnonymousUsageData: false,
+      telemetryConsentDecided: false,
     },
   },
 });

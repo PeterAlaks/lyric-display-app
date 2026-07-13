@@ -78,16 +78,32 @@ test('legacy preferences migrate once without overwriting valid operator choices
 
   assert.equal(result.success, true);
   assert.equal(result.changed, true);
-  assert.equal(result.preferences._schemaVersion, 1);
+  assert.equal(result.preferences._schemaVersion, 3);
   assert.equal(result.preferences.general.autoCheckForUpdates, false);
   assert.equal(result.preferences.general.liveSafetyMode, true);
   assert.equal(result.preferences.general.confirmOnClose, false);
+  assert.equal(result.preferences.general.shareAnonymousUsageData, undefined);
+  assert.equal(result.preferences.advanced.shareAnonymousUsageData, false);
+  assert.equal(result.preferences.advanced.telemetryConsentDecided, false);
   assert.deepEqual(result.preferences.appearance, { themeMode: 'dark' });
 
   const repeated = migratePreferences(result.preferences);
   assert.equal(repeated.success, true);
   assert.equal(repeated.changed, false);
   assert.equal(repeated.preferences, result.preferences);
+});
+
+test('an explicit legacy telemetry opt-out remains declined after migration', () => {
+  const result = migratePreferences({
+    _schemaVersion: 2,
+    general: { shareAnonymousUsageData: false },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.preferences._schemaVersion, 3);
+  assert.equal(result.preferences.general.shareAnonymousUsageData, undefined);
+  assert.equal(result.preferences.advanced.shareAnonymousUsageData, false);
+  assert.equal(result.preferences.advanced.telemetryConsentDecided, true);
 });
 
 test('future preference and session schemas are rejected without mutation', () => {

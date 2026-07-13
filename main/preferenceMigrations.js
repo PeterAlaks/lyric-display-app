@@ -1,4 +1,4 @@
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 1;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 3;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -37,6 +37,40 @@ export function migratePreferences(input) {
           : false,
       },
       _schemaVersion: 1,
+    };
+  }
+
+  if (sourceVersion < 2) {
+    const general = isPlainObject(migrated.general) ? migrated.general : {};
+    migrated = {
+      ...migrated,
+      general: {
+        ...general,
+        shareAnonymousUsageData: typeof general.shareAnonymousUsageData === 'boolean'
+          ? general.shareAnonymousUsageData
+          : true,
+      },
+      _schemaVersion: 2,
+    };
+  }
+
+  if (sourceVersion < 3) {
+    const general = isPlainObject(migrated.general) ? migrated.general : {};
+    const advanced = isPlainObject(migrated.advanced) ? migrated.advanced : {};
+    const { shareAnonymousUsageData: legacyUsageSharing, ...nextGeneral } = general;
+    const hasExplicitAdvancedDecision = advanced.telemetryConsentDecided === true;
+
+    migrated = {
+      ...migrated,
+      general: nextGeneral,
+      advanced: {
+        ...advanced,
+        shareAnonymousUsageData: hasExplicitAdvancedDecision
+          ? advanced.shareAnonymousUsageData === true
+          : false,
+        telemetryConsentDecided: hasExplicitAdvancedDecision || legacyUsageSharing === false,
+      },
+      _schemaVersion: 3,
     };
   }
 

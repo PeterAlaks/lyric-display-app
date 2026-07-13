@@ -24,6 +24,7 @@ const AdvancedPreferencesSection = ({
   showModal,
   showToast,
   updatePreference,
+  updatePreferenceGroup,
 }) => {
   const isDevMode = import.meta.env.MODE === 'development';
   const [obsDockStartup, setObsDockStartup] = useState(null);
@@ -95,6 +96,27 @@ const AdvancedPreferencesSection = ({
           These settings are for advanced users. Changing them may affect application stability.
         </p>
       </div>
+
+    <div className="flex items-center justify-between gap-6">
+      <div className="min-w-0 flex-1">
+        <label className={`text-sm font-medium ${labelClass}`}>Share minimal app activity</label>
+        <p className={`mt-1 text-xs ${mutedClass}`}>
+          Share a random installation ID, platform, app version, and successful launch or update events for analytics.
+        </p>
+      </div>
+      <Switch
+        checked={preferences.advanced?.shareAnonymousUsageData ?? false}
+        onCheckedChange={(checked) => updatePreferenceGroup('advanced', {
+          shareAnonymousUsageData: checked,
+          telemetryConsentDecided: true,
+        })}
+        className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+          ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+          : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+          }`}
+        thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+      />
+    </div>
 
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
       <div className="mb-4 flex items-start gap-3">

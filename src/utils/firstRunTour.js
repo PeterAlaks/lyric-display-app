@@ -1,6 +1,20 @@
 export const START_FIRST_RUN_TOUR_EVENT = 'first-run-tour:start';
 export const FIRST_RUN_TOUR_STEP_EVENT = 'first-run-tour:step-change';
 
+export function shouldShowTelemetryConsent({
+  consentDecided,
+  hasSeenWelcome,
+  isControlPanel,
+  tourActive,
+}) {
+  return Boolean(
+    isControlPanel
+    && consentDecided === false
+    && hasSeenWelcome
+    && !tourActive
+  );
+}
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 export function getTourCardPosition({
