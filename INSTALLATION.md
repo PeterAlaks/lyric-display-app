@@ -2,7 +2,7 @@
 
 Install LyricDisplay, connect production outputs, and resolve common setup problems.
 
-Version: 6.6.2
+Version: 6.7.0
 
 ## Contents
 
@@ -36,10 +36,10 @@ Current packages:
 
 Direct assets for this version:
 
-- [Windows x64 installer](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-Windows-Setup.exe)
-- [macOS Apple Silicon DMG](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-macOS-arm64.dmg)
-- [macOS Intel DMG](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-macOS-x64.dmg)
-- [Linux x64 AppImage](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.6.2/LyricDisplay-6.6.2-Linux.AppImage)
+- [Windows x64 installer](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.7.0/LyricDisplay-6.7.0-Windows-Setup.exe)
+- [macOS Apple Silicon DMG](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.7.0/LyricDisplay-6.7.0-macOS-arm64.dmg)
+- [macOS Intel DMG](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.7.0/LyricDisplay-6.7.0-macOS-x64.dmg)
+- [Linux x64 AppImage](https://github.com/PeterAlaks/lyric-display-app/releases/download/v6.7.0/LyricDisplay-6.7.0-Linux.AppImage)
 
 For a typical production workflow, 8 GB of RAM and a 1920×1080-capable display are a practical baseline. Multiple high-resolution video backgrounds, several browser sources, lyric video export, or NDI output benefit from more memory and GPU capacity. Wired Ethernet is strongly recommended when outputs or controllers run on other devices.
 
