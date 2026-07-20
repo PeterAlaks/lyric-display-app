@@ -553,8 +553,8 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
         </ol>
       </div>
 
-      <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 py-6 [scrollbar-gutter:stable] sm:px-6">
-        <div className="mx-auto w-full max-w-[720px]">
+      <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 py-6 scrollbar-gutter-stable sm:px-6">
+        <div className="mx-auto w-full max-w-180">
           {error && (
             <div className={`mb-5 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs leading-relaxed ${darkMode ? 'border-red-500/30 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`} role="alert">
               <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
@@ -820,7 +820,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
 
           {step === 3 && (
             <div className="space-y-6">
-              <div className="rounded-2xl bg-gradient-to-br from-blue-500 via-blue-400 to-emerald-400 p-px shadow-sm">
+              <div className="rounded-2xl bg-linear-to-br from-blue-500 via-blue-400 to-emerald-400 p-px shadow-sm">
                 <section className={`overflow-hidden rounded-[15px] ${darkMode ? 'bg-slate-900' : 'bg-white'}`}>
                   <div className={`flex items-start justify-between gap-4 border-b p-4 ${cardHeaderClass}`}>
                     <div className="min-w-0">
@@ -871,7 +871,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
         </div>
       </div>
 
-      <div className={`min-h-[78px] shrink-0 border-t px-4 py-4 sm:px-6 sm:py-5 ${darkMode ? 'border-slate-800 bg-slate-950/45' : 'border-slate-200 bg-slate-50'}`}>
+      <div className={`min-h-19.5 shrink-0 border-t px-4 py-4 sm:px-6 sm:py-5 ${darkMode ? 'border-slate-800 bg-slate-950/45' : 'border-slate-200 bg-slate-50'}`}>
         {blockedReason && !busy && (
           <p className={`mb-2 text-center text-[11px] sm:text-right ${mutedText}`}>{blockedReason}</p>
         )}
