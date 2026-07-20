@@ -2,10 +2,11 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
 import useSharedTimer from '../hooks/useSharedTimer';
-import { formatGlobalClock, isTimerVisiblyActive, splitClockPeriod } from '../utils/timerUtils';
+import { formatGlobalClock, getRemainingMs, isTimerVisiblyActive, splitClockPeriod } from '../utils/timerUtils';
 import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import { paintToCss } from '../utils/paint';
 import ProjectionExitHint from '../components/ProjectionExitHint';
+import { calculateScheduleProjection } from '../../shared/scheduleUtils.js';
 
 const PERIOD_STYLE = {
   fontSize: '0.38em',
@@ -188,6 +189,31 @@ const TimeDisplay = () => {
   const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);
   const showGlobalClock = display.showGlobalClock !== false;
   const showSecondaryText = display.showSecondaryText !== false;
+  const hasRunningSchedule = timerState.running && Array.isArray(timerState.sets) && timerState.sets.length > 0;
+  const scheduleRemainingMs = hasRunningSchedule && timerState.mode !== 'countup'
+    ? getRemainingMs(timerState, now)
+    : null;
+  const scheduleProjection = React.useMemo(() => calculateScheduleProjection({
+    items: timerState.sets,
+    active: hasRunningSchedule,
+    activeIndex: timerState.activeSetIndex,
+    now,
+    currentRemainingMs: scheduleRemainingMs,
+    currentIsTransition: timerState.phase === 'indicator',
+    transitionMs: timerState.indicatorEnabled ? timerState.indicatorDurationMs : 0,
+    idealEndAt: timerState.scheduleIdealEndAt,
+  }), [
+    hasRunningSchedule,
+    now,
+    scheduleRemainingMs,
+    timerState.activeSetIndex,
+    timerState.indicatorDurationMs,
+    timerState.indicatorEnabled,
+    timerState.phase,
+    timerState.scheduleIdealEndAt,
+    timerState.sets,
+  ]);
+  const isBehindSchedule = hasRunningSchedule && scheduleProjection.status === 'behind';
   const isWaitingForTime = !hasActiveTimer && !showGlobalClock;
   const isIdleFullScreenClock = shouldShowClock && !isWaitingForTime;
 
@@ -345,7 +371,7 @@ const TimeDisplay = () => {
         )}
         {showSecondaryText && showGlobalClock && hasActiveTimer && (
           <div
-            className="mx-auto mt-2 w-full text-center font-mono font-semibold leading-none"
+            className="mx-auto mt-2 flex w-full items-center justify-center gap-[0.65em] text-center font-semibold leading-none"
             style={{
               color: 'rgba(255,255,255,0.72)',
               fontSize: `${otherItemsFontSize}px`,
@@ -357,7 +383,13 @@ const TimeDisplay = () => {
               whiteSpace: 'nowrap',
             }}
           >
-            <ClockValue value={clockValue} />
+            {isBehindSchedule && (
+              <>
+                <span style={{ color: display.warningColor || '#F59E0B' }}>Behind schedule</span>
+                <span aria-hidden="true" style={{ color: 'rgba(255,255,255,0.28)' }}>&middot;</span>
+              </>
+            )}
+            <span className="font-mono"><ClockValue value={clockValue} /></span>
           </div>
         )}
       </div>

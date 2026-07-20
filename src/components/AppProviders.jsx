@@ -7,6 +7,8 @@ import { ToastProvider } from './toast/ToastProvider';
 import { ModalProvider } from './modal/ModalProvider';
 import { REQUEST_MODAL_CLOSE_EVENT } from '../constants/modalEvents';
 
+const ScheduleFileOpenBridge = React.lazy(() => import('./bridges/ScheduleFileOpenBridge'));
+
 export default function AppProviders({ children, effectiveDarkMode, isDockRuntime }) {
   const { setDarkMode } = useDarkModeState();
 
@@ -70,6 +72,9 @@ export default function AppProviders({ children, effectiveDarkMode, isDockRuntim
         position={isDockRuntime ? 'top-right' : 'bottom-right'}
         offset={isDockRuntime ? 8 : 32}
       >
+        <React.Suspense fallback={null}>
+          <ScheduleFileOpenBridge />
+        </React.Suspense>
         {children}
       </ToastProvider>
     </ModalProvider>

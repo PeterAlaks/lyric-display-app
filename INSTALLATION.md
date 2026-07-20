@@ -252,6 +252,7 @@ Supported lyric inputs:
 | Rich Text | `.rtf` |
 | Word document | `.docx` |
 | LyricDisplay setlist | `.ldset` |
+| LyricDisplay schedule | `.ldsch` |
 
 Load a file with **File > Load Lyrics File**, `Ctrl/Cmd + O`, or drag and drop. Create a song with **File > New Lyrics File** or `Ctrl/Cmd + N`.
 
@@ -265,6 +266,7 @@ For live operation:
 - Use **Output > Sync Outputs** when a connected display needs the full current state resent.
 - Open **Help > Keyboard Shortcuts** for the current complete shortcut list.
 - Save a `.ldset` when the running order and song collection should be reused.
+- In the Timer module, open **Schedule** to paste or import an agenda, build timed or manual items, configure transitions and an ideal end time, then save it as `.ldsch` for reuse.
 
 ## Troubleshooting
 

@@ -26,7 +26,7 @@ import {
   rememberLyricsGrouping,
 } from '../lyricsGroupingMetadata.js';
 
-const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc']);
+const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc', '.ldsch']);
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
@@ -82,7 +82,7 @@ function validateLyricWrite(filePath, content) {
 
   const extension = path.extname(normalized).toLowerCase();
   if (!ALLOWED_WRITE_EXTENSIONS.has(extension)) {
-    return { valid: false, error: 'Only .txt and .lrc lyric files can be written here' };
+    return { valid: false, error: 'Only .txt, .lrc, and .ldsch files can be written here' };
   }
 
   if (!writeGrantPaths.has(normalized)) {

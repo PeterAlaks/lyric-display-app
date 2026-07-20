@@ -55,6 +55,14 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
+  const previousOutputOnRef = React.useRef(isOutputOn);
+  const [outputBeaconDirection, setOutputBeaconDirection] = React.useState(null);
+
+  React.useEffect(() => {
+    if (previousOutputOnRef.current === isOutputOn) return;
+    setOutputBeaconDirection(isOutputOn ? 'on' : 'off');
+    previousOutputOnRef.current = isOutputOn;
+  }, [isOutputOn]);
   const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, lyricsEnhancedTimestamps, pendingSavedVersion, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, clearPendingSavedVersion } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
@@ -514,13 +522,21 @@ const LyricDisplayApp = () => {
                 />
                 <span className={`ml-5 inline-flex items-center gap-3 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   <span className="inline-block w-[152px] shrink-0">{isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}</span>
-                  <span
-                    className={`h-2 w-2 rounded-full ${isOutputOn
+                  <span className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
+                    {outputBeaconDirection && (
+                      <span
+                        key={`${outputBeaconDirection}-${isOutputOn ? 'active' : 'inactive'}`}
+                        className={`absolute h-2 w-2 rounded-full bg-emerald-500 ${outputBeaconDirection === 'on'
+                          ? 'output-live-beacon-on'
+                          : 'output-live-beacon-off'}`}
+                      />
+                    )}
+                    <span className={`relative h-2 w-2 rounded-full ${isOutputOn
                       ? 'bg-emerald-500'
                       : darkMode ? 'bg-gray-500' : 'bg-gray-400'
                       }`}
-                    aria-hidden="true"
-                  />
+                    />
+                  </span>
                 </span>
               </div>
 

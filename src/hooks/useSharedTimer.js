@@ -13,6 +13,10 @@ import {
   resetActiveTimerRuntime,
 } from '../utils/timerUtils';
 import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
+import {
+  isTimedScheduleItem,
+  normalizeScheduleItem,
+} from '../../shared/scheduleUtils.js';
 
 const getDisplayUpdatedAt = (display) => {
   const updatedAt = Number(display?.displayUpdatedAt);
@@ -75,6 +79,31 @@ const timerStatesAreEquivalent = (a, b) => {
   } catch {
     return false;
   }
+};
+
+const createSetRuntime = (current, set, index, startTime = Date.now()) => {
+  const timed = isTimedScheduleItem(set);
+  const durationMs = timed ? Math.max(1_000, Number(set.durationMs) || 0) : 0;
+  return {
+    ...current,
+    status: 'running',
+    running: true,
+    paused: false,
+    finished: false,
+    mode: timed ? 'countdown' : 'countup',
+    phase: 'timer',
+    label: set.label,
+    activeSetIndex: index,
+    durationMs,
+    startTime,
+    endTime: timed ? startTime + durationMs : null,
+    targetTime: null,
+    elapsedBeforePauseMs: 0,
+    pausedRemainingMs: null,
+    remaining: null,
+    overrunStartedAt: null,
+    awaitingNext: false,
+  };
 };
 
 export const useSharedTimer = ({
@@ -200,25 +229,30 @@ export const useSharedTimer = ({
       indicatorEnabled: Boolean(options.indicatorEnabled),
       indicatorDurationMs: Math.max(0, Number(options.indicatorDurationMs) || current.indicatorDurationMs || 0),
       indicatorLabel: options.indicatorLabel || current.indicatorLabel,
+      scheduleTitle: options.scheduleTitle || '',
+      scheduleIdealEndAt: Number.isFinite(Number(options.scheduleIdealEndAt)) ? Number(options.scheduleIdealEndAt) : null,
+      scheduleStartedAt: Array.isArray(options.sets) && options.sets.length > 0 ? startTime : null,
+      scheduleNotificationsEnabled: options.scheduleNotificationsEnabled !== false,
+      awaitingNext: false,
       display: { ...current.display, ...(options.display || {}) },
     });
   }, [commitTimerState]);
 
   const startTimerSet = React.useCallback((options = {}) => {
     const sets = (Array.isArray(options.sets) ? options.sets : [])
-      .map((set, index) => ({
-        id: set.id || `set-${Date.now()}-${index}`,
-        label: set.label || `Timer ${index + 1}`,
-        durationMs: Math.max(0, Number(set.durationMs) || 0),
-      }))
-      .filter((set) => set.durationMs > 0);
+      .map((set, index) => normalizeScheduleItem({
+        ...set,
+        id: set?.id || `set-${Date.now()}-${index}`,
+      }, index));
 
     if (sets.length === 0) return null;
 
+    const firstTimed = isTimedScheduleItem(sets[0]);
+
     return startTimer({
       ...options,
-      mode: 'countdown',
-      durationMs: sets[0].durationMs,
+      mode: firstTimed ? 'countdown' : 'countup',
+      durationMs: firstTimed ? sets[0].durationMs : 0,
       label: sets[0].label,
       sets,
     });
@@ -243,6 +277,7 @@ export const useSharedTimer = ({
   const resumeTimer = React.useCallback(() => {
     const current = latestStateRef.current;
     if (!current.running || !current.paused) return current;
+    if (current.awaitingNext) return current;
     const startTime = Date.now();
     const endTime = current.mode === 'countdown' || current.mode === 'target'
       ? startTime + Math.max(0, Number(current.pausedRemainingMs) || 0)
@@ -292,23 +327,64 @@ export const useSharedTimer = ({
     const nextSet = current.sets?.[nextIndex];
     if (!nextSet) return current;
     const startTime = Date.now();
+    if (current.phase !== 'indicator' && current.indicatorEnabled && current.indicatorDurationMs > 0) {
+      return commitTimerState({
+        ...current,
+        status: 'running',
+        running: true,
+        paused: false,
+        finished: false,
+        mode: 'countdown',
+        phase: 'indicator',
+        label: current.indicatorLabel,
+        durationMs: current.indicatorDurationMs,
+        startTime,
+        endTime: startTime + current.indicatorDurationMs,
+        elapsedBeforePauseMs: 0,
+        pausedRemainingMs: null,
+        remaining: null,
+        overrunStartedAt: null,
+        awaitingNext: false,
+      });
+    }
+    return commitTimerState(createSetRuntime(current, nextSet, nextIndex, startTime));
+  }, [commitTimerState]);
+
+  const jumpToSet = React.useCallback((index) => {
+    const current = latestStateRef.current;
+    const targetIndex = Math.max(0, Math.min(current.sets.length - 1, Number(index) || 0));
+    const targetSet = current.sets?.[targetIndex];
+    if (!targetSet) return current;
+    return commitTimerState(createSetRuntime(current, targetSet, targetIndex));
+  }, [commitTimerState]);
+
+  const completeSchedule = React.useCallback(() => {
+    const current = latestStateRef.current;
+    if (!current.running && !current.paused) return current;
+    const completionValue = current.mode === 'countup' ? getTimerDisplay(current, Date.now()) : '0:00';
     return commitTimerState({
       ...current,
-      status: 'running',
-      running: true,
+      status: 'finished',
+      running: false,
       paused: false,
-      phase: 'timer',
-      label: nextSet.label,
-      activeSetIndex: nextIndex,
-      durationMs: nextSet.durationMs,
-      startTime,
-      endTime: startTime + nextSet.durationMs,
+      finished: true,
+      mode: 'countdown',
+      durationMs: 0,
+      startTime: null,
+      endTime: null,
+      elapsedBeforePauseMs: 0,
       pausedRemainingMs: null,
-      remaining: null,
-      finished: false,
-      overrunStartedAt: null,
+      remaining: completionValue,
+      awaitingNext: false,
     });
   }, [commitTimerState]);
+
+  const advanceSchedule = React.useCallback(() => {
+    const current = latestStateRef.current;
+    return current.sets?.[current.activeSetIndex + 1]
+      ? skipToNextSet()
+      : completeSchedule();
+  }, [completeSchedule, skipToNextSet]);
 
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
   const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
@@ -328,6 +404,9 @@ export const useSharedTimer = ({
       stopTimer,
       addTime,
       skipToNextSet,
+      jumpToSet,
+      completeSchedule,
+      advanceSchedule,
       commitTimerState,
     },
   };

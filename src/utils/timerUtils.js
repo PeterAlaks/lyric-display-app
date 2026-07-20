@@ -1,11 +1,10 @@
-export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
-export const MAX_TIMER_SETS = 10;
+import {
+  MAX_SCHEDULE_ITEMS,
+  normalizeScheduleItem,
+} from '../../shared/scheduleUtils.js';
 
-export const createDefaultTimerControlSet = (index = 0) => ({
-  id: `timer-set-${index + 1}`,
-  label: `Timer ${index + 1}`,
-  durationMs: 5 * 60000,
-});
+export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
+export const MAX_TIMER_SETS = MAX_SCHEDULE_ITEMS;
 
 export const DEFAULT_TIMER_CONTROL_SETTINGS = {
   mode: 'countdown',
@@ -16,14 +15,16 @@ export const DEFAULT_TIMER_CONTROL_SETTINGS = {
   criticalSeconds: 30,
   overrunMode: false,
   useSets: false,
-  sets: [
-    createDefaultTimerControlSet(0),
-    createDefaultTimerControlSet(1),
-  ],
+  sets: [],
   autoStartNext: true,
   indicatorEnabled: true,
   indicatorSeconds: 10,
-  indicatorLabel: 'Next timer starts in',
+  indicatorLabel: 'Next item starts in',
+  scheduleTitle: 'Service Schedule',
+  scheduleEventStartTime: '',
+  scheduleIdealEndTime: '',
+  scheduleNotificationsEnabled: true,
+  awaitingNext: false,
 };
 
 export const DEFAULT_TIMER_DISPLAY = {
@@ -107,7 +108,11 @@ export const createIdleTimerState = () => ({
   autoStartNext: true,
   indicatorEnabled: false,
   indicatorDurationMs: 10000,
-  indicatorLabel: 'Next timer starts in',
+  indicatorLabel: 'Next item starts in',
+  scheduleTitle: '',
+  scheduleIdealEndAt: null,
+  scheduleStartedAt: null,
+  scheduleNotificationsEnabled: true,
   display: { ...DEFAULT_TIMER_DISPLAY },
   updatedAt: Date.now(),
 });
@@ -164,14 +169,16 @@ export const normalizeTimerControlSettings = (raw) => {
 
   const sets = Array.isArray(settings.sets)
     ? settings.sets
-      .map((set, index) => ({
-        id: String(set?.id || `timer-set-${index + 1}`),
-        label: typeof set?.label === 'string' ? set.label : `Timer ${index + 1}`,
-        durationMs: clampNumber(set?.durationMs, 5 * 60000, 0),
-      }))
-      .filter((set) => set.durationMs > 0)
+      .map((set, index) => normalizeScheduleItem(set, index))
       .slice(0, MAX_TIMER_SETS)
     : DEFAULT_TIMER_CONTROL_SETTINGS.sets;
+  const isLegacyPlaceholderSchedule = sets.length > 0
+    && sets.length <= 2
+    && sets.every((set, index) => (
+      set.id === `timer-set-${index + 1}`
+      && set.label === `Timer ${index + 1}`
+      && set.durationMs === 5 * 60_000
+    ));
 
   return {
     ...DEFAULT_TIMER_CONTROL_SETTINGS,
@@ -184,11 +191,17 @@ export const normalizeTimerControlSettings = (raw) => {
     criticalSeconds: normalizeTimerNumberInput(settings.criticalSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.criticalSeconds, 0, 86400),
     overrunMode: Boolean(settings.overrunMode),
     useSets: Boolean(settings.useSets),
-    sets: sets.length > 0 ? sets : [createDefaultTimerControlSet(0)],
+    sets: isLegacyPlaceholderSchedule ? [] : sets,
     autoStartNext: settings.autoStartNext !== false,
     indicatorEnabled: settings.indicatorEnabled !== false,
     indicatorSeconds: normalizeTimerNumberInput(settings.indicatorSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds, 0, 86400),
     indicatorLabel: typeof settings.indicatorLabel === 'string' ? settings.indicatorLabel : DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+    scheduleTitle: typeof settings.scheduleTitle === 'string'
+      ? settings.scheduleTitle.slice(0, 160)
+      : DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
+    scheduleEventStartTime: isValidTargetTime(settings.scheduleEventStartTime) ? settings.scheduleEventStartTime : '',
+    scheduleIdealEndTime: isValidTargetTime(settings.scheduleIdealEndTime) ? settings.scheduleIdealEndTime : '',
+    scheduleNotificationsEnabled: settings.scheduleNotificationsEnabled !== false,
     settingsUpdatedAt: Number.isFinite(Number(settings.settingsUpdatedAt)) ? Number(settings.settingsUpdatedAt) : 0,
   };
 };
@@ -205,12 +218,7 @@ export const normalizeTimerState = (raw) => {
   const durationMs = clampNumber(raw.durationMs ?? raw.durationMinutes * 60000, 0, 0);
   const sets = Array.isArray(raw.sets)
     ? raw.sets
-      .map((set, index) => ({
-        id: set?.id || `set-${index + 1}`,
-        label: String(set?.label || `Timer ${index + 1}`),
-        durationMs: clampNumber(set?.durationMs, 0, 0),
-      }))
-      .filter((set) => set.durationMs > 0)
+      .map((set, index) => normalizeScheduleItem(set, index))
       .slice(0, MAX_TIMER_SETS)
     : [];
 
@@ -240,7 +248,12 @@ export const normalizeTimerState = (raw) => {
     autoStartNext: raw.autoStartNext !== false,
     indicatorEnabled: Boolean(raw.indicatorEnabled),
     indicatorDurationMs: clampNumber(raw.indicatorDurationMs, 10000, 0),
-    indicatorLabel: String(raw.indicatorLabel || 'Next timer starts in'),
+    indicatorLabel: String(raw.indicatorLabel || 'Next item starts in'),
+    scheduleTitle: String(raw.scheduleTitle || ''),
+    scheduleIdealEndAt: normalizeNullableTimestamp(raw.scheduleIdealEndAt),
+    scheduleStartedAt: normalizeNullableTimestamp(raw.scheduleStartedAt),
+    scheduleNotificationsEnabled: raw.scheduleNotificationsEnabled !== false,
+    awaitingNext: Boolean(raw.awaitingNext),
     display: normalizeTimerDisplaySettings(raw.display),
     updatedAt: Number.isFinite(Number(raw.updatedAt)) ? Number(raw.updatedAt) : Date.now(),
   };

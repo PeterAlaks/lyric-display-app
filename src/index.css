@@ -194,6 +194,54 @@
   background-color: #ffffff;
 }
 
+@keyframes output-live-beacon-on {
+  from {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0.14;
+    transform: scale(2.6);
+  }
+}
+
+@keyframes output-live-beacon-off {
+  from {
+    opacity: 0.14;
+    transform: scale(2.6);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.output-live-beacon-on {
+  animation: output-live-beacon-on 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform-origin: center;
+}
+
+.output-live-beacon-off {
+  animation: output-live-beacon-off 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .output-live-beacon-on {
+    animation: none;
+    opacity: 0.14;
+    transform: scale(2.6);
+  }
+
+  .output-live-beacon-off {
+    animation: none;
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
 .dark .control-panel-sidebar-texture {
   background-color: #1f2937;
 }

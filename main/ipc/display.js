@@ -309,10 +309,10 @@ const openTimerControlWindow = async () => {
   }
 
   createWindow('/timer-control', {
-    width: 1100,
-    height: 700,
+    width: 1200,
+    height: 760,
     minWidth: 1100,
-    minHeight: 560,
+    minHeight: 620,
     title: 'LyricDisplay Timer',
   });
   return { success: true, route: '/timer-control', reused: false };

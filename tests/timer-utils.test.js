@@ -176,7 +176,7 @@ test('timer display sync ignores equal timestamped settings', () => {
   assert.equal(store.getState().timerDisplaySettings, syncedSettingsRef);
 });
 
-test('timer control settings cap timer sets at ten', () => {
+test('timer control settings cap timer sets at the schedule limit', () => {
   const settings = normalizeTimerControlSettings({
     sets: Array.from({ length: MAX_TIMER_SETS + 2 }, (_, index) => ({
       id: `set-${index + 1}`,
@@ -189,7 +189,23 @@ test('timer control settings cap timer sets at ten', () => {
   assert.equal(settings.sets.at(-1).label, `Timer ${MAX_TIMER_SETS}`);
 });
 
-test('timer state normalization caps runtime timer sets at ten', () => {
+test('timer control settings preserve an empty schedule as a clean slate', () => {
+  assert.deepEqual(normalizeTimerControlSettings({}).sets, []);
+  assert.deepEqual(normalizeTimerControlSettings({ sets: [] }).sets, []);
+  assert.deepEqual(normalizeTimerControlSettings({
+    sets: [
+      { id: 'timer-set-1', label: 'Timer 1', durationMs: 300_000 },
+      { id: 'timer-set-2', label: 'Timer 2', durationMs: 300_000 },
+    ],
+  }).sets, []);
+});
+
+test('timer control settings preserve a valid optional schedule event start', () => {
+  assert.equal(normalizeTimerControlSettings({ scheduleEventStartTime: '09:30' }).scheduleEventStartTime, '09:30');
+  assert.equal(normalizeTimerControlSettings({ scheduleEventStartTime: '25:00' }).scheduleEventStartTime, '');
+});
+
+test('timer state normalization caps runtime timer sets at the schedule limit', () => {
   const state = normalizeTimerState({
     activeSetIndex: MAX_TIMER_SETS + 4,
     sets: Array.from({ length: MAX_TIMER_SETS + 3 }, (_, index) => ({
@@ -201,6 +217,18 @@ test('timer state normalization caps runtime timer sets at ten', () => {
 
   assert.equal(state.sets.length, MAX_TIMER_SETS);
   assert.equal(state.activeSetIndex, MAX_TIMER_SETS - 1);
+});
+
+test('timer normalization preserves manual schedule items', () => {
+  const state = normalizeTimerState({
+    sets: [
+      { id: 'manual', label: 'Open ministry', durationMs: null, timed: false },
+    ],
+  });
+
+  assert.equal(state.sets.length, 1);
+  assert.equal(state.sets[0].timed, false);
+  assert.equal(state.sets[0].durationMs, null);
 });
 
 test('active timer runtime is reset when hydrating a new app session', () => {

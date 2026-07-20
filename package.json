@@ -196,6 +196,13 @@
           "description": "LyricDisplay setlist file",
           "icon": "public/favicon.ico",
           "role": "Editor"
+        },
+        {
+          "ext": "ldsch",
+          "name": "LyricDisplay Schedule",
+          "description": "LyricDisplay timer schedule file",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
         }
       ]
     },
@@ -292,6 +299,12 @@
           "name": "LyricDisplay Setlist",
           "description": "LyricDisplay setlist file",
           "role": "Editor"
+        },
+        {
+          "ext": "ldsch",
+          "name": "LyricDisplay Schedule",
+          "description": "LyricDisplay timer schedule file",
+          "role": "Editor"
         }
       ]
     },
@@ -365,6 +378,12 @@
           "name": "LyricDisplay Setlist",
           "description": "LyricDisplay setlist file",
           "mimeType": "application/x-ldset"
+        },
+        {
+          "ext": "ldsch",
+          "name": "LyricDisplay Schedule",
+          "description": "LyricDisplay timer schedule file",
+          "mimeType": "application/x-lyricdisplay-schedule"
         }
       ]
     },

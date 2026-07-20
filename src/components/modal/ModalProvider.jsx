@@ -21,6 +21,8 @@ import PreServiceHealthModal from '../PreServiceHealthModal';
 import OperatorActionLogModal from '../OperatorActionLogModal';
 import ObsDockInfoModal from '../ObsDockInfoModal';
 import TelemetryConsentModal from '../TelemetryConsentModal';
+import ScheduleCreatorWizard from '../ScheduleCreatorWizard';
+import TimerDisplaySettingsModal from '../TimerDisplaySettingsModal';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { ModalActionButton, ModalFooter } from './modalActions';
@@ -443,7 +445,7 @@ export function ModalProvider({ children, isDark = false }) {
     [showModal, closeModal, closeModalByDedupeKey]
   );
 
-  const modalMaxHeight = `calc(100vh - ${topMenuHeight} - 80px)`;
+  const modalMaxHeight = `calc(100dvh - ${topMenuHeight} - 24px)`;
 
   const content = modals.length > 0 ? (
     <div
@@ -499,7 +501,7 @@ export function ModalProvider({ children, isDark = false }) {
             />
 
             <div
-              className="pointer-events-none relative flex h-full items-center justify-center px-4 py-10">
+              className="pointer-events-none relative flex h-full items-center justify-center px-3 py-3 sm:px-4">
               <div
                 className={cn(
                   'pointer-events-auto rounded-2xl border ring-1 transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
@@ -516,7 +518,7 @@ export function ModalProvider({ children, isDark = false }) {
               >
                 {/* Fixed Header */}
                 <div className={cn(
-                  'flex gap-4 border-b px-6 py-5 shrink-0',
+                  'flex shrink-0 gap-3 border-b px-4 py-4 sm:gap-4 sm:px-6 sm:py-5',
                   modal.headerDescription ? 'items-start' : 'items-center',
                   isDark ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'
                 )}>
@@ -736,6 +738,21 @@ export function ModalProvider({ children, isDark = false }) {
                           darkMode={isDark}
                           onDecision={modal.onDecision}
                           onClose={(result) => closeModal(modal.id, result)}
+                        />
+                      )}
+                      {modal.component === 'ScheduleCreator' && (
+                        <ScheduleCreatorWizard
+                          initialSchedule={modal.initialSchedule}
+                          darkMode={isDark}
+                          onApply={modal.onApplySchedule}
+                          onClose={(result) => closeModal(modal.id, result)}
+                        />
+                      )}
+                      {modal.component === 'TimerDisplaySettings' && (
+                        <TimerDisplaySettingsModal
+                          displaySettings={modal.displaySettings}
+                          onDraftChange={modal.onDraftDisplaySettingsChange}
+                          darkMode={isDark}
                         />
                       )}
 

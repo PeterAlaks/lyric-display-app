@@ -18,10 +18,11 @@ Key capabilities include:
 
 - Two default lyric outputs, up to four custom outputs, a stage display, and a timer display.
 - Independent typography, positioning, transitions, backgrounds, media, and full-screen styling per output.
-- Text, LRC, Markdown, RTF, and DOCX lyric imports, plus `.ldset` setlists.
+- Text, LRC, Markdown, RTF, and DOCX imports, plus `.ldset` setlists and `.ldsch` event schedules.
 - Built-in song editing, translation grouping, timestamps, search, autoplay, and lyric video export.
 - Online lyric providers and EasyWorship/presentation import workflows.
 - OBS Browser Source creation, a compact OBS Dock mode, and generic browser URLs for other production software.
+- A schedule-driven timer with intelligent agenda import, manual items, transitions, and ideal-end tracking.
 - Join-code-protected mobile/web controllers and remote lyric draft approval.
 - Optional NDI output through the separately installed LyricDisplay NDI companion.
 - MIDI and OSC control, production-readiness checks, diagnostics, and automatic application updates.

@@ -208,6 +208,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, (_e, payload) => callback(payload));
     return () => ipcRenderer.removeAllListeners(channel);
   },
+  onOpenScheduleFromPath: (callback) => {
+    const channel = 'open-schedule-from-path';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, payload) => callback(payload));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  onOpenScheduleFromPathError: (callback) => {
+    const channel = 'open-schedule-from-path-error';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, payload) => callback(payload));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
 
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);

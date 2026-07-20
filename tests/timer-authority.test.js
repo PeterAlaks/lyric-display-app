@@ -92,6 +92,62 @@ test('authoritative timer advances sets through an indicator using boundary cont
   assert.equal(finished.remaining, '0:00');
 });
 
+test('authoritative timer enters untimed schedule items as manual count-up steps', () => {
+  const base = {
+    revision: 1,
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    label: 'Welcome',
+    startTime: 900_000,
+    endTime: 1_000_000,
+    durationMs: 100_000,
+    activeSetIndex: 0,
+    sets: [
+      { id: 'welcome', label: 'Welcome', durationMs: 100_000, timed: true },
+      { id: 'response', label: 'Open response', durationMs: null, timed: false },
+    ],
+    autoStartNext: true,
+    indicatorEnabled: false,
+  };
+
+  const manual = advanceAuthoritativeTimerBoundary(base, 1_000_000);
+  assert.equal(manual.activeSetIndex, 1);
+  assert.equal(manual.mode, 'countup');
+  assert.equal(manual.durationMs, 0);
+  assert.equal(manual.endTime, null);
+  assert.equal(manual.running, true);
+});
+
+test('authoritative timer waits for manual next when auto-start is disabled', () => {
+  const waiting = advanceAuthoritativeTimerBoundary({
+    revision: 1,
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    label: 'First',
+    startTime: 900_000,
+    endTime: 1_000_000,
+    durationMs: 100_000,
+    activeSetIndex: 0,
+    sets: [
+      { id: 'first', label: 'First', durationMs: 100_000, timed: true },
+      { id: 'second', label: 'Second', durationMs: 60_000, timed: true },
+    ],
+    autoStartNext: false,
+  }, 1_000_000);
+
+  assert.equal(waiting.running, true);
+  assert.equal(waiting.paused, true);
+  assert.equal(waiting.awaitingNext, true);
+  assert.equal(waiting.activeSetIndex, 0);
+  assert.equal(waiting.endTime, null);
+});
+
 test('authoritative timer rejects cyclic and oversized controller payloads', () => {
   const cyclic = { running: false };
   cyclic.self = cyclic;

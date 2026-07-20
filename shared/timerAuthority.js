@@ -1,8 +1,21 @@
+import {
+  MAX_SCHEDULE_ITEMS,
+  isTimedScheduleItem,
+  normalizeScheduleItem,
+} from './scheduleUtils.js';
+
 const MAX_TIMER_DURATION_MS = 24 * 60 * 60 * 1000;
-const MAX_TIMER_SETS = 10;
+const MAX_TIMER_SETS = MAX_SCHEDULE_ITEMS;
 const MAX_TIMER_PAYLOAD_BYTES = 64 * 1024;
 const MAX_CLOCK_DISTANCE_MS = 48 * 60 * 60 * 1000;
-const TIMESTAMP_FIELDS = ['startTime', 'endTime', 'targetTime', 'overrunStartedAt'];
+const TIMESTAMP_FIELDS = [
+  'startTime',
+  'endTime',
+  'targetTime',
+  'overrunStartedAt',
+  'scheduleIdealEndAt',
+  'scheduleStartedAt',
+];
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const clamp = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) => {
@@ -68,11 +81,19 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
     const finished = !running && Boolean(incomingState.finished);
     const status = running ? (paused ? 'paused' : 'running') : (finished ? 'finished' : 'idle');
     const sets = Array.isArray(incomingState.sets)
-      ? incomingState.sets.slice(0, MAX_TIMER_SETS).map((set, index) => ({
-        id: boundedText(set?.id, `set-${index + 1}`, 96),
-        label: boundedText(set?.label, `Timer ${index + 1}`, 160),
-        durationMs: clamp(set?.durationMs, 0, 0, MAX_TIMER_DURATION_MS),
-      })).filter((set) => set.durationMs > 0)
+      ? incomingState.sets.slice(0, MAX_TIMER_SETS).map((set, index) => {
+        const normalized = normalizeScheduleItem(set, index);
+        return {
+          id: boundedText(normalized.id, `set-${index + 1}`, 96),
+          label: boundedText(normalized.label, `Schedule item ${index + 1}`, 160),
+          durationMs: normalized.timed
+            ? clamp(normalized.durationMs, 0, 1_000, MAX_TIMER_DURATION_MS)
+            : null,
+          timed: normalized.timed,
+          notes: boundedText(normalized.notes, '', 500),
+          plannedStartTime: boundedText(normalized.plannedStartTime, '', 5),
+        };
+      })
       : [];
 
     const state = {
@@ -105,7 +126,12 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
       autoStartNext: incomingState.autoStartNext !== false,
       indicatorEnabled: Boolean(incomingState.indicatorEnabled),
       indicatorDurationMs: clamp(incomingState.indicatorDurationMs, 10000, 0, MAX_TIMER_DURATION_MS),
-      indicatorLabel: boundedText(incomingState.indicatorLabel, 'Next timer starts in'),
+      indicatorLabel: boundedText(incomingState.indicatorLabel, 'Next item starts in'),
+      scheduleTitle: boundedText(incomingState.scheduleTitle, '', 160),
+      scheduleIdealEndAt: rebaseTimestamp(incomingState.scheduleIdealEndAt),
+      scheduleStartedAt: rebaseTimestamp(incomingState.scheduleStartedAt),
+      scheduleNotificationsEnabled: incomingState.scheduleNotificationsEnabled !== false,
+      awaitingNext: Boolean(incomingState.awaitingNext),
       display: safeDisplay(incomingState.display, currentState?.display),
       updatedAt: now,
       serverUpdatedAt: now,
@@ -140,42 +166,72 @@ export function advanceAuthoritativeTimerBoundary(currentState, now = Date.now()
 
   const nextIndex = (Number(currentState.activeSetIndex) || 0) + 1;
   const nextSet = currentState.sets?.[nextIndex];
+  if (currentState.phase === 'timer' && nextSet && !currentState.autoStartNext) {
+    return {
+      ...base,
+      status: 'paused',
+      running: true,
+      paused: true,
+      finished: false,
+      endTime: null,
+      pausedRemainingMs: 0,
+      remaining: '0:00',
+      awaitingNext: true,
+    };
+  }
   if (currentState.phase === 'timer' && nextSet && currentState.autoStartNext) {
     if (currentState.indicatorEnabled && currentState.indicatorDurationMs > 0) {
       return {
         ...base,
+        mode: 'countdown',
         phase: 'indicator',
         label: currentState.indicatorLabel,
         durationMs: currentState.indicatorDurationMs,
         startTime: boundaryTime,
         endTime: boundaryTime + currentState.indicatorDurationMs,
+        targetTime: null,
+        elapsedBeforePauseMs: 0,
         pausedRemainingMs: null,
         remaining: null,
+        overrunStartedAt: null,
+        awaitingNext: false,
       };
     }
+    const nextTimed = isTimedScheduleItem(nextSet);
     return {
       ...base,
+      mode: nextTimed ? 'countdown' : 'countup',
       phase: 'timer',
       label: nextSet.label,
       activeSetIndex: nextIndex,
-      durationMs: nextSet.durationMs,
+      durationMs: nextTimed ? nextSet.durationMs : 0,
       startTime: boundaryTime,
-      endTime: boundaryTime + nextSet.durationMs,
+      endTime: nextTimed ? boundaryTime + nextSet.durationMs : null,
+      targetTime: null,
+      elapsedBeforePauseMs: 0,
       pausedRemainingMs: null,
       remaining: null,
+      overrunStartedAt: null,
+      awaitingNext: false,
     };
   }
   if (currentState.phase === 'indicator' && nextSet) {
+    const nextTimed = isTimedScheduleItem(nextSet);
     return {
       ...base,
+      mode: nextTimed ? 'countdown' : 'countup',
       phase: 'timer',
       label: nextSet.label,
       activeSetIndex: nextIndex,
-      durationMs: nextSet.durationMs,
+      durationMs: nextTimed ? nextSet.durationMs : 0,
       startTime: boundaryTime,
-      endTime: boundaryTime + nextSet.durationMs,
+      endTime: nextTimed ? boundaryTime + nextSet.durationMs : null,
+      targetTime: null,
+      elapsedBeforePauseMs: 0,
       pausedRemainingMs: null,
       remaining: null,
+      overrunStartedAt: null,
+      awaitingNext: false,
     };
   }
   return {
@@ -187,5 +243,6 @@ export function advanceAuthoritativeTimerBoundary(currentState, now = Date.now()
     endTime: null,
     pausedRemainingMs: null,
     remaining: '0:00',
+    awaitingNext: false,
   };
 }
