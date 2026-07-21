@@ -150,6 +150,9 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
   const [activeOverlayWidth, setActiveOverlayWidth] = React.useState(null);
   const fileInputRef = React.useRef(null);
   const importRequestRef = React.useRef(0);
+  const [pendingScrollItemId, setPendingScrollItemId] = React.useState(null);
+  const itemElementRefs = React.useRef(new Map());
+  const scrollContainerRef = React.useRef(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -159,6 +162,44 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     const interval = window.setInterval(() => setValidationNow(Date.now()), 15_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  React.useEffect(() => {
+    if (step !== 1 || !pendingScrollItemId) return undefined;
+
+    let frame;
+    let attempts = 0;
+    let cancelled = false;
+    const scrollToItem = () => {
+      if (cancelled) return;
+      const element = itemElementRefs.current.get(pendingScrollItemId);
+      const container = scrollContainerRef.current;
+      if ((!element || !container) && attempts < 5) {
+        attempts += 1;
+        frame = window.requestAnimationFrame(scrollToItem);
+        return;
+      }
+
+      if (!element || !container) {
+        setPendingScrollItemId(null);
+        return;
+      }
+
+      const itemRect = element.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const targetTop = Math.max(
+        0,
+        container.scrollTop + itemRect.top - containerRect.top - Math.max(16, (container.clientHeight - itemRect.height) / 2)
+      );
+      container.scrollTo({ top: targetTop, behavior: 'smooth' });
+      setPendingScrollItemId(null);
+    };
+
+    frame = window.requestAnimationFrame(scrollToItem);
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [pendingScrollItemId, step]);
 
   const inputClass = darkMode
     ? 'h-9 border-slate-700 bg-slate-950/55 text-[11px] text-slate-100 shadow-sm placeholder:text-slate-500 focus-visible:ring-blue-500/40 md:text-[11px]'
@@ -213,11 +254,17 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
   }, [updateItem]);
 
   const addItem = React.useCallback(() => {
+    if (draft.items.length >= MAX_SCHEDULE_ITEMS) return;
+    const item = createBlankItem(draft.items.length);
+    setPendingScrollItemId(item.id);
     setDraft((current) => {
       if (current.items.length >= MAX_SCHEDULE_ITEMS) return current;
-      return { ...current, items: [...current.items, createBlankItem(current.items.length)] };
+      return {
+        ...current,
+        items: [...current.items, { ...item, label: `Schedule item ${current.items.length + 1}` }],
+      };
     });
-  }, []);
+  }, [draft.items.length]);
 
   const removeItem = React.useCallback((id) => {
     setDraft((current) => ({ ...current, items: current.items.filter((item) => item.id !== id) }));
@@ -253,6 +300,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     setDraft((current) => ({ ...current, items: [] }));
     setParseInfo(null);
     setActiveItemId(null);
+    setPendingScrollItemId(null);
   }, [draft.items.length, showModal]);
 
   const handleCreateSchedule = React.useCallback(async () => {
@@ -270,7 +318,9 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
       if (result !== 'create') return;
     }
 
-    setDraft((current) => ({ ...current, items: [createBlankItem(0)] }));
+    const item = createBlankItem(0);
+    setPendingScrollItemId(item.id);
+    setDraft((current) => ({ ...current, items: [item] }));
     setParseInfo(null);
     setPasteText('');
     setSelectedFile(null);
@@ -466,10 +516,16 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     const handleClass = darkMode
       ? 'text-slate-500 hover:bg-blue-500/10 hover:text-blue-300'
       : 'text-slate-400 hover:bg-blue-50 hover:text-blue-600';
+    const setItemNode = (element) => {
+      drag.setNodeRef?.(element);
+      if (isDragOverlay) return;
+      if (element) itemElementRefs.current.set(item.id, element);
+      else itemElementRefs.current.delete(item.id);
+    };
 
     return (
       <div
-        ref={drag.setNodeRef}
+        ref={setItemNode}
         style={drag.style}
         className={`px-4 py-3 transition-[background-color,box-shadow,opacity] ${isDragOverlay
           ? `pointer-events-none rounded-xl border shadow-2xl ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`
@@ -615,7 +671,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
         </ol>
       </div>
 
-      <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 py-6 scrollbar-gutter-stable sm:px-6">
+      <div ref={scrollContainerRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 py-6 scrollbar-gutter-stable sm:px-6">
         <div className="mx-auto w-full max-w-180">
           {error && (
             <div className={`mb-5 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs leading-relaxed ${darkMode ? 'border-red-500/30 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`} role="alert">
@@ -703,15 +759,13 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                 </div>
 
                 {importMethod === 'paste' ? (
-                  <div className={`rounded-xl border p-3.5 ${insetClass}`}>
-                    <Textarea
-                      value={pasteText}
-                      onChange={(event) => { setPasteText(event.target.value); setError(''); }}
-                      className={`min-h-32 resize-y text-[11px] leading-relaxed ${inputClass}`}
-                      placeholder={'Paste schedule here\n\ne.g.\n1. Opening prayer\n2. Praise and worship — 30 mins\n3. Announcements — 10 min'}
-                      aria-label="Paste schedule text"
-                    />
-                  </div>
+                  <Textarea
+                    value={pasteText}
+                    onChange={(event) => { setPasteText(event.target.value); setError(''); }}
+                    className={`min-h-36 resize-y rounded-xl px-3.5 py-3 text-[11px] leading-relaxed ${inputClass}`}
+                    placeholder={'Paste schedule here\n\ne.g.\n1. Opening prayer\n2. Praise and worship — 30 mins\n3. Announcements — 10 min'}
+                    aria-label="Paste schedule text"
+                  />
                 ) : importMethod === 'create' ? (
                   <div className={`flex flex-col items-center gap-3 rounded-xl border border-dashed p-6 text-center ${insetClass}`}>
                     <div className={`flex h-11 w-11 items-center justify-center rounded-full ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-500 shadow-sm'}`}>

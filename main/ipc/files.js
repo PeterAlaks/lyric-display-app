@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron';
+import { BrowserWindow, ipcMain, dialog } from 'electron';
 import { readFile, stat, writeFile } from 'fs/promises';
 import path from 'path';
 import { parseLyricImportContent, extractLyricTextFromSource } from '../../shared/documentTextExtraction.js';
@@ -106,8 +106,11 @@ function validateLyricWrite(filePath, content) {
  */
 export function registerFileHandlers({ getMainWindow }) {
 
-  ipcMain.handle('show-save-dialog', async (_event, options) => {
-    const win = getMainWindow?.();
+  ipcMain.handle('show-save-dialog', async (event, options) => {
+    const senderWindow = event?.sender ? BrowserWindow.fromWebContents(event.sender) : null;
+    const win = senderWindow && !senderWindow.isDestroyed()
+      ? senderWindow
+      : getMainWindow?.();
     const result = await dialog.showSaveDialog(win || undefined, options);
     if (!result.canceled && result.filePath) {
       grantWritePath(result.filePath);
