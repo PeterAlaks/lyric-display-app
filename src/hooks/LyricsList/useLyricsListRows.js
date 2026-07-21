@@ -1,7 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useDynamicRowHeight } from 'react-window';
 import { sanitizeMaxLinesPerGroup, STRUCTURE_TAG_PATTERNS } from '../../../shared/lyricsParsing.js';
-import { DEFAULT_ROW_HEIGHT, ROW_GAP } from '../../components/LyricsList/layout';
+
+export const DEFAULT_ROW_HEIGHT = 48;
+export const ROW_GAP = 8;
+export const VIRTUALIZATION_THRESHOLD = 200;
+export const HORIZONTAL_PADDING_PX = 16;
 
 export default function useLyricsListRows({
   lyrics,

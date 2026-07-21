@@ -9,12 +9,11 @@ import useSectionNavigation from '../hooks/LyricsList/useSectionNavigation';
 import useLyricsListHistory from '../hooks/LyricsList/useLyricsListHistory';
 import useLyricsListSelection from '../hooks/LyricsList/useLyricsListSelection';
 import useLyricsListGrouping from '../hooks/LyricsList/useLyricsListGrouping';
-import useLyricsListRows from '../hooks/LyricsList/useLyricsListRows';
+import useLyricsListRows, { HORIZONTAL_PADDING_PX, VIRTUALIZATION_THRESHOLD } from '../hooks/LyricsList/useLyricsListRows';
 import { useLyricsScrollRestoration } from '../hooks/LyricDisplayApp/useLyricsScrollRestoration';
 import LyricRow from './LyricsList/LyricRow';
 import SectionChips from './LyricsList/SectionChips';
 import LyricsListContextMenu from './LyricsList/LyricsListContextMenu';
-import { HORIZONTAL_PADDING_PX, VIRTUALIZATION_THRESHOLD } from './LyricsList/layout';
 import {
   createLyricsScrollKey,
   isLyricsScrollRestorePending,

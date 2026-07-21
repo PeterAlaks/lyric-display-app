@@ -6,10 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { PRESENTATION_IMPORT_STEPS as STEPS } from '../constants/presentationImport';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
 
+const STEPS = {
+  INTRO: 0,
+  SELECT_FILES: 1,
+  DESTINATION: 2,
+  PROGRESS: 3,
+  COMPLETE: 4,
+};
 const LAST_PRESENTATION_FOLDER_STORAGE_KEY = 'lyricdisplay_presentation_import_last_folder';
 
 export default function PresentationImportModal({ isOpen, onClose, darkMode }) {

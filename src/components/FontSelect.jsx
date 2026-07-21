@@ -3,10 +3,22 @@ import { createPortal } from 'react-dom';
 import { List, useListRef } from 'react-window';
 import { Input } from "@/components/ui/input";
 import { ChevronDown, Check, Search, X } from 'lucide-react';
-import { FEATURED_FONTS } from '../constants/fonts';
 import { logWarn } from '../utils/logger';
 import { cn } from '@/lib/utils';
 
+const FEATURED_FONTS = [
+  'Arial',
+  'Bebas Neue',
+  'Fira Sans',
+  'Inter',
+  'Lato',
+  'Montserrat',
+  'Noto Sans',
+  'Open Sans',
+  'Poppins',
+  'Roboto',
+  'Work Sans',
+];
 const normalizeFontName = (font) => (typeof font === 'string' ? font.replace(/["']/g, '').trim() : '');
 const getFontPreviewFamily = (font) => {
   const normalized = normalizeFontName(font);

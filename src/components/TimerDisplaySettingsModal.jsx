@@ -2,7 +2,7 @@ import React from 'react';
 import { Clock3, LayoutPanelTop } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { getTimerToggleProps } from './timerToggleStyles.js';
+import { getTimerToggleProps } from '../utils/timerUtils';
 
 const SettingRow = ({ title, description, children, disabled = false, mutedText }) => (
   <div className={`flex items-center justify-between gap-5 py-2.5 ${disabled ? 'opacity-50' : ''}`}>

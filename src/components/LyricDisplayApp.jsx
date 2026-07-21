@@ -22,8 +22,8 @@ import useModal from '../hooks/useModal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../shared/outputRegistry.js';
 import { useAutoplayManager } from '../hooks/useAutoplayManager';
-import { useSyncOutputs } from '../hooks/useSyncOutputs';
-import { useLyricsLoader } from '../hooks/LyricDisplayApp/useLyricsLoader';
+import { useRegisterCustomOutputs, useSyncOutputs } from '../hooks/useSyncOutputs';
+import { useLyricsLoader, usePendingLyricsLoad } from '../hooks/LyricDisplayApp/useLyricsLoader';
 import { useKeyboardShortcuts } from '../hooks/LyricDisplayApp/useKeyboardShortcuts';
 import { useElectronListeners } from '../hooks/LyricDisplayApp/useElectronListeners';
 import { useResponsiveWidth } from '../hooks/LyricDisplayApp/useResponsiveWidth';
@@ -35,18 +35,16 @@ import { useCustomOutputActions } from '../hooks/LyricDisplayApp/useCustomOutput
 import { useLineCounterText } from '../hooks/LyricDisplayApp/useLineCounterText';
 import { useLrcTimestampHydration } from '../hooks/LyricDisplayApp/useLrcTimestampHydration';
 import { useOutputControlActions } from '../hooks/LyricDisplayApp/useOutputControlActions';
-import { usePendingLyricsLoad } from '../hooks/LyricDisplayApp/usePendingLyricsLoad';
 import { usePendingSavedVersionPrompt } from '../hooks/LyricDisplayApp/usePendingSavedVersionPrompt';
-import { useRegisterCustomOutputs } from '../hooks/LyricDisplayApp/useRegisterCustomOutputs';
-import { useResetLyricsScroll } from '../hooks/LyricDisplayApp/useResetLyricsScroll';
 import {
   useArmLyricsScrollRestoreOnUnmount,
   useLyricsScrollRestoration,
+  useResetLyricsScroll,
 } from '../hooks/LyricDisplayApp/useLyricsScrollRestoration';
 import { useSetlistNavigation } from '../hooks/LyricDisplayApp/useSetlistNavigation';
 import { getLyricsAcceptAttribute } from '../../shared/lyricImportRegistry.js';
 import { createLyricsScrollKey } from '../utils/lyricsScrollMemory.js';
-import { VIRTUALIZATION_THRESHOLD } from './LyricsList/layout';
+import { VIRTUALIZATION_THRESHOLD } from '../hooks/LyricsList/useLyricsListRows';
 import ControlPanelHeaderActions from './LyricDisplayApp/ControlPanelHeaderActions';
 import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
@@ -55,14 +53,6 @@ const LyricDisplayApp = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
-  const previousOutputOnRef = React.useRef(isOutputOn);
-  const [outputBeaconDirection, setOutputBeaconDirection] = React.useState(null);
-
-  React.useEffect(() => {
-    if (previousOutputOnRef.current === isOutputOn) return;
-    setOutputBeaconDirection(isOutputOn ? 'on' : 'off');
-    previousOutputOnRef.current = isOutputOn;
-  }, [isOutputOn]);
   const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, selectedLine, lyricsTimestamps, lyricsEnhancedTimestamps, pendingSavedVersion, selectLine, setLyrics, setLyricsSections, setLineToSection, setRawLyricsContent, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, clearPendingSavedVersion } = useLyricsState();
   const { settings: output1Settings, updateSettings: updateOutput1Settings } = useOutput1Settings();
   const { settings: output2Settings, updateSettings: updateOutput2Settings } = useOutput2Settings();
@@ -523,14 +513,7 @@ const LyricDisplayApp = () => {
                 <span className={`ml-5 inline-flex items-center gap-3 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   <span className="inline-block w-[152px] shrink-0">{isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}</span>
                   <span className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
-                    {outputBeaconDirection && (
-                      <span
-                        key={`${outputBeaconDirection}-${isOutputOn ? 'active' : 'inactive'}`}
-                        className={`absolute h-2 w-2 rounded-full bg-emerald-500 ${outputBeaconDirection === 'on'
-                          ? 'output-live-beacon-on'
-                          : 'output-live-beacon-off'}`}
-                      />
-                    )}
+                    <span className={`absolute h-2 w-2 origin-center rounded-full bg-emerald-500 opacity-20 transition-transform duration-500 ease-out motion-reduce:transition-none ${isOutputOn ? 'scale-[2.6]' : 'scale-100'}`} />
                     <span className={`relative h-2 w-2 rounded-full ${isOutputOn
                       ? 'bg-emerald-500'
                       : darkMode ? 'bg-gray-500' : 'bg-gray-400'

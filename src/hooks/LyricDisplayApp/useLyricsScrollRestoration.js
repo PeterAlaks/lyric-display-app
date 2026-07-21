@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   armLyricsScrollRestore,
   getRememberedLyricsScrollPosition,
@@ -6,6 +6,17 @@ import {
   markLyricsScrollRestoreApplied,
   rememberLyricsScrollPosition,
 } from '../../utils/lyricsScrollMemory.js';
+
+export const useResetLyricsScroll = (lyricsContainerRef) => {
+  useEffect(() => {
+    const handleResetScroll = () => {
+      if (lyricsContainerRef.current) lyricsContainerRef.current.scrollTop = 0;
+    };
+
+    window.addEventListener('reset-lyrics-scroll', handleResetScroll);
+    return () => window.removeEventListener('reset-lyrics-scroll', handleResetScroll);
+  }, [lyricsContainerRef]);
+};
 
 export function useArmLyricsScrollRestoreOnUnmount(lyricsKey) {
   const latestKeyRef = useRef(lyricsKey);

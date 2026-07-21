@@ -162,8 +162,8 @@ const TimerControlLayout = ({
           </div>
         </header>
 
-        <main className="grid grid-cols-[minmax(280px,320px)_minmax(380px,1fr)_minmax(260px,300px)] items-start gap-5">
-          <section className={`min-w-0 space-y-4 border-r pr-5 ${columnBorderClass}`}>
+        <main className="grid grid-cols-[minmax(280px,320px)_minmax(380px,1fr)_minmax(260px,300px)] items-stretch gap-5">
+          <section className={`min-w-0 self-stretch space-y-4 border-r pr-5 ${columnBorderClass}`}>
             {!useSets ? (
               <ManualControls
                 darkMode={darkMode}
@@ -478,7 +478,7 @@ const TimerTransport = ({ useSets, active, activeTimerUsesSets, timerState, acti
 const StylingControls = ({ darkMode, theme, displaySettings, applyTimerDisplaySettings }) => {
   const { columnBorderClass, mutedText, inputClass, selectTriggerClass, selectContentClass, subtleButtonClass, surfaceClass } = theme;
   return (
-    <section className={`min-w-0 space-y-4 border-l pl-5 ${columnBorderClass}`}>
+    <section className={`min-w-0 self-stretch space-y-4 border-l pl-5 ${columnBorderClass}`}>
       <h2 className="text-sm font-semibold">Styling</h2>
       <div className={`space-y-3 rounded-xl border p-3 ${surfaceClass}`}>
         <h3 className="text-[11px] font-semibold">Colour palette</h3>

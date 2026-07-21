@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { parseLyricsFileAsync } from '../../utils/asyncLyricsParser';
 import useLyricsStore from '../../context/LyricsStore.js';
 import { mergeLyricsParsingOptions } from '../../../shared/lyricsParsing.js';
@@ -10,6 +10,15 @@ import {
   normalizeLyricFileType,
   stripLyricImportExtension,
 } from '../../../shared/lyricImportRegistry.js';
+
+export const usePendingLyricsLoad = (processLoadedLyrics) => {
+  useEffect(() => {
+    if (!window.__pendingLyricsLoad) return;
+    const pendingData = window.__pendingLyricsLoad;
+    delete window.__pendingLyricsLoad;
+    processLoadedLyrics(pendingData);
+  }, [processLoadedLyrics]);
+};
 
 export const useLyricsLoader = ({
   setLyrics,

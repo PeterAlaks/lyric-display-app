@@ -1,7 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 import useLyricsStore from '../context/LyricsStore';
 import { buildLyricsSyncPayload } from '../utils/lyricsSyncPayload.js';
+
+export const useRegisterCustomOutputs = (customOutputIds) => {
+  useEffect(() => {
+    if (!window.electronAPI?.ndi?.registerOutputs) return;
+    window.electronAPI.ndi.registerOutputs(customOutputIds);
+  }, [customOutputIds]);
+};
 
 export const useSyncOutputs = ({
   isConnected,

@@ -743,6 +743,7 @@ export function ModalProvider({ children, isDark = false }) {
                       {modal.component === 'ScheduleCreator' && (
                         <ScheduleCreatorWizard
                           initialSchedule={modal.initialSchedule}
+                          isEditing={modal.isEditingSchedule}
                           darkMode={isDark}
                           onApply={modal.onApplySchedule}
                           onClose={(result) => closeModal(modal.id, result)}

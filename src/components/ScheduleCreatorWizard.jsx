@@ -40,7 +40,7 @@ import {
   resolveScheduleTime,
 } from '../../shared/scheduleUtils.js';
 import { downloadScheduleFile, importScheduleFile } from '../utils/scheduleFiles.js';
-import { getTimerToggleProps } from './timerToggleStyles.js';
+import { getTimerToggleProps } from '../utils/timerUtils';
 
 const STEPS = [
   { label: 'Details', icon: CalendarClock },
@@ -133,12 +133,14 @@ const SortableScheduleItem = ({ id, disabled, children }) => {
   });
 };
 
-const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onClose }) => {
+const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = false, onApply, onClose }) => {
   const { showModal } = useModal();
   const [step, setStep] = React.useState(0);
   const [draft, setDraft] = React.useState(() => normalizeScheduleDocument(initialSchedule));
-  const [importMethod, setImportMethod] = React.useState('ldsch');
+  const [importMethod, setImportMethod] = React.useState(() => (isEditing ? '' : 'ldsch'));
   const [pasteText, setPasteText] = React.useState('');
+  const [selectedFile, setSelectedFile] = React.useState(null);
+  const [pendingImport, setPendingImport] = React.useState(null);
   const [parseInfo, setParseInfo] = React.useState(null);
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
@@ -147,6 +149,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
   const [activeItemId, setActiveItemId] = React.useState(null);
   const [activeOverlayWidth, setActiveOverlayWidth] = React.useState(null);
   const fileInputRef = React.useRef(null);
+  const importRequestRef = React.useRef(0);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -267,6 +270,8 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
     setDraft((current) => ({ ...current, items: [createBlankItem(0)] }));
     setParseInfo(null);
     setPasteText('');
+    setSelectedFile(null);
+    setPendingImport(null);
     setDownloaded(false);
     setError('');
     setStep(1);
@@ -307,16 +312,44 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    const requestId = importRequestRef.current + 1;
+    importRequestRef.current = requestId;
+    setSelectedFile(file);
+    setPendingImport(null);
     setBusy(true);
     setError('');
     try {
-      applyImportResult(await importScheduleFile(file));
+      const result = await importScheduleFile(file);
+      if (importRequestRef.current === requestId) setPendingImport(result);
     } catch (importError) {
-      setError(importError?.message || 'Could not import this schedule');
+      if (importRequestRef.current === requestId) {
+        setError(importError?.message || 'Could not import this schedule');
+      }
     } finally {
-      setBusy(false);
+      if (importRequestRef.current === requestId) setBusy(false);
     }
-  }, [applyImportResult]);
+  }, []);
+
+  const clearSelectedFile = React.useCallback((event) => {
+    event?.stopPropagation();
+    importRequestRef.current += 1;
+    setSelectedFile(null);
+    setPendingImport(null);
+    setBusy(false);
+    setError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
+  const handleImportMethodChange = React.useCallback((method) => {
+    if (method === importMethod) return;
+    importRequestRef.current += 1;
+    setImportMethod(method);
+    setError('');
+    setSelectedFile(null);
+    setPendingImport(null);
+    setBusy(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [importMethod]);
 
   const handleParsePaste = React.useCallback(() => {
     setError('');
@@ -328,6 +361,28 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
       setError(parseError?.message || 'Could not identify a schedule in that text');
     }
   }, [applyImportResult, draft.title, pasteText]);
+
+  const handleContinue = React.useCallback(async () => {
+    if (step !== 0) {
+      setStep((current) => current + 1);
+      return;
+    }
+
+    if (importMethod === 'create') {
+      await handleCreateSchedule();
+      return;
+    }
+    if (importMethod === 'paste') {
+      handleParsePaste();
+      return;
+    }
+    if ((importMethod === 'ldsch' || importMethod === 'document') && pendingImport) {
+      applyImportResult(pendingImport);
+      return;
+    }
+
+    if (isEditing && !importMethod) setStep(1);
+  }, [applyImportResult, handleCreateSchedule, handleParsePaste, importMethod, isEditing, pendingImport, step]);
 
   const handleNotificationsChange = React.useCallback(async (enabled) => {
     updateDraft({ notificationsEnabled: enabled });
@@ -381,21 +436,13 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
     })
     : [];
   const labelsValid = draft.items.every((item) => item.label.trim());
+  const importReady = importMethod === 'create'
+    || (importMethod === 'paste' && Boolean(pasteText.trim()))
+    || ((importMethod === 'ldsch' || importMethod === 'document') && Boolean(selectedFile && pendingImport))
+    || (isEditing && !importMethod);
   const canContinue = step === 0
-    ? Boolean(draft.title.trim()) && eventStartValid
+    ? Boolean(draft.title.trim()) && eventStartValid && importReady
     : (step === 1 ? draft.items.length > 0 && labelsValid : true);
-
-  const blockedReason = step === 0
-    ? (!draft.title.trim()
-      ? 'Add a schedule title to continue'
-      : (!eventStartValid ? 'Event start time must be later than the current time' : ''))
-    : (step === 1 || step === 3)
-      ? (draft.items.length === 0
-        ? 'Add at least one schedule item'
-        : (!labelsValid
-          ? 'Give every item a title'
-          : (!eventStartValid ? 'Event start time must be later than the current time' : '')))
-      : '';
   const canReorder = draft.items.length > 1;
   const activeItem = activeItemId ? draft.items.find((item) => item.id === activeItemId) : null;
   const activeItemIndex = activeItem ? draft.items.findIndex((item) => item.id === activeItem.id) : -1;
@@ -525,24 +572,27 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
   return (
     <div className="flex h-full max-h-full min-h-0 flex-col overflow-hidden">
       <div className={`shrink-0 border-b px-4 py-3 sm:px-6 ${darkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/80'}`}>
-        <ol className={`grid grid-cols-4 gap-1 rounded-xl border p-1 ${darkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-white/80'}`} aria-label="Schedule creation progress">
+        <ol className={`grid grid-cols-4 gap-1 rounded-xl border p-1 ${darkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-white/80'}`} aria-label={isEditing ? 'Schedule editing progress' : 'Schedule creation progress'}>
           {STEPS.map((stepMeta, index) => {
             const complete = index < step;
             const current = index === step;
+            const available = isEditing || index <= step;
             const StepIcon = stepMeta.icon;
             return (
               <li key={stepMeta.label} className="min-w-0">
                 <button
                   type="button"
-                  onClick={() => { if (index < step) setStep(index); }}
-                  disabled={index > step}
+                  onClick={() => { if (available) setStep(index); }}
+                  disabled={!available}
                   aria-current={current ? 'step' : undefined}
                   aria-label={`${stepMeta.label}${complete ? ' (complete)' : current ? ' (current step)' : ''}`}
                   className={`flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 disabled:cursor-not-allowed ${current
                     ? 'bg-blue-600 text-white shadow-sm'
                     : complete
                       ? (darkMode ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100')
-                      : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}
+                      : isEditing
+                        ? (darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100')
+                        : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}
                 >
                   <StepIcon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{stepMeta.label}</span>
@@ -597,8 +647,12 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
                 <div className="flex items-center gap-2.5">
                   <FileText className="h-4 w-4 text-blue-500" />
                   <div>
-                    <h4 className="text-xs font-semibold">Add schedule items</h4>
-                    <p className={`mt-0.5 text-[11px] ${mutedText}`}>Choose one source for this schedule.</p>
+                    <h4 className="text-xs font-semibold">{isEditing ? 'Change Schedule' : 'Add schedule items'}</h4>
+                    <p className={`mt-0.5 text-[11px] ${mutedText}`}>
+                      {isEditing
+                        ? 'Optional: choosing a source here replaces the existing schedule items.'
+                        : 'Choose one source for this schedule.'}
+                    </p>
                   </div>
                 </div>
 
@@ -612,7 +666,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
                         type="button"
                         role="radio"
                         aria-checked={selected}
-                        onClick={() => { setImportMethod(method.value); setError(''); }}
+                        onClick={() => handleImportMethodChange(method.value)}
                         className={`relative flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all duration-150 ${
                           selected
                             ? (darkMode ? 'border-blue-400/50 bg-blue-500/10 shadow-sm' : 'border-blue-400 bg-blue-50/70 shadow-sm')
@@ -638,18 +692,13 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
 
                 {importMethod === 'paste' ? (
                   <div className={`rounded-xl border p-3.5 ${insetClass}`}>
-                    <label className="block space-y-1.5">
-                      <span className={fieldLabelClass}>Schedule text</span>
-                      <Textarea
-                        value={pasteText}
-                        onChange={(event) => setPasteText(event.target.value)}
-                        className={`min-h-32 resize-y text-[11px] leading-relaxed ${inputClass}`}
-                        placeholder={'1. Opening prayer\n2. Praise and worship — 30 mins\n3. Announcements — 10 min'}
-                      />
-                    </label>
-                    <Button type="button" size="sm" className="mt-3" onClick={handleParsePaste} disabled={!pasteText.trim() || busy}>
-                      Use schedule text
-                    </Button>
+                    <Textarea
+                      value={pasteText}
+                      onChange={(event) => { setPasteText(event.target.value); setError(''); }}
+                      className={`min-h-32 resize-y text-[11px] leading-relaxed ${inputClass}`}
+                      placeholder={'Paste schedule here\n\ne.g.\n1. Opening prayer\n2. Praise and worship — 30 mins\n3. Announcements — 10 min'}
+                      aria-label="Paste schedule text"
+                    />
                   </div>
                 ) : importMethod === 'create' ? (
                   <div className={`flex flex-col items-center gap-3 rounded-xl border border-dashed p-6 text-center ${insetClass}`}>
@@ -660,39 +709,57 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
                       <h5 className="text-xs font-semibold">Create a schedule manually</h5>
                       <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Start with one blank item, then add and reorder the rest.</p>
                     </div>
-                    <Button type="button" size="sm" onClick={handleCreateSchedule} disabled={busy}>
-                      <Plus className="h-4 w-4" /> Create schedule
-                    </Button>
                   </div>
-                ) : (
+                ) : IMPORT_OPTIONS[importMethod] ? (
                   <>
-                    <div
-                      role="button"
-                      tabIndex={busy ? -1 : 0}
-                      aria-disabled={busy || undefined}
-                      onClick={() => { if (!busy) fileInputRef.current?.click(); }}
-                      onKeyDown={(event) => {
-                        if (!busy && (event.key === 'Enter' || event.key === ' ')) {
-                          event.preventDefault();
-                          fileInputRef.current?.click();
-                        }
-                      }}
-                      className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed p-6 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 ${busy ? 'cursor-not-allowed opacity-60' : ''} ${insetClass}`}
-                    >
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-full ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-500 shadow-sm'}`}>
-                        <FileUp className="h-5 w-5" />
+                    {selectedFile ? (
+                      <div className={`flex items-center gap-3 rounded-xl border border-dashed p-4 ${insetClass}`}>
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-500 shadow-sm'}`}>
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold">{selectedFile.name}</p>
+                          <p className={`mt-0.5 text-[10px] ${mutedText}`}>{busy ? 'Reading schedule…' : (pendingImport ? 'Ready to continue' : 'Could not use this file')}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearSelectedFile}
+                          className={`ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${darkMode ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200' : 'text-slate-500 hover:bg-slate-200/70 hover:text-slate-800'}`}
+                          aria-label={`Remove ${selectedFile.name}`}
+                          title="Remove file"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                      <div className="min-w-0">
-                        <h5 className="text-xs font-semibold">{IMPORT_OPTIONS[importMethod].heading}</h5>
-                        <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>{IMPORT_OPTIONS[importMethod].description}</p>
+                    ) : (
+                      <div
+                        role="button"
+                        tabIndex={busy ? -1 : 0}
+                        aria-disabled={busy || undefined}
+                        onClick={() => { if (!busy) fileInputRef.current?.click(); }}
+                        onKeyDown={(event) => {
+                          if (!busy && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            fileInputRef.current?.click();
+                          }
+                        }}
+                        className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed p-6 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 ${busy ? 'cursor-not-allowed opacity-60' : ''} ${insetClass}`}
+                      >
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-full ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-500 shadow-sm'}`}>
+                          <FileUp className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h5 className="text-xs font-semibold">{IMPORT_OPTIONS[importMethod].heading}</h5>
+                          <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>{IMPORT_OPTIONS[importMethod].description}</p>
+                        </div>
+                        <span className={`inline-flex h-8 items-center justify-center gap-2 rounded-md border px-3 text-xs font-medium shadow-sm ${outlineButtonClass}`}>
+                          <FileUp className="h-4 w-4" /> {IMPORT_OPTIONS[importMethod].buttonLabel}
+                        </span>
                       </div>
-                      <span className={`inline-flex h-8 items-center justify-center gap-2 rounded-md border px-3 text-xs font-medium shadow-sm ${outlineButtonClass}`}>
-                        <FileUp className="h-4 w-4" /> {IMPORT_OPTIONS[importMethod].buttonLabel}
-                      </span>
-                    </div>
+                    )}
                     <input ref={fileInputRef} type="file" accept={IMPORT_OPTIONS[importMethod].accept} onChange={handleFile} className="hidden" />
                   </>
-                )}
+                ) : null}
               </div>
             </div>
           )}
@@ -872,16 +939,13 @@ const ScheduleCreatorWizard = ({ initialSchedule, darkMode = false, onApply, onC
       </div>
 
       <div className={`min-h-19.5 shrink-0 border-t px-4 py-4 sm:px-6 sm:py-5 ${darkMode ? 'border-slate-800 bg-slate-950/45' : 'border-slate-200 bg-slate-50'}`}>
-        {blockedReason && !busy && (
-          <p className={`mb-2 text-center text-[11px] sm:text-right ${mutedText}`}>{blockedReason}</p>
-        )}
         <div className="flex items-center justify-between gap-3">
           <Button type="button" size="sm" variant="ghost" onClick={step === 0 ? () => onClose?.({ dismissed: true }) : () => setStep((current) => current - 1)}>
             {step === 0 ? 'Cancel' : <><ArrowLeft className="h-4 w-4" /> Back</>}
           </Button>
           <span className={`hidden text-[10px] font-medium sm:block ${mutedText}`}>Step {step + 1} of {STEPS.length}</span>
           {step < STEPS.length - 1 ? (
-            <Button type="button" size="sm" onClick={() => setStep((current) => current + 1)} disabled={!canContinue || busy}>
+            <Button type="button" size="sm" onClick={handleContinue} disabled={!canContinue || busy}>
               Continue <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (

@@ -12,6 +12,7 @@ import {
   getTimerDisplay,
   getTimerIntensity,
   getTimerProgress,
+  getTimerToggleProps,
   minutesToMs,
   secondsToMs,
   splitClockPeriod,
@@ -20,7 +21,6 @@ import { paintToCss } from '../utils/paint';
 import { readTimerScheduleSnapshot, saveTimerScheduleSnapshot } from '../utils/timerScheduleStorage.js';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import TimerControlLayout from './TimerControlLayout';
-import { getTimerToggleProps } from './timerToggleStyles.js';
 import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
 import {
   calculateScheduleProjection,
@@ -860,9 +860,10 @@ const TimerControlModule = () => {
   }, [commitTimerState, setTimerControlSettings, showToast]);
 
   const handleOpenScheduleCreator = React.useCallback(() => {
+    const isEditingSchedule = scheduleItems.length > 0;
     showModal({
-      title: 'Schedule Creator',
-      headerDescription: 'Create or update a timer schedule.',
+      title: isEditingSchedule ? 'Edit Schedule' : 'Schedule Creator',
+      headerDescription: isEditingSchedule ? 'Update this timer schedule.' : 'Create a timer schedule.',
       icon: <CalendarClock className="h-5 w-5" />,
       variant: 'info',
       size: 'lg',
@@ -871,9 +872,10 @@ const TimerControlModule = () => {
       customLayout: true,
       actions: [],
       initialSchedule: editableSchedule,
+      isEditingSchedule,
       onApplySchedule: handleApplySchedule,
     });
-  }, [editableSchedule, handleApplySchedule, showModal]);
+  }, [editableSchedule, handleApplySchedule, scheduleItems.length, showModal]);
 
   const theme = {
     columnBorderClass: darkMode ? 'border-gray-800' : 'border-gray-200/80',
