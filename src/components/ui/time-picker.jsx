@@ -218,7 +218,7 @@ const TimePicker = React.forwardRef(({
           </div>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="space-y-3 px-4 pb-2.5 pt-4">
           <div className="flex items-center justify-center gap-2" onBlur={(event) => {
             if (!event.currentTarget.contains(event.relatedTarget)) normalizeParts()
           }}>
@@ -262,7 +262,7 @@ const TimePicker = React.forwardRef(({
             )}
           </div>
 
-          <div className="min-h-8">
+          <div className="min-h-4">
             {invalid ? (
               <p className={cn('text-[10px] leading-relaxed', darkMode ? 'text-red-300' : 'text-red-600')}>{invalidMessage}</p>
             ) : preview ? (

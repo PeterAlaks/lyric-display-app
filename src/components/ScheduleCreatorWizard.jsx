@@ -767,7 +767,16 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
           {step === 1 && (
             <div className="space-y-5">
               <div className="flex justify-end gap-2">
-                <Button type="button" size="sm" variant="outline" className={`${outlineButtonClass} text-red-600 hover:text-red-700`} onClick={confirmClearItems} disabled={draft.items.length === 0}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={darkMode
+                    ? 'border-red-400/30 bg-red-500/10 text-red-300 hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200'
+                    : `${outlineButtonClass} text-red-600 hover:text-red-700`}
+                  onClick={confirmClearItems}
+                  disabled={draft.items.length === 0}
+                >
                   <Trash2 className="h-4 w-4" /> Clear items
                 </Button>
                 <Button type="button" size="sm" onClick={addItem} disabled={draft.items.length >= MAX_SCHEDULE_ITEMS}>

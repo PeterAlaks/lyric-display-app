@@ -6,6 +6,7 @@ import {
   Pause,
   PencilLine,
   Play,
+  Plus,
   Settings2,
   SkipForward,
   Square,
@@ -344,6 +345,7 @@ const ScheduleControls = ({
 }) => {
   const { mutedText, inputClass, outlineButtonClass, surfaceClass, getSwitchProps } = theme;
   const timedCount = scheduleItems.filter(isTimedScheduleItem).length;
+  const scheduleControlsDisabled = scheduleItems.length === 0;
   return (
     <>
       <div className="flex items-start justify-between gap-3">
@@ -362,7 +364,7 @@ const ScheduleControls = ({
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" className={`min-w-0 flex-1 text-[11px] ${outlineButtonClass}`} onClick={handleOpenScheduleCreator}>
-          <PencilLine className="h-3.5 w-3.5" />
+          {scheduleItems.length > 0 ? <PencilLine className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
           {scheduleItems.length > 0 ? (activeTimerUsesSets ? 'Edit running schedule' : 'Edit schedule') : 'Create schedule'}
         </Button>
         {hasSavedSchedule && (
@@ -401,46 +403,49 @@ const ScheduleControls = ({
         </div>
       )}
 
-      <div className="space-y-2">
-        <label className="text-xs font-medium">Ideal end time</label>
-        <TimePicker
-          value={scheduleIdealEndTime}
-          onChange={(value) => applyTimerControlSettings({ scheduleIdealEndTime: value })}
-          darkMode={darkMode}
-          hourFormat={targetHourFormat}
-          onHourFormatChange={(value) => setTimerControlSettings({ targetHourFormat: value })}
-          ariaLabel="Ideal end time"
-          placeholder="Select ideal end"
-          relativePreview
-        />
-      </div>
+      <div className="space-y-4" aria-disabled={scheduleControlsDisabled || undefined}>
+        <div className="space-y-2">
+          <label className="text-xs font-medium">Ideal end time</label>
+          <TimePicker
+            value={scheduleIdealEndTime}
+            onChange={(value) => applyTimerControlSettings({ scheduleIdealEndTime: value })}
+            disabled={scheduleControlsDisabled}
+            darkMode={darkMode}
+            hourFormat={targetHourFormat}
+            onHourFormatChange={(value) => setTimerControlSettings({ targetHourFormat: value })}
+            ariaLabel="Ideal end time"
+            placeholder="Select ideal end"
+            relativePreview
+          />
+        </div>
 
-      <div className={`rounded-xl border px-3 ${surfaceClass}`}>
-        <h3 className="py-3 text-[11px] font-semibold">Schedule behavior</h3>
-        <div className={`divide-y ${darkMode ? 'divide-gray-800' : 'divide-gray-200/80'}`}>
-          <div className="flex min-h-11 items-center justify-between gap-3 py-3">
-            <span className="text-[11px]">Auto-start timed items</span>
-            <Switch checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} {...getSwitchProps(false)} />
-          </div>
-          <div className="py-3">
-            <div className="flex min-h-6 items-center justify-between gap-3">
-              <span className="text-[11px]">Transition indicator</span>
-              <Switch checked={indicatorEnabled} onCheckedChange={(checked) => applyTimerControlSettings({ indicatorEnabled: checked })} {...getSwitchProps(false)} />
+        <div className={`rounded-xl border px-3 ${surfaceClass}`}>
+          <h3 className="py-3 text-[11px] font-semibold">Schedule behavior</h3>
+          <div className={`divide-y ${darkMode ? 'divide-gray-800' : 'divide-gray-200/80'}`}>
+            <div className="flex min-h-11 items-center justify-between gap-3 py-3">
+              <span className="text-[11px]">Auto-start timed items</span>
+              <Switch disabled={scheduleControlsDisabled} checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} {...getSwitchProps(scheduleControlsDisabled)} />
             </div>
-            {indicatorEnabled && (
-              <div className="mt-3 grid grid-cols-[minmax(0,1fr)_72px] gap-2">
-                <label className="min-w-0 space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Text</span><Input value={indicatorLabel} onChange={(event) => applyTimerControlSettings({ indicatorLabel: event.target.value })} className={inputClass} /></label>
-                <label className="space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Seconds</span><Input type="number" min="0" value={indicatorSeconds} onChange={(event) => applyTimerControlSettings({ indicatorSeconds: event.target.value })} className={inputClass} /></label>
+            <div className="py-3">
+              <div className="flex min-h-6 items-center justify-between gap-3">
+                <span className="text-[11px]">Transition indicator</span>
+                <Switch disabled={scheduleControlsDisabled} checked={indicatorEnabled} onCheckedChange={(checked) => applyTimerControlSettings({ indicatorEnabled: checked })} {...getSwitchProps(scheduleControlsDisabled)} />
               </div>
-            )}
-          </div>
-          <div className="flex min-h-11 items-center justify-between gap-3 py-3">
-            <span className="text-[11px]">Timing alerts</span>
-            <Switch checked={scheduleNotificationsEnabled} onCheckedChange={handleTimingAlertsChange} {...getSwitchProps(false)} />
-          </div>
-          <div className="grid grid-cols-2 gap-2 py-3">
-            <label className="space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Warn at</span><Input type="number" min="0" value={warningSeconds} onChange={(event) => applyTimerControlSettings({ warningSeconds: event.target.value })} className={inputClass} /></label>
-            <label className="space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Critical at</span><Input type="number" min="0" value={criticalSeconds} onChange={(event) => applyTimerControlSettings({ criticalSeconds: event.target.value })} className={inputClass} /></label>
+              {indicatorEnabled && (
+                <div className="mt-3 grid grid-cols-[minmax(0,1fr)_72px] gap-2">
+                  <label className="min-w-0 space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Text</span><Input disabled={scheduleControlsDisabled} value={indicatorLabel} onChange={(event) => applyTimerControlSettings({ indicatorLabel: event.target.value })} className={inputClass} /></label>
+                  <label className="space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Seconds</span><Input disabled={scheduleControlsDisabled} type="number" min="0" value={indicatorSeconds} onChange={(event) => applyTimerControlSettings({ indicatorSeconds: event.target.value })} className={inputClass} /></label>
+                </div>
+              )}
+            </div>
+            <div className="flex min-h-11 items-center justify-between gap-3 py-3">
+              <span className="text-[11px]">Timing alerts</span>
+              <Switch disabled={scheduleControlsDisabled} checked={scheduleNotificationsEnabled} onCheckedChange={handleTimingAlertsChange} {...getSwitchProps(scheduleControlsDisabled)} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 py-3">
+              <label className="space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Warn at</span><Input disabled={scheduleControlsDisabled} type="number" min="0" value={warningSeconds} onChange={(event) => applyTimerControlSettings({ warningSeconds: event.target.value })} className={inputClass} /></label>
+              <label className="space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Critical at</span><Input disabled={scheduleControlsDisabled} type="number" min="0" value={criticalSeconds} onChange={(event) => applyTimerControlSettings({ criticalSeconds: event.target.value })} className={inputClass} /></label>
+            </div>
           </div>
         </div>
       </div>
