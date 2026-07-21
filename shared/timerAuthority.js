@@ -1,7 +1,8 @@
 import {
   MAX_SCHEDULE_ITEMS,
   isTimedScheduleItem,
-  normalizeScheduleItem,
+  normalizeScheduleItems,
+  normalizeTimeOfDay,
 } from './scheduleUtils.js';
 
 const MAX_TIMER_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -81,20 +82,13 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
     const finished = !running && Boolean(incomingState.finished);
     const status = running ? (paused ? 'paused' : 'running') : (finished ? 'finished' : 'idle');
     const sets = Array.isArray(incomingState.sets)
-      ? incomingState.sets.slice(0, MAX_TIMER_SETS).map((set, index) => {
-        const normalized = normalizeScheduleItem(set, index);
-        return {
-          id: boundedText(normalized.id, `set-${index + 1}`, 96),
-          label: boundedText(normalized.label, `Schedule item ${index + 1}`, 160),
-          durationMs: normalized.timed
-            ? clamp(normalized.durationMs, 0, 1_000, MAX_TIMER_DURATION_MS)
-            : null,
-          timed: normalized.timed,
-          notes: boundedText(normalized.notes, '', 500),
-          plannedStartTime: boundedText(normalized.plannedStartTime, '', 5),
-        };
-      })
+      ? normalizeScheduleItems(incomingState.sets.slice(0, MAX_TIMER_SETS))
       : [];
+    const warningMs = clamp(incomingState.warningMs, 60000, 0, MAX_TIMER_DURATION_MS);
+    const criticalMs = Math.min(
+      clamp(incomingState.criticalMs, 30000, 0, MAX_TIMER_DURATION_MS),
+      warningMs
+    );
 
     const state = {
       version: 2,
@@ -117,17 +111,18 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
       remaining: (paused || !incomingState.endTime)
         ? boundedText(incomingState.remaining, '', 32) || null
         : null,
-      warningMs: clamp(incomingState.warningMs, 60000, 0, MAX_TIMER_DURATION_MS),
-      criticalMs: clamp(incomingState.criticalMs, 30000, 0, MAX_TIMER_DURATION_MS),
+      warningMs,
+      criticalMs,
       overrunMode: Boolean(incomingState.overrunMode),
       overrunStartedAt: rebaseTimestamp(incomingState.overrunStartedAt),
       sets,
-      activeSetIndex: clamp(incomingState.activeSetIndex, 0, 0, Math.max(0, sets.length - 1)),
+      activeSetIndex: Math.trunc(clamp(incomingState.activeSetIndex, 0, 0, Math.max(0, sets.length - 1))),
       autoStartNext: incomingState.autoStartNext !== false,
       indicatorEnabled: Boolean(incomingState.indicatorEnabled),
       indicatorDurationMs: clamp(incomingState.indicatorDurationMs, 10000, 0, MAX_TIMER_DURATION_MS),
       indicatorLabel: boundedText(incomingState.indicatorLabel, 'Next item starts in'),
       scheduleTitle: boundedText(incomingState.scheduleTitle, '', 160),
+      scheduleEventStartTime: normalizeTimeOfDay(incomingState.scheduleEventStartTime),
       scheduleIdealEndAt: rebaseTimestamp(incomingState.scheduleIdealEndAt),
       scheduleStartedAt: rebaseTimestamp(incomingState.scheduleStartedAt),
       scheduleNotificationsEnabled: incomingState.scheduleNotificationsEnabled !== false,

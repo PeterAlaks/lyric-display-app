@@ -47,3 +47,13 @@ test('clearing a timer schedule removes its saved snapshot', () => {
   assert.equal(storage.getItem(TIMER_SCHEDULE_STORAGE_KEY), null);
   assert.equal(readTimerScheduleSnapshot(storage), null);
 });
+
+test('saved timer schedules reject snapshots from unsupported future versions', () => {
+  const storage = createMemoryStorage();
+  storage.setItem(TIMER_SCHEDULE_STORAGE_KEY, JSON.stringify({
+    version: 2,
+    sets: [{ id: 'welcome', label: 'Welcome', durationMs: 60_000 }],
+  }));
+
+  assert.equal(readTimerScheduleSnapshot(storage), null);
+});

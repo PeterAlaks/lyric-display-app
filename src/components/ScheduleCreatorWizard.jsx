@@ -28,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { TimePicker, formatTimeLabel, isTimeValueInFuture } from '@/components/ui/time-picker';
+import { TimePicker, formatTimeLabel } from '@/components/ui/time-picker';
 import useModal from '../hooks/useModal';
 import {
   MAX_SCHEDULE_ITEMS,
@@ -183,6 +183,9 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     ? 'border-slate-700/70 bg-slate-950/30 px-2 text-[10px] text-slate-300 shadow-none placeholder:text-slate-600 focus-visible:border-blue-400 focus-visible:ring-1 focus-visible:ring-blue-500/30 md:text-[10px]'
     : 'border-slate-200 bg-white px-2 text-[10px] text-slate-600 shadow-none placeholder:text-slate-400 focus-visible:border-blue-500 focus-visible:ring-1 focus-visible:ring-blue-500/20 md:text-[10px]';
   const durationFieldClass = `${microFieldClass} h-8 w-20 text-center font-medium`;
+  const titleValid = Boolean(draft.title.trim());
+  const labelsValid = draft.items.every((item) => item.label.trim());
+  const scheduleDraftValid = titleValid && draft.items.length > 0 && labelsValid;
 
   const updateDraft = React.useCallback((updates) => {
     setDraft((current) => ({ ...current, ...updates }));
@@ -301,7 +304,12 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
   }, []);
 
   const applyImportResult = React.useCallback((result) => {
-    setDraft(normalizeScheduleDocument(result.schedule));
+    const importedSchedule = normalizeScheduleDocument(result.schedule);
+    setDraft((current) => (
+      result.sourceType === 'ldsch'
+        ? importedSchedule
+        : { ...current, items: importedSchedule.items }
+    ));
     setParseInfo(result);
     setError('');
     setDownloaded(false);
@@ -392,6 +400,10 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
   }, [updateDraft]);
 
   const handleDownload = React.useCallback(async () => {
+    if (!scheduleDraftValid) {
+      setError('Add a schedule title and make sure every item has a title before saving.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -402,9 +414,13 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     } finally {
       setBusy(false);
     }
-  }, [draft]);
+  }, [draft, scheduleDraftValid]);
 
   const handleApply = React.useCallback(async () => {
+    if (!scheduleDraftValid) {
+      setError('Add a schedule title and make sure every item has a title before applying.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -415,33 +431,29 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     } finally {
       setBusy(false);
     }
-  }, [draft, onApply, onClose]);
+  }, [draft, onApply, onClose, scheduleDraftValid]);
 
   const timedItems = draft.items.filter(isTimedScheduleItem);
   const manualItems = draft.items.length - timedItems.length;
   const transitionMs = draft.indicator.enabled ? draft.indicator.durationSeconds * 1_000 : 0;
-  const eventStartValid = !draft.eventStartTime || isTimeValueInFuture(draft.eventStartTime, validationNow);
-  const projectionStartAt = eventStartValid ? (resolveScheduleTime(draft.eventStartTime) ?? validationNow) : validationNow;
+  const projectionStartAt = resolveScheduleTime(draft.eventStartTime, validationNow) ?? validationNow;
   const projection = calculateScheduleProjection({
     items: draft.items,
     now: projectionStartAt,
     transitionMs,
     idealEndTime: draft.idealEndTime,
   });
-  const itemStartTimes = eventStartValid
-    ? calculateScheduleItemStartTimes({
-      items: draft.items,
-      eventStartTime: draft.eventStartTime,
-      transitionMs,
-    })
-    : [];
-  const labelsValid = draft.items.every((item) => item.label.trim());
+  const itemStartTimes = calculateScheduleItemStartTimes({
+    items: draft.items,
+    eventStartTime: draft.eventStartTime,
+    transitionMs,
+  });
   const importReady = importMethod === 'create'
     || (importMethod === 'paste' && Boolean(pasteText.trim()))
     || ((importMethod === 'ldsch' || importMethod === 'document') && Boolean(selectedFile && pendingImport))
     || (isEditing && !importMethod);
   const canContinue = step === 0
-    ? Boolean(draft.title.trim()) && eventStartValid && importReady
+    ? titleValid && importReady
     : (step === 1 ? draft.items.length > 0 && labelsValid : true);
   const canReorder = draft.items.length > 1;
   const activeItem = activeItemId ? draft.items.find((item) => item.id === activeItemId) : null;
@@ -627,7 +639,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                     darkMode={darkMode}
                     ariaLabel="Event start time"
                     placeholder="Select event start"
-                    disablePast
+                    relativePreview
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -650,7 +662,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                     <h4 className="text-xs font-semibold">{isEditing ? 'Change Schedule' : 'Add schedule items'}</h4>
                     <p className={`mt-0.5 text-[11px] ${mutedText}`}>
                       {isEditing
-                        ? 'Optional: choosing a source here replaces the existing schedule items.'
+                        ? 'Optional: documents and pasted text replace the items; a .ldsch file replaces the full schedule.'
                         : 'Choose one source for this schedule.'}
                     </p>
                   </div>
@@ -939,7 +951,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                 </div>
               </section>
 
-              <Button type="button" size="sm" variant="outline" className={outlineButtonClass} onClick={handleDownload} disabled={busy || draft.items.length === 0}>
+              <Button type="button" size="sm" variant="outline" className={outlineButtonClass} onClick={handleDownload} disabled={busy || !scheduleDraftValid}>
                 <Download className="h-4 w-4" /> {downloaded ? 'Saved .ldsch file' : 'Save a .ldsch copy'}
               </Button>
             </div>
@@ -958,7 +970,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
               Continue <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="button" size="sm" onClick={handleApply} disabled={draft.items.length === 0 || !labelsValid || !eventStartValid || busy}>
+            <Button type="button" size="sm" onClick={handleApply} disabled={!scheduleDraftValid || busy}>
               <Check className="h-4 w-4" /> Apply schedule
             </Button>
           )}

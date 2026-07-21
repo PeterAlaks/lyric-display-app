@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   calculateScheduleItemStartTimes,
   calculateScheduleProjection,
+  normalizeScheduleDocument,
   parseScheduleDocument,
   parseScheduleText,
   serializeScheduleDocument,
@@ -120,6 +121,31 @@ test('LyricDisplay schedules round-trip through the versioned document format', 
   assert.equal(schedule.indicator.durationSeconds, 15);
 });
 
+test('schedule documents reject unsupported future versions instead of down-converting them', () => {
+  assert.throws(() => parseScheduleDocument({
+    format: 'lyricdisplay-schedule',
+    version: 2,
+    items: [{ id: 'welcome', label: 'Welcome', durationMs: 60_000 }],
+  }), /newer LyricDisplay version/i);
+});
+
+test('schedule normalization assigns stable unique ids and safe text defaults', () => {
+  const schedule = normalizeScheduleDocument({
+    title: '   ',
+    indicator: { label: '   ' },
+    items: [
+      { id: 'duplicate', label: 'First', durationMs: 60_000 },
+      { id: 'duplicate', label: 'Second', durationMs: 60_000 },
+      { id: 'duplicate-2', label: 'Third', durationMs: 60_000 },
+    ],
+  });
+
+  assert.equal(schedule.title, 'Service Schedule');
+  assert.equal(schedule.indicator.label, 'Next item starts in');
+  assert.deepEqual(schedule.items.map((item) => item.id), ['duplicate', 'duplicate-2', 'duplicate-2-2']);
+  assert.equal(new Set(schedule.items.map((item) => item.id)).size, schedule.items.length);
+});
+
 test('derived item starts include transitions and stop after a manual item', () => {
   const starts = calculateScheduleItemStartTimes({
     eventStartTime: '23:50',
@@ -170,4 +196,22 @@ test('schedule projections remain unconfigured when no ideal end is set', () => 
     assert.equal(projection.varianceMs, null);
     assert.equal(projection.status, 'unconfigured');
   }
+});
+
+test('schedule projections normalize fractional active indexes to an existing item', () => {
+  const now = 1_000_000;
+  const projection = calculateScheduleProjection({
+    now,
+    active: true,
+    activeIndex: 1.75,
+    currentRemainingMs: 30_000,
+    items: [
+      { id: 'first', label: 'First', durationMs: 60_000 },
+      { id: 'second', label: 'Second', durationMs: 60_000 },
+      { id: 'third', label: 'Third', durationMs: 60_000 },
+    ],
+  });
+
+  assert.equal(projection.remainingItemCount, 2);
+  assert.equal(projection.knownRemainingMs, 90_000);
 });

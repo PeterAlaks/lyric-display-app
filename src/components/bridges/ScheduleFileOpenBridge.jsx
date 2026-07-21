@@ -13,7 +13,7 @@ export default function ScheduleFileOpenBridge() {
     const api = window.electronAPI;
     if (!api?.onOpenScheduleFromPath) return undefined;
 
-    const offOpen = api.onOpenScheduleFromPath((payload = {}) => {
+    const offOpen = api.onOpenScheduleFromPath(async (payload = {}) => {
       try {
         const schedule = normalizeScheduleDocument(payload.schedule);
         if (schedule.items.length === 0) throw new Error('This schedule does not contain any items');
@@ -34,7 +34,16 @@ export default function ScheduleFileOpenBridge() {
         useLyricsStore.getState().updateTimerControlSettings(scheduleSettings);
         saveTimerScheduleSnapshot(scheduleSettings);
 
-        navigate('/timer-control');
+        if (api.display?.openTimerControlWindow) {
+          try {
+            const result = await api.display.openTimerControlWindow();
+            if (result?.success === false) navigate('/timer-control');
+          } catch {
+            navigate('/timer-control');
+          }
+        } else {
+          navigate('/timer-control');
+        }
         showToast({
           title: 'Schedule opened',
           message: `${schedule.title} is ready in Timer Control.`,

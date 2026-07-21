@@ -1,6 +1,7 @@
 import {
   MAX_SCHEDULE_ITEMS,
-  normalizeScheduleItem,
+  normalizeScheduleItems,
+  normalizeTimeOfDay,
 } from '../../shared/scheduleUtils.js';
 
 export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
@@ -118,6 +119,7 @@ export const createIdleTimerState = () => ({
   indicatorDurationMs: 10000,
   indicatorLabel: 'Next item starts in',
   scheduleTitle: '',
+  scheduleEventStartTime: '',
   scheduleIdealEndAt: null,
   scheduleStartedAt: null,
   scheduleNotificationsEnabled: true,
@@ -176,9 +178,7 @@ export const normalizeTimerControlSettings = (raw) => {
     : {};
 
   const sets = Array.isArray(settings.sets)
-    ? settings.sets
-      .map((set, index) => normalizeScheduleItem(set, index))
-      .slice(0, MAX_TIMER_SETS)
+    ? normalizeScheduleItems(settings.sets)
     : DEFAULT_TIMER_CONTROL_SETTINGS.sets;
   const isLegacyPlaceholderSchedule = sets.length > 0
     && sets.length <= 2
@@ -187,6 +187,23 @@ export const normalizeTimerControlSettings = (raw) => {
       && set.label === `Timer ${index + 1}`
       && set.durationMs === 5 * 60_000
     ));
+  const warningSeconds = normalizeTimerNumberInput(
+    settings.warningSeconds,
+    DEFAULT_TIMER_CONTROL_SETTINGS.warningSeconds,
+    0,
+    86400
+  );
+  const rawCriticalSeconds = normalizeTimerNumberInput(
+    settings.criticalSeconds,
+    DEFAULT_TIMER_CONTROL_SETTINGS.criticalSeconds,
+    0,
+    86400
+  );
+  const criticalSeconds = warningSeconds !== ''
+    && rawCriticalSeconds !== ''
+    && Number(rawCriticalSeconds) > Number(warningSeconds)
+    ? warningSeconds
+    : rawCriticalSeconds;
 
   return {
     ...DEFAULT_TIMER_CONTROL_SETTINGS,
@@ -195,8 +212,8 @@ export const normalizeTimerControlSettings = (raw) => {
     durationMinutes: normalizeTimerNumberInput(settings.durationMinutes, DEFAULT_TIMER_CONTROL_SETTINGS.durationMinutes, 0, 1440),
     targetTime: isValidTargetTime(settings.targetTime) ? settings.targetTime : '',
     targetHourFormat: settings.targetHourFormat === '24' ? '24' : '12',
-    warningSeconds: normalizeTimerNumberInput(settings.warningSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.warningSeconds, 0, 86400),
-    criticalSeconds: normalizeTimerNumberInput(settings.criticalSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.criticalSeconds, 0, 86400),
+    warningSeconds,
+    criticalSeconds,
     overrunMode: Boolean(settings.overrunMode),
     useSets: Boolean(settings.useSets),
     sets: isLegacyPlaceholderSchedule ? [] : sets,
@@ -224,11 +241,9 @@ export const normalizeTimerState = (raw) => {
   const paused = Boolean(raw.paused);
   const status = raw.status || (running ? (paused ? 'paused' : 'running') : (raw.finished ? 'finished' : 'idle'));
   const durationMs = clampNumber(raw.durationMs ?? raw.durationMinutes * 60000, 0, 0);
-  const sets = Array.isArray(raw.sets)
-    ? raw.sets
-      .map((set, index) => normalizeScheduleItem(set, index))
-      .slice(0, MAX_TIMER_SETS)
-    : [];
+  const sets = Array.isArray(raw.sets) ? normalizeScheduleItems(raw.sets) : [];
+  const warningMs = clampNumber(raw.warningMs, 60000, 0);
+  const criticalMs = Math.min(clampNumber(raw.criticalMs, 30000, 0), warningMs);
 
   return {
     ...idle,
@@ -247,17 +262,18 @@ export const normalizeTimerState = (raw) => {
     targetTime: normalizeNullableTimestamp(raw.targetTime),
     elapsedBeforePauseMs: clampNumber(raw.elapsedBeforePauseMs, 0, 0),
     pausedRemainingMs: Number.isFinite(Number(raw.pausedRemainingMs)) ? Math.max(0, Number(raw.pausedRemainingMs)) : null,
-    warningMs: clampNumber(raw.warningMs, 60000, 0),
-    criticalMs: clampNumber(raw.criticalMs, 30000, 0),
+    warningMs,
+    criticalMs,
     overrunMode: Boolean(raw.overrunMode),
     overrunStartedAt: normalizeNullableTimestamp(raw.overrunStartedAt),
     sets,
-    activeSetIndex: clampNumber(raw.activeSetIndex, 0, 0, Math.max(0, sets.length - 1)),
+    activeSetIndex: Math.trunc(clampNumber(raw.activeSetIndex, 0, 0, Math.max(0, sets.length - 1))),
     autoStartNext: raw.autoStartNext !== false,
     indicatorEnabled: Boolean(raw.indicatorEnabled),
     indicatorDurationMs: clampNumber(raw.indicatorDurationMs, 10000, 0),
-    indicatorLabel: String(raw.indicatorLabel || 'Next item starts in'),
+    indicatorLabel: typeof raw.indicatorLabel === 'string' ? raw.indicatorLabel : 'Next item starts in',
     scheduleTitle: String(raw.scheduleTitle || ''),
+    scheduleEventStartTime: normalizeTimeOfDay(raw.scheduleEventStartTime),
     scheduleIdealEndAt: normalizeNullableTimestamp(raw.scheduleIdealEndAt),
     scheduleStartedAt: normalizeNullableTimestamp(raw.scheduleStartedAt),
     scheduleNotificationsEnabled: raw.scheduleNotificationsEnabled !== false,

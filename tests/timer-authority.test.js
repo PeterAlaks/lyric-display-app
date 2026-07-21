@@ -51,6 +51,55 @@ test('authoritative timer snapshots are localized without changing their duratio
   assert.equal(localized.clockBasis, 'local');
 });
 
+test('authoritative timer normalization preserves zero transitions and schedule invariants', () => {
+  const result = applyAuthoritativeTimerUpdate({ revision: 0 }, {
+    running: true,
+    mode: 'countdown',
+    warningMs: 10_000,
+    criticalMs: 30_000,
+    indicatorEnabled: true,
+    indicatorDurationMs: 0,
+    activeSetIndex: 1.8,
+    scheduleEventStartTime: '09:30',
+    sets: [
+      { id: 'same', label: 'First', durationMs: 60_000 },
+      { id: 'same', label: 'Second', durationMs: 60_000 },
+    ],
+    clientSentAt: 1_000_000,
+    baseRevision: 0,
+  }, 1_000_000);
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.state.indicatorDurationMs, 0);
+  assert.equal(result.state.criticalMs, 10_000);
+  assert.equal(result.state.activeSetIndex, 1);
+  assert.equal(result.state.scheduleEventStartTime, '09:30');
+  assert.deepEqual(result.state.sets.map((item) => item.id), ['same', 'same-2']);
+});
+
+test('zero-duration transitions advance directly to the next schedule item', () => {
+  const next = advanceAuthoritativeTimerBoundary({
+    revision: 1,
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    endTime: 1_000_000,
+    activeSetIndex: 0,
+    sets: [
+      { id: 'first', label: 'First', durationMs: 60_000 },
+      { id: 'second', label: 'Second', durationMs: 60_000 },
+    ],
+    autoStartNext: true,
+    indicatorEnabled: true,
+    indicatorDurationMs: 0,
+  }, 1_000_000);
+
+  assert.equal(next.phase, 'timer');
+  assert.equal(next.activeSetIndex, 1);
+  assert.equal(next.label, 'Second');
+});
+
 test('authoritative timer advances sets through an indicator using boundary continuity', () => {
   const base = {
     revision: 1,

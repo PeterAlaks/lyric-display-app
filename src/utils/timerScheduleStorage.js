@@ -5,7 +5,11 @@ export const TIMER_SCHEDULE_STORAGE_KEY = 'lyricdisplay_saved_timer_schedule_v1'
 const getStorage = (storage) => {
   if (storage) return storage;
   if (typeof window === 'undefined') return null;
-  return window.localStorage || null;
+  try {
+    return window.localStorage || null;
+  } catch {
+    return null;
+  }
 };
 
 export const buildTimerScheduleSnapshot = (settings, savedAt = Date.now()) => {
@@ -56,6 +60,8 @@ export const readTimerScheduleSnapshot = (storage) => {
     if (!raw) return null;
     const snapshot = JSON.parse(raw);
     if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return null;
+    const version = snapshot.version == null ? 0 : Number(snapshot.version);
+    if (!Number.isInteger(version) || version < 0 || version > 1) return null;
     const normalized = normalizeTimerControlSettings({
       ...snapshot,
       useSets: true,

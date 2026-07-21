@@ -18,13 +18,16 @@ import {
   splitClockPeriod,
 } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
-import { readTimerScheduleSnapshot, saveTimerScheduleSnapshot } from '../utils/timerScheduleStorage.js';
+import {
+  TIMER_SCHEDULE_STORAGE_KEY,
+  readTimerScheduleSnapshot,
+  saveTimerScheduleSnapshot,
+} from '../utils/timerScheduleStorage.js';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import TimerControlLayout from './TimerControlLayout';
 import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
 import {
   calculateScheduleProjection,
-  isTimedScheduleItem,
   normalizeScheduleDocument,
   resolveScheduleTime,
 } from '../../shared/scheduleUtils.js';
@@ -41,12 +44,11 @@ const formatScheduleClock = (timestamp) => new Intl.DateTimeFormat(undefined, {
   minute: '2-digit',
 }).format(new Date(timestamp));
 
-const formatScheduleVariance = (varianceMs) => {
-  const minutes = Math.max(1, Math.ceil(Math.abs(Number(varianceMs) || 0) / 60_000));
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+const timestampToTimeOfDay = (timestamp) => {
+  const numeric = Number(timestamp);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '';
+  const date = new Date(numeric);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
 const usePreviewClock = (enabled, intervalMs = 1000) => {
@@ -224,7 +226,12 @@ const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = f
 TimerPreview.displayName = 'TimerPreview';
 
 const TimerControlModule = () => {
-  const { emitStageTimerUpdate } = useControlSocket();
+  const {
+    emitStageTimerUpdate,
+    ready: controlReady,
+    isConnected: controlConnected,
+    authStatus: controlAuthStatus,
+  } = useControlSocket();
   const { showModal } = useModal();
   const { showToast } = useToast();
   const { darkMode } = useDarkModeState();
@@ -239,13 +246,10 @@ const TimerControlModule = () => {
   const { commitTimerState } = actions;
   const latestTimerStateRef = React.useRef(timerState);
   const latestDisplaySettingsRef = React.useRef(null);
-  const lastManualItemNoticeRef = React.useRef('');
-  const lastBehindNoticeBucketRef = React.useRef(-1);
-  const criticalTimerAlertKeysRef = React.useRef(new Set());
   const scheduleClearedDuringRunRef = React.useRef(false);
-  const timerControlWindowActive = useWindowActive();
   const controlSettings = timerControlSettings || DEFAULT_TIMER_CONTROL_SETTINGS;
   const latestControlSettingsRef = React.useRef(controlSettings);
+  const liveControlReady = Boolean(controlReady && controlConnected && controlAuthStatus === 'authenticated');
 
   React.useEffect(() => {
     const handleTimerRejected = (event) => {
@@ -303,6 +307,47 @@ const TimerControlModule = () => {
       saveTimerScheduleSnapshot(controlSettings);
     }
   }, [controlSettings, updateTimerControlSettings]);
+
+  React.useEffect(() => {
+    const handleScheduleStorage = (event) => {
+      if (event.key !== TIMER_SCHEDULE_STORAGE_KEY) return;
+
+      if (!event.newValue) {
+        const currentTimer = latestTimerStateRef.current;
+        scheduleClearedDuringRunRef.current = Boolean(
+          (currentTimer?.running || currentTimer?.paused) && currentTimer?.sets?.length > 0
+        );
+        const clearedSettings = {
+          ...latestControlSettingsRef.current,
+          useSets: true,
+          sets: [],
+          scheduleTitle: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
+          scheduleEventStartTime: '',
+          scheduleIdealEndTime: '',
+          scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
+          autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
+          indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
+          indicatorSeconds: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds,
+          indicatorLabel: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+          settingsUpdatedAt: Date.now(),
+        };
+        latestControlSettingsRef.current = clearedSettings;
+        updateTimerControlSettings(clearedSettings, { touch: false });
+        return;
+      }
+
+      const storedSchedule = readTimerScheduleSnapshot();
+      if (!storedSchedule) return;
+      const currentUpdatedAt = Number(latestControlSettingsRef.current?.settingsUpdatedAt) || 0;
+      const incomingUpdatedAt = Number(storedSchedule.settingsUpdatedAt) || 0;
+      if (incomingUpdatedAt < currentUpdatedAt) return;
+      latestControlSettingsRef.current = storedSchedule;
+      updateTimerControlSettings(storedSchedule, { touch: false });
+    };
+
+    window.addEventListener('storage', handleScheduleStorage);
+    return () => window.removeEventListener('storage', handleScheduleStorage);
+  }, [updateTimerControlSettings]);
 
   const setTimerControlSettings = React.useCallback((partial) => {
     const nextSettings = {
@@ -386,8 +431,32 @@ const TimerControlModule = () => {
 
   const active = timerState.running || timerState.paused;
   const activeTimerUsesSets = active && Array.isArray(timerState.sets) && timerState.sets.length > 0;
+  const effectiveAutoStartNext = activeTimerUsesSets ? timerState.autoStartNext !== false : autoStartNext;
+  const effectiveIndicatorEnabled = activeTimerUsesSets ? Boolean(timerState.indicatorEnabled) : indicatorEnabled;
+  const effectiveIndicatorSeconds = activeTimerUsesSets
+    ? Math.max(0, Number(timerState.indicatorDurationMs) || 0) / 1000
+    : indicatorSeconds;
+  const effectiveIndicatorLabel = activeTimerUsesSets ? timerState.indicatorLabel : indicatorLabel;
+  const effectiveNotificationsEnabled = activeTimerUsesSets
+    ? timerState.scheduleNotificationsEnabled !== false
+    : scheduleNotificationsEnabled;
+  const effectiveWarningSeconds = activeTimerUsesSets
+    ? Math.max(0, Number(timerState.warningMs) || 0) / 1000
+    : warningSeconds;
+  const effectiveCriticalSeconds = activeTimerUsesSets
+    ? Math.max(0, Number(timerState.criticalMs) || 0) / 1000
+    : criticalSeconds;
+  const effectiveEventStartTime = activeTimerUsesSets
+    ? (timerState.scheduleEventStartTime || scheduleEventStartTime)
+    : scheduleEventStartTime;
+  const effectiveIdealEndTime = activeTimerUsesSets
+    ? timestampToTimeOfDay(timerState.scheduleIdealEndAt)
+    : scheduleIdealEndTime;
   const scheduleNow = usePreviewClock(useSets || activeTimerUsesSets, active ? 5_000 : 30_000);
   const projectionItems = activeTimerUsesSets ? timerState.sets : sets;
+  const scheduleProjectionNow = activeTimerUsesSets
+    ? scheduleNow
+    : (resolveScheduleTime(scheduleEventStartTime, scheduleNow) ?? scheduleNow);
   const currentScheduleRemainingMs = activeTimerUsesSets && timerState.mode !== 'countup'
     ? getRemainingMs(timerState, scheduleNow)
     : null;
@@ -395,20 +464,21 @@ const TimerControlModule = () => {
     items: projectionItems,
     active: activeTimerUsesSets,
     activeIndex: timerState.activeSetIndex,
-    now: scheduleNow,
+    now: scheduleProjectionNow,
     currentRemainingMs: currentScheduleRemainingMs,
     currentIsTransition: timerState.phase === 'indicator',
-    transitionMs: indicatorEnabled ? secondsToMs(indicatorSeconds) : 0,
+    transitionMs: effectiveIndicatorEnabled ? secondsToMs(effectiveIndicatorSeconds) : 0,
     idealEndAt: activeTimerUsesSets ? timerState.scheduleIdealEndAt : null,
     idealEndTime: activeTimerUsesSets ? '' : scheduleIdealEndTime,
   }), [
     activeTimerUsesSets,
     currentScheduleRemainingMs,
-    indicatorEnabled,
-    indicatorSeconds,
+    effectiveIndicatorEnabled,
+    effectiveIndicatorSeconds,
     projectionItems,
     scheduleIdealEndTime,
     scheduleNow,
+    scheduleProjectionNow,
     timerState.activeSetIndex,
     timerState.phase,
     timerState.scheduleIdealEndAt,
@@ -418,101 +488,12 @@ const TimerControlModule = () => {
     latestTimerStateRef.current = timerState;
   }, [timerState]);
 
-  const surfaceScheduleNotice = React.useCallback((title, message, variant = 'warning') => {
-    showToast({ title, message, variant });
-    if (!timerControlWindowActive && typeof window.Notification === 'function' && window.Notification.permission === 'granted') {
-      try { new window.Notification(title, { body: message }); } catch { /* In-app notification already surfaced. */ }
-    }
-  }, [showToast, timerControlWindowActive]);
-
   const handleTimingAlertsChange = React.useCallback(async (enabled) => {
     applyTimerControlSettings({ scheduleNotificationsEnabled: enabled });
     if (enabled && typeof window.Notification === 'function' && window.Notification.permission === 'default') {
       try { await window.Notification.requestPermission(); } catch { /* In-app alerts remain available. */ }
     }
   }, [applyTimerControlSettings]);
-
-  React.useEffect(() => {
-    if (!activeTimerUsesSets || timerState.phase !== 'timer' || timerState.scheduleNotificationsEnabled === false) return;
-    const currentItem = timerState.sets?.[timerState.activeSetIndex];
-    if (!currentItem || isTimedScheduleItem(currentItem)) return;
-    const noticeKey = `${timerState.scheduleStartedAt || ''}:${currentItem.id}`;
-    if (lastManualItemNoticeRef.current === noticeKey) return;
-    lastManualItemNoticeRef.current = noticeKey;
-    surfaceScheduleNotice(
-      'Manual schedule item',
-      `${currentItem.label} has no duration. Select Next when it is complete.`,
-      'info'
-    );
-  }, [
-    activeTimerUsesSets,
-    surfaceScheduleNotice,
-    timerState.activeSetIndex,
-    timerState.phase,
-    timerState.scheduleNotificationsEnabled,
-    timerState.scheduleStartedAt,
-    timerState.sets,
-  ]);
-
-  React.useEffect(() => {
-    const varianceMs = scheduleProjection.varianceMs;
-    const notificationsEnabled = activeTimerUsesSets && timerState.scheduleNotificationsEnabled !== false;
-    const hasIdealEnd = scheduleProjection.status !== 'unconfigured'
-      && Number.isFinite(scheduleProjection.idealEndAt);
-    if (!notificationsEnabled || !hasIdealEnd || !Number.isFinite(varianceMs) || varianceMs < 60_000) {
-      lastBehindNoticeBucketRef.current = -1;
-      return;
-    }
-    const bucket = Math.floor(varianceMs / (5 * 60_000));
-    if (lastBehindNoticeBucketRef.current >= bucket) return;
-    lastBehindNoticeBucketRef.current = bucket;
-    const qualifier = scheduleProjection.isEstimate ? 'at least ' : '';
-    surfaceScheduleNotice(
-      'Schedule running behind',
-      `${timerState.scheduleTitle || 'The schedule'} is ${qualifier}${formatScheduleVariance(varianceMs)} behind the ideal end time.`
-    );
-  }, [
-    activeTimerUsesSets,
-    scheduleProjection.idealEndAt,
-    scheduleProjection.isEstimate,
-    scheduleProjection.status,
-    scheduleProjection.varianceMs,
-    surfaceScheduleNotice,
-    timerState.scheduleNotificationsEnabled,
-    timerState.scheduleTitle,
-  ]);
-
-  const timerAlertIntensity = React.useMemo(
-    () => getTimerIntensity(timerState, scheduleNow),
-    [scheduleNow, timerState]
-  );
-
-  React.useEffect(() => {
-    const notificationsEnabled = activeTimerUsesSets && timerState.scheduleNotificationsEnabled !== false;
-    const currentItem = timerState.sets?.[timerState.activeSetIndex];
-    const canAlert = notificationsEnabled
-      && timerState.phase === 'timer'
-      && isTimedScheduleItem(currentItem)
-      && timerAlertIntensity === 'critical'
-      && Number(timerState.criticalMs) > 0;
-    if (!canAlert) return;
-
-    const alertKey = `${timerState.scheduleStartedAt || ''}:${currentItem.id}`;
-    if (criticalTimerAlertKeysRef.current.has(alertKey)) return;
-    criticalTimerAlertKeysRef.current.add(alertKey);
-    const remainingSeconds = Math.max(0, Math.ceil((getRemainingMs(timerState, scheduleNow) || 0) / 1000));
-    surfaceScheduleNotice(
-      'Timer critical',
-      `${currentItem.label} has ${remainingSeconds} ${remainingSeconds === 1 ? 'second' : 'seconds'} remaining.`,
-      'error'
-    );
-  }, [
-    activeTimerUsesSets,
-    scheduleNow,
-    surfaceScheduleNotice,
-    timerAlertIntensity,
-    timerState,
-  ]);
 
   const applyTimerDisplaySettings = React.useCallback((partial) => {
     const displayUpdatedAt = Date.now();
@@ -560,10 +541,12 @@ const TimerControlModule = () => {
     return next.getTime();
   }, [targetTime]);
 
-  const canStartTimer = !active
+  const canStartTimer = liveControlReady
+    && !active
     && (useSets ? sets.length > 0 : (mode !== 'target' || Boolean(targetTime)));
 
   const handleStart = React.useCallback(() => {
+    if (!liveControlReady) return;
     const display = buildDisplay();
     if (useSets) {
       scheduleClearedDuringRunRef.current = false;
@@ -580,6 +563,7 @@ const TimerControlModule = () => {
         indicatorDurationMs: secondsToMs(indicatorSeconds),
         indicatorLabel,
         scheduleTitle,
+        scheduleEventStartTime,
         scheduleIdealEndAt: resolveScheduleTime(scheduleIdealEndTime),
         scheduleNotificationsEnabled,
         display,
@@ -611,13 +595,16 @@ const TimerControlModule = () => {
     overrunMode,
     scheduleIdealEndTime,
     scheduleNotificationsEnabled,
+    scheduleEventStartTime,
     scheduleTitle,
     sets,
     useSets,
     warningSeconds,
+    liveControlReady,
   ]);
 
   const handleStop = React.useCallback(() => {
+    if (!liveControlReady) return;
     const current = latestTimerStateRef.current;
     const runtimeSchedule = Array.isArray(current.sets) ? current.sets : [];
     if ((current.running || current.paused)
@@ -628,8 +615,8 @@ const TimerControlModule = () => {
         useSets: true,
         sets: runtimeSchedule,
         scheduleTitle: current.scheduleTitle || scheduleTitle,
-        scheduleEventStartTime,
-        scheduleIdealEndTime,
+        scheduleEventStartTime: current.scheduleEventStartTime || scheduleEventStartTime,
+        scheduleIdealEndTime: timestampToTimeOfDay(current.scheduleIdealEndAt) || scheduleIdealEndTime,
         scheduleNotificationsEnabled: current.scheduleNotificationsEnabled !== false,
         autoStartNext: current.autoStartNext !== false,
         indicatorEnabled: Boolean(current.indicatorEnabled),
@@ -648,9 +635,11 @@ const TimerControlModule = () => {
     scheduleTitle,
     setTimerControlSettings,
     sets.length,
+    liveControlReady,
   ]);
 
   const toggleTimerPlayback = React.useCallback(() => {
+    if (!liveControlReady) return;
     if (timerState.running) {
       if (timerState.awaitingNext) {
         actions.advanceSchedule();
@@ -667,7 +656,7 @@ const TimerControlModule = () => {
     if (canStartTimer) {
       handleStart();
     }
-  }, [actions, canStartTimer, handleStart, timerState.awaitingNext, timerState.paused, timerState.running]);
+  }, [actions, canStartTimer, handleStart, liveControlReady, timerState.awaitingNext, timerState.paused, timerState.running]);
 
   React.useEffect(() => {
     const handleKeyDown = (event) => {
@@ -779,24 +768,24 @@ const TimerControlModule = () => {
 
   const editableSchedule = React.useMemo(() => normalizeScheduleDocument({
     title: visibleScheduleTitle,
-    eventStartTime: scheduleEventStartTime,
-    idealEndTime: scheduleIdealEndTime,
-    autoStartNext,
-    notificationsEnabled: scheduleNotificationsEnabled,
+    eventStartTime: effectiveEventStartTime,
+    idealEndTime: effectiveIdealEndTime,
+    autoStartNext: effectiveAutoStartNext,
+    notificationsEnabled: effectiveNotificationsEnabled,
     indicator: {
-      enabled: indicatorEnabled,
-      durationSeconds: indicatorSeconds,
-      label: indicatorLabel,
+      enabled: effectiveIndicatorEnabled,
+      durationSeconds: effectiveIndicatorSeconds,
+      label: effectiveIndicatorLabel,
     },
     items: scheduleItems,
   }), [
-    autoStartNext,
-    indicatorEnabled,
-    indicatorLabel,
-    indicatorSeconds,
-    scheduleEventStartTime,
-    scheduleIdealEndTime,
-    scheduleNotificationsEnabled,
+    effectiveAutoStartNext,
+    effectiveEventStartTime,
+    effectiveIdealEndTime,
+    effectiveIndicatorEnabled,
+    effectiveIndicatorLabel,
+    effectiveIndicatorSeconds,
+    effectiveNotificationsEnabled,
     scheduleItems,
     visibleScheduleTitle,
   ]);
@@ -822,7 +811,18 @@ const TimerControlModule = () => {
     });
 
     const current = latestTimerStateRef.current;
-    if (current.running || current.paused) {
+    const liveScheduleActive = (current.running || current.paused)
+      && Array.isArray(current.sets)
+      && current.sets.length > 0;
+    if (liveScheduleActive && !liveControlReady) {
+      showToast({
+        title: 'Schedule saved for the next run',
+        message: 'Live control is reconnecting, so the currently running schedule was left unchanged.',
+        variant: 'warning',
+      });
+      return;
+    }
+    if (liveScheduleActive) {
       const activeId = current.sets?.[current.activeSetIndex]?.id;
       const nextActiveIndex = schedule.items.findIndex((item) => item.id === activeId);
       if (nextActiveIndex >= 0) {
@@ -831,6 +831,7 @@ const TimerControlModule = () => {
           sets: schedule.items,
           activeSetIndex: nextActiveIndex,
           scheduleTitle: schedule.title,
+          scheduleEventStartTime: schedule.eventStartTime,
           scheduleIdealEndAt: schedule.idealEndTime
             ? resolveScheduleTime(schedule.idealEndTime, current.scheduleStartedAt || Date.now())
             : null,
@@ -857,7 +858,7 @@ const TimerControlModule = () => {
       message: `${schedule.title} has ${schedule.items.length} ${schedule.items.length === 1 ? 'item' : 'items'}.`,
       variant: 'success',
     });
-  }, [commitTimerState, setTimerControlSettings, showToast]);
+  }, [commitTimerState, liveControlReady, setTimerControlSettings, showToast]);
 
   const handleOpenScheduleCreator = React.useCallback(() => {
     const isEditingSchedule = scheduleItems.length > 0;
@@ -910,6 +911,7 @@ const TimerControlModule = () => {
       useSets={useSets}
       active={active}
       activeTimerUsesSets={activeTimerUsesSets}
+      liveControlReady={liveControlReady}
       timerState={timerState}
       actions={actions}
       preview={<TimerPreview timerState={timerState} displaySettings={displaySettings} scheduleMode={useSets} scheduleItems={scheduleItems} />}
@@ -927,19 +929,19 @@ const TimerControlModule = () => {
       durationMinutes={durationMinutes}
       targetTime={targetTime}
       targetHourFormat={targetHourFormat}
-      warningSeconds={warningSeconds}
-      criticalSeconds={criticalSeconds}
+      warningSeconds={effectiveWarningSeconds}
+      criticalSeconds={effectiveCriticalSeconds}
       overrunMode={overrunMode}
       scheduleItems={scheduleItems}
       hasSavedSchedule={sets.length > 0}
       visibleScheduleTitle={visibleScheduleTitle}
-      scheduleIdealEndTime={scheduleIdealEndTime}
+      scheduleIdealEndTime={effectiveIdealEndTime}
       scheduleProjection={scheduleProjection}
-      autoStartNext={autoStartNext}
-      indicatorEnabled={indicatorEnabled}
-      indicatorSeconds={indicatorSeconds}
-      indicatorLabel={indicatorLabel}
-      scheduleNotificationsEnabled={scheduleNotificationsEnabled}
+      autoStartNext={effectiveAutoStartNext}
+      indicatorEnabled={effectiveIndicatorEnabled}
+      indicatorSeconds={effectiveIndicatorSeconds}
+      indicatorLabel={effectiveIndicatorLabel}
+      scheduleNotificationsEnabled={effectiveNotificationsEnabled}
       displaySettings={displaySettings}
       setTimerControlSettings={setTimerControlSettings}
       applyTimerControlSettings={applyTimerControlSettings}

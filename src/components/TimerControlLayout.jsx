@@ -45,6 +45,7 @@ const TimerControlLayout = ({
   useSets,
   active,
   activeTimerUsesSets,
+  liveControlReady,
   timerState,
   actions,
   preview,
@@ -105,6 +106,11 @@ const TimerControlLayout = ({
           <div className="flex items-center gap-2">
             <Timer className="h-5 w-5" />
             <h1 className="text-lg font-semibold">Timer Control</h1>
+            {!liveControlReady && (
+              <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-wide ${darkMode ? 'bg-amber-400/10 text-amber-200' : 'bg-amber-50 text-amber-700'}`}>
+                Reconnecting
+              </span>
+            )}
           </div>
 
           <div
@@ -186,6 +192,7 @@ const TimerControlLayout = ({
                 darkMode={darkMode}
                 theme={theme}
                 activeTimerUsesSets={activeTimerUsesSets}
+                liveControlReady={liveControlReady}
                 scheduleItems={scheduleItems}
                 hasSavedSchedule={hasSavedSchedule}
                 visibleScheduleTitle={visibleScheduleTitle}
@@ -214,6 +221,7 @@ const TimerControlLayout = ({
               useSets={useSets}
               active={active}
               activeTimerUsesSets={activeTimerUsesSets}
+              liveControlReady={liveControlReady}
               timerState={timerState}
               actions={actions}
               canStartTimer={canStartTimer}
@@ -324,6 +332,7 @@ const ScheduleControls = ({
   darkMode,
   theme,
   activeTimerUsesSets,
+  liveControlReady,
   scheduleItems,
   hasSavedSchedule,
   visibleScheduleTitle,
@@ -345,7 +354,7 @@ const ScheduleControls = ({
 }) => {
   const { mutedText, inputClass, outlineButtonClass, surfaceClass, getSwitchProps } = theme;
   const timedCount = scheduleItems.filter(isTimedScheduleItem).length;
-  const scheduleControlsDisabled = scheduleItems.length === 0;
+  const scheduleControlsDisabled = scheduleItems.length === 0 || (activeTimerUsesSets && !liveControlReady);
   return (
     <>
       <div className="flex items-start justify-between gap-3">
@@ -453,26 +462,26 @@ const ScheduleControls = ({
   );
 };
 
-const TimerTransport = ({ useSets, active, activeTimerUsesSets, timerState, actions, canStartTimer, handleStart, handleStop, outlineButtonClass }) => (
+const TimerTransport = ({ useSets, active, activeTimerUsesSets, liveControlReady, timerState, actions, canStartTimer, handleStart, handleStop, outlineButtonClass }) => (
   <div className="mt-3 space-y-3">
     <div className="grid grid-cols-2 gap-2">
       {!timerState.running ? (
         <Button onClick={handleStart} disabled={!canStartTimer} className="w-full bg-green-600 text-xs text-white hover:bg-green-700"><Play className="h-4 w-4" />{useSets ? 'Start schedule' : 'Start'}</Button>
       ) : timerState.awaitingNext ? (
-        <Button onClick={actions.advanceSchedule} className="w-full bg-green-600 text-xs text-white hover:bg-green-700"><SkipForward className="h-4 w-4" />Next item</Button>
+        <Button onClick={actions.advanceSchedule} disabled={!liveControlReady} className="w-full bg-green-600 text-xs text-white hover:bg-green-700"><SkipForward className="h-4 w-4" />Next item</Button>
       ) : timerState.paused ? (
-        <Button onClick={actions.resumeTimer} className="w-full bg-green-600 text-xs text-white hover:bg-green-700"><Play className="h-4 w-4" />Resume</Button>
+        <Button onClick={actions.resumeTimer} disabled={!liveControlReady} className="w-full bg-green-600 text-xs text-white hover:bg-green-700"><Play className="h-4 w-4" />Resume</Button>
       ) : (
-        <Button onClick={actions.pauseTimer} className="w-full bg-amber-600 text-xs text-white hover:bg-amber-700"><Pause className="h-4 w-4" />Pause</Button>
+        <Button onClick={actions.pauseTimer} disabled={!liveControlReady} className="w-full bg-amber-600 text-xs text-white hover:bg-amber-700"><Pause className="h-4 w-4" />Pause</Button>
       )}
-      <Button variant="destructive" onClick={handleStop} disabled={!active} className="w-full text-xs"><Square className="h-4 w-4" />Stop</Button>
+      <Button variant="destructive" onClick={handleStop} disabled={!active || !liveControlReady} className="w-full text-xs"><Square className="h-4 w-4" />Stop</Button>
     </div>
     <div className={`grid gap-2 ${(useSets || activeTimerUsesSets) ? 'grid-cols-4' : 'grid-cols-3'}`}>
-      <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(-60000)} disabled={!active || timerState.mode === 'countup'}>-1m</Button>
-      <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(60000)} disabled={!active || timerState.mode === 'countup'}>+1m</Button>
-      <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(300000)} disabled={!active || timerState.mode === 'countup'}>+5m</Button>
+      <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(-60000)} disabled={!liveControlReady || !active || timerState.mode === 'countup'}>-1m</Button>
+      <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(60000)} disabled={!liveControlReady || !active || timerState.mode === 'countup'}>+1m</Button>
+      <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(300000)} disabled={!liveControlReady || !active || timerState.mode === 'countup'}>+5m</Button>
       {(useSets || activeTimerUsesSets) && (
-        <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={actions.advanceSchedule} disabled={!activeTimerUsesSets}>
+        <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={actions.advanceSchedule} disabled={!liveControlReady || !activeTimerUsesSets}>
           <SkipForward className="h-4 w-4" />{timerState.sets?.[timerState.activeSetIndex + 1] ? 'Next' : 'Finish'}
         </Button>
       )}

@@ -15,7 +15,7 @@ import {
 import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
 import {
   isTimedScheduleItem,
-  normalizeScheduleItem,
+  normalizeScheduleItems,
 } from '../../shared/scheduleUtils.js';
 
 const getDisplayUpdatedAt = (display) => {
@@ -130,12 +130,13 @@ export const useSharedTimer = ({
     const clientSentAt = Date.now();
     const baseRevision = Math.max(0, Number(latestStateRef.current?.revision) || 0);
     const normalized = normalizeTimerState({ ...nextState, updatedAt: clientSentAt });
+    if (emit && typeof emitRef.current === 'function') {
+      const sent = emitRef.current({ ...normalized, baseRevision, clientSentAt });
+      if (sent === false) return latestStateRef.current;
+    }
     setTimerState(normalized);
     latestStateRef.current = normalized;
     writeStoredTimerState(normalized);
-    if (emit && typeof emitRef.current === 'function') {
-      emitRef.current({ ...normalized, baseRevision, clientSentAt });
-    }
     return normalized;
   }, []);
 
@@ -198,7 +199,19 @@ export const useSharedTimer = ({
     const startTime = Date.now();
     const mode = options.mode || current.mode || 'countdown';
     const durationMs = Math.max(0, Number(options.durationMs) || 0);
-    const targetTime = Number.isFinite(Number(options.targetTime)) ? Number(options.targetTime) : null;
+    const requestedIndicatorDurationMs = Number(options.indicatorDurationMs);
+    const targetTime = options.targetTime !== null
+      && options.targetTime !== undefined
+      && options.targetTime !== ''
+      && Number.isFinite(Number(options.targetTime))
+      ? Number(options.targetTime)
+      : null;
+    const scheduleIdealEndAt = options.scheduleIdealEndAt !== null
+      && options.scheduleIdealEndAt !== undefined
+      && options.scheduleIdealEndAt !== ''
+      && Number.isFinite(Number(options.scheduleIdealEndAt))
+      ? Number(options.scheduleIdealEndAt)
+      : null;
     const endTime = mode === 'target'
       ? targetTime
       : (mode === 'countdown' ? startTime + durationMs : null);
@@ -227,10 +240,13 @@ export const useSharedTimer = ({
       activeSetIndex: 0,
       autoStartNext: options.autoStartNext !== false,
       indicatorEnabled: Boolean(options.indicatorEnabled),
-      indicatorDurationMs: Math.max(0, Number(options.indicatorDurationMs) || current.indicatorDurationMs || 0),
-      indicatorLabel: options.indicatorLabel || current.indicatorLabel,
+      indicatorDurationMs: Number.isFinite(requestedIndicatorDurationMs)
+        ? Math.max(0, requestedIndicatorDurationMs)
+        : Math.max(0, Number(current.indicatorDurationMs) || 0),
+      indicatorLabel: typeof options.indicatorLabel === 'string' ? options.indicatorLabel : current.indicatorLabel,
       scheduleTitle: options.scheduleTitle || '',
-      scheduleIdealEndAt: Number.isFinite(Number(options.scheduleIdealEndAt)) ? Number(options.scheduleIdealEndAt) : null,
+      scheduleEventStartTime: typeof options.scheduleEventStartTime === 'string' ? options.scheduleEventStartTime : '',
+      scheduleIdealEndAt,
       scheduleStartedAt: Array.isArray(options.sets) && options.sets.length > 0 ? startTime : null,
       scheduleNotificationsEnabled: options.scheduleNotificationsEnabled !== false,
       awaitingNext: false,
@@ -239,11 +255,11 @@ export const useSharedTimer = ({
   }, [commitTimerState]);
 
   const startTimerSet = React.useCallback((options = {}) => {
-    const sets = (Array.isArray(options.sets) ? options.sets : [])
-      .map((set, index) => normalizeScheduleItem({
+    const sets = normalizeScheduleItems((Array.isArray(options.sets) ? options.sets : [])
+      .map((set, index) => ({
         ...set,
         id: set?.id || `set-${Date.now()}-${index}`,
-      }, index));
+      })));
 
     if (sets.length === 0) return null;
 
@@ -352,7 +368,7 @@ export const useSharedTimer = ({
 
   const jumpToSet = React.useCallback((index) => {
     const current = latestStateRef.current;
-    const targetIndex = Math.max(0, Math.min(current.sets.length - 1, Number(index) || 0));
+    const targetIndex = Math.trunc(Math.max(0, Math.min(current.sets.length - 1, Number(index) || 0)));
     const targetSet = current.sets?.[targetIndex];
     if (!targetSet) return current;
     return commitTimerState(createSetRuntime(current, targetSet, targetIndex));

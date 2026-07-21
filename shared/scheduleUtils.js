@@ -46,6 +46,28 @@ export function normalizeScheduleItem(raw, index = 0) {
   };
 }
 
+export function normalizeScheduleItems(rawItems = []) {
+  if (!Array.isArray(rawItems)) return [];
+
+  const seenIds = new Set();
+  return rawItems
+    .slice(0, MAX_SCHEDULE_ITEMS)
+    .map((item, index) => normalizeScheduleItem(item, index))
+    .filter((item) => item.label)
+    .map((item, index) => {
+      const baseId = item.id || `schedule-item-${index + 1}`;
+      let uniqueId = baseId;
+      let suffix = 2;
+      while (seenIds.has(uniqueId)) {
+        const suffixText = `-${suffix}`;
+        uniqueId = `${baseId.slice(0, Math.max(1, 96 - suffixText.length))}${suffixText}`;
+        suffix += 1;
+      }
+      seenIds.add(uniqueId);
+      return uniqueId === item.id ? item : { ...item, id: uniqueId };
+    });
+}
+
 export function normalizeTimeOfDay(value) {
   if (typeof value !== 'string') return '';
   const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -65,16 +87,13 @@ export function normalizeScheduleDocument(raw = {}) {
     : (Array.isArray(document.sets) ? document.sets : []);
   const eventStartTime = normalizeTimeOfDay(document.eventStartTime ?? document.scheduleStartTime)
     || normalizeTimeOfDay(rawItems[0]?.plannedStartTime ?? rawItems[0]?.startTime);
-  const items = rawItems
-    .slice(0, MAX_SCHEDULE_ITEMS)
-    .map((item, index) => normalizeScheduleItem(item, index))
-    .filter((item) => item.label);
+  const items = normalizeScheduleItems(rawItems);
   const indicator = isPlainObject(document.indicator) ? document.indicator : {};
 
   return {
     format: LDSCH_FORMAT,
     version: LDSCH_VERSION,
-    title: boundedText(document.title, 'Service Schedule', 160),
+    title: boundedText(document.title, 'Service Schedule', 160) || 'Service Schedule',
     eventStartTime,
     idealEndTime: normalizeTimeOfDay(document.idealEndTime),
     autoStartNext: document.autoStartNext !== false,
@@ -82,7 +101,7 @@ export function normalizeScheduleDocument(raw = {}) {
     indicator: {
       enabled: indicator.enabled !== false,
       durationSeconds: clamp(indicator.durationSeconds, 10, 0, 86_400),
-      label: boundedText(indicator.label, 'Next item starts in', 160),
+      label: boundedText(indicator.label, 'Next item starts in', 160) || 'Next item starts in',
     },
     items,
     createdAt: typeof document.createdAt === 'string' ? document.createdAt : null,
@@ -102,6 +121,15 @@ export function parseScheduleDocument(raw) {
   }
   if (!isPlainObject(value)) throw new Error('Schedule file must contain an object');
   if (value.format && value.format !== LDSCH_FORMAT) throw new Error('This file is not a LyricDisplay schedule');
+  if (value.version !== null && value.version !== undefined) {
+    const sourceVersion = Number(value.version);
+    if (!Number.isInteger(sourceVersion) || sourceVersion < 0) {
+      throw new Error('Schedule file has an invalid format version');
+    }
+    if (sourceVersion > LDSCH_VERSION) {
+      throw new Error(`Schedule version ${sourceVersion} requires a newer LyricDisplay version`);
+    }
+  }
   const schedule = normalizeScheduleDocument(value);
   if (schedule.items.length === 0) throw new Error('Schedule file does not contain any items');
   return schedule;
@@ -338,7 +366,7 @@ export function parseScheduleText(rawText, options = {}) {
     item.inferredDuration = true;
   }
 
-  const items = candidates.slice(0, MAX_SCHEDULE_ITEMS).map((item, index) => normalizeScheduleItem(item, index));
+  const items = normalizeScheduleItems(candidates);
   if (items.length === 0) {
     return {
       schedule: normalizeScheduleDocument({ title: title || options.title, items: [] }),
@@ -393,7 +421,7 @@ export function calculateScheduleItemStartTimes({
   transitionMs = 0,
 } = {}) {
   const normalizedStart = normalizeTimeOfDay(eventStartTime);
-  const items = rawItems.slice(0, MAX_SCHEDULE_ITEMS).map((item, index) => normalizeScheduleItem(item, index));
+  const items = normalizeScheduleItems(rawItems);
   const starts = Array(items.length).fill('');
   if (!normalizedStart) return starts;
 
@@ -433,8 +461,8 @@ export function calculateScheduleProjection({
   idealEndAt = null,
   idealEndTime = '',
 } = {}) {
-  const items = rawItems.slice(0, MAX_SCHEDULE_ITEMS).map((item, index) => normalizeScheduleItem(item, index));
-  const safeIndex = clamp(activeIndex, 0, 0, Math.max(0, items.length - 1));
+  const items = normalizeScheduleItems(rawItems);
+  const safeIndex = Math.trunc(clamp(activeIndex, 0, 0, Math.max(0, items.length - 1)));
   const startIndex = active
     ? Math.min(items.length, safeIndex + (currentIsTransition ? 1 : 0))
     : 0;

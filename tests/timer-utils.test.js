@@ -205,6 +205,21 @@ test('timer control settings preserve a valid optional schedule event start', ()
   assert.equal(normalizeTimerControlSettings({ scheduleEventStartTime: '25:00' }).scheduleEventStartTime, '');
 });
 
+test('timer control settings preserve threshold ordering and unique schedule item ids', () => {
+  const settings = normalizeTimerControlSettings({
+    warningSeconds: 10,
+    criticalSeconds: 30,
+    sets: [
+      { id: 'same', label: 'First', durationMs: 60_000 },
+      { id: 'same', label: 'Second', durationMs: 60_000 },
+    ],
+  });
+
+  assert.equal(settings.warningSeconds, 10);
+  assert.equal(settings.criticalSeconds, 10);
+  assert.deepEqual(settings.sets.map((item) => item.id), ['same', 'same-2']);
+});
+
 test('timer state normalization caps runtime timer sets at the schedule limit', () => {
   const state = normalizeTimerState({
     activeSetIndex: MAX_TIMER_SETS + 4,
@@ -229,6 +244,26 @@ test('timer normalization preserves manual schedule items', () => {
   assert.equal(state.sets.length, 1);
   assert.equal(state.sets[0].timed, false);
   assert.equal(state.sets[0].durationMs, null);
+});
+
+test('timer state normalization keeps runtime schedule fields internally consistent', () => {
+  const state = normalizeTimerState({
+    warningMs: 10_000,
+    criticalMs: 30_000,
+    activeSetIndex: 1.8,
+    scheduleEventStartTime: '09:30',
+    indicatorDurationMs: 0,
+    sets: [
+      { id: 'same', label: 'First', durationMs: 60_000 },
+      { id: 'same', label: 'Second', durationMs: 60_000 },
+    ],
+  });
+
+  assert.equal(state.criticalMs, 10_000);
+  assert.equal(state.activeSetIndex, 1);
+  assert.equal(state.scheduleEventStartTime, '09:30');
+  assert.equal(state.indicatorDurationMs, 0);
+  assert.deepEqual(state.sets.map((item) => item.id), ['same', 'same-2']);
 });
 
 test('active timer runtime is reset when hydrating a new app session', () => {
