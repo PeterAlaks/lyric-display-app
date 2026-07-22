@@ -22,6 +22,7 @@ export const useOptionalControlSocket = () => useContext(ControlSocketContext);
 const LONG_BACKOFF_WARNING_MS = 4000;
 const OBS_DOCK_RECOVERY_POLL_MS = 2500;
 const CURRENT_STATE_READY_TIMEOUT_MS = 15000;
+const getStartupClock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
 export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const socketRef = useRef(null);
@@ -31,6 +32,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const clientId = useRef(`control_${Date.now()}`);
     const readyRef = useRef(false);
     const appliedSavedLiveSafetyRef = useRef(false);
+    const startupTimingsRef = useRef({});
 
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [ready, setReady] = useState(false);
@@ -196,11 +198,15 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
 
         try {
             connectionManager.startConnectionAttempt(clientId.current);
+            const attemptStartedAt = getStartupClock();
+            startupTimingsRef.current = { attemptStartedAt };
             setAuthStatus('authenticating');
             setConnectionStatus('connecting');
 
             const clientType = getClientType();
             const token = await ensureValidToken(clientType);
+            const tokenResolvedAt = getStartupClock();
+            startupTimingsRef.current.tokenMs = tokenResolvedAt - attemptStartedAt;
 
             if (!token) {
                 throw new Error('Authentication token was not provided');
@@ -208,6 +214,8 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
 
             const socketUrl = resolveBackendOrigin();
             await cleanupSocket();
+            const socketStartedAt = getStartupClock();
+            startupTimingsRef.current.socketStartedAt = socketStartedAt;
 
             socketRef.current = io(socketUrl, {
                 transports: ['websocket', 'polling'],
@@ -222,6 +230,9 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                 const isDesktopApp = clientType === 'desktop';
 
                 const handleConnect = () => {
+                    const socketConnectedAt = getStartupClock();
+                    startupTimingsRef.current.socketConnectedAt = socketConnectedAt;
+                    startupTimingsRef.current.socketMs = socketConnectedAt - socketStartedAt;
                     logDebug(`Control socket connected: ${clientId.current}`);
                     connectionManager.recordConnectionSuccess(clientId.current);
                     setConnectionStatus('connected');
@@ -253,6 +264,10 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                     }, CURRENT_STATE_READY_TIMEOUT_MS);
 
                     socket.once('currentState', () => {
+                        const readyAt = getStartupClock();
+                        startupTimingsRef.current.readyAt = readyAt;
+                        startupTimingsRef.current.stateSyncMs = readyAt - socketConnectedAt;
+                        startupTimingsRef.current.totalConnectionMs = readyAt - attemptStartedAt;
                         clearCurrentStateTimeout();
                         readyRef.current = true;
                         setReady(true);
@@ -684,6 +699,16 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         };
     }, [connectionStatus, authStatus, lastSyncTime]);
 
+    const getStartupTimings = useCallback(() => {
+        const timings = startupTimingsRef.current;
+        return {
+            tokenMs: timings.tokenMs ?? null,
+            socketMs: timings.socketMs ?? null,
+            stateSyncMs: timings.stateSyncMs ?? null,
+            totalConnectionMs: timings.totalConnectionMs ?? null,
+        };
+    }, []);
+
     useEffect(() => {
         const handleSyncCompleted = () => {
             const syncTime = Date.now();
@@ -762,6 +787,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         liveSafety,
         actionLog,
         getConnectionDiagnostics,
+        getStartupTimings,
     };
 
     return (

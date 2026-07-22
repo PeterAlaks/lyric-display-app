@@ -18,11 +18,20 @@ test('passive display preload excludes control, file, NDI, and update mutation c
     'security:rotate-jwt-and-restart',
     'updater:install',
     'updater:set-session-active',
+    'app:renderer-ready',
   ]) {
     assert.equal(source.includes(forbidden), false, forbidden);
   }
   assert.equal(source.includes('token-store:get'), true);
   assert.equal(source.includes('preferences:get-advanced-settings'), true);
+});
+
+test('only the control preload can report main-window startup readiness', () => {
+  const control = read('preload.js');
+  const loading = read('preloads/loading.cjs');
+
+  assert.equal(control.includes("ipcRenderer.send('app:renderer-ready'"), true);
+  assert.equal(loading.includes('app:renderer-ready'), false);
 });
 
 test('data-document preloads expose only their role-specific IPC channels', () => {

@@ -15,6 +15,7 @@ import { getSavedDarkMode } from './themePreferences.js';
 import { initializeExternalControl, registerExternalControlIPC } from './externalControl.js';
 import { initializeNdiManager, registerNdiIpcHandlers } from './ndiManager.js';
 import * as userPreferences from './userPreferences.js';
+import { waitForRendererStartup } from './startupReadiness.js';
 
 const isOutputRoute = (url) => /(?:#\/|\/)(stage|time|output\d+)(?:\?|$)/i.test(String(url || ''));
 
@@ -202,7 +203,8 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
       return null;
     }
 
-    const mainWindow = createWindow('/');
+    const mainWindow = createWindow('/', { deferShow: true });
+    const rendererStartupPromise = waitForRendererStartup(mainWindow.webContents);
 
     setupMainWindowCloseHandler(mainWindow);
 
@@ -223,10 +225,43 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     initializeNdiManager();
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    updateLoadingStatus('Finalizing');
+    updateLoadingStatus('Establishing secure session');
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    const rendererStartup = await rendererStartupPromise;
+    if (rendererStartup.outcome === 'ready') {
+      console.log('[Startup] Renderer readiness confirmed', {
+        waitMs: rendererStartup.elapsedMs,
+        ...rendererStartup.payload,
+      });
+    } else {
+      console.warn('[Startup] Renderer readiness wait ended without confirmation', rendererStartup);
+    }
+
+    if (mainWindow.isDestroyed()) {
+      closeLoadingWindow();
+      return null;
+    }
+
+    updateLoadingStatus('Opening control panel');
+    try {
+      if (typeof mainWindow.showInactive === 'function') {
+        mainWindow.showInactive();
+      } else {
+        mainWindow.show();
+      }
+    } catch (error) {
+      console.warn('[Startup] Failed to reveal main window:', error);
+    }
     closeLoadingWindow();
+
+    const focusTimer = setTimeout(() => {
+      try {
+        if (!mainWindow.isDestroyed()) mainWindow.focus();
+      } catch {
+      }
+    }, 350);
+    focusTimer.unref?.();
 
     setTimeout(() => {
       const autoCheck = userPreferences.getPreference('general.autoCheckForUpdates') ?? true;

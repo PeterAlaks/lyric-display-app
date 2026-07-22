@@ -10,6 +10,25 @@ import {
 } from './senderValidation.js';
 
 let cachedJoinCode = null;
+const DESKTOP_JWT_REQUEST_TIMEOUT_MS = 5000;
+const SLOW_AUTH_OPERATION_MS = 500;
+
+const fetchWithTimeout = async (url, options = {}) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DESKTOP_JWT_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const logSlowAuthOperation = (operation, startedAt) => {
+  const durationMs = Date.now() - startedAt;
+  if (durationMs >= SLOW_AUTH_OPERATION_MS) {
+    console.warn(`[AuthTiming] ${operation} took ${durationMs}ms`);
+  }
+};
 
 /**
  * Register authentication IPC handlers
@@ -69,11 +88,12 @@ export function registerAuthHandlers({ getMainWindow }) {
   });
 
   ipcMain.handle('get-desktop-jwt', async (event, payload = {}) => {
+    const startedAt = Date.now();
     try {
       assertTrustedAppRenderer(event, 'get-desktop-jwt', senderOptions);
       const { deviceId, sessionId } = normalizeAuthIdentity(payload);
       const adminKey = await getAdminKey();
-      const resp = await fetch(`http://127.0.0.1:${backendPort}/api/auth/token`, {
+      const resp = await fetchWithTimeout(`http://127.0.0.1:${backendPort}/api/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,6 +109,8 @@ export function registerAuthHandlers({ getMainWindow }) {
     } catch (err) {
       console.error('Error minting desktop JWT:', err);
       return null;
+    } finally {
+      logSlowAuthOperation('desktop JWT request', startedAt);
     }
   });
 
@@ -113,16 +135,20 @@ export function registerAuthHandlers({ getMainWindow }) {
 
   // Token store handlers
   ipcMain.handle('token-store:get', async (event, payload) => {
+    const startedAt = Date.now();
     try {
       assertTrustedAppRenderer(event, 'token-store:get', senderOptions);
       return await secureTokenStore.readToken(normalizeTokenStorePayload(payload));
     } catch (error) {
       console.error('Error retrieving token from secure store:', error);
       return null;
+    } finally {
+      logSlowAuthOperation('secure token read', startedAt);
     }
   });
 
   ipcMain.handle('token-store:set', async (event, payload) => {
+    const startedAt = Date.now();
     try {
       assertTrustedAppRenderer(event, 'token-store:set', senderOptions);
       await secureTokenStore.writeToken(normalizeTokenStorePayload(payload, { requireToken: true }));
@@ -130,6 +156,8 @@ export function registerAuthHandlers({ getMainWindow }) {
     } catch (error) {
       console.error('Error writing token to secure store:', error);
       return { success: false, error: error.message };
+    } finally {
+      logSlowAuthOperation('secure token write', startedAt);
     }
   });
 

@@ -3,6 +3,7 @@ const STORE_NAME = 'tokens';
 const DB_VERSION = 1;
 const SALT_SEED = 'lyricdisplay-token-store-salt:v1';
 const memoryCache = new Map();
+const cacheVersions = new Map();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -16,6 +17,12 @@ const isSecureCryptoAvailable = () => {
 
 const hasIndexedDb = () => typeof indexedDB !== 'undefined';
 const getCacheKey = ({ clientType, deviceId }) => `${clientType || 'unknown'}::${deviceId || 'default'}`;
+const getCacheVersion = (cacheKey) => cacheVersions.get(cacheKey) || 0;
+const bumpCacheVersion = (cacheKey) => {
+  const nextVersion = getCacheVersion(cacheKey) + 1;
+  cacheVersions.set(cacheKey, nextVersion);
+  return nextVersion;
+};
 
 const openDb = () => {
   if (typeof indexedDB === 'undefined') {
@@ -171,8 +178,13 @@ export async function readSecureToken({ clientType, deviceId }) {
     return memoryCache.get(cacheKey);
   }
 
+  const readVersion = getCacheVersion(cacheKey);
+
   if (isElectron()) {
     const value = await window.electronAPI.tokenStore.get({ clientType, deviceId });
+    if (getCacheVersion(cacheKey) !== readVersion) {
+      return memoryCache.get(cacheKey) || null;
+    }
     if (value) {
       memoryCache.set(cacheKey, value);
     }
@@ -189,6 +201,9 @@ export async function readSecureToken({ clientType, deviceId }) {
       return null;
     }
     const decrypted = await decryptToken(record.value, record.deviceId);
+    if (getCacheVersion(cacheKey) !== readVersion) {
+      return memoryCache.get(cacheKey) || null;
+    }
     memoryCache.set(cacheKey, decrypted);
     return decrypted;
   } catch (error) {
@@ -213,6 +228,7 @@ export async function writeSecureToken({ clientType, deviceId, token, expiresAt 
     updatedAt: Date.now(),
   };
 
+  bumpCacheVersion(cacheKey);
   memoryCache.set(cacheKey, payload);
 
   if (isElectron()) {
@@ -239,6 +255,7 @@ export async function writeSecureToken({ clientType, deviceId, token, expiresAt 
 
 export async function clearSecureToken({ clientType, deviceId }) {
   const cacheKey = getCacheKey({ clientType, deviceId });
+  bumpCacheVersion(cacheKey);
   memoryCache.delete(cacheKey);
 
   if (isElectron()) {

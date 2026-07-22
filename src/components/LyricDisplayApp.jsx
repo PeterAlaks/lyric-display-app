@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle, ScanEye } from 'lucide-react';
+import { FolderOpen, FilePlusCorner, FileMusic, MonitorDot, Plus, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -544,7 +544,7 @@ const LyricDisplayApp = () => {
                       }`}
                     aria-label="Preview Outputs"
                   >
-                    <ScanEye className="h-4 w-4" />
+                    <MonitorDot className="h-4 w-4" />
                   </button>
                 </Tooltip>
 
