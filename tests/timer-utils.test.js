@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createTimerSlice } from '../src/context/lyricsStore/timerSlice.js';
 import {
   MAX_TIMER_SETS,
+  getTimerDisplay,
   getTimerProgress,
   isTimerVisiblyActive,
   normalizeTimerControlSettings,
@@ -122,6 +123,31 @@ test('overrun and paused timers remain visibly active', () => {
   }, startTime + durationMs + 1), true);
 });
 
+test('reconciled overdue schedule items display overtime and remain visibly active', () => {
+  const state = {
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs: 60_000,
+    startTime: 1_000_000,
+    endTime: 1_060_000,
+    scheduleReconciliationHold: true,
+    overrunMode: false,
+  };
+
+  assert.equal(getTimerDisplay(state, 1_090_000), '+0:30');
+  assert.equal(isTimerVisiblyActive(state, 1_090_000), true);
+  assert.equal(getTimerDisplay({
+    ...state,
+    paused: true,
+    endTime: null,
+    pausedRemainingMs: 0,
+    schedulePausedOverrunMs: 45_000,
+  }, 1_090_000), '+0:45');
+});
+
 test('timer display scale normalization preserves defaults, migrations, and custom settings', () => {
   const defaults = normalizeTimerDisplaySettings({});
 
@@ -203,6 +229,8 @@ test('timer control settings preserve an empty schedule as a clean slate', () =>
 test('timer control settings preserve a valid optional schedule event start', () => {
   assert.equal(normalizeTimerControlSettings({ scheduleEventStartTime: '09:30' }).scheduleEventStartTime, '09:30');
   assert.equal(normalizeTimerControlSettings({ scheduleEventStartTime: '25:00' }).scheduleEventStartTime, '');
+  assert.equal(normalizeTimerControlSettings({ scheduleEventDate: '2026-07-22' }).scheduleEventDate, '2026-07-22');
+  assert.equal(normalizeTimerControlSettings({ scheduleEventDate: '2026-02-30' }).scheduleEventDate, '');
 });
 
 test('timer control settings preserve threshold ordering and unique schedule item ids', () => {

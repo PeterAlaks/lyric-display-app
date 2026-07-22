@@ -21,6 +21,8 @@ export const buildTimerScheduleSnapshot = (settings, savedAt = Date.now()) => {
     sets: normalized.sets,
     scheduleTitle: normalized.scheduleTitle,
     scheduleEventStartTime: normalized.scheduleEventStartTime,
+    scheduleEventDate: normalized.scheduleEventDate,
+    scheduleScheduledStartAt: normalized.scheduleScheduledStartAt,
     scheduleIdealEndTime: normalized.scheduleIdealEndTime,
     scheduleNotificationsEnabled: normalized.scheduleNotificationsEnabled,
     autoStartNext: normalized.autoStartNext,

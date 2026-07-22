@@ -40,6 +40,7 @@ const ScheduleAlertBridge = () => {
     now,
     currentRemainingMs,
     currentIsTransition: timerState.phase === 'indicator',
+    currentIsUnbounded: Boolean(timerState.scheduleReconciliationHold),
     transitionMs: timerState.indicatorEnabled ? timerState.indicatorDurationMs : 0,
     idealEndAt: timerState.scheduleIdealEndAt,
   }), [
@@ -50,6 +51,7 @@ const ScheduleAlertBridge = () => {
     timerState.indicatorDurationMs,
     timerState.indicatorEnabled,
     timerState.phase,
+    timerState.scheduleReconciliationHold,
     timerState.scheduleIdealEndAt,
     timerState.sets,
   ]);
@@ -61,23 +63,34 @@ const ScheduleAlertBridge = () => {
       try { new window.Notification(title, { body: message }); } catch { /* The in-app alert remains available. */ }
     }
   }, [showToast]);
+  const scheduleRunKey = String(timerState.scheduleRunId || timerState.scheduleJoinedAt || timerState.scheduleStartedAt || '');
+  const joinedCurrentItemInProgress = Boolean(
+    timerState.scheduleReconciled
+      && Number(timerState.scheduleJoinedAt) > 0
+      && Number(timerState.startTime) > 0
+      && Number(timerState.startTime) < Number(timerState.scheduleJoinedAt)
+  );
 
   React.useEffect(() => {
     if (!activeSchedule || timerState.phase !== 'timer' || timerState.scheduleNotificationsEnabled === false) return;
     if (!currentItem || isTimedScheduleItem(currentItem)) return;
-    const noticeKey = `${timerState.scheduleStartedAt || ''}:${currentItem.id}`;
+    const noticeKey = `${scheduleRunKey}:${currentItem.id}`;
     if (lastManualItemNoticeRef.current === noticeKey) return;
     lastManualItemNoticeRef.current = noticeKey;
+    if (joinedCurrentItemInProgress) return;
     surfaceNotice('Manual schedule item', `${currentItem.label} has no duration. Select Next when it is complete.`, 'info');
-  }, [activeSchedule, currentItem, surfaceNotice, timerState.phase, timerState.scheduleNotificationsEnabled, timerState.scheduleStartedAt]);
+  }, [activeSchedule, currentItem, joinedCurrentItemInProgress, scheduleRunKey, surfaceNotice, timerState.phase, timerState.scheduleNotificationsEnabled]);
 
   React.useEffect(() => {
     const varianceMs = projection.varianceMs;
     const notificationsEnabled = activeSchedule && timerState.scheduleNotificationsEnabled !== false;
     const hasIdealEnd = projection.status !== 'unconfigured' && Number.isFinite(projection.idealEndAt);
-    const runKey = String(timerState.scheduleStartedAt || '');
+    const runKey = scheduleRunKey;
     if (lastBehindNoticeRef.current.runKey !== runKey) {
-      lastBehindNoticeRef.current = { runKey, bucket: -1 };
+      const initialBucket = joinedCurrentItemInProgress && Number.isFinite(varianceMs) && varianceMs >= 60_000
+        ? Math.floor(varianceMs / (5 * 60_000))
+        : -1;
+      lastBehindNoticeRef.current = { runKey, bucket: initialBucket };
     }
     if (!notificationsEnabled || !hasIdealEnd || !Number.isFinite(varianceMs) || varianceMs < 60_000) {
       lastBehindNoticeRef.current.bucket = -1;
@@ -91,7 +104,7 @@ const ScheduleAlertBridge = () => {
       'Schedule running behind',
       `${timerState.scheduleTitle || 'The schedule'} is ${qualifier}${formatScheduleVariance(varianceMs)} behind the ideal end time.`
     );
-  }, [activeSchedule, projection, surfaceNotice, timerState.scheduleNotificationsEnabled, timerState.scheduleStartedAt, timerState.scheduleTitle]);
+  }, [activeSchedule, joinedCurrentItemInProgress, projection, scheduleRunKey, surfaceNotice, timerState.scheduleNotificationsEnabled, timerState.scheduleTitle]);
 
   React.useEffect(() => {
     const intensity = getTimerIntensity(timerState, now);
@@ -102,21 +115,22 @@ const ScheduleAlertBridge = () => {
       && intensity === 'critical'
       && Number(timerState.criticalMs) > 0;
     if (!canAlert) return;
-    const alertKey = `${timerState.scheduleStartedAt || ''}:${currentItem.id}`;
+    const alertKey = `${scheduleRunKey}:${currentItem.id}`;
     if (criticalTimerAlertKeysRef.current.has(alertKey)) return;
     criticalTimerAlertKeysRef.current.add(alertKey);
+    if (joinedCurrentItemInProgress) return;
     const remainingSeconds = Math.max(0, Math.ceil((getRemainingMs(timerState, now) || 0) / 1000));
     surfaceNotice(
       'Timer critical',
       `${currentItem.label} has ${remainingSeconds} ${remainingSeconds === 1 ? 'second' : 'seconds'} remaining.`,
       'error'
     );
-  }, [activeSchedule, currentItem, now, surfaceNotice, timerState]);
+  }, [activeSchedule, currentItem, joinedCurrentItemInProgress, now, scheduleRunKey, surfaceNotice, timerState]);
 
   React.useEffect(() => {
     if (criticalTimerAlertKeysRef.current.size <= 500) return;
     criticalTimerAlertKeysRef.current = new Set(Array.from(criticalTimerAlertKeysRef.current).slice(-250));
-  }, [timerState.scheduleStartedAt]);
+  }, [scheduleRunKey]);
 
   return null;
 };

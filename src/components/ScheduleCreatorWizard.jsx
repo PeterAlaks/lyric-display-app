@@ -28,7 +28,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { TimePicker, formatTimeLabel } from '@/components/ui/time-picker';
+import { DatePicker, formatDateLabel } from '@/components/ui/date-picker';
+import { TimePicker, formatTimeLabel, isTimeValueInFuture } from '@/components/ui/time-picker';
 import useModal from '../hooks/useModal';
 import {
   MAX_SCHEDULE_ITEMS,
@@ -37,7 +38,7 @@ import {
   isTimedScheduleItem,
   normalizeScheduleDocument,
   parseScheduleText,
-  resolveScheduleTime,
+  resolveScheduleOccurrence,
 } from '../../shared/scheduleUtils.js';
 import { downloadScheduleFile, importScheduleFile } from '../utils/scheduleFiles.js';
 import { getTimerToggleProps } from '../utils/timerUtils';
@@ -227,6 +228,11 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
   const titleValid = Boolean(draft.title.trim());
   const labelsValid = draft.items.every((item) => item.label.trim());
   const scheduleDraftValid = titleValid && draft.items.length > 0 && labelsValid;
+  const undatedStartHasPassedToday = Boolean(
+    draft.eventStartTime
+      && !draft.eventDate
+      && !isTimeValueInFuture(draft.eventStartTime, validationNow)
+  );
 
   const updateDraft = React.useCallback((updates) => {
     setDraft((current) => ({ ...current, ...updates }));
@@ -486,7 +492,11 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
   const timedItems = draft.items.filter(isTimedScheduleItem);
   const manualItems = draft.items.length - timedItems.length;
   const transitionMs = draft.indicator.enabled ? draft.indicator.durationSeconds * 1_000 : 0;
-  const projectionStartAt = resolveScheduleTime(draft.eventStartTime, validationNow) ?? validationNow;
+  const projectionStartAt = resolveScheduleOccurrence({
+    eventStartTime: draft.eventStartTime,
+    eventDate: draft.eventDate,
+    now: validationNow,
+  }) ?? validationNow;
   const projection = calculateScheduleProjection({
     items: draft.items,
     now: projectionStartAt,
@@ -682,8 +692,8 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
 
           {step === 0 && (
             <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="space-y-1.5 sm:col-span-2">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="space-y-1.5 sm:col-span-3">
                   <span className={fieldLabelClass}>Schedule title</span>
                   <Input value={draft.title} onChange={(event) => updateDraft({ title: event.target.value })} className={inputClass} placeholder="Sunday Service" />
                 </label>
@@ -691,12 +701,24 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                   <span className={fieldLabelClass}>Event start time <span className={`font-normal ${mutedText}`}>(optional)</span></span>
                   <TimePicker
                     value={draft.eventStartTime}
-                    onChange={(eventStartTime) => updateDraft({ eventStartTime })}
+                    onChange={(eventStartTime) => updateDraft({ eventStartTime, ...(!eventStartTime ? { eventDate: '' } : {}) })}
                     darkMode={darkMode}
                     ariaLabel="Event start time"
                     placeholder="Select event start"
-                    relativePreview
+                    relativePreview={!draft.eventDate}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <span className={fieldLabelClass}>Event date <span className={`font-normal ${mutedText}`}>(optional)</span></span>
+                  <DatePicker
+                    value={draft.eventDate}
+                    onChange={(eventDate) => updateDraft({ eventDate })}
+                    disabled={!draft.eventStartTime}
+                    darkMode={darkMode}
+                    ariaLabel="Event date"
+                    placeholder="Select event date"
+                  />
+                  {undatedStartHasPassedToday && <p className={`text-[9px] leading-relaxed ${darkMode ? 'text-amber-300' : 'text-amber-700'}`}>This time has passed today. Leave the date empty to synchronize today’s event, or choose a future date.</p>}
                 </div>
                 <div className="space-y-1.5">
                   <span className={fieldLabelClass}>Ideal end time <span className={`font-normal ${mutedText}`}>(optional)</span></span>
@@ -969,6 +991,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                       <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${mutedText}`}>Ready to apply</p>
                       <h4 className="mt-1 truncate text-base font-semibold tracking-tight">{draft.title}</h4>
                       <p className={`mt-1 text-xs ${mutedText}`}>{draft.items.length} items · {timedItems.length} timed · {manualItems} manual</p>
+                      {draft.eventStartTime && <p className={`mt-1 text-[10px] ${mutedText}`}>{draft.eventDate ? formatDateLabel(draft.eventDate) : 'Time-only schedule'} at {formatTimeLabel(draft.eventStartTime)}</p>}
                     </div>
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${darkMode ? 'bg-blue-500/10 text-blue-300' : 'bg-blue-50 text-blue-600'}`}><CalendarClock className="h-5 w-5" /></div>
                   </div>

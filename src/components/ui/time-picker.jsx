@@ -138,7 +138,7 @@ const TimePicker = React.forwardRef(({
   const updatePart = (part, rawValue) => {
     const numericValue = String(rawValue).replace(/\D/g, '').slice(0, 2)
     const fallback = parseTimeValue(timeFromOffset(1), hourFormat)
-    commitParts({
+    setParts({
       hour: parts.hour || fallback.hour,
       minute: parts.minute || '00',
       period: parts.period || fallback.period,
@@ -219,14 +219,13 @@ const TimePicker = React.forwardRef(({
         </div>
 
         <div className="space-y-3 px-4 pb-2.5 pt-4">
-          <div className="flex items-center justify-center gap-2" onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) normalizeParts()
-          }}>
+          <div className="flex items-center justify-center gap-2">
             <input
               type="text"
               inputMode="numeric"
               value={parts.hour}
               onChange={(event) => updatePart('hour', event.target.value)}
+              onBlur={normalizeParts}
               placeholder="HH"
               aria-label={`${ariaLabel} hour`}
               className={cn('h-14 w-20 rounded-lg border text-center text-xl font-semibold tabular-nums outline-none ring-0 transition-shadow focus:ring-2', inputSurfaceClass)}
@@ -237,6 +236,7 @@ const TimePicker = React.forwardRef(({
               inputMode="numeric"
               value={parts.minute}
               onChange={(event) => updatePart('minute', event.target.value)}
+              onBlur={normalizeParts}
               placeholder="MM"
               aria-label={`${ariaLabel} minute`}
               className={cn('h-14 w-20 rounded-lg border text-center text-xl font-semibold tabular-nums outline-none ring-0 transition-shadow focus:ring-2', inputSurfaceClass)}

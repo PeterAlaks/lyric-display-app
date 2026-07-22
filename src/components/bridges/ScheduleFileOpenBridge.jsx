@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useLyricsStore from '../../context/LyricsStore';
 import useToast from '../../hooks/useToast';
 import { saveTimerScheduleSnapshot } from '../../utils/timerScheduleStorage.js';
-import { normalizeScheduleDocument } from '../../../shared/scheduleUtils.js';
+import { normalizeScheduleDocument, resolveScheduleOccurrence } from '../../../shared/scheduleUtils.js';
 
 export default function ScheduleFileOpenBridge() {
   const navigate = useNavigate();
@@ -23,6 +23,11 @@ export default function ScheduleFileOpenBridge() {
           sets: schedule.items,
           scheduleTitle: schedule.title,
           scheduleEventStartTime: schedule.eventStartTime,
+          scheduleEventDate: schedule.eventDate,
+          scheduleScheduledStartAt: resolveScheduleOccurrence({
+            eventStartTime: schedule.eventStartTime,
+            eventDate: schedule.eventDate,
+          }),
           scheduleIdealEndTime: schedule.idealEndTime,
           scheduleNotificationsEnabled: schedule.notificationsEnabled,
           autoStartNext: schedule.autoStartNext,

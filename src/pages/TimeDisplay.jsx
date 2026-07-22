@@ -203,6 +203,7 @@ const TimeDisplay = () => {
     now,
     currentRemainingMs: scheduleRemainingMs,
     currentIsTransition: timerState.phase === 'indicator',
+    currentIsUnbounded: Boolean(timerState.scheduleReconciliationHold),
     transitionMs: timerState.indicatorEnabled ? timerState.indicatorDurationMs : 0,
     idealEndAt: timerState.scheduleIdealEndAt,
   }), [
@@ -213,6 +214,7 @@ const TimeDisplay = () => {
     timerState.indicatorDurationMs,
     timerState.indicatorEnabled,
     timerState.phase,
+    timerState.scheduleReconciliationHold,
     timerState.scheduleIdealEndAt,
     timerState.sets,
   ]);

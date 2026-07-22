@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildScheduleTimeline,
   calculateScheduleItemStartTimes,
   calculateScheduleProjection,
+  inferSchedulePosition,
   normalizeScheduleDocument,
   parseScheduleDocument,
   parseScheduleText,
+  resolveActualScheduleStart,
+  resolveScheduleOccurrence,
   serializeScheduleDocument,
 } from '../shared/scheduleUtils.js';
 
@@ -119,6 +123,115 @@ test('LyricDisplay schedules round-trip through the versioned document format', 
   assert.equal(schedule.idealEndTime, '20:30');
   assert.equal(schedule.items[1].timed, false);
   assert.equal(schedule.indicator.durationSeconds, 15);
+});
+
+test('schedule documents preserve an optional event date only when a start time exists', () => {
+  const dated = normalizeScheduleDocument({ eventStartTime: '09:00', eventDate: '2026-07-22' });
+  const undated = normalizeScheduleDocument({ eventDate: '2026-07-22' });
+
+  assert.equal(dated.eventDate, '2026-07-22');
+  assert.equal(undated.eventDate, '');
+  assert.equal(parseScheduleDocument(serializeScheduleDocument({
+    ...dated,
+    items: [{ label: 'Welcome', durationMs: 60_000 }],
+  })).eventDate, '2026-07-22');
+});
+
+test('schedule occurrence resolution binds local dates and replaces stale time-only bindings', () => {
+  const now = new Date(2026, 6, 22, 10, 30, 0, 0).getTime();
+  const today = resolveScheduleOccurrence({ eventStartTime: '09:00', now });
+  const dated = resolveScheduleOccurrence({ eventStartTime: '09:00', eventDate: '2026-07-24', now });
+  const stale = resolveScheduleOccurrence({
+    eventStartTime: '11:00',
+    boundStartAt: now - (19 * 60 * 60_000),
+    now,
+  });
+  const nextMorning = new Date(2026, 6, 23, 2, 0, 0, 0).getTime();
+  const previousMorningBinding = new Date(2026, 6, 22, 9, 0, 0, 0).getTime();
+  const reboundBeforeEvent = resolveScheduleOccurrence({
+    eventStartTime: '09:00',
+    boundStartAt: previousMorningBinding,
+    now: nextMorning,
+  });
+
+  assert.equal(new Date(today).getDate(), 22);
+  assert.equal(new Date(today).getHours(), 9);
+  assert.equal(new Date(dated).getDate(), 24);
+  assert.equal(new Date(stale).getDate(), 22);
+  assert.equal(new Date(stale).getHours(), 11);
+  assert.equal(new Date(reboundBeforeEvent).getDate(), 23);
+  assert.equal(new Date(reboundBeforeEvent).getHours(), 9);
+});
+
+test('actual start resolution handles overnight events without accepting a future same-day time', () => {
+  const scheduled = new Date(2026, 6, 22, 23, 30, 0, 0).getTime();
+  const afterMidnight = new Date(2026, 6, 23, 0, 10, 0, 0).getTime();
+  const actual = resolveActualScheduleStart('00:05', scheduled, afterMidnight);
+  const future = resolveActualScheduleStart(
+    '11:00',
+    new Date(2026, 6, 22, 9, 0, 0, 0).getTime(),
+    new Date(2026, 6, 22, 10, 0, 0, 0).getTime()
+  );
+
+  assert.equal(new Date(actual).getDate(), 23);
+  assert.equal(new Date(actual).getHours(), 0);
+  assert.equal(future, null);
+});
+
+test('timeline inference catches an on-time schedule up to the correct item and transition', () => {
+  const startAt = new Date(2026, 6, 22, 9, 0, 0, 0).getTime();
+  const items = [
+    { id: 'welcome', label: 'Welcome', durationMs: 10 * 60_000 },
+    { id: 'worship', label: 'Worship', durationMs: 20 * 60_000 },
+  ];
+  const duringTransition = inferSchedulePosition({
+    items,
+    scheduledStartAt: startAt,
+    actualStartAt: startAt,
+    transitionMs: 60_000,
+    now: startAt + (10 * 60_000) + 30_000,
+  });
+  const duringWorship = inferSchedulePosition({
+    items,
+    scheduledStartAt: startAt,
+    actualStartAt: startAt,
+    transitionMs: 0,
+    now: startAt + (28 * 60_000),
+  });
+
+  assert.equal(duringTransition.kind, 'transition');
+  assert.equal(duringTransition.suggestedItemIndex, 1);
+  assert.equal(duringTransition.remainingMs, 30_000);
+  assert.equal(duringWorship.kind, 'item');
+  assert.equal(duringWorship.suggestedItemIndex, 1);
+  assert.equal(duringWorship.remainingMs, 2 * 60_000);
+});
+
+test('timeline inference stops at an unbounded manual item and can resume from a fixed anchor', () => {
+  const startAt = new Date(2026, 6, 22, 9, 0, 0, 0).getTime();
+  const unbounded = buildScheduleTimeline({
+    scheduledStartAt: startAt,
+    actualStartAt: startAt,
+    items: [
+      { id: 'manual', label: 'Open ministry', timed: false, durationMs: null },
+      { id: 'message', label: 'Message', durationMs: 20 * 60_000 },
+    ],
+  });
+  const anchored = inferSchedulePosition({
+    scheduledStartAt: startAt,
+    actualStartAt: startAt,
+    now: startAt + (35 * 60_000),
+    items: [
+      { id: 'manual', label: 'Open ministry', timed: false, durationMs: null },
+      { id: 'message', label: 'Message', durationMs: 20 * 60_000, plannedStartTime: '09:30' },
+    ],
+  });
+
+  assert.equal(unbounded.complete, false);
+  assert.equal(unbounded.itemTimings[1], null);
+  assert.equal(anchored.kind, 'item');
+  assert.equal(anchored.suggestedItemIndex, 1);
+  assert.equal(anchored.remainingMs, 15 * 60_000);
 });
 
 test('schedule documents reject unsupported future versions instead of down-converting them', () => {

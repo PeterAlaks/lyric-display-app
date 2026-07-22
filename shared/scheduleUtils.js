@@ -1,6 +1,8 @@
 export const LDSCH_FORMAT = 'lyricdisplay-schedule';
 export const LDSCH_VERSION = 1;
 export const MAX_SCHEDULE_ITEMS = 100;
+export const SCHEDULE_START_GRACE_MS = 60_000;
+export const SCHEDULE_OCCURRENCE_STALE_MS = 18 * 60 * 60 * 1000;
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -80,6 +82,91 @@ export function normalizeTimeOfDay(value) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+export function normalizeDateOnly(value) {
+  if (typeof value !== 'string') return '';
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return '';
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const candidate = new Date(year, month - 1, day);
+  if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) {
+    return '';
+  }
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function combineScheduleDateAndTime(dateValue, timeValue, referenceMs = Date.now()) {
+  const normalizedTime = normalizeTimeOfDay(timeValue);
+  if (!normalizedTime) return null;
+  const normalizedDate = normalizeDateOnly(dateValue);
+  const reference = new Date(referenceMs);
+  const [hours, minutes] = normalizedTime.split(':').map(Number);
+  let year = reference.getFullYear();
+  let month = reference.getMonth();
+  let day = reference.getDate();
+  if (normalizedDate) {
+    const parts = normalizedDate.split('-').map(Number);
+    [year, month, day] = [parts[0], parts[1] - 1, parts[2]];
+  }
+  const candidate = new Date(year, month, day, hours, minutes, 0, 0);
+  return Number.isFinite(candidate.getTime()) ? candidate.getTime() : null;
+}
+
+export function resolveScheduleOccurrence({
+  eventStartTime = '',
+  eventDate = '',
+  boundStartAt = null,
+  now = Date.now(),
+  staleAfterMs = SCHEDULE_OCCURRENCE_STALE_MS,
+} = {}) {
+  const normalizedTime = normalizeTimeOfDay(eventStartTime);
+  if (!normalizedTime) return null;
+  const normalizedDate = normalizeDateOnly(eventDate);
+  if (normalizedDate) return combineScheduleDateAndTime(normalizedDate, normalizedTime, now);
+
+  const numericBound = Number(boundStartAt);
+  const safeStaleAfterMs = clamp(staleAfterMs, SCHEDULE_OCCURRENCE_STALE_MS, MINUTE_MS, 7 * 24 * HOUR_MS);
+  const todayOccurrence = combineScheduleDateAndTime('', normalizedTime, now);
+  const boundDate = Number.isFinite(numericBound) ? new Date(numericBound) : null;
+  const nowDate = new Date(now);
+  const boundIsPreviousCalendarDay = boundDate && (
+    boundDate.getFullYear() !== nowDate.getFullYear()
+      || boundDate.getMonth() !== nowDate.getMonth()
+      || boundDate.getDate() !== nowDate.getDate()
+  );
+  const staleBeforeTodaysOccurrence = boundIsPreviousCalendarDay
+    && Number.isFinite(todayOccurrence)
+    && todayOccurrence > now
+    && now - numericBound > 6 * HOUR_MS;
+  if (Number.isFinite(numericBound)
+    && numericBound > 0
+    && now - numericBound <= safeStaleAfterMs
+    && !staleBeforeTodaysOccurrence) {
+    return numericBound;
+  }
+
+  return todayOccurrence;
+}
+
+export function resolveActualScheduleStart(value, scheduledStartAt, now = Date.now()) {
+  const normalizedTime = normalizeTimeOfDay(value);
+  const numericScheduledStartAt = Number(scheduledStartAt);
+  if (!normalizedTime || !Number.isFinite(numericScheduledStartAt)) return null;
+  const scheduled = new Date(numericScheduledStartAt);
+  const dateValue = `${scheduled.getFullYear()}-${String(scheduled.getMonth() + 1).padStart(2, '0')}-${String(scheduled.getDate()).padStart(2, '0')}`;
+  const base = combineScheduleDateAndTime(dateValue, normalizedTime, numericScheduledStartAt);
+  if (!Number.isFinite(base)) return null;
+
+  const candidates = [base - (24 * HOUR_MS), base, base + (24 * HOUR_MS)]
+    .filter((candidate) => candidate <= now + 999 && Math.abs(candidate - numericScheduledStartAt) <= SCHEDULE_OCCURRENCE_STALE_MS)
+    .sort((a, b) => {
+      const scheduledDistance = Math.abs(a - numericScheduledStartAt) - Math.abs(b - numericScheduledStartAt);
+      return scheduledDistance || b - a;
+    });
+  return candidates[0] ?? null;
+}
+
 export function normalizeScheduleDocument(raw = {}) {
   const document = isPlainObject(raw) ? raw : {};
   const rawItems = Array.isArray(document.items)
@@ -95,6 +182,7 @@ export function normalizeScheduleDocument(raw = {}) {
     version: LDSCH_VERSION,
     title: boundedText(document.title, 'Service Schedule', 160) || 'Service Schedule',
     eventStartTime,
+    eventDate: eventStartTime ? normalizeDateOnly(document.eventDate) : '',
     idealEndTime: normalizeTimeOfDay(document.idealEndTime),
     autoStartNext: document.autoStartNext !== false,
     notificationsEnabled: document.notificationsEnabled !== false,
@@ -415,6 +503,200 @@ export function resolveScheduleTime(value, referenceMs = Date.now()) {
   return candidate.getTime();
 }
 
+const resolveClockOnOrAfter = (value, referenceMs) => {
+  const normalized = normalizeTimeOfDay(value);
+  if (!normalized || !Number.isFinite(Number(referenceMs))) return null;
+  const [hours, minutes] = normalized.split(':').map(Number);
+  const candidate = new Date(Number(referenceMs));
+  candidate.setHours(hours, minutes, 0, 0);
+  while (candidate.getTime() < Number(referenceMs)) candidate.setDate(candidate.getDate() + 1);
+  return candidate.getTime();
+};
+
+export function buildScheduleTimeline({
+  items: rawItems = [],
+  scheduledStartAt = null,
+  actualStartAt = null,
+  transitionMs = 0,
+} = {}) {
+  const items = normalizeScheduleItems(rawItems);
+  const numericActualStartAt = Number(actualStartAt);
+  const numericScheduledStartAt = Number(scheduledStartAt);
+  const startAt = Number.isFinite(numericActualStartAt)
+    ? numericActualStartAt
+    : (Number.isFinite(numericScheduledStartAt) ? numericScheduledStartAt : null);
+  if (!Number.isFinite(startAt) || items.length === 0) {
+    return { items, segments: [], itemTimings: [], complete: items.length === 0, warnings: [] };
+  }
+
+  const planStartAt = Number.isFinite(numericScheduledStartAt) ? numericScheduledStartAt : startAt;
+  const actualOffsetMs = startAt - planStartAt;
+  const safeTransitionMs = clamp(transitionMs, 0, 0, HOUR_MS);
+  const explicitStarts = Array(items.length).fill(null);
+  let previousExplicitStartAt = planStartAt;
+  items.forEach((item, index) => {
+    if (!item.plannedStartTime) return;
+    const plannedAt = resolveClockOnOrAfter(item.plannedStartTime, previousExplicitStartAt);
+    if (!Number.isFinite(plannedAt)) return;
+    explicitStarts[index] = plannedAt + actualOffsetMs;
+    previousExplicitStartAt = plannedAt;
+  });
+
+  const anchoredManualEnd = (index, itemStartAt) => {
+    let tailMs = safeTransitionMs;
+    for (let nextIndex = index + 1; nextIndex < items.length; nextIndex += 1) {
+      const anchorAt = explicitStarts[nextIndex];
+      if (Number.isFinite(anchorAt)) {
+        const candidate = anchorAt - tailMs;
+        return candidate > itemStartAt ? candidate : null;
+      }
+      const nextItem = items[nextIndex];
+      if (!isTimedScheduleItem(nextItem)) return null;
+      tailMs += Number(nextItem.durationMs);
+      if (nextIndex < items.length - 1) tailMs += safeTransitionMs;
+    }
+    return null;
+  };
+
+  const segments = [];
+  const itemTimings = Array(items.length).fill(null);
+  const warnings = [];
+  let cursor = startAt;
+  let complete = true;
+
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    const explicitStartAt = explicitStarts[index];
+    if (Number.isFinite(explicitStartAt) && explicitStartAt > cursor) {
+      segments.push({
+        type: 'gap',
+        startAt: cursor,
+        endAt: explicitStartAt,
+        nextItemIndex: index,
+      });
+      cursor = explicitStartAt;
+    } else if (Number.isFinite(explicitStartAt) && explicitStartAt < cursor) {
+      warnings.push(`The planned start for ${item.label} overlaps an earlier schedule segment.`);
+    }
+
+    const itemStartAt = cursor;
+    const timed = isTimedScheduleItem(item);
+    const itemEndAt = timed
+      ? itemStartAt + Number(item.durationMs)
+      : anchoredManualEnd(index, itemStartAt);
+    const itemSegment = {
+      type: 'item',
+      itemIndex: index,
+      itemId: item.id,
+      timed,
+      startAt: itemStartAt,
+      endAt: Number.isFinite(itemEndAt) ? itemEndAt : null,
+      durationMs: timed ? Number(item.durationMs) : null,
+      inferredFromAnchor: !timed && Number.isFinite(itemEndAt),
+    };
+    segments.push(itemSegment);
+    itemTimings[index] = itemSegment;
+
+    if (!Number.isFinite(itemEndAt)) {
+      complete = false;
+      break;
+    }
+    cursor = itemEndAt;
+
+    if (index < items.length - 1 && safeTransitionMs > 0) {
+      segments.push({
+        type: 'transition',
+        fromItemIndex: index,
+        nextItemIndex: index + 1,
+        startAt: cursor,
+        endAt: cursor + safeTransitionMs,
+        durationMs: safeTransitionMs,
+      });
+      cursor += safeTransitionMs;
+    }
+  }
+
+  return {
+    items,
+    segments,
+    itemTimings,
+    complete,
+    warnings,
+    startAt,
+    endAt: complete ? cursor : null,
+  };
+}
+
+export function inferSchedulePosition({ now = Date.now(), ...options } = {}) {
+  const timeline = buildScheduleTimeline(options);
+  const numericNow = Number(now);
+  if (!Number.isFinite(numericNow) || timeline.segments.length === 0) {
+    return { kind: 'unavailable', timeline, suggestedItemIndex: 0, exact: false };
+  }
+  if (numericNow < timeline.startAt) {
+    return { kind: 'before', timeline, suggestedItemIndex: 0, exact: true };
+  }
+
+  const segment = timeline.segments.find((candidate) => (
+    numericNow >= candidate.startAt
+      && (candidate.endAt === null || numericNow < candidate.endAt)
+  ));
+  if (segment?.type === 'item') {
+    const elapsedMs = Math.max(0, numericNow - segment.startAt);
+    const remainingMs = segment.endAt === null ? null : Math.max(0, segment.endAt - numericNow);
+    return {
+      kind: segment.timed ? 'item' : 'manual',
+      timeline,
+      segment,
+      suggestedItemIndex: segment.itemIndex,
+      exact: segment.timed && !segment.inferredFromAnchor,
+      elapsedMs,
+      remainingMs,
+    };
+  }
+  if (segment?.type === 'transition') {
+    return {
+      kind: 'transition',
+      timeline,
+      segment,
+      suggestedItemIndex: segment.nextItemIndex,
+      exact: true,
+      elapsedMs: Math.max(0, numericNow - segment.startAt),
+      remainingMs: Math.max(0, segment.endAt - numericNow),
+    };
+  }
+  if (segment?.type === 'gap') {
+    return {
+      kind: 'gap',
+      timeline,
+      segment,
+      suggestedItemIndex: segment.nextItemIndex,
+      exact: true,
+      remainingMs: Math.max(0, segment.endAt - numericNow),
+    };
+  }
+  if (timeline.complete) {
+    return {
+      kind: 'finished',
+      timeline,
+      suggestedItemIndex: Math.max(0, timeline.items.length - 1),
+      exact: true,
+      elapsedAfterEndMs: Math.max(0, numericNow - timeline.endAt),
+    };
+  }
+
+  const lastItem = [...timeline.itemTimings].reverse().find(Boolean);
+  return {
+    kind: 'manual',
+    timeline,
+    segment: lastItem,
+    suggestedItemIndex: lastItem?.itemIndex ?? 0,
+    exact: false,
+    elapsedMs: lastItem ? Math.max(0, numericNow - lastItem.startAt) : null,
+    remainingMs: null,
+  };
+}
+
 export function calculateScheduleItemStartTimes({
   items: rawItems = [],
   eventStartTime = '',
@@ -457,6 +739,7 @@ export function calculateScheduleProjection({
   now = Date.now(),
   currentRemainingMs = null,
   currentIsTransition = false,
+  currentIsUnbounded = false,
   transitionMs = 0,
   idealEndAt = null,
   idealEndTime = '',
@@ -469,7 +752,7 @@ export function calculateScheduleProjection({
   let knownRemainingMs = active && currentIsTransition && Number.isFinite(Number(currentRemainingMs))
     ? Math.max(0, Number(currentRemainingMs))
     : 0;
-  let manualItemCount = 0;
+  let manualItemCount = active && currentIsUnbounded ? 1 : 0;
 
   for (let index = startIndex; index < items.length; index += 1) {
     const item = items[index];

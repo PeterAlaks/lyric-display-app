@@ -1,5 +1,6 @@
 import {
   MAX_SCHEDULE_ITEMS,
+  normalizeDateOnly,
   normalizeScheduleItems,
   normalizeTimeOfDay,
 } from '../../shared/scheduleUtils.js';
@@ -31,6 +32,8 @@ export const DEFAULT_TIMER_CONTROL_SETTINGS = {
   indicatorLabel: 'Next item starts in',
   scheduleTitle: 'Service Schedule',
   scheduleEventStartTime: '',
+  scheduleEventDate: '',
+  scheduleScheduledStartAt: null,
   scheduleIdealEndTime: '',
   scheduleNotificationsEnabled: true,
   awaitingNext: false,
@@ -119,9 +122,17 @@ export const createIdleTimerState = () => ({
   indicatorDurationMs: 10000,
   indicatorLabel: 'Next item starts in',
   scheduleTitle: '',
+  scheduleRunId: '',
   scheduleEventStartTime: '',
+  scheduleEventDate: '',
+  scheduleScheduledStartAt: null,
   scheduleIdealEndAt: null,
   scheduleStartedAt: null,
+  scheduleJoinedAt: null,
+  scheduleReconciled: false,
+  scheduleReconciliationHold: false,
+  schedulePausedOverrunMs: 0,
+  scheduleAssumedCompletedIds: [],
   scheduleNotificationsEnabled: true,
   display: { ...DEFAULT_TIMER_DISPLAY },
   updatedAt: Date.now(),
@@ -225,6 +236,8 @@ export const normalizeTimerControlSettings = (raw) => {
       ? settings.scheduleTitle.slice(0, 160)
       : DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
     scheduleEventStartTime: isValidTargetTime(settings.scheduleEventStartTime) ? settings.scheduleEventStartTime : '',
+    scheduleEventDate: normalizeDateOnly(settings.scheduleEventDate),
+    scheduleScheduledStartAt: normalizeNullableTimestamp(settings.scheduleScheduledStartAt),
     scheduleIdealEndTime: isValidTargetTime(settings.scheduleIdealEndTime) ? settings.scheduleIdealEndTime : '',
     scheduleNotificationsEnabled: settings.scheduleNotificationsEnabled !== false,
     settingsUpdatedAt: Number.isFinite(Number(settings.settingsUpdatedAt)) ? Number(settings.settingsUpdatedAt) : 0,
@@ -273,9 +286,19 @@ export const normalizeTimerState = (raw) => {
     indicatorDurationMs: clampNumber(raw.indicatorDurationMs, 10000, 0),
     indicatorLabel: typeof raw.indicatorLabel === 'string' ? raw.indicatorLabel : 'Next item starts in',
     scheduleTitle: String(raw.scheduleTitle || ''),
+    scheduleRunId: String(raw.scheduleRunId || '').slice(0, 96),
     scheduleEventStartTime: normalizeTimeOfDay(raw.scheduleEventStartTime),
+    scheduleEventDate: normalizeDateOnly(raw.scheduleEventDate),
+    scheduleScheduledStartAt: normalizeNullableTimestamp(raw.scheduleScheduledStartAt),
     scheduleIdealEndAt: normalizeNullableTimestamp(raw.scheduleIdealEndAt),
     scheduleStartedAt: normalizeNullableTimestamp(raw.scheduleStartedAt),
+    scheduleJoinedAt: normalizeNullableTimestamp(raw.scheduleJoinedAt),
+    scheduleReconciled: Boolean(raw.scheduleReconciled),
+    scheduleReconciliationHold: Boolean(raw.scheduleReconciliationHold),
+    schedulePausedOverrunMs: clampNumber(raw.schedulePausedOverrunMs, 0, 0, 24 * 60 * 60 * 1000),
+    scheduleAssumedCompletedIds: Array.isArray(raw.scheduleAssumedCompletedIds)
+      ? raw.scheduleAssumedCompletedIds.map((id) => String(id || '').slice(0, 96)).filter(Boolean).slice(0, MAX_TIMER_SETS)
+      : [],
     scheduleNotificationsEnabled: raw.scheduleNotificationsEnabled !== false,
     awaitingNext: Boolean(raw.awaitingNext),
     display: normalizeTimerDisplaySettings(raw.display),
@@ -348,9 +371,13 @@ export const getTimerDisplay = (timerState, now = Date.now()) => {
     return formatDuration(getElapsedMs(state, now), format);
   }
 
+  if (state.paused && state.scheduleReconciliationHold && state.schedulePausedOverrunMs > 0) {
+    return `+${formatDuration(state.schedulePausedOverrunMs, format)}`;
+  }
+
   const remainingMs = getRemainingMs(state, now);
   if (Number.isFinite(remainingMs)) {
-    if (remainingMs < 0 && state.overrunMode) {
+    if (remainingMs < 0 && (state.overrunMode || state.scheduleReconciliationHold)) {
       return `+${formatDuration(Math.abs(remainingMs), format)}`;
     }
     return formatDuration(Math.max(0, remainingMs), format);
@@ -383,7 +410,7 @@ export const isTimerVisiblyActive = (timerState, now = Date.now()) => {
   const state = normalizeTimerState(timerState);
   if (state.paused) return true;
   if (!state.running) return false;
-  if (state.mode === 'countup' || state.overrunMode) return true;
+  if (state.mode === 'countup' || state.overrunMode || state.scheduleReconciliationHold) return true;
 
   const remainingMs = getRemainingMs(state, now);
   if (!Number.isFinite(remainingMs) || remainingMs > 0) return true;

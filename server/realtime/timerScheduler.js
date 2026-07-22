@@ -14,7 +14,9 @@ export function scheduleStageTimerBoundary(io) {
 
   const timerState = state.currentStageTimerState;
   if (!timerState?.running || timerState.paused || timerState.mode === 'countup') return;
-  if (timerState.overrunMode && timerState.phase === 'timer' && timerState.overrunStartedAt) return;
+  if ((timerState.overrunMode || timerState.scheduleReconciliationHold)
+    && timerState.phase === 'timer'
+    && timerState.overrunStartedAt) return;
   const endTime = Number(timerState.endTime);
   if (!Number.isFinite(endTime)) return;
 

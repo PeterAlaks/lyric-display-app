@@ -1,5 +1,6 @@
 import React from 'react';
 import { ModalActionButton } from '@/components/modal/modalActions';
+import { Input } from '@/components/ui/input';
 
 const AutoplaySettings = ({ settings, onSave, darkMode, close }) => {
   const [localSettings, setLocalSettings] = React.useState(settings);
@@ -21,7 +22,7 @@ const AutoplaySettings = ({ settings, onSave, darkMode, close }) => {
           }`}>
           Interval (seconds)
         </label>
-        <input
+        <Input
           type="number"
           min="1"
           max="60"

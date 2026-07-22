@@ -52,7 +52,16 @@ export const sanitizePersistedStageTimerState = (timerState) => {
     overrunStartedAt: null,
     sets: [],
     activeSetIndex: 0,
+    scheduleRunId: '',
     scheduleEventStartTime: '',
+    scheduleEventDate: '',
+    scheduleScheduledStartAt: null,
+    scheduleStartedAt: null,
+    scheduleJoinedAt: null,
+    scheduleReconciled: false,
+    scheduleReconciliationHold: false,
+    schedulePausedOverrunMs: 0,
+    scheduleAssumedCompletedIds: [],
     updatedAt: Date.now(),
   };
 };

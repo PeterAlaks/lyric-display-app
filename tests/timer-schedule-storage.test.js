@@ -23,6 +23,9 @@ test('a loaded timer schedule survives a local save and restore cycle', () => {
       { id: 'manual', label: 'Manual advancement', durationMs: null, timed: false },
     ],
     scheduleTitle: 'Visual test',
+    scheduleEventStartTime: '09:00',
+    scheduleEventDate: '2026-07-22',
+    scheduleScheduledStartAt: 1_900_000,
     scheduleNotificationsEnabled: true,
     criticalSeconds: 30,
   }, storage);
@@ -30,6 +33,8 @@ test('a loaded timer schedule survives a local save and restore cycle', () => {
   const restored = readTimerScheduleSnapshot(storage);
 
   assert.equal(restored.scheduleTitle, 'Visual test');
+  assert.equal(restored.scheduleEventDate, '2026-07-22');
+  assert.equal(restored.scheduleScheduledStartAt, 1_900_000);
   assert.equal(restored.sets.length, 2);
   assert.equal(restored.sets[1].timed, false);
   assert.equal(restored.criticalSeconds, 30);

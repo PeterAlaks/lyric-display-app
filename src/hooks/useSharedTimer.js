@@ -102,6 +102,8 @@ const createSetRuntime = (current, set, index, startTime = Date.now()) => {
     pausedRemainingMs: null,
     remaining: null,
     overrunStartedAt: null,
+    scheduleReconciliationHold: false,
+    schedulePausedOverrunMs: 0,
     awaitingNext: false,
   };
 };
@@ -245,9 +247,19 @@ export const useSharedTimer = ({
         : Math.max(0, Number(current.indicatorDurationMs) || 0),
       indicatorLabel: typeof options.indicatorLabel === 'string' ? options.indicatorLabel : current.indicatorLabel,
       scheduleTitle: options.scheduleTitle || '',
+      scheduleRunId: Array.isArray(options.sets) && options.sets.length > 0 ? `schedule-run-${startTime}` : '',
       scheduleEventStartTime: typeof options.scheduleEventStartTime === 'string' ? options.scheduleEventStartTime : '',
+      scheduleEventDate: typeof options.scheduleEventDate === 'string' ? options.scheduleEventDate : '',
+      scheduleScheduledStartAt: Number.isFinite(Number(options.scheduleScheduledStartAt))
+        ? Number(options.scheduleScheduledStartAt)
+        : null,
       scheduleIdealEndAt,
       scheduleStartedAt: Array.isArray(options.sets) && options.sets.length > 0 ? startTime : null,
+      scheduleJoinedAt: Array.isArray(options.sets) && options.sets.length > 0 ? startTime : null,
+      scheduleReconciled: false,
+      scheduleReconciliationHold: false,
+      schedulePausedOverrunMs: 0,
+      scheduleAssumedCompletedIds: [],
       scheduleNotificationsEnabled: options.scheduleNotificationsEnabled !== false,
       awaitingNext: false,
       display: { ...current.display, ...(options.display || {}) },
@@ -274,10 +286,98 @@ export const useSharedTimer = ({
     });
   }, [startTimer]);
 
+  const startScheduleRun = React.useCallback((options = {}) => {
+    const current = latestStateRef.current;
+    const sets = normalizeScheduleItems(Array.isArray(options.sets) ? options.sets : []);
+    if (sets.length === 0) return null;
+
+    const joinedAt = Number.isFinite(Number(options.joinedAt)) ? Number(options.joinedAt) : Date.now();
+    const phase = options.phase === 'indicator' ? 'indicator' : 'timer';
+    const requestedIndex = Math.trunc(Number(options.activeSetIndex) || 0);
+    const activeSetIndex = phase === 'indicator'
+      ? Math.max(0, Math.min(sets.length - 2, requestedIndex))
+      : Math.max(0, Math.min(sets.length - 1, requestedIndex));
+    const item = sets[activeSetIndex];
+    const timed = phase === 'indicator' || isTimedScheduleItem(item);
+    const durationMs = phase === 'indicator'
+      ? Math.max(0, Number(options.indicatorDurationMs) || 0)
+      : (timed ? Math.max(1_000, Number(item.durationMs) || 0) : 0);
+    const requestedStartAt = Number(options.phaseStartAt);
+    const phaseStartAt = Number.isFinite(requestedStartAt) && requestedStartAt <= joinedAt
+      ? requestedStartAt
+      : joinedAt;
+    const endTime = timed ? phaseStartAt + durationMs : null;
+    const reconciliationHold = phase === 'timer'
+      && timed
+      && Number.isFinite(endTime)
+      && endTime <= joinedAt;
+    const scheduledStartAt = Number.isFinite(Number(options.scheduleScheduledStartAt))
+      ? Number(options.scheduleScheduledStartAt)
+      : null;
+    const actualStartAt = Number.isFinite(Number(options.scheduleStartedAt))
+      ? Number(options.scheduleStartedAt)
+      : joinedAt;
+    const scheduleIdealEndAt = Number.isFinite(Number(options.scheduleIdealEndAt))
+      ? Number(options.scheduleIdealEndAt)
+      : null;
+
+    return commitTimerState({
+      ...current,
+      status: 'running',
+      running: true,
+      paused: false,
+      finished: false,
+      mode: timed ? 'countdown' : 'countup',
+      phase,
+      label: phase === 'indicator'
+        ? (options.indicatorLabel || current.indicatorLabel || 'Next item starts in')
+        : item.label,
+      durationMs,
+      startTime: phaseStartAt,
+      endTime,
+      targetTime: null,
+      elapsedBeforePauseMs: 0,
+      pausedRemainingMs: null,
+      remaining: null,
+      warningMs: Number.isFinite(Number(options.warningMs)) ? Number(options.warningMs) : current.warningMs,
+      criticalMs: Number.isFinite(Number(options.criticalMs)) ? Number(options.criticalMs) : current.criticalMs,
+      overrunMode: Boolean(options.overrunMode),
+      overrunStartedAt: reconciliationHold ? endTime : null,
+      sets,
+      activeSetIndex,
+      autoStartNext: options.autoStartNext !== false,
+      indicatorEnabled: Boolean(options.indicatorEnabled),
+      indicatorDurationMs: Math.max(0, Number(options.indicatorDurationMs) || 0),
+      indicatorLabel: typeof options.indicatorLabel === 'string' ? options.indicatorLabel : current.indicatorLabel,
+      scheduleTitle: options.scheduleTitle || '',
+      scheduleRunId: typeof options.scheduleRunId === 'string' && options.scheduleRunId
+        ? options.scheduleRunId
+        : `schedule-run-${joinedAt}`,
+      scheduleEventStartTime: typeof options.scheduleEventStartTime === 'string' ? options.scheduleEventStartTime : '',
+      scheduleEventDate: typeof options.scheduleEventDate === 'string' ? options.scheduleEventDate : '',
+      scheduleScheduledStartAt: scheduledStartAt,
+      scheduleIdealEndAt,
+      scheduleStartedAt: actualStartAt,
+      scheduleJoinedAt: joinedAt,
+      scheduleReconciled: true,
+      scheduleReconciliationHold: reconciliationHold,
+      schedulePausedOverrunMs: 0,
+      scheduleAssumedCompletedIds: Array.isArray(options.scheduleAssumedCompletedIds)
+        ? options.scheduleAssumedCompletedIds
+        : [],
+      scheduleNotificationsEnabled: options.scheduleNotificationsEnabled !== false,
+      awaitingNext: false,
+      display: { ...current.display, ...(options.display || {}) },
+    });
+  }, [commitTimerState]);
+
   const pauseTimer = React.useCallback(() => {
     const current = latestStateRef.current;
     if (!current.running || current.paused) return current;
     const pausedRemainingMs = getRemainingMs(current, Date.now());
+    const pausedOverrunMs = current.scheduleReconciliationHold && Number.isFinite(pausedRemainingMs) && pausedRemainingMs < 0
+      ? Math.abs(pausedRemainingMs)
+      : 0;
     return commitTimerState({
       ...current,
       status: 'paused',
@@ -286,7 +386,10 @@ export const useSharedTimer = ({
       endTime: null,
       elapsedBeforePauseMs: getElapsedMs(current, Date.now()),
       pausedRemainingMs: Number.isFinite(pausedRemainingMs) ? Math.max(0, pausedRemainingMs) : null,
-      remaining: getPausedRemainingLabel({ ...current, pausedRemainingMs }),
+      remaining: pausedOverrunMs > 0
+        ? `+${formatDuration(pausedOverrunMs, current.display?.format || 'auto')}`
+        : getPausedRemainingLabel({ ...current, pausedRemainingMs }),
+      schedulePausedOverrunMs: pausedOverrunMs,
     });
   }, [commitTimerState]);
 
@@ -295,17 +398,21 @@ export const useSharedTimer = ({
     if (!current.running || !current.paused) return current;
     if (current.awaitingNext) return current;
     const startTime = Date.now();
+    const resumesHeldOvertime = current.scheduleReconciliationHold && Number(current.schedulePausedOverrunMs) > 0;
     const endTime = current.mode === 'countdown' || current.mode === 'target'
-      ? startTime + Math.max(0, Number(current.pausedRemainingMs) || 0)
+      ? (resumesHeldOvertime
+        ? startTime - Number(current.schedulePausedOverrunMs)
+        : startTime + Math.max(0, Number(current.pausedRemainingMs) || 0))
       : null;
     return commitTimerState({
       ...current,
       status: 'running',
       paused: false,
-      startTime,
+      startTime: resumesHeldOvertime ? endTime - Math.max(0, Number(current.durationMs) || 0) : startTime,
       endTime,
       pausedRemainingMs: null,
       remaining: null,
+      schedulePausedOverrunMs: 0,
     });
   }, [commitTimerState]);
 
@@ -321,6 +428,22 @@ export const useSharedTimer = ({
     const current = latestStateRef.current;
     if (!current.running || current.mode === 'countup') return current;
     if (current.paused) {
+      if (current.scheduleReconciliationHold) {
+        const nextOverrunMs = Math.max(0, (Number(current.schedulePausedOverrunMs) || 0) - deltaMs);
+        const nextPausedRemainingMs = Math.max(0, deltaMs - (Number(current.schedulePausedOverrunMs) || 0));
+        const remainsHeld = nextOverrunMs > 0;
+        return commitTimerState({
+          ...current,
+          pausedRemainingMs: remainsHeld ? 0 : nextPausedRemainingMs,
+          durationMs: Math.max(0, current.durationMs + deltaMs),
+          remaining: remainsHeld
+            ? `+${formatDuration(nextOverrunMs, current.display?.format || 'auto')}`
+            : formatDuration(nextPausedRemainingMs, current.display?.format || 'auto'),
+          scheduleReconciliationHold: remainsHeld,
+          schedulePausedOverrunMs: nextOverrunMs,
+          overrunStartedAt: remainsHeld ? current.overrunStartedAt : null,
+        });
+      }
       const pausedRemainingMs = Math.max(0, (Number(current.pausedRemainingMs) || 0) + deltaMs);
       return commitTimerState({
         ...current,
@@ -330,10 +453,16 @@ export const useSharedTimer = ({
       });
     }
 
+    const nextEndTime = Number.isFinite(Number(current.endTime)) ? Number(current.endTime) + deltaMs : current.endTime;
+    const clearsReconciliationHold = current.scheduleReconciliationHold
+      && Number.isFinite(Number(nextEndTime))
+      && Number(nextEndTime) > Date.now();
     return commitTimerState({
       ...current,
       durationMs: Math.max(0, current.durationMs + deltaMs),
-      endTime: Number.isFinite(Number(current.endTime)) ? Number(current.endTime) + deltaMs : current.endTime,
+      endTime: nextEndTime,
+      scheduleReconciliationHold: clearsReconciliationHold ? false : current.scheduleReconciliationHold,
+      overrunStartedAt: clearsReconciliationHold ? null : current.overrunStartedAt,
     });
   }, [commitTimerState]);
 
@@ -360,6 +489,8 @@ export const useSharedTimer = ({
         pausedRemainingMs: null,
         remaining: null,
         overrunStartedAt: null,
+        scheduleReconciliationHold: false,
+        schedulePausedOverrunMs: 0,
         awaitingNext: false,
       });
     }
@@ -391,6 +522,8 @@ export const useSharedTimer = ({
       elapsedBeforePauseMs: 0,
       pausedRemainingMs: null,
       remaining: completionValue,
+      scheduleReconciliationHold: false,
+      schedulePausedOverrunMs: 0,
       awaitingNext: false,
     });
   }, [commitTimerState]);
@@ -415,6 +548,7 @@ export const useSharedTimer = ({
     actions: {
       startTimer,
       startTimerSet,
+      startScheduleRun,
       pauseTimer,
       resumeTimer,
       stopTimer,

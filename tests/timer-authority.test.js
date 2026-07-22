@@ -197,6 +197,69 @@ test('authoritative timer waits for manual next when auto-start is disabled', ()
   assert.equal(waiting.endTime, null);
 });
 
+test('a reconciled overtime item holds at its boundary until the operator advances', () => {
+  const held = advanceAuthoritativeTimerBoundary({
+    revision: 2,
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    label: 'Worship',
+    startTime: 900_000,
+    endTime: 1_000_000,
+    durationMs: 100_000,
+    activeSetIndex: 1,
+    sets: [
+      { id: 'welcome', label: 'Welcome', durationMs: 60_000 },
+      { id: 'worship', label: 'Worship', durationMs: 100_000 },
+      { id: 'message', label: 'Message', durationMs: 60_000 },
+    ],
+    autoStartNext: true,
+    scheduleReconciliationHold: true,
+    overrunStartedAt: null,
+  }, 1_020_000);
+
+  assert.equal(held.activeSetIndex, 1);
+  assert.equal(held.overrunStartedAt, 1_000_000);
+  assert.equal(advanceAuthoritativeTimerBoundary(held, 1_030_000), null);
+});
+
+test('authoritative updates preserve reconciliation metadata and schedule timestamps', () => {
+  const result = applyAuthoritativeTimerUpdate({ revision: 0 }, {
+    running: true,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs: 60_000,
+    startTime: 900_000,
+    endTime: 960_000,
+    scheduleScheduledStartAt: 800_000,
+    scheduleStartedAt: 810_000,
+    scheduleJoinedAt: 900_000,
+    scheduleRunId: 'schedule-run-900000',
+    scheduleEventDate: '2026-07-22',
+    scheduleReconciled: true,
+    scheduleReconciliationHold: false,
+    scheduleAssumedCompletedIds: ['welcome'],
+    sets: [
+      { id: 'welcome', label: 'Welcome', durationMs: 60_000 },
+      { id: 'worship', label: 'Worship', durationMs: 60_000 },
+    ],
+    activeSetIndex: 1,
+    clientSentAt: 900_000,
+    baseRevision: 0,
+  }, 1_000_000);
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.state.scheduleScheduledStartAt, 900_000);
+  assert.equal(result.state.scheduleStartedAt, 910_000);
+  assert.equal(result.state.scheduleJoinedAt, 1_000_000);
+  assert.equal(result.state.scheduleRunId, 'schedule-run-900000');
+  assert.equal(result.state.scheduleEventDate, '2026-07-22');
+  assert.equal(result.state.scheduleReconciled, true);
+  assert.deepEqual(result.state.scheduleAssumedCompletedIds, ['welcome']);
+});
+
 test('authoritative timer rejects cyclic and oversized controller payloads', () => {
   const cyclic = { running: false };
   cyclic.self = cyclic;

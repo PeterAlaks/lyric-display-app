@@ -19,6 +19,17 @@ test('numeric preference values normalize spinner, typed, and transient input co
   assert.equal(normalizeNumberPreferenceValue('2.5', floatOptions), 2.5);
 });
 
+test('shared numeric and time inputs preserve active drafts until focus leaves', async () => {
+  const [inputSource, timePickerSource] = await Promise.all([
+    readFile(new URL('../src/components/ui/input.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/ui/time-picker.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(inputSource, /value=\{numberDraft === null \? value : numberDraft\}/);
+  assert.match(inputSource, /setNumberDraft\(null\)[\s\S]*onBlur\?\.\(event\)/);
+  assert.equal((timePickerSource.match(/onBlur=\{normalizeParts\}/g) || []).length, 2);
+});
+
 test('every numeric field in User Preferences uses the shared change-and-blur persistence props', async () => {
   const paths = [
     '../src/components/UserPreferencesModal.jsx',

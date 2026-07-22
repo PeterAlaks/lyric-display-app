@@ -22,6 +22,7 @@ import OperatorActionLogModal from '../OperatorActionLogModal';
 import ObsDockInfoModal from '../ObsDockInfoModal';
 import TelemetryConsentModal from '../TelemetryConsentModal';
 import ScheduleCreatorWizard from '../ScheduleCreatorWizard';
+import ScheduleStartReconciliationWizard from '../ScheduleStartReconciliationWizard';
 import TimerDisplaySettingsModal from '../TimerDisplaySettingsModal';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
@@ -746,6 +747,17 @@ export function ModalProvider({ children, isDark = false }) {
                           isEditing={modal.isEditingSchedule}
                           darkMode={isDark}
                           onApply={modal.onApplySchedule}
+                          onClose={(result) => closeModal(modal.id, result)}
+                        />
+                      )}
+                      {modal.component === 'ScheduleStartReconciliation' && (
+                        <ScheduleStartReconciliationWizard
+                          schedule={modal.schedule}
+                          scheduledStartAt={modal.scheduledStartAt}
+                          hourFormat={modal.hourFormat}
+                          darkMode={isDark}
+                          getCanCommit={modal.getCanCommit}
+                          onConfirm={modal.onConfirmScheduleStart}
                           onClose={(result) => closeModal(modal.id, result)}
                         />
                       )}

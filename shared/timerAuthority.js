@@ -1,6 +1,7 @@
 import {
   MAX_SCHEDULE_ITEMS,
   isTimedScheduleItem,
+  normalizeDateOnly,
   normalizeScheduleItems,
   normalizeTimeOfDay,
 } from './scheduleUtils.js';
@@ -9,6 +10,7 @@ const MAX_TIMER_DURATION_MS = 24 * 60 * 60 * 1000;
 const MAX_TIMER_SETS = MAX_SCHEDULE_ITEMS;
 const MAX_TIMER_PAYLOAD_BYTES = 64 * 1024;
 const MAX_CLOCK_DISTANCE_MS = 48 * 60 * 60 * 1000;
+const MAX_SCHEDULE_CLOCK_DISTANCE_MS = 370 * 24 * 60 * 60 * 1000;
 const TIMESTAMP_FIELDS = [
   'startTime',
   'endTime',
@@ -16,6 +18,8 @@ const TIMESTAMP_FIELDS = [
   'overrunStartedAt',
   'scheduleIdealEndAt',
   'scheduleStartedAt',
+  'scheduleScheduledStartAt',
+  'scheduleJoinedAt',
 ];
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -71,11 +75,11 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
 
     const clientSentAt = Number(incomingState.clientSentAt ?? incomingState.updatedAt);
     const rebaseOffset = Number.isFinite(clientSentAt) ? now - clientSentAt : 0;
-    const rebaseTimestamp = (value) => {
+    const rebaseTimestamp = (value, maxDistanceMs = MAX_CLOCK_DISTANCE_MS) => {
       const timestamp = nullableTimestamp(value);
       if (timestamp === null) return null;
       const rebased = timestamp + rebaseOffset;
-      return Math.abs(rebased - now) <= MAX_CLOCK_DISTANCE_MS ? rebased : null;
+      return Math.abs(rebased - now) <= maxDistanceMs ? rebased : null;
     };
     const running = Boolean(incomingState.running);
     const paused = running && Boolean(incomingState.paused);
@@ -122,9 +126,22 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
       indicatorDurationMs: clamp(incomingState.indicatorDurationMs, 10000, 0, MAX_TIMER_DURATION_MS),
       indicatorLabel: boundedText(incomingState.indicatorLabel, 'Next item starts in'),
       scheduleTitle: boundedText(incomingState.scheduleTitle, '', 160),
+      scheduleRunId: boundedText(incomingState.scheduleRunId, '', 96),
       scheduleEventStartTime: normalizeTimeOfDay(incomingState.scheduleEventStartTime),
-      scheduleIdealEndAt: rebaseTimestamp(incomingState.scheduleIdealEndAt),
-      scheduleStartedAt: rebaseTimestamp(incomingState.scheduleStartedAt),
+      scheduleEventDate: normalizeDateOnly(incomingState.scheduleEventDate),
+      scheduleScheduledStartAt: rebaseTimestamp(incomingState.scheduleScheduledStartAt, MAX_SCHEDULE_CLOCK_DISTANCE_MS),
+      scheduleIdealEndAt: rebaseTimestamp(incomingState.scheduleIdealEndAt, MAX_SCHEDULE_CLOCK_DISTANCE_MS),
+      scheduleStartedAt: rebaseTimestamp(incomingState.scheduleStartedAt, MAX_SCHEDULE_CLOCK_DISTANCE_MS),
+      scheduleJoinedAt: rebaseTimestamp(incomingState.scheduleJoinedAt, MAX_SCHEDULE_CLOCK_DISTANCE_MS),
+      scheduleReconciled: Boolean(incomingState.scheduleReconciled),
+      scheduleReconciliationHold: Boolean(incomingState.scheduleReconciliationHold),
+      schedulePausedOverrunMs: clamp(incomingState.schedulePausedOverrunMs, 0, 0, MAX_TIMER_DURATION_MS),
+      scheduleAssumedCompletedIds: Array.isArray(incomingState.scheduleAssumedCompletedIds)
+        ? incomingState.scheduleAssumedCompletedIds
+          .map((id) => boundedText(id, '', 96))
+          .filter(Boolean)
+          .slice(0, MAX_TIMER_SETS)
+        : [],
       scheduleNotificationsEnabled: incomingState.scheduleNotificationsEnabled !== false,
       awaitingNext: Boolean(incomingState.awaitingNext),
       display: safeDisplay(incomingState.display, currentState?.display),
@@ -154,7 +171,7 @@ export function advanceAuthoritativeTimerBoundary(currentState, now = Date.now()
     serverNow: now,
     clockBasis: 'server',
   };
-  if (currentState.overrunMode && currentState.phase === 'timer') {
+  if ((currentState.overrunMode || currentState.scheduleReconciliationHold) && currentState.phase === 'timer') {
     if (currentState.overrunStartedAt) return null;
     return { ...base, overrunStartedAt: currentState.overrunStartedAt || boundaryTime };
   }
