@@ -7,6 +7,19 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'dist',
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'dnd-kit',
+              test: /node_modules[\\/]@dnd-kit[\\/]/,
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
   },
   worker: {
     format: 'es'
