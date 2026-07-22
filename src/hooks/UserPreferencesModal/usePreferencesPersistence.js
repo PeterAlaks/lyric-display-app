@@ -11,6 +11,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [saveError, setSaveError] = useState(false);
   const [midiStatus, setMidiStatus] = useState(null);
   const [oscStatus, setOscStatus] = useState(null);
   const saveTimeoutRef = useRef(null);
@@ -104,27 +105,41 @@ export const usePreferencesPersistence = ({ showToast }) => {
   }, []);
 
   const savePreferences = useCallback(async (newPreferences) => {
-    if (isMountedRef.current) setSaving(true);
+    if (isMountedRef.current) {
+      setSaving(true);
+      setSaveError(false);
+    }
     try {
-      if (window.electronAPI?.preferences?.saveAll) {
-        const result = await window.electronAPI.preferences.saveAll(newPreferences);
-        if (result.success) {
-          if (isMountedRef.current) setLastSaved(new Date());
+      if (!window.electronAPI?.preferences?.saveAll) {
+        throw new Error('Preferences API is unavailable');
+      }
 
-          await loadPreferencesIntoStore(useLyricsStore);
-          await loadAdvancedSettings();
-          await loadDebugLoggingPreference();
+      const result = await window.electronAPI.preferences.saveAll(newPreferences);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Preference save was rejected');
+      }
 
-          if (isMountedRef.current) {
-            if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
-            confirmationTimeoutRef.current = setTimeout(() => {
-              setLastSaved(null);
-            }, 3000);
-          }
-        }
+      if (isMountedRef.current) {
+        setLastSaved(new Date());
+        setSaveError(false);
+      }
+
+      await loadPreferencesIntoStore(useLyricsStore);
+      await loadAdvancedSettings();
+      await loadDebugLoggingPreference();
+
+      if (isMountedRef.current) {
+        if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
+        confirmationTimeoutRef.current = setTimeout(() => {
+          setLastSaved(null);
+        }, 3000);
       }
     } catch (error) {
       console.error('Failed to save preferences:', error);
+      if (isMountedRef.current) {
+        setLastSaved(null);
+        setSaveError(true);
+      }
     } finally {
       if (isMountedRef.current) setSaving(false);
     }
@@ -356,6 +371,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
     midiStatus,
     oscStatus,
     preferences,
+    saveError,
     saving,
     setMidiStatus,
     setOscStatus,

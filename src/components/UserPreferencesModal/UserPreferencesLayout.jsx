@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Loader2, Power, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, ChevronRight, Loader2, Power, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 
@@ -20,6 +20,7 @@ const UserPreferencesLayout = ({
   ndiCheckingUpdate,
   ndiStatus,
   panelBg,
+  saveError,
   saving,
   setActiveCategory,
 }) => (
@@ -104,6 +105,11 @@ const UserPreferencesLayout = ({
           <>
             <Loader2 className="w-3 h-3 animate-spin" />
             <span>Saving...</span>
+          </>
+        ) : saveError ? (
+          <>
+            <AlertCircle className={`w-3 h-3 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
+            <span className={darkMode ? 'text-red-400' : 'text-red-600'}>Settings could not be saved</span>
           </>
         ) : lastSaved ? (
           <>

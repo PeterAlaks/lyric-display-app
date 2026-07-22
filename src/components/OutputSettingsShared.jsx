@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
 import { sanitizeIntegerInput } from '../utils/numberInput';
+import { getEmphasisToggleStateClassName } from '../utils/emphasisToggleStyles.js';
 
 export const LabelWithIcon = ({ icon: Icon, text, darkMode }) => (
   <div className="flex items-center gap-2 min-w-[140px]">
@@ -160,15 +161,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onBoldChange(!boldValue)}
           disabled={disabled}
-          className={
-            boldValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(boldValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(boldValue, darkMode)}`}
         >
           <Bold className="h-3.5 w-3.5" />
         </Button>
@@ -179,15 +173,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onItalicChange(!italicValue)}
           disabled={disabled}
-          className={
-            italicValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(italicValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(italicValue, darkMode)}`}
         >
           <Italic className="h-3.5 w-3.5" />
         </Button>
@@ -198,15 +185,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onUnderlineChange(!underlineValue)}
           disabled={disabled}
-          className={
-            underlineValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(underlineValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(underlineValue, darkMode)}`}
         >
           <Underline className="h-3.5 w-3.5" />
         </Button>
@@ -217,15 +197,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onAllCapsChange(!allCapsValue)}
           disabled={disabled}
-          className={
-            allCapsValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(allCapsValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(allCapsValue, darkMode)}`}
         >
           <CaseUpper className="h-3.5 w-3.5" />
         </Button>

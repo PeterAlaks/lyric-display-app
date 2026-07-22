@@ -63,6 +63,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     midiStatus,
     oscStatus,
     preferences,
+    saveError,
     saving,
     setMidiStatus,
     setOscStatus,
@@ -154,6 +155,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const preferenceFieldLabelClass = `block mb-1.5 text-sm font-medium ${labelClass}`;
   const preferenceToggleRowClass = "flex items-center justify-between gap-6 [&>button]:shrink-0";
   const preferenceToggleTextClass = "min-w-0 flex-1";
+  const previewLinesLocked = Boolean(liveSafety?.enabled);
   const splitMinimum = Number(preferences?.lineSplitting?.minLength ?? 40);
   const splitTarget = Number(preferences?.lineSplitting?.targetLength ?? 60);
   const splitMaximum = Number(preferences?.lineSplitting?.maxLength ?? 80);
@@ -187,7 +189,36 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={Boolean(liveSafety?.enabled)}
                 disabled={!isAuthenticated || !ready}
-                onCheckedChange={(checked) => setLiveSafetyEnabled(checked)}
+                onCheckedChange={(checked) => {
+                  updatePreference('general', 'liveSafetyMode', checked);
+                  setLiveSafetyEnabled(checked, { persistPreference: false });
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div
+              className={`${preferenceToggleRowClass} ${previewLinesLocked ? 'cursor-not-allowed' : ''}`}
+              aria-disabled={previewLinesLocked}
+            >
+              <div className={`${preferenceToggleTextClass} ${previewLinesLocked ? 'opacity-50' : ''}`}>
+                <label className={`text-sm font-medium ${labelClass}`}>Preview Lyric Lines</label>
+                <p className={`text-xs ${mutedClass}`}>
+                  First click previews a lyric line; double-click or Enter sends it live.
+                  {previewLinesLocked ? ' Live Safety requires this setting.' : ''}
+                </p>
+              </div>
+              <Switch
+                checked={previewLinesLocked || (preferences.general?.previewLines ?? false)}
+                disabled={previewLinesLocked}
+                onCheckedChange={(checked) => {
+                  updatePreference('general', 'previewLines', checked);
+                  useLyricsStore.getState().setPreviewLinesEnabled(checked);
+                }}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                   : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -1008,6 +1039,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       ndiCheckingUpdate={ndiCheckingUpdate}
       ndiStatus={ndiStatus}
       panelBg={panelBg}
+      saveError={saveError}
       saving={saving}
       setActiveCategory={setActiveCategory}
     >

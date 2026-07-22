@@ -11,6 +11,7 @@ export default function useLyricsListSelection({
   onContextMenuApiReady,
   clickAwayIgnoreRefs,
   onLineSelect,
+  onSendLineToOutput = onLineSelect,
   selectLine,
   emitLineUpdate,
   getNormalGroupLines,
@@ -219,7 +220,11 @@ export default function useLyricsListSelection({
     selectionAnchorRef.current = index;
     setSelectedIndices(new Set([index]));
     closeContextMenu();
-    onLineSelect(index);
+    const result = onLineSelect(index, event);
+    if (result === 'clear-preview') {
+      setSelectedIndices(new Set());
+      selectionAnchorRef.current = null;
+    }
   }, [closeContextMenu, handleRangeSelection, isDesktopApp, onLineSelect, selectedIndices, selectionMode, setSelection, toggleSelection]);
 
   useEffect(() => {
@@ -292,9 +297,9 @@ export default function useLyricsListSelection({
     }
     const target = selectedIndicesArray[0];
     setSelection([target], target);
-    onLineSelect(target);
+    onSendLineToOutput(target);
     closeContextMenu();
-  }, [closeContextMenu, onLineSelect, selectedIndicesArray, setSelection]);
+  }, [closeContextMenu, onSendLineToOutput, selectedIndicesArray, setSelection]);
 
   const clearSelection = useCallback(() => {
     setSelectedIndices(new Set());

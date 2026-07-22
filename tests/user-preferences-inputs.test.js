@@ -57,3 +57,18 @@ test('the parser-settings toast reload request uses the shared browser event', (
   assert.equal(dispatched.length, 1);
   assert.equal(dispatched[0].type, RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT);
 });
+
+test('Live Safety uses the preferences autosave status while keeping its realtime request immediate', async () => {
+  const [modalSource, bridgeSource, persistenceSource, layoutSource] = await Promise.all([
+    readFile(new URL('../src/components/UserPreferencesModal.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/hooks/useLiveSafetyBridge.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/hooks/UserPreferencesModal/usePreferencesPersistence.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/UserPreferencesModal/UserPreferencesLayout.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(modalSource, /updatePreference\('general', 'liveSafetyMode', checked\);\s*setLiveSafetyEnabled\(checked, \{ persistPreference: false \}\);/);
+  assert.match(bridgeSource, /\{ persistPreference = true \}/);
+  assert.match(bridgeSource, /persistPreference && window\.electronAPI\?\.preferences\?\.set/);
+  assert.match(persistenceSource, /setSaveError\(true\)/);
+  assert.match(layoutSource, /Settings could not be saved/);
+});

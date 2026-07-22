@@ -78,10 +78,11 @@ test('legacy preferences migrate once without overwriting valid operator choices
 
   assert.equal(result.success, true);
   assert.equal(result.changed, true);
-  assert.equal(result.preferences._schemaVersion, 3);
+  assert.equal(result.preferences._schemaVersion, 4);
   assert.equal(result.preferences.general.autoCheckForUpdates, false);
   assert.equal(result.preferences.general.liveSafetyMode, true);
   assert.equal(result.preferences.general.confirmOnClose, false);
+  assert.equal(result.preferences.general.previewLines, false);
   assert.equal(result.preferences.general.shareAnonymousUsageData, undefined);
   assert.equal(result.preferences.advanced.shareAnonymousUsageData, false);
   assert.equal(result.preferences.advanced.telemetryConsentDecided, false);
@@ -100,10 +101,22 @@ test('an explicit legacy telemetry opt-out remains declined after migration', ()
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.preferences._schemaVersion, 3);
+  assert.equal(result.preferences._schemaVersion, 4);
   assert.equal(result.preferences.general.shareAnonymousUsageData, undefined);
   assert.equal(result.preferences.advanced.shareAnonymousUsageData, false);
   assert.equal(result.preferences.advanced.telemetryConsentDecided, true);
+});
+
+test('Preview Lyric Lines preference is preserved when upgrading from schema 3', () => {
+  const result = migratePreferences({
+    _schemaVersion: 3,
+    general: { previewLines: true },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.preferences._schemaVersion, 4);
+  assert.equal(result.preferences.general.previewLines, true);
 });
 
 test('future preference and session schemas are rejected without mutation', () => {

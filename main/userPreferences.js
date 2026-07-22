@@ -21,6 +21,7 @@ const preferencesStore = new Store({
       autoCheckForUpdates: true,
       confirmOnClose: true,
       liveSafetyMode: false,
+      previewLines: false,
       toastSoundsMuted: false,
       skipSectionTitlesOnKeyboard: true,
       startMinimized: false,

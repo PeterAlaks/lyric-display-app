@@ -1,4 +1,4 @@
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 3;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 4;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -71,6 +71,20 @@ export function migratePreferences(input) {
         telemetryConsentDecided: hasExplicitAdvancedDecision || legacyUsageSharing === false,
       },
       _schemaVersion: 3,
+    };
+  }
+
+  if (sourceVersion < 4) {
+    const general = isPlainObject(migrated.general) ? migrated.general : {};
+    migrated = {
+      ...migrated,
+      general: {
+        ...general,
+        previewLines: typeof general.previewLines === 'boolean'
+          ? general.previewLines
+          : false,
+      },
+      _schemaVersion: 4,
     };
   }
 

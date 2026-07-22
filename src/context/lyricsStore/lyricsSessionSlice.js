@@ -35,6 +35,8 @@ export const createLyricsSessionSlice = (set) => ({
   lyrics: [],
   rawLyricsContent: '',
   selectedLine: null,
+  previewLine: null,
+  lineStateClearRevision: 0,
   lyricsFileName: '',
   lyricsSections: [],
   lineToSection: {},
@@ -68,7 +70,20 @@ export const createLyricsSessionSlice = (set) => ({
   }),
   setRawLyricsContent: (content) => set((state) => (state.rawLyricsContent === content ? state : { rawLyricsContent: content })),
   setLyricsFileName: (name) => set((state) => (state.lyricsFileName === name ? state : { lyricsFileName: name })),
-  selectLine: (index) => set((state) => (Object.is(state.selectedLine, index) ? state : { selectedLine: index })),
+  selectLine: (index) => set((state) => {
+    if (index == null) {
+      return {
+        selectedLine: null,
+        previewLine: null,
+        lineStateClearRevision: state.lineStateClearRevision + 1,
+      };
+    }
+    if (Object.is(state.selectedLine, index) && state.previewLine == null) return state;
+    return { selectedLine: index, previewLine: null };
+  }),
+  setPreviewLine: (index) => set((state) => (
+    Object.is(state.previewLine, index) ? state : { previewLine: index }
+  )),
   setSongMetadata: (metadata) => set((state) => (stateValueEqual(state.songMetadata, metadata) ? state : { songMetadata: metadata })),
   setLyricsSource: (source) => set((state) => {
     const next = normalizeLyricsSource(source);

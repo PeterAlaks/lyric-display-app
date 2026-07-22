@@ -21,6 +21,7 @@ export default function LyricRow({
   handleRowTouchMove,
   handleRowTouchEnd,
   selectedLine,
+  previewLine,
   darkMode,
   hoveredLineIndex,
   setHoveredLineIndex,
@@ -81,6 +82,7 @@ export default function LyricRow({
       )}
       <div
         data-line-index={virtualized ? undefined : index}
+        data-preview-line={index === previewLine ? 'true' : undefined}
         className={`${getLineClassName(index, virtualized, isBatchSelected)} relative`}
         onClick={(event) => handleRowClick(event, index)}
         onContextMenu={(event) => handleContextMenuOpen(event, index)}

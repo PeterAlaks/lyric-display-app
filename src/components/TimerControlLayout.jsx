@@ -23,6 +23,7 @@ import { PaintPicker } from '@/components/ui/paint-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import FontSelect from './FontSelect';
 import { isTimedScheduleItem } from '../../shared/scheduleUtils.js';
+import { getEmphasisToggleStateClassName } from '../utils/emphasisToggleStyles.js';
 
 const QUICK_MINUTES = [1, 3, 5, 10, 15, 30];
 
@@ -490,7 +491,7 @@ const TimerTransport = ({ useSets, active, activeTimerUsesSets, liveControlReady
 );
 
 const StylingControls = ({ darkMode, theme, displaySettings, applyTimerDisplaySettings }) => {
-  const { columnBorderClass, mutedText, inputClass, selectTriggerClass, selectContentClass, subtleButtonClass, surfaceClass } = theme;
+  const { columnBorderClass, mutedText, inputClass, selectTriggerClass, selectContentClass, surfaceClass } = theme;
   return (
     <section className={`min-w-0 self-stretch space-y-4 border-l pl-5 ${columnBorderClass}`}>
       <h2 className="text-sm font-semibold">Styling</h2>
@@ -515,9 +516,9 @@ const StylingControls = ({ darkMode, theme, displaySettings, applyTimerDisplaySe
           <label className="space-y-2"><span className="text-[10px] font-medium">Secondary scale</span><Input type="number" min="0.08" max="2" step="0.01" value={displaySettings.otherItemsScale} onChange={(event) => applyTimerDisplaySettings({ otherItemsScale: event.target.value })} className={inputClass} /></label>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <button type="button" onClick={() => applyTimerDisplaySettings({ timerBold: !displaySettings.timerBold })} className={`h-8 rounded text-[11px] font-bold transition-colors ${displaySettings.timerBold ? 'bg-blue-600 text-white' : subtleButtonClass}`}>B</button>
-          <button type="button" onClick={() => applyTimerDisplaySettings({ timerItalic: !displaySettings.timerItalic })} className={`h-8 rounded text-[11px] italic transition-colors ${displaySettings.timerItalic ? 'bg-blue-600 text-white' : subtleButtonClass}`}>I</button>
-          <button type="button" onClick={() => applyTimerDisplaySettings({ timerUnderline: !displaySettings.timerUnderline })} className={`h-8 rounded text-[11px] underline transition-colors ${displaySettings.timerUnderline ? 'bg-blue-600 text-white' : subtleButtonClass}`}>U</button>
+          <button type="button" aria-label="Bold timer text" aria-pressed={Boolean(displaySettings.timerBold)} onClick={() => applyTimerDisplaySettings({ timerBold: !displaySettings.timerBold })} className={`h-8 rounded-md border text-[11px] font-bold transition-colors ${getEmphasisToggleStateClassName(displaySettings.timerBold, darkMode)}`}>B</button>
+          <button type="button" aria-label="Italic timer text" aria-pressed={Boolean(displaySettings.timerItalic)} onClick={() => applyTimerDisplaySettings({ timerItalic: !displaySettings.timerItalic })} className={`h-8 rounded-md border text-[11px] italic transition-colors ${getEmphasisToggleStateClassName(displaySettings.timerItalic, darkMode)}`}>I</button>
+          <button type="button" aria-label="Underline timer text" aria-pressed={Boolean(displaySettings.timerUnderline)} onClick={() => applyTimerDisplaySettings({ timerUnderline: !displaySettings.timerUnderline })} className={`h-8 rounded-md border text-[11px] underline transition-colors ${getEmphasisToggleStateClassName(displaySettings.timerUnderline, darkMode)}`}>U</button>
         </div>
       </div>
     </section>

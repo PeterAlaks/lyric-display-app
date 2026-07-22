@@ -105,6 +105,13 @@ export async function loadPreferencesIntoStore(store) {
       }
     }
 
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('general.previewLines');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setPreviewLinesEnabled(result.value);
+      }
+    }
+
     // Load formatting preferences
     if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('formatting.enableCleanupOnPaste');
