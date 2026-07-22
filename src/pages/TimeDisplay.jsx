@@ -101,13 +101,13 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
     if (!enabled || !containerEl || !textEl) return undefined;
     if (containerSize.width <= 0 || containerSize.height <= 0) return undefined;
 
-    const fit = () => {
+    const fit = ({ ignoreCache = false } = {}) => {
       const availableWidth = containerSize.width * 0.995;
       const availableHeight = containerSize.height * 0.98;
       if (availableWidth <= 0 || availableHeight <= 0) return;
 
       const cacheKey = `${fitKey}|${Math.round(availableWidth)}x${Math.round(availableHeight)}`;
-      const cached = autoFitCache.get(cacheKey);
+      const cached = ignoreCache ? null : autoFitCache.get(cacheKey);
       if (cached) {
         setFontSize((current) => (current === cached ? current : cached));
         return;
@@ -134,11 +134,13 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
     };
 
     let frame = null;
-    const scheduleFit = () => {
+    let cancelled = false;
+    const scheduleFit = (options) => {
+      if (cancelled) return;
       if (frame) window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         frame = null;
-        fit();
+        if (!cancelled) fit(options);
       });
     };
 
@@ -148,9 +150,10 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
     });
 
     const fontsReady = document.fonts?.ready;
-    fontsReady?.then?.(scheduleFit).catch?.(() => {});
+    fontsReady?.then?.(() => scheduleFit({ ignoreCache: true })).catch?.(() => {});
 
     return () => {
+      cancelled = true;
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, [containerEl, containerSize.height, containerSize.width, enabled, fitKey, textEl]);
