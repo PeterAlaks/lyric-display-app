@@ -83,3 +83,16 @@ test('Live Safety uses the preferences autosave status while keeping its realtim
   assert.match(persistenceSource, /setSaveError\(true\)/);
   assert.match(layoutSource, /Settings could not be saved/);
 });
+
+test('parser guidance is available from the preferences category header', async () => {
+  const [modalSource, layoutSource] = await Promise.all([
+    readFile(new URL('../src/components/UserPreferencesModal.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/UserPreferencesModal/UserPreferencesLayout.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(modalSource, /id: 'parsing',[\s\S]*?info: 'Controls how imported lyrics are arranged for display\./);
+  assert.match(modalSource, /id: 'lineSplitting',[\s\S]*?info: 'Breaks long imported lyrics at natural word boundaries/);
+  assert.doesNotMatch(modalSource, /Line splitting runs first\. Every resulting line/);
+  assert.match(layoutSource, /<AlwaysInfoButton/);
+  assert.match(layoutSource, /content=\{categories\.find\(c => c\.id === activeCategory\)\?\.info\}/);
+});

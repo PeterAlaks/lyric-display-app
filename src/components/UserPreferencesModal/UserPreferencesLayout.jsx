@@ -1,6 +1,7 @@
 import { AlertCircle, Check, ChevronRight, Loader2, Power, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
+import AlwaysInfoButton from '../LyricVideoStudio/AlwaysInfoButton';
 
 const UserPreferencesLayout = ({
   activeCategory,
@@ -54,6 +55,13 @@ const UserPreferencesLayout = ({
           <h3 className={`text-lg font-semibold ${labelClass}`}>
             {categories.find(c => c.id === activeCategory)?.label}
           </h3>
+          {categories.find(c => c.id === activeCategory)?.info && (
+            <AlwaysInfoButton
+              side="left"
+              ariaLabel={`About ${categories.find(c => c.id === activeCategory)?.label}`}
+              content={categories.find(c => c.id === activeCategory)?.info}
+            />
+          )}
           {activeCategory === 'ndi' && ndiStatus.installed && (
             <div className="flex items-center gap-2 shrink-0">
               {!companionRunning ? (

@@ -41,9 +41,19 @@ const CATEGORIES = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
-  { id: 'parsing', label: 'Lyrics Parsing', icon: FileText },
+  {
+    id: 'parsing',
+    label: 'Lyrics Parsing',
+    icon: FileText,
+    info: 'Controls how imported lyrics are arranged for display. When line splitting is on, it runs first; eligible short lines can then be combined into groups using the limits below.',
+  },
   { id: 'formatting', label: 'Lyrics Formatting', icon: Wand2 },
-  { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
+  {
+    id: 'lineSplitting',
+    label: 'Line Splitting',
+    icon: Sliders,
+    info: 'Breaks long imported lyrics at natural word boundaries for easier reading. Minimum sets when a break may happen, Target guides the preferred length, and Maximum prevents lines from running too long.',
+  },
   { id: 'externalControl', label: 'External Control', icon: Radio },
   { id: 'ndi', label: 'NDI', icon: Cast },
   { id: 'autoplay', label: 'Autoplay', icon: Play },
@@ -427,10 +437,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'parsing':
         return (
           <div className="space-y-6">
-            <div className={`rounded-lg border px-3 py-2 text-xs ${darkMode ? 'border-blue-800 bg-blue-950/30 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
-              Line splitting runs first. Every resulting line must still satisfy the grouping length and group-size limits below; split fragments that do not qualify are kept separate from unrelated lyrics.
-            </div>
-
             <div className="flex items-center justify-between">
               <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Auto Line Grouping</label>
@@ -624,10 +630,6 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'lineSplitting':
         return (
           <div className="space-y-6">
-            <div className={`rounded-lg border px-3 py-2 text-xs ${darkMode ? 'border-blue-800 bg-blue-950/30 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
-              These values are applied before lyric grouping. The parser keeps the effective order Minimum ≤ Target ≤ Maximum while preserving every setting here as user-configurable.
-            </div>
-
             {hasInvalidSplitRelationship && (
               <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${darkMode ? 'border-amber-700 bg-amber-950/30 text-amber-200' : 'border-amber-300 bg-amber-50 text-amber-800'}`}>
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
