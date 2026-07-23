@@ -61,6 +61,7 @@ test('authoritative timer normalization preserves zero transitions and schedule 
     indicatorDurationMs: 0,
     activeSetIndex: 1.8,
     scheduleEventStartTime: '09:30',
+    scheduleShowGlobalTimeDuringManualItems: false,
     sets: [
       { id: 'same', label: 'First', durationMs: 60_000 },
       { id: 'same', label: 'Second', durationMs: 60_000 },
@@ -74,6 +75,7 @@ test('authoritative timer normalization preserves zero transitions and schedule 
   assert.equal(result.state.criticalMs, 10_000);
   assert.equal(result.state.activeSetIndex, 1);
   assert.equal(result.state.scheduleEventStartTime, '09:30');
+  assert.equal(result.state.scheduleShowGlobalTimeDuringManualItems, false);
   assert.deepEqual(result.state.sets.map((item) => item.id), ['same', 'same-2']);
 });
 

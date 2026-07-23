@@ -2,6 +2,25 @@ import { normalizeTimerControlSettings } from './timerUtils.js';
 
 export const TIMER_SCHEDULE_STORAGE_KEY = 'lyricdisplay_saved_timer_schedule_v1';
 
+const selectTimerScheduleSettings = (settings) => ({
+  useSets: settings.useSets,
+  sets: settings.sets,
+  scheduleTitle: settings.scheduleTitle,
+  scheduleEventStartTime: settings.scheduleEventStartTime,
+  scheduleEventDate: settings.scheduleEventDate,
+  scheduleScheduledStartAt: settings.scheduleScheduledStartAt,
+  scheduleIdealEndTime: settings.scheduleIdealEndTime,
+  scheduleShowGlobalTimeDuringManualItems: settings.scheduleShowGlobalTimeDuringManualItems,
+  scheduleNotificationsEnabled: settings.scheduleNotificationsEnabled,
+  autoStartNext: settings.autoStartNext,
+  indicatorEnabled: settings.indicatorEnabled,
+  indicatorSeconds: settings.indicatorSeconds,
+  indicatorLabel: settings.indicatorLabel,
+  warningSeconds: settings.warningSeconds,
+  criticalSeconds: settings.criticalSeconds,
+  targetHourFormat: settings.targetHourFormat,
+});
+
 const getStorage = (storage) => {
   if (storage) return storage;
   if (typeof window === 'undefined') return null;
@@ -17,21 +36,7 @@ export const buildTimerScheduleSnapshot = (settings, savedAt = Date.now()) => {
   return {
     version: 1,
     savedAt: Math.max(0, Number(savedAt) || Date.now()),
-    useSets: true,
-    sets: normalized.sets,
-    scheduleTitle: normalized.scheduleTitle,
-    scheduleEventStartTime: normalized.scheduleEventStartTime,
-    scheduleEventDate: normalized.scheduleEventDate,
-    scheduleScheduledStartAt: normalized.scheduleScheduledStartAt,
-    scheduleIdealEndTime: normalized.scheduleIdealEndTime,
-    scheduleNotificationsEnabled: normalized.scheduleNotificationsEnabled,
-    autoStartNext: normalized.autoStartNext,
-    indicatorEnabled: normalized.indicatorEnabled,
-    indicatorSeconds: normalized.indicatorSeconds,
-    indicatorLabel: normalized.indicatorLabel,
-    warningSeconds: normalized.warningSeconds,
-    criticalSeconds: normalized.criticalSeconds,
-    targetHourFormat: normalized.targetHourFormat,
+    ...selectTimerScheduleSettings(normalized),
   };
 };
 
@@ -66,10 +71,14 @@ export const readTimerScheduleSnapshot = (storage) => {
     if (!Number.isInteger(version) || version < 0 || version > 1) return null;
     const normalized = normalizeTimerControlSettings({
       ...snapshot,
-      useSets: true,
       settingsUpdatedAt: snapshot.savedAt,
     });
-    return normalized.sets.length > 0 ? normalized : null;
+    return normalized.sets.length > 0
+      ? {
+        ...selectTimerScheduleSettings(normalized),
+        settingsUpdatedAt: normalized.settingsUpdatedAt,
+      }
+      : null;
   } catch {
     return null;
   }

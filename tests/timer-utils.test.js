@@ -10,6 +10,7 @@ import {
   normalizeTimerDisplaySettings,
   normalizeTimerState,
   resetActiveTimerRuntime,
+  shouldShowGlobalTimeForManualScheduleItem,
 } from '../src/utils/timerUtils.js';
 
 function createTimerStoreHarness() {
@@ -272,6 +273,32 @@ test('timer normalization preserves manual schedule items', () => {
   assert.equal(state.sets.length, 1);
   assert.equal(state.sets[0].timed, false);
   assert.equal(state.sets[0].durationMs, null);
+});
+
+test('manual schedule items show global time by default and respect the schedule opt-out', () => {
+  const manualState = normalizeTimerState({
+    status: 'running',
+    running: true,
+    mode: 'countup',
+    phase: 'timer',
+    sets: [{ id: 'manual', label: 'Open ministry', durationMs: null, timed: false }],
+  });
+
+  assert.equal(manualState.scheduleShowGlobalTimeDuringManualItems, true);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem(manualState), true);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem({
+    ...manualState,
+    scheduleShowGlobalTimeDuringManualItems: false,
+  }), false);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem({
+    ...manualState,
+    phase: 'indicator',
+  }), false);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem({
+    ...manualState,
+    mode: 'countdown',
+    sets: [{ id: 'timed', label: 'Welcome', durationMs: 60_000, timed: true }],
+  }), false);
 });
 
 test('timer state normalization keeps runtime schedule fields internally consistent', () => {

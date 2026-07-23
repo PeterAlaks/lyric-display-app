@@ -2,7 +2,13 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
 import useSharedTimer from '../hooks/useSharedTimer';
-import { formatGlobalClock, getRemainingMs, isTimerVisiblyActive, splitClockPeriod } from '../utils/timerUtils';
+import {
+  formatGlobalClock,
+  getRemainingMs,
+  isTimerVisiblyActive,
+  shouldShowGlobalTimeForManualScheduleItem,
+  splitClockPeriod,
+} from '../utils/timerUtils';
 import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import { paintToCss } from '../utils/paint';
 import ProjectionExitHint from '../components/ProjectionExitHint';
@@ -187,7 +193,8 @@ const TimeDisplay = () => {
       : { ...stateDisplay, ...localDisplay };
   }, [timerDisplaySettings, timerState.display]);
   const hasActiveTimer = isTimerVisiblyActive(timerState, now);
-  const shouldShowClock = !hasActiveTimer && display.showClockWhenIdle !== false;
+  const showManualItemGlobalTime = shouldShowGlobalTimeForManualScheduleItem(timerState);
+  const shouldShowClock = showManualItemGlobalTime || (!hasActiveTimer && display.showClockWhenIdle !== false);
   const clockValue = React.useMemo(() => formatGlobalClock(now, display), [display, now]);
   const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);
   const showGlobalClock = display.showGlobalClock !== false;
@@ -220,9 +227,13 @@ const TimeDisplay = () => {
   ]);
   const isBehindSchedule = hasRunningSchedule && scheduleProjection.status === 'behind';
   const isWaitingForTime = !hasActiveTimer && !showGlobalClock;
-  const isIdleFullScreenClock = shouldShowClock && !isWaitingForTime;
+  const isFullScreenClock = shouldShowClock && !isWaitingForTime;
+  const showActiveSecondaryGlobalClock = showSecondaryText
+    && showGlobalClock
+    && hasActiveTimer
+    && !showManualItemGlobalTime;
 
-  const value = isWaitingForTime ? 'Waiting for time...' : (isIdleFullScreenClock ? clockParts.time : displayValue);
+  const value = isWaitingForTime ? 'Waiting for time...' : (isFullScreenClock ? clockParts.time : displayValue);
   const label = !showSecondaryText || isWaitingForTime
     ? ''
     : shouldShowClock
@@ -243,8 +254,8 @@ const TimeDisplay = () => {
   const autoFitKey = React.useMemo(() => [
     getTextFitShape(value),
     getFontFitKey(display),
-    hasActiveTimer && showGlobalClock && showSecondaryText ? 'active-with-clock' : 'primary',
-  ].join('|'), [display, hasActiveTimer, showGlobalClock, showSecondaryText, value]);
+    showActiveSecondaryGlobalClock ? 'active-with-clock' : 'primary',
+  ].join('|'), [display, showActiveSecondaryGlobalClock, value]);
   const { containerRef, textRef, fontSize: autoFontSize } = useAutoFitText({
     enabled: autoFitEnabled,
     fitKey: autoFitKey,
@@ -296,7 +307,7 @@ const TimeDisplay = () => {
           className="w-full flex flex-col justify-center overflow-hidden"
           style={{
             alignItems,
-            height: hasActiveTimer && showGlobalClock && showSecondaryText ? '70vh' : '86vh',
+            height: showActiveSecondaryGlobalClock ? '70vh' : '86vh',
             contain: 'layout paint',
           }}
         >
@@ -324,7 +335,7 @@ const TimeDisplay = () => {
           >
             {value}
           </div>
-          {showSecondaryText && isIdleFullScreenClock && clockParts.period && (
+          {showSecondaryText && isFullScreenClock && clockParts.period && (
             <div
               className="font-bold leading-none text-center"
               style={{
@@ -343,7 +354,7 @@ const TimeDisplay = () => {
           )}
         </div>
 
-        {display.showProgress !== false && hasActiveTimer && (
+        {display.showProgress !== false && hasActiveTimer && !showManualItemGlobalTime && (
           <div
             className="mx-auto mt-4 rounded-full overflow-hidden"
             style={{
@@ -374,7 +385,7 @@ const TimeDisplay = () => {
             </div>
           </div>
         )}
-        {showSecondaryText && showGlobalClock && hasActiveTimer && (
+        {showActiveSecondaryGlobalClock && (
           <div
             className="mx-auto mt-2 flex w-full items-center justify-center gap-[0.65em] text-center font-semibold leading-none"
             style={{

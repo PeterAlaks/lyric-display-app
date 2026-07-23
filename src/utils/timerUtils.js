@@ -1,5 +1,6 @@
 import {
   MAX_SCHEDULE_ITEMS,
+  isTimedScheduleItem,
   normalizeDateOnly,
   normalizeScheduleItems,
   normalizeTimeOfDay,
@@ -35,6 +36,7 @@ export const DEFAULT_TIMER_CONTROL_SETTINGS = {
   scheduleEventDate: '',
   scheduleScheduledStartAt: null,
   scheduleIdealEndTime: '',
+  scheduleShowGlobalTimeDuringManualItems: true,
   scheduleNotificationsEnabled: true,
   awaitingNext: false,
 };
@@ -133,6 +135,7 @@ export const createIdleTimerState = () => ({
   scheduleReconciliationHold: false,
   schedulePausedOverrunMs: 0,
   scheduleAssumedCompletedIds: [],
+  scheduleShowGlobalTimeDuringManualItems: true,
   scheduleNotificationsEnabled: true,
   display: { ...DEFAULT_TIMER_DISPLAY },
   updatedAt: Date.now(),
@@ -239,6 +242,7 @@ export const normalizeTimerControlSettings = (raw) => {
     scheduleEventDate: normalizeDateOnly(settings.scheduleEventDate),
     scheduleScheduledStartAt: normalizeNullableTimestamp(settings.scheduleScheduledStartAt),
     scheduleIdealEndTime: isValidTargetTime(settings.scheduleIdealEndTime) ? settings.scheduleIdealEndTime : '',
+    scheduleShowGlobalTimeDuringManualItems: settings.scheduleShowGlobalTimeDuringManualItems !== false,
     scheduleNotificationsEnabled: settings.scheduleNotificationsEnabled !== false,
     settingsUpdatedAt: Number.isFinite(Number(settings.settingsUpdatedAt)) ? Number(settings.settingsUpdatedAt) : 0,
   };
@@ -299,11 +303,25 @@ export const normalizeTimerState = (raw) => {
     scheduleAssumedCompletedIds: Array.isArray(raw.scheduleAssumedCompletedIds)
       ? raw.scheduleAssumedCompletedIds.map((id) => String(id || '').slice(0, 96)).filter(Boolean).slice(0, MAX_TIMER_SETS)
       : [],
+    scheduleShowGlobalTimeDuringManualItems: raw.scheduleShowGlobalTimeDuringManualItems !== false,
     scheduleNotificationsEnabled: raw.scheduleNotificationsEnabled !== false,
     awaitingNext: Boolean(raw.awaitingNext),
     display: normalizeTimerDisplaySettings(raw.display),
     updatedAt: Number.isFinite(Number(raw.updatedAt)) ? Number(raw.updatedAt) : Date.now(),
   };
+};
+
+export const shouldShowGlobalTimeForManualScheduleItem = (timerState) => {
+  if (!timerState || typeof timerState !== 'object' || Array.isArray(timerState)) return false;
+  if (timerState.scheduleShowGlobalTimeDuringManualItems === false || timerState.phase === 'indicator') return false;
+  if (!timerState.running && !timerState.paused) return false;
+  if (!Array.isArray(timerState.sets) || timerState.sets.length === 0) return false;
+
+  const activeIndex = Math.max(0, Math.min(
+    timerState.sets.length - 1,
+    Math.trunc(Number(timerState.activeSetIndex) || 0)
+  ));
+  return !isTimedScheduleItem(timerState.sets[activeIndex]);
 };
 
 export const resetActiveTimerRuntime = (raw) => {

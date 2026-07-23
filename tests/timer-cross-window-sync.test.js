@@ -17,11 +17,16 @@ test('cross-window timer sync never rebroadcasts the broad persisted lyrics stor
   assert.doesNotMatch(appProvidersSource, /updateTimer(?:Display|Control)Settings/);
   assert.doesNotMatch(lyricsStoreSource, /addEventListener\(\s*['"]storage['"]/);
   assert.doesNotMatch(scheduleStorageSource, /addEventListener\(\s*['"]storage['"]/);
+  assert.match(lyricsStoreSource, /timerControlSettings:\s*state\.timerControlSettings/);
+  assert.match(lyricsStoreSource, /timerDisplaySettings:\s*state\.timerDisplaySettings/);
+  assert.match(lyricsStoreSource, /state\.timerControlSettings\s*=\s*normalizeTimerControlSettings/);
+  assert.match(lyricsStoreSource, /state\.timerDisplaySettings\s*=\s*normalizeTimerDisplaySettings/);
 
   assert.match(sharedTimerSource, /event\.key\s*!==\s*TIMER_STORAGE_KEY/);
   assert.match(sharedTimerSource, /addEventListener\(\s*['"]storage['"]\s*,\s*handleStorage\s*\)/);
   assert.match(timerControlSource, /event\.key\s*!==\s*TIMER_SCHEDULE_STORAGE_KEY/);
   assert.match(scheduleOpenSource, /openTimerControlWindow/);
+  assert.match(scheduleOpenSource, /saveTimerScheduleSnapshot\(useLyricsStore\.getState\(\)\.timerControlSettings\)/);
   assert.doesNotMatch(scheduleOpenSource, /navigate\(['"]\/timer-control['"]\)\s*;\s*showToast/);
 
   const rejectedEmitIndex = sharedTimerSource.indexOf("if (sent === false) return latestStateRef.current;");

@@ -123,6 +123,17 @@ test('LyricDisplay schedules round-trip through the versioned document format', 
   assert.equal(schedule.idealEndTime, '20:30');
   assert.equal(schedule.items[1].timed, false);
   assert.equal(schedule.indicator.durationSeconds, 15);
+  assert.equal(schedule.showGlobalTimeDuringManualItems, true);
+});
+
+test('schedule documents can keep the count-up timer visible for manual items', () => {
+  const schedule = parseScheduleDocument(serializeScheduleDocument({
+    title: 'Manual timer schedule',
+    showGlobalTimeDuringManualItems: false,
+    items: [{ id: 'response', label: 'Open response', durationMs: null, timed: false }],
+  }));
+
+  assert.equal(schedule.showGlobalTimeDuringManualItems, false);
 });
 
 test('schedule documents preserve an optional event date only when a start time exists', () => {

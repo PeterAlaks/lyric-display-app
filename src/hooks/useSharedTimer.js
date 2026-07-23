@@ -260,6 +260,7 @@ export const useSharedTimer = ({
       scheduleReconciliationHold: false,
       schedulePausedOverrunMs: 0,
       scheduleAssumedCompletedIds: [],
+      scheduleShowGlobalTimeDuringManualItems: options.scheduleShowGlobalTimeDuringManualItems !== false,
       scheduleNotificationsEnabled: options.scheduleNotificationsEnabled !== false,
       awaitingNext: false,
       display: { ...current.display, ...(options.display || {}) },
@@ -365,6 +366,7 @@ export const useSharedTimer = ({
       scheduleAssumedCompletedIds: Array.isArray(options.scheduleAssumedCompletedIds)
         ? options.scheduleAssumedCompletedIds
         : [],
+      scheduleShowGlobalTimeDuringManualItems: options.scheduleShowGlobalTimeDuringManualItems !== false,
       scheduleNotificationsEnabled: options.scheduleNotificationsEnabled !== false,
       awaitingNext: false,
       display: { ...current.display, ...(options.display || {}) },

@@ -185,6 +185,7 @@ export function normalizeScheduleDocument(raw = {}) {
     eventDate: eventStartTime ? normalizeDateOnly(document.eventDate) : '',
     idealEndTime: normalizeTimeOfDay(document.idealEndTime),
     autoStartNext: document.autoStartNext !== false,
+    showGlobalTimeDuringManualItems: document.showGlobalTimeDuringManualItems !== false,
     notificationsEnabled: document.notificationsEnabled !== false,
     indicator: {
       enabled: indicator.enabled !== false,

@@ -14,6 +14,7 @@ import {
   getTimerProgress,
   getTimerToggleProps,
   minutesToMs,
+  normalizeTimerControlSettings,
   secondsToMs,
   splitClockPeriod,
 } from '../utils/timerUtils';
@@ -289,6 +290,7 @@ const TimerControlModule = () => {
     scheduleEventDate,
     scheduleScheduledStartAt,
     scheduleIdealEndTime,
+    scheduleShowGlobalTimeDuringManualItems,
     scheduleNotificationsEnabled,
   } = controlSettings;
 
@@ -310,7 +312,10 @@ const TimerControlModule = () => {
     const currentHasSchedule = Array.isArray(controlSettings.sets) && controlSettings.sets.length > 0;
     const storedIsNewer = Number(storedSchedule.settingsUpdatedAt) > Number(controlSettings.settingsUpdatedAt || 0);
     if (!currentHasSchedule || storedIsNewer) {
-      latestControlSettingsRef.current = storedSchedule;
+      latestControlSettingsRef.current = normalizeTimerControlSettings({
+        ...controlSettings,
+        ...storedSchedule,
+      });
       updateTimerControlSettings(storedSchedule);
     } else {
       saveTimerScheduleSnapshot(controlSettings);
@@ -335,6 +340,7 @@ const TimerControlModule = () => {
           scheduleEventDate: '',
           scheduleScheduledStartAt: null,
           scheduleIdealEndTime: '',
+          scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
           scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
           autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
           indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
@@ -352,7 +358,10 @@ const TimerControlModule = () => {
       const currentUpdatedAt = Number(latestControlSettingsRef.current?.settingsUpdatedAt) || 0;
       const incomingUpdatedAt = Number(storedSchedule.settingsUpdatedAt) || 0;
       if (incomingUpdatedAt < currentUpdatedAt) return;
-      latestControlSettingsRef.current = storedSchedule;
+      latestControlSettingsRef.current = normalizeTimerControlSettings({
+        ...latestControlSettingsRef.current,
+        ...storedSchedule,
+      });
       updateTimerControlSettings(storedSchedule, { touch: false });
     };
 
@@ -414,6 +423,9 @@ const TimerControlModule = () => {
         ? resolveScheduleTime(partial.scheduleIdealEndTime, current.scheduleScheduledStartAt || current.scheduleStartedAt || Date.now())
         : null;
     }
+    if (Object.prototype.hasOwnProperty.call(partial, 'scheduleShowGlobalTimeDuringManualItems')) {
+      liveUpdates.scheduleShowGlobalTimeDuringManualItems = partial.scheduleShowGlobalTimeDuringManualItems !== false;
+    }
     if (Object.prototype.hasOwnProperty.call(partial, 'scheduleNotificationsEnabled')) {
       liveUpdates.scheduleNotificationsEnabled = partial.scheduleNotificationsEnabled !== false;
     }
@@ -451,6 +463,9 @@ const TimerControlModule = () => {
   const effectiveNotificationsEnabled = activeTimerUsesSets
     ? timerState.scheduleNotificationsEnabled !== false
     : scheduleNotificationsEnabled;
+  const effectiveShowGlobalTimeDuringManualItems = activeTimerUsesSets
+    ? timerState.scheduleShowGlobalTimeDuringManualItems !== false
+    : scheduleShowGlobalTimeDuringManualItems;
   const effectiveWarningSeconds = activeTimerUsesSets
     ? Math.max(0, Number(timerState.warningMs) || 0) / 1000
     : warningSeconds;
@@ -603,6 +618,7 @@ const TimerControlModule = () => {
         scheduleEventDate,
         scheduleScheduledStartAt: resolvedScheduledStartAt,
         scheduleIdealEndAt,
+        scheduleShowGlobalTimeDuringManualItems,
         scheduleNotificationsEnabled,
         display,
       };
@@ -620,6 +636,7 @@ const TimerControlModule = () => {
           eventDate: scheduleEventDate,
           idealEndTime: scheduleIdealEndTime,
           autoStartNext,
+          showGlobalTimeDuringManualItems: scheduleShowGlobalTimeDuringManualItems,
           notificationsEnabled: scheduleNotificationsEnabled,
           indicator: {
             enabled: indicatorEnabled,
@@ -691,6 +708,7 @@ const TimerControlModule = () => {
                 scheduleReconciliationHold: false,
                 schedulePausedOverrunMs: 0,
                 scheduleAssumedCompletedIds: schedule.items.map((item) => item.id),
+                scheduleShowGlobalTimeDuringManualItems,
                 scheduleNotificationsEnabled,
                 awaitingNext: false,
                 display,
@@ -745,6 +763,7 @@ const TimerControlModule = () => {
     mode,
     overrunMode,
     scheduleIdealEndTime,
+    scheduleShowGlobalTimeDuringManualItems,
     scheduleNotificationsEnabled,
     scheduleEventDate,
     scheduleEventStartTime,
@@ -777,6 +796,7 @@ const TimerControlModule = () => {
         scheduleEventDate: current.scheduleEventDate || scheduleEventDate,
         scheduleScheduledStartAt: current.scheduleScheduledStartAt || scheduleScheduledStartAt,
         scheduleIdealEndTime: timestampToTimeOfDay(current.scheduleIdealEndAt) || scheduleIdealEndTime,
+        scheduleShowGlobalTimeDuringManualItems: current.scheduleShowGlobalTimeDuringManualItems !== false,
         scheduleNotificationsEnabled: current.scheduleNotificationsEnabled !== false,
         autoStartNext: current.autoStartNext !== false,
         indicatorEnabled: Boolean(current.indicatorEnabled),
@@ -793,6 +813,7 @@ const TimerControlModule = () => {
     scheduleEventDate,
     scheduleEventStartTime,
     scheduleIdealEndTime,
+    scheduleShowGlobalTimeDuringManualItems,
     scheduleScheduledStartAt,
     scheduleTitle,
     setTimerControlSettings,
@@ -909,12 +930,12 @@ const TimerControlModule = () => {
       scheduleEventDate: '',
       scheduleScheduledStartAt: null,
       scheduleIdealEndTime: '',
+      scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
       scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
       autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
       indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
       indicatorSeconds: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds,
       indicatorLabel: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
-      overrunMode: false,
     });
     showToast({
       title: 'Schedule cleared',
@@ -936,6 +957,7 @@ const TimerControlModule = () => {
     eventDate: effectiveEventDate,
     idealEndTime: effectiveIdealEndTime,
     autoStartNext: effectiveAutoStartNext,
+    showGlobalTimeDuringManualItems: effectiveShowGlobalTimeDuringManualItems,
     notificationsEnabled: effectiveNotificationsEnabled,
     indicator: {
       enabled: effectiveIndicatorEnabled,
@@ -952,6 +974,7 @@ const TimerControlModule = () => {
     effectiveIndicatorLabel,
     effectiveIndicatorSeconds,
     effectiveNotificationsEnabled,
+    effectiveShowGlobalTimeDuringManualItems,
     scheduleItems,
     visibleScheduleTitle,
   ]);
@@ -974,12 +997,12 @@ const TimerControlModule = () => {
       scheduleEventDate: schedule.eventDate,
       scheduleScheduledStartAt: scheduledStartAt,
       scheduleIdealEndTime: schedule.idealEndTime,
+      scheduleShowGlobalTimeDuringManualItems: schedule.showGlobalTimeDuringManualItems,
       scheduleNotificationsEnabled: schedule.notificationsEnabled,
       autoStartNext: schedule.autoStartNext,
       indicatorEnabled: schedule.indicator.enabled,
       indicatorSeconds: schedule.indicator.durationSeconds,
       indicatorLabel: schedule.indicator.label,
-      overrunMode: false,
     });
 
     const current = latestTimerStateRef.current;
@@ -1008,6 +1031,7 @@ const TimerControlModule = () => {
           scheduleIdealEndAt: schedule.idealEndTime
             ? resolveScheduleTime(schedule.idealEndTime, current.scheduleScheduledStartAt || current.scheduleStartedAt || Date.now())
             : null,
+          scheduleShowGlobalTimeDuringManualItems: schedule.showGlobalTimeDuringManualItems,
           scheduleNotificationsEnabled: schedule.notificationsEnabled,
           autoStartNext: schedule.autoStartNext,
           indicatorEnabled: schedule.indicator.enabled,

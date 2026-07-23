@@ -29,15 +29,15 @@ export default function ScheduleFileOpenBridge() {
             eventDate: schedule.eventDate,
           }),
           scheduleIdealEndTime: schedule.idealEndTime,
+          scheduleShowGlobalTimeDuringManualItems: schedule.showGlobalTimeDuringManualItems,
           scheduleNotificationsEnabled: schedule.notificationsEnabled,
           autoStartNext: schedule.autoStartNext,
           indicatorEnabled: schedule.indicator.enabled,
           indicatorSeconds: schedule.indicator.durationSeconds,
           indicatorLabel: schedule.indicator.label,
-          overrunMode: false,
         };
         useLyricsStore.getState().updateTimerControlSettings(scheduleSettings);
-        saveTimerScheduleSnapshot(scheduleSettings);
+        saveTimerScheduleSnapshot(useLyricsStore.getState().timerControlSettings);
 
         if (api.display?.openTimerControlWindow) {
           try {

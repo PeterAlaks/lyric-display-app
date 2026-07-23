@@ -142,6 +142,7 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
           .filter(Boolean)
           .slice(0, MAX_TIMER_SETS)
         : [],
+      scheduleShowGlobalTimeDuringManualItems: incomingState.scheduleShowGlobalTimeDuringManualItems !== false,
       scheduleNotificationsEnabled: incomingState.scheduleNotificationsEnabled !== false,
       awaitingNext: Boolean(incomingState.awaitingNext),
       display: safeDisplay(incomingState.display, currentState?.display),

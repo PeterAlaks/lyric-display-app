@@ -950,6 +950,15 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                     <Switch checked={draft.autoStartNext} onCheckedChange={(checked) => updateDraft({ autoStartNext: checked })} {...scheduleSwitchProps} />
                   </div>
 
+                  <div className="flex items-start gap-3 p-4">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${darkMode ? 'bg-cyan-500/10 text-cyan-300' : 'bg-cyan-50 text-cyan-600'}`}><Clock3 className="h-4 w-4" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold">Show global time during manual items</p>
+                      <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Displays the global time during schedule items without set duration.</p>
+                    </div>
+                    <Switch checked={draft.showGlobalTimeDuringManualItems} onCheckedChange={(checked) => updateDraft({ showGlobalTimeDuringManualItems: checked })} {...scheduleSwitchProps} />
+                  </div>
+
                   <div className="p-4">
                     <div className="flex items-start gap-3">
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${darkMode ? 'bg-violet-500/10 text-violet-300' : 'bg-violet-50 text-violet-600'}`}><TimerReset className="h-4 w-4" /></div>
