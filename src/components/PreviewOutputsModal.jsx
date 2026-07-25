@@ -167,6 +167,11 @@ const PreviewOutputsModal = ({ darkMode }) => {
     return formatOutputLabel(previewCustomOutputId);
   }, [previewCustomOutputId]);
 
+  const openOutputButtonClassName = `p-1 rounded transition-colors ${darkMode
+    ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+    : 'text-gray-500 hover:text-gray-100 hover:bg-gray-700'
+    }`;
+
   const getIframeTransform = (resolution, containerDimensions) => {
     const containerWidth = containerDimensions.width;
     const containerHeight = containerDimensions.height;
@@ -263,7 +268,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             </h3>
             <button
               onClick={() => handleOpenOutput('output1')}
-              className={`p-1 rounded hover:bg-gray-700 transition-colors ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-100'}`}
+              className={openOutputButtonClassName}
               title="Open in window"
             >
               <AppWindowMac className="w-3 h-3" />
@@ -306,7 +311,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                 htmlFor="output1-mock"
                 className={`text-xs cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
-                Add Mock Image
+                Show Mock Image
               </label>
             </div>
           </div>
@@ -364,7 +369,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             </h3>
             <button
               onClick={() => handleOpenOutput('output2')}
-              className={`p-1 rounded hover:bg-gray-700 transition-colors ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+              className={openOutputButtonClassName}
               title="Open in window"
             >
               <AppWindowMac className="w-3 h-3" />
@@ -407,7 +412,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                 htmlFor="output2-mock"
                 className={`text-xs cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
-                Add Mock Image
+                Show Mock Image
               </label>
             </div>
           </div>
@@ -465,7 +470,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             </h3>
             <button
               onClick={() => handleOpenOutput('stage')}
-              className={`p-1 rounded hover:bg-gray-700 transition-colors ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+              className={openOutputButtonClassName}
               title="Open in window"
             >
               <AppWindowMac className="w-3 h-3" />
@@ -536,7 +541,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             </h3>
             <button
               onClick={() => handleOpenOutput('time')}
-              className={`p-1 rounded hover:bg-gray-700 transition-colors ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+              className={openOutputButtonClassName}
               title="Open in window"
             >
               <AppWindowMac className="w-3 h-3" />
@@ -618,7 +623,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                   <PopoverContent
                     side="bottom"
                     align="start"
-                    className={`z-[2100] p-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'}`}
+                    className={`z-2100 p-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'}`}
                   >
                     {CustomOutputPickerContent}
                   </PopoverContent>
@@ -628,7 +633,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             {previewCustomOutputId && (
               <button
                 onClick={() => handleOpenOutput(previewCustomOutputId)}
-                className={`p-1 rounded transition-colors ${darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
+                className={openOutputButtonClassName}
                 title="Open in window"
               >
                 <AppWindowMac className="w-3 h-3" />
@@ -671,7 +676,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                 htmlFor="custom-mock"
                 className={`text-xs cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
-                Add Mock Image
+                Show Mock Image
               </label>
             </div>
           </div>
@@ -727,7 +732,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                           <PopoverContent
                             side="top"
                             align="center"
-                            className={`z-[2100] p-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'}`}
+                            className={`z-2100 p-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'}`}
                           >
                             {CustomOutputPickerContent}
                           </PopoverContent>

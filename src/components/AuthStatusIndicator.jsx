@@ -301,7 +301,7 @@ const AuthStatusIndicator = ({
             headerDescription: 'Inspect connected clients, sync state, and retry health',
             component: 'ConnectionDiagnostics',
             variant: 'info',
-            size: 'lg',
+            size: 'md',
             actions: [
               { label: 'Close', variant: 'outline' },
               {

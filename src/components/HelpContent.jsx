@@ -23,7 +23,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
         <HelpSection
             icon={Globe}
             title="Search Online Lyrics"
-            description="Search multiple lyrics databases simultaneously. Find songs from LRCLIB, ChartLyrics, Lyrics.ovh, Open Hymnal, and more. Results include synced LRC files when available."
+            description="Search multiple lyrics databases simultaneously. Find songs from LRCLIB, Lyrics.ovh, and Open Hymnal. Results include synced LRC files when available."
             darkMode={darkMode}
         />
 

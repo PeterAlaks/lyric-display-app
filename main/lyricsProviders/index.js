@@ -2,7 +2,6 @@ import { TTLCache } from './cache.js';
 import * as lyricsOvh from './providers/lyricsOvh.js';
 import * as openHymnal from './providers/openHymnal.js';
 import * as lrclib from './providers/lrclib.js';
-import * as chartlyrics from './providers/chartlyrics.js';
 import { deleteProviderKey, getProviderKey, listProviderKeys, setProviderKey } from '../providerCredentials.js';
 import { mergeResults } from './searchAlgorithm.js';
 import fs from 'fs';
@@ -25,7 +24,6 @@ const providers = [
   openHymnal,
   lrclib,
   lyricsOvh,
-  chartlyrics,
 ];
 
 const providerById = new Map(providers.map((mod) => [mod.definition.id, mod]));

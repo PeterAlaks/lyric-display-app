@@ -447,7 +447,7 @@ const useMenuHandlers = (closeMenu) => {
       headerDescription: 'Inspect connected clients, sync state, and retry health',
       component: 'ConnectionDiagnostics',
       variant: 'info',
-      size: 'large',
+      size: 'md',
       actions: [
         { label: 'Close', variant: 'outline' },
         {

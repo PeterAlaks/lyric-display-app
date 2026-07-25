@@ -4,14 +4,12 @@ export const SEARCH_TIMEOUTS_MS = {
     openHymnal: 1500,
     lrclib: 12000,
     lyricsOvh: 2500,
-    chartlyrics: 1500,
   },
   full: {
     default: 6000,
     openHymnal: 2000,
     lrclib: 15000,
     lyricsOvh: 5000,
-    chartlyrics: 2500,
   },
 };
 

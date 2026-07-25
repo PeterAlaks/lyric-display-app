@@ -184,8 +184,8 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
 
     if (loading && !connectionStats && connectedClients.length === 0) {
         return (
-            <div className={`flex items-center justify-center py-8 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+            <div className={`flex items-center justify-center py-6 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                <RefreshCw className="w-5 h-5 animate-spin mr-2" />
                 <span>Loading diagnostics...</span>
             </div>
         );
@@ -195,23 +195,23 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
     const actualClientCount = connectedClients.length;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             {/* Status Overview Card */}
-            <div className={`rounded-lg p-4 ${isHealthy
+            <div className={`rounded-xl p-3.5 ${isHealthy
                 ? (darkMode ? 'bg-green-900/20 border border-green-700/30' : 'bg-green-50 border border-green-200')
                 : (darkMode ? 'bg-yellow-900/20 border border-yellow-700/30' : 'bg-yellow-50 border border-yellow-200')
                 }`}>
                 <div className="flex items-start gap-3">
                     {isHealthy ? (
-                        <CheckCircle className={`w-6 h-6 shrink-0 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
+                        <CheckCircle className={`w-5 h-5 shrink-0 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
                     ) : (
-                        <AlertCircle className={`w-6 h-6 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                        <AlertCircle className={`w-5 h-5 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                     )}
-                    <div className="flex-1">
-                        <h3 className={`font-semibold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <div className="min-w-0 flex-1">
+                        <h3 className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {isHealthy ? 'Connection Healthy' : 'Temporary Cooldown Active'}
                         </h3>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        <p className={`mt-0.5 text-xs leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                             {isHealthy
                                 ? 'All systems ready. Connections will retry immediately if needed.'
                                 : `Auto-retry will resume in approximately ${formatDuration(connectionStats?.globalBackoffRemainingMs || 0)}`
@@ -222,43 +222,43 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-3 gap-4">
-                <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <Activity className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className="grid grid-cols-3 gap-3">
+                <div className={`rounded-xl p-3 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                        <Activity className={`w-4 h-4 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Active Clients
                         </span>
                     </div>
-                    <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <p className={`text-xl font-bold leading-none ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {actualClientCount}
                     </p>
                 </div>
 
-                <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <AlertCircle className={`w-5 h-5 ${darkMode ? 'text-orange-400' : 'text-orange-600'}`} />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`rounded-xl p-3 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                        <AlertCircle className={`w-4 h-4 ${darkMode ? 'text-orange-400' : 'text-orange-600'}`} />
+                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Session Failures
                         </span>
                     </div>
-                    <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <p className={`text-xl font-bold leading-none ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {connectionStats?.globalFailures || 0}
                     </p>
                 </div>
 
-                <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <RefreshCcw className={`w-5 h-5 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`rounded-xl p-3 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                        <RefreshCcw className={`w-4 h-4 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
+                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Last Synced
                         </span>
                     </div>
-                    <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <p className={`text-xl font-bold leading-none ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {lastSyncTime ? `${secondsAgo}s` : 'Never'}
                     </p>
                     {lastSyncTime && (
-                        <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                        <p className={`mt-1 text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
                             ago
                         </p>
                     )}
@@ -267,14 +267,14 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
 
             {/* Last Failure Info */}
             {connectionStats?.lastFailureTime && (
-                <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <Clock className={`w-5 h-5 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className={`rounded-xl p-3 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                    <div className="mb-1 flex items-center gap-1.5">
+                        <Clock className={`w-4 h-4 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Most Recent Issue
                         </span>
                     </div>
-                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {formatRelativeTime(connectionStats.lastFailureTime)}
                     </p>
                 </div>
@@ -282,13 +282,13 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
 
             {/* Connected Clients */}
             <div>
-                <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <h4 className={`mb-2.5 flex items-center gap-1.5 text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     <Users className="w-4 h-4" />
                     Connected Clients ({actualClientCount})
                 </h4>
 
                 {connectedClients.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {connectedClients.map((client) => {
                             const Icon = CLIENT_TYPE_ICONS[client.type] || Monitor;
                             const label = getClientTypeLabel(client.type);
@@ -297,21 +297,21 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
                             return (
                                 <div
                                     key={client.id}
-                                    className={`rounded-lg p-3 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}
+                                    className={`rounded-xl p-2.5 ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}
                                 >
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <Icon className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                                            <span className={`font-medium text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    <div className="mb-1.5 flex items-start justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <Icon className={`w-4 h-4 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                                            <span className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                                 {label}
                                             </span>
                                         </div>
-                                        <span className={`text-xs font-semibold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                        <span className={`text-[11px] font-semibold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                                             Connected
                                         </span>
                                     </div>
 
-                                    <div className={`space-y-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    <div className={`space-y-0.5 text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                         {connectedTime && (
                                             <p className="flex items-center gap-1.5">
                                                 <Clock className="w-3 h-3" />
@@ -334,9 +334,9 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
                         })}
                     </div>
                 ) : (
-                    <div className={`text-center py-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No clients currently connected</p>
+                    <div className={`py-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <Users className="mx-auto mb-1.5 h-8 w-8 opacity-50" />
+                        <p className="text-xs">No clients currently connected</p>
                     </div>
                 )}
             </div>

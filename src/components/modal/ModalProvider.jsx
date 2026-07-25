@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Info, View, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
 import PreviewOutputsModal from '../PreviewOutputsModal';
 import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, LyricVideoStudioHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp } from '../HelpContent';
@@ -453,7 +453,9 @@ export function ModalProvider({ children, isDark = false }) {
       className="pointer-events-none fixed inset-0 z-1300 flex flex-col">
       {modals.map((modal, index) => {
         const palette = variantPalette(modal.variant, isDark);
-        const IconComponent = variantIcon(modal.variant);
+        const IconComponent = modal.component === 'PreviewOutputs'
+          ? View
+          : variantIcon(modal.variant);
         const zIndex = 1300 + index;
         const isTopModal = index === modals.length - 1;
         const sizeClass =

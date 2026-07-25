@@ -948,8 +948,6 @@ function getProviderTrustScore(providerId) {
             return 0.92;
         case 'lyricsOvh':
             return 0.72;
-        case 'chartlyrics':
-            return 0.5;
         default:
             return 0.65;
     }

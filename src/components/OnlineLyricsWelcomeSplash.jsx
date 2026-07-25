@@ -83,14 +83,6 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
             link: 'https://lyricsovh.docs.apiary.io/',
         },
         {
-            name: 'ChartLyrics',
-            description: 'Free lyrics API with good coverage of popular songs',
-            requiresKey: false,
-            icon: '/logos/chartlyrics-icon.png',
-            color: 'blue',
-            link: 'http://api.chartlyrics.com/apiv1.asmx',
-        },
-        {
             name: 'Open Hymnal',
             description: 'Bundled collection of beloved traditional hymns (offline)',
             requiresKey: false,
