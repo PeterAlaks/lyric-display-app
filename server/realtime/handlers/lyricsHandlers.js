@@ -1,4 +1,5 @@
 import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { isLyricsFileNamePayload } from '../../../shared/sessionReconciliation.js';
 import { appendActionLog } from '../actionLog.js';
 import { emitLyricsLoad, emitLyricsRenderEvent } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
@@ -50,7 +51,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
 
     const payloadObject = isPlainObject(payload) ? payload : null;
     const lyrics = Array.isArray(payload) ? payload : payloadObject?.lyrics || [];
-    const fileName = payloadObject ? (payloadObject.fileName || '') : '';
+    const fileName = isLyricsFileNamePayload(payloadObject?.fileName) ? payloadObject.fileName : '';
     const incomingTimestamps = Array.isArray(payloadObject?.lyricsTimestamps) ? payloadObject.lyricsTimestamps : [];
     const incomingEnhancedTimestamps = Array.isArray(payloadObject?.lyricsEnhancedTimestamps) ? payloadObject.lyricsEnhancedTimestamps : [];
     const incomingSections = Array.isArray(payloadObject?.sections) ? payloadObject.sections : null;
@@ -233,6 +234,11 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
 
     if (!hasPermission(socket, 'lyrics:write')) {
       socket.emit('permissionError', 'Insufficient permissions to update filename');
+      return;
+    }
+
+    if (!isLyricsFileNamePayload(fileName)) {
+      socket.emit('permissionError', 'Invalid filename update payload');
       return;
     }
 

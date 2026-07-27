@@ -2,6 +2,8 @@ import { getAllRoutableOutputIds } from './outputRegistry.js';
 
 const ROUTABLE_OUTPUT_IDS = new Set(getAllRoutableOutputIds());
 
+export const isLyricsFileNamePayload = (value) => typeof value === 'string';
+
 export const getDesktopBootstrapOutputIds = (storeState = {}) => (
   (Array.isArray(storeState.customOutputIds) ? storeState.customOutputIds : [])
     .filter((outputId) => ROUTABLE_OUTPUT_IDS.has(outputId) && outputId !== 'output1' && outputId !== 'output2')

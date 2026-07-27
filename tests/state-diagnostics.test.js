@@ -17,6 +17,14 @@ test('socket event hook subscribes only to stable store actions', () => {
   assert.match(source, /useLyricsStore\(\(state\) => state\.updateOutputSettings\)/);
 });
 
+test('socket filename updates use the authoritative payload without the removed stale-state guard', () => {
+  const source = fs.readFileSync(new URL('../src/hooks/useSocketEvents.js', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(source, /shouldIgnoreEmptyRemoteFileName/);
+  assert.match(source, /if \(!isLyricsFileNamePayload\(fileName\)\)/);
+  assert.match(source, /setLyricsFileName\(fileName\)/);
+});
+
 test('state diagnostics report controller snapshot size and composition', () => {
   const metrics = describeStatePayload(
     { type: 'desktop', purpose: 'control' },

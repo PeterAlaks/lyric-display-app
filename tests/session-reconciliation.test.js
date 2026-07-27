@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   emitDesktopSessionBootstrap,
+  isLyricsFileNamePayload,
   shouldBootstrapDesktopSession,
 } from '../shared/sessionReconciliation.js';
 import { schedulePersistSessionState } from '../server/realtime/sessionPersistence.js';
@@ -20,6 +21,15 @@ test('desktop bootstrap is allowed only for a new uninitialized server session',
     isDesktopApp: false,
     snapshot: { sessionAuthority: { source: 'new', bootstrapAllowed: true } },
   }), false);
+});
+
+test('authoritative filename updates accept empty strings and reject non-string payloads', () => {
+  assert.equal(isLyricsFileNamePayload('Service Song'), true);
+  assert.equal(isLyricsFileNamePayload(''), true);
+  assert.equal(isLyricsFileNamePayload('   '), true);
+  assert.equal(isLyricsFileNamePayload(null), false);
+  assert.equal(isLyricsFileNamePayload(undefined), false);
+  assert.equal(isLyricsFileNamePayload({ fileName: 'Service Song' }), false);
 });
 
 test('desktop bootstrap sends bounded current state without cross-session setlists', () => {

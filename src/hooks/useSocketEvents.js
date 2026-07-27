@@ -9,6 +9,7 @@ import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 import {
   emitDesktopSessionBootstrap,
   getDesktopBootstrapOutputIds,
+  isLyricsFileNamePayload,
   shouldBootstrapDesktopSession,
 } from '../../shared/sessionReconciliation.js';
 
@@ -615,11 +616,12 @@ const useSocketEvents = (role, clientPurpose = role) => {
     });
 
     socket.on('fileNameUpdate', (fileName) => {
-      logDebug('Received filename update:', fileName);
-      if (shouldIgnoreEmptyRemoteFileName(fileName)) {
-        logDebug('Ignoring empty fileNameUpdate to preserve local desktop state');
+      if (!isLyricsFileNamePayload(fileName)) {
+        logWarn('Ignoring invalid fileNameUpdate payload');
         return;
       }
+
+      logDebug('Received filename update:', fileName);
       setLyricsFileName(fileName);
     });
 

@@ -466,6 +466,53 @@ test('line navigation rejects indices outside the active lyrics', () => {
   }
 });
 
+test('filename updates reject malformed payloads while allowing an authoritative clear', () => {
+  const previousFileName = state.currentLyricsFileName;
+  const previousLiveSafety = state.liveSafety;
+  state.currentLyricsFileName = 'Existing title';
+  state.liveSafety = { enabled: false };
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const ioEvents = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+    };
+
+    registerLyricsHandlers({
+      io: { emit: (eventName, payload) => ioEvents.push({ eventName, payload }) },
+      socket,
+      hasPermission: (_socket, permission) => permission === 'lyrics:write',
+      clientType: 'desktop',
+      deviceId: 'desktop-device',
+      sessionId: 'desktop-session',
+    });
+
+    handlers.get('fileNameUpdate')?.({ fileName: 'Malformed' });
+
+    assert.deepEqual(emitted.at(-1), {
+      eventName: 'permissionError',
+      payload: 'Invalid filename update payload',
+    });
+    assert.equal(state.currentLyricsFileName, 'Existing title');
+    assert.equal(ioEvents.some((event) => event.eventName === 'fileNameUpdate'), false);
+
+    handlers.get('fileNameUpdate')?.('');
+
+    assert.equal(state.currentLyricsFileName, '');
+    assert.deepEqual(ioEvents.at(-1), { eventName: 'fileNameUpdate', payload: '' });
+  } finally {
+    state.currentLyricsFileName = previousFileName;
+    state.liveSafety = previousLiveSafety;
+  }
+});
+
 test('live safety mode blocks secondary group splitting', () => {
   const previousLiveSafety = state.liveSafety;
   const previousLyrics = state.currentLyrics;
