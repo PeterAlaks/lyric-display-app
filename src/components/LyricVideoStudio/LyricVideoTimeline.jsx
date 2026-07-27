@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { formatTimestamp } from '../../utils/timestampHelpers';
-import { getLyricVideoLineDisplayText } from '../../utils/lyricVideoLineText';
+import { getLyricVideoLineDisplayText } from '../../utils/lyricVideoTimeline';
 
 export default function LyricVideoTimeline({
   lyrics,

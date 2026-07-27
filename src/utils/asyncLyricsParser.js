@@ -1,8 +1,20 @@
 import { parseLyrics } from './parseLyrics.js';
-import { parseLrc } from './parseLrc.js';
 import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
 import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
 import { parseLyricImportContent } from '../../shared/documentTextExtraction.js';
+
+export const parseLrc = (file, options = {}) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      resolve(parseLrcContent(event.target.result || '', options));
+    } catch (error) {
+      reject(error);
+    }
+  };
+  reader.onerror = (error) => reject(error);
+  reader.readAsText(file);
+});
 
 let workerInstance = null;
 let workerInitAttempted = false;

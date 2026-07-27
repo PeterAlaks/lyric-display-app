@@ -3,8 +3,11 @@ import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { useLyricsState, useOutputState, useStageSettings, useSetlistState, useIndividualOutputState, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
-import { getLineOutputText } from '../utils/parseLyrics';
-import { findNavigableLyricLineIndex, isStructureTagLyricLine } from '../utils/lyricLineNavigation';
+import {
+  findNavigableLyricLineIndex,
+  getLineOutputText,
+  isStructureTagLyricLine,
+} from '../utils/parseLyrics';
 import { logDebug } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
 import { normalizeStageMessages } from '../utils/stageMessages';

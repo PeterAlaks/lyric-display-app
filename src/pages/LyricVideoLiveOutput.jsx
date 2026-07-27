@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
 import IntroOverlay from '../components/LyricVideoStudio/IntroOverlay';
-import { getActiveLyricVideoLine } from '../utils/lyricVideoTimeline';
-import { getLyricVideoLineOutputText } from '../utils/lyricVideoLineText';
+import { getActiveLyricVideoLine, getLyricVideoLineOutputText } from '../utils/lyricVideoTimeline';
 import {
   LYRIC_VIDEO_STUDIO_CHANNEL,
   LYRIC_VIDEO_STUDIO_STATE_KEY,

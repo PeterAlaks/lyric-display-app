@@ -1,3 +1,5 @@
+import { getLineDisplayText, getLineOutputText } from './parseLyrics.js';
+
 export const GAP_BEHAVIORS = {
   BACKGROUND_ONLY: 'background-only',
   BLANK: 'blank',
@@ -12,6 +14,22 @@ export const timestampCsToMs = (timestampCs) =>
   isValidTimestampCs(timestampCs) ? timestampCs * 10 : null;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const LEGACY_BLANK_MARKERS = new Set([
+  '\u00e2\u2122\u00aa',
+  '\u266a',
+]);
+
+const sanitizeLyricVideoText = (text) => {
+  if (typeof text !== 'string') return '';
+  return LEGACY_BLANK_MARKERS.has(text.trim()) ? '' : text;
+};
+
+export const getLyricVideoLineDisplayText = (line) =>
+  sanitizeLyricVideoText(getLineDisplayText(line));
+
+export const getLyricVideoLineOutputText = (line, target = 'output') =>
+  sanitizeLyricVideoText(getLineOutputText(line, target));
 
 function getTimedEntries(lyrics, timestamps) {
   if (!Array.isArray(lyrics) || !Array.isArray(timestamps)) return [];

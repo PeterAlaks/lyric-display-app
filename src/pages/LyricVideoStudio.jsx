@@ -5,15 +5,14 @@ import { Button } from '../components/ui/button';
 import { Tooltip } from '../components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
-import { parseLrc } from '../utils/parseLrc';
+import { parseLrc } from '../utils/asyncLyricsParser';
 import { createDefaultOutputSettings } from '../context/LyricsStore';
 import {
   useAllOutputIds,
   useLyricsState,
   useOutputSettings,
 } from '../hooks/useStoreSelectors';
-import { getActiveLyricVideoLine } from '../utils/lyricVideoTimeline';
-import { getLyricVideoLineOutputText } from '../utils/lyricVideoLineText';
+import { getActiveLyricVideoLine, getLyricVideoLineOutputText } from '../utils/lyricVideoTimeline';
 import LyricVideoTimeline from '../components/LyricVideoStudio/LyricVideoTimeline';
 import LyricVideoPreview from '../components/LyricVideoStudio/LyricVideoPreview';
 import LyricVideoTransport from '../components/LyricVideoStudio/LyricVideoTransport';

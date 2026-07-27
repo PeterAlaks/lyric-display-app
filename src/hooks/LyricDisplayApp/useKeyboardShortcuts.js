@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
-import { findNavigableLyricLineIndex } from '../../utils/lyricLineNavigation';
+import { findNavigableLyricLineIndex } from '../../utils/parseLyrics';
 import { dispatchCommand, isCommandFocusProtected } from '../../../shared/commandSafetyPolicy.js';
 
 const dispatchKeyboardCommand = (event, action, execute) => dispatchCommand({
