@@ -12,3 +12,13 @@ export function getWindowPreloadRole(route = '/') {
   }
   return 'control';
 }
+
+export function isTimeDisplayRoute(route = '/') {
+  const normalized = String(route || '/');
+  const routePath = normalized.split('?')[0].replace(/\/+$/, '') || '/';
+  return routePath === '/time';
+}
+
+export function shouldDisableBackgroundThrottling(route = '/', { projection = false } = {}) {
+  return Boolean(projection) || isTimeDisplayRoute(route);
+}

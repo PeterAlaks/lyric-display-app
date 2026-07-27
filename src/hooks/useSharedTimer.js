@@ -17,6 +17,7 @@ import {
   isTimedScheduleItem,
   normalizeScheduleItems,
 } from '../../shared/scheduleUtils.js';
+import { createTimerRenderClock } from '../utils/timerRenderClock.js';
 
 const getDisplayUpdatedAt = (display) => {
   const updatedAt = Number(display?.displayUpdatedAt);
@@ -191,10 +192,30 @@ export const useSharedTimer = ({
 
   React.useEffect(() => {
     if (renderTickIntervalMs === null || renderTickIntervalMs === false) return;
-    const shouldTick = timerState.running || timerState.status === 'running' || timerState.status === 'paused';
-    const interval = window.setInterval(() => setNow(Date.now()), shouldTick ? activeRenderTickIntervalMs : 1000);
-    return () => window.clearInterval(interval);
-  }, [activeRenderTickIntervalMs, renderTickIntervalMs, timerState.running, timerState.status]);
+
+    return createTimerRenderClock({
+      getTimerState: () => latestStateRef.current,
+      activeRenderIntervalMs: activeRenderTickIntervalMs,
+      now: Date.now,
+      monotonicNow: () => window.performance?.now?.() ?? Date.now(),
+      setIntervalFn: window.setInterval.bind(window),
+      clearIntervalFn: window.clearInterval.bind(window),
+      onRender: setNow,
+      onDelay: ({ delayMs, pollIntervalMs }) => {
+        console.warn('[TimerClock] Active timer render tick was delayed', {
+          delayMs: Math.round(delayMs),
+          pollIntervalMs,
+          visibilityState: document.visibilityState,
+        });
+      },
+    });
+  }, [
+    activeRenderTickIntervalMs,
+    renderTickIntervalMs,
+    timerState.paused,
+    timerState.running,
+    timerState.status,
+  ]);
 
   const startTimer = React.useCallback((options = {}) => {
     const current = latestStateRef.current;

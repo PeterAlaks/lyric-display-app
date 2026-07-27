@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { getWindowPreloadRole } from '../main/windowSecurity.js';
+import {
+  getWindowPreloadRole,
+  isTimeDisplayRoute,
+  shouldDisableBackgroundThrottling,
+} from '../main/windowSecurity.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
@@ -62,4 +66,15 @@ test('window routes receive control, passive, or no preload by role', () => {
   assert.equal(getWindowPreloadRole('/time'), 'passive');
   assert.equal(getWindowPreloadRole('/lyric-video-live-output'), 'passive');
   assert.equal(getWindowPreloadRole('/lyric-video-export-frame'), 'none');
+});
+
+test('time displays remain unthrottled with or without projection mode', () => {
+  assert.equal(isTimeDisplayRoute('/time'), true);
+  assert.equal(isTimeDisplayRoute('/time?escapeHint=1'), true);
+  assert.equal(isTimeDisplayRoute('/timer-control'), false);
+
+  assert.equal(shouldDisableBackgroundThrottling('/time'), true);
+  assert.equal(shouldDisableBackgroundThrottling('/time?projection=1'), true);
+  assert.equal(shouldDisableBackgroundThrottling('/output1', { projection: true }), true);
+  assert.equal(shouldDisableBackgroundThrottling('/output1'), false);
 });
