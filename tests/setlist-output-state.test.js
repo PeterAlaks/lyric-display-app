@@ -7,6 +7,11 @@ import {
   partializeOutputState,
   rehydrateOutputState,
 } from '../src/context/lyricsStore/outputSlice.js';
+import {
+  defaultStageSettings,
+  hasSelectedStageLyricLine,
+  shouldClearStageIdleScreen,
+} from '../src/context/lyricsStore/stageSlice.js';
 import { registerConnectionHandlers } from '../server/realtime/handlers/connectionHandlers.js';
 import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerOutputHandlers } from '../server/realtime/handlers/outputHandlers.js';
@@ -864,6 +869,19 @@ test('output persistence includes custom outputs and rehydration clears stale ru
   persisted.customOutputIds = [];
   rehydrateOutputState(persisted);
   assert.equal(persisted.previewCustomOutputId, null);
+});
+
+test('stage clear-empty setting stays opt-in and only clears an idle display', () => {
+  assert.equal(defaultStageSettings.clearEmptyLyricsScreen, false);
+  assert.equal(shouldClearStageIdleScreen(false, null, 3), false);
+  assert.equal(shouldClearStageIdleScreen(true, null, 3), true);
+  assert.equal(shouldClearStageIdleScreen(true, 0, 0), true);
+  assert.equal(shouldClearStageIdleScreen(true, 3, 3), true);
+  assert.equal(shouldClearStageIdleScreen(true, 0, 3), false);
+  assert.equal(shouldClearStageIdleScreen(true, 2, 3), false);
+  assert.equal(hasSelectedStageLyricLine(-1, 3), false);
+  assert.equal(hasSelectedStageLyricLine(1.5, 3), false);
+  assert.equal(hasSelectedStageLyricLine('1', 3), false);
 });
 
 test('last output disconnect broadcasts zero active instances', () => {

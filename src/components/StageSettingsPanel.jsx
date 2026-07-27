@@ -95,6 +95,13 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
 
   const [editingMessageId, setEditingMessageId] = React.useState(null);
   const [editingMessageText, setEditingMessageText] = React.useState('');
+  const [backgroundAdvancedExpanded, setBackgroundAdvancedExpanded] = React.useState(false);
+
+  React.useEffect(() => {
+    if (settings.clearEmptyLyricsScreen) {
+      setBackgroundAdvancedExpanded(true);
+    }
+  }, [settings.clearEmptyLyricsScreen]);
 
   React.useEffect(() => {
     if (!editingMessageId) return;
@@ -148,7 +155,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
     ? 'h-8 border border-transparent px-2 text-xs font-semibold text-red-200 hover:bg-red-500/15 hover:text-red-100'
     : 'h-8 border border-transparent px-2 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700';
 
-  const FullScreenToggleRow = ({ label, checked, onChange, disabled, ariaLabel }) => (
+  const SettingsToggleRow = ({ label, checked, onChange, disabled, ariaLabel }) => (
     <div className="flex items-center justify-between w-full">
       <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${disabled ? 'opacity-50' : ''}`}>
         {label}
@@ -585,22 +592,43 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       </div>
 
       {/* Background */}
-      <div className="flex items-center justify-between gap-4">
-        <Tooltip content="Set background color or gradient for stage display" side="right">
-          <LabelWithIcon icon={Square} text="Background" darkMode={darkMode} />
-        </Tooltip>
-        <PaintPicker
-          value={settings.backgroundPaint}
-          fallbackColor={settings.backgroundColor ?? '#000000'}
-          onChange={(val) => {
-            applySettings({
-              backgroundPaint: val,
-              ...(val?.type === 'solid' ? { backgroundColor: val.color } : {}),
-            });
-          }}
-          darkMode={darkMode}
-          className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
-        />
+      <div>
+        <div className="flex items-center justify-between gap-4">
+          <Tooltip content="Set background color or gradient for stage display" side="right">
+            <LabelWithIcon icon={Square} text="Background" darkMode={darkMode} />
+          </Tooltip>
+          <div className="flex items-center gap-2 justify-end w-full">
+            <Tooltip content={(backgroundAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">
+              <AdvancedToggle
+                expanded={backgroundAdvancedExpanded}
+                onToggle={() => setBackgroundAdvancedExpanded(!backgroundAdvancedExpanded)}
+                darkMode={darkMode}
+                ariaLabel="Toggle background advanced settings"
+              />
+            </Tooltip>
+            <PaintPicker
+              value={settings.backgroundPaint}
+              fallbackColor={settings.backgroundColor ?? '#000000'}
+              onChange={(val) => {
+                applySettings({
+                  backgroundPaint: val,
+                  ...(val?.type === 'solid' ? { backgroundColor: val.color } : {}),
+                });
+              }}
+              darkMode={darkMode}
+              className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+            />
+          </div>
+        </div>
+
+        <AdvancedCollapse expanded={backgroundAdvancedExpanded}>
+          <SettingsToggleRow
+            label="Clear Empty Lyrics Screen"
+            checked={settings.clearEmptyLyricsScreen || false}
+            onChange={(checked) => update('clearEmptyLyricsScreen', checked)}
+            ariaLabel="Toggle clear empty lyrics screen"
+          />
+        </AdvancedCollapse>
       </div>
 
       <div>
@@ -667,7 +695,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               </div>
             </div>
 
-            <FullScreenToggleRow
+            <SettingsToggleRow
               label="Send Full Screen"
               checked={settings.upcomingSongFullScreen || false}
               onChange={(checked) => handleFullScreenToggle('upcomingSong', checked)}
@@ -768,7 +796,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         {/* Timer Advanced Settings Row */}
         <AdvancedCollapse expanded={timerAdvancedExpanded}>
           <div className="space-y-3">
-            <FullScreenToggleRow
+            <SettingsToggleRow
               label="Send Full Screen"
               checked={settings.timerFullScreen || false}
               onChange={(checked) => handleFullScreenToggle('timer', checked)}
@@ -889,7 +917,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         {/* Custom Messages Advanced Settings Row */}
         <AdvancedCollapse expanded={customMessagesAdvancedExpanded}>
           <div className="space-y-3">
-            <FullScreenToggleRow
+            <SettingsToggleRow
               label="Send Full Screen"
               checked={settings.customMessagesFullScreen || false}
               onChange={(checked) => handleFullScreenToggle('customMessages', checked)}
