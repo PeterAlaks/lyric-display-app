@@ -181,7 +181,7 @@ export default function LyricVisualFrame({
     shouldRenderFullScreenBackgroundLayer && fullScreenBackgroundType === 'color'
       ? paintToCss(fullScreenBackgroundPaint, fullScreenBackgroundColor || '#000000')
       : 'transparent';
-  const windowBackgroundColor = isProjectionMode ? '#000000' : fullScreenBackgroundColorValue;
+  const frameFallbackBackground = isProjectionMode ? '#000000' : 'transparent';
 
   const backgroundMediaSource = useMemo(() => {
     if (!shouldRenderFullScreenBackgroundLayer || !fullScreenBackgroundMedia) return null;
@@ -569,23 +569,51 @@ export default function LyricVisualFrame({
   return (
     <div
       className={className}
+      data-lyric-visual-frame="true"
+      data-lyrics-position={effectiveLyricsPosition}
+      data-fullscreen-mode={fullScreenMode ? 'true' : 'false'}
       style={{
-        background: windowBackgroundColor,
-        contain: 'layout style paint',
-        isolation: 'isolate',
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        background: frameFallbackBackground,
       }}
     >
+      {shouldRenderFullScreenBackgroundLayer && fullScreenBackgroundType === 'color' && (
+        <div
+          data-lyric-background-color="true"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            background: fullScreenBackgroundColorValue,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       {renderFullScreenMedia()}
       {renderFullScreenElement()}
       <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       <div
-        className="relative z-10 flex w-full h-full"
+        data-lyric-position-layer="true"
         style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          zIndex: 10,
+          display: 'flex',
           justifyContent,
           flexDirection: 'column',
           alignItems: 'stretch',
           paddingTop: `${verticalMarginRem}rem`,
           paddingBottom: `${verticalMarginRem}rem`,
+          boxSizing: 'border-box',
         }}
       >
         <div className="flex w-full justify-center">

@@ -48,25 +48,6 @@ const OutputPage = ({ outputId }) => {
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
 
-  useEffect(() => {
-    const modeStyle = isProjectionMode
-      ? 'background: #000000 !important'
-      : 'background: transparent !important';
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-
-    if (html) html.setAttribute('style', modeStyle);
-    if (body) body.setAttribute('style', modeStyle);
-    if (root) root.setAttribute('style', modeStyle);
-
-    return () => {
-      if (html) html.removeAttribute('style');
-      if (body) body.removeAttribute('style');
-      if (root) root.removeAttribute('style');
-    };
-  }, [isProjectionMode]);
-
   const isOutputActive = Boolean(outputSettings)
     && (isPreviewMode || Boolean(isOutputOn && (outputEnabled !== false)));
 

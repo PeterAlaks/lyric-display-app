@@ -7,6 +7,7 @@ import { isTrustedAppRendererUrl, normalizeBrowserUrl } from './ipc/senderValida
 import {
   getWindowPreloadRole,
   isTimeDisplayRoute,
+  resolveWindowBackgroundColor,
   shouldDisableBackgroundThrottling,
 } from './windowSecurity.js';
 
@@ -435,9 +436,11 @@ export function createWindow(route = '/', options = {}) {
   const preloadRole = getWindowPreloadRole(route);
   const isControlWindow = route === '/' || route.startsWith('/new-song') || isTimerControlWindow || isObsSetupWindow;
   const windowTitle = title || (isTimerControlWindow ? 'LyricDisplay Timer' : isObsSetupWindow ? 'LyricDisplay OBS Source Creator' : 'LyricDisplay');
-  const defaultBackground = projection
-    ? '#000000'
-    : (backgroundColor || (isDev ? '#ffffff' : '#f9fafb'));
+  const defaultBackground = resolveWindowBackgroundColor(route, {
+    projection,
+    backgroundColor,
+    development: isDev,
+  });
 
   const win = new BrowserWindow({
     width,

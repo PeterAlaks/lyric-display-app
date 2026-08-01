@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useDarkModeState } from './hooks/useStoreSelectors';
 import AppErrorBoundary from './components/AppErrorBoundary';
@@ -39,6 +39,24 @@ const isPassiveDisplayRoute = (pathname) => {
     path === '/lyric-video-export-frame' ||
     /^\/output\d+$/.test(path)
   );
+};
+
+const getDisplaySurface = (pathname, search = '') => {
+  const path = normalizePath(pathname);
+  const searchParams = new URLSearchParams(search);
+  const projection = ['1', 'true'].includes(
+    (searchParams.get('projection') || '').toLowerCase()
+  );
+  const outputRoute = /^\/output\d+$/.test(path);
+  const liveVideoRoute = path === '/lyric-video-live-output';
+
+  if (projection && (outputRoute || liveVideoRoute || path === '/stage')) {
+    return 'projection';
+  }
+  if (outputRoute || liveVideoRoute || path === '/lyric-video-export-frame') {
+    return 'transparent';
+  }
+  return null;
 };
 
 function AppRoutes() {
@@ -83,6 +101,15 @@ function AppShell() {
   }, []);
   const effectiveDarkMode = isDockRuntime ? true : darkMode;
   const passiveDisplay = isPassiveDisplayRoute(location.pathname);
+
+  useLayoutEffect(() => {
+    const surface = getDisplaySurface(location.pathname, location.search);
+    if (surface) {
+      document.documentElement.dataset.lyricDisplaySurface = surface;
+    } else {
+      delete document.documentElement.dataset.lyricDisplaySurface;
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (effectiveDarkMode) {

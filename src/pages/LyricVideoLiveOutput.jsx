@@ -31,25 +31,6 @@ export default function LyricVideoLiveOutput() {
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
   useEffect(() => {
-    const modeStyle = isProjectionMode
-      ? 'background: #000000 !important'
-      : 'background: transparent !important';
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-
-    if (html) html.setAttribute('style', modeStyle);
-    if (body) body.setAttribute('style', modeStyle);
-    if (root) root.setAttribute('style', modeStyle);
-
-    return () => {
-      if (html) html.removeAttribute('style');
-      if (body) body.removeAttribute('style');
-      if (root) root.removeAttribute('style');
-    };
-  }, [isProjectionMode]);
-
-  useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return undefined;
 
     const channel = new BroadcastChannel(LYRIC_VIDEO_STUDIO_CHANNEL);

@@ -201,25 +201,6 @@ const Stage = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isProjectionMode) return undefined;
-
-    const modeStyle = 'background: #000000 !important';
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-
-    if (html) html.setAttribute('style', modeStyle);
-    if (body) body.setAttribute('style', modeStyle);
-    if (root) root.setAttribute('style', modeStyle);
-
-    return () => {
-      if (html) html.removeAttribute('style');
-      if (body) body.removeAttribute('style');
-      if (root) root.removeAttribute('style');
-    };
-  }, [isProjectionMode]);
-
   const {
     fontStyle = 'Bebas Neue',
     backgroundColor = '#000000',

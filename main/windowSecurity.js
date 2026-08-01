@@ -19,6 +19,22 @@ export function isTimeDisplayRoute(route = '/') {
   return routePath === '/time';
 }
 
+export function resolveWindowBackgroundColor(route = '/', {
+  projection = false,
+  backgroundColor,
+  development = false,
+} = {}) {
+  if (projection) return '#000000';
+  if (typeof backgroundColor === 'string' && backgroundColor.trim()) return backgroundColor;
+
+  // Output preview windows render transparent web content over the native
+  // BrowserWindow surface. Keep that surface black from window creation so it
+  // cannot expose Electron's light default before or behind the output page.
+  if (getWindowPreloadRole(route) === 'passive') return '#000000';
+
+  return development ? '#ffffff' : '#f9fafb';
+}
+
 export function shouldDisableBackgroundThrottling(route = '/', { projection = false } = {}) {
   return Boolean(projection) || isTimeDisplayRoute(route);
 }

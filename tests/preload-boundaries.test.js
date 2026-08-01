@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   getWindowPreloadRole,
   isTimeDisplayRoute,
+  resolveWindowBackgroundColor,
   shouldDisableBackgroundThrottling,
 } from '../main/windowSecurity.js';
 
@@ -77,4 +78,16 @@ test('time displays remain unthrottled with or without projection mode', () => {
   assert.equal(shouldDisableBackgroundThrottling('/time?projection=1'), true);
   assert.equal(shouldDisableBackgroundThrottling('/output1', { projection: true }), true);
   assert.equal(shouldDisableBackgroundThrottling('/output1'), false);
+});
+
+test('native output preview windows use a black backing surface', () => {
+  for (const route of ['/output1', '/output6', '/stage', '/time', '/lyric-video-live-output']) {
+    assert.equal(resolveWindowBackgroundColor(route), '#000000', route);
+  }
+
+  assert.equal(resolveWindowBackgroundColor('/output1?preview=true'), '#000000');
+  assert.equal(resolveWindowBackgroundColor('/output1', { projection: true }), '#000000');
+  assert.equal(resolveWindowBackgroundColor('/output1', { backgroundColor: '#123456' }), '#123456');
+  assert.equal(resolveWindowBackgroundColor('/', { development: true }), '#ffffff');
+  assert.equal(resolveWindowBackgroundColor('/'), '#f9fafb');
 });
