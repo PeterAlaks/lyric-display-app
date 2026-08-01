@@ -494,7 +494,7 @@ app.whenReady().then(async () => {
     attachMainWindowLifecycle(mainWindow);
   }
 
-  if ((mainWindow || isHeadlessMode) && !app.isQuitting) {
+  if (app.isPackaged && (mainWindow || isHeadlessMode) && !app.isQuitting) {
     void recordSuccessfulAppLaunch({
       enabled: userPreferences.getPreference('advanced.shareAnonymousUsageData') ?? false,
     });

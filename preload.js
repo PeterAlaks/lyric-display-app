@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSystemFonts: () => ipcRenderer.invoke('fonts:list'),
   getPlatform: () => process.platform,
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  getRuntimeInfo: () => ipcRenderer.invoke('app:get-runtime-info'),
   getLogPaths: () => ipcRenderer.invoke('app:get-log-paths'),
   signalStartupReady: (payload) => ipcRenderer.send('app:renderer-ready', payload),
   obsDockStartup: {

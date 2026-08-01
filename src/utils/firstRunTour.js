@@ -5,10 +5,12 @@ export function shouldShowTelemetryConsent({
   consentDecided,
   hasSeenWelcome,
   isControlPanel,
+  isPackagedApp,
   tourActive,
 }) {
   return Boolean(
     isControlPanel
+    && isPackagedApp
     && consentDecided === false
     && hasSeenWelcome
     && !tourActive

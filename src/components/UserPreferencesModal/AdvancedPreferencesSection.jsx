@@ -3,6 +3,7 @@ import { AlertTriangle, FileText, Info, Loader2, Monitor, Play, RefreshCw, Rotat
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import useIsPackagedApp from '../../hooks/useIsPackagedApp';
 import { setDebugLogging } from '../../utils/logger';
 import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '../../utils/lyricDisplayDock';
 
@@ -27,6 +28,7 @@ const AdvancedPreferencesSection = ({
   updatePreferenceGroup,
 }) => {
   const isDevMode = import.meta.env.MODE === 'development';
+  const isPackagedApp = useIsPackagedApp();
   const [obsDockStartup, setObsDockStartup] = useState(null);
   const [obsDockStartupSaving, setObsDockStartupSaving] = useState(false);
 
@@ -97,26 +99,28 @@ const AdvancedPreferencesSection = ({
         </p>
       </div>
 
-    <div className="flex items-center justify-between gap-6">
-      <div className="min-w-0 flex-1">
-        <label className={`text-sm font-medium ${labelClass}`}>Share minimal app activity</label>
-        <p className={`mt-1 text-xs ${mutedClass}`}>
-          Share a random installation ID, platform, app version, and successful launch or update events for analytics.
-        </p>
+    {isPackagedApp && (
+      <div className="flex items-center justify-between gap-6">
+        <div className="min-w-0 flex-1">
+          <label className={`text-sm font-medium ${labelClass}`}>Share minimal app activity</label>
+          <p className={`mt-1 text-xs ${mutedClass}`}>
+            Share a random installation ID, platform, app version, and successful launch or update events for analytics.
+          </p>
+        </div>
+        <Switch
+          checked={preferences.advanced?.shareAnonymousUsageData ?? false}
+          onCheckedChange={(checked) => updatePreferenceGroup('advanced', {
+            shareAnonymousUsageData: checked,
+            telemetryConsentDecided: true,
+          })}
+          className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+            ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+            : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+            }`}
+          thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+        />
       </div>
-      <Switch
-        checked={preferences.advanced?.shareAnonymousUsageData ?? false}
-        onCheckedChange={(checked) => updatePreferenceGroup('advanced', {
-          shareAnonymousUsageData: checked,
-          telemetryConsentDecided: true,
-        })}
-        className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-          ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-          : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-          }`}
-        thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-      />
-    </div>
+    )}
 
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
       <div className="mb-4 flex items-start gap-3">

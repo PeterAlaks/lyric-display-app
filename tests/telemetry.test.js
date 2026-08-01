@@ -59,12 +59,11 @@ test('a version change produces a completed-update event', () => {
 
 test('reported version advances only after the event is accepted', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lyricdisplay-telemetry-'));
-  const previousForce = process.env.LYRICDISPLAY_TELEMETRY_FORCE;
-  process.env.LYRICDISPLAY_TELEMETRY_FORCE = '1';
   try {
     const sent = [];
     await recordSuccessfulAppLaunch({
       enabled: true,
+      isPackaged: true,
       userDataPath: directory,
       currentVersion: '2.8.0',
       platform: 'darwin',
@@ -72,6 +71,7 @@ test('reported version advances only after the event is accepted', async () => {
     });
     await recordSuccessfulAppLaunch({
       enabled: true,
+      isPackaged: true,
       userDataPath: directory,
       currentVersion: '2.8.1',
       platform: 'darwin',
@@ -82,8 +82,6 @@ test('reported version advances only after the event is accepted', async () => {
     const stored = JSON.parse(fs.readFileSync(path.join(directory, TELEMETRY_STATE_FILE), 'utf8'));
     assert.equal(stored.lastReportedVersion, '2.8.1');
   } finally {
-    if (previousForce === undefined) delete process.env.LYRICDISPLAY_TELEMETRY_FORCE;
-    else process.env.LYRICDISPLAY_TELEMETRY_FORCE = previousForce;
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
@@ -94,6 +92,26 @@ test('disabled telemetry does not create an installation identifier or send', as
   try {
     const result = await recordSuccessfulAppLaunch({
       enabled: false,
+      isPackaged: true,
+      userDataPath: directory,
+      currentVersion: '2.8.1',
+      sender: async () => { calls += 1; },
+    });
+    assert.equal(result.skipped, true);
+    assert.equal(calls, 0);
+    assert.equal(fs.existsSync(path.join(directory, TELEMETRY_STATE_FILE)), false);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('unpackaged runtimes cannot create an installation identifier or send', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lyricdisplay-telemetry-'));
+  let calls = 0;
+  try {
+    const result = await recordSuccessfulAppLaunch({
+      enabled: true,
+      isPackaged: false,
       userDataPath: directory,
       currentVersion: '2.8.1',
       sender: async () => { calls += 1; },

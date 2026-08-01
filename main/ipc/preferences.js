@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron';
+import { app, ipcMain, dialog } from 'electron';
 import * as userPreferences from '../userPreferences.js';
 import { recordSuccessfulAppLaunch } from '../telemetry.js';
 import { setUpdateSessionActive } from '../updater.js';
@@ -55,7 +55,7 @@ export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingC
       if (typeof path === 'string' && (path.startsWith('parsing.') || path.startsWith('lineSplitting.'))) {
         syncParsingConfig();
       }
-      if (path === 'advanced.shareAnonymousUsageData' && value === true && !usageSharingWasEnabled) {
+      if (app.isPackaged && path === 'advanced.shareAnonymousUsageData' && value === true && !usageSharingWasEnabled) {
         void recordSuccessfulAppLaunch({ enabled: true });
       }
       return { success: true };
@@ -75,7 +75,7 @@ export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingC
       if (result.success) {
         syncParsingConfig();
       }
-      if (result.success && preferences?.advanced?.shareAnonymousUsageData === true && !usageSharingWasEnabled) {
+      if (app.isPackaged && result.success && preferences?.advanced?.shareAnonymousUsageData === true && !usageSharingWasEnabled) {
         void recordSuccessfulAppLaunch({ enabled: true });
       }
       return result;

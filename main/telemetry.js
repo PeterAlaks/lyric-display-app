@@ -5,7 +5,6 @@ import path from 'node:path';
 import electron from 'electron';
 
 const { app } = typeof electron === 'object' && electron ? electron : {};
-const isDevelopmentRuntime = !app?.isPackaged;
 
 export const DEFAULT_TELEMETRY_URL = 'https://lyricdisplay.app/.netlify/functions/telemetry';
 export const TELEMETRY_STATE_FILE = 'anonymous-installation.json';
@@ -105,13 +104,14 @@ function sendJson(urlString, payload, redirectsRemaining = 2) {
 
 export async function recordSuccessfulAppLaunch({
   enabled = false,
+  isPackaged = app?.isPackaged === true,
   userDataPath = app?.getPath?.('userData'),
   currentVersion = app?.getVersion?.(),
   platform = process.platform,
   endpoint = process.env.LYRICDISPLAY_TELEMETRY_URL || DEFAULT_TELEMETRY_URL,
   sender = sendJson,
 } = {}) {
-  if (!enabled || (isDevelopmentRuntime && process.env.LYRICDISPLAY_TELEMETRY_FORCE !== '1') || process.env.LYRICDISPLAY_TELEMETRY_DISABLED === '1') {
+  if (!enabled || !isPackaged || process.env.LYRICDISPLAY_TELEMETRY_DISABLED === '1') {
     return { skipped: true };
   }
   if (!userDataPath || !currentVersion) return { skipped: true };

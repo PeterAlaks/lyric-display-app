@@ -60,6 +60,11 @@ export function registerAppHandlers({ updateDarkModeMenu }) {
     }
   });
 
+  ipcMain.handle('app:get-runtime-info', () => ({
+    success: true,
+    isPackaged: app.isPackaged,
+  }));
+
   ipcMain.handle('app:get-log-paths', () => {
     try {
       return { success: true, ...getLogPaths() };

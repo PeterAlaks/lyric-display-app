@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Info } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import useLyricsStore from '../../context/LyricsStore';
+import useIsPackagedApp from '../../hooks/useIsPackagedApp';
 import { useDarkModeState } from '../../hooks/useStoreSelectors';
 import useModal from '../../hooks/useModal';
 import { shouldShowTelemetryConsent, START_FIRST_RUN_TOUR_EVENT } from '../../utils/firstRunTour';
@@ -14,6 +15,7 @@ export default function FirstRunTourBridge() {
   const setHasSeenWelcome = useLyricsStore((state) => state.setHasSeenWelcome);
   const { darkMode } = useDarkModeState();
   const { showModal } = useModal();
+  const isPackagedApp = useIsPackagedApp();
   const [tourSession, setTourSession] = useState(null);
   const [telemetryConsentDecided, setTelemetryConsentDecided] = useState(null);
   const [showTelemetryConsent, setShowTelemetryConsent] = useState(false);
@@ -27,7 +29,7 @@ export default function FirstRunTourBridge() {
   }, []);
 
   useEffect(() => {
-    if (!isControlPanel || !window.electronAPI?.preferences?.get) return undefined;
+    if (!isPackagedApp || !isControlPanel || !window.electronAPI?.preferences?.get) return undefined;
     let cancelled = false;
 
     window.electronAPI.preferences.get('advanced.telemetryConsentDecided')
@@ -39,18 +41,19 @@ export default function FirstRunTourBridge() {
       });
 
     return () => { cancelled = true; };
-  }, [isControlPanel]);
+  }, [isControlPanel, isPackagedApp]);
 
   useEffect(() => {
     if (shouldShowTelemetryConsent({
       consentDecided: telemetryConsentDecided,
       hasSeenWelcome,
       isControlPanel,
+      isPackagedApp,
       tourActive: Boolean(tourSession),
     })) {
       setShowTelemetryConsent(true);
     }
-  }, [hasSeenWelcome, isControlPanel, telemetryConsentDecided, tourSession]);
+  }, [hasSeenWelcome, isControlPanel, isPackagedApp, telemetryConsentDecided, tourSession]);
 
   useEffect(() => {
     if (hasSeenWelcome || !window.electronAPI || tourSession || !isControlPanel) return undefined;

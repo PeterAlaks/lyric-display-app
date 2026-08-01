@@ -63,6 +63,7 @@ test('existing installations see telemetry consent without replaying the welcome
     consentDecided: false,
     hasSeenWelcome: true,
     isControlPanel: true,
+    isPackagedApp: true,
     tourActive: false,
   }), true);
 });
@@ -72,12 +73,14 @@ test('new installations wait until the first-run tour has ended', () => {
     consentDecided: false,
     hasSeenWelcome: false,
     isControlPanel: true,
+    isPackagedApp: true,
     tourActive: true,
   }), false);
   assert.equal(shouldShowTelemetryConsent({
     consentDecided: false,
     hasSeenWelcome: true,
     isControlPanel: true,
+    isPackagedApp: true,
     tourActive: false,
   }), true);
 });
@@ -87,12 +90,24 @@ test('replaying the welcome tour never repeats a completed telemetry choice', ()
     consentDecided: true,
     hasSeenWelcome: true,
     isControlPanel: true,
+    isPackagedApp: true,
     tourActive: true,
   }), false);
   assert.equal(shouldShowTelemetryConsent({
     consentDecided: true,
     hasSeenWelcome: true,
     isControlPanel: true,
+    isPackagedApp: true,
+    tourActive: false,
+  }), false);
+});
+
+test('unpackaged apps never show telemetry consent', () => {
+  assert.equal(shouldShowTelemetryConsent({
+    consentDecided: false,
+    hasSeenWelcome: true,
+    isControlPanel: true,
+    isPackagedApp: false,
     tourActive: false,
   }), false);
 });
