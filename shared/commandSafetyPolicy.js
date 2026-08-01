@@ -30,6 +30,26 @@ const PROTECTED_ROLES = new Set([
   'switch',
 ]);
 
+const TEXT_EDITING_ROLES = new Set([
+  'textbox',
+  'searchbox',
+  'combobox',
+  'spinbutton',
+]);
+
+const NON_TEXT_INPUT_TYPES = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'hidden',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+]);
+
 function isProtectedNode(node) {
   if (!node || typeof node !== 'object') return false;
   const tagName = typeof node.tagName === 'string' ? node.tagName.toUpperCase() : '';
@@ -42,15 +62,53 @@ function isProtectedNode(node) {
     || (contentEditable !== '' && contentEditable !== 'false');
 }
 
-export function isCommandFocusProtected(...candidates) {
+function isTextEditingNode(node) {
+  if (!node || typeof node !== 'object') return false;
+  const tagName = typeof node.tagName === 'string' ? node.tagName.toUpperCase() : '';
+  if (tagName === 'TEXTAREA' || node.isContentEditable === true) return true;
+  if (typeof node.getAttribute !== 'function') return tagName === 'INPUT';
+
+  const contentEditable = String(node.getAttribute('contenteditable') || '').toLowerCase();
+  if (contentEditable !== '' && contentEditable !== 'false') return true;
+
+  if (tagName === 'INPUT') {
+    const inputType = String(node.getAttribute('type') || 'text').toLowerCase();
+    return !NON_TEXT_INPUT_TYPES.has(inputType);
+  }
+
+  const role = String(node.getAttribute('role') || '').toLowerCase();
+  return TEXT_EDITING_ROLES.has(role);
+}
+
+function isModalNode(node) {
+  return Boolean(
+    node
+      && typeof node.getAttribute === 'function'
+      && node.getAttribute('data-modal-root') === 'true'
+  );
+}
+
+function hasMatchingNode(candidates, predicate) {
   for (const candidate of candidates) {
     let node = candidate;
     for (let depth = 0; node && depth < 32; depth += 1) {
-      if (isProtectedNode(node)) return true;
+      if (predicate(node)) return true;
       node = node.parentElement || node.parentNode || null;
     }
   }
   return false;
+}
+
+export function isCommandFocusProtected(...candidates) {
+  return hasMatchingNode(candidates, isProtectedNode);
+}
+
+export function isTextEditingFocusProtected(...candidates) {
+  return hasMatchingNode(candidates, isTextEditingNode);
+}
+
+export function isModalFocusProtected(...candidates) {
+  return hasMatchingNode(candidates, isModalNode);
 }
 
 export function evaluateCommandSafety({

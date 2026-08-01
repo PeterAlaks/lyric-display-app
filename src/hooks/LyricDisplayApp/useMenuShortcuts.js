@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
-import { isCommandFocusProtected } from '../../../shared/commandSafetyPolicy.js';
+import {
+  isModalFocusProtected,
+  isTextEditingFocusProtected,
+} from '../../../shared/commandSafetyPolicy.js';
 
 const useMenuShortcuts = (navigate, fileInputRef) => {
   useEffect(() => {
@@ -43,16 +46,18 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdOrCtrl = isMac ? event.metaKey : event.ctrlKey;
       const activeElement = document.activeElement;
-      const isTyping = isCommandFocusProtected(event.target, activeElement);
-      if (isTyping) return;
+      const isEditingText = isTextEditingFocusProtected(event.target, activeElement);
+      if (isModalFocusProtected(event.target, activeElement)) return;
 
       if (cmdOrCtrl && !event.shiftKey && event.key === 'z') {
+        if (isEditingText) return;
         event.preventDefault();
         window.dispatchEvent(new Event('menu-undo'));
         return;
       }
 
       if (cmdOrCtrl && event.shiftKey && (event.key === 'z' || event.key === 'Z')) {
+        if (isEditingText) return;
         event.preventDefault();
         window.dispatchEvent(new Event('menu-redo'));
         return;

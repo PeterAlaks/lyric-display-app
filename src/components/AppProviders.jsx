@@ -11,6 +11,7 @@ import { calculateScheduleProjection, isTimedScheduleItem } from '../../shared/s
 import { ToastProvider } from './toast/ToastProvider';
 import { ModalProvider } from './modal/ModalProvider';
 import { REQUEST_MODAL_CLOSE_EVENT } from '../constants/modalEvents';
+import useReleasePointerFocus from '../hooks/useReleasePointerFocus';
 
 const ScheduleFileOpenBridge = React.lazy(() => import('./bridges/ScheduleFileOpenBridge'));
 
@@ -136,6 +137,8 @@ const ScheduleAlertBridge = () => {
 };
 
 export default function AppProviders({ children, effectiveDarkMode, isDockRuntime }) {
+  useReleasePointerFocus();
+
   const { setDarkMode } = useDarkModeState();
   const location = useLocation();
   const ownsScheduleAlerts = !isDockRuntime && (

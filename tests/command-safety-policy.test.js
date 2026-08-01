@@ -4,6 +4,8 @@ import {
   dispatchCommand,
   evaluateCommandSafety,
   isCommandFocusProtected,
+  isModalFocusProtected,
+  isTextEditingFocusProtected,
 } from '../shared/commandSafetyPolicy.js';
 
 function element(tagName, attributes = {}, parentElement = null) {
@@ -61,6 +63,29 @@ test('global shortcut focus policy covers native, ARIA, nested, and modal contro
   for (const target of [input, select, button, editable, textbox, nestedInEditable, modalText]) {
     assert.equal(isCommandFocusProtected(target), true, target.tagName);
   }
+});
+
+test('text editing focus is distinct from buttons and other transient controls', () => {
+  const body = element('DIV');
+  const input = element('INPUT', {}, body);
+  const checkbox = element('INPUT', { type: 'checkbox' }, body);
+  const textarea = element('TEXTAREA', {}, body);
+  const button = element('BUTTON', {}, body);
+  const editable = element('DIV', { contenteditable: 'true' }, body);
+  const nestedInEditable = element('SPAN', {}, editable);
+  const textbox = element('DIV', { role: 'textbox' }, body);
+  const modal = element('DIV', { 'data-modal-root': 'true' }, body);
+  const modalButton = element('BUTTON', {}, modal);
+
+  for (const target of [input, textarea, editable, nestedInEditable, textbox]) {
+    assert.equal(isTextEditingFocusProtected(target), true, target.tagName);
+  }
+  for (const target of [body, button, checkbox, modalButton]) {
+    assert.equal(isTextEditingFocusProtected(target), false, target.tagName);
+  }
+
+  assert.equal(isModalFocusProtected(button), false);
+  assert.equal(isModalFocusProtected(modalButton), true);
 });
 
 test('the shared dispatcher executes allowed commands once and reports blocked commands', () => {

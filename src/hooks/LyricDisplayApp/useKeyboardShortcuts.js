@@ -1,14 +1,19 @@
 import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
 import { findNavigableLyricLineIndex } from '../../utils/parseLyrics';
-import { dispatchCommand, isCommandFocusProtected } from '../../../shared/commandSafetyPolicy.js';
+import {
+  dispatchCommand,
+  isCommandFocusProtected,
+  isModalFocusProtected,
+  isTextEditingFocusProtected,
+} from '../../../shared/commandSafetyPolicy.js';
 
-const dispatchKeyboardCommand = (event, action, execute) => dispatchCommand({
+const dispatchKeyboardCommand = (event, action, execute, enforceFocus = true) => dispatchCommand({
   action,
   source: 'keyboard',
   focusTarget: event?.target,
   fallbackFocusTarget: typeof document !== 'undefined' ? document.activeElement : null,
-  enforceFocus: true,
+  enforceFocus,
   execute,
 });
 
@@ -43,8 +48,7 @@ export const useKeyboardShortcuts = ({
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
       const activeElement = document.activeElement;
-      const isTyping = isCommandFocusProtected(event.target, activeElement);
-      if (isTyping) return;
+      if (isModalFocusProtected(event.target, activeElement)) return;
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'o' || event.key === 'O')) {
         event.preventDefault();
@@ -111,7 +115,8 @@ export const useKeyboardShortcuts = ({
 
     const handleKeyDown = (event) => {
       const activeElement = document.activeElement;
-      const isTyping = isCommandFocusProtected(event.target, activeElement);
+      const isEditingText = isTextEditingFocusProtected(event.target, activeElement);
+      const isModalFocused = isModalFocusProtected(event.target, activeElement);
 
       if (event.key === 'Escape') {
         if (searchQuery) {
@@ -135,9 +140,8 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      if (isTyping) return;
-
       if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+        if (isModalFocused) return;
         event.preventDefault();
         const searchInput = document.querySelector('[data-search-input]');
         if (searchInput) {
@@ -148,19 +152,23 @@ export const useKeyboardShortcuts = ({
       }
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'c' || event.key === 'C')) {
-        const dispatched = dispatchKeyboardCommand(event, 'clear-output', handleClearOutput);
+        if (isEditingText || isModalFocused) return;
+        const dispatched = dispatchKeyboardCommand(event, 'clear-output', handleClearOutput, false);
         if (dispatched.executed) event.preventDefault();
         return;
       }
 
       if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'P')) {
+        if (isModalFocused) return;
         const useIntelligentAutoplay = event.shiftKey && hasValidTimestamps(lyricsTimestamps);
         const action = useIntelligentAutoplay ? 'toggle-intelligent-autoplay' : 'toggle-autoplay';
         const execute = useIntelligentAutoplay ? handleIntelligentAutoplayToggle : handleAutoplayToggle;
-        const dispatched = dispatchKeyboardCommand(event, action, execute);
+        const dispatched = dispatchKeyboardCommand(event, action, execute, false);
         if (dispatched.executed) event.preventDefault();
         return;
       }
+
+      if (isCommandFocusProtected(event.target, activeElement)) return;
 
       if (!event.ctrlKey && !event.metaKey && !event.altKey) {
         if (event.key === '0') {
