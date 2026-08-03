@@ -72,10 +72,11 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
         if (isOpen && !destinationPath) {
             if (window?.electronAPI?.easyWorship?.getUserHome) {
                 window.electronAPI.easyWorship.getUserHome().then(result => {
-                    if (result.success && result.homedir) {
+                    if (result.success && (result.documentsPath || result.homedir)) {
                         const platform = window.electronAPI.getPlatform();
                         const separator = platform === 'win32' ? '\\' : '/';
-                        const docsPath = `${result.homedir}${separator}Documents${separator}Imported Songs from EW`;
+                        const documentsPath = result.documentsPath || `${result.homedir}${separator}Documents`;
+                        const docsPath = `${documentsPath}${separator}LyricDisplay${separator}Imported Songs from EW`;
                         setDestinationPath(docsPath);
                     }
                 }).catch(err => {

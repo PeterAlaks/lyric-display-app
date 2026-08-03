@@ -11,6 +11,7 @@ export const NDI_INSTALL_FOLDER_NAME = 'Companion';
 export const NDI_USER_DATA_FOLDER_NAME = 'User Data';
 export const NDI_MANAGED_INSTALL_MARKER = '.managed-install-complete';
 export const LEGACY_NDI_FOLDER_NAME = 'lyricdisplay-ndi';
+export const LEGACY_EASYWORSHIP_IMPORT_FOLDER_NAME = 'Imported Songs from EW';
 
 const MIGRATION_MARKER = 'user-data-migration.json';
 const NDI_RUNTIME_ENTRY_NAMES = new Set([
@@ -215,7 +216,7 @@ function copyMissingRecursive(sourcePath, targetPath, summary) {
   }
 }
 
-function migrateUserData(appDataPath) {
+function migrateUserData(appDataPath, documentsPath = null) {
   const sourcePath = path.join(appDataPath, LEGACY_APP_NAME);
   const targetPath = path.join(appDataPath, APP_NAME);
   const markerPath = path.join(targetPath, MIGRATION_MARKER);
@@ -224,6 +225,12 @@ function migrateUserData(appDataPath) {
   const targetNdiPath = path.join(targetPath, NDI_FOLDER_NAME);
   const targetNdiInstallPath = path.join(targetNdiPath, NDI_INSTALL_FOLDER_NAME);
   const targetNdiUserDataPath = path.join(targetNdiPath, NDI_USER_DATA_FOLDER_NAME);
+  const legacyEasyWorshipSongsPath = documentsPath
+    ? path.join(documentsPath, LEGACY_EASYWORSHIP_IMPORT_FOLDER_NAME)
+    : null;
+  const targetEasyWorshipSongsPath = documentsPath
+    ? path.join(documentsPath, APP_NAME, LEGACY_EASYWORSHIP_IMPORT_FOLDER_NAME)
+    : null;
 
   const summary = {
     sourcePath,
@@ -242,11 +249,20 @@ function migrateUserData(appDataPath) {
     legacyNdi: createLegacyNdiSummary(legacyNdiPath, targetNdiUserDataPath),
     legacyUserDataNdi: createLegacyNdiSummary(legacyUserDataNdiPath, targetNdiInstallPath),
     flatNdiInstall: createLegacyNdiSummary(targetNdiPath, targetNdiInstallPath),
+    legacyEasyWorshipSongs: documentsPath
+      ? createLegacyNdiSummary(legacyEasyWorshipSongsPath, targetEasyWorshipSongsPath)
+      : null,
     errors: [],
+  };
+  let auxiliaryMigrationsRun = false;
+  const runAuxiliaryMigrations = () => {
+    if (auxiliaryMigrationsRun) return;
+    auxiliaryMigrationsRun = true;
+    migrateAuxiliaryLegacyFolders(summary);
   };
 
   if (sourcePath === targetPath) {
-    migrateLegacyNdiFolders(summary);
+    runAuxiliaryMigrations();
     return summary;
   }
 
@@ -258,7 +274,7 @@ function migrateUserData(appDataPath) {
       summary.conflicts = [];
       summary.errors = getMigrationErrors(summary);
     }
-    migrateLegacyNdiFolders(summary);
+    runAuxiliaryMigrations();
     if (pathExists(markerPath)) {
       updateMigrationMarker(markerPath, summary);
     }
@@ -281,7 +297,7 @@ function migrateUserData(appDataPath) {
     }
     deleteLegacyUserData(sourcePath, summary);
     updateMigrationMarker(markerPath, summary);
-    migrateLegacyNdiFolders(summary);
+    runAuxiliaryMigrations();
     updateMigrationMarker(markerPath, summary);
     return summary;
   }
@@ -297,7 +313,7 @@ function migrateUserData(appDataPath) {
       summary.migratedAt = new Date().toISOString();
       updateMigrationMarker(markerPath, summary);
       deleteLegacyUserData(sourcePath, summary);
-      migrateLegacyNdiFolders(summary);
+      runAuxiliaryMigrations();
       updateMigrationMarker(markerPath, summary);
     } else if (!summary.legacyDeleteSkippedReason) {
       summary.legacyDeleteSkippedReason = 'Migration did not complete cleanly';
@@ -309,6 +325,7 @@ function migrateUserData(appDataPath) {
     }
   }
 
+  runAuxiliaryMigrations();
   return summary;
 }
 
@@ -331,7 +348,7 @@ function createLegacyNdiSummary(sourcePath, targetPath) {
   };
 }
 
-function migrateLegacyNdiFolders(summary) {
+function migrateAuxiliaryLegacyFolders(summary) {
   migrateLegacyNdiFolder(summary.legacyNdi);
   migrateLegacyNdiFolder(summary.legacyUserDataNdi);
   migrateFlatNdiInstall(
@@ -339,6 +356,7 @@ function migrateLegacyNdiFolders(summary) {
     summary.legacyNdi?.targetPath,
     Boolean(summary.legacyNdi?.attempted && summary.legacyNdi?.deletedLegacy)
   );
+  migrateLegacyNdiFolder(summary.legacyEasyWorshipSongs);
 }
 
 function migrateFlatNdiInstall(ndi, userDataPath, managedUserDataIsAuthoritative = false) {
@@ -517,12 +535,12 @@ function migrateLegacyNdiFolder(ndi) {
     if (isLegacyNdiMigrationComplete(ndi)) {
       deleteLegacyNdiFolder(ndi);
     } else if (!ndi.legacyDeleteSkippedReason) {
-      ndi.legacyDeleteSkippedReason = 'Legacy NDI migration did not complete cleanly';
+      ndi.legacyDeleteSkippedReason = 'Legacy folder migration did not complete cleanly';
     }
   } catch (error) {
     ndi.errors.push({ path: ndi.targetPath, message: error.message });
     if (!ndi.legacyDeleteSkippedReason) {
-      ndi.legacyDeleteSkippedReason = 'Legacy NDI migration failed';
+      ndi.legacyDeleteSkippedReason = 'Legacy folder migration failed';
     }
   }
 }
@@ -541,7 +559,7 @@ function getLegacyNdiMigrationErrors(ndi) {
 function deleteLegacyNdiFolder(ndi) {
   if (!isLegacyNdiMigrationComplete(ndi)) {
     if (!ndi.legacyDeleteSkippedReason) {
-      ndi.legacyDeleteSkippedReason = 'Legacy NDI migration did not complete cleanly';
+      ndi.legacyDeleteSkippedReason = 'Legacy folder migration did not complete cleanly';
     }
     return;
   }
@@ -553,12 +571,12 @@ function deleteLegacyNdiFolder(ndi) {
     });
     ndi.deletedLegacy = !pathExists(ndi.sourcePath);
     if (!ndi.deletedLegacy) {
-      ndi.legacyDeleteSkippedReason = 'Legacy NDI folder still exists after delete attempt';
+      ndi.legacyDeleteSkippedReason = 'Legacy folder still exists after delete attempt';
     } else {
       ndi.legacyDeleteSkippedReason = null;
     }
   } catch (error) {
-    ndi.legacyDeleteSkippedReason = 'Failed to delete legacy NDI folder';
+    ndi.legacyDeleteSkippedReason = 'Failed to delete legacy folder';
     ndi.errors.push({ path: ndi.sourcePath, message: error.message });
   }
 }
@@ -604,6 +622,13 @@ function applyExistingMarker(markerPath, summary) {
     }
     if (marker.flatNdiInstall && typeof marker.flatNdiInstall === 'object') {
       applyLegacyNdiMarker(summary.flatNdiInstall, marker.flatNdiInstall);
+    }
+    if (
+      summary.legacyEasyWorshipSongs &&
+      marker.legacyEasyWorshipSongs &&
+      typeof marker.legacyEasyWorshipSongs === 'object'
+    ) {
+      applyLegacyNdiMarker(summary.legacyEasyWorshipSongs, marker.legacyEasyWorshipSongs);
     }
   } catch (error) {
     summary.errors.push({ path: markerPath, message: error.message });
@@ -676,6 +701,7 @@ function updateMigrationMarker(markerPath, summary) {
         legacyNdi: summary.legacyNdi,
         legacyUserDataNdi: summary.legacyUserDataNdi,
         flatNdiInstall: summary.flatNdiInstall,
+        legacyEasyWorshipSongs: summary.legacyEasyWorshipSongs,
         errors: summary.errors,
       }, null, 2),
       'utf8'
@@ -706,9 +732,10 @@ export function configureAppIdentity() {
 
   try {
     const appDataPath = app.getPath('appData');
+    const documentsPath = app.getPath('documents');
     const userDataPath = path.join(appDataPath, APP_NAME);
 
-    migrationResult = migrateUserData(appDataPath);
+    migrationResult = migrateUserData(appDataPath, documentsPath);
     fs.mkdirSync(userDataPath, { recursive: true });
     app.setPath('userData', userDataPath);
   } catch (error) {
@@ -729,8 +756,8 @@ export function getUserDataMigrationResult() {
   return migrationResult;
 }
 
-export function migrateUserDataForTests(appDataPath) {
-  return migrateUserData(appDataPath);
+export function migrateUserDataForTests(appDataPath, documentsPath = null) {
+  return migrateUserData(appDataPath, documentsPath);
 }
 
 configureAppIdentity();

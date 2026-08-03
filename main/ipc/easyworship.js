@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import * as easyWorship from '../easyWorship.js';
 
 /**
@@ -58,7 +58,11 @@ export function registerEasyWorshipHandlers({ getMainWindow }) {
   ipcMain.handle('easyworship:get-user-home', async () => {
     try {
       const os = await import('os');
-      return { success: true, homedir: os.homedir() };
+      return {
+        success: true,
+        homedir: os.homedir(),
+        documentsPath: app.getPath('documents'),
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }
