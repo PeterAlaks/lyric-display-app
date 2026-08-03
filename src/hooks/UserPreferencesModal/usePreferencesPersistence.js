@@ -350,21 +350,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
     return () => window.removeEventListener('tutorial-popovers-preference-updated', handleTutorialPreferenceUpdated);
   }, []);
 
-  const handleBrowseDefaultPath = useCallback(async () => {
-    try {
-      if (window.electronAPI?.preferences?.browseDefaultPath) {
-        const result = await window.electronAPI.preferences.browseDefaultPath();
-        if (result.success && result.path) {
-          updatePreference('fileHandling', 'defaultLyricsPath', result.path);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to browse for path:', error);
-    }
-  }, [updatePreference]);
-
   return {
-    handleBrowseDefaultPath,
     handleResetCategory,
     lastSaved,
     loading,

@@ -78,7 +78,16 @@ export const useCanvasLoadLifecycle = ({
 
     window.addEventListener('load-into-canvas', handleLoadIntoCanvas);
 
+    const pendingLoadTimer = window.__pendingCanvasLyricsLoad
+      ? window.setTimeout(() => {
+        const pending = window.__pendingCanvasLyricsLoad;
+        delete window.__pendingCanvasLyricsLoad;
+        handleLoadIntoCanvas({ detail: pending });
+      }, 0)
+      : null;
+
     return () => {
+      if (pendingLoadTimer !== null) window.clearTimeout(pendingLoadTimer);
       window.removeEventListener('load-into-canvas', handleLoadIntoCanvas);
     };
   }, [baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setCurrentFilePath, setFileName, setTitle, showToast]);

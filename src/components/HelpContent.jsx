@@ -50,8 +50,8 @@ export const ControlPanelHelp = ({ darkMode }) => (
 
         <HelpSection
             icon={FolderOpen}
-            title="Load Lyrics File"
-            description="Import .txt, .lrc, Markdown, RTF, or DOCX files from your computer. Document formats are converted to editable lyric text before display."
+            title="Load Lyrics"
+            description="Search indexed folders for .txt, .lrc, Markdown, RTF, or DOCX files. TXT and LRC files support lyric-content search and previews; document formats are converted when loaded."
             darkMode={darkMode}
         />
 
@@ -64,7 +64,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
 
         <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
             <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
-                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to quickly load files, Ctrl/Cmd+N for new songs, Ctrl/Cmd+P to toggle autoplay, and Ctrl/Cmd+Shift+P for intelligent autoplay (when timestamps are available). The Display Output toggle controls visibility on all connected displays simultaneously.
+                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to open the file navigator, Ctrl/Cmd+N for new songs, Ctrl/Cmd+P to toggle autoplay, and Ctrl/Cmd+Shift+P for intelligent autoplay (when timestamps are available). The Display Output toggle controls visibility on all connected displays simultaneously.
             </p>
         </div>
     </div>
@@ -204,7 +204,7 @@ export const SongCanvasHelp = ({ darkMode }) => (
         <HelpSection
             icon={FileText}
             title="Save & Load Options"
-            description="Save lyrics as .txt files to your computer, or use 'Save & Load' to save AND immediately load into the control panel. Desktop app remembers recent files for quick access."
+            description="Save or Save & Load opens a compact indexed-folder picker for fast keyboard saving. Use Up/Down and Enter, or choose 'Save in different folder…' when you need the native Save As dialog."
             darkMode={darkMode}
         />
 

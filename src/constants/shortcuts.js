@@ -16,7 +16,7 @@ export const SHORTCUTS = [
   {
     category: 'Control Panel — Files & Setlist',
     items: [
-      { label: 'Open lyrics file', combo: 'Ctrl/Cmd + O' },
+      { label: 'Open file navigator', combo: 'Ctrl/Cmd + O' },
       { label: 'Create new lyrics', combo: 'Ctrl/Cmd + N' },
       { label: 'Edit loaded lyrics', combo: 'Ctrl/Cmd + E' },
       { label: 'Open Setlist Manager', combo: 'Ctrl/Cmd + Shift + S' },
@@ -57,7 +57,7 @@ export const SHORTCUTS = [
     category: 'Song Canvas — File & Search',
     items: [
       { label: 'Start new lyrics', combo: 'Ctrl/Cmd + N' },
-      { label: 'Open lyrics file', combo: 'Ctrl/Cmd + O' },
+      { label: 'Open file navigator', combo: 'Ctrl/Cmd + O' },
       { label: 'Save file', combo: 'Ctrl/Cmd + S' },
       { label: 'Save and load into Control Panel', combo: 'Ctrl/Cmd + Shift + L' },
       { label: 'Clean up lyrics', combo: 'Ctrl/Cmd + Shift + C' },

@@ -459,13 +459,13 @@ const LyricDisplayApp = () => {
 
             {/* Load and Create Buttons */}
             <div data-tour="load-lyrics" className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
-              <Tooltip content={<span>Load a lyrics file from your computer - <strong>Ctrl+O</strong></span>} side="right">
+              <Tooltip content={<span>Search indexed lyric folders - <strong>Ctrl+O</strong></span>} side="right">
                 <button
                   className="flex-1 py-3 px-4 bg-linear-to-r from-blue-400 to-purple-600 text-white rounded-2xl text-sm font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
                   onClick={openFileDialog}
                 >
                   <FolderOpen className="w-4 h-4" />
-                  Load lyrics file
+                  Load lyrics
                 </button>
               </Tooltip>
               <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="right">

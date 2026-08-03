@@ -3,12 +3,14 @@ import {
   isModalFocusProtected,
   isTextEditingFocusProtected,
 } from '../../../shared/commandSafetyPolicy.js';
+import { openFileNavigator } from '../../utils/fileNavigatorEvents';
 
 const useMenuShortcuts = (navigate, fileInputRef) => {
   useEffect(() => {
     if (!window.electronAPI) return;
 
     const handleTriggerFileLoad = async () => {
+      if (openFileNavigator({ destination: 'control' })) return;
       try {
         if (window.electronAPI?.loadLyricsFile) {
           const result = await window.electronAPI.loadLyricsFile();

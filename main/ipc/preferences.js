@@ -1,4 +1,4 @@
-import { app, ipcMain, dialog } from 'electron';
+import { app, ipcMain } from 'electron';
 import * as userPreferences from '../userPreferences.js';
 import { recordSuccessfulAppLaunch } from '../telemetry.js';
 import { setUpdateSessionActive } from '../updater.js';
@@ -7,7 +7,7 @@ import { setUpdateSessionActive } from '../updater.js';
  * Register user preferences IPC handlers
  * Handles getting, setting, and resetting user preferences
  */
-export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingConfig }) {
+export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
   const syncParsingConfig = () => {
     if (typeof syncBackendParsingConfig !== 'function') return;
     syncBackendParsingConfig(userPreferences.getParsingConfig());
@@ -115,27 +115,6 @@ export function registerPreferencesHandlers({ getMainWindow, syncBackendParsingC
       return result;
     } catch (error) {
       console.error('[UserPreferences] Error resetting all preferences:', error);
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('preferences:browse-default-path', async () => {
-    try {
-      const win = getMainWindow?.();
-      const result = await dialog.showOpenDialog(win || undefined, {
-        title: 'Select Default Lyrics Folder',
-        properties: ['openDirectory', 'createDirectory']
-      });
-
-      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
-        return { success: false, canceled: true };
-      }
-
-      const selectedPath = result.filePaths[0];
-      userPreferences.setPreference('fileHandling.defaultLyricsPath', selectedPath);
-      return { success: true, path: selectedPath };
-    } catch (error) {
-      console.error('[UserPreferences] Error browsing for default path:', error);
       return { success: false, error: error.message };
     }
   });

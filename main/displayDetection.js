@@ -104,6 +104,7 @@ export async function handleDisplayChange(changeType, display, requestRendererMo
       title: 'Display disconnected',
       description: `${displayName} is no longer available.${assignmentText} Verify the remaining projection windows before continuing.`,
       variant: 'warning',
+      size: 'sm',
       dedupeKey: `display-removed:${display?.id ?? 'unknown'}`,
       dismissible: true,
       actions: [

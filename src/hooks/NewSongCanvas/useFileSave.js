@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
 import { extractExplicitGroupingDirective, parseTxtContent } from '../../../shared/lyricsParsing.js';
 import useLyricsStore from '../../context/LyricsStore.js';
+import {
+  canUseFileNavigator,
+  saveWithFileNavigator,
+} from '../../utils/fileNavigatorEvents.js';
 
 /**
  * Hook for handling file save operations (Save, Save & Load)
- * Adds awareness of existing file paths so overwrites can bypass the native dialog
+ * Adds awareness of existing file paths and uses the indexed-folder save navigator.
  */
 const useFileSave = ({
   content,
@@ -248,32 +252,58 @@ const useFileSave = ({
     return result;
   }, []);
 
-  const saveWithDialog = useCallback(async ({ payload, extension, baseName, defaultDir, notifyPendingReload, alsoLoad }) => {
-    if (!window.electronAPI?.showSaveDialog) return null;
-
-    const sep = defaultDir && /\\/.test(defaultDir) ? '\\' : '/';
-    const normalizedDir = (defaultDir || '').replace(/[\\/]+$/, '');
-    const defaultPath = normalizedDir ? `${normalizedDir}${sep}${baseName}.${extension}` : `${baseName}.${extension}`;
-
+  const saveWithNavigator = useCallback(async ({
+    payload,
+    extension,
+    availableExtensions,
+    baseName,
+    defaultDir,
+    notifyPendingReload,
+    alsoLoad,
+  }) => {
+    if (!canUseFileNavigator()) return null;
     try {
-      const filePayload = serializePayload(payload, extension);
-      const result = await window.electronAPI.showSaveDialog({
-        defaultPath,
-        filters: [{ name: extension === 'lrc' ? 'LRC Files' : 'Text Files', extensions: [extension] }]
+      let result = await saveWithFileNavigator({
+        suggestedName: baseName,
+        extension,
+        availableExtensions,
+        initialDirectory: defaultDir,
       });
 
-      if (result.canceled) return { canceled: true };
+      if (result?.unavailable) return null;
+      if (result?.canceled) return { canceled: true };
+      const selectedExtension = result?.extension === 'lrc' ? 'lrc' : 'txt';
+      if (result?.nativeDialog) {
+        if (!window.electronAPI?.showSaveDialog) return { canceled: true };
+        const effectiveDefaultDirectory = result.defaultDirectory || defaultDir || '';
+        const sep = /\\/.test(effectiveDefaultDirectory) ? '\\' : '/';
+        const normalizedDir = effectiveDefaultDirectory.replace(/[\\/]+$/, '');
+        const defaultPath = normalizedDir
+          ? `${normalizedDir}${sep}${baseName}.${selectedExtension}`
+          : `${baseName}.${selectedExtension}`;
+        result = await window.electronAPI.showSaveDialog({
+          defaultPath,
+          filters: [{
+            name: selectedExtension === 'lrc' ? 'LRC Files' : 'Text Files',
+            extensions: [selectedExtension],
+          }],
+        });
+        if (result.canceled) return { canceled: true };
+      }
+      if (!result?.filePath) throw new Error('No save destination was selected');
 
+      const filePayload = serializePayload(payload, selectedExtension);
       const writeResult = await writeLyricsFile(result.filePath, filePayload);
-      const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
+      const savedBaseName = result.baseName
+        || result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
       if (alsoLoad) {
         const blob = new Blob([filePayload], { type: 'text/plain' });
-        const file = new File([blob], `${savedBaseName}.${extension}`, { type: 'text/plain' });
+        const file = new File([blob], `${savedBaseName}.${selectedExtension}`, { type: 'text/plain' });
         setRawLyricsContent(filePayload);
         await handleFileUpload(file, getReloadOptions({
           payload: filePayload,
-          extension,
+          extension: selectedExtension,
           filePath: result.filePath,
           groupingPlan: writeResult?.groupingPlan,
         }));
@@ -282,7 +312,7 @@ const useFileSave = ({
       await syncActiveSetlistItem({
         payload: filePayload,
         baseName: savedBaseName,
-        extension,
+        extension: selectedExtension,
         filePath: result.filePath,
         groupingPlan: writeResult?.groupingPlan,
       });
@@ -291,7 +321,7 @@ const useFileSave = ({
         payload: filePayload,
         editorContent: payload,
         baseName: savedBaseName,
-        extension,
+        extension: selectedExtension,
         filePath: result.filePath,
         notifyPendingReload: notifyPendingReload && !alsoLoad
       });
@@ -304,7 +334,7 @@ const useFileSave = ({
 
       showToast({
         title: 'File saved',
-        message: `"${savedBaseName}.${extension}" saved successfully`,
+        message: `"${savedBaseName}.${selectedExtension}" saved successfully`,
         variant: 'success'
       });
 
@@ -312,9 +342,9 @@ const useFileSave = ({
         navigate('/');
       }
 
-      return { success: true, filePath: result.filePath };
+      return { success: true, filePath: result.filePath, extension: selectedExtension };
     } catch (err) {
-      console.error('Failed to save lyrics file via dialog:', err);
+      console.error('Failed to save lyrics file via navigator:', err);
       showModal({
         title: 'Save failed',
         description: 'We could not save the lyric file. Please try again.',
@@ -354,17 +384,15 @@ const useFileSave = ({
     });
     if (action === 'cancel') return { canceled: true };
     if (action === 'save-new') {
+      if (!canUseFileNavigator()) return null;
       const preferredExtension = target.extension;
-      const format = await promptForFileFormat(preferredExtension);
-      if (!format) return { canceled: true };
-      if (format === 'lrc' && !lrcEligibility.eligible) return { canceled: true };
-
-      const extension = format === 'lrc' ? 'lrc' : 'txt';
+      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
       const dir = getDirectoryFromPath(target.path);
       const baseName = resolveBaseName();
-      const res = await saveWithDialog({
+      const res = await saveWithNavigator({
         payload,
         extension,
+        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
         baseName,
         defaultDir: dir,
         notifyPendingReload: !alsoLoad,
@@ -433,7 +461,7 @@ const useFileSave = ({
       });
       return null;
     }
-  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, saveWithDialog, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
+  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, resolveBaseName, saveWithNavigator, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim() || !title.trim()) {
@@ -454,65 +482,27 @@ const useFileSave = ({
     }
 
     const preferredExtension = getExistingTarget()?.extension;
+    const baseName = resolveBaseName();
+    if (canUseFileNavigator()) {
+      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
+      await saveWithNavigator({
+        payload,
+        extension,
+        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+        baseName,
+        defaultDir: getDirectoryFromPath(getExistingTarget()?.path),
+        notifyPendingReload: editMode,
+        alsoLoad: false,
+      });
+      return;
+    }
+
     const format = await promptForFileFormat(preferredExtension);
     if (!format) return;
     if (format === 'lrc' && !lrcEligibility.eligible) return;
 
     const extension = format === 'lrc' ? 'lrc' : 'txt';
-    const baseName = resolveBaseName();
     const filePayload = serializePayload(payload, extension);
-
-    if (window.electronAPI && window.electronAPI.showSaveDialog) {
-      try {
-        const result = await window.electronAPI.showSaveDialog({
-          defaultPath: `${baseName}.${extension}`,
-          filters: [{ name: extension === 'lrc' ? 'LRC Files' : 'Text Files', extensions: [extension] }]
-        });
-
-        if (!result.canceled) {
-          const writeResult = await writeLyricsFile(result.filePath, filePayload);
-          const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
-
-          await syncActiveSetlistItem({
-            payload: filePayload,
-            baseName: savedBaseName,
-            extension,
-            filePath: result.filePath,
-            groupingPlan: writeResult?.groupingPlan,
-          });
-
-          markSaved({
-            payload: filePayload,
-            editorContent: payload,
-            baseName: savedBaseName,
-            extension,
-            filePath: result.filePath,
-            notifyPendingReload: editMode
-          });
-
-          try {
-            if (window.electronAPI?.addRecentFile) {
-              await window.electronAPI.addRecentFile(result.filePath);
-            }
-          } catch { }
-
-          showToast({
-            title: 'File saved',
-            message: `"${savedBaseName}.${extension}" saved successfully`,
-            variant: 'success'
-          });
-        }
-      } catch (err) {
-        console.error('Failed to save file:', err);
-        showModal({
-          title: 'Save failed',
-          description: 'We could not save the lyric file. Please try again.',
-          variant: 'error',
-          dismissLabel: 'Close',
-        });
-      }
-      return;
-    }
 
     try {
       const blob = new Blob([filePayload], { type: 'text/plain' });
@@ -550,7 +540,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, serializePayload, showModal, showToast, syncActiveSetlistItem, title, tryDirectSaveToExistingPath, writeLyricsFile]);
+  }, [content, editMode, getDirectoryFromPath, getExistingTarget, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, saveWithNavigator, serializePayload, showModal, showToast, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   const handleSaveAndLoad = useCallback(async () => {
     if (!content.trim() || !title.trim()) {
@@ -571,71 +561,27 @@ const useFileSave = ({
     }
 
     const preferredExtension = getExistingTarget()?.extension;
+    const baseName = resolveBaseName();
+    if (canUseFileNavigator()) {
+      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
+      await saveWithNavigator({
+        payload,
+        extension,
+        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+        baseName,
+        defaultDir: getDirectoryFromPath(getExistingTarget()?.path),
+        notifyPendingReload: false,
+        alsoLoad: true,
+      });
+      return;
+    }
+
     const format = await promptForFileFormat(preferredExtension);
     if (!format) return;
     if (format === 'lrc' && !lrcEligibility.eligible) return;
 
     const extension = format === 'lrc' ? 'lrc' : 'txt';
-    const baseName = resolveBaseName();
     const filePayload = serializePayload(payload, extension);
-
-    if (window.electronAPI && window.electronAPI.showSaveDialog) {
-      try {
-        const result = await window.electronAPI.showSaveDialog({
-          defaultPath: `${baseName}.${extension}`,
-          filters: [{ name: extension === 'lrc' ? 'LRC Files' : 'Text Files', extensions: [extension] }]
-        });
-
-        if (!result.canceled) {
-          const writeResult = await writeLyricsFile(result.filePath, filePayload);
-          const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
-
-          const blob = new Blob([filePayload], { type: 'text/plain' });
-          const file = new File([blob], `${savedBaseName}.${extension}`, { type: 'text/plain' });
-
-          setRawLyricsContent(filePayload);
-          await handleFileUpload(file, getReloadOptions({
-            payload: filePayload,
-            extension,
-            filePath: result.filePath,
-            groupingPlan: writeResult?.groupingPlan,
-          }));
-          await syncActiveSetlistItem({
-            payload: filePayload,
-            baseName: savedBaseName,
-            extension,
-            filePath: result.filePath,
-            groupingPlan: writeResult?.groupingPlan,
-          });
-
-          markSaved({
-            payload: filePayload,
-            editorContent: payload,
-            baseName: savedBaseName,
-            extension,
-            filePath: result.filePath,
-            notifyPendingReload: false
-          });
-
-          try {
-            if (window.electronAPI?.addRecentFile) {
-              await window.electronAPI.addRecentFile(result.filePath);
-            }
-          } catch { }
-
-          navigate('/');
-        }
-      } catch (err) {
-        console.error('Failed to save and load file:', err);
-        showModal({
-          title: 'Save and load failed',
-          description: 'We could not save and reload the lyrics. Please try again.',
-          variant: 'error',
-          dismissLabel: 'Close',
-        });
-      }
-      return;
-    }
 
     try {
       const blob = new Blob([filePayload], { type: 'text/plain' });
@@ -672,7 +618,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, serializePayload, setRawLyricsContent, showModal, syncActiveSetlistItem, title, tryDirectSaveToExistingPath, writeLyricsFile]);
+  }, [content, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, saveWithNavigator, serializePayload, setRawLyricsContent, showModal, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   return {
     handleSave,

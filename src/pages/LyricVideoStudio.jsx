@@ -26,6 +26,7 @@ import {
   writeLyricVideoStudioState,
 } from '../utils/lyricVideoStudioState';
 import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
+import { openFileNavigator } from '../utils/fileNavigatorEvents';
 
 const DEFAULT_LYRIC_VIDEO_SETTINGS = createDefaultOutputSettings({
   fontSize: 86,
@@ -697,9 +698,7 @@ export default function LyricVideoStudio() {
     window.open('https://ffmpeg.org/download.html', '_blank', 'noopener,noreferrer');
   }, []);
 
-  const handleImportLrc = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
+  const importLrcFile = useCallback(async (file) => {
     if (!file) return;
 
     try {
@@ -723,7 +722,28 @@ export default function LyricVideoStudio() {
         variant: 'error',
       });
     }
-  };
+  }, [showToast]);
+
+  const handleImportLrc = useCallback((event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    void importLrcFile(file);
+  }, [importLrcFile]);
+
+  useEffect(() => {
+    const handleNavigatorLrc = (event) => {
+      const payload = event?.detail || {};
+      if (payload.fileType !== 'lrc' || typeof payload.content !== 'string') return;
+      const file = new File([payload.content], payload.fileName || 'lyrics.lrc', { type: 'text/plain' });
+      void importLrcFile(file);
+    };
+    window.addEventListener('file-navigator:video-lrc-selection', handleNavigatorLrc);
+    return () => window.removeEventListener('file-navigator:video-lrc-selection', handleNavigatorLrc);
+  }, [importLrcFile]);
+
+  const handleChooseLrc = useCallback(() => {
+    if (!openFileNavigator({ destination: 'video' })) lrcInputRef.current?.click();
+  }, []);
 
   const setAudioProject = (audio, { resetPlayback = true } = {}) => {
     if (resetPlayback) {
@@ -906,23 +926,35 @@ export default function LyricVideoStudio() {
   ]);
 
   useEffect(() => {
-    const handleStudioSpacebar = (event) => {
-      if (event.code !== 'Space' || event.repeat || exportOpen || styleOpen) return;
-
+    const handleStudioShortcut = (event) => {
       const target = event.target;
       if (isCommandFocusProtected(target, document.activeElement)) return;
 
       const activeModal = document.querySelector('[data-modal-root="true"]');
       if (activeModal?.contains?.(target)) return;
 
+      if (
+        !event.repeat
+        && (event.ctrlKey || event.metaKey)
+        && !event.shiftKey
+        && String(event.key || '').toLowerCase() === 'o'
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleChooseLrc();
+        return;
+      }
+
+      if (event.code !== 'Space' || event.repeat || exportOpen || styleOpen) return;
+
       event.preventDefault();
       event.stopPropagation();
       handlePlayPause();
     };
 
-    window.addEventListener('keydown', handleStudioSpacebar, true);
-    return () => window.removeEventListener('keydown', handleStudioSpacebar, true);
-  }, [exportOpen, handlePlayPause, styleOpen]);
+    window.addEventListener('keydown', handleStudioShortcut, true);
+    return () => window.removeEventListener('keydown', handleStudioShortcut, true);
+  }, [exportOpen, handleChooseLrc, handlePlayPause, styleOpen]);
 
   const handleStartExport = async (performanceMode = 'balanced') => {
     if (!window.electronAPI?.lyricVideo?.exportVideo) {
@@ -1123,7 +1155,7 @@ export default function LyricVideoStudio() {
         <aside className="row-span-2 flex min-h-0 flex-col overflow-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
           <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-5 dark:border-gray-800">
             <Tooltip content="Import a timestamped .lrc file" side="bottom">
-              <Button type="button" variant="ghost" size="sm" onClick={() => lrcInputRef.current?.click()} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
+              <Button type="button" variant="ghost" size="sm" onClick={handleChooseLrc} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
                 <FileText className="h-4 w-4" />
                 Import LRC
               </Button>

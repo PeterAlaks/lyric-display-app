@@ -428,7 +428,7 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('file')}
               >
                 <MenuItem ref={(el) => registerItemRef('file', 0, el)} label="New Lyrics" shortcut="Ctrl/Cmd + N" onClick={menuHandlers.handleNewLyrics} active={openMenu?.startsWith('file') && activeIndex === 0} />
-                <MenuItem ref={(el) => registerItemRef('file', 1, el)} label="Load Lyrics File" shortcut="Ctrl/Cmd + O" onClick={menuHandlers.handleOpenLyrics} disabled={isLyricVideoStudio} active={openMenu?.startsWith('file') && activeIndex === 1} title={isLyricVideoStudio ? 'Use Import LRC inside Lyric Video Studio' : undefined} />
+                <MenuItem ref={(el) => registerItemRef('file', 1, el)} label="Load Lyrics" shortcut="Ctrl/Cmd + O" onClick={menuHandlers.handleOpenLyrics} active={openMenu?.startsWith('file') && activeIndex === 1} />
                 <div
                   className="relative"
                   onMouseEnter={() => {

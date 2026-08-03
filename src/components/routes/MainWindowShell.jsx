@@ -13,6 +13,8 @@ const ShortcutsHelpBridge = React.lazy(() => import('../bridges/ShortcutsHelpBri
 const SupportDevelopmentBridge = React.lazy(() => import('../bridges/SupportDevelopmentBridge'));
 const UpdaterBridge = React.lazy(() => import('../bridges/UpdaterBridge'));
 const FirstRunTourBridge = React.lazy(() => import('../bridges/FirstRunTourBridge'));
+const FileNavigatorModal = React.lazy(() => import('../FileNavigatorModal'));
+const FileSaveNavigatorModal = React.lazy(() => import('../FileSaveNavigatorModal'));
 
 function MainWindowBridges() {
   return (
@@ -44,6 +46,10 @@ export default function MainWindowShell() {
       <ControlSocketProvider>
         <StartupReadinessReporter />
         <MainWindowBridges />
+        <React.Suspense fallback={null}>
+          <FileNavigatorModal />
+          <FileSaveNavigatorModal />
+        </React.Suspense>
         <Outlet />
       </ControlSocketProvider>
     </ConditionalDesktopShell>

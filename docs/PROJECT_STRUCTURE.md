@@ -124,6 +124,8 @@ Passive display routes skip the global modal/toast providers. Output, stage, tim
 | [`main/windowSecurity.js`](../main/windowSecurity.js) | Route-to-preload-role policy |
 | [`main/singleInstance.js`](../main/singleInstance.js) | Single-instance lock and second-launch dispatch |
 | [`main/fileHandler.js`](../main/fileHandler.js) | OS file association and pending-open handling |
+| [`main/lyricFiles.js`](../main/lyricFiles.js) | Canonical path validation, extraction, recent-file updates, and write grants for local lyric files |
+| [`main/fileNavigator.js`](../main/fileNavigator.js) | Persistent indexed roots, filesystem watching, search records, previews, and safe browse/open resolution |
 | [`main/menuBridge.js`](../main/menuBridge.js) | Native menu construction and renderer menu events |
 | [`main/modalBridge.js`](../main/modalBridge.js) | Promise-based requests from main process to renderer modals |
 | [`main/tray.js`](../main/tray.js) | Desktop/headless system tray |
@@ -152,6 +154,7 @@ Passive display routes skip the global modal/toast providers. Output, stage, tim
 | `auth.js` | Desktop JWT, join code, connection diagnostics, secure token store |
 | `display.js` | Display inventory, projection, output/timer/OBS setup windows |
 | `files.js` | Lyric open/save/parse and lyric-video audio grants |
+| `fileNavigator.js` | Indexed-root management, browse/search/preview, batch selection, and reveal/open operations |
 | `recents.js` | Recent-file list and open behavior |
 | `lyrics.js` | Online provider discovery, credentials, search, fetch, cancellation |
 | `easyworship.js` | EasyWorship database validation and import |
@@ -299,7 +302,7 @@ src/
 - [`components/NewSongCanvas.jsx`](../src/components/NewSongCanvas.jsx), `components/NewSongCanvas/`, and `hooks/NewSongCanvas/` own authoring, clipboard/history, search, measurements, timestamps, drafts, and saving.
 - [`components/OutputSettingsPanel.jsx`](../src/components/OutputSettingsPanel.jsx), its directory, and `hooks/OutputSettingsPanel/` own output styling controls. Shared output rendering belongs in [`components/output/LyricVisualFrame.jsx`](../src/components/output/LyricVisualFrame.jsx).
 - `components/LyricVideoStudio/` plus the lyric-video pages/utilities own preview, transport, timeline, styling, and export UX.
-- `components/UserPreferencesModal/` and its hooks own preference editing; persistence itself crosses preload IPC into `main/userPreferences.js`.
+- `components/UserPreferencesModal/` and its hooks own preference editing; its indexed-folder page manages navigator sources through the file-navigator IPC, while ordinary preference persistence crosses preload IPC into `main/userPreferences.js`.
 - `components/routes/` decides which routes get the control socket provider and desktop shell.
 - `components/bridges/` converts Electron events into renderer modals/actions without coupling feature components directly to raw IPC listeners.
 - `components/modal/`, `components/toast/`, and `components/ui/` are reusable infrastructure. Add primitives here instead of cloning controls inside a feature.
@@ -345,6 +348,7 @@ This store is both UI state and a local persistence cache. The backend remains a
 | `documentTextExtraction.js` | Markdown/RTF/DOCX extraction and unified import parsing |
 | `lyricImportRegistry.js` | Supported extensions, parser types, labels, accept strings, dialog filters |
 | `lyricImportLimits.js` | Import and extracted-document size limits |
+| `fileNavigatorSearch.js` | Normalization, query filters, typo-tolerant relevance scoring, LRC previews, and match snippets |
 | `outputRegistry.js` | Default output IDs, custom-output count, routable IDs |
 | `setlistLimits.js` | Setlist count, payload, item, and string limits |
 | `timerAuthority.js` | Revisioned timer validation, clock localization, boundary advancement |
@@ -362,10 +366,11 @@ If a limit, event name, output ID, timer shape, or parser behavior is consumed i
 ### Load lyrics and cue a line
 
 ```text
-file/online/setlist input
+file navigator / drag-and-drop / online / setlist input
   -> renderer file/import hook
   -> asyncLyricsParser
-       Electron: preload -> main/ipc/files.js -> shared parser
+       Indexed file: preload -> main/ipc/fileNavigator.js -> main/lyricFiles.js
+       Electron parser: preload -> main/ipc/files.js -> shared parser
        Browser: Web Worker -> shared parser
        Fallback: shared parser in renderer
   -> Zustand lyrics session slice
@@ -377,6 +382,17 @@ file/online/setlist input
 ```
 
 When changing this flow, check import limits/format registry, parser result shape, renderer store setters, socket payload validation, session persistence, and output/stage readers.
+
+### Save lyrics
+
+```text
+Canvas Save / Save & Load
+  -> compact indexed-folder save navigator
+  -> preload -> main/ipc/fileNavigator.js validates the destination and grants the write
+       Optional: Save in different folder -> native Save As dialog
+  -> main/ipc/files.js writes TXT/LRC and refreshes the navigator index
+  -> recent files and the active setlist copy are refreshed
+```
 
 ### Change an output style
 

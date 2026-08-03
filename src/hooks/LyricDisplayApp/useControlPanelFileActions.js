@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { openFileNavigator } from '../../utils/fileNavigatorEvents';
 
 export const useControlPanelFileActions = ({
   clearSearch,
@@ -21,6 +22,8 @@ export const useControlPanelFileActions = ({
       });
       return;
     }
+
+    if (openFileNavigator({ destination: 'control' })) return;
 
     try {
       if (window?.electronAPI?.loadLyricsFile) {

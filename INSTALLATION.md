@@ -255,7 +255,9 @@ Supported lyric inputs:
 | LyricDisplay setlist | `.ldset` |
 | LyricDisplay schedule | `.ldsch` |
 
-Load a file with **File > Load Lyrics File**, `Ctrl/Cmd + O`, or drag and drop. Create a song with **File > New Lyrics File** or `Ctrl/Cmd + N`.
+Open the built-in file navigator with **File > Load Lyrics** or `Ctrl/Cmd + O`. Add one or more source folders once, then search filenames, paths, and TXT/LRC lyric contents without leaving LyricDisplay. The navigator starts on recent files, supports Up/Down and Enter, previews TXT/LRC files, and watches indexed folders for changes. Drag and drop remains available. Create a song with **File > New Lyrics File** or `Ctrl/Cmd + N`.
+
+Saving a song opens a smaller in-app destination picker. It lists the current indexed song folder first when available, followed by indexed lyrics folders; use Up/Down and Enter for a fast save. Choose **Save in different folder…** only when you want the operating system's Save As dialog.
 
 Lines wrapped in `[ ]`, `( )`, `< >`, or `{ }` can be recognized as translation/alternate lines and grouped with the preceding lyric line. Parsing, cleanup, capitalization, splitting, and grouping behavior can be adjusted in Preferences.
 

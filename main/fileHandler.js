@@ -1,10 +1,9 @@
 import path from 'path';
-import { extractLyricTextFromSource } from '../shared/documentTextExtraction.js';
 import {
   isSupportedLyricsImportFile,
-  normalizeLyricFileType,
 } from '../shared/lyricImportRegistry.js';
 import { parseScheduleDocument } from '../shared/scheduleUtils.js';
+import { readLyricsFileFromPath } from './lyricFiles.js';
 
 const MAX_SCHEDULE_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -123,24 +122,11 @@ export async function handleFileOpen(filePath, mainWindow) {
 
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
     try {
-      const fs = await import('fs/promises');
-      const fileName = path.basename(filePath);
-      const fileType = normalizeLyricFileType({ fileName });
-      const content = await extractLyricTextFromSource({
-        fileType,
-        fileName,
-        path: filePath,
-        readFile: fs.readFile,
-      });
+      const payload = await readLyricsFileFromPath(filePath);
 
-      console.log('[FileHandler] Sending file to renderer:', fileName);
+      console.log('[FileHandler] Sending file to renderer:', payload.fileName);
 
-      mainWindow.webContents.send('open-lyrics-from-path', {
-        content,
-        fileName,
-        filePath,
-        fileType
-      });
+      mainWindow.webContents.send('open-lyrics-from-path', payload);
 
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();

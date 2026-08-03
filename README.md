@@ -19,6 +19,8 @@ Key capabilities include:
 - Two default lyric outputs, up to four custom outputs, a stage display, and a timer display.
 - Independent typography, positioning, transitions, backgrounds, media, and full-screen styling per output.
 - Text, LRC, Markdown, RTF, and DOCX imports, plus `.ldset` setlists and `.ldsch` event schedules.
+- A keyboard-first local file navigator with indexed filename/path search, TXT/LRC lyric search and previews, recent files, and watched source folders.
+- A compact indexed-folder save picker with keyboard navigation, safe overwrite confirmation, and an optional native Save As escape hatch.
 - Built-in song editing, translation grouping, timestamps, search, autoplay, and lyric video export.
 - Online lyric providers and EasyWorship/presentation import workflows.
 - OBS Browser Source creation, a compact OBS Dock mode, and generic browser URLs for other production software.

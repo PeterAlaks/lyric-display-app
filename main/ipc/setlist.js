@@ -1,9 +1,7 @@
 import { ipcMain, dialog } from 'electron';
 import { exportSetlistToPDF, exportSetlistToTXT } from '../setlistExport.js';
-import { extractLyricTextFromSource } from '../../shared/documentTextExtraction.js';
 import {
   getLyricOpenDialogFilters,
-  normalizeLyricFileType,
 } from '../../shared/lyricImportRegistry.js';
 import {
   hasSetlistExtension,
@@ -11,6 +9,7 @@ import {
   sanitizeSetlistDefaultName,
 } from '../setlistValidation.js';
 import { readValidatedSetlistFile, saveSetlistFile } from '../setlistFileStorage.js';
+import { readLyricsFileFromPath } from '../lyricFiles.js';
 
 /**
  * Register setlist IPC handlers
@@ -146,21 +145,17 @@ export function registerSetlistHandlers({ getMainWindow }) {
       const fs = await import('fs/promises');
       const files = await Promise.all(
         result.filePaths.map(async (filePath) => {
-          const fileName = filePath.split(/[\\/]/).pop();
-          const fileType = normalizeLyricFileType({ fileName });
-          const extractedContent = await extractLyricTextFromSource({
-            fileType,
-            fileName,
-            path: filePath,
-            readFile: fs.readFile,
+          const payload = await readLyricsFileFromPath(filePath, {
+            remember: false,
+            grantWrite: false,
           });
           const stats = await fs.stat(filePath);
           return {
-            name: fileName,
-            content: extractedContent,
-            fileType,
+            name: payload.fileName,
+            content: payload.content,
+            fileType: payload.fileType,
             lastModified: stats.mtimeMs,
-            filePath
+            filePath: payload.filePath,
           };
         })
       );

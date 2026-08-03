@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import {
-  Settings, FolderOpen, FileText, Radio, Play, Sliders,
+  Settings, FileText, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Loader2,
   ChevronRight, HardDrive, Cast, Palette, Wand2
 } from 'lucide-react';
@@ -33,6 +33,7 @@ import { useSecurityPreferences } from '../hooks/UserPreferencesModal/useSecurit
 import AdvancedPreferencesSection from './UserPreferencesModal/AdvancedPreferencesSection';
 import CapitalizedWordsPreferencesPage from './UserPreferencesModal/CapitalizedWordsPreferencesPage';
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
+import IndexedLyricsFoldersPreferencesPage from './UserPreferencesModal/IndexedLyricsFoldersPreferencesPage';
 import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPreferencesPage';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
 import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagPhrasesPreferencesPage';
@@ -75,13 +76,18 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
   const [parsingPage, setParsingPage] = useState('main');
   const [formattingPage, setFormattingPage] = useState('main');
+  const [fileHandlingPage, setFileHandlingPage] = useState('main');
   const [externalControlPage, setExternalControlPage] = useState('main');
   const [contentDirection, setContentDirection] = useState(0);
+  const [indexedFolderPersistence, setIndexedFolderPersistence] = useState({
+    saving: false,
+    saveError: false,
+    lastSaved: null,
+  });
   const { showToast } = useToast();
   const { showModal } = useModal();
   const { liveSafety, setLiveSafetyEnabled, isAuthenticated, ready } = useLiveSafetyBridge();
   const {
-    handleBrowseDefaultPath,
     handleResetCategory,
     lastSaved,
     loading,
@@ -195,16 +201,19 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   );
   const isSectionTagPhrasesPage = activeCategory === 'parsing' && parsingPage === 'sectionTagPhrases';
   const isCapitalizedWordsPage = activeCategory === 'formatting' && formattingPage === 'capitalizedWords';
+  const isIndexedLyricsFoldersPage = activeCategory === 'fileHandling' && fileHandlingPage === 'indexedFolders';
   const isMidiMappingsPage = activeCategory === 'externalControl' && externalControlPage === 'midiMappings';
   const handleCategoryChange = (category) => {
     const isReturningFromNestedPage = (
       (category === 'parsing' && isSectionTagPhrasesPage)
       || (category === 'formatting' && isCapitalizedWordsPage)
+      || (category === 'fileHandling' && isIndexedLyricsFoldersPage)
       || (category === 'externalControl' && isMidiMappingsPage)
     );
     setContentDirection(isReturningFromNestedPage ? -1 : 0);
     setParsingPage('main');
     setFormattingPage('main');
+    setFileHandlingPage('main');
     setExternalControlPage('main');
     setActiveCategory(category);
   };
@@ -223,6 +232,28 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const closeCapitalizedWordsPage = () => {
     setContentDirection(-1);
     setFormattingPage('main');
+  };
+  const openIndexedLyricsFoldersPage = () => {
+    setContentDirection(1);
+    setFileHandlingPage('indexedFolders');
+  };
+  const closeIndexedLyricsFoldersPage = () => {
+    setContentDirection(-1);
+    setFileHandlingPage('main');
+  };
+  const handleIndexedFolderPersistenceChange = (phase) => {
+    setIndexedFolderPersistence((current) => {
+      if (phase === 'start') {
+        return { saving: true, saveError: false, lastSaved: null };
+      }
+      if (phase === 'success') {
+        return { saving: false, saveError: false, lastSaved: Date.now() };
+      }
+      if (phase === 'error') {
+        return { saving: false, saveError: true, lastSaved: null };
+      }
+      return { ...current, saving: false };
+    });
   };
   const openMidiMappingsPage = () => {
     setContentDirection(1);
@@ -281,6 +312,19 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           onWordsChange={handleCapitalizedWordsChange}
           showModal={showModal}
           words={capitalizedWords}
+        />
+      );
+    }
+
+    if (isIndexedLyricsFoldersPage) {
+      return (
+        <IndexedLyricsFoldersPreferencesPage
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeIndexedLyricsFoldersPage}
+          onPersistenceChange={handleIndexedFolderPersistenceChange}
+          showModal={showModal}
         />
       );
     }
@@ -882,45 +926,19 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'fileHandling':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className={`text-sm font-medium ${labelClass}`}>Remember Last Opened Path</label>
-                <p className={`text-xs ${mutedClass}`}>Use the last opened folder instead of default</p>
+            <button
+              type="button"
+              onClick={openIndexedLyricsFoldersPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label="Manage indexed lyrics folders"
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Indexed Lyrics Folders</span>
+                <p className={`text-xs ${mutedClass}`}>Choose the folders searched by the Load Lyrics navigator</p>
               </div>
-              <Switch
-                checked={preferences.fileHandling?.rememberLastOpenedPath ?? true}
-                onCheckedChange={(checked) => updatePreference('fileHandling', 'rememberLastOpenedPath', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>Default Lyrics Folder</label>
-              <div className="flex gap-2">
-                <Input
-                  value={preferences.fileHandling?.defaultLyricsPath || ''}
-                  onChange={(e) => updatePreference('fileHandling', 'defaultLyricsPath', e.target.value)}
-                  placeholder="Select a default folder..."
-                  className={`flex-1 ${inputClass}`}
-                  disabled={preferences.fileHandling?.rememberLastOpenedPath ?? true}
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleBrowseDefaultPath}
-                  className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                  disabled={preferences.fileHandling?.rememberLastOpenedPath ?? true}
-                >
-                  <FolderOpen className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className={`text-xs ${mutedClass}`}>
-                This folder will open by default when loading lyrics files (Ctrl+O). Disabled when "Remember Last Opened Path" is enabled.
-              </p>
-            </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>Manage</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
             <div className="space-y-2">
               <label className={preferenceFieldLabelClass}>Max Recent Files</label>
               <Input
@@ -1174,22 +1192,24 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         ? 'parsing-section-tag-phrases'
         : (isCapitalizedWordsPage
           ? 'formatting-capitalized-words'
-          : (isMidiMappingsPage ? 'external-control-midi-mappings' : activeCategory))}
+          : (isIndexedLyricsFoldersPage
+            ? 'file-handling-indexed-folders'
+            : (isMidiMappingsPage ? 'external-control-midi-mappings' : activeCategory)))}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}
       handleNdiStop={handleNdiStop}
       handleNdiUninstall={handleNdiUninstall}
       labelClass={labelClass}
-      lastSaved={lastSaved}
+      lastSaved={indexedFolderPersistence.lastSaved || lastSaved}
       mutedClass={mutedClass}
       ndiCheckingUpdate={ndiCheckingUpdate}
       ndiStatus={ndiStatus}
       panelBg={panelBg}
-      saveError={saveError}
-      saving={saving}
+      saveError={saveError || indexedFolderPersistence.saveError}
+      saving={saving || indexedFolderPersistence.saving}
       setActiveCategory={handleCategoryChange}
-      hideContentHeader={isSectionTagPhrasesPage || isCapitalizedWordsPage || isMidiMappingsPage}
+      hideContentHeader={isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage}
     >
       {renderCategoryContent()}
     </UserPreferencesLayout>

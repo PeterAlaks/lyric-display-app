@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { openFileNavigator } from '../../utils/fileNavigatorEvents';
 
 export const useCanvasNavigationActions = ({
   hasUnsavedChanges,
@@ -46,6 +47,7 @@ export const useCanvasNavigationActions = ({
   }, [hasUnsavedChanges, navigate, showToast]);
 
   const handleOpenLyrics = useCallback(async () => {
+    if (openFileNavigator({ destination: 'canvas' })) return;
     try {
       if (window?.electronAPI?.loadLyricsFile) {
         const result = await window.electronAPI.loadLyricsFile();

@@ -22,6 +22,7 @@
 import { registerAppHandlers } from './app.js';
 import { registerWindowHandlers } from './window.js';
 import { registerFileHandlers } from './files.js';
+import { registerFileNavigatorHandlers } from './fileNavigator.js';
 import { registerRecentsHandlers } from './recents.js';
 import { registerAuthHandlers } from './auth.js';
 import { registerLyricsHandlers } from './lyrics.js';
@@ -51,6 +52,7 @@ export function registerIpcHandlers(context) {
   registerAppHandlers(context);
   registerWindowHandlers(context);
   registerFileHandlers(context);
+  registerFileNavigatorHandlers(context);
   registerRecentsHandlers(context);
   registerAuthHandlers(context);
   registerLyricsHandlers(context);

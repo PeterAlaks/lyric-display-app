@@ -18,4 +18,5 @@ test('display removal alerts the operator with the affected output assignment', 
   assert.match(requests[0].description, /Sanctuary Projector/);
   assert.match(requests[0].description, /Output 2/);
   assert.equal(requests[0].dedupeKey, 'display-removed:42');
+  assert.equal(requests[0].size, 'sm');
 });

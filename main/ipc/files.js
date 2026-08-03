@@ -1,16 +1,14 @@
 import { BrowserWindow, ipcMain, dialog } from 'electron';
 import { readFile, stat, writeFile } from 'fs/promises';
 import path from 'path';
-import { parseLyricImportContent, extractLyricTextFromSource } from '../../shared/documentTextExtraction.js';
+import { parseLyricImportContent } from '../../shared/documentTextExtraction.js';
 import {
   getLyricOpenDialogFilters,
-  getLyricImportFormatForName,
   normalizeLyricFileType,
 } from '../../shared/lyricImportRegistry.js';
 import {
   assertLyricImportSize,
   getBinaryByteLength,
-  getConfiguredLyricImportByteLimit,
 } from '../../shared/lyricImportLimits.js';
 import {
   buildLyricsParsingOptions,
@@ -18,88 +16,28 @@ import {
   mergeLyricsParsingOptions,
   parseTxtContent,
 } from '../../shared/lyricsParsing.js';
-import { addRecent } from '../recents.js';
 import * as userPreferences from '../userPreferences.js';
 import { grantLyricVideoMediaFile, revokeLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
+import {
+  getActiveLyricImportByteLimit,
+  grantLyricWritePath,
+  normalizeLyricPath,
+  readLyricsFileFromPath,
+  validateLyricImportPath,
+  validateLyricWrite,
+} from '../lyricFiles.js';
+import { refreshFileInNavigator } from '../fileNavigator.js';
 import {
   getRememberedLyricsGrouping,
   rememberLyricsGrouping,
 } from '../lyricsGroupingMetadata.js';
 
-const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc', '.ldsch']);
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
   '.m4a': 'audio/mp4',
   '.aac': 'audio/aac',
 };
-const MAX_WRITE_CONTENT_BYTES = 10 * 1024 * 1024;
-const writeGrantPaths = new Set();
-
-function getActiveImportByteLimit() {
-  return getConfiguredLyricImportByteLimit(
-    userPreferences.getPreference('fileHandling.maxFileSize')
-  );
-}
-
-async function validateImportPath(filePath, expectedFileType = null) {
-  const normalized = normalizeFilePath(filePath);
-  const format = normalized ? getLyricImportFormatForName(normalized) : null;
-  if (!normalized || !format) throw new Error('Unsupported lyric file type');
-  if (expectedFileType && format.fileType !== expectedFileType) {
-    throw new Error('Lyric file type does not match its extension');
-  }
-  const fileStat = await stat(normalized);
-  if (!fileStat.isFile()) throw new Error('Selected lyric path is not a file');
-  assertLyricImportSize(fileStat.size, getActiveImportByteLimit());
-  return { normalized, fileType: format.fileType };
-}
-
-function normalizeFilePath(filePath) {
-  if (typeof filePath !== 'string' || !filePath.trim()) {
-    return null;
-  }
-  const resolved = path.resolve(filePath);
-  if (!path.isAbsolute(resolved)) {
-    return null;
-  }
-  return resolved;
-}
-
-function grantWritePath(filePath) {
-  const normalized = normalizeFilePath(filePath);
-  if (normalized) {
-    writeGrantPaths.add(normalized);
-  }
-  return normalized;
-}
-
-function validateLyricWrite(filePath, content) {
-  const normalized = normalizeFilePath(filePath);
-  if (!normalized) {
-    return { valid: false, error: 'Invalid file path' };
-  }
-
-  const extension = path.extname(normalized).toLowerCase();
-  if (!ALLOWED_WRITE_EXTENSIONS.has(extension)) {
-    return { valid: false, error: 'Only .txt, .lrc, and .ldsch files can be written here' };
-  }
-
-  if (!writeGrantPaths.has(normalized)) {
-    return { valid: false, error: 'File write was not granted by a LyricDisplay file workflow' };
-  }
-
-  if (typeof content !== 'string') {
-    return { valid: false, error: 'File content must be text' };
-  }
-
-  if (Buffer.byteLength(content, 'utf8') > MAX_WRITE_CONTENT_BYTES) {
-    return { valid: false, error: 'File content is too large' };
-  }
-
-  return { valid: true, normalized };
-}
-
 /**
  * Register file operation IPC handlers
  * Handles file dialogs, reading, writing, and parsing lyrics files
@@ -113,7 +51,7 @@ export function registerFileHandlers({ getMainWindow }) {
       : getMainWindow?.();
     const result = await dialog.showSaveDialog(win || undefined, options);
     if (!result.canceled && result.filePath) {
-      grantWritePath(result.filePath);
+      grantLyricWritePath(result.filePath);
     }
     return result;
   });
@@ -129,6 +67,7 @@ export function registerFileHandlers({ getMainWindow }) {
     }
 
     await writeFile(validation.normalized, cleanContent, 'utf8');
+    void refreshFileInNavigator(validation.normalized);
 
     let groupingPlan = null;
     if (extension === '.txt' && options?.preserveGrouping === true) {
@@ -175,21 +114,8 @@ export function registerFileHandlers({ getMainWindow }) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
-        const filePath = result.filePaths[0];
-        const fileName = filePath.split(/[\\/]/).pop();
-        const validated = await validateImportPath(filePath);
-        const fileType = validated.fileType;
-        const content = await extractLyricTextFromSource({
-          fileType,
-          fileName,
-          path: validated.normalized,
-          readFile,
-        });
-        grantWritePath(filePath);
-        try {
-          await addRecent(filePath);
-        } catch { }
-        return { success: true, content, fileName, filePath, fileType };
+        const payload = await readLyricsFileFromPath(result.filePaths[0]);
+        return { success: true, ...payload };
       }
       return { success: false, canceled: true };
     } catch (error) {
@@ -231,7 +157,7 @@ export function registerFileHandlers({ getMainWindow }) {
 
   ipcMain.handle('lyric-video:restore-audio', async (_event, payload = {}) => {
     try {
-      const normalized = normalizeFilePath(payload?.filePath);
+      const normalized = normalizeLyricPath(payload?.filePath);
       if (!normalized) {
         return { success: false, error: 'Invalid audio file path' };
       }
@@ -277,7 +203,7 @@ export function registerFileHandlers({ getMainWindow }) {
       } = payload || {};
       const content = typeof rawText === 'string' ? rawText : null;
       const finalFileType = normalizeLyricFileType({ fileType, fileName: name || filePath });
-      const maxImportBytes = getActiveImportByteLimit();
+      const maxImportBytes = await getActiveLyricImportByteLimit();
 
       if (typeof content !== 'string' && !rawBytes && !filePath) {
         return { success: false, error: 'No lyric content available for parsing' };
@@ -285,7 +211,7 @@ export function registerFileHandlers({ getMainWindow }) {
 
       let validatedFilePath = null;
       if (filePath) {
-        const validated = await validateImportPath(filePath, finalFileType);
+        const validated = await validateLyricImportPath(filePath, finalFileType);
         validatedFilePath = validated.normalized;
       }
       if (content !== null) {
@@ -324,7 +250,7 @@ export function registerFileHandlers({ getMainWindow }) {
         parsingOptions,
       });
       if (validatedFilePath) {
-        grantWritePath(validatedFilePath);
+        grantLyricWritePath(validatedFilePath);
       }
 
       return { success: true, payload: result };

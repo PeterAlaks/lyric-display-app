@@ -5,6 +5,7 @@ import useToast from '@/hooks/useToast';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useLyricsStore from '@/context/LyricsStore';
 import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '@/utils/lyricDisplayDock';
+import { openFileNavigator } from '@/utils/fileNavigatorEvents';
 
 const useMenuHandlers = (closeMenu) => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const useMenuHandlers = (closeMenu) => {
   const { showToast } = useToast();
   const { darkMode, setDarkMode } = useDarkModeState();
   const isNewSongCanvas = location.pathname === '/new-song';
+  const isLyricVideoStudio = location.pathname === '/lyric-video-studio';
   const isDevMode = import.meta.env.MODE === 'development';
 
   const handleNewLyrics = useCallback(() => {
@@ -23,6 +25,10 @@ const useMenuHandlers = (closeMenu) => {
 
   const handleOpenLyrics = useCallback(async () => {
     closeMenu();
+
+    if (openFileNavigator({
+      destination: isNewSongCanvas ? 'canvas' : isLyricVideoStudio ? 'video' : 'control',
+    })) return;
 
     if (isNewSongCanvas) {
       try {
@@ -78,7 +84,7 @@ const useMenuHandlers = (closeMenu) => {
     } else {
       window.dispatchEvent(new Event('trigger-file-load'));
     }
-  }, [closeMenu, isNewSongCanvas, showModal, showToast, navigate]);
+  }, [closeMenu, isLyricVideoStudio, isNewSongCanvas, showModal, showToast, navigate]);
 
   const handleOpenRecent = useCallback(async (filePath) => {
     closeMenu();

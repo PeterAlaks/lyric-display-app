@@ -19,6 +19,7 @@ import {
   normalizeLyricFileType,
   stripLyricImportExtension,
 } from '../../shared/lyricImportRegistry.js';
+import { openFileNavigator } from '../utils/fileNavigatorEvents';
 
 const SETLIST_DROP_ANIMATION = {
   duration: 180,
@@ -98,6 +99,67 @@ const SetlistModal = () => {
     });
   };
 
+  const addSelectedFiles = useCallback((files) => {
+    if (!Array.isArray(files) || files.length === 0) return false;
+
+    const availableSlots = getAvailableSetlistSlots();
+    if (files.length > availableSlots) {
+      showModal({
+        title: 'Setlist limit reached',
+        description: availableSlots === 0
+          ? 'No slots are left. Remove a song before adding new ones.'
+          : `You can add ${availableSlots} more ${availableSlots === 1 ? 'song' : 'songs'} right now.`,
+        variant: 'warn',
+        dismissLabel: 'Okay',
+      });
+      return false;
+    }
+
+    pendingAddRef.current = files.map((file) => {
+      const fileType = normalizeLyricFileType({ fileType: file.fileType, fileName: file.name });
+      const displayName = stripLyricImportExtension(file.name) || file.name;
+      return {
+        displayName,
+        originalName: file.name,
+        fileType,
+      };
+    });
+
+    const filesWithMetadata = files.map((file) => ({
+      name: file.name,
+      content: file.content,
+      fileType: file.fileType,
+      lastModified: file.lastModified,
+      metadata: file.filePath ? { filePath: file.filePath } : null
+    }));
+
+    const emitted = emitSetlistAdd(filesWithMetadata);
+    if (!emitted) {
+      pendingAddRef.current = [];
+      showToast({
+        title: 'Setlist unavailable',
+        message: 'Unable to add files right now. Check your connection and try again.',
+        variant: 'warn',
+      });
+      return false;
+    }
+    return true;
+  }, [emitSetlistAdd, getAvailableSetlistSlots, showModal, showToast]);
+
+  useEffect(() => {
+    const handleNavigatorSelection = (event) => {
+      if (!setlistModalOpen) return;
+      setIsLoading(true);
+      try {
+        addSelectedFiles(event?.detail?.files || []);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    window.addEventListener('file-navigator:setlist-selection', handleNavigatorSelection);
+    return () => window.removeEventListener('file-navigator:setlist-selection', handleNavigatorSelection);
+  }, [addSelectedFiles, setlistModalOpen]);
+
   const handleFileSelect = useCallback(async () => {
     if (!isDesktopApp || !window?.electronAPI?.setlist?.browseFiles) {
       console.warn('File add only available on desktop app');
@@ -114,6 +176,11 @@ const SetlistModal = () => {
       return;
     }
 
+    if (openFileNavigator({
+      destination: 'setlist',
+      maxSelections: getAvailableSetlistSlots(),
+    })) return;
+
     setIsLoading(true);
 
     try {
@@ -124,55 +191,7 @@ const SetlistModal = () => {
         return;
       }
 
-      const files = result.files;
-      if (files.length === 0) {
-        setIsLoading(false);
-        return;
-      }
-
-      const availableSlots = getAvailableSetlistSlots();
-      if (files.length > availableSlots) {
-        showModal({
-          title: 'Setlist limit reached',
-          description: availableSlots === 0
-            ? 'No slots are left. Remove a song before adding new ones.'
-            : `You can add ${availableSlots} more ${availableSlots === 1 ? 'song' : 'songs'} right now.`,
-          variant: 'warn',
-          dismissLabel: 'Okay',
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      pendingAddRef.current = files.map((file) => {
-        const fileType = normalizeLyricFileType({ fileType: file.fileType, fileName: file.name });
-        const displayName = stripLyricImportExtension(file.name) || file.name;
-        return {
-          displayName,
-          originalName: file.name,
-          fileType,
-        };
-      });
-
-      const filesWithMetadata = files.map((file) => ({
-        name: file.name,
-        content: file.content,
-        fileType: file.fileType,
-        lastModified: file.lastModified,
-        metadata: file.filePath ? { filePath: file.filePath } : null
-      }));
-
-      const emitted = emitSetlistAdd(filesWithMetadata);
-      if (!emitted) {
-        pendingAddRef.current = [];
-        setIsLoading(false);
-        showToast({
-          title: 'Setlist unavailable',
-          message: 'Unable to add files right now. Check your connection and try again.',
-          variant: 'warn',
-        });
-        return;
-      }
+      addSelectedFiles(result.files);
 
     } catch (error) {
       console.error('Error processing files:', error);
@@ -185,7 +204,7 @@ const SetlistModal = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isDesktopApp, isSetlistFull, getAvailableSetlistSlots, emitSetlistAdd, showModal, showToast]);
+  }, [addSelectedFiles, getAvailableSetlistSlots, isDesktopApp, isSetlistFull, maxSetlistFiles, showModal]);
 
   const handleRemoveFile = useCallback((fileId, event) => {
     event.stopPropagation();

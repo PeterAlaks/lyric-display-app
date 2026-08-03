@@ -17,6 +17,7 @@ test('passive display preload excludes control, file, NDI, and update mutation c
   const source = read('preloads/passive.cjs');
   for (const forbidden of [
     'write-file',
+    'file-navigator:',
     'display:project-output',
     'ndi:set-output-enabled',
     'osc:enable',

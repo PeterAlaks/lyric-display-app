@@ -13,6 +13,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   syncNativeThemeSource: (themeSource) => ipcRenderer.invoke('sync-native-theme-source', themeSource),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
   parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
+  fileNavigator: {
+    getState: () => ipcRenderer.invoke('file-navigator:get-state'),
+    getSaveDestinations: (preferredDirectory) => ipcRenderer.invoke('file-navigator:save-destinations', preferredDirectory),
+    addRoot: () => ipcRenderer.invoke('file-navigator:add-root'),
+    removeRoot: (rootPath) => ipcRenderer.invoke('file-navigator:remove-root', rootPath),
+    reindex: () => ipcRenderer.invoke('file-navigator:reindex'),
+    search: (payload) => ipcRenderer.invoke('file-navigator:search', payload),
+    browse: (directoryPath) => ipcRenderer.invoke('file-navigator:browse', directoryPath),
+    prepareSave: (payload) => ipcRenderer.invoke('file-navigator:prepare-save', payload),
+    preview: (filePath) => ipcRenderer.invoke('file-navigator:preview', filePath),
+    open: (filePath) => ipcRenderer.invoke('file-navigator:open', filePath),
+    openMany: (filePaths) => ipcRenderer.invoke('file-navigator:open-many', filePaths),
+    reveal: (filePath) => ipcRenderer.invoke('file-navigator:reveal', filePath),
+    onChange: (callback) => {
+      const channel = 'file-navigator:update';
+      const listener = (_event, payload) => callback?.(payload);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    }
+  },
   lyricVideo: {
     selectAudio: () => ipcRenderer.invoke('lyric-video:select-audio'),
     restoreAudio: (payload) => ipcRenderer.invoke('lyric-video:restore-audio', payload),
@@ -404,7 +424,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveAll: (preferences) => ipcRenderer.invoke('preferences:save-all', { preferences }),
     resetCategory: (category) => ipcRenderer.invoke('preferences:reset-category', { category }),
     resetAll: () => ipcRenderer.invoke('preferences:reset-all'),
-    browseDefaultPath: () => ipcRenderer.invoke('preferences:browse-default-path'),
     getParsingConfig: () => ipcRenderer.invoke('preferences:get-parsing-config'),
     getAutoplayDefaults: () => ipcRenderer.invoke('preferences:get-autoplay-defaults'),
     getAdvancedSettings: () => ipcRenderer.invoke('preferences:get-advanced-settings'),

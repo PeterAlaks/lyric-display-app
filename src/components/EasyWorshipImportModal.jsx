@@ -711,7 +711,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                 </h4>
                                 <ul className={cn('text-sm space-y-1', darkMode ? 'text-blue-300/80' : 'text-blue-600')}>
                                     <li>• Click "Load Imported Songs" to open the first imported song</li>
-                                    <li>• Or use File → Load Lyrics File to browse your imported songs</li>
+                                    <li>• Or add the import folder in File → Load Lyrics for instant search</li>
                                     <li>• All files are saved as .txt files compatible with LyricDisplay</li>
                                 </ul>
                             </div>

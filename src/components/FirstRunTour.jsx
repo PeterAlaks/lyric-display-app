@@ -34,7 +34,7 @@ const TOUR_STEPS = [
     icon: FolderOpen,
     eyebrow: 'Bring in a song',
     title: 'Start with your lyrics',
-    description: 'Load a lyrics file, drag one into the workspace, or create a song from scratch. LyricDisplay also supports online search from the globe button above.',
+    description: 'Search your indexed lyric folders, drag a file into the workspace, or create a song from scratch. LyricDisplay also supports online search from the globe button above.',
     tip: 'Shortcut: Ctrl/Cmd + O',
     placement: 'right',
   },
