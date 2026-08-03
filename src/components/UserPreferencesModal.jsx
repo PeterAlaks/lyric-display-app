@@ -35,12 +35,17 @@ import CapitalizedWordsPreferencesPage from './UserPreferencesModal/CapitalizedW
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
 import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPreferencesPage';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
+import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagPhrasesPreferencesPage';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
 import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,
 } from '../../shared/capitalizedWords.js';
+import {
+  DEFAULT_SECTION_TAG_PHRASES,
+  normalizeSectionTagPhrases,
+} from '../../shared/sectionTagPhrases.js';
 
 // Category definitions
 const CATEGORIES = [
@@ -68,6 +73,7 @@ const CATEGORIES = [
 
 const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
+  const [parsingPage, setParsingPage] = useState('main');
   const [formattingPage, setFormattingPage] = useState('main');
   const [externalControlPage, setExternalControlPage] = useState('main');
   const [contentDirection, setContentDirection] = useState(0);
@@ -183,17 +189,32 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     preferences?.formatting?.capitalizedWords,
     DEFAULT_CAPITALIZED_WORDS,
   );
+  const sectionTagPhrases = normalizeSectionTagPhrases(
+    preferences?.parsing?.sectionTagPhrases,
+    DEFAULT_SECTION_TAG_PHRASES,
+  );
+  const isSectionTagPhrasesPage = activeCategory === 'parsing' && parsingPage === 'sectionTagPhrases';
   const isCapitalizedWordsPage = activeCategory === 'formatting' && formattingPage === 'capitalizedWords';
   const isMidiMappingsPage = activeCategory === 'externalControl' && externalControlPage === 'midiMappings';
   const handleCategoryChange = (category) => {
     const isReturningFromNestedPage = (
-      (category === 'formatting' && isCapitalizedWordsPage)
+      (category === 'parsing' && isSectionTagPhrasesPage)
+      || (category === 'formatting' && isCapitalizedWordsPage)
       || (category === 'externalControl' && isMidiMappingsPage)
     );
     setContentDirection(isReturningFromNestedPage ? -1 : 0);
+    setParsingPage('main');
     setFormattingPage('main');
     setExternalControlPage('main');
     setActiveCategory(category);
+  };
+  const openSectionTagPhrasesPage = () => {
+    setContentDirection(1);
+    setParsingPage('sectionTagPhrases');
+  };
+  const closeSectionTagPhrasesPage = () => {
+    setContentDirection(-1);
+    setParsingPage('main');
   };
   const openCapitalizedWordsPage = () => {
     setContentDirection(1);
@@ -216,6 +237,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     updatePreference('formatting', 'capitalizedWords', normalizedWords);
     useLyricsStore.getState().setFormattingCapitalizedWords(normalizedWords);
   };
+  const handleSectionTagPhrasesChange = (phrases) => {
+    updatePreference('parsing', 'sectionTagPhrases', normalizeSectionTagPhrases(phrases));
+  };
   const commitLineSplittingPreference = (key, value) => {
     const normalized = normalizeLineSplittingConfig({
       ...(preferences?.lineSplitting || {}),
@@ -232,6 +256,20 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   // Render category content
   const renderCategoryContent = () => {
     if (!preferences) return null;
+
+    if (isSectionTagPhrasesPage) {
+      return (
+        <SectionTagPhrasesPreferencesPage
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeSectionTagPhrasesPage}
+          onPhrasesChange={handleSectionTagPhrasesChange}
+          phrases={sectionTagPhrases}
+          showModal={showModal}
+        />
+      );
+    }
 
     if (isCapitalizedWordsPage) {
       return (
@@ -621,6 +659,20 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 How to handle [Verse], [Chorus], etc. tags
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={openSectionTagPhrasesPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label={`Manage ${sectionTagPhrases.length} recognized section tag phrases`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Recognized Section Tags</span>
+                <p className={`text-xs ${mutedClass}`}>Choose phrases treated as Verse, Chorus, Bridge, and other headings</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>{sectionTagPhrases.length}</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
           </div>
         );
 
@@ -1118,9 +1170,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       companionRunning={companionRunning}
       companionStarting={companionStarting}
       contentDirection={contentDirection}
-      contentKey={isCapitalizedWordsPage
-        ? 'formatting-capitalized-words'
-        : (isMidiMappingsPage ? 'external-control-midi-mappings' : activeCategory)}
+      contentKey={isSectionTagPhrasesPage
+        ? 'parsing-section-tag-phrases'
+        : (isCapitalizedWordsPage
+          ? 'formatting-capitalized-words'
+          : (isMidiMappingsPage ? 'external-control-midi-mappings' : activeCategory))}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}
@@ -1135,7 +1189,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       saveError={saveError}
       saving={saving}
       setActiveCategory={handleCategoryChange}
-      hideContentHeader={isCapitalizedWordsPage || isMidiMappingsPage}
+      hideContentHeader={isSectionTagPhrasesPage || isCapitalizedWordsPage || isMidiMappingsPage}
     >
       {renderCategoryContent()}
     </UserPreferencesLayout>

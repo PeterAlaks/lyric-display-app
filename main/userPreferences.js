@@ -9,6 +9,7 @@ import path from 'path';
 import './appIdentity.js';
 import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setlistLimits.js';
 import { DEFAULT_CAPITALIZED_WORDS } from '../shared/capitalizedWords.js';
+import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
 import {
   CURRENT_PREFERENCES_SCHEMA_VERSION,
   migratePreferences,
@@ -37,6 +38,7 @@ const preferencesStore = new Store({
       maxLinesPerGroup: 2,
       enableCrossBlankLineGrouping: true,
       structureTagMode: 'isolate', // 'isolate', 'strip', 'keep'
+      sectionTagPhrases: [...DEFAULT_SECTION_TAG_PHRASES],
     },
 
     // Lyrics Formatting Settings
@@ -294,6 +296,7 @@ export function getParsingConfig() {
       structureTagsConfig: {
         ENABLED: true,
         MODE: parsing?.structureTagMode ?? 'isolate',
+        PHRASES: parsing?.sectionTagPhrases ?? DEFAULT_SECTION_TAG_PHRASES,
       },
       enableTranslationGrouping: parsing?.enableTranslationGrouping ?? true,
     };

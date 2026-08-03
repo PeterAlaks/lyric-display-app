@@ -5,11 +5,14 @@ import {
   createGroupingPlan,
   extractExplicitGroupingDirective,
   isManualNormalGroupCandidate,
+  isStructureTag,
   normalizeLyricsParsingOptions,
   parseLrcContent,
   parseTxtContent,
 } from '../shared/lyricsParsing.js';
+import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
 import { formatLyrics, formatLyricsWithStats, reconstructEditableText } from '../src/utils/lyricsFormat.js';
+import { extractFirstValidLine } from '../src/utils/titlePrefill.js';
 
 test('persisted parsing preferences map to the same parser options on every load path', () => {
   const options = buildLyricsParsingOptions({
@@ -32,6 +35,7 @@ test('persisted parsing preferences map to the same parser options on every load
     maxLinesPerGroup: 2,
     enableCrossBlankLineGrouping: true,
     structureTagMode: 'keep',
+    sectionTagPhrases: [...DEFAULT_SECTION_TAG_PHRASES],
   });
 });
 
@@ -68,6 +72,7 @@ test('the complete parsing profile normalizes every exposed splitting value and 
     maxLinesPerGroup: 4,
     enableCrossBlankLineGrouping: false,
     structureTagMode: 'keep',
+    sectionTagPhrases: [...DEFAULT_SECTION_TAG_PHRASES],
   });
 });
 
@@ -225,6 +230,50 @@ test('plain text parsing keeps section metadata aligned with processed lines', (
   assert.equal(parsed.sections[1].label, 'Chorus');
   assert.equal(parsed.lineToSection[1], parsed.sections[0].id);
   assert.equal(parsed.lineToSection[3], parsed.sections[1].id);
+});
+
+test('custom section-tag phrases drive recognition and replace removed defaults', () => {
+  assert.equal(isStructureTag('Response II', ['Response']), true);
+  assert.equal(isStructureTag('[Response: Congregation]', ['Response']), true);
+  assert.equal(isStructureTag('Verse', ['Response']), false);
+
+  const parsed = parseTxtContent('Response\nWe lift our voices', {
+    enableSplitting: false,
+    groupingConfig: {
+      enableAutoLineGrouping: false,
+      sectionTagPhrases: ['Response'],
+    },
+  });
+
+  assert.deepEqual(parsed.processedLines, ['Response', 'We lift our voices']);
+  assert.equal(parsed.sections.length, 1);
+  assert.equal(parsed.sections[0].label, 'Response');
+
+  const removedDefault = parseTxtContent('Chorus\nSing this once\nResponse\nChorus', {
+    enableSplitting: false,
+    groupingConfig: {
+      enableAutoLineGrouping: false,
+      sectionTagPhrases: ['Response'],
+    },
+  });
+
+  assert.deepEqual(removedDefault.processedLines, ['Chorus', 'Sing this once', 'Response', 'Chorus']);
+  assert.deepEqual(removedDefault.sections.map((section) => section.label), ['Response']);
+});
+
+test('new-song title prediction skips default and custom section headings', () => {
+  assert.equal(
+    extractFirstValidLine('Verse\nAmazing grace\nHow sweet the sound'),
+    'Amazing grace',
+  );
+  assert.equal(
+    extractFirstValidLine('Verse II\nAmazing grace'),
+    'Amazing grace',
+  );
+  assert.equal(
+    extractFirstValidLine('Response\nThe people sing', { sectionTagPhrases: ['Response'] }),
+    'The people sing',
+  );
 });
 
 test('app-owned grouping plans round-trip editor group and ungroup boundaries without modifying TXT', () => {

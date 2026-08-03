@@ -2,8 +2,12 @@ import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,
 } from '../shared/capitalizedWords.js';
+import {
+  DEFAULT_SECTION_TAG_PHRASES,
+  normalizeSectionTagPhrases,
+} from '../shared/sectionTagPhrases.js';
 
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 5;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 6;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -104,6 +108,20 @@ export function migratePreferences(input) {
           : [...DEFAULT_CAPITALIZED_WORDS],
       },
       _schemaVersion: 5,
+    };
+  }
+
+  if (sourceVersion < 6) {
+    const parsing = isPlainObject(migrated.parsing) ? migrated.parsing : {};
+    migrated = {
+      ...migrated,
+      parsing: {
+        ...parsing,
+        sectionTagPhrases: Array.isArray(parsing.sectionTagPhrases)
+          ? normalizeSectionTagPhrases(parsing.sectionTagPhrases)
+          : [...DEFAULT_SECTION_TAG_PHRASES],
+      },
+      _schemaVersion: 6,
     };
   }
 

@@ -100,6 +100,7 @@ export default function LyricsList({
     selectedLine,
     previewLine,
     maxLinesPerGroup: lyricsGroupingConfig.maxLinesPerGroup,
+    sectionTagPhrases: lyricsGroupingConfig.sectionTagPhrases,
     highlightedLineIndex,
     searchQuery,
     darkMode,

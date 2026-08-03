@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getLineDisplayText } from '../utils/parseLyrics';
 import { getNextIntelligentAutoplayStep, hasValidTimestamps } from '../utils/timestampHelpers';
-import { STRUCTURE_TAG_PATTERNS } from '../../shared/lyricsParsing.js';
+import { isStructureTag } from '../../shared/lyricsParsing.js';
+import useLyricsStore from '../context/LyricsStore';
 
 export const useAutoplayManager = ({
   lyrics,
@@ -23,6 +24,9 @@ export const useAutoplayManager = ({
   ready,
   clientType = 'desktop'
 }) => {
+  const sectionTagPhrases = useLyricsStore(
+    (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
+  );
   const [autoplayActive, setAutoplayActive] = useState(false);
   const [intelligentAutoplayActive, setIntelligentAutoplayActive] = useState(false);
   const [remoteAutoplayActive, setRemoteAutoplayActive] = useState(false);
@@ -51,9 +55,9 @@ export const useAutoplayManager = ({
     const displayText = getLineDisplayText(line);
     if (!displayText || displayText.trim() === '') return true;
 
-    if (typeof line === 'string' && STRUCTURE_TAG_PATTERNS.some((p) => p.test(line.trim()))) return true;
+    if (typeof line === 'string' && isStructureTag(line, sectionTagPhrases)) return true;
     return false;
-  }, []);
+  }, [sectionTagPhrases]);
 
   useEffect(() => {
     if (autoplayIntervalRef.current) {

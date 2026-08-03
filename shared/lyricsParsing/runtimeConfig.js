@@ -1,4 +1,8 @@
 import { NORMAL_GROUP_CONFIG, STRUCTURE_TAGS_CONFIG } from './constants.js';
+import {
+  DEFAULT_SECTION_TAG_PHRASES,
+  normalizeSectionTagPhrases,
+} from '../sectionTagPhrases.js';
 
 // Runtime config that can be set per-parse operation
 let runtimeGroupingConfig = null;
@@ -30,6 +34,7 @@ export function getEffectiveGroupingConfig() {
       enableCrossBlankLineGrouping: NORMAL_GROUP_CONFIG.CROSS_BLANK_LINE_GROUPING,
       maxLinesPerGroup: NORMAL_GROUP_CONFIG.MAX_LINES_PER_GROUP,
       structureTagMode: STRUCTURE_TAGS_CONFIG.MODE,
+      sectionTagPhrases: [...DEFAULT_SECTION_TAG_PHRASES],
     };
   }
   return {
@@ -39,6 +44,7 @@ export function getEffectiveGroupingConfig() {
     enableCrossBlankLineGrouping: runtimeGroupingConfig.enableCrossBlankLineGrouping ?? NORMAL_GROUP_CONFIG.CROSS_BLANK_LINE_GROUPING,
     maxLinesPerGroup: runtimeGroupingConfig.maxLinesPerGroup ?? NORMAL_GROUP_CONFIG.MAX_LINES_PER_GROUP,
     structureTagMode: runtimeGroupingConfig.structureTagMode ?? STRUCTURE_TAGS_CONFIG.MODE,
+    sectionTagPhrases: normalizeSectionTagPhrases(runtimeGroupingConfig.sectionTagPhrases),
   };
 }
 

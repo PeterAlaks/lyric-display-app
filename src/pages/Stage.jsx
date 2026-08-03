@@ -15,6 +15,7 @@ import { getTimerDisplay, getTimerIntensity, isTimerVisiblyActive } from '../uti
 import { paintToCss } from '../utils/paint';
 import { hasSelectedStageLyricLine, shouldClearStageIdleScreen } from '../context/lyricsStore/stageSlice';
 import ProjectionExitHint from '../components/ProjectionExitHint';
+import useLyricsStore from '../context/LyricsStore';
 
 const pulseAnimation = `
 @keyframes pulse {
@@ -149,6 +150,9 @@ const Stage = () => {
   const { setlistFiles } = useSetlistState();
   const { stageEnabled } = useIndividualOutputState();
   const { skipSectionTitlesOnKeyboard } = useKeyboardNavigationPreferences();
+  const sectionTagPhrases = useLyricsStore(
+    (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
+  );
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
@@ -447,16 +451,16 @@ const Stage = () => {
   const currentLine = selectedLine !== null && selectedLine !== undefined ? selectedLine : null;
   const effectiveCurrentLine = (() => {
     if (currentLine === null || currentLine === undefined) return null;
-    if (!skipSectionTitlesOnKeyboard || !isStructureTagLyricLine(lyrics[currentLine])) return currentLine;
+    if (!skipSectionTitlesOnKeyboard || !isStructureTagLyricLine(lyrics[currentLine], sectionTagPhrases)) return currentLine;
 
-    return findNavigableLyricLineIndex(lyrics, currentLine + 1, 1, { skipSectionTitles: true })
-      ?? findNavigableLyricLineIndex(lyrics, currentLine - 1, -1, { skipSectionTitles: true });
+    return findNavigableLyricLineIndex(lyrics, currentLine + 1, 1, { skipSectionTitles: true, sectionTagPhrases })
+      ?? findNavigableLyricLineIndex(lyrics, currentLine - 1, -1, { skipSectionTitles: true, sectionTagPhrases });
   })();
   const previousLine = effectiveCurrentLine !== null
-    ? findNavigableLyricLineIndex(lyrics, effectiveCurrentLine - 1, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard })
+    ? findNavigableLyricLineIndex(lyrics, effectiveCurrentLine - 1, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases })
     : null;
   const nextLine = effectiveCurrentLine !== null
-    ? findNavigableLyricLineIndex(lyrics, effectiveCurrentLine + 1, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard })
+    ? findNavigableLyricLineIndex(lyrics, effectiveCurrentLine + 1, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases })
     : null;
   const hasSelectedLyricLine = hasSelectedStageLyricLine(effectiveCurrentLine, lyrics.length);
   const isVisible = Boolean((isPreviewMode || (isOutputOn && stageEnabled)) && hasSelectedLyricLine);

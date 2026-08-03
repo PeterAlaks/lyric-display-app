@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { extractFirstValidLine } from '../../utils/titlePrefill';
+import useLyricsStore from '../../context/LyricsStore';
 
 /**
  * Hook for managing automatic title prefilling from lyrics content
@@ -10,6 +11,9 @@ import { extractFirstValidLine } from '../../utils/titlePrefill';
  * @returns {Object} - Title prefill state and handlers
  */
 export default function useTitlePrefill(content, title, setTitle, editMode, textareaRef) {
+  const sectionTagPhrases = useLyricsStore(
+    (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
+  );
   const [isTitlePrefilled, setIsTitlePrefilled] = useState(false);
   const pasteTimeoutRef = useRef(null);
 
@@ -18,7 +22,7 @@ export default function useTitlePrefill(content, title, setTitle, editMode, text
     if (title && !isTitlePrefilled) return;
 
     const contentToUse = overrideContent !== undefined ? overrideContent : content;
-    const firstLine = extractFirstValidLine(contentToUse);
+    const firstLine = extractFirstValidLine(contentToUse, { sectionTagPhrases });
 
     if (firstLine && firstLine !== title) {
       const truncatedTitle = firstLine.slice(0, 65);
@@ -28,7 +32,7 @@ export default function useTitlePrefill(content, title, setTitle, editMode, text
       setTitle('');
       setIsTitlePrefilled(false);
     }
-  }, [content, title, isTitlePrefilled, editMode, setTitle]);
+  }, [content, title, isTitlePrefilled, editMode, sectionTagPhrases, setTitle]);
 
   const handleContentKeyDown = useCallback((event, textareaRef) => {
     if (event.key === 'Enter' && !editMode) {

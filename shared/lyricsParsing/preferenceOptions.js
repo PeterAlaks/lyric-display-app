@@ -1,4 +1,5 @@
 import { NORMAL_GROUP_CONFIG, STRUCTURE_TAGS_CONFIG } from './constants.js';
+import { normalizeSectionTagPhrases } from '../sectionTagPhrases.js';
 
 const DEFAULT_SPLIT_CONFIG = {
   TARGET_LENGTH: 60,
@@ -78,6 +79,7 @@ export function normalizeLyricsGroupingConfig(config = {}) {
     structureTagMode: ['isolate', 'strip', 'keep'].includes(config?.structureTagMode)
       ? config.structureTagMode
       : STRUCTURE_TAGS_CONFIG.MODE,
+    sectionTagPhrases: normalizeSectionTagPhrases(config?.sectionTagPhrases),
   };
 }
 
@@ -132,6 +134,7 @@ export function buildLyricsParsingOptions(parsingConfig = {}) {
       maxLinesPerGroup: normalGroupConfig.MAX_LINES_PER_GROUP ?? NORMAL_GROUP_CONFIG.MAX_LINES_PER_GROUP,
       enableCrossBlankLineGrouping: normalGroupConfig.CROSS_BLANK_LINE_GROUPING ?? NORMAL_GROUP_CONFIG.CROSS_BLANK_LINE_GROUPING,
       structureTagMode: structureTagsConfig.MODE ?? STRUCTURE_TAGS_CONFIG.MODE,
+      sectionTagPhrases: structureTagsConfig.PHRASES,
     }),
   });
 }

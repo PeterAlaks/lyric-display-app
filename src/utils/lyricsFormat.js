@@ -1,5 +1,11 @@
 import { preprocessText, splitLongLine } from '../../shared/lineSplitting.js';
-import { isManualNormalGroupCandidate, STRUCTURE_TAGS_CONFIG, STRUCTURE_TAG_PATTERNS, BRACKET_PAIRS } from '../../shared/lyricsParsing.js';
+import {
+  BRACKET_PAIRS,
+  extractStructureTags,
+  isManualNormalGroupCandidate,
+  isStructureTag,
+  STRUCTURE_TAGS_CONFIG,
+} from '../../shared/lyricsParsing.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,
@@ -67,7 +73,7 @@ const isMetadataTag = (line) => {
  * @param {string} line
  * @returns {{ text: string, bracketsRepaired: number }}
  */
-const repairOrphanedBrackets = (line) => {
+const repairOrphanedBrackets = (line, sectionTagPhrases) => {
   if (!line || typeof line !== 'string') return { text: line, bracketsRepaired: 0 };
 
   const trimmed = line.trim();
@@ -75,7 +81,7 @@ const repairOrphanedBrackets = (line) => {
 
   if (/^\[\d{1,2}:/.test(trimmed) || isMetadataTag(trimmed)) return { text: line, bracketsRepaired: 0 };
 
-  if (STRUCTURE_TAG_PATTERNS.some(p => p.test(trimmed))) return { text: line, bracketsRepaired: 0 };
+  if (isStructureTag(trimmed, sectionTagPhrases)) return { text: line, bracketsRepaired: 0 };
 
   let result = trimmed;
   let bracketsRepaired = 0;
@@ -112,13 +118,8 @@ const repairOrphanedBrackets = (line) => {
  * @param {string[]} lines
  * @returns {{ lines: string[], emptySectionsRemoved: number }}
  */
-const removeEmptySectionTags = (lines) => {
+const removeEmptySectionTags = (lines, sectionTagPhrases) => {
   if (!Array.isArray(lines) || lines.length === 0) return { lines, emptySectionsRemoved: 0 };
-
-  const isStructureTag = (line) => {
-    if (!line || typeof line !== 'string') return false;
-    return STRUCTURE_TAG_PATTERNS.some(p => p.test(line.trim()));
-  };
 
   const result = [];
   let emptySectionsRemoved = 0;
@@ -126,13 +127,13 @@ const removeEmptySectionTags = (lines) => {
   for (let i = 0; i < lines.length; i++) {
     const current = (lines[i] || '').trim();
 
-    if (isStructureTag(current)) {
+    if (isStructureTag(current, sectionTagPhrases)) {
 
       let hasContent = false;
       for (let j = i + 1; j < lines.length; j++) {
         const ahead = (lines[j] || '').trim();
         if (ahead.length === 0) continue;
-        if (isStructureTag(ahead)) break;
+        if (isStructureTag(ahead, sectionTagPhrases)) break;
         hasContent = true;
         break;
       }
@@ -298,61 +299,6 @@ export const splitInlineTranslation = (line) => {
   }
 
   return [mainLine, translationLine];
-};
-
-/**
- * Extract and isolate structure tags from text (for cleanup operations)
- * @param {string} text
- * @returns {string}
- */
-const extractStructureTags = (text, groupingConfig = {}) => {
-  if (!text || typeof text !== 'string') return text;
-  if (!STRUCTURE_TAGS_CONFIG.ENABLED) return text;
-
-  const lines = text.split(/\r?\n/);
-  const processedLines = [];
-  const structureTagMode = ['isolate', 'strip', 'keep'].includes(groupingConfig?.structureTagMode)
-    ? groupingConfig.structureTagMode
-    : STRUCTURE_TAGS_CONFIG.MODE;
-
-  for (const line of lines) {
-    if (!line || line.trim().length === 0) {
-      processedLines.push(line);
-      continue;
-    }
-
-    let processed = false;
-
-    for (const pattern of STRUCTURE_TAG_PATTERNS) {
-      const match = line.match(pattern);
-      if (match) {
-        const tag = match[0].trim();
-        const remainder = line.substring(match[0].length).trim();
-
-        if (structureTagMode === 'strip') {
-          if (remainder) {
-            processedLines.push(remainder);
-          }
-        } else if (structureTagMode === 'isolate') {
-          processedLines.push(tag);
-          if (remainder) {
-            processedLines.push(remainder);
-          }
-        } else {
-          processedLines.push(line);
-        }
-
-        processed = true;
-        break;
-      }
-    }
-
-    if (!processed) {
-      processedLines.push(line);
-    }
-  }
-
-  return processedLines.join('\n');
 };
 
 /**
@@ -561,14 +507,20 @@ export const formatLyricsWithStats = (text, options = {}) => {
   resultLines = resultLines.map((line) => {
     const trimmed = (line || '').trim();
     if (trimmed.length === 0) return line;
-    const { text: fixed, bracketsRepaired } = repairOrphanedBrackets(line);
+    const { text: fixed, bracketsRepaired } = repairOrphanedBrackets(
+      line,
+      options.groupingConfig?.sectionTagPhrases,
+    );
     totalBrackets += bracketsRepaired;
     return fixed;
   });
   stats.bracketsRepaired = totalBrackets;
 
   // 4b: Remove empty section tags
-  const emptySections = removeEmptySectionTags(resultLines);
+  const emptySections = removeEmptySectionTags(
+    resultLines,
+    options.groupingConfig?.sectionTagPhrases,
+  );
   resultLines = emptySections.lines;
   stats.emptySectionsRemoved = emptySections.emptySectionsRemoved;
 

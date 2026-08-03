@@ -3,6 +3,7 @@ export {
   NORMAL_GROUP_CONFIG,
   STRUCTURE_TAGS_CONFIG,
   STRUCTURE_TAG_PATTERNS,
+  createStructureTagPatterns,
 } from './constants.js';
 
 export {
@@ -11,7 +12,11 @@ export {
   sanitizeMaxLinesPerGroup,
 } from './runtimeConfig.js';
 
-export { getCleanSectionLabel } from './structureTags.js';
+export {
+  extractStructureTags,
+  getCleanSectionLabel,
+  isStructureTag,
+} from './structureTags.js';
 export { isTranslationLine } from './translation.js';
 export {
   isManualNormalGroupCandidate,

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useDynamicRowHeight } from 'react-window';
-import { sanitizeMaxLinesPerGroup, STRUCTURE_TAG_PATTERNS } from '../../../shared/lyricsParsing.js';
+import { createStructureTagPatterns, sanitizeMaxLinesPerGroup } from '../../../shared/lyricsParsing.js';
 
 export const DEFAULT_ROW_HEIGHT = 48;
 export const ROW_GAP = 8;
@@ -14,6 +14,7 @@ export default function useLyricsListRows({
   selectedLine,
   previewLine,
   maxLinesPerGroup,
+  sectionTagPhrases,
   highlightedLineIndex,
   searchQuery,
   darkMode,
@@ -23,12 +24,17 @@ export default function useLyricsListRows({
   const baseRowHeight = compact ? 38 : DEFAULT_ROW_HEIGHT;
   const rowGap = compact ? 4 : ROW_GAP;
 
+  const structureTagPatterns = useMemo(
+    () => createStructureTagPatterns(sectionTagPhrases),
+    [sectionTagPhrases],
+  );
+
   const isStructureTagLine = useCallback((line) => {
     if (!line || typeof line !== 'string') return false;
     const trimmed = line.trim();
     if (!trimmed) return false;
-    return STRUCTURE_TAG_PATTERNS.some((pattern) => pattern.test(trimmed));
-  }, []);
+    return structureTagPatterns.some((pattern) => pattern.test(trimmed));
+  }, [structureTagPatterns]);
 
   const effectiveMaxLinesPerGroup = useMemo(() => {
     return sanitizeMaxLinesPerGroup(maxLinesPerGroup);

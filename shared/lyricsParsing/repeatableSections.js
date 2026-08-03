@@ -11,7 +11,7 @@ const REPEATABLE_SECTION_INLINE_TOKEN_REGEX = /(\[[^\]]+\]|\{[^}]+\}|<[^>]+>|\([
  */
 function parseRepeatableSectionMarker(line = '') {
   const trimmed = String(line).trim();
-  if (!trimmed) return null;
+  if (!trimmed || !isStructureTag(trimmed)) return null;
 
   const wrappedMatch = trimmed.match(/^[\[\(\{<]\s*(.+?)\s*[\]\)\}>]\s*$/);
   const candidateRaw = wrappedMatch ? wrappedMatch[1] : trimmed;

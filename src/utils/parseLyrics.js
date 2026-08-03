@@ -2,9 +2,9 @@
 // File: src/utils/parseLyrics.js
 
 import {
+  isStructureTag,
   parseTxtContent,
   processRawTextToLines,
-  STRUCTURE_TAG_PATTERNS,
 } from '../../shared/lyricsParsing.js';
 
 /**
@@ -128,18 +128,16 @@ export const getLineOutputText = (line, target = 'output') => {
   return formatTextForTarget(rawText, target);
 };
 
-export const isStructureTagLyricLine = (line) => {
+export const isStructureTagLyricLine = (line, sectionTagPhrases) => {
   if (!line || typeof line !== 'string') return false;
-  const trimmed = line.trim();
-  if (!trimmed) return false;
-  return STRUCTURE_TAG_PATTERNS.some((pattern) => pattern.test(trimmed));
+  return isStructureTag(line, sectionTagPhrases);
 };
 
 export const findNavigableLyricLineIndex = (
   lyrics,
   startIndex,
   direction = 1,
-  { skipSectionTitles = false } = {}
+  { skipSectionTitles = false, sectionTagPhrases } = {}
 ) => {
   if (!Array.isArray(lyrics) || lyrics.length === 0) return null;
 
@@ -147,7 +145,7 @@ export const findNavigableLyricLineIndex = (
   let index = Math.min(lyrics.length - 1, Math.max(0, Number(startIndex) || 0));
 
   while (index >= 0 && index < lyrics.length) {
-    if (!skipSectionTitles || !isStructureTagLyricLine(lyrics[index])) {
+    if (!skipSectionTitles || !isStructureTagLyricLine(lyrics[index], sectionTagPhrases)) {
       return index;
     }
     index += step;

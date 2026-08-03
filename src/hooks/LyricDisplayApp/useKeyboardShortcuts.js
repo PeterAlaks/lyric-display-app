@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
 import { findNavigableLyricLineIndex } from '../../utils/parseLyrics';
+import useLyricsStore from '../../context/LyricsStore';
 import {
   dispatchCommand,
   isCommandFocusProtected,
@@ -44,6 +45,9 @@ export const useKeyboardShortcuts = ({
   availableOutputIds,
   skipSectionTitlesOnKeyboard = true
 }) => {
+  const sectionTagPhrases = useLyricsStore(
+    (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
+  );
 
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
@@ -206,15 +210,15 @@ export const useKeyboardShortcuts = ({
         let newIndex;
 
         if (isHome) {
-          newIndex = findNavigableLyricLineIndex(lyrics, 0, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
+          newIndex = findNavigableLyricLineIndex(lyrics, 0, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
         } else if (isEnd) {
-          newIndex = findNavigableLyricLineIndex(lyrics, lyrics.length - 1, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
+          newIndex = findNavigableLyricLineIndex(lyrics, lyrics.length - 1, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
         } else if (isUpArrow) {
           const startIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
+          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
         } else {
           const startIndex = currentIndex < lyrics.length - 1 ? currentIndex + 1 : lyrics.length - 1;
-          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard });
+          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
         }
 
         if (newIndex !== null && newIndex !== currentIndex) {
@@ -248,6 +252,7 @@ export const useKeyboardShortcuts = ({
     handleOpenSetlist,
     handleOpenOnlineLyricsSearch,
     availableOutputIds,
+    sectionTagPhrases,
     skipSectionTitlesOnKeyboard
   ]);
 };
