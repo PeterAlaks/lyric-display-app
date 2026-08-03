@@ -130,6 +130,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     handleNdiCancelDownload,
     handleNdiCheckForUpdate,
     handleNdiDownload,
+    handleNdiInstallFromZip,
     handleNdiLaunch,
     handleNdiStop,
     handleNdiUninstall,
@@ -138,6 +139,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     ndiAutoLaunch,
     ndiCheckingUpdate,
     ndiStatus,
+    ndiLastError,
     ndiTelemetry,
     ndiUpdateInfo,
     ndiUpdating,
@@ -889,6 +891,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             handleNdiAutoLaunchToggle={handleNdiAutoLaunchToggle}
             handleNdiCancelDownload={handleNdiCancelDownload}
             handleNdiDownload={handleNdiDownload}
+            handleNdiInstallFromZip={handleNdiInstallFromZip}
             handleNdiUpdate={handleNdiUpdate}
             inputClass={inputClass}
             isDownloading={isDownloading}
@@ -896,6 +899,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             mutedClass={mutedClass}
             ndiAutoLaunch={ndiAutoLaunch}
             ndiStatus={ndiStatus}
+            ndiLastError={ndiLastError}
             ndiTelemetry={ndiTelemetry}
             ndiUpdateInfo={ndiUpdateInfo}
             ndiUpdating={ndiUpdating}

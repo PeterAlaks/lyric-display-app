@@ -220,10 +220,11 @@ NDI support uses a separately downloaded LyricDisplay companion rather than bund
 
 1. In LyricDisplay, open **Output > NDI Preferences**.
 2. Select **Download NDI Companion** and wait for download and extraction to complete.
-3. Launch the companion, or enable **Start with LyricDisplay**.
-4. Open the NDI settings for each output or Stage view that should broadcast.
-5. Enable the output, choose a unique source name, resolution, and frame rate. `1080p` at `30 fps` is a sensible starting point for lyrics.
-6. Select that source in the NDI receiver, such as an NDI-enabled OBS or vMix input.
+3. If you already downloaded the latest official platform ZIP from the [LyricDisplay NDI releases](https://github.com/PeterAlaks/lyricdisplay-ndi/releases), select **Install from downloaded ZIP** or **Install or update from downloaded ZIP**. LyricDisplay stages the file in temporary storage and verifies it against the published checksum before replacing an existing Companion installation.
+4. Launch the companion, or enable **Start with LyricDisplay**.
+5. Open the NDI settings for each output or Stage view that should broadcast.
+6. Enable the output, choose a unique source name, resolution, and frame rate. `1080p` at `30 fps` is a sensible starting point for lyrics.
+7. Select that source in the NDI receiver, such as an NDI-enabled OBS or vMix input.
 
 The companion status should progress through Installed, Running, and Ready. Higher resolutions and frame rates require more CPU/GPU/network capacity. If no compatible companion asset is available for the current platform, the in-app download will report that condition.
 
@@ -308,6 +309,7 @@ Only one LyricDisplay backend can use the default port. Close other desktop/head
 ### NDI source is missing or stale
 
 - Open **Output > NDI Preferences** and confirm Installed, Running, and Ready states.
+- If installation fails, copy the persistent error message, stage, code, and hostname shown in NDI Preferences. These details distinguish release-metadata, download, checksum, extraction, and file-replacement failures.
 - Confirm the intended output's NDI toggle is enabled and its source name is unique.
 - Start with `1080p`/`30 fps` and reduce resolution/frame rate if telemetry reports dropped frames.
 - Keep sender and receiver on the same LAN and check firewall/VLAN discovery restrictions.

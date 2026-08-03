@@ -2,6 +2,7 @@ import { Download, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import useIsPackagedApp from '../../hooks/useIsPackagedApp';
 
 const NdiPreferencesSection = ({
   companionRunning,
@@ -13,6 +14,7 @@ const NdiPreferencesSection = ({
   handleNdiAutoLaunchToggle,
   handleNdiCancelDownload,
   handleNdiDownload,
+  handleNdiInstallFromZip,
   handleNdiUpdate,
   inputClass,
   isDownloading,
@@ -20,11 +22,13 @@ const NdiPreferencesSection = ({
   mutedClass,
   ndiAutoLaunch,
   ndiStatus,
+  ndiLastError,
   ndiTelemetry,
   ndiUpdateInfo,
   ndiUpdating,
   preferenceFieldLabelClass,
 }) => {
+  const isPackagedApp = useIsPackagedApp();
   const stats = ndiTelemetry?.stats || null;
   const health = ndiTelemetry?.health || null;
   const formatMetric = (value, digits = 1) => (
@@ -83,6 +87,18 @@ const NdiPreferencesSection = ({
       {ndiStatus.installed && companionBootstrapError && (
         <div className={`rounded-lg border p-3 text-xs ${darkMode ? 'border-amber-600/30 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
           {companionBootstrapError}
+        </div>
+      )}
+
+      {ndiLastError && (
+        <div className={`rounded-lg border p-3 text-xs ${darkMode ? 'border-red-600/30 bg-red-900/20 text-red-200' : 'border-red-200 bg-red-50 text-red-800'}`}>
+          <p className="font-medium">The last NDI Companion operation failed.</p>
+          <p className="mt-1 break-words">{typeof ndiLastError === 'string' ? ndiLastError : ndiLastError.error}</p>
+          {typeof ndiLastError === 'object' && (ndiLastError.stage || ndiLastError.code || ndiLastError.host) && (
+            <p className={`mt-1.5 ${darkMode ? 'text-red-300/75' : 'text-red-700/75'}`}>
+              {[ndiLastError.stage, ndiLastError.code, ndiLastError.host].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
       )}
 
@@ -173,21 +189,22 @@ const NdiPreferencesSection = ({
           </div>
           <div className="flex items-center justify-between">
             <p className={`text-xs ${mutedClass}`}>
-              {downloadProgress.status === 'extracting'
-                ? `Extracting... ${downloadProgress.percent || 0}%`
-                : `Downloading... ${downloadProgress.percent || 0}%`}
+              {{
+                downloading: 'Downloading',
+                copying: 'Preparing local ZIP',
+                verifying: 'Verifying integrity',
+                extracting: 'Extracting',
+              }[downloadProgress.status] || 'Preparing'}... {downloadProgress.percent || 0}%
             </p>
-            {downloadProgress.status !== 'extracting' && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleNdiCancelDownload}
-                className={`h-6 px-2 text-xs ${darkMode ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-500' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'}`}
-              >
-                <X className="w-3 h-3 mr-1" />
-                Cancel
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleNdiCancelDownload}
+              className={`h-6 px-2 text-xs ${darkMode ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-500' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'}`}
+            >
+              <X className="w-3 h-3 mr-1" />
+              Cancel
+            </Button>
           </div>
         </div>
       )}
@@ -216,6 +233,7 @@ const NdiPreferencesSection = ({
                 </>
               )}
             </Button>
+
           </div>
         </div>
       ) : (
@@ -227,6 +245,11 @@ const NdiPreferencesSection = ({
               readOnly
               className={`${inputClass} opacity-70 cursor-default`}
             />
+            {isPackagedApp && (
+              <p className={`text-[10px] leading-snug ${mutedClass}`}>
+                Microsoft Store builds may map this logical AppData path to Windows-managed private package storage.
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -244,6 +267,23 @@ const NdiPreferencesSection = ({
               thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
             />
           </div>
+        </div>
+      )}
+
+      {isPackagedApp && (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleNdiInstallFromZip}
+            disabled={isDownloading || ndiUpdating}
+            className="w-full"
+          >
+            {ndiStatus.installed ? 'Install or update from downloaded ZIP' : 'Install from downloaded ZIP'}
+          </Button>
+          <p className={`text-xs ${mutedClass}`}>
+            Select the latest official platform ZIP from the LyricDisplay NDI GitHub release.
+          </p>
         </div>
       )}
 

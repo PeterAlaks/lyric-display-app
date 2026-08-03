@@ -339,6 +339,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ndi: {
     checkInstalled: () => ipcRenderer.invoke('ndi:check-installed'),
     download: () => ipcRenderer.invoke('ndi:download'),
+    installFromZip: () => ipcRenderer.invoke('ndi:install-from-zip'),
     updateCompanion: () => ipcRenderer.invoke('ndi:update-companion'),
     checkForUpdate: () => ipcRenderer.invoke('ndi:check-for-update'),
     onDownloadProgress: (callback) => {

@@ -66,6 +66,7 @@ export default function NdiBridge() {
       cleanups.push(api.onDownloadComplete((result) => {
         resetOperationState();
         if (result?.success) {
+          useNdiStore.getState().setLastError(null);
           refreshInstallStatus();
         }
       }));
@@ -75,7 +76,7 @@ export default function NdiBridge() {
       cleanups.push(api.onDownloadFailed((result) => {
         resetOperationState();
         if (result?.error) {
-          useNdiStore.getState().setLastError(result.cancelled ? null : result.error);
+          useNdiStore.getState().setLastError(result.cancelled ? null : result);
         }
       }));
     }
