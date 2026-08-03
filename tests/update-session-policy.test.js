@@ -78,7 +78,7 @@ test('legacy preferences migrate once without overwriting valid operator choices
 
   assert.equal(result.success, true);
   assert.equal(result.changed, true);
-  assert.equal(result.preferences._schemaVersion, 4);
+  assert.equal(result.preferences._schemaVersion, 5);
   assert.equal(result.preferences.general.autoCheckForUpdates, false);
   assert.equal(result.preferences.general.liveSafetyMode, true);
   assert.equal(result.preferences.general.confirmOnClose, false);
@@ -86,6 +86,7 @@ test('legacy preferences migrate once without overwriting valid operator choices
   assert.equal(result.preferences.general.shareAnonymousUsageData, undefined);
   assert.equal(result.preferences.advanced.shareAnonymousUsageData, false);
   assert.equal(result.preferences.advanced.telemetryConsentDecided, false);
+  assert.equal(result.preferences.formatting.capitalizedWords.includes('Holy Spirit'), true);
   assert.deepEqual(result.preferences.appearance, { themeMode: 'dark' });
 
   const repeated = migratePreferences(result.preferences);
@@ -101,7 +102,7 @@ test('an explicit legacy telemetry opt-out remains declined after migration', ()
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.preferences._schemaVersion, 4);
+  assert.equal(result.preferences._schemaVersion, 5);
   assert.equal(result.preferences.general.shareAnonymousUsageData, undefined);
   assert.equal(result.preferences.advanced.shareAnonymousUsageData, false);
   assert.equal(result.preferences.advanced.telemetryConsentDecided, true);
@@ -115,8 +116,23 @@ test('Preview Lyric Lines preference is preserved when upgrading from schema 3',
 
   assert.equal(result.success, true);
   assert.equal(result.changed, true);
-  assert.equal(result.preferences._schemaVersion, 4);
+  assert.equal(result.preferences._schemaVersion, 5);
   assert.equal(result.preferences.general.previewLines, true);
+});
+
+test('schema 4 preferences gain a normalized editable capitalization list', () => {
+  const result = migratePreferences({
+    _schemaVersion: 4,
+    formatting: {
+      capitalizeReligiousTerms: false,
+      capitalizedWords: ['  holy   spirit ', 'ABBA', 'abba', 'invalid!'],
+    },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.preferences._schemaVersion, 5);
+  assert.equal(result.preferences.formatting.capitalizeReligiousTerms, false);
+  assert.deepEqual(result.preferences.formatting.capitalizedWords, ['Holy Spirit', 'Abba']);
 });
 
 test('future preference and session schemas are rejected without mutation', () => {

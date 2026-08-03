@@ -132,6 +132,12 @@ export async function loadPreferencesIntoStore(store) {
       }
     }
     if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.capitalizedWords');
+      if (result.success) {
+        store.getState().setFormattingCapitalizedWords(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('formatting.normalizeTypographicChars');
       if (result.success && typeof result.value === 'boolean') {
         store.getState().setFormattingNormalizeTypographicChars(result.value);

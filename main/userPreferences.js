@@ -8,6 +8,7 @@ import { app } from 'electron';
 import path from 'path';
 import './appIdentity.js';
 import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setlistLimits.js';
+import { DEFAULT_CAPITALIZED_WORDS } from '../shared/capitalizedWords.js';
 import {
   CURRENT_PREFERENCES_SCHEMA_VERSION,
   migratePreferences,
@@ -43,6 +44,7 @@ const preferencesStore = new Store({
       enableCleanupOnPaste: true,
       capitalizeFirstLetter: true,
       capitalizeReligiousTerms: true,
+      capitalizedWords: [...DEFAULT_CAPITALIZED_WORDS],
       normalizeTypographicChars: true,
     },
 

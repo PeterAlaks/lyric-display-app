@@ -1,4 +1,5 @@
 import { AlertCircle, Check, ChevronRight, Loader2, Power, RefreshCw, Trash2 } from 'lucide-react';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import AlwaysInfoButton from '../LyricVideoStudio/AlwaysInfoButton';
@@ -10,6 +11,8 @@ const UserPreferencesLayout = ({
   children,
   companionRunning,
   companionStarting,
+  contentDirection = 0,
+  contentKey,
   darkMode,
   handleNdiCheckForUpdate,
   handleNdiLaunch,
@@ -24,6 +27,7 @@ const UserPreferencesLayout = ({
   saveError,
   saving,
   setActiveCategory,
+  hideContentHeader = false,
 }) => (
   <div className="flex flex-col h-[500px]">
     <div className="flex flex-1 min-h-0">
@@ -50,60 +54,83 @@ const UserPreferencesLayout = ({
         </nav>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <h3 className={`text-lg font-semibold ${labelClass}`}>
-            {categories.find(c => c.id === activeCategory)?.label}
-          </h3>
-          {categories.find(c => c.id === activeCategory)?.info && (
-            <AlwaysInfoButton
-              side="left"
-              ariaLabel={`About ${categories.find(c => c.id === activeCategory)?.label}`}
-              content={categories.find(c => c.id === activeCategory)?.info}
-            />
-          )}
-          {activeCategory === 'ndi' && ndiStatus.installed && (
-            <div className="flex items-center gap-2 shrink-0">
-              {!companionRunning ? (
-                <Tooltip content="Launch the NDI companion process" side="bottom">
-                  <Button size="sm" onClick={handleNdiLaunch} disabled={companionStarting} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
-                    {companionStarting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Power className="w-3.5 h-3.5 mr-1.5" />}
-                    {companionStarting ? 'Starting' : 'Launch'}
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Tooltip content="Stop the NDI companion process" side="bottom">
-                  <Button size="sm" onClick={handleNdiStop} className={`${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}>
-                    <Power className="w-3.5 h-3.5 mr-1.5" />
-                    Stop
-                  </Button>
-                </Tooltip>
+      <div className="relative min-w-0 flex-1 overflow-hidden">
+        <MotionConfig reducedMotion="user">
+          <AnimatePresence initial={false} mode="wait" custom={contentDirection}>
+            <motion.div
+              key={contentKey || activeCategory}
+              custom={contentDirection}
+              variants={{
+                enter: (direction) => ({ opacity: 0, x: direction * 28 }),
+                center: { opacity: 1, x: 0 },
+                exit: (direction) => ({ opacity: 0, x: direction * -28 }),
+              }}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="absolute inset-0 overflow-y-auto p-6"
+            >
+              {!hideContentHeader && (
+                <div className="mb-6 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h3 className={`text-lg font-semibold ${labelClass}`}>
+                      {categories.find(c => c.id === activeCategory)?.label}
+                    </h3>
+                    {categories.find(c => c.id === activeCategory)?.info && (
+                      <AlwaysInfoButton
+                        side="left"
+                        ariaLabel={`About ${categories.find(c => c.id === activeCategory)?.label}`}
+                        content={categories.find(c => c.id === activeCategory)?.info}
+                      />
+                    )}
+                  </div>
+                  {activeCategory === 'ndi' && ndiStatus.installed && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!companionRunning ? (
+                        <Tooltip content="Launch the NDI companion process" side="bottom">
+                          <Button size="sm" onClick={handleNdiLaunch} disabled={companionStarting} className={`${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                            {companionStarting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Power className="w-3.5 h-3.5 mr-1.5" />}
+                            {companionStarting ? 'Starting' : 'Launch'}
+                          </Button>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip content="Stop the NDI companion process" side="bottom">
+                          <Button size="sm" onClick={handleNdiStop} className={`${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}>
+                            <Power className="w-3.5 h-3.5 mr-1.5" />
+                            Stop
+                          </Button>
+                        </Tooltip>
+                      )}
+                      <Tooltip content="Check for companion updates" side="bottom">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleNdiCheckForUpdate}
+                          disabled={ndiCheckingUpdate}
+                          className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
+                        >
+                          {ndiCheckingUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        </Button>
+                      </Tooltip>
+                      <Tooltip content="Uninstall NDI companion" side="bottom">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleNdiUninstall}
+                          className={`${darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 border-red-600/50 text-red-500 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
               )}
-              <Tooltip content="Check for companion updates" side="bottom">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleNdiCheckForUpdate}
-                  disabled={ndiCheckingUpdate}
-                  className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                >
-                  {ndiCheckingUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                </Button>
-              </Tooltip>
-              <Tooltip content="Uninstall NDI companion" side="bottom">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleNdiUninstall}
-                  className={`${darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 border-red-600/50 text-red-500 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </Tooltip>
-            </div>
-          )}
-        </div>
-        {children}
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </MotionConfig>
       </div>
     </div>
 

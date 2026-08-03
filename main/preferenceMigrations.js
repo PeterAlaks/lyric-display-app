@@ -1,4 +1,9 @@
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 4;
+import {
+  DEFAULT_CAPITALIZED_WORDS,
+  normalizeCapitalizedWords,
+} from '../shared/capitalizedWords.js';
+
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 5;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -85,6 +90,20 @@ export function migratePreferences(input) {
           : false,
       },
       _schemaVersion: 4,
+    };
+  }
+
+  if (sourceVersion < 5) {
+    const formatting = isPlainObject(migrated.formatting) ? migrated.formatting : {};
+    migrated = {
+      ...migrated,
+      formatting: {
+        ...formatting,
+        capitalizedWords: Array.isArray(formatting.capitalizedWords)
+          ? normalizeCapitalizedWords(formatting.capitalizedWords)
+          : [...DEFAULT_CAPITALIZED_WORDS],
+      },
+      _schemaVersion: 5,
     };
   }
 

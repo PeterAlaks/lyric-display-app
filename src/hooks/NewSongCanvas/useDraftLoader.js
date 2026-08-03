@@ -32,6 +32,7 @@ export const useDraftLoader = ({
       ...parsingOptions,
       capitalizeFirst: state.formattingCapitalizeFirstLetter,
       capitalizeReligious: state.formattingCapitalizeReligiousTerms,
+      capitalizedWords: state.formattingCapitalizedWords,
       normalizeTypographic: state.formattingNormalizeTypographicChars,
     });
     const processedLines = parseTxtContent(cleanedText, parsingOptions).processedLines;

@@ -7,6 +7,7 @@ const getFormattingOptions = () => {
   return {
     capitalizeFirst: state.formattingCapitalizeFirstLetter,
     capitalizeReligious: state.formattingCapitalizeReligiousTerms,
+    capitalizedWords: state.formattingCapitalizedWords,
     normalizeTypographic: state.formattingNormalizeTypographicChars,
     enableSplitting: state.lyricsParsingOptions.enableSplitting,
     splitConfig: state.lyricsParsingOptions.splitConfig,

@@ -317,6 +317,18 @@ test('formatter capitalizes lyric text after leading LRC timestamps', () => {
   assert.equal(formatLyrics('[00:01.00] hello god', { enableSplitting: false }), '[00:01.00] Hello God');
 });
 
+test('formatter uses the user-configured capitalized words list', () => {
+  assert.equal(formatLyrics('we sing to jesus and abba', {
+    enableSplitting: false,
+    capitalizedWords: ['abba'],
+  }), 'We sing to jesus and Abba');
+
+  assert.equal(formatLyrics('we sing to god', {
+    enableSplitting: false,
+    capitalizedWords: [],
+  }), 'We sing to god');
+});
+
 test('LRC parsing strips enhanced word timestamps from visible lyric text', () => {
   const parsed = parseLrcContent('[ti:Example]\n[00:01.00]Hello <00:01.25>world', { enableSplitting: false });
 

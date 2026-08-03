@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import {
   Settings, FolderOpen, FileText, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Loader2,
-  HardDrive, Cast, Palette, Wand2
+  ChevronRight, HardDrive, Cast, Palette, Wand2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,10 +31,16 @@ import { useOscPreferences } from '../hooks/UserPreferencesModal/useOscPreferenc
 import { usePreferencesPersistence } from '../hooks/UserPreferencesModal/usePreferencesPersistence';
 import { useSecurityPreferences } from '../hooks/UserPreferencesModal/useSecurityPreferences';
 import AdvancedPreferencesSection from './UserPreferencesModal/AdvancedPreferencesSection';
+import CapitalizedWordsPreferencesPage from './UserPreferencesModal/CapitalizedWordsPreferencesPage';
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
+import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPreferencesPage';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
 import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing.js';
+import {
+  DEFAULT_CAPITALIZED_WORDS,
+  normalizeCapitalizedWords,
+} from '../../shared/capitalizedWords.js';
 
 // Category definitions
 const CATEGORIES = [
@@ -62,6 +68,9 @@ const CATEGORIES = [
 
 const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
+  const [formattingPage, setFormattingPage] = useState('main');
+  const [externalControlPage, setExternalControlPage] = useState('main');
+  const [contentDirection, setContentDirection] = useState(0);
   const { showToast } = useToast();
   const { showModal } = useModal();
   const { liveSafety, setLiveSafetyEnabled, isAuthenticated, ready } = useLiveSafetyBridge();
@@ -105,9 +114,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     lastLearnedMidi,
     midiAssigningAction,
     midiLearnActive,
-    midiMappingsExpanded,
     midiRefreshing,
-    setMidiMappingsExpanded,
   } = useMidiPreferences({ midiStatus, setMidiStatus, showToast, updateNestedPreference });
 
   const {
@@ -172,6 +179,43 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const splitTarget = Number(preferences?.lineSplitting?.targetLength ?? 60);
   const splitMaximum = Number(preferences?.lineSplitting?.maxLength ?? 80);
   const hasInvalidSplitRelationship = splitMinimum > splitTarget || splitTarget > splitMaximum;
+  const capitalizedWords = normalizeCapitalizedWords(
+    preferences?.formatting?.capitalizedWords,
+    DEFAULT_CAPITALIZED_WORDS,
+  );
+  const isCapitalizedWordsPage = activeCategory === 'formatting' && formattingPage === 'capitalizedWords';
+  const isMidiMappingsPage = activeCategory === 'externalControl' && externalControlPage === 'midiMappings';
+  const handleCategoryChange = (category) => {
+    const isReturningFromNestedPage = (
+      (category === 'formatting' && isCapitalizedWordsPage)
+      || (category === 'externalControl' && isMidiMappingsPage)
+    );
+    setContentDirection(isReturningFromNestedPage ? -1 : 0);
+    setFormattingPage('main');
+    setExternalControlPage('main');
+    setActiveCategory(category);
+  };
+  const openCapitalizedWordsPage = () => {
+    setContentDirection(1);
+    setFormattingPage('capitalizedWords');
+  };
+  const closeCapitalizedWordsPage = () => {
+    setContentDirection(-1);
+    setFormattingPage('main');
+  };
+  const openMidiMappingsPage = () => {
+    setContentDirection(1);
+    setExternalControlPage('midiMappings');
+  };
+  const closeMidiMappingsPage = () => {
+    setContentDirection(-1);
+    setExternalControlPage('main');
+  };
+  const handleCapitalizedWordsChange = (words) => {
+    const normalizedWords = normalizeCapitalizedWords(words);
+    updatePreference('formatting', 'capitalizedWords', normalizedWords);
+    useLyricsStore.getState().setFormattingCapitalizedWords(normalizedWords);
+  };
   const commitLineSplittingPreference = (key, value) => {
     const normalized = normalizeLineSplittingConfig({
       ...(preferences?.lineSplitting || {}),
@@ -188,6 +232,38 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   // Render category content
   const renderCategoryContent = () => {
     if (!preferences) return null;
+
+    if (isCapitalizedWordsPage) {
+      return (
+        <CapitalizedWordsPreferencesPage
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeCapitalizedWordsPage}
+          onWordsChange={handleCapitalizedWordsChange}
+          showModal={showModal}
+          words={capitalizedWords}
+        />
+      );
+    }
+
+    if (isMidiMappingsPage) {
+      return (
+        <MidiMappingsPreferencesPage
+          darkMode={darkMode}
+          handleMidiAssignAction={handleMidiAssignAction}
+          handleMidiLearn={handleMidiLearn}
+          handleMidiResetMappings={handleMidiResetMappings}
+          labelClass={labelClass}
+          lastLearnedMidi={lastLearnedMidi}
+          midiAssigningAction={midiAssigningAction}
+          midiLearnActive={midiLearnActive}
+          midiStatus={midiStatus}
+          mutedClass={mutedClass}
+          onBack={closeMidiMappingsPage}
+        />
+      );
+    }
 
     switch (activeCategory) {
       case 'general':
@@ -608,6 +684,20 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
+            <button
+              type="button"
+              onClick={openCapitalizedWordsPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label={`Manage ${capitalizedWords.length} capitalized ${capitalizedWords.length === 1 ? 'word' : 'words'}`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Capitalized Words</span>
+                <p className={`text-xs ${mutedClass}`}>Choose the words and phrases this formatting rule applies to</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>{capitalizedWords.length}</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
+
             <div className="flex items-center justify-between">
               <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Normalize Typographic Characters</label>
@@ -851,10 +941,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <ExternalControlPreferencesSection
             darkMode={darkMode}
-            handleMidiAssignAction={handleMidiAssignAction}
-            handleMidiLearn={handleMidiLearn}
             handleMidiRefreshPorts={handleMidiRefreshPorts}
-            handleMidiResetMappings={handleMidiResetMappings}
             handleMidiSelectPort={handleMidiSelectPort}
             handleMidiToggle={handleMidiToggle}
             handleOscFeedbackPortChange={handleOscFeedbackPortChange}
@@ -867,16 +954,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             getNumberPreferenceInputProps={getNumberPreferenceInputProps}
             inputClass={inputClass}
             labelClass={labelClass}
-            lastLearnedMidi={lastLearnedMidi}
-            midiAssigningAction={midiAssigningAction}
-            midiLearnActive={midiLearnActive}
-            midiMappingsExpanded={midiMappingsExpanded}
             midiRefreshing={midiRefreshing}
             midiStatus={midiStatus}
             mutedClass={mutedClass}
+            onOpenMidiMappings={openMidiMappingsPage}
             oscStatus={oscStatus}
             preferenceFieldLabelClass={preferenceFieldLabelClass}
-            setMidiMappingsExpanded={setMidiMappingsExpanded}
           />
         );
       case 'ndi':
@@ -1034,6 +1117,10 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       categories={CATEGORIES}
       companionRunning={companionRunning}
       companionStarting={companionStarting}
+      contentDirection={contentDirection}
+      contentKey={isCapitalizedWordsPage
+        ? 'formatting-capitalized-words'
+        : (isMidiMappingsPage ? 'external-control-midi-mappings' : activeCategory)}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}
@@ -1047,7 +1134,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       panelBg={panelBg}
       saveError={saveError}
       saving={saving}
-      setActiveCategory={setActiveCategory}
+      setActiveCategory={handleCategoryChange}
+      hideContentHeader={isCapitalizedWordsPage || isMidiMappingsPage}
     >
       {renderCategoryContent()}
     </UserPreferencesLayout>

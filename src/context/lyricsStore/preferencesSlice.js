@@ -1,4 +1,8 @@
 import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing.js';
+import {
+  DEFAULT_CAPITALIZED_WORDS,
+  normalizeCapitalizedWords,
+} from '../../../shared/capitalizedWords.js';
 
 let maxFileSizeLimit = 2;
 
@@ -12,6 +16,7 @@ export const createPreferencesSlice = (set) => ({
   canvasCleanupOnPaste: true,
   formattingCapitalizeFirstLetter: true,
   formattingCapitalizeReligiousTerms: true,
+  formattingCapitalizedWords: [...DEFAULT_CAPITALIZED_WORDS],
   formattingNormalizeTypographicChars: true,
   maxFileSizeLimit: 2,
   lyricsParsingOptions: normalizeLyricsParsingOptions(),
@@ -25,6 +30,9 @@ export const createPreferencesSlice = (set) => ({
   setCanvasCleanupOnPaste: (enabled) => set({ canvasCleanupOnPaste: enabled }),
   setFormattingCapitalizeFirstLetter: (enabled) => set({ formattingCapitalizeFirstLetter: enabled }),
   setFormattingCapitalizeReligiousTerms: (enabled) => set({ formattingCapitalizeReligiousTerms: enabled }),
+  setFormattingCapitalizedWords: (words) => set({
+    formattingCapitalizedWords: normalizeCapitalizedWords(words),
+  }),
   setFormattingNormalizeTypographicChars: (enabled) => set({ formattingNormalizeTypographicChars: enabled }),
   setLyricsParsingOptions: (options) => set({
     lyricsParsingOptions: normalizeLyricsParsingOptions(options),

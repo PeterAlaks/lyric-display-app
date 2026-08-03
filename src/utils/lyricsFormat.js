@@ -1,10 +1,12 @@
 import { preprocessText, splitLongLine } from '../../shared/lineSplitting.js';
 import { isManualNormalGroupCandidate, STRUCTURE_TAGS_CONFIG, STRUCTURE_TAG_PATTERNS, BRACKET_PAIRS } from '../../shared/lyricsParsing.js';
+import {
+  DEFAULT_CAPITALIZED_WORDS,
+  normalizeCapitalizedWords,
+} from '../../shared/capitalizedWords.js';
 
-const RELIGIOUS_WORDS = ['jesus', 'jehovah', 'god', 'yahweh', 'lord', 'christ', 'holy ghost',
-  'holy spirit', 'bible', 'amen', 'hallelujah', 'hosanna', 'savior', 'saviour', 'redeemer', 'messiah'];
 const LATIN_LETTER_REGEX = /[A-Za-z]/;
-const ENGLISH_HINT_WORDS = [...RELIGIOUS_WORDS, 'the', 'and', 'for', 'with', 'praise', 'glory', 'grace', 'mercy', 'love', 'king', 'queen', 'strength', 'light', 'power', 'redeemer', 'savior', 'saviour', 'spirit', 'amen', 'hallelujah', 'we', 'you', 'your', 'our', 'their', 'his', 'her', 'who', 'what', 'where', 'when', 'why', 'how', 'this', 'that', 'these', 'those', 'shall', 'will', 'hope', 'faith', 'joy', 'peace', 'deliver', 'deliverer', 'rescue', 'comfort', 'comforter', 'guide', 'helper'];
+const ENGLISH_HINT_WORDS = [...DEFAULT_CAPITALIZED_WORDS, 'the', 'and', 'for', 'with', 'praise', 'glory', 'grace', 'mercy', 'love', 'king', 'queen', 'strength', 'light', 'power', 'redeemer', 'savior', 'saviour', 'spirit', 'amen', 'hallelujah', 'we', 'you', 'your', 'our', 'their', 'his', 'her', 'who', 'what', 'where', 'when', 'why', 'how', 'this', 'that', 'these', 'those', 'shall', 'will', 'hope', 'faith', 'joy', 'peace', 'deliver', 'deliverer', 'rescue', 'comfort', 'comforter', 'guide', 'helper'];
 const ENGLISH_HINT_REGEXES = ENGLISH_HINT_WORDS.map((word) => new RegExp(`\\b${word}\\b`, 'i'));
 
 /**
@@ -223,20 +225,15 @@ const capitalizeFirstCharacter = (line) => {
   return corrected.charAt(0).toUpperCase() + corrected.slice(1);
 };
 
-const toTitleCase = (phrase) => {
-  if (!phrase) return phrase;
-  return phrase
-    .split(/\s+/)
-    .map((part) => part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : part)
-    .join(' ');
-};
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const capitalizeReligiousTerms = (line) => {
+const capitalizeReligiousTerms = (line, capitalizedWords) => {
   if (!line) return line;
 
-  return RELIGIOUS_WORDS.reduce((current, word) => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    return current.replace(regex, (match) => toTitleCase(match));
+  return capitalizedWords.reduce((current, word) => {
+    const escapedWord = escapeRegExp(word).replace(/\s+/g, '\\s+');
+    const regex = new RegExp(`(^|[^\\p{L}\\p{N}_])(${escapedWord})(?=$|[^\\p{L}\\p{N}_])`, 'giu');
+    return current.replace(regex, (_match, prefix) => `${prefix}${word}`);
   }, line);
 };
 
@@ -416,6 +413,7 @@ export const formatLyrics = (text, options = {}) => {
     enableSplitting = false,
     capitalizeFirst = true,
     capitalizeReligious = true,
+    capitalizedWords = DEFAULT_CAPITALIZED_WORDS,
     normalizeTypographic = true,
     groupingConfig,
     splitConfig = {
@@ -425,6 +423,8 @@ export const formatLyrics = (text, options = {}) => {
       OVERFLOW_TOLERANCE: 15,
     }
   } = options;
+
+  const normalizedCapitalizedWords = normalizeCapitalizedWords(capitalizedWords);
 
   let workingText = enableSplitting ? preprocessText(text) : text;
 
@@ -473,7 +473,7 @@ export const formatLyrics = (text, options = {}) => {
         .map((segment) => {
           let result = segment;
           if (capitalizeFirst) result = capitalizeFirstCharacter(result);
-          if (capitalizeReligious) result = capitalizeReligiousTerms(result);
+          if (capitalizeReligious) result = capitalizeReligiousTerms(result, normalizedCapitalizedWords);
           return result;
         });
 
