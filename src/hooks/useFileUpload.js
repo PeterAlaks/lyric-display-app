@@ -5,7 +5,7 @@ import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 import useLyricsStore from '../context/LyricsStore';
-import { mergeLyricsParsingOptions } from '../../shared/lyricsParsing.js';
+import { mergeLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
 import {
   getLyricFormatLabel,
   getLyricOriginLabel,

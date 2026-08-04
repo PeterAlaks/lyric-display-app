@@ -1,4 +1,4 @@
-import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing/sections.js';
 import { isLyricsFileNamePayload } from '../../../shared/sessionReconciliation.js';
 import { appendActionLog } from '../actionLog.js';
 import { emitLyricsLoad, emitLyricsRenderEvent } from '../broadcast.js';

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { reconstructEditableText } from '../../utils/lyricsFormat';
 import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
-import { extractExplicitGroupingDirective } from '../../../shared/lyricsParsing.js';
+import { extractExplicitGroupingDirective } from '../../../shared/lyricsParsing/txtParser.js';
 
 const resetCanvasState = ({ baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setFileName, setTitle }) => {
   resetHistory('');

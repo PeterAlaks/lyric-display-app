@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getLyrics, search } from '../main/lyricsProviders/providers/openHymnal.js';
-import { parseTxtContent } from '../shared/lyricsParsing.js';
+import { parseTxtContent } from '../shared/lyricsParsing/txtParser.js';
 
 test('Open Hymnal search does not surface weak fuzzy matches for specific non-hymn queries', async () => {
   const response = await search('Obinasom', { limit: 5 });

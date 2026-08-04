@@ -1,10 +1,19 @@
 import { preprocessText, splitLongLine } from './lineSplitting.js';
-import { stripTimestampPatterns } from './textCleanup.js';
+import { TIMESTAMP_LIKE_PATTERNS } from './constants.js';
 import { extractStructureTags } from './structureTags.js';
 import { expandRepeatableSectionReferences } from './repeatableSections.js';
-import { isTranslationLine } from './translation.js';
+import { isTranslationLine } from './lineClassification.js';
 import { flattenClusters, mergeAcrossBlankLines } from './grouping.js';
 import { normalizeLineSplittingConfig } from './preferenceOptions.js';
+
+function stripTimestampPatterns(text) {
+  if (!text || typeof text !== 'string') return text;
+
+  return TIMESTAMP_LIKE_PATTERNS.reduce(
+    (cleaned, pattern) => cleaned.replace(pattern, ''),
+    text
+  );
+}
 
 /**
  * Split raw text into clusters separated by blank lines and convert into processed lyric lines.

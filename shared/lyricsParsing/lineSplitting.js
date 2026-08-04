@@ -1,4 +1,3 @@
-// shared/lineSplitting.js
 // Enhanced utilities for intelligently breaking long lyric lines into displayable segments
 import { normalizeLineSplittingConfig } from './preferenceOptions.js';
 

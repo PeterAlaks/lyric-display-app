@@ -1,7 +1,11 @@
-import { isSongSeparator } from './separators.js';
 import { isStructureTag } from './structureTags.js';
 
 const REPEATABLE_SECTION_INLINE_TOKEN_REGEX = /(\[[^\]]+\]|\{[^}]+\}|<[^>]+>|\([^)]+\))/g;
+
+export function isSongSeparator(line) {
+  if (!line || typeof line !== 'string') return false;
+  return /^[\*\-_]{2,}/.test(line.trim());
+}
 
 /**
  * Parse a marker that can be used as a reusable section definition/call.

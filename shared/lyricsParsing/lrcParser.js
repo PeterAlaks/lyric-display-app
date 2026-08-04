@@ -6,10 +6,9 @@ import {
   sanitizeMaxLinesPerGroup,
   setRuntimeGroupingConfig
 } from './runtimeConfig.js';
-import { isTranslationLine } from './translation.js';
 import { isStructureTag } from './structureTags.js';
-import { isNormalGroupCandidate } from './normalGroupCandidates.js';
-import { createNormalGroup } from './helpers.js';
+import { isNormalGroupCandidate, isTranslationLine } from './lineClassification.js';
+import { createNormalGroup } from './grouping.js';
 import { deriveSectionsFromProcessedLines } from './sections.js';
 
 /**

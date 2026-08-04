@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isStructureTag } from '../../../shared/lyricsParsing.js';
+import { isStructureTag } from '../../../shared/lyricsParsing/structureTags.js';
 import useLyricsStore from '../../context/LyricsStore';
 
 export const useLineCounterText = ({ hasLyrics, lyrics, selectedLine }) => {

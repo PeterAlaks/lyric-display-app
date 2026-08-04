@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getLineDisplayText } from '../utils/parseLyrics';
 import { getNextIntelligentAutoplayStep, hasValidTimestamps } from '../utils/timestampHelpers';
-import { isStructureTag } from '../../shared/lyricsParsing.js';
+import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
 import useLyricsStore from '../context/LyricsStore';
 
 export const useAutoplayManager = ({

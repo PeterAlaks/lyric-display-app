@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { isManualNormalGroupCandidate } from '../../../shared/lyricsParsing.js';
+import { isManualNormalGroupCandidate } from '../../../shared/lyricsParsing/lineClassification.js';
 import useLyricsStore from '../../context/LyricsStore';
 import { buildLyricsSyncPayload } from '../../utils/lyricsSyncPayload.js';
 

@@ -1,4 +1,4 @@
-import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing.js';
+import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing/preferenceOptions.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,

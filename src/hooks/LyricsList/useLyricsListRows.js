@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useDynamicRowHeight } from 'react-window';
-import { createStructureTagPatterns, sanitizeMaxLinesPerGroup } from '../../../shared/lyricsParsing.js';
+import { createStructureTagPatterns } from '../../../shared/lyricsParsing/constants.js';
+import { sanitizeMaxLinesPerGroup } from '../../../shared/lyricsParsing/runtimeConfig.js';
 
 export const DEFAULT_ROW_HEIGHT = 48;
 export const ROW_GAP = 8;

@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import useLyricsStore from '../context/LyricsStore';
 import { logDebug, logError, logWarn } from '../utils/logger';
 import { detectArtistFromFilename } from '../utils/artistDetection';
-import { deriveSectionsFromProcessedLines } from '../../shared/lyricsParsing.js';
+import { deriveSectionsFromProcessedLines } from '../../shared/lyricsParsing/sections.js';
 import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
 import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
 import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';

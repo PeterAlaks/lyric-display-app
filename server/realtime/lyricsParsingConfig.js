@@ -1,4 +1,4 @@
-import { buildLyricsParsingOptions } from '../../shared/lyricsParsing.js';
+import { buildLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
 
 const readInitialConfig = () => {
   const serialized = process.env.LYRICDISPLAY_PARSING_CONFIG;

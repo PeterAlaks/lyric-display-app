@@ -1,4 +1,4 @@
-import { isStructureTag } from '../../shared/lyricsParsing.js';
+import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
 
 const TIMESTAMP_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
 const METADATA_TAG_REGEX = /^\s*\[[a-z]+:/i;

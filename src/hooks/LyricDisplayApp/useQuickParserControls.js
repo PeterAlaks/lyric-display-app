@@ -3,8 +3,8 @@ import { normalizeLyricFileType } from '../../../shared/lyricImportRegistry.js';
 import {
   buildLyricsParsingOptions,
   mergeLyricsParsingOptions,
-  sanitizeMaxLinesPerGroup,
-} from '../../../shared/lyricsParsing.js';
+} from '../../../shared/lyricsParsing/preferenceOptions.js';
+import { sanitizeMaxLinesPerGroup } from '../../../shared/lyricsParsing/runtimeConfig.js';
 import useLyricsStore from '../../context/LyricsStore.js';
 import { RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT } from '../../utils/lyricsReloadEvents.js';
 

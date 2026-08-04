@@ -1,12 +1,29 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  CONTROL_COMMAND_INTENTS,
   dispatchCommand,
   evaluateCommandSafety,
   isCommandFocusProtected,
   isModalFocusProtected,
   isTextEditingFocusProtected,
+  shouldNotifyRejectedControlCommand,
 } from '../shared/commandSafetyPolicy.js';
+
+test('control command rejection feedback waits for sync and ignores background work', () => {
+  assert.equal(shouldNotifyRejectedControlCommand({
+    hasCompletedInitialSync: false,
+    intent: CONTROL_COMMAND_INTENTS.operator,
+  }), false);
+  assert.equal(shouldNotifyRejectedControlCommand({
+    hasCompletedInitialSync: true,
+    intent: CONTROL_COMMAND_INTENTS.operator,
+  }), true);
+  assert.equal(shouldNotifyRejectedControlCommand({
+    hasCompletedInitialSync: true,
+    intent: CONTROL_COMMAND_INTENTS.background,
+  }), false);
+});
 
 function element(tagName, attributes = {}, parentElement = null) {
   return {

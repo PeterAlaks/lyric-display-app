@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createGroupingPlan } from '../shared/lyricsParsing/groupingPlan.js';
+import { isManualNormalGroupCandidate } from '../shared/lyricsParsing/lineClassification.js';
+import { parseLrcContent } from '../shared/lyricsParsing/lrcParser.js';
 import {
   buildLyricsParsingOptions,
-  createGroupingPlan,
-  extractExplicitGroupingDirective,
-  isManualNormalGroupCandidate,
-  isStructureTag,
   normalizeLyricsParsingOptions,
-  parseLrcContent,
+} from '../shared/lyricsParsing/preferenceOptions.js';
+import { isStructureTag } from '../shared/lyricsParsing/structureTags.js';
+import {
+  extractExplicitGroupingDirective,
   parseTxtContent,
-} from '../shared/lyricsParsing.js';
+} from '../shared/lyricsParsing/txtParser.js';
 import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
 import { formatLyrics, formatLyricsWithStats, reconstructEditableText } from '../src/utils/lyricsFormat.js';
 import { extractFirstValidLine } from '../src/utils/titlePrefill.js';

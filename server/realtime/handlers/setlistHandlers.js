@@ -1,4 +1,5 @@
-import { parseTxtContent, parseLrcContent } from '../../../shared/lyricsParsing.js';
+import { parseLrcContent } from '../../../shared/lyricsParsing/lrcParser.js';
+import { parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
 import {
   normalizeLyricFileType,
   stripLyricImportExtension,

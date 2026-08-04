@@ -1,4 +1,5 @@
-import { parseLrcContent, parseTxtContent } from './lyricsParsing.js';
+import { parseLrcContent } from './lyricsParsing/lrcParser.js';
+import { parseTxtContent } from './lyricsParsing/txtParser.js';
 import { getLyricParserType, normalizeLyricFileType } from './lyricImportRegistry.js';
 import {
   MAX_DOCX_ARCHIVE_ENTRIES,

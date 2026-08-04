@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createGroupingPlan } from '../shared/lyricsParsing.js';
+import { createGroupingPlan } from '../shared/lyricsParsing/groupingPlan.js';
 import {
   createDefaultOutputSettings,
   createOutputSlice,

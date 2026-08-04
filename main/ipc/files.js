@@ -12,10 +12,12 @@ import {
 } from '../../shared/lyricImportLimits.js';
 import {
   buildLyricsParsingOptions,
-  extractExplicitGroupingDirective,
   mergeLyricsParsingOptions,
+} from '../../shared/lyricsParsing/preferenceOptions.js';
+import {
+  extractExplicitGroupingDirective,
   parseTxtContent,
-} from '../../shared/lyricsParsing.js';
+} from '../../shared/lyricsParsing/txtParser.js';
 import * as userPreferences from '../userPreferences.js';
 import { grantLyricVideoMediaFile, revokeLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
 import {

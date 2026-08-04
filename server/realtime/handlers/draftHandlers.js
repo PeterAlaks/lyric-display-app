@@ -1,4 +1,4 @@
-import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing.js';
+import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing/sections.js';
 import { appendActionLog } from '../actionLog.js';
 import { emitControllerEvent, emitLyricsLoad, emitLyricsRenderEvent } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';

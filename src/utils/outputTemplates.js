@@ -1,4 +1,8 @@
-import { defaultOutput1Settings, defaultOutput2Settings, defaultStageSettings } from '../context/LyricsStore';
+import {
+  defaultOutput1Settings,
+  defaultOutput2Settings,
+} from '../context/lyricsStore/outputSlice.js';
+import { defaultStageSettings } from '../context/lyricsStore/stageSlice.js';
 
 const baseOutputSettings = { ...defaultOutput1Settings };
 

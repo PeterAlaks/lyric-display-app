@@ -1,5 +1,6 @@
 import { parseLyrics } from './parseLyrics.js';
-import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
+import { parseLrcContent } from '../../shared/lyricsParsing/lrcParser.js';
+import { parseTxtContent } from '../../shared/lyricsParsing/txtParser.js';
 import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
 import { parseLyricImportContent } from '../../shared/documentTextExtraction.js';
 

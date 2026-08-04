@@ -1,11 +1,13 @@
-import { preprocessText, splitLongLine } from '../../shared/lineSplitting.js';
+import { preprocessText, splitLongLine } from '../../shared/lyricsParsing/lineSplitting.js';
 import {
   BRACKET_PAIRS,
-  extractStructureTags,
-  isManualNormalGroupCandidate,
-  isStructureTag,
   STRUCTURE_TAGS_CONFIG,
-} from '../../shared/lyricsParsing.js';
+} from '../../shared/lyricsParsing/constants.js';
+import { isManualNormalGroupCandidate } from '../../shared/lyricsParsing/lineClassification.js';
+import {
+  extractStructureTags,
+  isStructureTag,
+} from '../../shared/lyricsParsing/structureTags.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,

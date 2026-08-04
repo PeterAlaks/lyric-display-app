@@ -1,7 +1,7 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
-import { buildLyricsParsingOptions } from '../../shared/lyricsParsing.js';
+import { buildLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
 import { normalizeTimerControlSettings, normalizeTimerDisplaySettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
@@ -16,9 +16,6 @@ import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 import { createStageSlice } from './lyricsStore/stageSlice.js';
 import { createTimerSlice } from './lyricsStore/timerSlice.js';
-
-export { createDefaultOutputSettings, defaultOutput1Settings, defaultOutput2Settings } from './lyricsStore/outputSlice.js';
-export { defaultStageSettings } from './lyricsStore/stageSlice.js';
 
 const normalizePaintSettingUpdates = (settings = {}) => {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return {};

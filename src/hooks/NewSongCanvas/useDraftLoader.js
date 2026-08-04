@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { formatLyrics } from '../../utils/lyricsFormat';
-import { parseTxtContent } from '../../../shared/lyricsParsing.js';
+import { parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
 import useLyricsStore from '../../context/LyricsStore.js';
 
 export const useDraftLoader = ({

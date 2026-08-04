@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
-import { extractExplicitGroupingDirective, parseTxtContent } from '../../../shared/lyricsParsing.js';
+import { extractExplicitGroupingDirective, parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
 import useLyricsStore from '../../context/LyricsStore.js';
 import {
   canUseFileNavigator,

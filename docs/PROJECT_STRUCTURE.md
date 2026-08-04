@@ -96,11 +96,11 @@ The source of truth is [`src/App.jsx`](../src/App.jsx). Custom output routes are
 
 | Route | Main component | Runtime role |
 | --- | --- | --- |
-| `/` | `pages/ControlPanel.jsx` -> `components/LyricDisplayApp.jsx` | Primary operator UI; wrapped in the control socket provider and desktop shell when applicable |
+| `/` | `components/LyricDisplayApp.jsx` | Primary operator UI; wrapped in the control socket provider and desktop shell when applicable |
 | `/?dock=obs` and `/obs-dock` | `components/ObsDockLayout.jsx` | Compact OBS dock controller using an `obsDock` client identity |
 | `/new-song` | `components/NewSongCanvas.jsx` | Lyrics authoring/editor workflow |
 | `/lyric-video-studio` | `pages/LyricVideoStudio.jsx` | Timeline, preview, style, and export UI |
-| `/output1`, `/output2` | `pages/Output1.jsx`, `pages/Output2.jsx` -> `pages/OutputPage.jsx` | Default socket-driven lyric outputs |
+| `/output1`, `/output2` | `pages/OutputPage.jsx` | Default socket-driven lyric outputs selected by route-provided output ID |
 | `/output3` ... `/output6` | `pages/OutputPage.jsx` | Custom socket-driven lyric outputs |
 | `/stage` | `pages/Stage.jsx` | Stage display: current/next/previous lyrics, timer, messages, upcoming song |
 | `/time` | `pages/TimeDisplay.jsx` | Dedicated timer/clock projection |
@@ -146,7 +146,7 @@ Passive display routes skip the global modal/toast providers. Output, stage, tim
 
 ### IPC organization
 
-[`main/ipc.js`](../main/ipc.js) is only a compatibility re-export. [`main/ipc/index.js`](../main/ipc/index.js) is the registration hub; domain ownership is below it.
+[`main/ipc/index.js`](../main/ipc/index.js) is the registration hub; domain ownership is below it.
 
 | Domain file | Renderer capability |
 | --- | --- |
@@ -342,9 +342,7 @@ This store is both UI state and a local persistence cache. The backend remains a
 
 | File or directory | Responsibility |
 | --- | --- |
-| `lyricsParsing.js` | Compatibility barrel for the modular parser |
-| `lyricsParsing/` | Text/LRC/online parsing, cleanup, grouping, translation, structure tags, sections, line splitting, runtime config |
-| `lineSplitting.js` | Compatibility barrel for parser line-splitting exports |
+| `lyricsParsing/` | Text/LRC parsing, cleanup, grouping, translation, structure tags, sections, line splitting, runtime config |
 | `documentTextExtraction.js` | Markdown/RTF/DOCX extraction and unified import parsing |
 | `lyricImportRegistry.js` | Supported extensions, parser types, labels, accept strings, dialog filters |
 | `lyricImportLimits.js` | Import and extracted-document size limits |

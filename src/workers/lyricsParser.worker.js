@@ -1,4 +1,5 @@
-import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
+import { parseLrcContent } from '../../shared/lyricsParsing/lrcParser.js';
+import { parseTxtContent } from '../../shared/lyricsParsing/txtParser.js';
 
 const RESULT_OK = 'success';
 const RESULT_ERROR = 'error';

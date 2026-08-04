@@ -1,4 +1,4 @@
-import { createNormalGroup } from './helpers.js';
+import { createNormalGroup } from './grouping.js';
 
 export const GROUPING_PLAN_VERSION = 1;
 

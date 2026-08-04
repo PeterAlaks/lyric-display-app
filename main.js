@@ -5,7 +5,7 @@ import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { appRoot, isDev } from './main/paths.js';
 import { createWindow } from './main/windows.js';
 import { checkForUpdates } from './main/updater.js';
-import { registerIpcHandlers } from './main/ipc.js';
+import { registerIpcHandlers } from './main/ipc/index.js';
 import { openInAppBrowser, registerInAppBrowserIpc } from './main/inAppBrowser.js';
 import { makeMenuAPI } from './main/menuBridge.js';
 import { setupSingleInstanceLock } from './main/singleInstance.js';

@@ -1,11 +1,9 @@
 // Project: LyricDisplay App
 // File: src/utils/parseLyrics.js
 
-import {
-  isStructureTag,
-  parseTxtContent,
-  processRawTextToLines,
-} from '../../shared/lyricsParsing.js';
+import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
+import { parseTxtContent } from '../../shared/lyricsParsing/txtParser.js';
+import { processRawTextToLines } from '../../shared/lyricsParsing/txtProcessor.js';
 
 /**
  * Parses a .txt file and extracts the raw text and processed lyric lines.

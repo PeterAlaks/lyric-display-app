@@ -3,7 +3,7 @@ import useLyricsStore, { loadPreferencesIntoStore } from '../../context/LyricsSt
 import { loadAdvancedSettings } from '../../utils/connectionManager';
 import { loadDebugLoggingPreference } from '../../utils/logger';
 import { LIVE_SAFETY_PREFERENCE_EVENT } from '../useLiveSafetyBridge';
-import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing.js';
+import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing/preferenceOptions.js';
 import { requestLyricsReloadWithCurrentParser } from '../../utils/lyricsReloadEvents.js';
 
 export const usePreferencesPersistence = ({ showToast }) => {

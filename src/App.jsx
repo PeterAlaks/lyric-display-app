@@ -12,9 +12,7 @@ const ObsDockRoute = React.lazy(() => import('./components/routes/ObsDockRoute')
 const ObsSetupRoute = React.lazy(() => import('./components/routes/ObsSetupRoute'));
 const TimerControlRoute = React.lazy(() => import('./components/routes/TimerControlRoute'));
 
-const ControlPanel = React.lazy(() => import('./pages/ControlPanel'));
-const Output1 = React.lazy(() => import('./pages/Output1'));
-const Output2 = React.lazy(() => import('./pages/Output2'));
+const LyricDisplayApp = React.lazy(() => import('./components/LyricDisplayApp'));
 const Stage = React.lazy(() => import('./pages/Stage'));
 const TimeDisplay = React.lazy(() => import('./pages/TimeDisplay'));
 const OutputPage = React.lazy(() => import('./pages/OutputPage'));
@@ -68,12 +66,19 @@ function AppRoutes() {
     <React.Suspense fallback={null}>
       <Routes>
         <Route element={<MainWindowShell />}>
-          <Route path="/" element={isObsDockEntry ? <ObsDockRoute /> : <ControlPanel />} />
+          <Route
+            path="/"
+            element={isObsDockEntry ? <ObsDockRoute /> : (
+              <div className="w-full h-full text-black font-grotesk">
+                <LyricDisplayApp />
+              </div>
+            )}
+          />
           <Route path="/lyric-video-studio" element={<LyricVideoStudio />} />
           <Route path="/new-song" element={<NewSongCanvas />} />
         </Route>
-        <Route path="/output1" element={<Output1 />} />
-        <Route path="/output2" element={<Output2 />} />
+        <Route path="/output1" element={<OutputPage outputId="output1" />} />
+        <Route path="/output2" element={<OutputPage outputId="output2" />} />
         {CUSTOM_OUTPUT_ROUTE_IDS.map((outputId) => (
           <Route key={outputId} path={`/${outputId}`} element={<OutputPage outputId={outputId} />} />
         ))}

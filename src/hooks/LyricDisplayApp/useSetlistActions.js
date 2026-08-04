@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useLyricsFileName, useSetlistState, useIsDesktopApp, useLyricsState } from '../useStoreSelectors';
 import useLyricsStore from '../../context/LyricsStore';
 import useToast from '../useToast';
-import { createGroupingPlan } from '../../../shared/lyricsParsing.js';
+import { createGroupingPlan } from '../../../shared/lyricsParsing/groupingPlan.js';
 
 const useSetlistActions = (emitSetlistAdd) => {
   const isDesktopApp = useIsDesktopApp();

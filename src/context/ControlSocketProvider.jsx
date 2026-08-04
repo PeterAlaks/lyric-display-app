@@ -9,7 +9,7 @@ import { getRequestedControllerClientType } from '../utils/clientType';
 import {
     CONTROL_COMMAND_INTENTS,
     shouldNotifyRejectedControlCommand,
-} from '../../shared/controlCommandFeedback.js';
+} from '../../shared/commandSafetyPolicy.js';
 
 const ControlSocketContext = createContext(null);
 

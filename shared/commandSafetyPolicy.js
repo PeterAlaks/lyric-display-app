@@ -50,6 +50,18 @@ const NON_TEXT_INPUT_TYPES = new Set([
   'submit',
 ]);
 
+export const CONTROL_COMMAND_INTENTS = Object.freeze({
+  operator: 'operator',
+  background: 'background',
+});
+
+export function shouldNotifyRejectedControlCommand({
+  hasCompletedInitialSync = false,
+  intent = CONTROL_COMMAND_INTENTS.operator,
+} = {}) {
+  return Boolean(hasCompletedInitialSync) && intent === CONTROL_COMMAND_INTENTS.operator;
+}
+
 function isProtectedNode(node) {
   if (!node || typeof node !== 'object') return false;
   const tagName = typeof node.tagName === 'string' ? node.tagName.toUpperCase() : '';

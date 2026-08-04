@@ -6,7 +6,7 @@ import { Tooltip } from '../components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
 import { parseLrc } from '../utils/asyncLyricsParser';
-import { createDefaultOutputSettings } from '../context/LyricsStore';
+import { createDefaultOutputSettings } from '../context/lyricsStore/outputSlice.js';
 import {
   useAllOutputIds,
   useLyricsState,

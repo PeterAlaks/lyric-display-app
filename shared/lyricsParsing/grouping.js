@@ -1,14 +1,29 @@
 import { getEffectiveGroupingConfig, sanitizeMaxLinesPerGroup } from './runtimeConfig.js';
-import { isTranslationLine } from './translation.js';
 import { isStructureTag } from './structureTags.js';
-import { isNormalGroupCandidate } from './normalGroupCandidates.js';
-import { createNormalGroup } from './helpers.js';
-import { isSongSeparator } from './separators.js';
+import { isNormalGroupCandidate, isTranslationLine } from './lineClassification.js';
+import { isSongSeparator } from './repeatableSections.js';
 
 const PROTECTED_SPLIT_LINE_TYPE = 'parser-protected-split-line';
 const protectSplitLine = (line) => ({ type: PROTECTED_SPLIT_LINE_TYPE, line });
 const isProtectedSplitLine = (item) => item?.type === PROTECTED_SPLIT_LINE_TYPE;
 const unwrapProtectedSplitLine = (item) => isProtectedSplitLine(item) ? item.line : item;
+
+export function createNormalGroup(lines = [], idPrefix = 'normal_group', originalIndex = 0) {
+  const normalizedLines = Array.isArray(lines)
+    ? lines.filter((line) => typeof line === 'string' && line.trim().length > 0)
+    : [];
+
+  return {
+    type: 'normal-group',
+    id: `${idPrefix}_${originalIndex}`,
+    lines: normalizedLines,
+    line1: normalizedLines[0] || '',
+    line2: normalizedLines[1] || '',
+    displayText: normalizedLines.join('\n'),
+    searchText: normalizedLines.join(' '),
+    originalIndex,
+  };
+}
 
 /**
  * Groups clusters of raw lines into either individual strings, translation groups, or normal groups.

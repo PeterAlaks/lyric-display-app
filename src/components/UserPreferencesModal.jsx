@@ -38,7 +38,7 @@ import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPref
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
 import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagPhrasesPreferencesPage';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
-import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing.js';
+import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing/preferenceOptions.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,

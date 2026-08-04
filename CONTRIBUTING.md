@@ -18,7 +18,7 @@ All contributors and community participants are expected to follow the [Code of 
 For process boundaries, file ownership, runtime flows, the route map, and a feature-to-file index, use the [repository and architecture map](docs/PROJECT_STRUCTURE.md).
 
 - **Frontend (`src/`)**: React 19 + Vite + Tailwind. Zustand (`context/LyricsStore.js`) persists control state (lyrics, selections, styling). Routing uses HashRouter in production. Reusable UI lives in `components/ui`, modals/toasts are provided via `ModalProvider` and `ToastProvider`.
-- **Output views (`pages/Output1|Output2|Stage.jsx`)**: Socket-driven displays that render a single current line with styling/autosizing/background media, using framer-motion for transitions.
+- **Output views (`pages/OutputPage.jsx`, `pages/Stage.jsx`)**: Socket-driven displays that render a single current line with styling/autosizing/background media, using framer-motion for transitions.
 - **Control panel (`components/LyricDisplayApp.jsx`)**: Desktop-first controller with setlists, online lyrics search, autoplay (interval and timestamp-driven), intelligent search, and styling panels for each output.
 - **Backend (`server/`)**: Express + Socket.IO with JWT auth, join-code guard for controllers, media upload endpoints (200 MB max, limited MIME types), and secret rotation support. Socket events live in `server/events.js` and enforce permissions.
 - **Electron main process (`main/`)**: Window creation, IPC bridges, updater, display assignments, EasyWorship import, secure token storage, and menu integration. Shared parsing lives in `shared/`.
@@ -28,7 +28,7 @@ For process boundaries, file ownership, runtime flows, the route map, and a feat
 - Styling: Tailwind utility classes and the small UI kit in `components/ui`. Reuse shared components (e.g., `Switch`, `Tabs`, tooltip) instead of ad-hoc DOM.
 - State: Pull selectors from `hooks/useStoreSelectors` to avoid redundant subscription logic. Keep persistence-friendly shapes (avoid storing transient DOM data).
 - Sockets: Use `useSocket` / `useControlSocket` emitters. Never bypass permission checks on the server—mirror existing event names/payload shapes in `server/realtime/handlers/` and `docs/asyncapi.yaml`.
-- Parsing: Use `shared/lyricsParsing.js`/`shared/lineSplitting.js` for lyric parsing and `shared/documentTextExtraction.js`/`shared/lyricImportRegistry.js` for document imports to keep desktop, backend, and renderer in sync.
+- Parsing: Import from the owning module in `shared/lyricsParsing/` (such as `txtParser.js`, `lrcParser.js`, or `lineSplitting.js`) and use `shared/documentTextExtraction.js`/`shared/lyricImportRegistry.js` for document imports to keep desktop, backend, and renderer in sync.
 - File I/O and dialogs: Go through the domain handlers in `main/ipc/` and the preload bridge; avoid accessing Node APIs directly from the renderer.
 - Logging: Use `utils/logger.js` helpers. Avoid logging tokens, admin keys, or raw JWTs.
 
@@ -53,4 +53,4 @@ For process boundaries, file ownership, runtime flows, the route map, and a feat
 - Consider cross-platform impacts (Windows/macOS/Linux) for filesystem paths, display handling, and packaging.
 
 ## Decision Log (lightweight)
-- When introducing a new protocol, event, or settings shape, document it briefly in the PR description and update relevant helpers (`useSocketEvents`, `server/events.js`, `shared/lyricsParsing.js`) to keep surfaces aligned.
+- When introducing a new protocol, event, or settings shape, document it briefly in the PR description and update relevant helpers (`useSocketEvents`, `server/events.js`, the owning `shared/lyricsParsing/` module) to keep surfaces aligned.

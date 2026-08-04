@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
-import { parseLrcContent } from '../../../shared/lyricsParsing.js';
+import { parseLrcContent } from '../../../shared/lyricsParsing/lrcParser.js';
 import useLyricsStore from '../../context/LyricsStore.js';
 
 export const useLrcTimestampHydration = ({

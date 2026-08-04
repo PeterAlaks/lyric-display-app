@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { parseLyricsFileAsync } from '../../utils/asyncLyricsParser';
 import useLyricsStore from '../../context/LyricsStore.js';
-import { mergeLyricsParsingOptions } from '../../../shared/lyricsParsing.js';
+import { mergeLyricsParsingOptions } from '../../../shared/lyricsParsing/preferenceOptions.js';
 import { detectArtistFromFilename } from '../../utils/artistDetection';
 import {
   getLyricFormatLabel,
