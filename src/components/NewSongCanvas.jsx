@@ -82,8 +82,6 @@ const NewSongCanvas = () => {
   const [contextMenuDimensions, setContextMenuDimensions] = useState({ width: 0, height: 0 });
   const [pendingFocus, setPendingFocus] = useState(null);
   const [searchHighlightRect, setSearchHighlightRect] = useState(null);
-  const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false);
-  const sectionDropdownRef = useRef(null);
 
   const lines = useMemo(() => content.split('\n'), [content]);
   const isContentEmpty = !content.trim();
@@ -342,10 +340,7 @@ const NewSongCanvas = () => {
     editorContainerRef,
     handleBack,
     searchBarVisible,
-    sectionDropdownOpen,
-    sectionDropdownRef,
     selectedLineIndex,
-    setSectionDropdownOpen,
     setSelectedLineIndex,
   });
 
@@ -438,12 +433,57 @@ const NewSongCanvas = () => {
     handleTitleChange
   } = useTitlePrefill(content, title, setTitle, editMode, textareaRef);
 
+  const getActiveLineIndex = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      return getLineIndexFromOffset(textarea.selectionStart ?? 0);
+    }
+    return selectedLineIndex ?? (lines.length ? 0 : null);
+  }, [getLineIndexFromOffset, lines.length, selectedLineIndex]);
+
+  const activeLineIndex = selectedLineIndex ?? getActiveLineIndex();
+  const activeLineText = activeLineIndex !== null ? (lines[activeLineIndex] ?? '') : '';
+  const activeLineHasTimestamp = STANDARD_LRC_START_REGEX.test(activeLineText.trim());
+  const canAddTranslationOnActiveLine = Boolean(activeLineText.trim()) && !isLineWrappedWithTranslation(activeLineText);
+
+  const handleToolbarPaste = useCallback(async () => {
+    const nextContent = await handlePaste();
+    if (typeof nextContent === 'string') {
+      handleContentPaste(nextContent);
+    }
+    return nextContent;
+  }, [handleContentPaste, handlePaste]);
+
+  const handleAddTranslationAtActiveLine = useCallback(() => {
+    handleAddTranslation(getActiveLineIndex());
+  }, [getActiveLineIndex, handleAddTranslation]);
+
+  const handleCopyActiveLine = useCallback(() => {
+    handleCopyLine(getActiveLineIndex());
+  }, [getActiveLineIndex, handleCopyLine]);
+
+  const handleDuplicateActiveLine = useCallback(() => {
+    handleDuplicateLine(getActiveLineIndex());
+  }, [getActiveLineIndex, handleDuplicateLine]);
+
+  const insertStandardTimestampAtActiveLine = useCallback(() => {
+    insertStandardTimestampAtLine(getActiveLineIndex());
+  }, [getActiveLineIndex, insertStandardTimestampAtLine]);
+
+  const insertEnhancedTimestampAtActiveLine = useCallback(() => {
+    insertEnhancedTimestampAtCursor(getActiveLineIndex());
+  }, [getActiveLineIndex, insertEnhancedTimestampAtCursor]);
+
+  const insertMetadataAtActiveLine = useCallback((key) => {
+    insertMetadataTagAtCursor(getActiveLineIndex(), key);
+  }, [getActiveLineIndex, insertMetadataTagAtCursor]);
+
   const getSaveButtonTooltip = () => {
     if (isContentEmpty && isTitleEmpty) {
-      return "Enter a song title and add lyrics content to save";
+      return "Enter a file name and add lyrics content to save";
     }
     if (isTitleEmpty) {
-      return "Enter a song title to save";
+      return "Enter a file name to save";
     }
     if (isContentEmpty) {
       return "Add lyrics content to save";
@@ -453,10 +493,10 @@ const NewSongCanvas = () => {
 
   const getSaveAndLoadButtonTooltip = () => {
     if (isContentEmpty && isTitleEmpty) {
-      return "Enter a song title and add lyrics content to load";
+      return "Enter a file name and add lyrics content to load";
     }
     if (isTitleEmpty) {
-      return "Enter a song title to load";
+      return "Enter a file name to load";
     }
     if (isContentEmpty) {
       return "Add lyrics content to load";
@@ -494,8 +534,14 @@ const NewSongCanvas = () => {
   useElectronListeners({ canUndo, canRedo, handleUndo, handleRedo });
 
   return (
-    <div className={`flex flex-col h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-[#f8fafc]'}`}>
+    <div className={`flex h-full flex-col font-sans ${darkMode
+      ? 'dark bg-[radial-gradient(circle_at_top,_#172033_0%,_#111827_46%,_#0b1120_100%)]'
+      : 'bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f8fafc_55%,_#eef2ff_100%)]'
+      }`}>
       <SongCanvasHeader
+        activeLineHasTimestamp={activeLineHasTimestamp}
+        activeLineIndex={activeLineIndex}
+        canAddTranslationOnActiveLine={canAddTranslationOnActiveLine}
         canRedo={canRedo}
         canUndo={canUndo}
         composeMode={composeMode}
@@ -503,12 +549,16 @@ const NewSongCanvas = () => {
         editMode={editMode}
         getSaveAndLoadButtonTooltip={getSaveAndLoadButtonTooltip}
         getSaveButtonTooltip={getSaveButtonTooltip}
+        handleAddDefaultTags={handleAddDefaultTags}
+        handleAddTranslationAtActiveLine={handleAddTranslationAtActiveLine}
         handleBack={handleBack}
         handleCleanup={handleCleanup}
         handleCopy={handleCopy}
+        handleCopyActiveLine={handleCopyActiveLine}
         handleCut={handleCut}
+        handleDuplicateActiveLine={handleDuplicateActiveLine}
         handleLoadDraft={handleLoadDraft}
-        handlePaste={handlePaste}
+        handlePaste={handleToolbarPaste}
         handleRedo={handleRedo}
         handleSave={handleSave}
         handleSaveAndLoad={handleSaveAndLoad}
@@ -517,26 +567,28 @@ const NewSongCanvas = () => {
         handleTitleChange={handleTitleChange}
         handleUndo={handleUndo}
         hasUnsavedChanges={hasUnsavedChanges}
+        insertEnhancedTimestampAtActiveLine={insertEnhancedTimestampAtActiveLine}
+        insertMetadataAtActiveLine={insertMetadataAtActiveLine}
         insertSectionAtCursor={insertSectionAtCursor}
+        insertStandardTimestampAtActiveLine={insertStandardTimestampAtActiveLine}
         isContentEmpty={isContentEmpty}
         isCursorAtEligiblePosition={isCursorAtEligiblePosition}
         isTitleEmpty={isTitleEmpty}
         isTitlePrefilled={isTitlePrefilled}
         searchBarVisible={searchBarVisible}
-        sectionDropdownOpen={sectionDropdownOpen}
-        sectionDropdownRef={sectionDropdownRef}
-        setSectionDropdownOpen={setSectionDropdownOpen}
         showModal={showModal}
-        showToast={showToast}
         title={title}
         toolbarGhostClass={toolbarGhostClass}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 pt-4 px-5 pb-5">
+      <div className="min-h-0 flex-1 px-4 pb-4 pt-4 md:px-5 md:pb-5">
         <div
           ref={editorContainerRef}
-          className={`relative h-full overflow-hidden rounded-lg border transition-colors ${darkMode ? 'border-gray-800 bg-gray-800' : 'border-gray-200 bg-white'}`}
+          className={`relative h-full overflow-hidden rounded-2xl border shadow-xl transition-[border-color,box-shadow,background-color] duration-200 focus-within:ring-2 ${darkMode
+            ? 'border-gray-700/80 bg-gray-900/75 shadow-black/20 focus-within:border-blue-500/50 focus-within:ring-blue-500/10'
+            : 'border-slate-200/90 bg-white/95 shadow-slate-900/8 focus-within:border-blue-400/60 focus-within:ring-blue-500/10'
+            }`}
           onContextMenu={handleCanvasContextMenu}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -560,9 +612,9 @@ const NewSongCanvas = () => {
             onKeyUp={handleTextareaSelect}
             onSelect={handleTextareaSelect}
             placeholder="Start typing your lyrics here, or paste existing content..."
-            className={`w-full h-full resize-none rounded-2xl p-5 outline-none font-mono text-base leading-relaxed ${darkMode
-              ? 'bg-gray-800 text-gray-200 placeholder-gray-600'
-              : 'bg-white text-gray-900 placeholder-gray-400'
+            className={`h-full w-full resize-none rounded-2xl p-5 font-mono text-base leading-[1.85] outline-none ${darkMode
+              ? 'bg-gray-900/65 text-gray-100 caret-blue-300 placeholder-gray-600'
+              : 'bg-white/90 text-slate-900 caret-blue-600 placeholder-slate-400'
               }`}
             spellCheck={false}
           />
@@ -646,7 +698,7 @@ const NewSongCanvas = () => {
               handleCopyLine={handleCopyLine}
               handleCut={handleCut}
               handleDuplicateLine={handleDuplicateLine}
-              handlePaste={handlePaste}
+              handlePaste={handleToolbarPaste}
               handleRootItemEnter={handleRootItemEnter}
               handleSubmenuPanelEnter={handleSubmenuPanelEnter}
               handleSubmenuPanelLeave={handleSubmenuPanelLeave}

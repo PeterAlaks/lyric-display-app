@@ -2,7 +2,7 @@ const CanvasMeasurementLayer = ({ editorPadding, lines, measurementContainerRef,
   <div
     ref={measurementContainerRef}
     aria-hidden="true"
-    className="pointer-events-none absolute inset-0 select-none overflow-hidden whitespace-pre-wrap wrap-break-word font-mono text-base leading-relaxed opacity-0"
+    className="pointer-events-none absolute inset-0 select-none overflow-hidden whitespace-pre-wrap wrap-break-word font-mono text-base leading-[1.85] opacity-0"
     style={{
       paddingTop: `${editorPadding.top}px`,
       paddingRight: `${editorPadding.right}px`,

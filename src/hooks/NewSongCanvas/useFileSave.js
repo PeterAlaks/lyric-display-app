@@ -135,7 +135,7 @@ const useFileSave = ({
     }
 
     const description = titleChanged
-      ? 'The song title was changed. Save a new file instead of overwriting the original.'
+      ? 'The file name was changed. Save a new file instead of overwriting the original.'
       : 'Saving will automatically replace the lyrics file at this location:';
 
     const body = titleChanged
@@ -467,7 +467,7 @@ const useFileSave = ({
     if (!content.trim() || !title.trim()) {
       showModal({
         title: 'Missing song details',
-        description: 'Enter both a song title and lyrics before saving.',
+        description: 'Enter both a file name and lyrics before saving.',
         variant: 'warn',
         dismissLabel: 'Will do',
       });
@@ -546,7 +546,7 @@ const useFileSave = ({
     if (!content.trim() || !title.trim()) {
       showModal({
         title: 'Missing song details',
-        description: 'Enter both a song title and lyrics before saving and loading.',
+        description: 'Enter both a file name and lyrics before saving and loading.',
         variant: 'warn',
         dismissLabel: 'Got it',
       });

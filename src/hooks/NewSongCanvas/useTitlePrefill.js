@@ -51,18 +51,24 @@ export default function useTitlePrefill(content, title, setTitle, editMode, text
     }
   }, [content, editMode, updateTitlePrefill]);
 
-  const handleContentPaste = useCallback(() => {
+  const handleContentPaste = useCallback((overrideContent) => {
     if (editMode) return;
 
     if (pasteTimeoutRef.current) {
       clearTimeout(pasteTimeoutRef.current);
     }
 
+    if (typeof overrideContent === 'string') {
+      updateTitlePrefill(overrideContent);
+      pasteTimeoutRef.current = null;
+      return;
+    }
+
     pasteTimeoutRef.current = setTimeout(() => {
       const currentContent = textareaRef?.current?.value || '';
       updateTitlePrefill(currentContent);
       pasteTimeoutRef.current = null;
-    }, 1000);
+    }, 0);
   }, [editMode, updateTitlePrefill, textareaRef]);
 
   const handleTitleChange = useCallback((e) => {

@@ -1,8 +1,53 @@
-import { Download, Loader2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, Copy, Download, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import useIsPackagedApp from '../../hooks/useIsPackagedApp';
+
+const CopyErrorButton = ({ darkMode, text }) => {
+  const [copied, setCopied] = useState(false);
+  const resetTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (resetTimerRef.current) {
+      window.clearTimeout(resetTimerRef.current);
+    }
+  }, []);
+
+  const handleCopy = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      if (resetTimerRef.current) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+      resetTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        resetTimerRef.current = null;
+      }, 1800);
+    } catch (error) {
+      console.warn('Failed to copy NDI error message:', error);
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={`absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${copied
+        ? (darkMode ? 'bg-green-500/15 text-green-300 focus-visible:ring-green-400/60' : 'bg-green-100 text-green-700 focus-visible:ring-green-500/50')
+        : (darkMode ? 'text-current/70 hover:bg-white/10 hover:text-current focus-visible:ring-white/40' : 'text-current/65 hover:bg-black/5 hover:text-current focus-visible:ring-black/30')
+        }`}
+      title={copied ? 'Error copied' : 'Copy error message'}
+      aria-label={copied ? 'NDI error message copied' : 'Copy NDI error message'}
+    >
+      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+    </button>
+  );
+};
 
 const NdiPreferencesSection = ({
   companionRunning,
@@ -37,6 +82,13 @@ const NdiPreferencesSection = ({
   const telemetryAgeSeconds = ndiTelemetry?.updatedAt
     ? Math.max(0, Math.floor((Date.now() - ndiTelemetry.updatedAt) / 1000))
     : null;
+  const ndiLastErrorMessage = typeof ndiLastError === 'string'
+    ? ndiLastError
+    : (ndiLastError?.error || ndiLastError?.message || 'Unknown NDI Companion error');
+  const ndiLastErrorMetadata = typeof ndiLastError === 'object' && ndiLastError
+    ? [ndiLastError.stage, ndiLastError.code, ndiLastError.host].filter(Boolean).join(' · ')
+    : '';
+  const ndiLastErrorCopyText = [ndiLastErrorMessage, ndiLastErrorMetadata].filter(Boolean).join('\n');
 
   return (
     <div className="space-y-6">
@@ -85,20 +137,22 @@ const NdiPreferencesSection = ({
       </div>
 
       {ndiStatus.installed && companionBootstrapError && (
-        <div className={`rounded-lg border p-3 text-xs ${darkMode ? 'border-amber-600/30 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+        <div className={`relative rounded-lg border p-3 pr-11 text-xs ${darkMode ? 'border-amber-600/30 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
           {companionBootstrapError}
+          <CopyErrorButton darkMode={darkMode} text={String(companionBootstrapError)} />
         </div>
       )}
 
       {ndiLastError && (
-        <div className={`rounded-lg border p-3 text-xs ${darkMode ? 'border-red-600/30 bg-red-900/20 text-red-200' : 'border-red-200 bg-red-50 text-red-800'}`}>
+        <div className={`relative rounded-lg border p-3 pr-11 text-xs ${darkMode ? 'border-red-600/30 bg-red-900/20 text-red-200' : 'border-red-200 bg-red-50 text-red-800'}`}>
           <p className="font-medium">The last NDI Companion operation failed.</p>
-          <p className="mt-1 break-words">{typeof ndiLastError === 'string' ? ndiLastError : ndiLastError.error}</p>
-          {typeof ndiLastError === 'object' && (ndiLastError.stage || ndiLastError.code || ndiLastError.host) && (
+          <p className="mt-1 break-words">{ndiLastErrorMessage}</p>
+          {ndiLastErrorMetadata && (
             <p className={`mt-1.5 ${darkMode ? 'text-red-300/75' : 'text-red-700/75'}`}>
-              {[ndiLastError.stage, ndiLastError.code, ndiLastError.host].filter(Boolean).join(' · ')}
+              {ndiLastErrorMetadata}
             </p>
           )}
+          <CopyErrorButton darkMode={darkMode} text={ndiLastErrorCopyText} />
         </div>
       )}
 

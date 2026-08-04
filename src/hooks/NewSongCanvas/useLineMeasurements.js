@@ -16,7 +16,7 @@ const useLineMeasurements = ({
   const [lineMetrics, setLineMetrics] = useState([]);
   const [toolbarDimensions, setToolbarDimensions] = useState({ width: 0, height: 0 });
 
-  const fallbackLineHeight = 24;
+  const fallbackLineHeight = 30;
   const selectedMetric = selectedLineIndex !== null ? lineMetrics[selectedLineIndex] : null;
   const highlightTop = selectedMetric ? selectedMetric.top - scrollTop : null;
   const highlightHeight = selectedMetric ? Math.max(selectedMetric.height || 0, fallbackLineHeight) : fallbackLineHeight;

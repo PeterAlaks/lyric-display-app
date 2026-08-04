@@ -73,8 +73,10 @@ const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => 
       });
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(nextCursor, nextCursor);
+      return newContent;
     } catch (err) {
       console.error('Failed to paste text:', err);
+      return null;
     }
   }, [content, setContent, textareaRef]);
 
