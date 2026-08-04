@@ -15,11 +15,11 @@
       Abort
     ${EndIf}
 
-    ${NSD_CreateCheckbox} 0 8u 100% 12u "Delete LyricDisplay settings, cached media, templates, and credentials"
+    ${NSD_CreateCheckbox} 0 8u 100% 12u "Delete LyricDisplay settings, saved documents, cached media, templates, and credentials"
     Pop $DeleteUserDataCheckbox
     ${NSD_Uncheck} $DeleteUserDataCheckbox
 
-    ${NSD_CreateLabel} 0 28u 100% 30u "Leave this unchecked if you plan to reinstall LyricDisplay. Files you saved outside LyricDisplay's application data folders will not be removed."
+    ${NSD_CreateLabel} 0 28u 100% 30u "This also removes Documents\LyricDisplay, including lyrics, imported songs, and setlists. Files saved elsewhere are not removed."
     Pop $0
 
     ${NSD_CreateLabel} 0 66u 100% 20u "Deleting this data cannot be undone."
@@ -68,6 +68,7 @@
     RMDir /r "$APPDATA\lyric-display-app"
     RMDir /r "$APPDATA\lyricdisplay-ndi"
     RMDir /r "$LOCALAPPDATA\LyricDisplay"
+    RMDir /r "$DOCUMENTS\LyricDisplay"
 
     ${If} $installMode == "all"
       SetShellVarContext all

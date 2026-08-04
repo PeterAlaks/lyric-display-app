@@ -4,8 +4,6 @@
  */
 
 import Store from 'electron-store';
-import { app } from 'electron';
-import path from 'path';
 import './appIdentity.js';
 import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setlistLimits.js';
 import { DEFAULT_CAPITALIZED_WORDS } from '../shared/capitalizedWords.js';
@@ -85,7 +83,6 @@ const preferencesStore = new Store({
 
     // File Handling
     fileHandling: {
-      defaultLyricsPath: '',
       rememberLastOpenedPath: true,
       maxRecentFiles: 10,
       maxFileSize: 2, // MB
@@ -161,7 +158,7 @@ export function getPreferenceCategory(category) {
 
 /**
  * Get a specific preference value
- * @param {string} path - Dot-notation path (e.g., 'general.defaultLyricsPath')
+ * @param {string} path - Dot-notation path (e.g., 'general.confirmOnClose')
  * @returns {any} Preference value
  */
 export function getPreference(path) {
@@ -175,7 +172,7 @@ export function getPreference(path) {
 
 /**
  * Set a specific preference value
- * @param {string} path - Dot-notation path (e.g., 'general.defaultLyricsPath')
+ * @param {string} path - Dot-notation path (e.g., 'general.confirmOnClose')
  * @param {any} value - Value to set
  */
 export function setPreference(path, value) {
@@ -249,24 +246,6 @@ export function resetAllToDefaults() {
   } catch (error) {
     console.error('[UserPreferences] Failed to reset preferences:', error);
     return { success: false, error: error.message };
-  }
-}
-
-/**
- * Get the default lyrics path, falling back to documents folder
- * @returns {string} Default path for opening lyrics files
- */
-export function getDefaultLyricsPath() {
-  try {
-    const savedPath = preferencesStore.get('fileHandling.defaultLyricsPath');
-    if (savedPath && savedPath.trim()) {
-      return savedPath;
-    }
-    // Fall back to documents folder
-    return app.getPath('documents');
-  } catch (error) {
-    console.error('[UserPreferences] Failed to get default lyrics path:', error);
-    return '';
   }
 }
 

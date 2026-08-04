@@ -325,6 +325,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           onBack={closeIndexedLyricsFoldersPage}
           onPersistenceChange={handleIndexedFolderPersistenceChange}
           showModal={showModal}
+          showToast={showToast}
         />
       );
     }

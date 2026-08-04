@@ -21,6 +21,7 @@ Key capabilities include:
 - Text, LRC, Markdown, RTF, and DOCX imports, plus `.ldset` setlists and `.ldsch` event schedules.
 - A keyboard-first local file navigator with indexed filename/path search, TXT/LRC lyric search and previews, recent files, and watched source folders.
 - A compact indexed-folder save picker with keyboard navigation, safe overwrite confirmation, and an optional native Save As escape hatch.
+- Bounded indexing safeguards: up to 10 focused source folders, 512 MB of supported files per folder, and capped searchable TXT/LRC content memory.
 - Built-in song editing, translation grouping, timestamps, search, autoplay, and lyric video export.
 - Online lyric providers and EasyWorship/presentation import workflows.
 - OBS Browser Source creation, a compact OBS Dock mode, and generic browser URLs for other production software.

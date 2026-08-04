@@ -4,6 +4,7 @@ import {
   Check,
   Folder,
   FolderOpen,
+  FolderPlus,
   Loader2,
   Save,
   X,
@@ -36,6 +37,7 @@ export default function FileSaveNavigatorModal() {
   const [availableExtensions, setAvailableExtensions] = useState(['txt']);
   const [initialDirectory, setInitialDirectory] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [creatingLyricsFolder, setCreatingLyricsFolder] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [overwriteCandidate, setOverwriteCandidate] = useState(null);
   const [error, setError] = useState('');
@@ -50,6 +52,7 @@ export default function FileSaveNavigatorModal() {
     }
     setTransitioning(true);
     setPreparing(false);
+    setCreatingLyricsFolder(false);
     closeTimerRef.current = window.setTimeout(() => {
       closeTimerRef.current = null;
       setOpen(false);
@@ -102,6 +105,7 @@ export default function FileSaveNavigatorModal() {
       setOverwriteCandidate(null);
       setError('');
       setPreparing(false);
+      setCreatingLyricsFolder(false);
       setLoading(true);
       setTransitioning(true);
       setOpen(true);
@@ -205,6 +209,38 @@ export default function FileSaveNavigatorModal() {
       defaultDirectory: selectedDestination?.path || initialDirectory || null,
     });
   }, [extension, finish, initialDirectory, selectedDestination]);
+
+  const handleCreateLyricsFolder = useCallback(async () => {
+    if (creatingLyricsFolder || preparing) return;
+    const sequence = ++requestSequenceRef.current;
+    setCreatingLyricsFolder(true);
+    setError('');
+    try {
+      const creationResult = await window.electronAPI?.fileNavigator?.createLyricsFolder?.();
+      if (!creationResult?.success) {
+        throw new Error(creationResult?.error || 'Could not create the Lyrics folder');
+      }
+      const destinationsResult = await window.electronAPI?.fileNavigator?.getSaveDestinations?.(initialDirectory);
+      if (sequence !== requestSequenceRef.current) return;
+      if (!destinationsResult?.success) {
+        throw new Error(destinationsResult?.error || 'Could not load the created Lyrics folder');
+      }
+      const nextDestinations = destinationsResult.destinations || [];
+      setDestinations(nextDestinations);
+      const createdIndex = nextDestinations.findIndex((destination) => (
+        destination.path === creationResult.createdFolderPath && destination.available
+      ));
+      const firstAvailableIndex = nextDestinations.findIndex((destination) => destination.available);
+      setSelectedIndex(createdIndex >= 0 ? createdIndex : Math.max(0, firstAvailableIndex));
+      window.requestAnimationFrame(() => nameInputRef.current?.focus());
+    } catch (nextError) {
+      if (sequence === requestSequenceRef.current) {
+        setError(nextError?.message || 'Could not create the Lyrics folder');
+      }
+    } finally {
+      if (sequence === requestSequenceRef.current) setCreatingLyricsFolder(false);
+    }
+  }, [creatingLyricsFolder, initialDirectory, preparing]);
 
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Escape') {
@@ -328,7 +364,7 @@ export default function FileSaveNavigatorModal() {
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable]"
             role="listbox"
             aria-label="Indexed save folders"
-            aria-busy={loading}
+            aria-busy={loading || creatingLyricsFolder}
           >
             {loading ? (
               <div className="flex h-full min-h-32 items-center justify-center">
@@ -336,12 +372,23 @@ export default function FileSaveNavigatorModal() {
                 <span className="sr-only">Loading indexed folders</span>
               </div>
             ) : destinations.length === 0 ? (
-              <div className="flex h-40 flex-col items-center justify-center px-8 text-center">
+              <div className="flex h-44 flex-col items-center justify-center px-8 text-center">
                 <FolderOpen className={`h-7 w-7 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} />
                 <p className={`mt-3 text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>No indexed folders available</p>
                 <p className={`mt-1 max-w-sm text-[11px] leading-4 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
-                  Add a folder in Preferences, or use a different folder for this save.
+                  Add a folder in Preferences, or create a Lyrics folder.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateLyricsFolder()}
+                  disabled={creatingLyricsFolder}
+                  className="mt-3 flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {creatingLyricsFolder
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    : <FolderPlus className="h-3.5 w-3.5" aria-hidden />}
+                  {creatingLyricsFolder ? 'Creating folder…' : 'Create lyrics folder'}
+                </button>
               </div>
             ) : (
               <div className="space-y-1">
@@ -388,7 +435,8 @@ export default function FileSaveNavigatorModal() {
               type="button"
               data-native-save-option="true"
               onClick={useNativeDialog}
-              className={`flex h-9 items-center gap-2 rounded-lg px-3 text-[11px] font-semibold ${darkMode ? 'text-gray-400 hover:bg-white/7 hover:text-gray-200' : 'text-gray-600 hover:bg-gray-200/70 hover:text-gray-900'}`}
+              disabled={creatingLyricsFolder || preparing}
+              className={`flex h-9 items-center gap-2 rounded-lg px-3 text-[11px] font-semibold disabled:cursor-wait disabled:opacity-50 ${darkMode ? 'text-gray-400 hover:bg-white/7 hover:text-gray-200' : 'text-gray-600 hover:bg-gray-200/70 hover:text-gray-900'}`}
             >
               <FolderOpen className="h-3.5 w-3.5" />
               Save in different folder…

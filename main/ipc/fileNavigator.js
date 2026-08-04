@@ -1,8 +1,9 @@
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { stat } from 'fs/promises';
 import {
-  addFileNavigatorRoot,
+  addFileNavigatorRoots,
   browseFileNavigator,
+  createFileNavigatorLyricsFolder,
   getFileNavigatorPreview,
   getFileNavigatorSaveDestinations,
   getFileNavigatorState,
@@ -46,17 +47,25 @@ export function registerFileNavigatorHandlers({ getMainWindow }) {
         : getMainWindow?.();
       const current = await getFileNavigatorState();
       const result = await dialog.showOpenDialog(win || undefined, {
-        title: 'Add Lyrics Folder',
-        buttonLabel: 'Index this folder',
-        properties: ['openDirectory'],
+        title: 'Add Lyrics Folders',
+        buttonLabel: 'Index selected folders',
+        properties: ['openDirectory', 'multiSelections'],
         defaultPath: current.roots?.[0]?.path || undefined,
       });
-      if (result.canceled || !result.filePaths?.[0]) {
+      if (result.canceled || !result.filePaths?.length) {
         return { success: false, canceled: true };
       }
-      return { success: true, ...(await addFileNavigatorRoot(result.filePaths[0])) };
+      return { success: true, ...(await addFileNavigatorRoots(result.filePaths)) };
     } catch (error) {
-      return errorResult(error, 'Could not add the selected folder');
+      return errorResult(error, 'Could not add the selected folders');
+    }
+  });
+
+  ipcMain.handle('file-navigator:create-lyrics-folder', async () => {
+    try {
+      return { success: true, ...(await createFileNavigatorLyricsFolder()) };
+    } catch (error) {
+      return errorResult(error, 'Could not create the Lyrics folder');
     }
   });
 

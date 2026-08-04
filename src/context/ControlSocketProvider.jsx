@@ -6,6 +6,10 @@ import useSocketEvents from '../hooks/useSocketEvents';
 import { connectionManager } from '../utils/connectionManager';
 import { logDebug, logError, logWarn } from '../utils/logger';
 import { getRequestedControllerClientType } from '../utils/clientType';
+import {
+    CONTROL_COMMAND_INTENTS,
+    shouldNotifyRejectedControlCommand,
+} from '../../shared/controlCommandFeedback.js';
 
 const ControlSocketContext = createContext(null);
 
@@ -31,6 +35,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const currentStateTimeoutRef = useRef(null);
     const clientId = useRef(`control_${Date.now()}`);
     const readyRef = useRef(false);
+    const hasCompletedInitialControlSyncRef = useRef(false);
     const appliedSavedLiveSafetyRef = useRef(false);
     const startupTimingsRef = useRef({});
 
@@ -269,6 +274,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                         startupTimingsRef.current.stateSyncMs = readyAt - socketConnectedAt;
                         startupTimingsRef.current.totalConnectionMs = readyAt - attemptStartedAt;
                         clearCurrentStateTimeout();
+                        hasCompletedInitialControlSyncRef.current = true;
                         readyRef.current = true;
                         setReady(true);
                         window.dispatchEvent(new CustomEvent('sync-completed'));
@@ -310,6 +316,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
 
                 socket.on('currentState', (state) => {
                     clearCurrentStateTimeout();
+                    hasCompletedInitialControlSyncRef.current = true;
                     const syncTime = Date.now();
                     setLastSyncTime(syncTime);
                     if (state?.liveSafety && typeof state.liveSafety.enabled === 'boolean') {
@@ -406,15 +413,27 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         }, retryDelay);
     }, [connectSocketInternal]);
 
-    const createEmitFunction = useCallback((eventName) => {
+    const createEmitFunction = useCallback((eventName, {
+        intent = CONTROL_COMMAND_INTENTS.operator,
+    } = {}) => {
         return (...args) => {
             if (!socketRef.current?.connected || !readyRef.current || authStatus !== 'authenticated') {
-                window.dispatchEvent(new CustomEvent('command-rejected', {
-                    detail: {
-                        eventName,
-                        message: 'The action was not sent because live control is disconnected. Reconnect and try again.',
-                    },
-                }));
+                if (shouldNotifyRejectedControlCommand({
+                    hasCompletedInitialSync: hasCompletedInitialControlSyncRef.current,
+                    intent,
+                })) {
+                    window.dispatchEvent(new CustomEvent('command-rejected', {
+                        detail: {
+                            eventName,
+                            message: 'The action was not sent because live control is disconnected. Reconnect and try again.',
+                        },
+                    }));
+                } else {
+                    logDebug(`Suppressed ${eventName} rejection without operator feedback`, {
+                        intent,
+                        hasCompletedInitialSync: hasCompletedInitialControlSyncRef.current,
+                    });
+                }
                 return false;
             }
 
@@ -502,14 +521,20 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const emitStageTimerUpdate = useCallback(createEmitFunction('stageTimerUpdate'), [createEmitFunction]);
     const emitStageMessagesUpdate = useCallback(createEmitFunction('stageMessagesUpdate'), [createEmitFunction]);
     const emitSplitNormalGroup = useCallback(createEmitFunction('splitNormalGroup'), [createEmitFunction]);
-    const emitAutoplayStateUpdate = useCallback(createEmitFunction('autoplayStateUpdate'), [createEmitFunction]);
+    const emitAutoplayStateUpdate = useCallback(createEmitFunction('autoplayStateUpdate', {
+        intent: CONTROL_COMMAND_INTENTS.background,
+    }), [createEmitFunction]);
     const emitOutputRemove = useCallback(createEmitFunction('outputRemove'), [createEmitFunction]);
     const emitOutputsRegister = useCallback(createEmitFunction('outputsRegister'), [createEmitFunction]);
-    const emitLiveSafetySet = useCallback((enabled) => {
-        return createEmitFunction('liveSafetySet')({ enabled: Boolean(enabled) });
+    const emitLiveSafetySet = useCallback((enabled, {
+        intent = CONTROL_COMMAND_INTENTS.operator,
+    } = {}) => {
+        return createEmitFunction('liveSafetySet', { intent })({ enabled: Boolean(enabled) });
     }, [createEmitFunction]);
     const emitRequestActionLog = useCallback((payload = {}) => {
-        return createEmitFunction('requestActionLog')(payload);
+        return createEmitFunction('requestActionLog', {
+            intent: CONTROL_COMMAND_INTENTS.background,
+        })(payload);
     }, [createEmitFunction]);
     const emitActionLogClear = useCallback(() => {
         return createEmitFunction('actionLogClear')();
@@ -584,7 +609,9 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
             .then((result) => {
                 if (cancelled || result?.success === false || typeof result?.value !== 'boolean') return;
                 if (result.value !== Boolean(liveSafety?.enabled)) {
-                    emitLiveSafetySet(result.value);
+                    emitLiveSafetySet(result.value, {
+                        intent: CONTROL_COMMAND_INTENTS.background,
+                    });
                 }
             })
             .catch((error) => {

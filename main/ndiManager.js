@@ -23,6 +23,7 @@ import { randomBytes } from 'crypto';
 import { createNdiIpcClient } from './ndi/ipcClient.js';
 import { createOutputSettingsManager } from './ndi/outputSettings.js';
 import { createNdiInstaller } from './ndi/installer.js';
+import { createElectronNetworkFetch } from './ndi/electronNetworkFetch.js';
 import { createCompanionLaunchConfig } from './ndi/launchConfig.js';
 import { DEFAULT_OUTPUT_IDS } from '../shared/outputRegistry.js';
 
@@ -206,7 +207,7 @@ const installer = createNdiInstaller({
   resolveCompanionEntryPath: findCompanionEntryPath,
   getPlatformAssetName,
   stopCompanion,
-  networkFetch: (url, options) => net.fetch(url, options),
+  networkFetch: createElectronNetworkFetch(net),
 });
 
 const normalizeOutputList = outputSettingsManager.normalizeOutputList;

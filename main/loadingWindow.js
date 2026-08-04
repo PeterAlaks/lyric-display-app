@@ -105,7 +105,7 @@ export function createLoadingWindow() {
           border-radius: 22px;
           display: flex;
           overflow: hidden;
-          box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.42);
+          box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.42);
           position: relative;
         }
 

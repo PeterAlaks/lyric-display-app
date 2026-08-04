@@ -17,10 +17,16 @@ import {
   X,
 } from 'lucide-react';
 import { useDarkModeState } from '../hooks/useStoreSelectors';
+import useModal from '../hooks/useModal';
 import useToast from '../hooks/useToast';
 import { REQUEST_MODAL_CLOSE_EVENT } from '../constants/modalEvents';
-import { OPEN_FILE_NAVIGATOR_EVENT } from '../utils/fileNavigatorEvents';
+import {
+  getFolderSelectionNotice,
+  mergeFileNavigatorStatus,
+  OPEN_FILE_NAVIGATOR_EVENT,
+} from '../utils/fileNavigatorEvents';
 import { Input } from './ui/input';
+import { FILE_NAVIGATOR_LIMITS } from '../../shared/fileNavigatorLimits.js';
 
 const MODAL_ANIMATION_DURATION = 220;
 
@@ -133,26 +139,37 @@ export default function FileNavigatorModal() {
   const location = useLocation();
   const navigate = useNavigate();
   const { darkMode } = useDarkModeState();
+  const { showModal } = useModal();
   const { showToast } = useToast();
   const inputRef = useRef(null);
   const resultsRef = useRef(null);
   const requestSequenceRef = useRef(0);
+  const stateRequestSequenceRef = useRef(0);
+  const indexEventSequenceRef = useRef(0);
+  const indexEventActiveRef = useRef(false);
+  const hydrationSequenceRef = useRef(0);
   const currentDirectoryRef = useRef(null);
   const closeTimerRef = useRef(null);
   const enterFrameRef = useRef(null);
+  const removalConfirmationTimerRef = useRef(null);
+  const wasIndexingRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [query, setQuery] = useState('');
   const [filterId, setFilterId] = useState('all');
   const [destination, setDestination] = useState('control');
-  const [navigatorState, setNavigatorState] = useState({ roots: [], recents: [], status: {} });
+  const [navigatorState, setNavigatorState] = useState({ roots: [], recents: [], status: {}, limits: {} });
   const [entries, setEntries] = useState([]);
   const [currentDirectory, setCurrentDirectory] = useState(null);
   const [browseParent, setBrowseParent] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [stateHydrating, setStateHydrating] = useState(false);
+  const [indexingPending, setIndexingPending] = useState(false);
+  const [creatingLyricsFolder, setCreatingLyricsFolder] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [removalConfirmationOpen, setRemovalConfirmationOpen] = useState(false);
   const [maxSelections, setMaxSelections] = useState(100);
   const [selectedPaths, setSelectedPaths] = useState(() => new Set());
   const [error, setError] = useState('');
@@ -163,6 +180,9 @@ export default function FileNavigatorModal() {
   const activeFilter = FILTERS.find((filter) => filter.id === filterId) || FILTERS[0];
   const setlistMode = destination === 'setlist';
   const videoMode = destination === 'video';
+  const remoteIndexing = Boolean(navigatorState.status?.scanning);
+  const indexing = indexingPending || creatingLyricsFolder || remoteIndexing || stateHydrating;
+  const navigatorBlocked = indexing;
 
   const close = useCallback(() => {
     if (closeTimerRef.current !== null) return;
@@ -183,30 +203,52 @@ export default function FileNavigatorModal() {
   useEffect(() => () => {
     if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
     if (enterFrameRef.current !== null) window.cancelAnimationFrame(enterFrameRef.current);
+    if (removalConfirmationTimerRef.current !== null) window.clearTimeout(removalConfirmationTimerRef.current);
   }, []);
 
   const applyState = useCallback((result) => {
     if (!result?.success) return false;
-    setNavigatorState({
-      roots: result.roots || [],
-      recents: result.recents || [],
-      status: result.status || {},
+    setNavigatorState((previous) => {
+      const incomingScanId = Number(result.status?.scanId) || 0;
+      const currentScanId = Number(previous.status?.scanId) || 0;
+      if (incomingScanId < currentScanId) return previous;
+      return {
+        roots: result.roots || [],
+        recents: result.recents || [],
+        status: result.status || {},
+        limits: result.limits || {},
+      };
     });
     return true;
   }, []);
 
-  const loadState = useCallback(async ({ updateEntries = false } = {}) => {
+  const loadState = useCallback(async ({
+    updateEntries = false,
+    expectedIndexEventSequence = null,
+  } = {}) => {
     const api = window.electronAPI?.fileNavigator;
-    if (!api?.getState) return;
+    if (!api?.getState) return 'failed';
+    const stateRequestSequence = ++stateRequestSequenceRef.current;
     try {
       const result = await api.getState();
+      if (
+        stateRequestSequence !== stateRequestSequenceRef.current
+        || (
+          expectedIndexEventSequence !== null
+          && expectedIndexEventSequence !== indexEventSequenceRef.current
+        )
+      ) return 'stale';
       if (!applyState(result)) throw new Error(result?.error || 'Could not load file navigator');
       if (updateEntries && !currentDirectoryRef.current) {
         setEntries(result.recents || []);
         setSelectedIndex(0);
       }
+      return 'loaded';
     } catch (nextError) {
-      setError(nextError?.message || 'Could not load file navigator');
+      if (stateRequestSequence === stateRequestSequenceRef.current) {
+        setError(nextError?.message || 'Could not load file navigator');
+      }
+      return 'failed';
     }
   }, [applyState]);
 
@@ -233,7 +275,11 @@ export default function FileNavigatorModal() {
       if (enterFrameRef.current !== null) window.cancelAnimationFrame(enterFrameRef.current);
       setTransitioning(true);
       setOpen(true);
-      void loadState({ updateEntries: true });
+      const hydrationSequence = ++hydrationSequenceRef.current;
+      setStateHydrating(true);
+      void loadState({ updateEntries: true }).finally(() => {
+        if (hydrationSequence === hydrationSequenceRef.current) setStateHydrating(false);
+      });
     };
     window.addEventListener(OPEN_FILE_NAVIGATOR_EVENT, handleOpenRequest);
     return () => window.removeEventListener(OPEN_FILE_NAVIGATOR_EVENT, handleOpenRequest);
@@ -244,6 +290,14 @@ export default function FileNavigatorModal() {
     const focusFrame = window.requestAnimationFrame(() => inputRef.current?.focus());
     return () => window.cancelAnimationFrame(focusFrame);
   }, [open]);
+
+  useEffect(() => {
+    const indexingFinished = open && wasIndexingRef.current && !indexing;
+    wasIndexingRef.current = indexing;
+    if (!indexingFinished) return undefined;
+    const focusFrame = window.requestAnimationFrame(() => inputRef.current?.focus());
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, [indexing, open]);
 
   useEffect(() => {
     if (!open || !transitioning || closeTimerRef.current !== null) return undefined;
@@ -273,11 +327,44 @@ export default function FileNavigatorModal() {
     const api = window.electronAPI?.fileNavigator;
     if (!api?.onChange) return undefined;
     const unsubscribe = api.onChange((nextStatus) => {
-      setNavigatorState((previous) => ({
-        ...previous,
-        status: { ...previous.status, ...(nextStatus || {}) },
-      }));
-      if (open && nextStatus?.scanning === false) void loadState({ updateEntries: !query.trim() && !currentDirectoryRef.current });
+      if (nextStatus?.scanning === true) {
+        if (!indexEventActiveRef.current) indexEventSequenceRef.current += 1;
+        indexEventActiveRef.current = true;
+        stateRequestSequenceRef.current += 1;
+        requestSequenceRef.current += 1;
+        setLoading(false);
+      }
+      if (nextStatus?.scanning === false) {
+        indexEventActiveRef.current = false;
+        const expectedIndexEventSequence = ++indexEventSequenceRef.current;
+        if (!open) {
+          setNavigatorState((previous) => ({
+            ...previous,
+            status: mergeFileNavigatorStatus(previous.status, nextStatus),
+          }));
+          return;
+        }
+        void loadState({
+          updateEntries: !query.trim() && !currentDirectoryRef.current,
+          expectedIndexEventSequence,
+        }).then((outcome) => {
+          if (outcome !== 'failed') return;
+          if (expectedIndexEventSequence !== indexEventSequenceRef.current) return;
+          setNavigatorState((previous) => ({
+            ...previous,
+            status: mergeFileNavigatorStatus(previous.status, nextStatus),
+          }));
+        });
+        return;
+      }
+      setNavigatorState((previous) => {
+        const status = mergeFileNavigatorStatus(previous.status, nextStatus);
+        if (status === previous.status) return previous;
+        return {
+          ...previous,
+          status,
+        };
+      });
     });
     const unsubscribeRecents = window.electronAPI?.recents?.onChange?.(() => {
       if (open) void loadState({ updateEntries: !query.trim() && !currentDirectoryRef.current });
@@ -313,7 +400,7 @@ export default function FileNavigatorModal() {
   }, [activeFilter.types]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || navigatorBlocked) return undefined;
     const trimmed = query.trim();
     if (!trimmed) {
       if (currentDirectory) {
@@ -352,9 +439,10 @@ export default function FileNavigatorModal() {
       }
     }, 55);
     return () => window.clearTimeout(timer);
-  }, [activeFilter.types, currentDirectory, loadDirectory, navigatorState.recents, open, query]);
+  }, [activeFilter.types, currentDirectory, loadDirectory, navigatorBlocked, navigatorState.recents, open, query]);
 
   useEffect(() => {
+    if (navigatorBlocked) return undefined;
     if (!selectedEntry || selectedEntry.kind !== 'file' || selectedEntry.missing) {
       setPreview({ loading: false, content: '', available: false, reason: '' });
       return undefined;
@@ -385,7 +473,7 @@ export default function FileNavigatorModal() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [selectedEntry]);
+  }, [navigatorBlocked, selectedEntry]);
 
   useEffect(() => {
     const element = resultsRef.current?.querySelector?.(`[data-file-navigator-index="${selectedIndex}"]`);
@@ -413,8 +501,35 @@ export default function FileNavigatorModal() {
     });
   }, [maxSelections, showToast]);
 
+  const loadLyricsIntoDestination = useCallback((result, requestedDestination) => {
+    const payload = {
+      content: result.content,
+      fileName: result.fileName,
+      filePath: result.filePath,
+      fileType: result.fileType,
+    };
+    close();
+
+    if (requestedDestination === 'video') {
+      window.dispatchEvent(new CustomEvent('file-navigator:video-lrc-selection', { detail: payload }));
+    } else if (requestedDestination === 'canvas') {
+      if (location.pathname === '/new-song') {
+        window.setTimeout(() => window.dispatchEvent(new CustomEvent('load-into-canvas', { detail: payload })), 0);
+      } else {
+        window.__pendingCanvasLyricsLoad = payload;
+        navigate('/new-song?mode=new');
+      }
+    } else if (location.pathname === '/') {
+      window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
+      window.dispatchEvent(new CustomEvent('support-dev:track-action', { detail: { actionType: 'song_loaded' } }));
+    } else {
+      window.__pendingLyricsLoad = payload;
+      navigate('/');
+    }
+  }, [close, location.pathname, navigate]);
+
   const openEntry = useCallback(async (entry, requestedDestination = destination) => {
-    if (!entry || entry.missing || opening) return;
+    if (!entry || entry.missing || indexing || opening) return;
     if (entry.kind === 'folder') {
       setQuery('');
       await loadDirectory(entry.filePath);
@@ -434,40 +549,40 @@ export default function FileNavigatorModal() {
       if (!result?.success || typeof result.content !== 'string') {
         throw new Error(result?.error || 'Could not load the selected lyrics file');
       }
-      const payload = {
-        content: result.content,
-        fileName: result.fileName,
-        filePath: result.filePath,
-        fileType: result.fileType,
-      };
-      close();
-
-      if (requestedDestination === 'video') {
-        window.dispatchEvent(new CustomEvent('file-navigator:video-lrc-selection', { detail: payload }));
-      } else if (requestedDestination === 'canvas') {
-        if (location.pathname === '/new-song') {
-          window.setTimeout(() => window.dispatchEvent(new CustomEvent('load-into-canvas', { detail: payload })), 0);
-        } else {
-          window.__pendingCanvasLyricsLoad = payload;
-          navigate('/new-song?mode=new');
-        }
-      } else if (location.pathname === '/') {
-        window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
-        window.dispatchEvent(new CustomEvent('support-dev:track-action', { detail: { actionType: 'song_loaded' } }));
-      } else {
-        window.__pendingLyricsLoad = payload;
-        navigate('/');
-      }
+      loadLyricsIntoDestination(result, requestedDestination);
     } catch (nextError) {
       setOpening(false);
       const message = nextError?.message || 'Could not load the selected lyrics file';
       setError(message);
       showToast({ title: 'Load failed', message, variant: 'error' });
     }
-  }, [close, destination, loadDirectory, location.pathname, navigate, opening, showToast, toggleSetlistEntry]);
+  }, [destination, indexing, loadDirectory, loadLyricsIntoDestination, opening, showToast, toggleSetlistEntry]);
+
+  const handleOpenStandaloneFile = useCallback(async () => {
+    if (opening) return;
+    setOpening(true);
+    setError('');
+    try {
+      const result = await window.electronAPI?.loadLyricsFile?.();
+      if (result?.canceled) {
+        setOpening(false);
+        inputRef.current?.focus();
+        return;
+      }
+      if (!result?.success || typeof result.content !== 'string') {
+        throw new Error(result?.error || 'Could not load the selected lyrics file');
+      }
+      loadLyricsIntoDestination(result, destination);
+    } catch (nextError) {
+      setOpening(false);
+      const message = nextError?.message || 'Could not load the selected lyrics file';
+      setError(message);
+      showToast({ title: 'Load failed', message, variant: 'error' });
+    }
+  }, [destination, loadLyricsIntoDestination, opening, showToast]);
 
   const completeSetlistSelection = useCallback(async () => {
-    if (selectedPaths.size === 0 || opening) return;
+    if (selectedPaths.size === 0 || indexing || opening) return;
     setOpening(true);
     setError('');
     try {
@@ -485,49 +600,158 @@ export default function FileNavigatorModal() {
       setError(message);
       showToast({ title: 'Load failed', message, variant: 'error' });
     }
-  }, [close, opening, selectedPaths, showToast]);
+  }, [close, indexing, opening, selectedPaths, showToast]);
 
   const handleAddRoot = useCallback(async () => {
-    const result = await window.electronAPI?.fileNavigator?.addRoot?.();
-    if (!result || result.canceled) {
-      inputRef.current?.focus();
-      return;
+    if (indexing) return;
+    setIndexingPending(true);
+    requestSequenceRef.current += 1;
+    setLoading(false);
+    try {
+      const result = await window.electronAPI?.fileNavigator?.addRoot?.();
+      if (result?.canceled) return;
+      if (!applyState(result)) {
+        showToast({
+          title: 'Folders not indexed',
+          message: result?.error || 'Could not add the selected folders.',
+          variant: 'error',
+        });
+        return;
+      }
+      const notice = getFolderSelectionNotice(result.selection);
+      if (notice) showToast(notice);
+      if (result.selection?.addedCount === 1) {
+        const addedPath = result.selection.addedPaths?.[0];
+        if (addedPath) {
+          setQuery('');
+          await loadDirectory(addedPath);
+        }
+      }
+    } catch (nextError) {
+      showToast({
+        title: 'Folders not indexed',
+        message: nextError?.message || 'Could not add the selected folders.',
+        variant: 'error',
+      });
+    } finally {
+      setIndexingPending(false);
+      window.requestAnimationFrame(() => inputRef.current?.focus());
     }
-    if (!applyState(result)) {
-      setError(result?.error || 'Could not add folder');
-      return;
-    }
-    const addedRoot = result.roots?.find((root) => (
-      !(navigatorState.roots || []).some((previous) => normalizePath(previous.path) === normalizePath(root.path))
-    )) || result.roots?.[result.roots.length - 1];
-    if (addedRoot?.path) {
-      setQuery('');
-      await loadDirectory(addedRoot.path);
-    }
-    inputRef.current?.focus();
-  }, [applyState, loadDirectory, navigatorState.roots]);
+  }, [applyState, indexing, loadDirectory, showToast]);
 
-  const handleRemoveRoot = useCallback(async (event, rootPath) => {
-    event.stopPropagation();
-    const result = await window.electronAPI?.fileNavigator?.removeRoot?.(rootPath);
-    if (!applyState(result)) {
-      setError(result?.error || 'Could not remove folder');
-      return;
-    }
-    if (currentDirectory && normalizePath(currentDirectory).startsWith(normalizePath(rootPath))) {
+  const handleCreateLyricsFolder = useCallback(async () => {
+    if (indexing) return;
+    setCreatingLyricsFolder(true);
+    requestSequenceRef.current += 1;
+    setLoading(false);
+    setError('');
+    try {
+      const result = await window.electronAPI?.fileNavigator?.createLyricsFolder?.();
+      if (!applyState(result)) {
+        throw new Error(result?.error || 'Could not create the Lyrics folder');
+      }
+      setQuery('');
       setCurrentDirectory(null);
       setBrowseParent(null);
-      setQuery('');
       setEntries(result.recents || []);
+      setSelectedIndex(0);
+      showToast({
+        title: result.folderCreated ? 'Lyrics folder created' : 'Lyrics folder ready',
+        message: result.folderCreated
+          ? 'Documents/LyricDisplay/Lyrics was created and indexed.'
+          : 'The existing Documents/LyricDisplay/Lyrics folder is now indexed.',
+        variant: 'success',
+      });
+    } catch (nextError) {
+      const message = nextError?.message || 'Could not create the Lyrics folder.';
+      setError(message);
+      showToast({ title: 'Lyrics folder unavailable', message, variant: 'error' });
+    } finally {
+      setCreatingLyricsFolder(false);
+      window.requestAnimationFrame(() => inputRef.current?.focus());
     }
-    inputRef.current?.focus();
-  }, [applyState, currentDirectory]);
+  }, [applyState, indexing, showToast]);
+
+  const handleRemoveRoot = useCallback(async (event, root) => {
+    event.stopPropagation();
+    if (!root?.path || indexing) return;
+
+    if (removalConfirmationTimerRef.current !== null) {
+      window.clearTimeout(removalConfirmationTimerRef.current);
+      removalConfirmationTimerRef.current = null;
+    }
+    setRemovalConfirmationOpen(true);
+    const confirmation = await showModal({
+      title: `Remove ${root.name || 'this folder'}?`,
+      description: 'LyricDisplay will stop indexing this folder. No files will be moved or deleted.',
+      variant: 'warning',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Remove folder', value: 'remove', variant: 'destructive', autoFocus: true },
+      ],
+    });
+    removalConfirmationTimerRef.current = window.setTimeout(() => {
+      removalConfirmationTimerRef.current = null;
+      setRemovalConfirmationOpen(false);
+      inputRef.current?.focus();
+    }, MODAL_ANIMATION_DURATION);
+    if (confirmation !== 'remove') return;
+
+    setIndexingPending(true);
+    requestSequenceRef.current += 1;
+    try {
+      const result = await window.electronAPI?.fileNavigator?.removeRoot?.(root.path);
+      if (!applyState(result)) {
+        showToast({
+          title: 'Folder not removed',
+          message: result?.error || 'Could not remove that folder.',
+          variant: 'error',
+        });
+        return;
+      }
+      if (currentDirectory && normalizePath(currentDirectory).startsWith(normalizePath(root.path))) {
+        setCurrentDirectory(null);
+        setBrowseParent(null);
+        setQuery('');
+        setEntries(result.recents || []);
+      }
+    } catch (nextError) {
+      showToast({
+        title: 'Folder not removed',
+        message: nextError?.message || 'Could not remove that folder.',
+        variant: 'error',
+      });
+    } finally {
+      setIndexingPending(false);
+      window.requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [applyState, currentDirectory, indexing, showModal, showToast]);
 
   const handleReindex = useCallback(async () => {
-    const result = await window.electronAPI?.fileNavigator?.reindex?.();
-    if (!applyState(result)) setError(result?.error || 'Could not refresh index');
-    inputRef.current?.focus();
-  }, [applyState]);
+    if (indexing) return;
+    setIndexingPending(true);
+    requestSequenceRef.current += 1;
+    try {
+      const result = await window.electronAPI?.fileNavigator?.reindex?.();
+      if (!applyState(result)) {
+        showToast({
+          title: 'Index not refreshed',
+          message: result?.error || 'Could not refresh the file index.',
+          variant: 'error',
+        });
+      }
+    } catch (nextError) {
+      showToast({
+        title: 'Index not refreshed',
+        message: nextError?.message || 'Could not refresh the file index.',
+        variant: 'error',
+      });
+    } finally {
+      setIndexingPending(false);
+      window.requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [applyState, indexing, showToast]);
 
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Escape') {
@@ -541,8 +765,10 @@ export default function FileNavigatorModal() {
     if (commandKey && shortcutKey === 'f') {
       event.preventDefault();
       event.stopPropagation();
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      if (!indexing) {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
       return;
     }
     if (commandKey && ['h', 'i', 'l', 'n', 'o', 's'].includes(shortcutKey)) {
@@ -553,6 +779,7 @@ export default function FileNavigatorModal() {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       event.stopPropagation();
+      if (indexing) return;
       setSelectedIndex((previous) => {
         if (entries.length === 0) return 0;
         return event.key === 'ArrowDown'
@@ -565,12 +792,14 @@ export default function FileNavigatorModal() {
       if (event.target instanceof HTMLElement && event.target.closest('button')) return;
       event.preventDefault();
       event.stopPropagation();
+      if (indexing) return;
       void openEntry(entries[selectedIndex]);
       return;
     }
     if (
       event.key === 'Backspace'
       && event.target === inputRef.current
+      && !indexing
       && !query
       && currentDirectory
       && browseParent
@@ -578,21 +807,24 @@ export default function FileNavigatorModal() {
       event.preventDefault();
       void loadDirectory(browseParent);
     }
-  }, [browseParent, close, currentDirectory, entries, loadDirectory, openEntry, query, selectedIndex]);
+  }, [browseParent, close, currentDirectory, entries, indexing, loadDirectory, openEntry, query, selectedIndex]);
 
   const title = query.trim()
     ? `${entries.length} search ${entries.length === 1 ? 'result' : 'results'}`
     : currentDirectory ? pathName(currentDirectory) : 'Recently opened';
   const hasRoots = navigatorState.roots.length > 0;
+  const maxRoots = FILE_NAVIGATOR_LIMITS.maxRoots;
+  const rootLimitReached = navigatorState.roots.length >= maxRoots;
   const searchInputClass = darkMode
     ? 'h-10 rounded-full border-gray-700/70 bg-gray-800/90 pl-10 pr-10 text-[13px] text-white shadow-none placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20'
     : 'h-10 rounded-full border-gray-200 bg-white pl-10 pr-10 text-[13px] text-gray-900 shadow-none placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15';
 
   const content = open ? (
     <div
-      className="fixed inset-x-0 bottom-0 top-9 z-[1800]"
+      className={`fixed inset-x-0 bottom-0 top-9 ${removalConfirmationOpen ? 'z-[1200]' : 'z-[1800]'}`}
       role="dialog"
-      aria-modal="true"
+      aria-modal={removalConfirmationOpen ? undefined : 'true'}
+      aria-hidden={removalConfirmationOpen ? 'true' : undefined}
       aria-labelledby="file-navigator-title"
       onKeyDownCapture={handleKeyDown}
     >
@@ -621,15 +853,17 @@ export default function FileNavigatorModal() {
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                disabled={indexing}
                 placeholder="Search titles, folders, or lyrics..."
                 aria-label="Search indexed lyrics files"
-                aria-controls="file-navigator-results"
-                aria-activedescendant={selectedEntry ? `file-navigator-result-${selectedIndex}` : undefined}
+                aria-controls={indexing ? undefined : 'file-navigator-results'}
+                aria-activedescendant={!indexing && selectedEntry ? `file-navigator-result-${selectedIndex}` : undefined}
+                aria-busy={indexing ? 'true' : undefined}
                 className={searchInputClass}
               />
-              {loading ? (
+              {!indexing && loading ? (
                 <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-blue-500" aria-label="Searching" />
-              ) : query ? (
+              ) : !indexing && query ? (
                 <button
                   type="button"
                   onClick={() => { setQuery(''); inputRef.current?.focus(); }}
@@ -656,10 +890,11 @@ export default function FileNavigatorModal() {
                   key={filter.id}
                   type="button"
                   onClick={() => { setFilterId(filter.id); inputRef.current?.focus(); }}
+                  disabled={indexing}
                   className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${filterId === filter.id
                     ? darkMode ? 'bg-blue-500 text-white' : 'bg-gray-900 text-white'
                     : darkMode ? 'text-gray-400 hover:bg-white/7 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-200/70 hover:text-gray-800'
-                    }`}
+                    } disabled:cursor-wait disabled:opacity-45`}
                 >
                   {filter.label}
                 </button>
@@ -672,85 +907,125 @@ export default function FileNavigatorModal() {
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-[188px_minmax(280px,1.35fr)_minmax(240px,0.8fr)]">
-          <aside className={`min-h-0 overflow-y-auto overscroll-contain border-r p-3 [scrollbar-gutter:stable] ${darkMode ? 'border-white/7 bg-slate-900/45' : 'border-gray-200 bg-gray-50/65'}`}>
-            <button
-              type="button"
-              onClick={() => {
-                setQuery('');
-                setCurrentDirectory(null);
-                setBrowseParent(null);
-                setEntries(navigatorState.recents || []);
-                setSelectedIndex(0);
-                inputRef.current?.focus();
-              }}
-              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold ${!currentDirectory && !query
-                ? darkMode ? 'bg-white/8 text-white' : 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-200'
-                : darkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-white'
-                }`}
-            >
-              <History className="h-4 w-4" />
-              Recent
-            </button>
+          <aside className={`flex min-h-0 flex-col overflow-hidden border-r ${darkMode ? 'border-white/7' : 'border-gray-200'}`}>
+            <div className={`shrink-0 pt-3 ${darkMode ? 'bg-slate-900/45' : 'bg-gray-50/65'}`}>
+              <div className="px-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setCurrentDirectory(null);
+                    setBrowseParent(null);
+                    setEntries(navigatorState.recents || []);
+                    setSelectedIndex(0);
+                    inputRef.current?.focus();
+                  }}
+                  disabled={indexing}
+                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold ${!currentDirectory && !query
+                    ? darkMode ? 'bg-white/8 text-white' : 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-200'
+                    : darkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-white'
+                    } disabled:cursor-wait disabled:opacity-50`}
+                >
+                  <History className="h-4 w-4" />
+                  Recent
+                </button>
+              </div>
 
-            <div className="mb-1 mt-5 flex items-center justify-between px-2">
-              <span className={`text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Sources</span>
+              <div className="mb-1 mt-5 flex w-full items-center justify-between pl-5 pr-3">
+                <span className={`text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                  Sources {navigatorState.roots.length}/{maxRoots}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAddRoot}
+                  disabled={indexing || rootLimitReached}
+                  className={`rounded-md disabled:cursor-not-allowed disabled:opacity-40 ${darkMode ? 'text-gray-500 hover:text-blue-300' : 'text-gray-400 hover:text-blue-600'}`}
+                  aria-label="Add lyrics folders"
+                  title={indexing ? 'Wait for indexing to finish' : rootLimitReached ? 'Indexed folder limit reached' : 'Add lyrics folders'}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 [scrollbar-gutter:stable] ${darkMode ? 'bg-slate-900/45' : 'bg-gray-50/65'}`}>
+              <div className="space-y-1">
+                {navigatorState.roots.map((root) => {
+                  const active = currentDirectory && normalizePath(currentDirectory).startsWith(normalizePath(root.path));
+                  return (
+                    <div
+                      key={root.path}
+                      className={`group flex w-full items-center rounded-lg text-xs ${active
+                        ? darkMode ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-50 text-blue-800'
+                        : darkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-white'
+                        } ${!root.available ? 'opacity-50' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => { setQuery(''); void loadDirectory(root.path); inputRef.current?.focus(); }}
+                        disabled={indexing}
+                        className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left disabled:cursor-wait"
+                        title={root.issue || root.path}
+                      >
+                        <Folder className="h-4 w-4 shrink-0 text-amber-500" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{root.name}</span>
+                          {root.issue && <span className="block truncate text-[9px] text-amber-500">Index limit exceeded</span>}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => void handleRemoveRoot(event, root)}
+                        disabled={indexing}
+                        className={`mr-1.5 rounded p-1 opacity-0 transition group-hover:opacity-100 focus:opacity-100 ${darkMode ? 'hover:bg-white/10 hover:text-red-300' : 'hover:bg-gray-100 hover:text-red-600'}`}
+                        aria-label={`Remove ${root.name} from indexed folders`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              {!hasRoots && (
+                <div className={`mx-1 mt-3 rounded-xl border border-dashed p-3 text-[11px] leading-4 ${darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-300 text-gray-500'}`}>
+                  Add the folder where your lyric files live.
+                </div>
+              )}
+            </div>
+
+            <div className={`shrink-0 px-3 pb-3 ${darkMode ? 'bg-slate-900/45' : 'bg-gray-50/65'}`}>
               <button
                 type="button"
                 onClick={handleAddRoot}
-                className={`rounded-md p-1 ${darkMode ? 'text-gray-500 hover:bg-white/8 hover:text-blue-300' : 'text-gray-400 hover:bg-white hover:text-blue-600'}`}
-                aria-label="Add lyrics folder"
-                title="Add lyrics folder"
+                disabled={indexing || rootLimitReached}
+                className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-2 py-2 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${darkMode ? 'border-gray-700 text-gray-400 hover:border-blue-500/60 hover:text-blue-300' : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-700'}`}
               >
-                <FolderPlus className="h-4 w-4" />
+                <FolderPlus className="h-3.5 w-3.5" />
+                {rootLimitReached ? 'Folder limit reached' : 'Add folders'}
               </button>
             </div>
-            <div className="space-y-1">
-              {navigatorState.roots.map((root) => {
-                const active = currentDirectory && normalizePath(currentDirectory).startsWith(normalizePath(root.path));
-                return (
-                  <div
-                    key={root.path}
-                    className={`group flex w-full items-center rounded-lg text-xs ${active
-                      ? darkMode ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-50 text-blue-800'
-                      : darkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-white'
-                      } ${!root.available ? 'opacity-50' : ''}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => { setQuery(''); void loadDirectory(root.path); inputRef.current?.focus(); }}
-                      className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left"
-                      title={root.path}
-                    >
-                      <Folder className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span className="min-w-0 flex-1 truncate">{root.name}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(event) => void handleRemoveRoot(event, root.path)}
-                      className={`mr-1.5 rounded p-1 opacity-0 transition group-hover:opacity-100 focus:opacity-100 ${darkMode ? 'hover:bg-white/10 hover:text-red-300' : 'hover:bg-gray-100 hover:text-red-600'}`}
-                      aria-label={`Remove ${root.name} from indexed folders`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            {!hasRoots && (
-              <div className={`mx-1 mt-3 rounded-xl border border-dashed p-3 text-[11px] leading-4 ${darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-300 text-gray-500'}`}>
-                Add the folder where your lyric files live. LyricDisplay keeps the files in place and only builds a search index.
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleAddRoot}
-              className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-2 py-2 text-[11px] font-semibold ${darkMode ? 'border-gray-700 text-gray-400 hover:border-blue-500/60 hover:text-blue-300' : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-700'}`}
-            >
-              <FolderPlus className="h-3.5 w-3.5" />
-              Add folder
-            </button>
           </aside>
 
+          {indexing ? (
+            <section
+              className={`col-span-2 flex min-h-0 items-center justify-center ${darkMode ? 'bg-slate-950 text-gray-500' : 'bg-white text-gray-500'}`}
+              aria-live="polite"
+              aria-busy="true"
+              role="status"
+            >
+              <div className="flex items-center gap-2 text-xs font-medium">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" aria-hidden />
+                <h2 id="file-navigator-title">
+                  {creatingLyricsFolder
+                    ? 'Creating lyrics folder…'
+                    : stateHydrating && !indexingPending && !remoteIndexing
+                    ? 'Preparing file navigator…'
+                    : 'Indexing lyric folders…'}
+                </h2>
+              </div>
+            </section>
+          ) : (
+            <>
           <section className={`flex min-h-0 flex-col border-r ${darkMode ? 'border-white/7' : 'border-gray-200'}`}>
             <div className={`flex h-11 shrink-0 items-center justify-between border-b px-4 ${darkMode ? 'border-white/7' : 'border-gray-100'}`}>
               <div className="flex min-w-0 items-center gap-2">
@@ -767,12 +1042,6 @@ export default function FileNavigatorModal() {
                 <h2 id="file-navigator-title" className="truncate text-[12px] font-semibold">{title}</h2>
               </div>
               <div className="flex items-center gap-2">
-                {navigatorState.status?.scanning && (
-                  <span className={`flex items-center gap-1.5 text-[10px] ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Indexing {navigatorState.status.scannedFiles || ''}
-                  </span>
-                )}
                 <button
                   type="button"
                   onClick={handleReindex}
@@ -805,8 +1074,21 @@ export default function FileNavigatorModal() {
                     {query ? 'No matching lyric files' : currentDirectory ? 'No lyric files in this folder' : 'No recent lyric files yet'}
                   </p>
                   <p className={`mt-1 max-w-xs text-[11px] leading-4 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
-                    {query ? 'Try fewer words, a filename fragment, or another file type.' : hasRoots ? 'Start typing to search all indexed folders.' : 'Add a lyrics folder to begin.'}
+                    {query ? 'Try fewer words, a filename fragment, or another file type.' : hasRoots ? 'Start typing to search all indexed folders.' : 'Add or create lyrics folder to begin.'}
                   </p>
+                  {!query && !currentDirectory && !hasRoots && (
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateLyricsFolder()}
+                      disabled={creatingLyricsFolder}
+                      className="mt-4 flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {creatingLyricsFolder
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        : <FolderPlus className="h-3.5 w-3.5" aria-hidden />}
+                      {creatingLyricsFolder ? 'Creating folder…' : 'Create lyrics folder'}
+                    </button>
+                  )}
                 </div>
               )}
               {entries.map((entry, index) => (
@@ -906,20 +1188,26 @@ export default function FileNavigatorModal() {
               </div>
             )}
           </aside>
+            </>
+          )}
         </div>
 
         <footer className={`flex h-14 shrink-0 items-center justify-between border-t px-4 ${darkMode ? 'border-white/7 bg-slate-900/75' : 'border-gray-200 bg-gray-50'}`}>
           <div className={`flex items-center gap-4 text-[10px] ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
-            <span><kbd className="font-sans font-semibold">↑↓</kbd> Navigate</span>
-            <span><kbd className="font-sans font-semibold">Enter</kbd> {setlistMode ? 'Select' : 'Open'}</span>
+            {!indexing && (
+              <>
+                <span><kbd className="font-sans font-semibold">↑↓</kbd> Navigate</span>
+                <span><kbd className="font-sans font-semibold">Enter</kbd> {setlistMode ? 'Select' : 'Open'}</span>
+              </>
+            )}
             <span><kbd className="font-sans font-semibold">Esc</kbd> Close</span>
-            {currentDirectory && !query && browseParent && <span><kbd className="font-sans font-semibold">Backspace</kbd> Up</span>}
+            {!indexing && currentDirectory && !query && browseParent && <span><kbd className="font-sans font-semibold">Backspace</kbd> Up</span>}
           </div>
           {setlistMode ? (
             <button
               type="button"
               onClick={() => void completeSetlistSelection()}
-              disabled={selectedPaths.size === 0 || opening}
+              disabled={indexing || selectedPaths.size === 0 || opening}
               className="flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-[11px] font-semibold text-white hover:bg-blue-700 disabled:opacity-45"
             >
               {opening && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -928,27 +1216,42 @@ export default function FileNavigatorModal() {
           ) : videoMode ? (
             <span className={`text-[10px] font-semibold ${darkMode ? 'text-violet-300' : 'text-violet-700'}`}>LRC files only</span>
           ) : (
-            <div className="flex items-center gap-1 rounded-xl p-1 ring-1 ring-inset ring-gray-300/40">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => { setDestination('control'); inputRef.current?.focus(); }}
-                className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'control'
-                  ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
-                  : darkMode ? 'text-gray-500' : 'text-gray-500'
+                onClick={() => void handleOpenStandaloneFile()}
+                disabled={opening}
+                title="Open a single file without indexing its folder"
+                className={`flex h-8 items-center justify-center gap-2 rounded-lg px-3 text-[11px] font-semibold transition-colors disabled:opacity-45 ${darkMode
+                  ? 'text-gray-300 hover:bg-white/7'
+                  : 'text-gray-600 hover:bg-white'
                   }`}
               >
-                Control Panel
+                {opening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                Open File&hellip;
               </button>
-              <button
-                type="button"
-                onClick={() => { setDestination('canvas'); inputRef.current?.focus(); }}
-                className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'canvas'
-                  ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
-                  : darkMode ? 'text-gray-500' : 'text-gray-500'
-                  }`}
-              >
-                Canvas
-              </button>
+              <div className="flex items-center gap-1 rounded-xl p-1 ring-1 ring-inset ring-gray-300/40">
+                <button
+                  type="button"
+                  onClick={() => { setDestination('control'); inputRef.current?.focus(); }}
+                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'control'
+                    ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
+                    : darkMode ? 'text-gray-500' : 'text-gray-500'
+                    }`}
+                >
+                  Control Panel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDestination('canvas'); inputRef.current?.focus(); }}
+                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'canvas'
+                    ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
+                    : darkMode ? 'text-gray-500' : 'text-gray-500'
+                    }`}
+                >
+                  Canvas
+                </button>
+              </div>
             </div>
           )}
         </footer>

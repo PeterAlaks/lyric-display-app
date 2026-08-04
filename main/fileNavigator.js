@@ -14,12 +14,16 @@ import {
 } from '../shared/fileNavigatorSearch.js';
 import { validateNavigatorSaveName } from '../shared/fileNavigatorSave.js';
 import {
+  FILE_NAVIGATOR_LIMITS,
+  getFileNavigatorRootLimitError,
+} from '../shared/fileNavigatorLimits.js';
+import {
   getActiveLyricImportByteLimit,
   grantLyricWritePath,
   normalizeLyricPath,
 } from './lyricFiles.js';
-import { getLastOpenedDirectory, getRecents } from './recents.js';
-import * as userPreferences from './userPreferences.js';
+import { getRecents } from './recents.js';
+import { ensureNavigatorDirectory } from './fileNavigatorDirectories.js';
 
 const CONFIG_VERSION = 1;
 const MAX_INDEX_FILES = 100_000;
@@ -43,11 +47,19 @@ let rebuildRequested = false;
 let rebuildGeneration = 0;
 let watcherTimer = null;
 let watchers = [];
+let rootIssues = new Map();
+let rootMutationTail = Promise.resolve();
+let indexingHoldCount = 0;
+let indexingHoldBaseStatus = null;
+let indexingHoldHadRebuild = false;
+let indexingHoldError = null;
 let status = {
   scanning: false,
+  scanId: 0,
   indexedFiles: 0,
   scannedFiles: 0,
   truncated: false,
+  contentTruncated: false,
   lastIndexedAt: null,
   error: null,
 };
@@ -78,12 +90,93 @@ function rootForPath(filePath, sourceRoots = roots) {
     .find((rootPath) => isWithinPath(normalized, normalizeComparisonPath(rootPath))) || null;
 }
 
+function createContentBudget(sourceRoots = roots) {
+  return {
+    remainingTotal: FILE_NAVIGATOR_LIMITS.maxSearchableContentBytesTotal,
+    remainingByRoot: new Map(sourceRoots.map((rootPath) => [
+      normalizeComparisonPath(rootPath),
+      FILE_NAVIGATOR_LIMITS.maxSearchableContentBytesPerRoot,
+    ])),
+    truncated: false,
+  };
+}
+
+function reserveContentBytes(budget, rootPath, byteLength) {
+  if (!budget || byteLength <= 0) return true;
+  const key = normalizeComparisonPath(rootPath);
+  const remainingForRoot = budget.remainingByRoot.get(key)
+    ?? FILE_NAVIGATOR_LIMITS.maxSearchableContentBytesPerRoot;
+  if (byteLength > budget.remainingTotal || byteLength > remainingForRoot) {
+    budget.truncated = true;
+    return false;
+  }
+  budget.remainingTotal -= byteLength;
+  budget.remainingByRoot.set(key, remainingForRoot - byteLength);
+  return true;
+}
+
 function broadcast(payload = {}) {
   const next = { ...status, ...payload };
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win || win.isDestroyed()) continue;
     try { win.webContents.send('file-navigator:update', next); } catch { }
   }
+}
+
+function beginIndexingActivity() {
+  if (status.scanning) return false;
+  status = {
+    ...status,
+    scanning: true,
+    scanId: (Number(status.scanId) || 0) + 1,
+    scannedFiles: 0,
+    error: null,
+  };
+  broadcast();
+  return true;
+}
+
+function acquireIndexingHold() {
+  if (indexingHoldCount === 0) {
+    indexingHoldBaseStatus = status;
+    indexingHoldHadRebuild = Boolean(rebuildPromise);
+    indexingHoldError = null;
+  }
+  indexingHoldCount += 1;
+  beginIndexingActivity();
+
+  let released = false;
+  return (error = null) => {
+    if (released) return;
+    released = true;
+    if (error) indexingHoldError = error?.message || String(error);
+    indexingHoldCount = Math.max(0, indexingHoldCount - 1);
+    if (indexingHoldCount > 0) return;
+
+    const baseStatus = indexingHoldBaseStatus;
+    const hadRebuild = indexingHoldHadRebuild;
+    const heldError = indexingHoldError;
+    indexingHoldBaseStatus = null;
+    indexingHoldHadRebuild = false;
+    indexingHoldError = null;
+
+    if (rebuildPromise || !status.scanning) return;
+    status = hadRebuild
+      ? { ...status, scanning: false, ...(heldError ? { error: heldError } : {}) }
+      : {
+        ...(baseStatus || status),
+        scanning: false,
+        scanId: status.scanId,
+        ...(heldError ? { error: heldError } : {}),
+      };
+    broadcast();
+  };
+}
+
+function withRootMutationLock(operation) {
+  const result = rootMutationTail.then(operation, operation);
+  rootMutationTail = result.then(() => undefined, () => undefined);
+  return result;
 }
 
 async function pathIsDirectory(candidate) {
@@ -110,21 +203,22 @@ async function loadConfig() {
   } catch { }
 
   if (parsed?.initialized === true && Array.isArray(parsed.roots)) {
-    roots = [...new Set(parsed.roots
+    const configuredRoots = [...new Set(parsed.roots
       .map((entry) => normalizeLyricPath(entry))
       .filter(Boolean))];
+    roots = configuredRoots.slice(0, FILE_NAVIGATOR_LIMITS.maxRoots);
+    if (configuredRoots.length > roots.length) {
+      status = {
+        ...status,
+        truncated: true,
+        error: `Only the first ${FILE_NAVIGATOR_LIMITS.maxRoots} indexed folders were loaded.`,
+      };
+      await persistConfig();
+    }
     return;
   }
 
-  const rememberLastPath = userPreferences.getPreference('fileHandling.rememberLastOpenedPath') ?? true;
-  const configuredPath = normalizeLyricPath(
-    userPreferences.getPreference('fileHandling.defaultLyricsPath') || ''
-  );
-  const lastOpenedDirectory = rememberLastPath
-    ? normalizeLyricPath(await getLastOpenedDirectory())
-    : null;
-  const seed = lastOpenedDirectory || configuredPath;
-  roots = seed && await pathIsDirectory(seed) ? [seed] : [];
+  roots = [];
   await persistConfig();
 }
 
@@ -171,11 +265,25 @@ function hydrateRecord(record) {
 function loadCachedRecords() {
   if (!database || roots.length === 0) return;
   try {
-    const cached = database.prepare('SELECT * FROM navigator_files').all();
-    records = new Map(cached
-      .filter((record) => rootForPath(record.filePath))
-      .map((record) => [normalizeComparisonPath(record.filePath), hydrateRecord(record)]));
-    status = { ...status, indexedFiles: records.size };
+    const budget = createContentBudget();
+    const nextRecords = new Map();
+    for (const cached of database.prepare('SELECT * FROM navigator_files').iterate()) {
+      const sourceRoot = rootForPath(cached.filePath);
+      if (!sourceRoot) continue;
+      const contentBytes = cached.contentText
+        ? Buffer.byteLength(cached.contentText, 'utf8')
+        : 0;
+      const boundedRecord = contentBytes > 0 && !reserveContentBytes(budget, sourceRoot, contentBytes)
+        ? { ...cached, contentText: '' }
+        : cached;
+      nextRecords.set(normalizeComparisonPath(cached.filePath), hydrateRecord(boundedRecord));
+    }
+    records = nextRecords;
+    status = {
+      ...status,
+      indexedFiles: records.size,
+      contentTruncated: budget.truncated,
+    };
   } catch (error) {
     console.warn('[FileNavigator] Could not load persistent index:', error?.message || error);
   }
@@ -246,7 +354,7 @@ function persistSingleRecord(record) {
   }
 }
 
-async function collectCandidates(sourceRoots) {
+async function collectCandidates(sourceRoots, { fileLimit = MAX_INDEX_FILES } = {}) {
   const candidates = [];
   const directories = [];
   let truncated = false;
@@ -274,7 +382,7 @@ async function collectCandidates(sourceRoots) {
         }
         if (!entry.isFile() || !isSupportedLyricsImportFile(entry.name)) continue;
         candidates.push({ filePath: entryPath, rootPath });
-        if (candidates.length >= MAX_INDEX_FILES) {
+        if (candidates.length >= fileLimit) {
           truncated = true;
           break;
         }
@@ -286,24 +394,41 @@ async function collectCandidates(sourceRoots) {
   return { candidates, directories, truncated };
 }
 
-async function createRecord(candidate, previousRecord = null, contentByteLimit = MAX_INDEX_TEXT_BYTES) {
-  const fileStat = await fs.stat(candidate.filePath);
+async function createRecord(
+  candidate,
+  previousRecord = null,
+  contentByteLimit = MAX_INDEX_TEXT_BYTES,
+  contentBudget = null
+) {
+  const fileStat = candidate.stat || await fs.stat(candidate.filePath);
   if (!fileStat.isFile()) return null;
+  const format = getLyricImportFormatForName(candidate.filePath);
+  if (!format) return null;
+
   if (
     previousRecord
     && previousRecord.size === fileStat.size
     && previousRecord.modifiedMs === fileStat.mtimeMs
     && previousRecord.rootPath === candidate.rootPath
   ) {
-    return previousRecord;
+    const previousContentBytes = previousRecord.contentText
+      ? Buffer.byteLength(previousRecord.contentText, 'utf8')
+      : 0;
+    if (previousContentBytes === 0 || reserveContentBytes(
+      contentBudget,
+      candidate.rootPath,
+      previousContentBytes
+    )) {
+      return previousRecord;
+    }
+    return hydrateRecord({ ...previousRecord, contentText: '' });
   }
 
-  const format = getLyricImportFormatForName(candidate.filePath);
-  if (!format) return null;
   let contentText = '';
   if (
     (format.fileType === 'txt' || format.fileType === 'lrc')
     && fileStat.size <= contentByteLimit
+    && reserveContentBytes(contentBudget, candidate.rootPath, fileStat.size)
   ) {
     try { contentText = await fs.readFile(candidate.filePath, 'utf8'); } catch { }
   }
@@ -319,6 +444,37 @@ async function createRecord(candidate, previousRecord = null, contentByteLimit =
     modifiedMs: fileStat.mtimeMs,
     contentText,
   });
+}
+
+async function statCandidates(candidates) {
+  return mapWithConcurrency(candidates, 16, async (candidate) => {
+    const fileStat = await fs.stat(candidate.filePath);
+    return fileStat.isFile() ? { ...candidate, stat: fileStat } : null;
+  }).then((items) => items.filter(Boolean));
+}
+
+async function inspectRootLimits(rootPath) {
+  const { candidates, truncated } = await collectCandidates([rootPath], {
+    fileLimit: FILE_NAVIGATOR_LIMITS.maxFilesPerRoot + 1,
+  });
+  if (truncated || candidates.length > FILE_NAVIGATOR_LIMITS.maxFilesPerRoot) {
+    return {
+      fileCount: candidates.length,
+      sourceBytes: 0,
+      error: getFileNavigatorRootLimitError({ fileCount: candidates.length }),
+    };
+  }
+
+  const measured = await statCandidates(candidates);
+  const sourceBytes = measured.reduce((total, candidate) => total + candidate.stat.size, 0);
+  return {
+    fileCount: measured.length,
+    sourceBytes,
+    error: getFileNavigatorRootLimitError({
+      fileCount: measured.length,
+      sourceBytes,
+    }),
+  };
 }
 
 async function mapWithConcurrency(items, concurrency, mapper) {
@@ -385,21 +541,45 @@ function watchDirectories(sourceRoots, directories) {
 async function performRebuild() {
   const generation = ++rebuildGeneration;
   const sourceRoots = roots.slice();
-  status = { ...status, scanning: true, scannedFiles: 0, error: null };
-  broadcast();
+  beginIndexingActivity();
+  if (indexingHoldCount > 0) indexingHoldHadRebuild = true;
 
   try {
     const availableRoots = [];
     for (const rootPath of sourceRoots) {
       if (await pathIsDirectory(rootPath)) availableRoots.push(rootPath);
     }
-    const { candidates, directories, truncated } = await collectCandidates(availableRoots);
+    const { candidates, directories, truncated: fileLimitReached } = await collectCandidates(availableRoots);
+    const measuredCandidates = await statCandidates(candidates);
+    const rootTotals = new Map(availableRoots.map((rootPath) => [
+      normalizeComparisonPath(rootPath),
+      { fileCount: 0, sourceBytes: 0 },
+    ]));
+    for (const candidate of measuredCandidates) {
+      const key = normalizeComparisonPath(candidate.rootPath);
+      const total = rootTotals.get(key) || { fileCount: 0, sourceBytes: 0 };
+      total.fileCount += 1;
+      total.sourceBytes += candidate.stat.size;
+      rootTotals.set(key, total);
+    }
+
+    const nextRootIssues = new Map();
+    for (const rootPath of availableRoots) {
+      const total = rootTotals.get(normalizeComparisonPath(rootPath));
+      const limitError = getFileNavigatorRootLimitError(total);
+      if (limitError) nextRootIssues.set(normalizeComparisonPath(rootPath), limitError);
+    }
+    rootIssues = nextRootIssues;
+    const eligibleCandidates = measuredCandidates.filter((candidate) => (
+      !rootIssues.has(normalizeComparisonPath(candidate.rootPath))
+    ));
     const previous = records;
     const contentByteLimit = Math.min(MAX_INDEX_TEXT_BYTES, await getActiveLyricImportByteLimit());
-    const nextItems = await mapWithConcurrency(candidates, 16, async (candidate, index) => {
+    const contentBudget = createContentBudget(availableRoots);
+    const nextItems = await mapWithConcurrency(eligibleCandidates, 16, async (candidate, index) => {
       if (generation !== rebuildGeneration) return null;
       const previousRecord = previous.get(normalizeComparisonPath(candidate.filePath));
-      const next = await createRecord(candidate, previousRecord, contentByteLimit);
+      const next = await createRecord(candidate, previousRecord, contentByteLimit, contentBudget);
       if ((index + 1) % 250 === 0) {
         status = { ...status, scannedFiles: index + 1 };
         broadcast();
@@ -415,21 +595,26 @@ async function performRebuild() {
     persistRecords(nextRecords);
     watchDirectories(availableRoots, directories);
     status = {
-      scanning: false,
+      scanning: rebuildRequested || indexingHoldCount > 0,
+      scanId: status.scanId,
       indexedFiles: records.size,
-      scannedFiles: candidates.length,
-      truncated,
+      scannedFiles: measuredCandidates.length,
+      truncated: fileLimitReached || rootIssues.size > 0,
+      contentTruncated: contentBudget.truncated,
+      limitedRoots: [...rootIssues.keys()],
       lastIndexedAt: Date.now(),
       error: null,
     };
   } catch (error) {
     status = {
       ...status,
-      scanning: false,
+      scanning: rebuildRequested || indexingHoldCount > 0,
       error: error?.message || 'Could not index lyric folders',
     };
   }
-  broadcast();
+  // A queued pass is part of the same indexing transaction. Do not announce a
+  // false completion between passes or renderers will briefly expose stale data.
+  if (!rebuildRequested && indexingHoldCount === 0) broadcast();
 }
 
 async function queueRebuild() {
@@ -480,11 +665,16 @@ function publicRecord(record, { query = '', matchedField = null } = {}) {
 }
 
 async function describeRoots() {
-  return Promise.all(roots.map(async (rootPath) => ({
-    path: rootPath,
-    name: path.basename(rootPath) || rootPath,
-    available: await pathIsDirectory(rootPath),
-  })));
+  return Promise.all(roots.map(async (rootPath) => {
+    const issue = rootIssues.get(normalizeComparisonPath(rootPath)) || null;
+    return {
+      path: rootPath,
+      name: path.basename(rootPath) || rootPath,
+      available: await pathIsDirectory(rootPath),
+      indexable: !issue,
+      issue,
+    };
+  }));
 }
 
 async function recentEntries() {
@@ -539,6 +729,7 @@ export async function getFileNavigatorState() {
     roots: await describeRoots(),
     recents: await recentEntries(),
     status: { ...status, indexedFiles: records.size },
+    limits: { ...FILE_NAVIGATOR_LIMITS },
   };
 }
 
@@ -576,39 +767,190 @@ export async function getFileNavigatorSaveDestinations(preferredDirectory = null
   return destinations;
 }
 
-export async function addFileNavigatorRoot(rootPath) {
-  await ensureInitialized();
-  const normalized = normalizeLyricPath(rootPath);
-  if (!normalized || !await pathIsDirectory(normalized)) {
-    throw new Error('Selected folder is not available');
-  }
+async function addFileNavigatorRootsUnlocked(rootPaths) {
+  const allRequested = (Array.isArray(rootPaths) ? rootPaths : [rootPaths])
+    .filter((entry) => typeof entry === 'string' && entry.trim());
+  if (allRequested.length === 0) throw new Error('No folders were selected');
+  const requestProcessingLimit = FILE_NAVIGATOR_LIMITS.maxRoots * 2;
+  const requested = allRequested.slice(0, requestProcessingLimit);
 
-  const realRoot = await fs.realpath(normalized);
-  const comparisonRoot = normalizeComparisonPath(realRoot);
-  if (roots.some((entry) => isWithinPath(comparisonRoot, normalizeComparisonPath(entry)))) {
-    return getFileNavigatorState();
+  const skipped = allRequested.slice(requestProcessingLimit).map((selectedPath) => ({
+    path: selectedPath,
+    name: path.basename(selectedPath) || selectedPath,
+    reason: `Only ${requestProcessingLimit} folders can be evaluated at once.`,
+  }));
+  const resolvedSelections = [];
+  const resolvedKeys = new Set();
+
+  try {
+    for (const selectedPath of requested) {
+      const normalized = normalizeLyricPath(selectedPath);
+      if (!normalized || !await pathIsDirectory(normalized)) {
+        skipped.push({
+          path: selectedPath,
+          name: path.basename(selectedPath) || selectedPath,
+          reason: 'Folder is not available.',
+        });
+        continue;
+      }
+      try {
+        const realRoot = await fs.realpath(normalized);
+        const key = normalizeComparisonPath(realRoot);
+        if (resolvedKeys.has(key)) continue;
+        resolvedKeys.add(key);
+        resolvedSelections.push({ path: realRoot, key });
+      } catch {
+        skipped.push({
+          path: selectedPath,
+          name: path.basename(selectedPath) || selectedPath,
+          reason: 'Folder could not be accessed.',
+        });
+      }
+    }
+
+    // Parents are evaluated first so selecting both a parent and one of its
+    // children produces one focused source regardless of picker ordering.
+    resolvedSelections.sort((a, b) => (
+      a.path.length - b.path.length || naturalCollator.compare(a.path, b.path)
+    ));
+
+    let nextRoots = roots.slice();
+    const addedPaths = [];
+    for (const selection of resolvedSelections) {
+      const coveredBy = nextRoots.find((entry) => (
+        isWithinPath(selection.key, normalizeComparisonPath(entry))
+      ));
+      if (coveredBy) {
+        skipped.push({
+          path: selection.path,
+          name: path.basename(selection.path) || selection.path,
+          reason: normalizeComparisonPath(coveredBy) === selection.key
+            ? 'Folder is already indexed.'
+            : 'Folder is already covered by an indexed parent folder.',
+        });
+        continue;
+      }
+
+      const retainedRoots = nextRoots.filter((entry) => (
+        !isWithinPath(normalizeComparisonPath(entry), selection.key)
+      ));
+      if (retainedRoots.length >= FILE_NAVIGATOR_LIMITS.maxRoots) {
+        skipped.push({
+          path: selection.path,
+          name: path.basename(selection.path) || selection.path,
+          reason: `The ${FILE_NAVIGATOR_LIMITS.maxRoots}-folder indexing limit was reached.`,
+        });
+        continue;
+      }
+
+      const inspection = await inspectRootLimits(selection.path);
+      if (inspection.error) {
+        skipped.push({
+          path: selection.path,
+          name: path.basename(selection.path) || selection.path,
+          reason: inspection.error,
+        });
+        continue;
+      }
+
+      nextRoots = [...retainedRoots, selection.path];
+      addedPaths.push(selection.path);
+    }
+
+    if (addedPaths.length > 0) {
+      roots = nextRoots;
+      for (const addedPath of addedPaths) {
+        rootIssues.delete(normalizeComparisonPath(addedPath));
+      }
+      await persistConfig();
+      await queueRebuild();
+    } else if (rebuildPromise) {
+      await rebuildPromise;
+    }
+
+    return {
+      selection: {
+        requestedCount: allRequested.length,
+        addedCount: addedPaths.length,
+        addedPaths,
+        skipped,
+      },
+    };
+  } catch (error) {
+    throw error;
   }
-  roots = roots.filter((entry) => !isWithinPath(normalizeComparisonPath(entry), comparisonRoot));
-  roots.push(realRoot);
-  await persistConfig();
-  void queueRebuild();
-  return getFileNavigatorState();
+}
+
+export async function addFileNavigatorRoots(rootPaths) {
+  await ensureInitialized();
+  const releaseIndexingHold = acquireIndexingHold();
+  return withRootMutationLock(async () => {
+    try {
+      const result = await addFileNavigatorRootsUnlocked(rootPaths);
+      releaseIndexingHold();
+      return { ...(await getFileNavigatorState()), ...result };
+    } catch (error) {
+      releaseIndexingHold(error);
+      throw error;
+    }
+  });
+}
+
+export async function addFileNavigatorRoot(rootPath) {
+  return addFileNavigatorRoots([rootPath]);
+}
+
+export async function createFileNavigatorLyricsFolder() {
+  const documentsPath = app.getPath('documents');
+  const appDocumentsPath = path.join(documentsPath, 'LyricDisplay');
+  const lyricsFolderPath = path.join(appDocumentsPath, 'Lyrics');
+  await ensureNavigatorDirectory(documentsPath, 'Your Documents folder');
+  await ensureNavigatorDirectory(appDocumentsPath, 'The LyricDisplay Documents folder');
+  const folderCreated = await ensureNavigatorDirectory(lyricsFolderPath, 'The Lyrics folder');
+  const resolvedLyricsFolderPath = await fs.realpath(lyricsFolderPath);
+  const result = await addFileNavigatorRoots([resolvedLyricsFolderPath]);
+  const indexedRoot = rootForPath(resolvedLyricsFolderPath);
+  const indexedRootIssue = indexedRoot
+    ? rootIssues.get(normalizeComparisonPath(indexedRoot))
+    : null;
+  if (!indexedRoot || indexedRootIssue) {
+    const reason = result.selection?.skipped?.find((entry) => (
+      normalizeComparisonPath(entry.path) === normalizeComparisonPath(resolvedLyricsFolderPath)
+    ))?.reason || indexedRootIssue;
+    throw new Error(folderCreated
+      ? `The Lyrics folder was created but could not be indexed. ${reason || 'Add it from Preferences after resolving the folder issue.'}`
+      : `The existing Lyrics folder could not be indexed. ${reason || 'Resolve the folder issue and try again.'}`);
+  }
+  return {
+    ...result,
+    createdFolderPath: resolvedLyricsFolderPath,
+    folderCreated,
+  };
 }
 
 export async function removeFileNavigatorRoot(rootPath) {
   await ensureInitialized();
-  const normalized = normalizeComparisonPath(normalizeLyricPath(rootPath));
-  roots = roots.filter((entry) => normalizeComparisonPath(entry) !== normalized);
-  records = new Map([...records.entries()].filter(([, record]) => rootForPath(record.filePath)));
-  await persistConfig();
-  void queueRebuild();
-  broadcast();
-  return getFileNavigatorState();
+  const releaseIndexingHold = acquireIndexingHold();
+  return withRootMutationLock(async () => {
+    try {
+      const normalized = normalizeComparisonPath(normalizeLyricPath(rootPath));
+      roots = roots.filter((entry) => normalizeComparisonPath(entry) !== normalized);
+      rootIssues.delete(normalized);
+      records = new Map([...records.entries()].filter(([, record]) => rootForPath(record.filePath)));
+      await persistConfig();
+      await queueRebuild();
+      releaseIndexingHold();
+      return getFileNavigatorState();
+    } catch (error) {
+      releaseIndexingHold(error);
+      throw error;
+    }
+  });
 }
 
 export async function rebuildFileNavigatorIndex() {
   await ensureInitialized();
-  void queueRebuild();
+  await queueRebuild();
   return getFileNavigatorState();
 }
 
@@ -688,10 +1030,14 @@ export async function browseFileNavigator(directoryPath) {
       continue;
     }
     try {
+      const metadataOnlyBudget = createContentBudget([resolved.rootPath]);
+      metadataOnlyBudget.remainingTotal = 0;
+      metadataOnlyBudget.remainingByRoot.set(normalizeComparisonPath(resolved.rootPath), 0);
       const next = await createRecord(
         { filePath: entryPath, rootPath: resolved.rootPath },
         null,
-        contentByteLimit
+        contentByteLimit,
+        metadataOnlyBudget
       );
       if (next) items.push(publicRecord(next));
     } catch { }
@@ -807,18 +1153,33 @@ export async function refreshFileInNavigator(filePath) {
   const normalized = normalizeLyricPath(filePath);
   const sourceRoot = normalized ? rootForPath(normalized) : null;
   if (!normalized || !sourceRoot || !isSupportedLyricsImportFile(normalized)) return false;
+  if (rootIssues.has(normalizeComparisonPath(sourceRoot))) return false;
   const key = normalizeComparisonPath(normalized);
   try {
     const contentByteLimit = Math.min(MAX_INDEX_TEXT_BYTES, await getActiveLyricImportByteLimit());
+    const contentBudget = createContentBudget();
+    for (const [recordKey, record] of records) {
+      if (recordKey === key || !record.contentText) continue;
+      reserveContentBytes(
+        contentBudget,
+        record.rootPath,
+        Buffer.byteLength(record.contentText, 'utf8')
+      );
+    }
     const next = await createRecord(
       { filePath: normalized, rootPath: sourceRoot },
       null,
-      contentByteLimit
+      contentByteLimit,
+      contentBudget
     );
     if (!next) return false;
     records.set(key, next);
     persistSingleRecord(next);
-    status = { ...status, indexedFiles: records.size };
+    status = {
+      ...status,
+      indexedFiles: records.size,
+      contentTruncated: contentBudget.truncated,
+    };
     broadcast({ changedFilePath: normalized });
     return true;
   } catch {

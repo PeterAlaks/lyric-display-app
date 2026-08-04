@@ -35,9 +35,18 @@ test('Windows cleanup covers current, legacy, and local application data', () =>
     '$APPDATA\\lyric-display-app',
     '$APPDATA\\lyricdisplay-ndi',
     '$LOCALAPPDATA\\LyricDisplay',
+    '$DOCUMENTS\\LyricDisplay',
   ]) {
     assert.ok(installerScript.includes(`RMDir /r "${expectedPath}"`), expectedPath);
   }
+});
+
+test('Windows cleanup explicitly warns before removing app-created documents', () => {
+  assert.match(installerScript, /This also removes Documents\\LyricDisplay/);
+  assert.match(
+    installerScript,
+    /\$\{If\} \$DeleteUserDataSelection == \$\{BST_CHECKED\}[\s\S]*RMDir \/r "\$DOCUMENTS\\LyricDisplay"/
+  );
 });
 
 test('the NSIS uninstaller embeds credential cleanup for every LyricDisplay service', () => {

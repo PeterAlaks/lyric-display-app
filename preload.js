@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getState: () => ipcRenderer.invoke('file-navigator:get-state'),
     getSaveDestinations: (preferredDirectory) => ipcRenderer.invoke('file-navigator:save-destinations', preferredDirectory),
     addRoot: () => ipcRenderer.invoke('file-navigator:add-root'),
+    createLyricsFolder: () => ipcRenderer.invoke('file-navigator:create-lyrics-folder'),
     removeRoot: (rootPath) => ipcRenderer.invoke('file-navigator:remove-root', rootPath),
     reindex: () => ipcRenderer.invoke('file-navigator:reindex'),
     search: (payload) => ipcRenderer.invoke('file-navigator:search', payload),

@@ -7,7 +7,7 @@ import {
   normalizeSectionTagPhrases,
 } from '../shared/sectionTagPhrases.js';
 
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 6;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 7;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -122,6 +122,17 @@ export function migratePreferences(input) {
           : [...DEFAULT_SECTION_TAG_PHRASES],
       },
       _schemaVersion: 6,
+    };
+  }
+
+  if (sourceVersion < 7) {
+    const fileHandling = isPlainObject(migrated.fileHandling) ? migrated.fileHandling : {};
+    const nextFileHandling = { ...fileHandling };
+    delete nextFileHandling.defaultLyricsPath;
+    migrated = {
+      ...migrated,
+      fileHandling: nextFileHandling,
+      _schemaVersion: 7,
     };
   }
 

@@ -90,21 +90,10 @@ export function registerFileHandlers({ getMainWindow }) {
     try {
       const win = getMainWindow?.();
       const rememberLastPath = userPreferences.getPreference('fileHandling.rememberLastOpenedPath') ?? true;
-
-      let defaultPath;
-
+      let defaultPath = null;
       if (rememberLastPath) {
         const { getLastOpenedDirectory } = await import('../recents.js');
         defaultPath = await getLastOpenedDirectory();
-      } else {
-        const configuredPath = userPreferences.getPreference('fileHandling.defaultLyricsPath');
-        if (configuredPath && configuredPath.trim()) {
-          defaultPath = configuredPath;
-        }
-      }
-
-      if (!defaultPath) {
-        defaultPath = userPreferences.getDefaultLyricsPath();
       }
 
       const result = await dialog.showOpenDialog(win || undefined, {

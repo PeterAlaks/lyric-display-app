@@ -1,6 +1,35 @@
 export const OPEN_FILE_NAVIGATOR_EVENT = 'lyricdisplay:open-file-navigator';
 export const OPEN_FILE_SAVE_NAVIGATOR_EVENT = 'lyricdisplay:open-file-save-navigator';
 
+export function mergeFileNavigatorStatus(previousStatus = {}, nextStatus = {}) {
+  if (previousStatus.scanning === true && nextStatus.scanning === true) return previousStatus;
+  return { ...previousStatus, ...nextStatus };
+}
+
+export function getFolderSelectionNotice(selection) {
+  if (!selection) return null;
+  const addedCount = Math.max(0, Number(selection.addedCount) || 0);
+  const skipped = Array.isArray(selection.skipped) ? selection.skipped : [];
+  if (Number(selection.requestedCount) <= 1 && skipped.length === 0) return null;
+  if (skipped.length === 0) {
+    return {
+      title: `${addedCount} folders indexed`,
+      message: 'The selected folders are ready to search.',
+      variant: 'success',
+    };
+  }
+  const firstReason = skipped[0]?.reason || 'One or more folders could not be indexed.';
+  return {
+    title: addedCount > 0
+      ? `${addedCount} indexed, ${skipped.length} skipped`
+      : 'No folders were added',
+    message: skipped.length === 1
+      ? firstReason
+      : `${firstReason} ${skipped.length - 1} other ${skipped.length - 1 === 1 ? 'folder was' : 'folders were'} skipped.`,
+    variant: 'warning',
+  };
+}
+
 export function canUseFileNavigator() {
   return Boolean(window?.electronAPI?.fileNavigator?.getState);
 }

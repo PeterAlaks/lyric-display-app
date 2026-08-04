@@ -3,7 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { migratePreferences } from '../main/preferenceMigrations.js';
+import {
+  CURRENT_PREFERENCES_SCHEMA_VERSION,
+  migratePreferences,
+} from '../main/preferenceMigrations.js';
 import { createUpdateSessionPolicy } from '../main/updateSessionPolicy.js';
 import {
   CURRENT_SESSION_SCHEMA_VERSION,
@@ -78,7 +81,7 @@ test('legacy preferences migrate once without overwriting valid operator choices
 
   assert.equal(result.success, true);
   assert.equal(result.changed, true);
-  assert.equal(result.preferences._schemaVersion, 6);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
   assert.equal(result.preferences.general.autoCheckForUpdates, false);
   assert.equal(result.preferences.general.liveSafetyMode, true);
   assert.equal(result.preferences.general.confirmOnClose, false);
@@ -103,7 +106,7 @@ test('an explicit legacy telemetry opt-out remains declined after migration', ()
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.preferences._schemaVersion, 6);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
   assert.equal(result.preferences.general.shareAnonymousUsageData, undefined);
   assert.equal(result.preferences.advanced.shareAnonymousUsageData, false);
   assert.equal(result.preferences.advanced.telemetryConsentDecided, true);
@@ -117,7 +120,7 @@ test('Preview Lyric Lines preference is preserved when upgrading from schema 3',
 
   assert.equal(result.success, true);
   assert.equal(result.changed, true);
-  assert.equal(result.preferences._schemaVersion, 6);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
   assert.equal(result.preferences.general.previewLines, true);
 });
 
@@ -131,7 +134,7 @@ test('schema 4 preferences gain a normalized editable capitalization list', () =
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.preferences._schemaVersion, 6);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
   assert.equal(result.preferences.formatting.capitalizeReligiousTerms, false);
   assert.deepEqual(result.preferences.formatting.capitalizedWords, ['Holy Spirit', 'Abba']);
 });
@@ -146,9 +149,26 @@ test('schema 5 preferences gain a normalized editable section-tag phrase list', 
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.preferences._schemaVersion, 6);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
   assert.equal(result.preferences.parsing.structureTagMode, 'keep');
   assert.deepEqual(result.preferences.parsing.sectionTagPhrases, ['Call And Response']);
+});
+
+test('schema 6 preferences discard the removed default lyrics folder setting', () => {
+  const result = migratePreferences({
+    _schemaVersion: 6,
+    fileHandling: {
+      defaultLyricsPath: 'C:\\Legacy Lyrics',
+      rememberLastOpenedPath: false,
+      maxRecentFiles: 12,
+    },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
+  assert.equal(result.preferences.fileHandling.defaultLyricsPath, undefined);
+  assert.equal(result.preferences.fileHandling.rememberLastOpenedPath, false);
+  assert.equal(result.preferences.fileHandling.maxRecentFiles, 12);
 });
 
 test('future preference and session schemas are rejected without mutation', () => {
