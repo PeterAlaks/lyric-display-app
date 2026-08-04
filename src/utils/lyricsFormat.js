@@ -215,17 +215,50 @@ const normalizePunctuation = (line) => {
   return workingLine;
 };
 
-const capitalizeFirstCharacter = (line) => {
+const isBracketedTranslationLine = (line) => {
+  if (!line || typeof line !== 'string') return false;
+
+  const trimmed = line.trim();
+  if (trimmed.length <= 2) return false;
+
+  return BRACKET_PAIRS.some(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
+};
+
+const capitalizeFirstCharacter = (line, sectionTagPhrases) => {
   if (!line) return line;
   const corrected = line.replace(/\bi\b/g, 'I');
+
+  const capitalizeVisibleContent = (value) => {
+    const trimmed = value.trim();
+    if (
+      !isBracketedTranslationLine(trimmed)
+      || isMetadataTag(trimmed)
+      || isStructureTag(trimmed, sectionTagPhrases)
+    ) {
+      return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    const leadingWhitespaceLength = value.indexOf(trimmed);
+    const leadingWhitespace = value.slice(0, leadingWhitespaceLength);
+    const trailingWhitespace = value.slice(leadingWhitespaceLength + trimmed.length);
+    const innerContent = trimmed.slice(1, -1);
+    const firstLetterIndex = innerContent.search(/\p{L}/u);
+    if (firstLetterIndex === -1) return value;
+
+    const capitalizedInner = innerContent.slice(0, firstLetterIndex)
+      + innerContent.charAt(firstLetterIndex).toLocaleUpperCase()
+      + innerContent.slice(firstLetterIndex + 1);
+    return `${leadingWhitespace}${trimmed.charAt(0)}${capitalizedInner}${trimmed.slice(-1)}${trailingWhitespace}`;
+  };
+
   const timestampPrefixMatch = corrected.match(/^((?:\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+)(\s*)/);
   if (timestampPrefixMatch) {
     const prefix = `${timestampPrefixMatch[1]}${timestampPrefixMatch[2] || ''}`;
     const rest = corrected.slice(timestampPrefixMatch[0].length);
     if (!rest) return corrected;
-    return prefix + rest.charAt(0).toUpperCase() + rest.slice(1);
+    return prefix + capitalizeVisibleContent(rest);
   }
-  return corrected.charAt(0).toUpperCase() + corrected.slice(1);
+  return capitalizeVisibleContent(corrected);
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -238,15 +271,6 @@ const capitalizeReligiousTerms = (line, capitalizedWords) => {
     const regex = new RegExp(`(^|[^\\p{L}\\p{N}_])(${escapedWord})(?=$|[^\\p{L}\\p{N}_])`, 'giu');
     return current.replace(regex, (_match, prefix) => `${prefix}${word}`);
   }, line);
-};
-
-const isBracketedTranslationLine = (line) => {
-  if (!line || typeof line !== 'string') return false;
-
-  const trimmed = line.trim();
-  if (trimmed.length <= 2) return false;
-
-  return BRACKET_PAIRS.some(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
 };
 
 const containsLatinCharacters = (text) => Boolean(text && LATIN_LETTER_REGEX.test(text));
@@ -420,7 +444,7 @@ export const formatLyrics = (text, options = {}) => {
         .filter(Boolean)
         .map((segment) => {
           let result = segment;
-          if (capitalizeFirst) result = capitalizeFirstCharacter(result);
+          if (capitalizeFirst) result = capitalizeFirstCharacter(result, groupingConfig?.sectionTagPhrases);
           if (capitalizeReligious) result = capitalizeReligiousTerms(result, normalizedCapitalizedWords);
           return result;
         });

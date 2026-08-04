@@ -242,9 +242,10 @@ const useFileSave = ({
     };
   }, [activeSetlistItemId, createEditorGroupingPlan, songMetadata]);
 
-  const writeLyricsFile = useCallback(async (targetPath, payload) => {
+  const writeLyricsFile = useCallback(async (targetPath, payload, options = {}) => {
     const result = await window.electronAPI.writeFile(targetPath, payload, {
       preserveGrouping: /\.txt$/i.test(targetPath || ''),
+      ...options,
     });
     if (result && result.success === false) {
       throw new Error(result.error || 'File write failed');
@@ -263,17 +264,23 @@ const useFileSave = ({
   }) => {
     if (!canUseFileNavigator()) return null;
     try {
+      let usedNativeDialog = false;
       let result = await saveWithFileNavigator({
         suggestedName: baseName,
         extension,
         availableExtensions,
         initialDirectory: defaultDir,
+        contentByExtension: Object.fromEntries(availableExtensions.map((candidateExtension) => [
+          candidateExtension,
+          serializePayload(payload, candidateExtension),
+        ])),
       });
 
       if (result?.unavailable) return null;
       if (result?.canceled) return { canceled: true };
       const selectedExtension = result?.extension === 'lrc' ? 'lrc' : 'txt';
       if (result?.nativeDialog) {
+        usedNativeDialog = true;
         if (!window.electronAPI?.showSaveDialog) return { canceled: true };
         const effectiveDefaultDirectory = result.defaultDirectory || defaultDir || '';
         const sep = /\\/.test(effectiveDefaultDirectory) ? '\\' : '/';
@@ -293,7 +300,9 @@ const useFileSave = ({
       if (!result?.filePath) throw new Error('No save destination was selected');
 
       const filePayload = serializePayload(payload, selectedExtension);
-      const writeResult = await writeLyricsFile(result.filePath, filePayload);
+      const writeResult = result.writeResult || await writeLyricsFile(result.filePath, filePayload, {
+        collisionPolicy: usedNativeDialog || result.replaced ? 'replace' : 'create',
+      });
       const savedBaseName = result.baseName
         || result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
@@ -404,7 +413,9 @@ const useFileSave = ({
 
     try {
       const filePayload = serializePayload(payload, target.extension);
-      const writeResult = await writeLyricsFile(target.path, filePayload);
+      const writeResult = await writeLyricsFile(target.path, filePayload, {
+        collisionPolicy: 'replace',
+      });
       const savedBaseName = target.path.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
       if (alsoLoad) {

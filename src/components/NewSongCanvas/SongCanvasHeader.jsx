@@ -303,10 +303,6 @@ const SongCanvasHeader = ({
   const panelClass = darkMode
     ? 'border-gray-800/90 bg-gray-950/25'
     : 'border-slate-200/90 bg-slate-50/75 shadow-sm';
-  const editorStatus = composeMode
-    ? 'Draft workspace'
-    : (hasUnsavedChanges ? 'Unsaved changes' : (editMode ? 'All changes saved' : 'Ready to create'));
-  const editorStatusDot = hasUnsavedChanges ? 'bg-amber-400' : 'bg-emerald-400';
   const hasActiveLine = activeLineIndex !== null && activeLineIndex !== undefined;
 
   const timestampItems = [
@@ -367,10 +363,6 @@ const SongCanvasHeader = ({
             <h1 className={`truncate text-base font-semibold sm:text-lg md:text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               {titleText(composeMode, editMode)}
             </h1>
-            <div className={`hidden items-center justify-center gap-1.5 text-[11px] sm:flex sm:justify-start ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${editorStatusDot}`} />
-              {editorStatus}
-            </div>
           </div>
           <HelpButton darkMode={darkMode} showModal={showModal} />
         </div>

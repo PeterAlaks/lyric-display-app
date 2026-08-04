@@ -121,11 +121,13 @@ test('save navigator requests resolve with the selected indexed destination', as
       suggestedName: 'Amazing Grace',
       extension: 'txt',
       initialDirectory: '/songs',
+      contentByExtension: { txt: 'Amazing grace' },
     });
     assert.equal(receivedEvent?.type, 'lyricdisplay:open-file-save-navigator');
     assert.equal(receivedEvent?.detail?.suggestedName, 'Amazing Grace');
     assert.equal(receivedEvent?.detail?.extension, 'txt');
     assert.equal(receivedEvent?.detail?.initialDirectory, '/songs');
+    assert.deepEqual(receivedEvent?.detail?.contentByExtension, { txt: 'Amazing grace' });
     receivedEvent.detail.onComplete({ success: true, filePath: '/songs/Amazing Grace.txt' });
     assert.deepEqual(await selectionPromise, {
       success: true,

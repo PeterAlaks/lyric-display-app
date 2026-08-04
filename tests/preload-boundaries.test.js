@@ -25,6 +25,7 @@ test('passive display preload excludes control, file, NDI, and update mutation c
     'updater:install',
     'updater:set-session-active',
     'app:renderer-ready',
+    'app:logs:clear',
   ]) {
     assert.equal(source.includes(forbidden), false, forbidden);
   }
@@ -37,6 +38,7 @@ test('only the control preload can report main-window startup readiness', () => 
   const loading = read('preloads/loading.cjs');
 
   assert.equal(control.includes("ipcRenderer.send('app:renderer-ready'"), true);
+  assert.equal(control.includes("ipcRenderer.invoke('app:logs:clear')"), true);
   assert.equal(loading.includes('app:renderer-ready'), false);
 });
 

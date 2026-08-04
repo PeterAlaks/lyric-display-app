@@ -1089,7 +1089,11 @@ export async function prepareFileNavigatorSave({
     if (error?.code !== 'ENOENT') throw error;
   }
 
-  if (!exists || overwrite === true) grantLyricWritePath(targetPath);
+  if (!exists || overwrite === true) {
+    grantLyricWritePath(targetPath, {
+      collisionPolicy: overwrite === true ? 'replace' : 'create',
+    });
+  }
 
   return {
     directoryPath: resolved.directoryPath,

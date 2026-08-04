@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, FileText, Info, Loader2, Monitor, Play, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, FileText, Info, Loader2, Monitor, Play, RefreshCw, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -31,6 +31,7 @@ const AdvancedPreferencesSection = ({
   const isPackagedApp = useIsPackagedApp();
   const [obsDockStartup, setObsDockStartup] = useState(null);
   const [obsDockStartupSaving, setObsDockStartupSaving] = useState(false);
+  const [clearingSystemLogs, setClearingSystemLogs] = useState(false);
 
   const loadObsDockStartup = async () => {
     if (!window.electronAPI?.obsDockStartup?.get) return;
@@ -83,6 +84,51 @@ const AdvancedPreferencesSection = ({
         ? [{ label: 'Close', variant: 'outline' }]
         : createLyricDisplayDockSetupActions(handleLaunchHeadlessMode),
     });
+  };
+
+  const handleClearSystemLogs = async () => {
+    const confirmation = await showModal?.({
+      title: 'Clear All System Logs?',
+      description: 'This permanently deletes all troubleshooting logs stored in LyricDisplay’s user-data logs folder.',
+      body: 'The current session will continue with a fresh, empty log. This action cannot be undone.',
+      variant: 'warning',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Clear Logs', value: 'clear', variant: 'destructive' },
+      ],
+    });
+
+    if (confirmation !== 'clear') return;
+    if (!window.electronAPI?.clearSystemLogs) {
+      showToast?.({
+        title: 'Log Cleanup Unavailable',
+        message: 'This build does not expose system log cleanup.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    setClearingSystemLogs(true);
+    try {
+      const result = await window.electronAPI.clearSystemLogs();
+      if (!result?.success) {
+        throw new Error(result?.error || 'Could not clear the system logs.');
+      }
+      showToast?.({
+        title: 'System Logs Cleared',
+        message: 'All saved system logs were removed. A fresh session log is now active.',
+        variant: 'success',
+      });
+    } catch (error) {
+      showToast?.({
+        title: 'Log Cleanup Failed',
+        message: error?.message || 'Could not clear the system logs.',
+        variant: 'error',
+      });
+    } finally {
+      setClearingSystemLogs(false);
+    }
   };
 
   return (
@@ -350,6 +396,26 @@ const AdvancedPreferencesSection = ({
           }`}
         thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
       />
+    </div>
+
+    <div className="flex items-center justify-between gap-6">
+      <div className="min-w-0 flex-1">
+        <label className={`text-sm font-medium ${labelClass}`}>Clear All System Logs</label>
+        <p className={`text-xs ${mutedClass}`}>Delete troubleshooting logs stored in the user-data logs folder</p>
+      </div>
+      <Button
+        type="button"
+        variant="destructiveOutline"
+        size="sm"
+        onClick={handleClearSystemLogs}
+        disabled={clearingSystemLogs}
+        className="shrink-0"
+      >
+        {clearingSystemLogs
+          ? <Loader2 className="h-4 w-4 animate-spin" />
+          : <Trash2 className="h-4 w-4" />}
+        Clear Logs
+      </Button>
     </div>
 
     <div className="space-y-2">

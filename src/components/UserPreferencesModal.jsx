@@ -724,8 +724,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'formatting':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Auto Cleanup on Paste</label>
                 <p className={`text-xs ${mutedClass}`}>Automatically format and clean up lyrics when pasting into the song canvas</p>
               </div>
@@ -743,8 +743,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Capitalize First Letter</label>
                 <p className={`text-xs ${mutedClass}`}>Automatically capitalize the first letter of each lyric line during cleanup</p>
               </div>
@@ -762,8 +762,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Capitalize Religious Terms</label>
                 <p className={`text-xs ${mutedClass}`}>Auto-capitalize words like Jesus, God, Holy Spirit, Hallelujah, etc.</p>
               </div>
@@ -795,8 +795,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
             </button>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>Normalize Typographic Characters</label>
                 <p className={`text-xs ${mutedClass}`}>Convert smart quotes, em dashes, and other typographic characters to plain equivalents</p>
               </div>

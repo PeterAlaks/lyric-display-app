@@ -6,6 +6,7 @@ import util from 'util';
 import { randomUUID } from 'crypto';
 import { getUserDataMigrationResult } from './appIdentity.js';
 import { BatchedLogWriter, formatStructuredLogRecord } from './batchedLogWriter.js';
+import { clearLogDirectoryContents } from './logCleanup.js';
 import {
   LOG_RETENTION,
   MANAGED_LOG_FILE_PATTERN,
@@ -27,6 +28,7 @@ let resourceDiagnosticsTimer = null;
 let resourceDiagnosticsPending = false;
 let batchedWriter = null;
 let logContext = null;
+let clearingLogs = false;
 
 const timestamp = () => new Date().toISOString();
 
@@ -475,6 +477,66 @@ export async function flushFileLogs({ timeoutMs = 1500 } = {}) {
     ]);
   } finally {
     if (timeout) clearTimeout(timeout);
+  }
+}
+
+export async function clearAllFileLogs() {
+  if (clearingLogs) {
+    return { success: false, error: 'System logs are already being cleared.' };
+  }
+
+  clearingLogs = true;
+  let targetLogDir = null;
+  try {
+    targetLogDir = path.resolve(logDir || resolveLogDir());
+    const expectedLogDir = path.resolve(resolveLogDir());
+    const userDataDir = path.resolve(app.getPath('userData'));
+    if (targetLogDir !== expectedLogDir || targetLogDir === userDataDir) {
+      throw new Error('Resolved log directory failed safety validation');
+    }
+
+    await flushFileLogs({ timeoutMs: 3000 });
+    fileLoggingReady = false;
+    await fs.promises.mkdir(targetLogDir, { recursive: true });
+    const { removedEntries } = await clearLogDirectoryContents(targetLogDir);
+
+    const existingSessionPathIsSafe = Boolean(
+      logFilePath
+      && path.resolve(path.dirname(logFilePath)) === targetLogDir
+    );
+    logDir = targetLogDir;
+    logFilePath = existingSessionPathIsSafe
+      ? logFilePath
+      : path.join(targetLogDir, createSessionLogFileName());
+    latestLogFilePath = path.join(targetLogDir, 'latest.log');
+
+    await fs.promises.writeFile(logFilePath, '', 'utf8');
+    await fs.promises.writeFile(latestLogFilePath, logFilePath, 'utf8');
+    currentLogBytes = 0;
+    fileLoggingReady = true;
+
+    return { success: true, removedEntries };
+  } catch (error) {
+    try {
+      if (targetLogDir) {
+        await fs.promises.mkdir(targetLogDir, { recursive: true });
+        if (!logFilePath || path.resolve(path.dirname(logFilePath)) !== targetLogDir) {
+          logFilePath = path.join(targetLogDir, createSessionLogFileName());
+        }
+        latestLogFilePath = path.join(targetLogDir, 'latest.log');
+        const handle = await fs.promises.open(logFilePath, 'a');
+        await handle.close();
+        await fs.promises.writeFile(latestLogFilePath, logFilePath, 'utf8');
+        currentLogBytes = getFileSize(logFilePath);
+        fileLoggingReady = true;
+      }
+    } catch {
+      fileLoggingReady = false;
+    }
+    warnLoggingFailure('[Logging] Failed to clear system logs:', error);
+    return { success: false, error: error?.message || 'Could not clear system logs.' };
+  } finally {
+    clearingLogs = false;
   }
 }
 

@@ -12,7 +12,7 @@ import {
 
 const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc', '.ldsch']);
 const MAX_WRITE_CONTENT_BYTES = 10 * 1024 * 1024;
-const writeGrantPaths = new Set();
+const writeGrantPaths = new Map();
 
 export async function getActiveLyricImportByteLimit() {
   try {
@@ -45,13 +45,17 @@ export async function validateLyricImportPath(filePath, expectedFileType = null)
   return { normalized, fileType: format.fileType, stat: fileStat };
 }
 
-export function grantLyricWritePath(filePath) {
+export function grantLyricWritePath(filePath, { collisionPolicy = 'replace' } = {}) {
   const normalized = normalizeLyricPath(filePath);
-  if (normalized) writeGrantPaths.add(normalized);
+  if (normalized) {
+    const grantedPolicies = writeGrantPaths.get(normalized) || new Set();
+    grantedPolicies.add(collisionPolicy === 'create' ? 'create' : 'replace');
+    writeGrantPaths.set(normalized, grantedPolicies);
+  }
   return normalized;
 }
 
-export function validateLyricWrite(filePath, content) {
+export function validateLyricWrite(filePath, content, { collisionPolicy = 'replace' } = {}) {
   const normalized = normalizeLyricPath(filePath);
   if (!normalized) return { valid: false, error: 'Invalid file path' };
 
@@ -59,8 +63,14 @@ export function validateLyricWrite(filePath, content) {
   if (!ALLOWED_WRITE_EXTENSIONS.has(extension)) {
     return { valid: false, error: 'Only .txt, .lrc, and .ldsch files can be written here' };
   }
-  if (!writeGrantPaths.has(normalized)) {
-    return { valid: false, error: 'File write was not granted by a LyricDisplay file workflow' };
+  const normalizedPolicy = collisionPolicy === 'create' ? 'create' : 'replace';
+  if (!writeGrantPaths.get(normalized)?.has(normalizedPolicy)) {
+    return {
+      valid: false,
+      error: normalizedPolicy === 'replace'
+        ? 'File replacement was not confirmed by a LyricDisplay file workflow'
+        : 'File creation was not granted by a LyricDisplay file workflow',
+    };
   }
   if (typeof content !== 'string') {
     return { valid: false, error: 'File content must be text' };

@@ -116,9 +116,8 @@ const UserPreferencesLayout = ({
                       <Tooltip content="Uninstall NDI companion" side="bottom">
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="destructiveOutline"
                           onClick={handleNdiUninstall}
-                          className={`${darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 border-red-600/50 text-red-500 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>

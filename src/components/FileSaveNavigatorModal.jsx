@@ -27,6 +27,7 @@ export default function FileSaveNavigatorModal() {
   const closeTimerRef = useRef(null);
   const enterFrameRef = useRef(null);
   const requestSequenceRef = useRef(0);
+  const contentByExtensionRef = useRef(null);
 
   const [open, setOpen] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
@@ -63,6 +64,7 @@ export default function FileSaveNavigatorModal() {
   const finish = useCallback((result) => {
     const complete = completionRef.current;
     completionRef.current = null;
+    contentByExtensionRef.current = null;
     complete?.(result);
     beginClose();
   }, [beginClose]);
@@ -74,6 +76,7 @@ export default function FileSaveNavigatorModal() {
     if (enterFrameRef.current !== null) window.cancelAnimationFrame(enterFrameRef.current);
     completionRef.current?.({ canceled: true });
     completionRef.current = null;
+    contentByExtensionRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -100,6 +103,9 @@ export default function FileSaveNavigatorModal() {
       setExtension(nextExtension);
       setAvailableExtensions(nextAvailableExtensions);
       setInitialDirectory(detail.initialDirectory || null);
+      contentByExtensionRef.current = detail.contentByExtension && typeof detail.contentByExtension === 'object'
+        ? detail.contentByExtension
+        : null;
       setDestinations([]);
       setSelectedIndex(0);
       setOverwriteCandidate(null);
@@ -187,6 +193,25 @@ export default function FileSaveNavigatorModal() {
         setOverwriteCandidate(result);
         return;
       }
+      const saveContent = contentByExtensionRef.current?.[result.extension];
+      let writeResult = null;
+      if (typeof saveContent === 'string') {
+        writeResult = await window.electronAPI?.writeFile?.(result.filePath, saveContent, {
+          preserveGrouping: result.extension === 'txt',
+          collisionPolicy: overwrite ? 'replace' : 'create',
+        });
+        if (!writeResult?.success) {
+          if (writeResult?.code === 'FILE_EXISTS' && !overwrite) {
+            setOverwriteCandidate({
+              ...result,
+              exists: true,
+              writeGranted: false,
+            });
+            return;
+          }
+          throw new Error(writeResult?.error || 'Could not save the lyric file');
+        }
+      }
       finish({
         success: true,
         filePath: result.filePath,
@@ -194,6 +219,7 @@ export default function FileSaveNavigatorModal() {
         baseName: result.baseName,
         extension: result.extension,
         replaced: Boolean(result.exists),
+        writeResult,
       });
     } catch (nextError) {
       setError(nextError?.message || 'Could not use this save destination');

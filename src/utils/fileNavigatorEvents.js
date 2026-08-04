@@ -47,6 +47,7 @@ export function saveWithFileNavigator({
   extension,
   availableExtensions,
   initialDirectory = null,
+  contentByExtension = null,
 } = {}) {
   if (!canUseFileNavigator() || !window.electronAPI?.fileNavigator?.prepareSave) {
     return Promise.resolve({ unavailable: true });
@@ -59,6 +60,7 @@ export function saveWithFileNavigator({
         extension,
         availableExtensions,
         initialDirectory,
+        contentByExtension,
         onComplete: resolve,
       },
     }));

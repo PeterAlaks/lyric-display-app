@@ -347,14 +347,9 @@ const UserMediaModal = ({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="destructiveOutline"
               onClick={deleteAll}
               disabled={busy || deletableVisibleMedia.length === 0}
-              className={cn(
-                darkMode
-                  ? 'bg-red-950/60 border-red-700 text-red-100 hover:bg-red-900 hover:text-white hover:border-red-500'
-                  : 'border-red-200 text-red-600 hover:bg-red-50'
-              )}
             >
               <Trash2 className="h-4 w-4" />
               Delete All

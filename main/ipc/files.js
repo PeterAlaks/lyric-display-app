@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain, dialog } from 'electron';
-import { readFile, stat, writeFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import path from 'path';
 import { parseLyricImportContent } from '../../shared/documentTextExtraction.js';
 import {
@@ -33,6 +33,7 @@ import {
   getRememberedLyricsGrouping,
   rememberLyricsGrouping,
 } from '../lyricsGroupingMetadata.js';
+import { saveTextFileAtomically } from '../atomicFileSave.js';
 
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
@@ -60,15 +61,33 @@ export function registerFileHandlers({ getMainWindow }) {
 
   ipcMain.handle('write-file', async (_event, filePath, content, options = {}) => {
     const extension = path.extname(filePath || '').toLowerCase();
+    const collisionPolicy = options?.collisionPolicy === 'create' ? 'create' : 'replace';
     const cleanContent = extension === '.txt' && typeof content === 'string'
       ? extractExplicitGroupingDirective(content).content
       : content;
-    const validation = validateLyricWrite(filePath, cleanContent);
+    const validation = validateLyricWrite(filePath, cleanContent, { collisionPolicy });
     if (!validation.valid) {
       return { success: false, error: validation.error };
     }
 
-    await writeFile(validation.normalized, cleanContent, 'utf8');
+    try {
+      await saveTextFileAtomically(validation.normalized, cleanContent, {
+        mode: collisionPolicy,
+      });
+    } catch (error) {
+      if (error?.code === 'FILE_EXISTS') {
+        return {
+          success: false,
+          code: 'FILE_EXISTS',
+          error: 'A file with that name already exists',
+        };
+      }
+      return {
+        success: false,
+        code: error?.code || 'WRITE_FAILED',
+        error: error?.message || 'File write failed',
+      };
+    }
     void refreshFileInNavigator(validation.normalized);
 
     let groupingPlan = null;

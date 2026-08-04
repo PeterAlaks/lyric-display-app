@@ -507,6 +507,10 @@ const NewSongCanvas = () => {
   const toolbarGhostClass = darkMode
     ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 active:bg-blue-500/15 focus-visible:bg-blue-500/10 focus-visible:text-blue-300 focus-visible:ring-1 focus-visible:ring-blue-500/60'
     : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600 active:bg-blue-100 focus-visible:bg-blue-50 focus-visible:text-blue-600 focus-visible:ring-1 focus-visible:ring-blue-500/30';
+  const editorStatus = composeMode
+    ? 'Draft workspace'
+    : (hasUnsavedChanges ? 'Unsaved changes' : (editMode ? 'All changes saved' : 'Ready to create'));
+  const editorStatusDot = hasUnsavedChanges ? 'bg-amber-400' : 'bg-emerald-400';
 
   useKeyboardShortcuts({
     handleBack,
@@ -612,12 +616,23 @@ const NewSongCanvas = () => {
             onKeyUp={handleTextareaSelect}
             onSelect={handleTextareaSelect}
             placeholder="Start typing your lyrics here, or paste existing content..."
-            className={`h-full w-full resize-none rounded-2xl p-5 font-mono text-base leading-[1.85] outline-none ${darkMode
+            className={`h-full w-full resize-none rounded-2xl px-5 pb-12 pt-5 font-mono text-base leading-[1.85] outline-none ${darkMode
               ? 'bg-gray-900/65 text-gray-100 caret-blue-300 placeholder-gray-600'
               : 'bg-white/90 text-slate-900 caret-blue-600 placeholder-slate-400'
               }`}
             spellCheck={false}
           />
+
+          <div
+            className={`pointer-events-none absolute bottom-0 left-1/2 z-20 flex w-48 -translate-x-1/2 items-center justify-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 px-3 py-1.5 text-[11px] font-medium shadow-[0_-5px_18px_rgba(15,23,42,0.08)] backdrop-blur-md ${darkMode
+              ? 'border-gray-700/90 bg-gray-950/75 text-gray-300'
+              : 'border-slate-200/90 bg-white/80 text-slate-600'
+              }`}
+            role="status"
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${editorStatusDot}`} />
+            {editorStatus}
+          </div>
 
           {searchBarVisible && (
             <CanvasSearchPanel

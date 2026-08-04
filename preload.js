@@ -63,6 +63,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
   getRuntimeInfo: () => ipcRenderer.invoke('app:get-runtime-info'),
   getLogPaths: () => ipcRenderer.invoke('app:get-log-paths'),
+  clearSystemLogs: () => ipcRenderer.invoke('app:logs:clear'),
   signalStartupReady: (payload) => ipcRenderer.send('app:renderer-ready', payload),
   obsDockStartup: {
     get: () => ipcRenderer.invoke('app:obs-dock-startup:get'),

@@ -368,6 +368,31 @@ test('formatter capitalizes lyric text after leading LRC timestamps', () => {
   assert.equal(formatLyrics('[00:01.00] hello god', { enableSplitting: false }), '[00:01.00] Hello God');
 });
 
+test('formatter capitalizes the first word inside bracketed lyric lines when enabled', () => {
+  const options = { enableSplitting: false, capitalizeReligious: false };
+
+  assert.equal(formatLyrics('(hello world)', options), '(Hello world)');
+  assert.equal(formatLyrics('{  grace carries me}', options), '{ Grace carries me}');
+  assert.equal(formatLyrics('[translated lyric]', options), '[Translated lyric]');
+  assert.equal(formatLyrics('<another language>', options), '<Another language>');
+  assert.equal(formatLyrics('[00:01.00] (hello again)', options), '[00:01.00]\n(Hello again)');
+});
+
+test('formatter leaves bracketed lyric capitalization unchanged when disabled', () => {
+  assert.equal(formatLyrics('(hello world)', {
+    enableSplitting: false,
+    capitalizeFirst: false,
+    capitalizeReligious: false,
+  }), '(hello world)');
+});
+
+test('formatter does not treat metadata or structure tags as bracketed lyrics', () => {
+  const options = { enableSplitting: false, capitalizeReligious: false };
+
+  assert.equal(formatLyrics('[ti:lowercase title]', options), '[ti:lowercase title]');
+  assert.equal(formatLyrics('[verse]', options), '[verse]');
+});
+
 test('formatter uses the user-configured capitalized words list', () => {
   assert.equal(formatLyrics('we sing to jesus and abba', {
     enableSplitting: false,
