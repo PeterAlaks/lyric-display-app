@@ -59,12 +59,16 @@ const NdiTelemetryPreferencesPage = ({
               ['Repeated Frames', typeof stats.repeated_frames === 'number' ? stats.repeated_frames : '--'],
               ['Coalesced Frames', typeof stats.coalesced_frames === 'number' ? stats.coalesced_frames : '--'],
               ['Send Failures', typeof stats.ndi_send_failures === 'number' ? stats.ndi_send_failures : '--'],
+              ['Connected Receivers', typeof stats.connected_receivers === 'number' ? stats.connected_receivers : '--'],
+              ['Program Tally', typeof stats.program_tally_sources === 'number' ? stats.program_tally_sources : '--'],
+              ['Preview Tally', typeof stats.preview_tally_sources === 'number' ? stats.preview_tally_sources : '--'],
               ['Avg Frame (ms)', formatMetric(stats.avg_frame_ms, 2)],
               ['P95 Frame (ms)', formatMetric(stats.p95_frame_ms, 2)],
               ['Avg Send (ms)', formatMetric(stats.avg_send_ms, 2)],
               ['P95 Send (ms)', formatMetric(stats.p95_send_ms, 2)],
               ['Send Jitter (ms)', formatMetric(stats.avg_send_jitter_ms, 2)],
               ['Backend', health?.ndi_backend || '--'],
+              ['NDI SDK', health?.ndi_sdk_version || '--'],
               [
                 'Warnings',
                 Array.isArray(health?.warning_flags) && health.warning_flags.length > 0

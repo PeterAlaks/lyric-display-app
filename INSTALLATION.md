@@ -228,6 +228,8 @@ NDI support uses a separately downloaded LyricDisplay companion rather than bund
 
 The companion status should progress through Installed, Running, and Ready. Higher resolutions and frame rates require more CPU/GPU/network capacity. If no compatible companion asset is available for the current platform, the in-app download will report that condition.
 
+On Linux, NDI discovery also requires the Avahi client libraries and a running `avahi-daemon`. On Debian or Ubuntu, install `avahi-daemon`, `libavahi-common3`, and `libavahi-client3`, then enable the daemon before launching the companion.
+
 NDI discovery normally expects devices to be on the same LAN. Firewall rules, VLAN boundaries, Wi-Fi client isolation, or blocked discovery traffic can prevent a receiver from seeing a source.
 
 NDI is a trademark of Vizrt NDI AB. LyricDisplay is not affiliated with or endorsed by Vizrt NDI AB.
@@ -315,6 +317,7 @@ Only one LyricDisplay backend can use the default port. Close other desktop/head
 - Confirm the intended output's NDI toggle is enabled and its source name is unique.
 - Start with `1080p`/`30 fps` and reduce resolution/frame rate if telemetry reports dropped frames.
 - Keep sender and receiver on the same LAN and check firewall/VLAN discovery restrictions.
+- On Linux, confirm `avahi-daemon` is installed and running.
 - Update the companion from the NDI Preferences page when an update is offered.
 
 ### macOS blocks the app
