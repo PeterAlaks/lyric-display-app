@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
+  ArrowUpDown,
+  Check,
   ChevronRight,
   FileCode2,
   FileText,
@@ -26,6 +28,7 @@ import {
   OPEN_FILE_NAVIGATOR_EVENT,
 } from '../utils/fileNavigatorEvents';
 import { Input } from './ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { FILE_NAVIGATOR_LIMITS } from '../../shared/fileNavigatorLimits.js';
 
 const MODAL_ANIMATION_DURATION = 220;
@@ -36,6 +39,41 @@ const FILTERS = [
   { id: 'lrc', label: 'LRC', types: ['lrc'] },
   { id: 'documents', label: 'Documents', types: ['md', 'rtf', 'docx'] },
 ];
+
+const SORT_OPTIONS = [
+  { id: 'name-asc', label: 'Name (A to Z)' },
+  { id: 'name-desc', label: 'Name (Z to A)' },
+  { id: 'modified-desc', label: 'Date modified (newest)' },
+  { id: 'modified-asc', label: 'Date modified (oldest)' },
+  { id: 'size-desc', label: 'Size (largest)' },
+  { id: 'size-asc', label: 'Size (smallest)' },
+  { id: 'type-asc', label: 'File type' },
+];
+
+const fileNameCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+const sortFolderEntries = (entries, sortId) => [...entries].sort((first, second) => {
+  if (first.kind !== second.kind) return first.kind === 'folder' ? -1 : 1;
+
+  let comparison = 0;
+  if (sortId === 'name-desc') {
+    comparison = fileNameCollator.compare(second.fileName || '', first.fileName || '');
+  } else if (first.kind === 'file' && sortId === 'modified-desc') {
+    comparison = (Number(second.modifiedMs) || 0) - (Number(first.modifiedMs) || 0);
+  } else if (first.kind === 'file' && sortId === 'modified-asc') {
+    comparison = (Number(first.modifiedMs) || 0) - (Number(second.modifiedMs) || 0);
+  } else if (first.kind === 'file' && sortId === 'size-desc') {
+    comparison = (Number(second.size) || 0) - (Number(first.size) || 0);
+  } else if (first.kind === 'file' && sortId === 'size-asc') {
+    comparison = (Number(first.size) || 0) - (Number(second.size) || 0);
+  } else if (first.kind === 'file' && sortId === 'type-asc') {
+    comparison = fileNameCollator.compare(first.fileType || '', second.fileType || '');
+  }
+
+  return comparison
+    || fileNameCollator.compare(first.fileName || '', second.fileName || '')
+    || fileNameCollator.compare(first.filePath || '', second.filePath || '');
+});
 
 const pathName = (value = '') => String(value || '').split(/[\\/]/).filter(Boolean).pop() || value;
 const normalizePath = (value = '') => String(value || '').replace(/\\/g, '/').toLowerCase();
@@ -158,6 +196,8 @@ export default function FileNavigatorModal() {
   const [transitioning, setTransitioning] = useState(false);
   const [query, setQuery] = useState('');
   const [filterId, setFilterId] = useState('all');
+  const [sortId, setSortId] = useState('name-asc');
+  const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [destination, setDestination] = useState('control');
   const [navigatorState, setNavigatorState] = useState({ roots: [], recents: [], status: {}, limits: {} });
   const [entries, setEntries] = useState([]);
@@ -176,8 +216,12 @@ export default function FileNavigatorModal() {
   const [preview, setPreview] = useState({ loading: false, content: '', available: false, reason: '' });
 
   currentDirectoryRef.current = currentDirectory;
-  const selectedEntry = entries[selectedIndex] || null;
+  const displayedEntries = useMemo(() => (
+    currentDirectory && !query.trim() ? sortFolderEntries(entries, sortId) : entries
+  ), [currentDirectory, entries, query, sortId]);
+  const selectedEntry = displayedEntries[selectedIndex] || null;
   const activeFilter = FILTERS.find((filter) => filter.id === filterId) || FILTERS[0];
+  const activeSort = SORT_OPTIONS.find((option) => option.id === sortId) || SORT_OPTIONS[0];
   const setlistMode = destination === 'setlist';
   const videoMode = destination === 'video';
   const remoteIndexing = Boolean(navigatorState.status?.scanning);
@@ -192,6 +236,7 @@ export default function FileNavigatorModal() {
     }
     setTransitioning(true);
     setOpening(false);
+    setSortPopoverOpen(false);
     setError('');
     closeTimerRef.current = window.setTimeout(() => {
       closeTimerRef.current = null;
@@ -260,6 +305,7 @@ export default function FileNavigatorModal() {
         : location.pathname === '/new-song' ? 'canvas' : 'control');
       setQuery('');
       setFilterId(requestedDestination === 'video' ? 'lrc' : 'all');
+      setSortPopoverOpen(false);
       setMaxSelections(Math.max(1, Math.min(100, Number(event?.detail?.maxSelections) || 100)));
       setSelectedPaths(new Set());
       setCurrentDirectory(null);
@@ -753,10 +799,28 @@ export default function FileNavigatorModal() {
     }
   }, [applyState, indexing, showToast]);
 
+  const handleSortChange = useCallback((nextSortId) => {
+    const selectedPath = displayedEntries[selectedIndex]?.filePath;
+    const nextEntries = sortFolderEntries(entries, nextSortId);
+    setSortId(nextSortId);
+    setSortPopoverOpen(false);
+    setSelectedIndex(() => {
+      if (!selectedPath) return 0;
+      const nextIndex = nextEntries.findIndex((entry) => entry.filePath === selectedPath);
+      return nextIndex >= 0 ? nextIndex : 0;
+    });
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  }, [displayedEntries, entries, selectedIndex]);
+
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
+      if (sortPopoverOpen) {
+        setSortPopoverOpen(false);
+        inputRef.current?.focus();
+        return;
+      }
       close();
       return;
     }
@@ -781,10 +845,10 @@ export default function FileNavigatorModal() {
       event.stopPropagation();
       if (indexing) return;
       setSelectedIndex((previous) => {
-        if (entries.length === 0) return 0;
+        if (displayedEntries.length === 0) return 0;
         return event.key === 'ArrowDown'
-          ? (previous + 1) % entries.length
-          : (previous - 1 + entries.length) % entries.length;
+          ? (previous + 1) % displayedEntries.length
+          : (previous - 1 + displayedEntries.length) % displayedEntries.length;
       });
       return;
     }
@@ -793,7 +857,7 @@ export default function FileNavigatorModal() {
       event.preventDefault();
       event.stopPropagation();
       if (indexing) return;
-      void openEntry(entries[selectedIndex]);
+      void openEntry(displayedEntries[selectedIndex]);
       return;
     }
     if (
@@ -807,7 +871,7 @@ export default function FileNavigatorModal() {
       event.preventDefault();
       void loadDirectory(browseParent);
     }
-  }, [browseParent, close, currentDirectory, entries, indexing, loadDirectory, openEntry, query, selectedIndex]);
+  }, [browseParent, close, currentDirectory, displayedEntries, indexing, loadDirectory, openEntry, query, selectedIndex, sortPopoverOpen]);
 
   const title = query.trim()
     ? `${entries.length} search ${entries.length === 1 ? 'result' : 'results'}`
@@ -815,6 +879,7 @@ export default function FileNavigatorModal() {
   const hasRoots = navigatorState.roots.length > 0;
   const maxRoots = FILE_NAVIGATOR_LIMITS.maxRoots;
   const rootLimitReached = navigatorState.roots.length >= maxRoots;
+  const canSortFolder = Boolean(currentDirectory && !query.trim());
   const searchInputClass = darkMode
     ? 'h-10 rounded-full border-gray-700/70 bg-gray-800/90 pl-10 pr-10 text-[13px] text-white shadow-none placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20'
     : 'h-10 rounded-full border-gray-200 bg-white pl-10 pr-10 text-[13px] text-gray-900 shadow-none placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15';
@@ -1042,6 +1107,54 @@ export default function FileNavigatorModal() {
                 <h2 id="file-navigator-title" className="truncate text-[12px] font-semibold">{title}</h2>
               </div>
               <div className="flex items-center gap-2">
+                <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={!canSortFolder}
+                      className={`rounded-md p-1.5 ${darkMode ? 'text-gray-500 hover:bg-white/8 hover:text-gray-200' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'} disabled:cursor-not-allowed disabled:opacity-40`}
+                      aria-label={`Sort folder by ${activeSort.label}`}
+                      aria-haspopup="menu"
+                      aria-expanded={sortPopoverOpen}
+                      title={canSortFolder ? `Sort: ${activeSort.label}` : 'Open a folder to sort its files'}
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    sideOffset={6}
+                    role="menu"
+                    aria-label="Sort folder files"
+                    className={`z-[1900] w-56 rounded-xl p-1.5 shadow-xl ${darkMode
+                      ? 'border-gray-700 bg-gray-800 text-gray-100'
+                      : 'border-gray-200 bg-white text-gray-800'
+                      }`}
+                  >
+                    <p className={`px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Sort by
+                    </p>
+                    {SORT_OPTIONS.map((option) => {
+                      const selected = option.id === sortId;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={selected}
+                          onClick={() => handleSortChange(option.id)}
+                          className={`flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${selected
+                            ? darkMode ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-50 text-blue-700'
+                            : darkMode ? 'hover:bg-white/7' : 'hover:bg-gray-100'
+                            }`}
+                        >
+                          <span>{option.label}</span>
+                          {selected && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+                        </button>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
                 <button
                   type="button"
                   onClick={handleReindex}
@@ -1091,7 +1204,7 @@ export default function FileNavigatorModal() {
                   )}
                 </div>
               )}
-              {entries.map((entry, index) => (
+              {displayedEntries.map((entry, index) => (
                 <ResultRow
                   key={`${entry.kind}:${entry.filePath}`}
                   active={index === selectedIndex}

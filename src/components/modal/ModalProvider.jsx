@@ -478,6 +478,12 @@ export function ModalProvider({ children, isDark = false }) {
           : isTopModal
             ? 'opacity-100'
             : 'translate-y-2 opacity-90 scale-[0.98]';
+        const panelStyle = {
+          maxHeight: modalMaxHeight,
+          ...(modal.component === 'UserMedia'
+            ? { height: `min(620px, ${modalMaxHeight})` }
+            : {}),
+        };
 
         return (
           <div
@@ -518,7 +524,7 @@ export function ModalProvider({ children, isDark = false }) {
                   modal.className
                 )}
                 data-modal-root="true"
-                style={{ maxHeight: modalMaxHeight }}
+                style={panelStyle}
               >
                 {/* Fixed Header */}
                 <div className={cn(

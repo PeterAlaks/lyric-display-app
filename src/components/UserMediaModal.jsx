@@ -372,8 +372,8 @@ const UserMediaModal = ({
   };
 
   return (
-    <div className={cn('flex h-full min-h-[520px] flex-col', darkMode ? 'text-gray-100' : 'text-gray-900')}>
-      <div className={cn('flex flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]')}>
+    <div className={cn('flex h-full min-h-0 flex-col overflow-hidden', darkMode ? 'text-gray-100' : 'text-gray-900')}>
+      <div className={cn('flex shrink-0 flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className={cn('h-10 p-1', darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600')}>
@@ -438,7 +438,7 @@ const UserMediaModal = ({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 [scrollbar-gutter:stable]">
         {loading ? (
           <div className={cn('flex h-full items-center justify-center text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
             Loading media...

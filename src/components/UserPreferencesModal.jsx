@@ -83,6 +83,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [externalControlPage, setExternalControlPage] = useState('main');
   const [ndiPage, setNdiPage] = useState('main');
   const [contentDirection, setContentDirection] = useState(0);
+  const [restoringAllDefaults, setRestoringAllDefaults] = useState(false);
   const [indexedFolderPersistence, setIndexedFolderPersistence] = useState({
     saving: false,
     saveError: false,
@@ -92,6 +93,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const { showModal } = useModal();
   const { liveSafety, setLiveSafetyEnabled, isAuthenticated, ready } = useLiveSafetyBridge();
   const {
+    handleResetAll,
     handleResetCategory,
     lastSaved,
     loading,
@@ -308,6 +310,35 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       maxLength: normalized.MAX_LENGTH,
       overflowTolerance: normalized.OVERFLOW_TOLERANCE,
     });
+  };
+  const handleRestoreAllDefaults = async () => {
+    const confirmation = await showModal({
+      title: 'Restore All Default Settings?',
+      description: 'Every category in User Preferences will be restored to its original defaults.',
+      body: 'Your lyric files, indexed folders, setlists, and system logs will not be removed. Settings marked as requiring a restart will take full effect after restarting LyricDisplay.',
+      variant: 'warning',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Restore Defaults', value: 'restore', variant: 'destructive' },
+      ],
+    });
+    if (confirmation !== 'restore') return;
+
+    setRestoringAllDefaults(true);
+    try {
+      const restored = await handleResetAll();
+      if (!restored) return;
+
+      setLiveSafetyEnabled(false, { persistPreference: false });
+      showToast({
+        title: 'Default Settings Restored',
+        message: 'All user preference categories have been restored to their defaults.',
+        variant: 'success',
+      });
+    } finally {
+      setRestoringAllDefaults(false);
+    }
   };
 
   // Render category content
@@ -1228,6 +1259,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             formatSecurityDate={formatSecurityDate}
             getNumberPreferenceInputProps={getNumberPreferenceInputProps}
             handleResetCategory={handleResetCategory}
+            handleRestoreAllDefaults={handleRestoreAllDefaults}
             handleRotateSecurityTokenKey={handleRotateSecurityTokenKey}
             inputClass={inputClass}
             labelClass={labelClass}
@@ -1235,6 +1267,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             mutedClass={mutedClass}
             preferenceFieldLabelClass={preferenceFieldLabelClass}
             preferences={preferences}
+            restoringAllDefaults={restoringAllDefaults}
             securityLoading={securityLoading}
             securityRotating={securityRotating}
             securityStatus={securityStatus}

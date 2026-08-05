@@ -12,6 +12,7 @@ const AdvancedPreferencesSection = ({
   formatSecurityDate,
   getNumberPreferenceInputProps,
   handleResetCategory,
+  handleRestoreAllDefaults,
   handleRotateSecurityTokenKey,
   inputClass,
   labelClass,
@@ -19,6 +20,7 @@ const AdvancedPreferencesSection = ({
   mutedClass,
   preferenceFieldLabelClass,
   preferences,
+  restoringAllDefaults,
   securityLoading,
   securityRotating,
   securityStatus,
@@ -472,11 +474,34 @@ const AdvancedPreferencesSection = ({
     <Button
       variant="outline"
       onClick={() => handleResetCategory('advanced')}
+      disabled={restoringAllDefaults}
       className={darkMode ? 'w-full bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : 'w-full'}
     >
       <RotateCcw className="w-4 h-4 mr-2" />
       Reset Advanced Settings to Defaults
     </Button>
+
+    <div className={`border-t pt-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <label className={`text-sm font-medium ${labelClass}`}>Restore All Default Settings</label>
+          <p className={`mt-1 text-xs ${mutedClass}`}>Reset every User Preferences category without deleting your lyrics or indexed folders</p>
+        </div>
+        <Button
+          type="button"
+          variant="destructiveOutline"
+          size="sm"
+          onClick={handleRestoreAllDefaults}
+          disabled={restoringAllDefaults}
+          className="shrink-0"
+        >
+          {restoringAllDefaults
+            ? <Loader2 className="h-4 w-4 animate-spin" />
+            : <RotateCcw className="h-4 w-4" />}
+          {restoringAllDefaults ? 'Restoring...' : 'Restore Defaults'}
+        </Button>
+      </div>
+    </div>
   </div>
   );
 };
