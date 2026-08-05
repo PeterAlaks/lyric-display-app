@@ -15,11 +15,11 @@
       Abort
     ${EndIf}
 
-    ${NSD_CreateCheckbox} 0 8u 100% 12u "Delete LyricDisplay settings, saved documents, cached media, templates, and credentials"
+    ${NSD_CreateCheckbox} 0 8u 100% 12u "Delete LyricDisplay settings, saved files and credentials"
     Pop $DeleteUserDataCheckbox
     ${NSD_Uncheck} $DeleteUserDataCheckbox
 
-    ${NSD_CreateLabel} 0 28u 100% 30u "This also removes Documents\LyricDisplay, including lyrics, imported songs, and setlists. Files saved elsewhere are not removed."
+    ${NSD_CreateLabel} 0 28u 100% 30u "This also removes lyrics, imported songs and setlists. Files saved elsewhere are not removed."
     Pop $0
 
     ${NSD_CreateLabel} 0 66u 100% 20u "Deleting this data cannot be undone."

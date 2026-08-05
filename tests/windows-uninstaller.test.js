@@ -42,7 +42,10 @@ test('Windows cleanup covers current, legacy, and local application data', () =>
 });
 
 test('Windows cleanup explicitly warns before removing app-created documents', () => {
-  assert.match(installerScript, /This also removes Documents\\LyricDisplay/);
+  assert.match(
+    installerScript,
+    /This also removes lyrics, imported songs and setlists\. Files saved elsewhere are not removed\./
+  );
   assert.match(
     installerScript,
     /\$\{If\} \$DeleteUserDataSelection == \$\{BST_CHECKED\}[\s\S]*RMDir \/r "\$DOCUMENTS\\LyricDisplay"/

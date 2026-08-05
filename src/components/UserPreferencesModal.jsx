@@ -36,6 +36,7 @@ import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalCo
 import IndexedLyricsFoldersPreferencesPage from './UserPreferencesModal/IndexedLyricsFoldersPreferencesPage';
 import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPreferencesPage';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
+import NdiTelemetryPreferencesPage from './UserPreferencesModal/NdiTelemetryPreferencesPage';
 import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagPhrasesPreferencesPage';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
 import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing/preferenceOptions.js';
@@ -78,6 +79,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [formattingPage, setFormattingPage] = useState('main');
   const [fileHandlingPage, setFileHandlingPage] = useState('main');
   const [externalControlPage, setExternalControlPage] = useState('main');
+  const [ndiPage, setNdiPage] = useState('main');
   const [contentDirection, setContentDirection] = useState(0);
   const [indexedFolderPersistence, setIndexedFolderPersistence] = useState({
     saving: false,
@@ -203,18 +205,21 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const isCapitalizedWordsPage = activeCategory === 'formatting' && formattingPage === 'capitalizedWords';
   const isIndexedLyricsFoldersPage = activeCategory === 'fileHandling' && fileHandlingPage === 'indexedFolders';
   const isMidiMappingsPage = activeCategory === 'externalControl' && externalControlPage === 'midiMappings';
+  const isNdiTelemetryPage = activeCategory === 'ndi' && ndiPage === 'telemetry';
   const handleCategoryChange = (category) => {
     const isReturningFromNestedPage = (
       (category === 'parsing' && isSectionTagPhrasesPage)
       || (category === 'formatting' && isCapitalizedWordsPage)
       || (category === 'fileHandling' && isIndexedLyricsFoldersPage)
       || (category === 'externalControl' && isMidiMappingsPage)
+      || (category === 'ndi' && isNdiTelemetryPage)
     );
     setContentDirection(isReturningFromNestedPage ? -1 : 0);
     setParsingPage('main');
     setFormattingPage('main');
     setFileHandlingPage('main');
     setExternalControlPage('main');
+    setNdiPage('main');
     setActiveCategory(category);
   };
   const openSectionTagPhrasesPage = () => {
@@ -262,6 +267,14 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const closeMidiMappingsPage = () => {
     setContentDirection(-1);
     setExternalControlPage('main');
+  };
+  const openNdiTelemetryPage = () => {
+    setContentDirection(1);
+    setNdiPage('telemetry');
+  };
+  const closeNdiTelemetryPage = () => {
+    setContentDirection(-1);
+    setNdiPage('main');
   };
   const handleCapitalizedWordsChange = (words) => {
     const normalizedWords = normalizeCapitalizedWords(words);
@@ -344,6 +357,19 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           midiStatus={midiStatus}
           mutedClass={mutedClass}
           onBack={closeMidiMappingsPage}
+        />
+      );
+    }
+
+    if (isNdiTelemetryPage) {
+      return (
+        <NdiTelemetryPreferencesPage
+          companionRunning={companionRunning}
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          ndiTelemetry={ndiTelemetry}
+          onBack={closeNdiTelemetryPage}
         />
       );
     }
@@ -1057,6 +1083,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             ndiTelemetry={ndiTelemetry}
             ndiUpdateInfo={ndiUpdateInfo}
             ndiUpdating={ndiUpdating}
+            onOpenTelemetry={openNdiTelemetryPage}
             preferenceFieldLabelClass={preferenceFieldLabelClass}
           />
         );
@@ -1195,7 +1222,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           ? 'formatting-capitalized-words'
           : (isIndexedLyricsFoldersPage
             ? 'file-handling-indexed-folders'
-            : (isMidiMappingsPage ? 'external-control-midi-mappings' : activeCategory)))}
+            : (isMidiMappingsPage
+              ? 'external-control-midi-mappings'
+              : (isNdiTelemetryPage ? 'ndi-runtime-telemetry' : activeCategory))))}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}
@@ -1210,7 +1239,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       saveError={saveError || indexedFolderPersistence.saveError}
       saving={saving || indexedFolderPersistence.saving}
       setActiveCategory={handleCategoryChange}
-      hideContentHeader={isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage}
+      hideContentHeader={isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage || isNdiTelemetryPage}
     >
       {renderCategoryContent()}
     </UserPreferencesLayout>

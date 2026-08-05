@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Download, Loader2, X } from 'lucide-react';
+import { Check, ChevronRight, Copy, Download, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -71,17 +71,13 @@ const NdiPreferencesSection = ({
   ndiTelemetry,
   ndiUpdateInfo,
   ndiUpdating,
+  onOpenTelemetry,
   preferenceFieldLabelClass,
 }) => {
   const isPackagedApp = useIsPackagedApp();
-  const stats = ndiTelemetry?.stats || null;
-  const health = ndiTelemetry?.health || null;
-  const formatMetric = (value, digits = 1) => (
-    typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '--'
-  );
-  const telemetryAgeSeconds = ndiTelemetry?.updatedAt
-    ? Math.max(0, Math.floor((Date.now() - ndiTelemetry.updatedAt) / 1000))
-    : null;
+  const telemetryWarnings = Array.isArray(ndiTelemetry?.health?.warning_flags)
+    ? ndiTelemetry.health.warning_flags.length
+    : 0;
   const ndiLastErrorMessage = typeof ndiLastError === 'string'
     ? ndiLastError
     : (ndiLastError?.error || ndiLastError?.message || 'Unknown NDI Companion error');
@@ -156,55 +152,22 @@ const NdiPreferencesSection = ({
         </div>
       )}
 
-      {ndiStatus.installed && companionRunning && (
-        <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}>
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <p className={`text-xs font-medium ${labelClass}`}>Runtime Telemetry</p>
-            {telemetryAgeSeconds !== null && (
-              <span className={`text-[11px] ${mutedClass}`}>
-                Updated {telemetryAgeSeconds}s ago
-              </span>
-            )}
+      {ndiStatus.installed && (
+        <button
+          type="button"
+          onClick={onOpenTelemetry}
+          className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+          aria-label="View NDI runtime telemetry"
+        >
+          <div className="min-w-0 flex-1">
+            <span className={`text-sm font-medium ${labelClass}`}>Runtime Telemetry</span>
+            <p className={`text-xs ${mutedClass}`}>View render timing, frame delivery, and NDI health</p>
           </div>
-          {stats ? (
-            <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 text-xs ${mutedClass}`}>
-              <div>
-                <p className={labelClass}>Render FPS</p>
-                <p>{formatMetric(stats.render_fps)}</p>
-              </div>
-              <div>
-                <p className={labelClass}>Send FPS</p>
-                <p>{formatMetric(stats.send_fps)}</p>
-              </div>
-              <div>
-                <p className={labelClass}>Dropped Frames</p>
-                <p>{typeof stats.dropped_frames === 'number' ? stats.dropped_frames : '--'}</p>
-              </div>
-              <div>
-                <p className={labelClass}>Send Failures</p>
-                <p>{typeof stats.ndi_send_failures === 'number' ? stats.ndi_send_failures : '--'}</p>
-              </div>
-              <div>
-                <p className={labelClass}>Avg Frame (ms)</p>
-                <p>{formatMetric(stats.avg_frame_ms, 2)}</p>
-              </div>
-              <div>
-                <p className={labelClass}>P95 Frame (ms)</p>
-                <p>{formatMetric(stats.p95_frame_ms, 2)}</p>
-              </div>
-              <div>
-                <p className={labelClass}>Backend</p>
-                <p>{health?.ndi_backend || '--'}</p>
-              </div>
-              <div>
-                <p className={labelClass}>Warnings</p>
-                <p>{Array.isArray(health?.warning_flags) && health.warning_flags.length > 0 ? health.warning_flags.join(', ') : 'none'}</p>
-              </div>
-            </div>
-          ) : (
-            <p className={`text-xs ${mutedClass}`}>Waiting for telemetry data from companion...</p>
-          )}
-        </div>
+          <span className={`shrink-0 text-xs ${mutedClass}`}>
+            {!companionRunning ? 'Stopped' : telemetryWarnings > 0 ? `${telemetryWarnings} warning${telemetryWarnings === 1 ? '' : 's'}` : 'View'}
+          </span>
+          <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+        </button>
       )}
 
       {ndiStatus.installed && ndiUpdateInfo?.updateAvailable && (
