@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 const SUBMENU_VERTICAL_PADDING = 8;
 const FALLBACK_SUBMENU_MAX_HEIGHT = 320;
+const SUBMENU_ESTIMATED_WIDTH = 272;
 
 const useContextSubmenus = ({
   containerSize,
@@ -51,8 +52,6 @@ const useContextSubmenus = ({
   const handleSubmenuPanelLeave = scheduleSubmenuClose;
 
   const submenuHorizontal = useMemo(() => {
-    const submenuWidth = 200;
-
     if (!contextMenuPosition) {
       return 'right';
     }
@@ -60,8 +59,8 @@ const useContextSubmenus = ({
     const availableRight = (containerSize.width || 0) - (contextMenuPosition.left + menuWidth);
     const availableLeft = contextMenuPosition.left;
 
-    if (availableRight >= submenuWidth) return 'right';
-    if (availableLeft >= submenuWidth) return 'left';
+    if (availableRight >= SUBMENU_ESTIMATED_WIDTH) return 'right';
+    if (availableLeft >= SUBMENU_ESTIMATED_WIDTH) return 'left';
     return 'right';
   }, [containerSize.width, contextMenuPosition, menuWidth]);
 

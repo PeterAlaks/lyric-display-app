@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { formatLyrics } from '../../utils/lyricsFormat';
 import { parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
 import useLyricsStore from '../../context/LyricsStore.js';
+import { isUsableLyricsTitle, UNTITLED_LYRICS_TITLE } from '../../utils/titlePrefill.js';
 
 export const useDraftLoader = ({
   baseContentRef,
@@ -15,10 +16,10 @@ export const useDraftLoader = ({
   showToast,
   title,
 }) => useCallback(async () => {
-  if (!content.trim() || !title.trim()) {
+  if (!content.trim() || !isUsableLyricsTitle(title)) {
     showModal({
       title: 'Missing details',
-      description: 'Enter both a song title and lyrics before loading.',
+      description: 'Replace “Untitled Lyrics” with a song title and add lyrics before loading.',
       variant: 'warn',
       dismissLabel: 'Got it',
     });
@@ -54,9 +55,9 @@ export const useDraftLoader = ({
 
     setTimeout(() => {
       resetHistory('');
-      setTitle('');
+      setTitle(UNTITLED_LYRICS_TITLE);
       baseContentRef.current = '';
-      baseTitleRef.current = '';
+      baseTitleRef.current = UNTITLED_LYRICS_TITLE;
       navigate('/');
     }, 1500);
   } catch (err) {

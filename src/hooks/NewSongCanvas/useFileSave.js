@@ -7,6 +7,7 @@ import {
   canUseFileNavigator,
   saveWithFileNavigator,
 } from '../../utils/fileNavigatorEvents.js';
+import { isUsableLyricsTitle } from '../../utils/titlePrefill.js';
 
 /**
  * Hook for handling file save operations (Save, Save & Load)
@@ -475,10 +476,10 @@ const useFileSave = ({
   }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, resolveBaseName, saveWithNavigator, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
 
   const handleSave = useCallback(async () => {
-    if (!content.trim() || !title.trim()) {
+    if (!content.trim() || !isUsableLyricsTitle(title)) {
       showModal({
         title: 'Missing song details',
-        description: 'Enter both a file name and lyrics before saving.',
+        description: 'Replace “Untitled Lyrics” with a file name and add lyrics before saving.',
         variant: 'warn',
         dismissLabel: 'Will do',
       });
@@ -554,10 +555,10 @@ const useFileSave = ({
   }, [content, editMode, getDirectoryFromPath, getExistingTarget, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, saveWithNavigator, serializePayload, showModal, showToast, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   const handleSaveAndLoad = useCallback(async () => {
-    if (!content.trim() || !title.trim()) {
+    if (!content.trim() || !isUsableLyricsTitle(title)) {
       showModal({
         title: 'Missing song details',
-        description: 'Enter both a file name and lyrics before saving and loading.',
+        description: 'Replace “Untitled Lyrics” with a file name and add lyrics before saving and loading.',
         variant: 'warn',
         dismissLabel: 'Got it',
       });

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
+  CaseSensitive,
   ChevronDown,
   ClipboardCopy,
   ClipboardPaste,
@@ -11,24 +14,22 @@ import {
   FolderOpen,
   Languages,
   ListOrdered,
+  MonitorOff,
   Redo,
   Save,
   Scissors,
   Search,
   Tags,
   Timer,
+  Trash2,
   Undo,
   Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
-import { METADATA_OPTIONS, SONG_SECTIONS } from '../../constants/songCanvas';
-
-const titleText = (composeMode, editMode) => {
-  if (composeMode) return 'Compose Lyrics';
-  return editMode ? 'Edit Lyrics File' : 'New Lyrics File';
-};
+import { METADATA_OPTIONS } from '../../constants/songCanvas';
+import { TEXT_CASING } from '../../utils/textCasing';
 
 const HelpButton = ({ darkMode, showModal }) => (
   <button
@@ -69,7 +70,7 @@ const SaveActions = ({
   toolbarGhostClass,
 }) => {
   const disabled = isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges);
-  const gradientActionClass = 'flex items-center gap-1.5 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-3 py-1.5 text-[11px] font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55';
+  const gradientActionClass = 'flex h-10 items-center gap-1.5 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55';
 
   if (composeMode) {
     return (
@@ -98,7 +99,7 @@ const SaveActions = ({
             variant="ghost"
             size="sm"
             title="Save"
-            className={`${toolbarGhostClass} text-[11px] font-semibold`}
+            className={`${toolbarGhostClass} h-10 px-5 py-2.5 text-sm font-semibold`}
           >
             <Save className="h-4 w-4" /> Save
           </Button>
@@ -127,27 +128,32 @@ const IconAction = ({
   darkMode,
   disabled = false,
   onClick,
+  pressed,
   title,
   toolbarGhostClass,
-}) => (
-  <Tooltip content={title} side="bottom">
-    <Button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      variant="ghost"
-      size="sm"
-      className={`h-8 w-8 shrink-0 p-0 ${toolbarGhostClass} ${active
-        ? (darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-100 text-blue-700')
-        : ''}`}
-      title={title}
-      aria-label={ariaLabel || title}
-      aria-pressed={active || undefined}
-    >
-      {children}
-    </Button>
-  </Tooltip>
-);
+}) => {
+  const selected = typeof pressed === 'boolean' ? pressed : active;
+
+  return (
+    <Tooltip content={title} side="bottom">
+      <Button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        variant="ghost"
+        size="sm"
+        className={`h-8 w-8 shrink-0 p-0 ${toolbarGhostClass} ${selected
+          ? (darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-100 text-blue-700')
+          : ''}`}
+        title={title}
+        aria-label={ariaLabel || title}
+        aria-pressed={typeof pressed === 'boolean' ? pressed : (active || undefined)}
+      >
+        {children}
+      </Button>
+    </Tooltip>
+  );
+};
 
 const ToolbarDropdown = ({
   align = 'left',
@@ -171,7 +177,7 @@ const ToolbarDropdown = ({
 
   return (
     <div className="relative" data-song-canvas-menu>
-      <Tooltip content={label} side="bottom">
+      <Tooltip content={label} side="bottom" disabled={open}>
         <Button
           type="button"
           onClick={() => setOpenMenu((current) => current === id ? null : id)}
@@ -181,7 +187,6 @@ const ToolbarDropdown = ({
           className={`h-8 min-w-8 shrink-0 gap-0.5 px-1.5 ${toolbarGhostClass} ${open
             ? (darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-100 text-blue-700')
             : ''}`}
-          title={label}
           aria-label={label}
           aria-haspopup="menu"
           aria-expanded={open}
@@ -193,7 +198,7 @@ const ToolbarDropdown = ({
 
       {open && (
         <div
-          className={`absolute top-full z-50 mt-2 max-h-80 min-w-52 overflow-y-auto rounded-xl border py-1.5 text-[13px] shadow-xl backdrop-blur-xl ${align === 'right' ? 'right-0' : 'left-0'} ${menuClass}`}
+          className={`absolute top-full z-50 mt-2 max-h-80 w-max min-w-52 max-w-72 overflow-y-auto rounded-xl border py-1.5 text-[13px] shadow-xl backdrop-blur-xl ${align === 'right' ? 'right-0' : 'left-0'} ${menuClass}`}
           role="menu"
         >
           {items.map((item, index) => item.separator ? (
@@ -215,7 +220,7 @@ const ToolbarDropdown = ({
               role="menuitem"
             >
               {item.icon ? <item.icon className="h-4 w-4 shrink-0 opacity-75" /> : null}
-              <span>{item.label}</span>
+              <span className="min-w-0 whitespace-normal break-words">{item.label}</span>
             </button>
           ))}
         </div>
@@ -225,7 +230,7 @@ const ToolbarDropdown = ({
 };
 
 const ActionGroup = ({ children, darkMode }) => (
-  <div className={`flex items-center gap-1 rounded-xl border p-1 ${darkMode
+  <div className={`flex items-center gap-2 rounded-xl border p-1 ${darkMode
     ? 'border-gray-700/70 bg-gray-950/30'
     : 'border-slate-200/90 bg-white/80 shadow-sm'
     }`}>
@@ -234,9 +239,13 @@ const ActionGroup = ({ children, darkMode }) => (
 );
 
 const SongCanvasHeader = ({
+  activeLineHasContent,
   activeLineHasTimestamp,
   activeLineIndex,
+  activeLineIsStageOnly,
   canAddTranslationOnActiveLine,
+  canMoveActiveLineDown,
+  canMoveActiveLineUp,
   canRedo,
   canUndo,
   composeMode,
@@ -248,20 +257,27 @@ const SongCanvasHeader = ({
   handleAddTranslationAtActiveLine,
   handleBack,
   handleCleanup,
+  handleChangeSelectionCase,
   handleCopy,
   handleCopyActiveLine,
   handleCut,
+  handleDeleteActiveLine,
   handleDuplicateActiveLine,
   handleLoadDraft,
+  handleMoveActiveLineDown,
+  handleMoveActiveLineUp,
   handlePaste,
   handleRedo,
   handleSave,
   handleSaveAndLoad,
   handleSearchButtonClick,
   handleStartNewSong,
+  handleTitleBlur,
   handleTitleChange,
+  handleToggleStageOnlyActiveLine,
   handleUndo,
   hasUnsavedChanges,
+  hasTextSelection,
   insertEnhancedTimestampAtActiveLine,
   insertMetadataAtActiveLine,
   insertSectionAtCursor,
@@ -272,6 +288,7 @@ const SongCanvasHeader = ({
   isTitlePrefilled,
   searchBarVisible,
   showModal,
+  songSections = [],
   title,
   toolbarGhostClass,
 }) => {
@@ -298,11 +315,8 @@ const SongCanvasHeader = ({
     ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
     : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
   const titleInputClass = darkMode
-    ? `rounded-xl border-gray-700/70 bg-gray-950/45 text-[13px] placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20 ${isTitlePrefilled ? 'text-gray-400' : 'text-gray-100'}`
-    : `rounded-xl border-gray-200 bg-white text-[13px] placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`;
-  const panelClass = darkMode
-    ? 'border-gray-800/90 bg-gray-950/25'
-    : 'border-slate-200/90 bg-slate-50/75 shadow-sm';
+    ? `border-0 bg-transparent text-gray-100 shadow-none hover:text-white focus-visible:border-0 focus-visible:ring-0 ${isTitlePrefilled || isTitleEmpty ? 'italic text-gray-400' : ''}`
+    : `border-0 bg-transparent text-gray-900 shadow-none hover:text-blue-700 focus-visible:border-0 focus-visible:ring-0 ${isTitlePrefilled || isTitleEmpty ? 'italic text-gray-500' : ''}`;
   const hasActiveLine = activeLineIndex !== null && activeLineIndex !== undefined;
 
   const timestampItems = [
@@ -319,7 +333,7 @@ const SongCanvasHeader = ({
       disabled: !activeLineHasTimestamp,
     },
   ];
-  const sectionItems = SONG_SECTIONS.map((section) => ({
+  const sectionItems = songSections.map((section) => ({
     key: section.key,
     label: section.label,
     onSelect: () => insertSectionAtCursor(section.key),
@@ -339,12 +353,39 @@ const SongCanvasHeader = ({
       disabled: !hasActiveLine,
     })),
   ];
+  const casingItems = [
+    {
+      key: TEXT_CASING.UPPERCASE,
+      label: 'UPPERCASE',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.UPPERCASE),
+    },
+    {
+      key: TEXT_CASING.SENTENCE,
+      label: 'Sentence case',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.SENTENCE),
+    },
+    {
+      key: TEXT_CASING.LOWERCASE,
+      label: 'lower case',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.LOWERCASE),
+    },
+    {
+      key: TEXT_CASING.CAPITALIZE_WORDS,
+      label: 'Capitalize Each Word',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.CAPITALIZE_WORDS),
+    },
+    {
+      key: TEXT_CASING.TOGGLE,
+      label: 'tOGGLE cASE',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.TOGGLE),
+    },
+  ];
 
   return (
     <header className={`relative border-b px-4 py-3 md:px-5 md:py-4 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-slate-200 bg-white'}`}>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-500/70 to-transparent" />
 
-      <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:mb-4">
+      <div className="mb-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 md:mb-4">
         <div className="justify-self-start">
           <Tooltip content="Return to control panel" side="right">
             <button
@@ -357,13 +398,30 @@ const SongCanvasHeader = ({
           </Tooltip>
         </div>
 
-        <div className="flex min-w-0 items-center justify-center gap-2.5">
+        <div className="flex w-full max-w-xl min-w-0 items-center justify-self-center gap-2.5 px-1">
           <FileText className={`hidden h-6 w-6 shrink-0 sm:block ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
-          <div className="min-w-0 text-center sm:text-left">
-            <h1 className={`truncate text-base font-semibold sm:text-lg md:text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              {titleText(composeMode, editMode)}
-            </h1>
+          <div className="min-w-0 flex-1">
+            <label htmlFor="lyrics-file-name" className="sr-only">Lyrics file name</label>
+            <Input
+              id="lyrics-file-name"
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              onFocus={(event) => event.currentTarget.select()}
+              onBlur={(event) => {
+                event.currentTarget.scrollLeft = 0;
+                handleTitleBlur(event);
+              }}
+              maxLength={65}
+              placeholder="Untitled Lyrics"
+              aria-label="Lyrics file name"
+              title={title}
+              className={`h-9 min-w-0 truncate rounded-none px-0 py-0 text-left text-sm font-semibold sm:text-base md:text-lg ${titleInputClass}`}
+            />
           </div>
+          {isTitlePrefilled && (
+            <span className={`hidden shrink-0 text-[10px] italic sm:inline ${darkMode ? 'text-blue-300/70' : 'text-blue-600/70'}`}>Auto-filled</span>
+          )}
           <HelpButton darkMode={darkMode} showModal={showModal} />
         </div>
 
@@ -384,12 +442,8 @@ const SongCanvasHeader = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-        <section className={`flex min-w-0 flex-col justify-center rounded-2xl border p-2.5 ${panelClass}`} aria-label="Actions">
-          <div className={`mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${darkMode ? 'text-gray-500' : 'text-slate-500'}`}>
-            Actions
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex w-fit max-w-full min-w-0 flex-wrap items-center gap-3" role="toolbar" aria-label="Lyrics actions">
             <ActionGroup darkMode={darkMode}>
               <IconAction onClick={handleUndo} disabled={!canUndo} title="Undo last change — Ctrl+Z" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
                 <Undo className="h-4 w-4" />
@@ -401,7 +455,6 @@ const SongCanvasHeader = ({
                 <Search className="h-4 w-4" />
               </IconAction>
             </ActionGroup>
-
             <ActionGroup darkMode={darkMode}>
               <IconAction onClick={handleCut} disabled={isContentEmpty} title="Cut selected text" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
                 <Scissors className="h-4 w-4" />
@@ -416,7 +469,6 @@ const SongCanvasHeader = ({
                 <Wand2 className="h-4 w-4" />
               </IconAction>
             </ActionGroup>
-
             <ActionGroup darkMode={darkMode}>
               <ToolbarDropdown
                 align="right"
@@ -433,19 +485,41 @@ const SongCanvasHeader = ({
               <IconAction onClick={handleAddTranslationAtActiveLine} disabled={!canAddTranslationOnActiveLine} title="Add translation to current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
                 <Languages className="h-4 w-4" />
               </IconAction>
+              <IconAction
+                onClick={handleToggleStageOnlyActiveLine}
+                disabled={!hasActiveLine || !activeLineHasContent}
+                pressed={activeLineIsStageOnly}
+                title={activeLineIsStageOnly
+                  ? 'Mark current line for all outputs'
+                  : 'Mark current line for Stage only'}
+                toolbarGhostClass={toolbarGhostClass}
+                darkMode={darkMode}
+              >
+                <MonitorOff className="h-4 w-4" />
+              </IconAction>
+            </ActionGroup>
+            <ActionGroup darkMode={darkMode}>
               <IconAction onClick={handleCopyActiveLine} disabled={!hasActiveLine} title="Copy current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
                 <ClipboardCopy className="h-4 w-4" />
               </IconAction>
               <IconAction onClick={handleDuplicateActiveLine} disabled={!hasActiveLine} title="Duplicate current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
                 <CopyPlus className="h-4 w-4" />
               </IconAction>
+              <IconAction onClick={handleDeleteActiveLine} disabled={!hasActiveLine || isContentEmpty} title="Delete current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Trash2 className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleMoveActiveLineUp} disabled={!canMoveActiveLineUp} title="Move current line up" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <ArrowUp className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleMoveActiveLineDown} disabled={!canMoveActiveLineDown} title="Move current line down" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <ArrowDown className="h-4 w-4" />
+              </IconAction>
             </ActionGroup>
-
             <ActionGroup darkMode={darkMode}>
               <ToolbarDropdown
                 align="right"
                 darkMode={darkMode}
-                disabled={!isCursorAtEligiblePosition()}
+                disabled={sectionItems.length === 0 || !isCursorAtEligiblePosition()}
                 icon={ListOrdered}
                 id="section"
                 items={sectionItems}
@@ -464,31 +538,23 @@ const SongCanvasHeader = ({
                 setOpenMenu={setOpenMenu}
                 toolbarGhostClass={toolbarGhostClass}
               />
+              <ToolbarDropdown
+                align="right"
+                darkMode={darkMode}
+                disabled={!hasTextSelection}
+                icon={CaseSensitive}
+                id="casing"
+                items={casingItems}
+                label="Change casing"
+                openMenu={openMenu}
+                setOpenMenu={setOpenMenu}
+                toolbarGhostClass={toolbarGhostClass}
+              />
             </ActionGroup>
-          </div>
-        </section>
+        </div>
 
-        <section className={`flex min-w-0 flex-wrap items-end justify-end gap-2 rounded-2xl border p-2.5 md:pl-4 ${panelClass}`} aria-label="File actions">
-          <div className="min-w-[120px] flex-1">
-            <div className="mb-1.5 flex items-center justify-between px-1">
-              <label htmlFor="lyrics-file-name" className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${darkMode ? 'text-gray-500' : 'text-slate-500'}`}>
-                File name
-              </label>
-              {isTitlePrefilled && (
-                <span className={`text-[10px] italic ${darkMode ? 'text-blue-300/70' : 'text-blue-600/70'}`}>Auto-filled</span>
-              )}
-            </div>
-            <Input
-              id="lyrics-file-name"
-              type="text"
-              value={title}
-              onChange={handleTitleChange}
-              maxLength={65}
-              placeholder="Enter lyrics file name..."
-              className={`h-10 min-w-0 px-4 ${isTitlePrefilled ? 'italic' : ''} ${titleInputClass}`}
-            />
-          </div>
-          <div className="flex shrink-0 items-center justify-end gap-1.5 pb-0.5">
+        <div className="flex shrink-0 items-center justify-end self-end md:ml-auto md:self-center" role="group" aria-label="File actions">
+          <div className="flex items-center justify-end gap-1.5">
             <SaveActions
               composeMode={composeMode}
               editMode={editMode}
@@ -503,7 +569,7 @@ const SongCanvasHeader = ({
               toolbarGhostClass={toolbarGhostClass}
             />
           </div>
-        </section>
+        </div>
       </div>
     </header>
   );

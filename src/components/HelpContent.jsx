@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, List, ListMusic, RefreshCw, Shield, FolderOpen, FileText, FilePlusCorner, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings, Film, Music2, SlidersHorizontal } from 'lucide-react';
+import { Globe, List, ListMusic, RefreshCw, Shield, FolderOpen, FileText, FilePlusCorner, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings, Film, Music2, SlidersHorizontal, MonitorOff } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -202,9 +202,23 @@ export const SongCanvasHelp = ({ darkMode }) => (
         />
 
         <HelpSection
+            icon={MonitorOff}
+            title="Stage-only & Line Tools"
+            description="Use the monitor toggle to add or remove // on the current line. Marked lines remain visible on Stage but are hidden from normal outputs. The adjacent controls copy, duplicate, delete, or move the current line, and every content change can be undone."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Type}
+            title="Selection Casing"
+            description="Highlight text, open the casing menu, and apply uppercase, sentence case, lowercase, capitalize each word, or toggle case without losing your selection."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
             icon={FileText}
             title="Save & Load Options"
-            description="Save or Save & Load opens a compact indexed-folder picker for fast keyboard saving. Use Up/Down and Enter, or choose 'Save in different folder…' when you need the native Save As dialog."
+            description="Edit the flat file title at the top of the canvas, or let the first lyric line auto-fill it. New lyrics cannot be saved as 'Untitled Lyrics'. Save or Save & Load opens a compact indexed-folder picker; choose 'Save in different folder…' when you need the native Save As dialog."
             darkMode={darkMode}
         />
 

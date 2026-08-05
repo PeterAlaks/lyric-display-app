@@ -6,6 +6,14 @@ const CHORUS_TAG_REGEX = /^\s*\[chorus\s*:\s*/i;
 const CHORUS_END_TAG_REGEX = /^\s*\[\/chorus\]/i;
 const INVALID_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
 
+export const UNTITLED_LYRICS_TITLE = 'Untitled Lyrics';
+
+export const isUsableLyricsTitle = (title) => {
+  const normalizedTitle = typeof title === 'string' ? title.trim() : '';
+  return Boolean(normalizedTitle)
+    && normalizedTitle.toLocaleLowerCase() !== UNTITLED_LYRICS_TITLE.toLocaleLowerCase();
+};
+
 /**
  * Removes timestamps from the beginning of a line
  * @param {string} line - The line to process

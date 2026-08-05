@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { toggleStageOnlyPrefix } from '../../utils/parseLyrics';
 
 const BRACKET_PAIRS = {
   '(': ')',
@@ -8,7 +9,8 @@ const BRACKET_PAIRS = {
 };
 
 /**
- * Hook for line manipulation operations (add translation, copy, duplicate)
+ * Hook for line manipulation operations (add translation, copy, duplicate, delete,
+ * reorder, and Stage-only visibility)
  * @param {Object} params
  * @param {Array<string>} params.lines - Array of content lines
  * @param {React.RefObject} params.textareaRef - Reference to textarea element
@@ -124,10 +126,67 @@ const useLineOperations = ({
     closeContextMenu();
   }, [closeContextMenu, focusLine, preserveTextareaScroll, setContent]);
 
+  const commitLineChange = useCallback((segments, nextLineIndex) => {
+    const currentScroll = textareaRef.current?.scrollTop ?? lastKnownScrollRef.current ?? 0;
+    const newContent = segments.join('\n');
+
+    preserveTextareaScroll(() => {
+      setContent(newContent, {
+        selectionStart: null,
+        selectionEnd: null,
+        scrollTop: currentScroll,
+        timestamp: Date.now(),
+        coalesceKey: null
+      });
+    });
+    focusLine(nextLineIndex);
+    closeContextMenu();
+  }, [closeContextMenu, focusLine, lastKnownScrollRef, preserveTextareaScroll, setContent, textareaRef]);
+
+  const handleDeleteLine = useCallback((lineIndex) => {
+    if (lineIndex === null || lineIndex === undefined || !lines.length) return;
+
+    const safeIndex = Math.max(0, Math.min(lineIndex, lines.length - 1));
+    const segments = [...lines];
+    segments.splice(safeIndex, 1);
+    if (segments.length === 0) segments.push('');
+
+    const nextLineIndex = Math.min(safeIndex, segments.length - 1);
+    commitLineChange(segments, nextLineIndex);
+  }, [commitLineChange, lines]);
+
+  const handleMoveLine = useCallback((lineIndex, direction) => {
+    if (lineIndex === null || lineIndex === undefined || !lines.length) return;
+    if (direction !== -1 && direction !== 1) return;
+
+    const safeIndex = Math.max(0, Math.min(lineIndex, lines.length - 1));
+    const targetIndex = safeIndex + direction;
+    if (targetIndex < 0 || targetIndex >= lines.length) return;
+
+    const segments = [...lines];
+    [segments[safeIndex], segments[targetIndex]] = [segments[targetIndex], segments[safeIndex]];
+    commitLineChange(segments, targetIndex);
+  }, [commitLineChange, lines]);
+
+  const handleToggleStageOnlyLine = useCallback((lineIndex) => {
+    if (lineIndex === null || lineIndex === undefined || !lines.length) return;
+
+    const safeIndex = Math.max(0, Math.min(lineIndex, lines.length - 1));
+    const lineText = lines[safeIndex] ?? '';
+    if (!lineText.trim()) return;
+
+    const segments = [...lines];
+    segments[safeIndex] = toggleStageOnlyPrefix(lineText);
+    commitLineChange(segments, safeIndex);
+  }, [commitLineChange, lines]);
+
   return {
     handleAddTranslation,
     handleCopyLine,
+    handleDeleteLine,
     handleDuplicateLine,
+    handleMoveLine,
+    handleToggleStageOnlyLine,
     isLineWrappedWithTranslation
   };
 };

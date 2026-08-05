@@ -21,6 +21,7 @@ export const useCanvasEditorInteractions = ({
   setScrollTop,
   setSelectedLineIndex,
   setContextMenuState,
+  setHasTextSelection,
   textareaRef,
   touchLongPressTimeoutRef,
   touchMovedRef,
@@ -72,6 +73,7 @@ export const useCanvasEditorInteractions = ({
     if (typeof safeScroll === 'number') {
       setScrollTop(safeScroll);
     }
+    setHasTextSelection(selectionStart !== selectionEnd);
     setContent(value, {
       selectionStart,
       selectionEnd,
@@ -79,14 +81,16 @@ export const useCanvasEditorInteractions = ({
       timestamp: Date.now(),
       coalesceKey: 'typing'
     });
-  }, [lastKnownScrollRef, setContent, setScrollTop]);
+  }, [lastKnownScrollRef, setContent, setHasTextSelection, setScrollTop]);
 
   const handleTextareaSelect = useCallback(() => {
     if (!textareaRef.current) return;
     const start = textareaRef.current.selectionStart;
+    const end = textareaRef.current.selectionEnd;
     const lineIndex = getLineIndexFromOffset(start);
+    setHasTextSelection(start !== end);
     setSelectedLineIndex(lineIndex);
-  }, [getLineIndexFromOffset, setSelectedLineIndex, textareaRef]);
+  }, [getLineIndexFromOffset, setHasTextSelection, setSelectedLineIndex, textareaRef]);
 
   const handleTextareaKeyDown = useCallback((event) => {
     if (!textareaRef.current) return;

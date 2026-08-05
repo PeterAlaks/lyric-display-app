@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator, ContextMenuSubmenu } from '@/components/ui/context-menu';
-import { METADATA_OPTIONS, SONG_SECTIONS } from '../../constants/songCanvas';
+import { METADATA_OPTIONS } from '../../constants/songCanvas';
 
 const CanvasContextMenu = ({
   activeSubmenu,
@@ -33,6 +33,7 @@ const CanvasContextMenu = ({
   isCursorAtEligiblePosition,
   metadataSubmenuRef,
   sectionSubmenuRef,
+  songSections = [],
   setActiveSubmenu,
   setContextMenuDimensions,
   submenuHorizontal,
@@ -205,12 +206,12 @@ const CanvasContextMenu = ({
           <div
             className="relative"
             onMouseEnter={() => {
-              if (isCursorAtEligiblePosition()) {
+              if (songSections.length > 0 && isCursorAtEligiblePosition()) {
                 handleSubmenuTriggerEnter('section');
               }
             }}
             onFocus={() => {
-              if (isCursorAtEligiblePosition()) {
+              if (songSections.length > 0 && isCursorAtEligiblePosition()) {
                 handleSubmenuTriggerEnter('section');
               }
             }}
@@ -218,11 +219,11 @@ const CanvasContextMenu = ({
           >
             <ContextMenuItem
               className="justify-between"
-              disabled={!isCursorAtEligiblePosition()}
+              disabled={songSections.length === 0 || !isCursorAtEligiblePosition()}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                if (isCursorAtEligiblePosition()) {
+                if (songSections.length > 0 && isCursorAtEligiblePosition()) {
                   setActiveSubmenu('section');
                 }
               }}
@@ -233,18 +234,19 @@ const CanvasContextMenu = ({
             </ContextMenuItem>
             <ContextMenuSubmenu
               ref={sectionSubmenuRef}
-              open={activeSubmenu === 'section'}
+              open={activeSubmenu === 'section' && songSections.length > 0}
               direction={submenuHorizontal}
               offsetTop={submenuOffsets.section ?? 0}
               maxHeight={submenuMaxHeight}
               darkMode={darkMode}
-              className="w-40"
+              className="w-64"
               onMouseEnter={handleSubmenuPanelEnter}
               onMouseLeave={handleSubmenuPanelLeave}
             >
-              {SONG_SECTIONS.map((section) => (
+              {songSections.map((section) => (
                 <ContextMenuItem
                   key={section.key}
+                  className="whitespace-normal break-words"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();

@@ -13,8 +13,97 @@ import {
   parseTxtContent,
 } from '../shared/lyricsParsing/txtParser.js';
 import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
+import { buildSongSectionOptions } from '../src/constants/songCanvas.js';
 import { formatLyrics, formatLyricsWithStats, reconstructEditableText } from '../src/utils/lyricsFormat.js';
-import { extractFirstValidLine } from '../src/utils/titlePrefill.js';
+import {
+  getLineOutputText,
+  isStageOnlyLine,
+  stripStageOnlyPrefix,
+  toggleStageOnlyPrefix,
+} from '../src/utils/parseLyrics.js';
+import { applyTextCasing, TEXT_CASING } from '../src/utils/textCasing.js';
+import {
+  extractFirstValidLine,
+  isUsableLyricsTitle,
+  UNTITLED_LYRICS_TITLE,
+} from '../src/utils/titlePrefill.js';
+
+test('song canvas section options include every recognized preference phrase', () => {
+  const options = buildSongSectionOptions([
+    'Verse',
+    'call and response',
+    'Chorus',
+    'CALL AND RESPONSE',
+  ]);
+
+  assert.deepEqual(options.map((option) => option.label), [
+    'Verse',
+    'Verse 1',
+    'Verse 2',
+    'Verse 3',
+    'Call And Response',
+    'Chorus',
+  ]);
+});
+
+test('song canvas section options track defaults and explicit empty preferences', () => {
+  const defaultLabels = buildSongSectionOptions().map((option) => option.label);
+
+  DEFAULT_SECTION_TAG_PHRASES.forEach((phrase) => {
+    assert.equal(defaultLabels.includes(phrase), true);
+  });
+  assert.deepEqual(buildSongSectionOptions([]), []);
+});
+
+test('the new-song title is a visible but unsavable default', () => {
+  assert.equal(isUsableLyricsTitle(UNTITLED_LYRICS_TITLE), false);
+  assert.equal(isUsableLyricsTitle(`  ${UNTITLED_LYRICS_TITLE.toUpperCase()}  `), false);
+  assert.equal(isUsableLyricsTitle(''), false);
+});
+
+test('manual and auto-prefilled song titles are usable', () => {
+  assert.equal(isUsableLyricsTitle('Amazing Grace'), true);
+  assert.equal(isUsableLyricsTitle('Untitled Hymn'), true);
+});
+
+test('stage-only markers are detected and stripped for Stage output', () => {
+  assert.equal(isStageOnlyLine('// Next: Amazing Grace'), true);
+  assert.equal(isStageOnlyLine('  // Next: Amazing Grace'), true);
+  assert.equal(isStageOnlyLine('https://example.com'), false);
+  assert.equal(stripStageOnlyPrefix('  //   Next: Amazing Grace'), 'Next: Amazing Grace');
+  assert.equal(getLineOutputText('// Next: Amazing Grace', 'stage'), 'Next: Amazing Grace');
+  assert.equal(getLineOutputText('// Next: Amazing Grace', 'output'), '');
+});
+
+test('stage-only toggle preserves indentation and round-trips line content', () => {
+  const original = '  Next: Amazing Grace';
+  const marked = toggleStageOnlyPrefix(original);
+
+  assert.equal(marked, '  // Next: Amazing Grace');
+  assert.equal(toggleStageOnlyPrefix(marked), original);
+  assert.equal(toggleStageOnlyPrefix('//    Watch the director'), 'Watch the director');
+});
+
+test('selection casing supports uppercase and lowercase', () => {
+  assert.equal(applyTextCasing('Grace Is HERE', TEXT_CASING.UPPERCASE), 'GRACE IS HERE');
+  assert.equal(applyTextCasing('Grace Is HERE', TEXT_CASING.LOWERCASE), 'grace is here');
+});
+
+test('sentence casing capitalizes sentences and lyric lines', () => {
+  assert.equal(
+    applyTextCasing('THIS is ONE. and THIS? yes!\nA NEW LINE', TEXT_CASING.SENTENCE),
+    'This is one. And this? Yes!\nA new line',
+  );
+});
+
+test('word and toggle casing handle punctuation and mixed case', () => {
+  assert.equal(
+    applyTextCasing("DON'T stop-believing", TEXT_CASING.CAPITALIZE_WORDS),
+    "Don't Stop-Believing",
+  );
+  assert.equal(applyTextCasing('Amazing GRACE 123!', TEXT_CASING.TOGGLE), 'aMAZING grace 123!');
+  assert.equal(applyTextCasing('Keep Me', 'unknown'), 'Keep Me');
+});
 
 test('persisted parsing preferences map to the same parser options on every load path', () => {
   const options = buildLyricsParsingOptions({

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCanvasFloatingToolbarPreference, useLyricsState, useDarkModeState } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
+import useLyricsStore from '../context/LyricsStore';
 import useFileUpload from '../hooks/useFileUpload';
 import useDarkModeSync from '../hooks/useDarkModeSync';
 import useEditorClipboard from '../hooks/NewSongCanvas/useEditorClipboard';
@@ -29,7 +30,10 @@ import { useDraftEvents } from '../hooks/NewSongCanvas/useDraftEvents';
 import { useDraftLoader } from '../hooks/NewSongCanvas/useDraftLoader';
 import { useEditorUndoRedoShortcuts } from '../hooks/NewSongCanvas/useEditorUndoRedoShortcuts';
 import { usePendingCanvasFocus } from '../hooks/NewSongCanvas/usePendingCanvasFocus';
-import { STANDARD_LRC_START_REGEX } from '../constants/songCanvas';
+import { buildSongSectionOptions, STANDARD_LRC_START_REGEX } from '../constants/songCanvas';
+import { applyTextCasing } from '../utils/textCasing';
+import { isStageOnlyLine } from '../utils/parseLyrics';
+import { isUsableLyricsTitle, UNTITLED_LYRICS_TITLE } from '../utils/titlePrefill';
 import CanvasContextMenu from './NewSongCanvas/CanvasContextMenu';
 import CanvasFloatingToolbar from './NewSongCanvas/CanvasFloatingToolbar';
 import CanvasMeasurementLayer from './NewSongCanvas/CanvasMeasurementLayer';
@@ -47,18 +51,25 @@ const NewSongCanvas = () => {
   const { darkMode, setDarkMode } = useDarkModeState();
   const showCanvasFloatingToolbar = useCanvasFloatingToolbarPreference();
   const { lyrics, lyricsFileName, lyricsSource, rawLyricsContent, songMetadata, setRawLyricsContent, setSongMetadata, setPendingSavedVersion } = useLyricsState();
+  const sectionTagPhrases = useLyricsStore(
+    (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
+  );
+  const songSections = useMemo(
+    () => buildSongSectionOptions(sectionTagPhrases),
+    [sectionTagPhrases],
+  );
 
   const { emitLyricsDraftSubmit, updateSetlistItem } = useControlSocket();
 
   const handleFileUpload = useFileUpload();
   const textareaRef = useRef(null);
   const baseContentRef = useRef('');
-  const baseTitleRef = useRef('');
+  const baseTitleRef = useRef(UNTITLED_LYRICS_TITLE);
   const loadSignatureRef = useRef(null);
 
   const { content, setContent, undo, redo, canUndo, canRedo, resetHistory } = useEditorHistory('');
   const [fileName, setFileName] = useState('');
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(UNTITLED_LYRICS_TITLE);
   const [saveVersion, setSaveVersion] = useState(0);
   const [currentFilePath, setCurrentFilePath] = useState('');
   const editorContainerRef = useRef(null);
@@ -78,6 +89,7 @@ const NewSongCanvas = () => {
   const [editorPadding, setEditorPadding] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [selectedLineIndex, setSelectedLineIndex] = useState(null);
+  const [hasTextSelection, setHasTextSelection] = useState(false);
   const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0, lineIndex: null, mode: 'line', cursorOffset: null });
   const [contextMenuDimensions, setContextMenuDimensions] = useState({ width: 0, height: 0 });
   const [pendingFocus, setPendingFocus] = useState(null);
@@ -85,7 +97,7 @@ const NewSongCanvas = () => {
 
   const lines = useMemo(() => content.split('\n'), [content]);
   const isContentEmpty = !content.trim();
-  const isTitleEmpty = !title.trim();
+  const isTitleEmpty = !isUsableLyricsTitle(title);
   const hasUnsavedChanges = React.useMemo(() => {
     return (content || '') !== (baseContentRef.current || '') || (title || '') !== (baseTitleRef.current || '');
   }, [content, title, saveVersion]);
@@ -244,7 +256,15 @@ const NewSongCanvas = () => {
     lastKnownScrollRef
   });
 
-  const { handleAddTranslation, handleCopyLine, handleDuplicateLine, isLineWrappedWithTranslation } = useLineOperations({
+  const {
+    handleAddTranslation,
+    handleCopyLine,
+    handleDeleteLine,
+    handleDuplicateLine,
+    handleMoveLine,
+    handleToggleStageOnlyLine,
+    isLineWrappedWithTranslation,
+  } = useLineOperations({
     lines,
     textareaRef,
     setContent,
@@ -409,6 +429,7 @@ const NewSongCanvas = () => {
     scrollTop,
     setContent,
     setContextMenuState,
+    setHasTextSelection,
     setPendingFocus,
     setScrollTop,
     setSelectedLineIndex,
@@ -430,8 +451,9 @@ const NewSongCanvas = () => {
     isTitlePrefilled,
     handleContentKeyDown,
     handleContentPaste,
+    handleTitleBlur,
     handleTitleChange
-  } = useTitlePrefill(content, title, setTitle, editMode, textareaRef);
+  } = useTitlePrefill(content, title, setTitle, editMode, textareaRef, sectionTagPhrases);
 
   const getActiveLineIndex = useCallback(() => {
     const textarea = textareaRef.current;
@@ -443,8 +465,12 @@ const NewSongCanvas = () => {
 
   const activeLineIndex = selectedLineIndex ?? getActiveLineIndex();
   const activeLineText = activeLineIndex !== null ? (lines[activeLineIndex] ?? '') : '';
+  const activeLineHasContent = Boolean(activeLineText.trim());
   const activeLineHasTimestamp = STANDARD_LRC_START_REGEX.test(activeLineText.trim());
-  const canAddTranslationOnActiveLine = Boolean(activeLineText.trim()) && !isLineWrappedWithTranslation(activeLineText);
+  const activeLineIsStageOnly = isStageOnlyLine(activeLineText);
+  const canAddTranslationOnActiveLine = activeLineHasContent && !isLineWrappedWithTranslation(activeLineText);
+  const canMoveActiveLineUp = activeLineIndex !== null && activeLineIndex > 0;
+  const canMoveActiveLineDown = activeLineIndex !== null && activeLineIndex < lines.length - 1;
 
   const handleToolbarPaste = useCallback(async () => {
     const nextContent = await handlePaste();
@@ -453,6 +479,46 @@ const NewSongCanvas = () => {
     }
     return nextContent;
   }, [handleContentPaste, handlePaste]);
+
+  const handleChangeSelectionCase = useCallback((casing) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const selectionStart = textarea.selectionStart ?? 0;
+    const selectionEnd = textarea.selectionEnd ?? selectionStart;
+    if (selectionStart === selectionEnd) return;
+
+    const transformedText = applyTextCasing(
+      content.slice(selectionStart, selectionEnd),
+      casing,
+    );
+    const nextSelectionEnd = selectionStart + transformedText.length;
+    const nextContent = content.slice(0, selectionStart)
+      + transformedText
+      + content.slice(selectionEnd);
+    const currentScroll = textarea.scrollTop || 0;
+
+    setContent(nextContent, {
+      selectionStart,
+      selectionEnd: nextSelectionEnd,
+      scrollTop: currentScroll,
+      timestamp: Date.now(),
+      coalesceKey: 'casing',
+    });
+    setHasTextSelection(true);
+
+    requestAnimationFrame(() => {
+      const currentTextarea = textareaRef.current;
+      if (!currentTextarea) return;
+      try {
+        currentTextarea.focus({ preventScroll: true });
+      } catch (error) {
+        currentTextarea.focus();
+      }
+      currentTextarea.setSelectionRange(selectionStart, nextSelectionEnd);
+      currentTextarea.scrollTop = currentScroll;
+    });
+  }, [content, setContent, textareaRef]);
 
   const handleAddTranslationAtActiveLine = useCallback(() => {
     handleAddTranslation(getActiveLineIndex());
@@ -465,6 +531,22 @@ const NewSongCanvas = () => {
   const handleDuplicateActiveLine = useCallback(() => {
     handleDuplicateLine(getActiveLineIndex());
   }, [getActiveLineIndex, handleDuplicateLine]);
+
+  const handleDeleteActiveLine = useCallback(() => {
+    handleDeleteLine(getActiveLineIndex());
+  }, [getActiveLineIndex, handleDeleteLine]);
+
+  const handleMoveActiveLineUp = useCallback(() => {
+    handleMoveLine(getActiveLineIndex(), -1);
+  }, [getActiveLineIndex, handleMoveLine]);
+
+  const handleMoveActiveLineDown = useCallback(() => {
+    handleMoveLine(getActiveLineIndex(), 1);
+  }, [getActiveLineIndex, handleMoveLine]);
+
+  const handleToggleStageOnlyActiveLine = useCallback(() => {
+    handleToggleStageOnlyLine(getActiveLineIndex());
+  }, [getActiveLineIndex, handleToggleStageOnlyLine]);
 
   const insertStandardTimestampAtActiveLine = useCallback(() => {
     insertStandardTimestampAtLine(getActiveLineIndex());
@@ -480,10 +562,10 @@ const NewSongCanvas = () => {
 
   const getSaveButtonTooltip = () => {
     if (isContentEmpty && isTitleEmpty) {
-      return "Enter a file name and add lyrics content to save";
+      return "Choose a song title and add lyrics content to save";
     }
     if (isTitleEmpty) {
-      return "Enter a file name to save";
+      return "Replace Untitled Lyrics with a song title to save";
     }
     if (isContentEmpty) {
       return "Add lyrics content to save";
@@ -493,10 +575,10 @@ const NewSongCanvas = () => {
 
   const getSaveAndLoadButtonTooltip = () => {
     if (isContentEmpty && isTitleEmpty) {
-      return "Enter a file name and add lyrics content to load";
+      return "Choose a song title and add lyrics content to load";
     }
     if (isTitleEmpty) {
-      return "Enter a file name to load";
+      return "Replace Untitled Lyrics with a song title to load";
     }
     if (isContentEmpty) {
       return "Add lyrics content to load";
@@ -543,9 +625,13 @@ const NewSongCanvas = () => {
       : 'bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f8fafc_55%,_#eef2ff_100%)]'
       }`}>
       <SongCanvasHeader
+        activeLineHasContent={activeLineHasContent}
         activeLineHasTimestamp={activeLineHasTimestamp}
         activeLineIndex={activeLineIndex}
+        activeLineIsStageOnly={activeLineIsStageOnly}
         canAddTranslationOnActiveLine={canAddTranslationOnActiveLine}
+        canMoveActiveLineDown={canMoveActiveLineDown}
+        canMoveActiveLineUp={canMoveActiveLineUp}
         canRedo={canRedo}
         canUndo={canUndo}
         composeMode={composeMode}
@@ -557,20 +643,27 @@ const NewSongCanvas = () => {
         handleAddTranslationAtActiveLine={handleAddTranslationAtActiveLine}
         handleBack={handleBack}
         handleCleanup={handleCleanup}
+        handleChangeSelectionCase={handleChangeSelectionCase}
         handleCopy={handleCopy}
         handleCopyActiveLine={handleCopyActiveLine}
         handleCut={handleCut}
+        handleDeleteActiveLine={handleDeleteActiveLine}
         handleDuplicateActiveLine={handleDuplicateActiveLine}
         handleLoadDraft={handleLoadDraft}
+        handleMoveActiveLineDown={handleMoveActiveLineDown}
+        handleMoveActiveLineUp={handleMoveActiveLineUp}
         handlePaste={handleToolbarPaste}
         handleRedo={handleRedo}
         handleSave={handleSave}
         handleSaveAndLoad={handleSaveAndLoad}
         handleSearchButtonClick={handleSearchButtonClick}
         handleStartNewSong={handleStartNewSong}
+        handleTitleBlur={handleTitleBlur}
         handleTitleChange={handleTitleChange}
+        handleToggleStageOnlyActiveLine={handleToggleStageOnlyActiveLine}
         handleUndo={handleUndo}
         hasUnsavedChanges={hasUnsavedChanges}
+        hasTextSelection={hasTextSelection}
         insertEnhancedTimestampAtActiveLine={insertEnhancedTimestampAtActiveLine}
         insertMetadataAtActiveLine={insertMetadataAtActiveLine}
         insertSectionAtCursor={insertSectionAtCursor}
@@ -581,6 +674,7 @@ const NewSongCanvas = () => {
         isTitlePrefilled={isTitlePrefilled}
         searchBarVisible={searchBarVisible}
         showModal={showModal}
+        songSections={songSections}
         title={title}
         toolbarGhostClass={toolbarGhostClass}
       />
@@ -726,6 +820,7 @@ const NewSongCanvas = () => {
               isCursorAtEligiblePosition={isCursorAtEligiblePosition}
               metadataSubmenuRef={metadataSubmenuRef}
               sectionSubmenuRef={sectionSubmenuRef}
+              songSections={songSections}
               setActiveSubmenu={setActiveSubmenu}
               setContextMenuDimensions={setContextMenuDimensions}
               submenuHorizontal={submenuHorizontal}
