@@ -13,6 +13,8 @@ const NDI_INSTALL_NAME = 'Companion';
 const NDI_USER_DATA_NAME = 'User Data';
 const NDI_MANAGED_INSTALL_MARKER = '.managed-install-complete';
 const EASYWORSHIP_IMPORT_FOLDER_NAME = 'Imported Songs from EW';
+const EASYWORSHIP_LYRICS_FOLDER_NAME = 'Imported Lyrics from EW';
+const PRESENTATION_LYRICS_FOLDER_NAME = 'Imported Lyrics from Presentations';
 const MARKER_FILE = 'user-data-migration.json';
 const ORIGINAL_MIGRATED_AT = '2025-01-02T03:04:05.000Z';
 
@@ -271,6 +273,34 @@ test('moves legacy EasyWorship imports under the LyricDisplay documents folder',
   assert.equal(fs.readFileSync(path.join(targetPath, 'Worship', 'Amazing Grace.txt'), 'utf8'), 'lyrics');
   assert.equal(marker.legacyEasyWorshipSongs.deletedLegacy, true);
   assert.equal(marker.legacyEasyWorshipSongs.targetPath, targetPath);
+});
+
+test('moves current EasyWorship and presentation import folders into LyricDisplay documents', () => {
+  const appDataPath = makeTempAppData();
+  const documentsPath = path.join(appDataPath, 'Documents');
+  const userDataPath = path.join(appDataPath, APP_NAME);
+  const easyWorshipSource = path.join(documentsPath, EASYWORSHIP_LYRICS_FOLDER_NAME);
+  const presentationSource = path.join(documentsPath, PRESENTATION_LYRICS_FOLDER_NAME);
+  const easyWorshipTarget = path.join(documentsPath, APP_NAME, EASYWORSHIP_LYRICS_FOLDER_NAME);
+  const presentationTarget = path.join(documentsPath, APP_NAME, PRESENTATION_LYRICS_FOLDER_NAME);
+
+  fs.mkdirSync(easyWorshipSource, { recursive: true });
+  fs.mkdirSync(presentationSource, { recursive: true });
+  fs.writeFileSync(path.join(easyWorshipSource, 'EW Song.txt'), 'easyworship lyrics', 'utf8');
+  fs.writeFileSync(path.join(presentationSource, 'Presentation Song.txt'), 'presentation lyrics', 'utf8');
+  writeMarker(userDataPath);
+
+  const result = migrateUserDataForTests(appDataPath, documentsPath);
+  const marker = JSON.parse(fs.readFileSync(path.join(userDataPath, MARKER_FILE), 'utf8'));
+
+  assert.equal(result.legacyEasyWorshipLyrics.deletedLegacy, true);
+  assert.equal(result.legacyPresentationLyrics.deletedLegacy, true);
+  assert.equal(fs.existsSync(easyWorshipSource), false);
+  assert.equal(fs.existsSync(presentationSource), false);
+  assert.equal(fs.readFileSync(path.join(easyWorshipTarget, 'EW Song.txt'), 'utf8'), 'easyworship lyrics');
+  assert.equal(fs.readFileSync(path.join(presentationTarget, 'Presentation Song.txt'), 'utf8'), 'presentation lyrics');
+  assert.equal(marker.legacyEasyWorshipLyrics.targetPath, easyWorshipTarget);
+  assert.equal(marker.legacyPresentationLyrics.targetPath, presentationTarget);
 });
 
 test('merges legacy EasyWorship imports into an existing destination before deleting the old folder', () => {

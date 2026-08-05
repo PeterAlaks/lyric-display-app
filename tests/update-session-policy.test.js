@@ -91,7 +91,15 @@ test('legacy preferences migrate once without overwriting valid operator choices
   assert.equal(result.preferences.advanced.telemetryConsentDecided, false);
   assert.equal(result.preferences.formatting.capitalizedWords.includes('Holy Spirit'), true);
   assert.equal(result.preferences.parsing.sectionTagPhrases.includes('Verse'), true);
-  assert.deepEqual(result.preferences.appearance, { themeMode: 'dark' });
+  assert.deepEqual(result.preferences.appearance, {
+    themeMode: 'dark',
+    timerStateTransitionAnimation: 'fade',
+    timerStateTransitionDuration: 300,
+    backgroundMediaTransitionAnimation: 'fade',
+    backgroundMediaTransitionDuration: 300,
+    outputVisibilityTransitionAnimation: 'fade',
+    outputVisibilityTransitionDuration: 300,
+  });
 
   const repeated = migratePreferences(result.preferences);
   assert.equal(repeated.success, true);
@@ -169,6 +177,30 @@ test('schema 6 preferences discard the removed default lyrics folder setting', (
   assert.equal(result.preferences.fileHandling.defaultLyricsPath, undefined);
   assert.equal(result.preferences.fileHandling.rememberLastOpenedPath, false);
   assert.equal(result.preferences.fileHandling.maxRecentFiles, 12);
+});
+
+test('schema 7 preferences gain normalized output transition settings', () => {
+  const result = migratePreferences({
+    _schemaVersion: 7,
+    appearance: {
+      themeMode: 'dark',
+      timerStateTransitionAnimation: 'none',
+      timerStateTransitionDuration: 5_000,
+      backgroundMediaTransitionAnimation: 'unsupported',
+      backgroundMediaTransitionDuration: 25,
+      outputVisibilityTransitionAnimation: 'blur',
+      outputVisibilityTransitionDuration: 450,
+    },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.preferences.appearance.themeMode, 'dark');
+  assert.equal(result.preferences.appearance.timerStateTransitionAnimation, 'none');
+  assert.equal(result.preferences.appearance.timerStateTransitionDuration, 2_000);
+  assert.equal(result.preferences.appearance.backgroundMediaTransitionAnimation, 'fade');
+  assert.equal(result.preferences.appearance.backgroundMediaTransitionDuration, 100);
+  assert.equal(result.preferences.appearance.outputVisibilityTransitionAnimation, 'blur');
+  assert.equal(result.preferences.appearance.outputVisibilityTransitionDuration, 450);
 });
 
 test('future preference and session schemas are rejected without mutation', () => {

@@ -110,10 +110,11 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
   useEffect(() => {
     if (isOpen && !destinationPath && window?.electronAPI?.presentation?.getUserHome) {
       window.electronAPI.presentation.getUserHome().then((result) => {
-        if (result?.success && result.homedir) {
+        if (result?.success && (result.documentsPath || result.homedir)) {
           const platform = window.electronAPI.getPlatform();
           const separator = platform === 'win32' ? '\\' : '/';
-          setDestinationPath(`${result.homedir}${separator}Documents${separator}Imported Lyrics from Presentations`);
+          const documentsPath = result.documentsPath || `${result.homedir}${separator}Documents`;
+          setDestinationPath(`${documentsPath}${separator}LyricDisplay${separator}Imported Lyrics from Presentations`);
         }
       }).catch((err) => {
         console.error('Failed to get user home directory:', err);

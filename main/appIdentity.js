@@ -12,6 +12,8 @@ export const NDI_USER_DATA_FOLDER_NAME = 'User Data';
 export const NDI_MANAGED_INSTALL_MARKER = '.managed-install-complete';
 export const LEGACY_NDI_FOLDER_NAME = 'lyricdisplay-ndi';
 export const LEGACY_EASYWORSHIP_IMPORT_FOLDER_NAME = 'Imported Songs from EW';
+export const EASYWORSHIP_IMPORT_FOLDER_NAME = 'Imported Lyrics from EW';
+export const PRESENTATION_IMPORT_FOLDER_NAME = 'Imported Lyrics from Presentations';
 
 const MIGRATION_MARKER = 'user-data-migration.json';
 const NDI_RUNTIME_ENTRY_NAMES = new Set([
@@ -231,6 +233,18 @@ function migrateUserData(appDataPath, documentsPath = null) {
   const targetEasyWorshipSongsPath = documentsPath
     ? path.join(documentsPath, APP_NAME, LEGACY_EASYWORSHIP_IMPORT_FOLDER_NAME)
     : null;
+  const legacyEasyWorshipLyricsPath = documentsPath
+    ? path.join(documentsPath, EASYWORSHIP_IMPORT_FOLDER_NAME)
+    : null;
+  const targetEasyWorshipLyricsPath = documentsPath
+    ? path.join(documentsPath, APP_NAME, EASYWORSHIP_IMPORT_FOLDER_NAME)
+    : null;
+  const legacyPresentationLyricsPath = documentsPath
+    ? path.join(documentsPath, PRESENTATION_IMPORT_FOLDER_NAME)
+    : null;
+  const targetPresentationLyricsPath = documentsPath
+    ? path.join(documentsPath, APP_NAME, PRESENTATION_IMPORT_FOLDER_NAME)
+    : null;
 
   const summary = {
     sourcePath,
@@ -251,6 +265,12 @@ function migrateUserData(appDataPath, documentsPath = null) {
     flatNdiInstall: createLegacyNdiSummary(targetNdiPath, targetNdiInstallPath),
     legacyEasyWorshipSongs: documentsPath
       ? createLegacyNdiSummary(legacyEasyWorshipSongsPath, targetEasyWorshipSongsPath)
+      : null,
+    legacyEasyWorshipLyrics: documentsPath
+      ? createLegacyNdiSummary(legacyEasyWorshipLyricsPath, targetEasyWorshipLyricsPath)
+      : null,
+    legacyPresentationLyrics: documentsPath
+      ? createLegacyNdiSummary(legacyPresentationLyricsPath, targetPresentationLyricsPath)
       : null,
     errors: [],
   };
@@ -357,6 +377,8 @@ function migrateAuxiliaryLegacyFolders(summary) {
     Boolean(summary.legacyNdi?.attempted && summary.legacyNdi?.deletedLegacy)
   );
   migrateLegacyNdiFolder(summary.legacyEasyWorshipSongs);
+  migrateLegacyNdiFolder(summary.legacyEasyWorshipLyrics);
+  migrateLegacyNdiFolder(summary.legacyPresentationLyrics);
 }
 
 function migrateFlatNdiInstall(ndi, userDataPath, managedUserDataIsAuthoritative = false) {
@@ -630,6 +652,20 @@ function applyExistingMarker(markerPath, summary) {
     ) {
       applyLegacyNdiMarker(summary.legacyEasyWorshipSongs, marker.legacyEasyWorshipSongs);
     }
+    if (
+      summary.legacyEasyWorshipLyrics &&
+      marker.legacyEasyWorshipLyrics &&
+      typeof marker.legacyEasyWorshipLyrics === 'object'
+    ) {
+      applyLegacyNdiMarker(summary.legacyEasyWorshipLyrics, marker.legacyEasyWorshipLyrics);
+    }
+    if (
+      summary.legacyPresentationLyrics &&
+      marker.legacyPresentationLyrics &&
+      typeof marker.legacyPresentationLyrics === 'object'
+    ) {
+      applyLegacyNdiMarker(summary.legacyPresentationLyrics, marker.legacyPresentationLyrics);
+    }
   } catch (error) {
     summary.errors.push({ path: markerPath, message: error.message });
     summary.legacyDeleteSkippedReason = 'Could not verify existing migration marker';
@@ -702,6 +738,8 @@ function updateMigrationMarker(markerPath, summary) {
         legacyUserDataNdi: summary.legacyUserDataNdi,
         flatNdiInstall: summary.flatNdiInstall,
         legacyEasyWorshipSongs: summary.legacyEasyWorshipSongs,
+        legacyEasyWorshipLyrics: summary.legacyEasyWorshipLyrics,
+        legacyPresentationLyrics: summary.legacyPresentationLyrics,
         errors: summary.errors,
       }, null, 2),
       'utf8'

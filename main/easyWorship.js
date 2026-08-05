@@ -924,7 +924,7 @@ async function getUniqueFilename(destPath, baseName, handling) {
         await fs.access(fullPath);
 
         if (handling === 'skip') {
-            return { filename: null, skipped: true };
+            return { filename, skipped: true };
         }
 
         if (handling === 'overwrite') {
@@ -982,7 +982,7 @@ export async function importSong({ song, destinationPath, duplicateHandling }) {
         );
 
         if (skipped) {
-            return { success: true, skipped: true };
+            return { success: true, skipped: true, filePath: path.join(destinationPath, filename) };
         }
 
         let fileContent = '';
@@ -1006,7 +1006,7 @@ export async function importSong({ song, destinationPath, duplicateHandling }) {
         const fullPath = path.join(destinationPath, filename);
         await fs.writeFile(fullPath, fileContent, 'utf8');
 
-        return { success: true, skipped: false };
+        return { success: true, skipped: false, filePath: fullPath };
     } catch (error) {
         console.error('Error importing song:', error);
         return {

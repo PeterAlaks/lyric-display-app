@@ -11,6 +11,7 @@ const selectTimerScheduleSettings = (settings) => ({
   scheduleScheduledStartAt: settings.scheduleScheduledStartAt,
   scheduleIdealEndTime: settings.scheduleIdealEndTime,
   scheduleShowGlobalTimeDuringManualItems: settings.scheduleShowGlobalTimeDuringManualItems,
+  showGlobalClockDuringPause: settings.showGlobalClockDuringPause,
   scheduleNotificationsEnabled: settings.scheduleNotificationsEnabled,
   autoStartNext: settings.autoStartNext,
   indicatorEnabled: settings.indicatorEnabled,

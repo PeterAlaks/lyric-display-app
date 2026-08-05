@@ -76,7 +76,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                         const platform = window.electronAPI.getPlatform();
                         const separator = platform === 'win32' ? '\\' : '/';
                         const documentsPath = result.documentsPath || `${result.homedir}${separator}Documents`;
-                        const docsPath = `${documentsPath}${separator}LyricDisplay${separator}Imported Songs from EW`;
+                        const docsPath = `${documentsPath}${separator}LyricDisplay${separator}Imported Lyrics from EW`;
                         setDestinationPath(docsPath);
                     }
                 }).catch(err => {

@@ -24,6 +24,7 @@ import TelemetryConsentModal from '../TelemetryConsentModal';
 import ScheduleCreatorWizard from '../ScheduleCreatorWizard';
 import ScheduleStartReconciliationWizard from '../ScheduleStartReconciliationWizard';
 import TimerDisplaySettingsModal from '../TimerDisplaySettingsModal';
+import NetworkAddressChangedModal from '../NetworkAddressChangedModal';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { ModalActionButton, ModalFooter } from './modalActions';
@@ -768,6 +769,15 @@ export function ModalProvider({ children, isDark = false }) {
                           displaySettings={modal.displaySettings}
                           onDraftChange={modal.onDraftDisplaySettingsChange}
                           darkMode={isDark}
+                        />
+                      )}
+                      {modal.component === 'NetworkAddressChanged' && (
+                        <NetworkAddressChangedModal
+                          darkMode={isDark}
+                          previousIPAddress={modal.previousIPAddress}
+                          newIPAddress={modal.newIPAddress}
+                          serverPort={modal.serverPort}
+                          affectedRemoteOutputCount={modal.affectedRemoteOutputCount}
                         />
                       )}
 

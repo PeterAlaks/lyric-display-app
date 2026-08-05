@@ -27,6 +27,11 @@ import * as userPreferences from './main/userPreferences.js';
 import { flushFileLogs, initFileLogging } from './main/logging.js';
 import { createAppTray, destroyAppTray } from './main/tray.js';
 import { recordSuccessfulAppLaunch } from './main/telemetry.js';
+import {
+  startNetworkAddressMonitor,
+  stopNetworkAddressMonitor,
+  updateNetworkOutputPresence,
+} from './main/networkAddressMonitor.js';
 
 const APP_PROTOCOL = 'lyricdisplay';
 const DEV_APP_PROTOCOL = 'lyricdisplay-dev';
@@ -418,6 +423,10 @@ setBackendMessageHandler((message) => {
     return { success: setAdminKeyFromBackend(message.adminKey) };
   }
 
+  if (message?.type === 'output-presence') {
+    return { success: updateNetworkOutputPresence(message) };
+  }
+
   if (message?.type === 'switch-to-desktop-mode') {
     if (isHeadlessMode) {
       console.log('[Main] Desktop mode relaunch requested from Dock Mode');
@@ -492,6 +501,7 @@ app.whenReady().then(async () => {
 
   if (mainWindow) {
     attachMainWindowLifecycle(mainWindow);
+    startNetworkAddressMonitor({ requestRendererModal });
   }
 
   if (app.isPackaged && (mainWindow || isHeadlessMode) && !app.isQuitting) {
@@ -559,6 +569,7 @@ app.on('before-quit', (event) => {
 });
 
 app.on('will-quit', () => {
+  stopNetworkAddressMonitor();
   destroyAppTray();
   performCleanup();
 });

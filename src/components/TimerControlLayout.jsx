@@ -67,6 +67,7 @@ const TimerControlLayout = ({
   warningSeconds,
   criticalSeconds,
   overrunMode,
+  showGlobalClockDuringPause,
   scheduleItems,
   hasSavedSchedule,
   visibleScheduleTitle,
@@ -183,6 +184,7 @@ const TimerControlLayout = ({
                 warningSeconds={warningSeconds}
                 criticalSeconds={criticalSeconds}
                 overrunMode={overrunMode}
+                showGlobalClockDuringPause={showGlobalClockDuringPause}
                 displaySettings={displaySettings}
                 setTimerControlSettings={setTimerControlSettings}
                 applyTimerControlSettings={applyTimerControlSettings}
@@ -254,6 +256,7 @@ const ManualControls = ({
   warningSeconds,
   criticalSeconds,
   overrunMode,
+  showGlobalClockDuringPause,
   displaySettings,
   setTimerControlSettings,
   applyTimerControlSettings,
@@ -323,6 +326,13 @@ const ManualControls = ({
             <p className={`mt-0.5 text-[10px] ${mutedText}`}>Count beyond zero instead of ending.</p>
           </div>
           <Switch checked={overrunMode} onCheckedChange={(checked) => applyTimerControlSettings({ overrunMode: checked })} {...getSwitchProps(false)} />
+        </div>
+        <div className={`flex items-center justify-between border-t pt-3 ${theme.dividerClass}`}>
+          <div className="pr-3">
+            <p className="text-xs font-medium">Show global clock during timer pause</p>
+            <p className={`mt-0.5 text-[10px] ${mutedText}`}>Replace the paused timer with the current time.</p>
+          </div>
+          <Switch checked={showGlobalClockDuringPause} onCheckedChange={(checked) => applyTimerControlSettings({ showGlobalClockDuringPause: checked })} {...getSwitchProps(false)} />
         </div>
       </div>
     </>

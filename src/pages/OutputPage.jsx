@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   useCustomOutputIds,
   useLyricsState,
@@ -10,6 +11,10 @@ import {
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
+import {
+  getTransitionVariants,
+  normalizeTransitionDuration,
+} from '../../shared/transitionSettings.js';
 
 /**
  * Generic output page component. Renders lyrics with full styling support.
@@ -50,6 +55,15 @@ const OutputPage = ({ outputId }) => {
 
   const isOutputActive = Boolean(outputSettings)
     && (isPreviewMode || Boolean(isOutputOn && (outputEnabled !== false)));
+  const outputTransitionVariants = getTransitionVariants(outputSettings?.outputVisibilityTransitionAnimation);
+  const outputTransitionSeconds = normalizeTransitionDuration(
+    outputSettings?.outputVisibilityTransitionDuration,
+    300
+  ) / 1000;
+  const effectiveOutputTransitionVariants = outputTransitionVariants || {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  };
 
   const publishOutputMetrics = useCallback((metrics = {}) => {
     if (!isPreviewMode && emitOutputMetrics && isConnected && isAuthenticated) {
@@ -83,20 +97,39 @@ const OutputPage = ({ outputId }) => {
   }, [isAuthenticated, isConnected, isPreviewMode, publishOutputMetrics]);
 
   return (
-    <LyricVisualFrame
-      line={line}
-      currentLine={currentLine}
-      settings={outputSettings}
-      visible={Boolean(isOutputActive && line)}
-      active={isOutputActive}
-      previewMode={isPreviewMode}
-      frameKey={selectedLine ?? 'none'}
-      label={label}
-      isProjectionMode={isProjectionMode}
-      showProjectionExitHint={showProjectionExitHint}
-      className="relative w-screen h-screen overflow-hidden"
-      onAutosizeChange={handleAutosizeChange}
-    />
+    <div
+      className="relative h-screen w-screen overflow-hidden"
+      style={{ background: isProjectionMode ? '#000000' : 'transparent' }}
+    >
+      <motion.div
+        className="absolute inset-0"
+        aria-hidden={!isOutputActive}
+        variants={effectiveOutputTransitionVariants}
+        initial={isOutputActive ? 'visible' : 'hidden'}
+        animate={isOutputActive ? 'visible' : 'hidden'}
+        transition={{
+          duration: outputTransitionVariants ? outputTransitionSeconds : 0,
+          ease: [0.25, 0.46, 0.45, 0.94],
+        }}
+        style={{ pointerEvents: isOutputActive ? 'auto' : 'none' }}
+      >
+        <LyricVisualFrame
+          line={line}
+          currentLine={currentLine}
+          settings={outputSettings}
+          visible={Boolean(isOutputActive && line)}
+          active={isOutputActive}
+          previewMode={isPreviewMode}
+          frameKey={selectedLine ?? 'none'}
+          label={label}
+          isProjectionMode={isProjectionMode}
+          showProjectionExitHint={showProjectionExitHint}
+          className="relative h-full w-full overflow-hidden"
+          onAutosizeChange={handleAutosizeChange}
+          retainBackgroundLayerWhenInactive
+        />
+      </motion.div>
+    </div>
   );
 };
 

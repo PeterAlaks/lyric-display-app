@@ -10,6 +10,7 @@ import {
   normalizeTimerDisplaySettings,
   normalizeTimerState,
   resetActiveTimerRuntime,
+  shouldShowGlobalClockDuringPause,
   shouldShowGlobalTimeForManualScheduleItem,
 } from '../src/utils/timerUtils.js';
 
@@ -299,6 +300,20 @@ test('manual schedule items show global time by default and respect the schedule
     mode: 'countdown',
     sets: [{ id: 'timed', label: 'Welcome', durationMs: 60_000, timed: true }],
   }), false);
+});
+
+test('paused timers show the global clock only when the explicit option is enabled', () => {
+  const pausedTimer = normalizeTimerState({
+    status: 'paused',
+    running: true,
+    paused: true,
+    showGlobalClockDuringPause: true,
+  });
+
+  assert.equal(shouldShowGlobalClockDuringPause(pausedTimer), true);
+  assert.equal(shouldShowGlobalClockDuringPause({ ...pausedTimer, showGlobalClockDuringPause: false }), false);
+  assert.equal(shouldShowGlobalClockDuringPause({ ...pausedTimer, paused: false }), false);
+  assert.equal(shouldShowGlobalClockDuringPause({ ...pausedTimer, running: false }), false);
 });
 
 test('timer state normalization keeps runtime schedule fields internally consistent', () => {

@@ -24,6 +24,11 @@ import {
 } from './lyricFiles.js';
 import { getRecents } from './recents.js';
 import { ensureNavigatorDirectory } from './fileNavigatorDirectories.js';
+import {
+  APP_NAME,
+  EASYWORSHIP_IMPORT_FOLDER_NAME,
+  PRESENTATION_IMPORT_FOLDER_NAME,
+} from './appIdentity.js';
 
 const CONFIG_VERSION = 1;
 const MAX_INDEX_FILES = 100_000;
@@ -185,6 +190,58 @@ async function pathIsDirectory(candidate) {
   } catch {
     return false;
   }
+}
+
+async function folderContainsSupportedLyrics(rootPath) {
+  const pending = [rootPath];
+  let inspectedEntries = 0;
+  while (pending.length > 0 && inspectedEntries < 10_000) {
+    const current = pending.shift();
+    let entries;
+    try {
+      entries = await fs.readdir(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      inspectedEntries += 1;
+      if (entry.isSymbolicLink()) continue;
+      const entryPath = path.join(current, entry.name);
+      if (entry.isFile() && isSupportedLyricsImportFile(entryPath)) return true;
+      if (entry.isDirectory() && !IGNORED_DIRECTORIES.has(entry.name.toLowerCase())) {
+        pending.push(entryPath);
+      }
+      if (inspectedEntries >= 10_000) break;
+    }
+  }
+  return false;
+}
+
+async function addAutomaticImportRoots() {
+  const importRoot = path.join(app.getPath('documents'), APP_NAME);
+  const candidates = [EASYWORSHIP_IMPORT_FOLDER_NAME, PRESENTATION_IMPORT_FOLDER_NAME]
+    .map((folderName) => path.join(importRoot, folderName));
+  let changed = false;
+
+  for (const candidate of candidates) {
+    if (rootForPath(candidate)) continue;
+    if (!await pathIsDirectory(candidate) || !await folderContainsSupportedLyrics(candidate)) continue;
+    try {
+      const realRoot = await fs.realpath(candidate);
+      if (rootForPath(realRoot)) continue;
+      const inspection = await inspectRootLimits(realRoot);
+      if (inspection.error) continue;
+      const realRootKey = normalizeComparisonPath(realRoot);
+      const retainedRoots = roots.filter((entry) => (
+        !isWithinPath(normalizeComparisonPath(entry), realRootKey)
+      ));
+      if (retainedRoots.length >= FILE_NAVIGATOR_LIMITS.maxRoots) continue;
+      roots = [...retainedRoots, realRoot];
+      changed = true;
+    } catch { }
+  }
+
+  if (changed) await persistConfig();
 }
 
 async function persistConfig() {
@@ -635,6 +692,7 @@ async function queueRebuild() {
 
 async function initialize() {
   await loadConfig();
+  await addAutomaticImportRoots();
   await openDatabase();
   loadCachedRecords();
   void queueRebuild();

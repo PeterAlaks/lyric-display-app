@@ -129,7 +129,7 @@ async function getUniqueFilename(destPath, baseName, handling) {
         await fs.access(fullPath);
 
         if (handling === 'skip') {
-            return { filename: null, skipped: true };
+            return { filename, skipped: true };
         }
 
         if (handling === 'overwrite') {
@@ -229,7 +229,7 @@ export async function importPresentation({ presentation, destinationPath, duplic
         const { filename, skipped } = await getUniqueFilename(destinationPath, baseName, duplicateHandling);
 
         if (skipped) {
-            return { success: true, skipped: true };
+            return { success: true, skipped: true, filePath: path.join(destinationPath, filename) };
         }
 
         const importedDate = new Date().toISOString().split('T')[0];
@@ -246,7 +246,7 @@ export async function importPresentation({ presentation, destinationPath, duplic
         const outputPath = path.join(destinationPath, filename);
         await fs.writeFile(outputPath, fileContent, 'utf8');
 
-        return { success: true, skipped: false };
+        return { success: true, skipped: false, filePath: outputPath };
     } catch (error) {
         return {
             success: false,

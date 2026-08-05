@@ -32,6 +32,7 @@ import { usePreferencesPersistence } from '../hooks/UserPreferencesModal/usePref
 import { useSecurityPreferences } from '../hooks/UserPreferencesModal/useSecurityPreferences';
 import AdvancedPreferencesSection from './UserPreferencesModal/AdvancedPreferencesSection';
 import CapitalizedWordsPreferencesPage from './UserPreferencesModal/CapitalizedWordsPreferencesPage';
+import DisplayTransitionsPreferencesPage from './UserPreferencesModal/DisplayTransitionsPreferencesPage';
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
 import IndexedLyricsFoldersPreferencesPage from './UserPreferencesModal/IndexedLyricsFoldersPreferencesPage';
 import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPreferencesPage';
@@ -75,6 +76,7 @@ const CATEGORIES = [
 
 const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
+  const [appearancePage, setAppearancePage] = useState('main');
   const [parsingPage, setParsingPage] = useState('main');
   const [formattingPage, setFormattingPage] = useState('main');
   const [fileHandlingPage, setFileHandlingPage] = useState('main');
@@ -201,6 +203,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     preferences?.parsing?.sectionTagPhrases,
     DEFAULT_SECTION_TAG_PHRASES,
   );
+  const isDisplayTransitionsPage = activeCategory === 'appearance' && appearancePage === 'displayTransitions';
   const isSectionTagPhrasesPage = activeCategory === 'parsing' && parsingPage === 'sectionTagPhrases';
   const isCapitalizedWordsPage = activeCategory === 'formatting' && formattingPage === 'capitalizedWords';
   const isIndexedLyricsFoldersPage = activeCategory === 'fileHandling' && fileHandlingPage === 'indexedFolders';
@@ -208,19 +211,29 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const isNdiTelemetryPage = activeCategory === 'ndi' && ndiPage === 'telemetry';
   const handleCategoryChange = (category) => {
     const isReturningFromNestedPage = (
-      (category === 'parsing' && isSectionTagPhrasesPage)
+      (category === 'appearance' && isDisplayTransitionsPage)
+      || (category === 'parsing' && isSectionTagPhrasesPage)
       || (category === 'formatting' && isCapitalizedWordsPage)
       || (category === 'fileHandling' && isIndexedLyricsFoldersPage)
       || (category === 'externalControl' && isMidiMappingsPage)
       || (category === 'ndi' && isNdiTelemetryPage)
     );
     setContentDirection(isReturningFromNestedPage ? -1 : 0);
+    setAppearancePage('main');
     setParsingPage('main');
     setFormattingPage('main');
     setFileHandlingPage('main');
     setExternalControlPage('main');
     setNdiPage('main');
     setActiveCategory(category);
+  };
+  const openDisplayTransitionsPage = () => {
+    setContentDirection(1);
+    setAppearancePage('displayTransitions');
+  };
+  const closeDisplayTransitionsPage = () => {
+    setContentDirection(-1);
+    setAppearancePage('main');
   };
   const openSectionTagPhrasesPage = () => {
     setContentDirection(1);
@@ -300,6 +313,21 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   // Render category content
   const renderCategoryContent = () => {
     if (!preferences) return null;
+
+    if (isDisplayTransitionsPage) {
+      return (
+        <DisplayTransitionsPreferencesPage
+          getNumberPreferenceInputProps={getNumberPreferenceInputProps}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeDisplayTransitionsPage}
+          preferences={preferences}
+          selectContentClass={selectContentClass}
+          updatePreference={updatePreference}
+        />
+      );
+    }
 
     if (isSectionTagPhrasesPage) {
       return (
@@ -556,6 +584,20 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 </div>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={openDisplayTransitionsPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label="Configure display transitions"
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Display Transitions</span>
+                <p className={`text-xs ${mutedClass}`}>Configure timer, background media, and output visibility animations</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>Manage</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
 
             <div className="flex items-center justify-between">
               <div>
@@ -1216,15 +1258,17 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       companionRunning={companionRunning}
       companionStarting={companionStarting}
       contentDirection={contentDirection}
-      contentKey={isSectionTagPhrasesPage
-        ? 'parsing-section-tag-phrases'
-        : (isCapitalizedWordsPage
-          ? 'formatting-capitalized-words'
-          : (isIndexedLyricsFoldersPage
-            ? 'file-handling-indexed-folders'
-            : (isMidiMappingsPage
-              ? 'external-control-midi-mappings'
-              : (isNdiTelemetryPage ? 'ndi-runtime-telemetry' : activeCategory))))}
+      contentKey={isDisplayTransitionsPage
+        ? 'appearance-display-transitions'
+        : (isSectionTagPhrasesPage
+          ? 'parsing-section-tag-phrases'
+          : (isCapitalizedWordsPage
+            ? 'formatting-capitalized-words'
+            : (isIndexedLyricsFoldersPage
+              ? 'file-handling-indexed-folders'
+              : (isMidiMappingsPage
+                ? 'external-control-midi-mappings'
+                : (isNdiTelemetryPage ? 'ndi-runtime-telemetry' : activeCategory)))))}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}
@@ -1239,7 +1283,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       saveError={saveError || indexedFolderPersistence.saveError}
       saving={saving || indexedFolderPersistence.saving}
       setActiveCategory={handleCategoryChange}
-      hideContentHeader={isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage || isNdiTelemetryPage}
+      hideContentHeader={isDisplayTransitionsPage || isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage || isNdiTelemetryPage}
     >
       {renderCategoryContent()}
     </UserPreferencesLayout>

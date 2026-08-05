@@ -27,6 +27,12 @@
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
+    --outline-button-background: hsl(var(--background));
+    --outline-button-border: hsl(var(--input));
+    --outline-button-foreground: hsl(var(--foreground));
+    --outline-button-hover-background: hsl(var(--accent));
+    --outline-button-hover-border: hsl(var(--input));
+    --outline-button-hover-foreground: hsl(var(--accent-foreground));
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -55,6 +61,12 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
+    --outline-button-background: #1f2937;
+    --outline-button-border: #4b5563;
+    --outline-button-foreground: #e5e7eb;
+    --outline-button-hover-background: #374151;
+    --outline-button-hover-border: #6b7280;
+    --outline-button-hover-foreground: #ffffff;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;

@@ -24,7 +24,10 @@ import { createNdiIpcClient } from './ndi/ipcClient.js';
 import { createOutputSettingsManager } from './ndi/outputSettings.js';
 import { createNdiInstaller } from './ndi/installer.js';
 import { createElectronNetworkFetch } from './ndi/electronNetworkFetch.js';
-import { createCompanionLaunchConfig } from './ndi/launchConfig.js';
+import {
+  createCompanionLaunchConfig,
+  resolveAuthoritativeCompanionLocation,
+} from './ndi/launchConfig.js';
 import { DEFAULT_OUTPUT_IDS } from '../shared/outputRegistry.js';
 
 const isDev = !app.isPackaged;
@@ -275,41 +278,24 @@ function getCompanionBinaryName() {
 }
 
 function getCompanionEntryPath() {
-  const installPath = getInstallPath();
-  const currentEntryPath = findCompanionEntryPath(installPath);
-
-  if (fs.existsSync(currentEntryPath)) return currentEntryPath;
-
-  if (isDev) {
-    return path.join(getDevelopmentSourcePath(), 'src', 'main.js');
-  }
-
-  for (const legacyInstallPath of getLegacyInstallPaths()) {
-    const legacyEntryPath = findCompanionEntryPath(legacyInstallPath);
-    if (fs.existsSync(legacyEntryPath)) return legacyEntryPath;
-  }
-
-  return currentEntryPath;
+  return getResolvedCompanionLocation().companionPath;
 }
 
 function getResolvedInstallPath() {
-  const installPath = getInstallPath();
+  return getResolvedCompanionLocation().installPath;
+}
 
-  if (fs.existsSync(findCompanionEntryPath(installPath))) {
-    return installPath;
-  }
-
-  if (isDev) {
-    return getDevelopmentSourcePath();
-  }
-
-  for (const legacyInstallPath of getLegacyInstallPaths()) {
-    if (fs.existsSync(findCompanionEntryPath(legacyInstallPath))) {
-      return legacyInstallPath;
-    }
-  }
-
-  return installPath;
+function getResolvedCompanionLocation() {
+  const developmentInstallPath = getDevelopmentSourcePath();
+  return resolveAuthoritativeCompanionLocation({
+    isDevelopment: isDev,
+    developmentInstallPath,
+    developmentEntryPath: path.join(developmentInstallPath, 'src', 'main.js'),
+    managedInstallPath: getInstallPath(),
+    legacyInstallPaths: getLegacyInstallPaths(),
+    resolveEntryPath: findCompanionEntryPath,
+    entryExists: fs.existsSync,
+  });
 }
 
 function findCompanionEntryPath(installPath) {
@@ -577,7 +563,8 @@ async function launchCompanion() {
     return { success: true, message: 'Already running' };
   }
 
-  const entryPath = getCompanionEntryPath();
+  const companionLocation = getResolvedCompanionLocation();
+  const entryPath = companionLocation.companionPath;
   const ipcConfig = getIpcConfig();
   companionAuthToken = createCompanionAuthToken();
   companionStarting = true;
@@ -593,9 +580,7 @@ async function launchCompanion() {
     return { success: false, error: `Could not prepare NDI companion data directory: ${error.message}` };
   }
 
-  const resolvedInstallPath = getResolvedInstallPath();
-  const usingDevelopmentSource = isDev &&
-    path.resolve(resolvedInstallPath) === path.resolve(getDevelopmentSourcePath());
+  const usingDevelopmentSource = companionLocation.source === 'development';
 
   if (usingDevelopmentSource) {
     // In dev mode, launch via the running Electron binary pointing at the companion source.
@@ -605,7 +590,7 @@ async function launchCompanion() {
     }
 
     const electronBin = process.execPath;
-    const companionDir = getDevelopmentSourcePath();
+    const companionDir = companionLocation.installPath;
     const launchConfig = createCompanionLaunchConfig({
       userDataPath: companionUserDataPath,
       appPath: companionDir,

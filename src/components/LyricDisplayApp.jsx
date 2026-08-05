@@ -48,6 +48,7 @@ import { VIRTUALIZATION_THRESHOLD } from '../hooks/LyricsList/useLyricsListRows'
 import ControlPanelHeaderActions from './LyricDisplayApp/ControlPanelHeaderActions';
 import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
+import useLyricsStore from '../context/LyricsStore';
 
 const LyricDisplayApp = () => {
   const navigate = useNavigate();
@@ -78,10 +79,26 @@ const LyricDisplayApp = () => {
   const loadSetlist = useSetlistLoader({ setlistFiles, replaceSetlist });
 
   const allOutputIds = useAllOutputIds();
+  const appearanceTransitions = useLyricsStore((state) => state.appearanceTransitions);
   const customOutputIds = React.useMemo(
     () => allOutputIds.filter((id) => id !== 'output1' && id !== 'output2'),
     [allOutputIds]
   );
+
+  const lastAppearanceSyncRef = React.useRef('');
+  React.useEffect(() => {
+    if (!isConnected || !isAuthenticated || !ready || !appearanceTransitions) return;
+    const signature = JSON.stringify(appearanceTransitions);
+    if (lastAppearanceSyncRef.current === signature) return;
+
+    const state = useLyricsStore.getState();
+    let allSent = true;
+    for (const outputId of allOutputIds) {
+      const settings = state[`${outputId}Settings`];
+      if (settings && !emitStyleUpdate(outputId, settings)) allSent = false;
+    }
+    if (allSent) lastAppearanceSyncRef.current = signature;
+  }, [allOutputIds, appearanceTransitions, emitStyleUpdate, isAuthenticated, isConnected, ready]);
 
   const { activeTab, setActiveTab } = useOutputSettings({
     availableTabs: [...allOutputIds, 'stage'],

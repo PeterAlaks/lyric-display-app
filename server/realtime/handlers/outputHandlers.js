@@ -2,6 +2,7 @@ import {
   buildOutputList,
   ensureOutputExists,
   isKnownOrStageOutput,
+  notifyOutputPresenceChange,
   registerOutputs,
   state
 } from '../state.js';
@@ -15,7 +16,7 @@ import {
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { REALTIME_EVENTS, REALTIME_PERMISSIONS } from '../../../shared/apiContractRegistry.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
-import { getPrimaryOutputInstance, isOutputClientType, isPlainObject } from '../utils.js';
+import { getPrimaryOutputInstance, getSocketConnectionScope, isOutputClientType, isPlainObject } from '../utils.js';
 
 const areSettingValuesEqual = (left, right) => {
   if (Object.is(left, right)) return true;
@@ -190,6 +191,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     });
     emitIndividualOutputEvent(io, REALTIME_EVENTS.outputRemoved, { output });
     emitOutputRegistry(io, { outputs: buildOutputList() });
+    notifyOutputPresenceChange();
   });
 
   socket.on(REALTIME_EVENTS.outputsRegister, (payload) => {
@@ -219,6 +221,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       metadata: { outputs },
     });
     emitOutputRegistry(io, { outputs: buildOutputList() });
+    notifyOutputPresenceChange();
   });
 
   socket.on('outputMetrics', (payload) => {
@@ -257,10 +260,13 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     if (Number.isFinite(metrics.viewportHeight)) safe.viewportHeight = metrics.viewportHeight;
     if (Number.isFinite(metrics.timestamp)) safe.timestamp = metrics.timestamp;
 
+    const existingInstance = state.outputInstances.get(output).get(socket.id);
     state.outputInstances.get(output).set(socket.id, {
+      ...existingInstance,
       ...safe,
       socketId: socket.id,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      connectionScope: existingInstance?.connectionScope || getSocketConnectionScope(socket),
     });
 
     const allInstances = Array.from(state.outputInstances.get(output).values());
@@ -272,5 +278,6 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       allInstances: allInstances,
       instanceCount: allInstances.length
     });
+    notifyOutputPresenceChange();
   });
 }

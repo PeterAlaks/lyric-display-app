@@ -31,6 +31,7 @@ import { registerTemplateRoutes } from './routes/templates.js';
 import { loadPersistedSessionState } from './realtime/sessionPersistence.js';
 import { setLyricsParsingConfig } from './realtime/lyricsParsingConfig.js';
 import { emitControllerEvent } from './realtime/broadcast.js';
+import { notifyOutputPresenceChange } from './realtime/state.js';
 import { REALTIME_EVENTS } from '../shared/apiContractRegistry.js';
 
 dotenv.config();
@@ -215,6 +216,7 @@ server.listen(PORT, async () => {
   console.log('Server fully initialized and listening on port', PORT);
 
   if (process.send) {
+    notifyOutputPresenceChange({ force: true });
     process.send({
       status: 'ready',
       port: PORT,

@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as userPreferences from '../userPreferences.js';
 import { recordSuccessfulAppLaunch } from '../telemetry.js';
 import { setUpdateSessionActive } from '../updater.js';
@@ -8,6 +8,13 @@ import { setUpdateSessionActive } from '../updater.js';
  * Handles getting, setting, and resetting user preferences
  */
 export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
+  const broadcastPreferencesUpdated = (category) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win || win.isDestroyed()) continue;
+      try { win.webContents.send('preferences:updated', { category }); } catch { }
+    }
+  };
+
   const syncParsingConfig = () => {
     if (typeof syncBackendParsingConfig !== 'function') return;
     syncBackendParsingConfig(userPreferences.getParsingConfig());
@@ -55,6 +62,9 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       if (typeof path === 'string' && (path.startsWith('parsing.') || path.startsWith('lineSplitting.'))) {
         syncParsingConfig();
       }
+      if (typeof path === 'string') {
+        broadcastPreferencesUpdated(path.split('.')[0] || null);
+      }
       if (app.isPackaged && path === 'advanced.shareAnonymousUsageData' && value === true && !usageSharingWasEnabled) {
         void recordSuccessfulAppLaunch({ enabled: true });
       }
@@ -74,6 +84,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       }
       if (result.success) {
         syncParsingConfig();
+        broadcastPreferencesUpdated(null);
       }
       if (app.isPackaged && result.success && preferences?.advanced?.shareAnonymousUsageData === true && !usageSharingWasEnabled) {
         void recordSuccessfulAppLaunch({ enabled: true });
@@ -97,6 +108,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       if (category === 'parsing' || category === 'lineSplitting') {
         syncParsingConfig();
       }
+      broadcastPreferencesUpdated(category);
       return { success: true };
     } catch (error) {
       console.error('[UserPreferences] Error resetting category:', error);
@@ -111,6 +123,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
         userPreferences.setPreference('advanced.telemetryConsentDecided', true);
         setUpdateSessionActive(false);
         syncParsingConfig();
+        broadcastPreferencesUpdated(null);
       }
       return result;
     } catch (error) {

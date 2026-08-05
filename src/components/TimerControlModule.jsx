@@ -16,9 +16,15 @@ import {
   minutesToMs,
   normalizeTimerControlSettings,
   secondsToMs,
+  shouldShowGlobalClockDuringPause,
   splitClockPeriod,
 } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
+import useLyricsStore from '../context/LyricsStore';
+import {
+  normalizeTransitionAnimation,
+  normalizeTransitionDuration,
+} from '../../shared/transitionSettings.js';
 import {
   TIMER_SCHEDULE_STORAGE_KEY,
   readTimerScheduleSnapshot,
@@ -131,6 +137,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = f
     clockShowPeriod: displaySettings.clockShowPeriod,
   }), [displaySettings.clockHour12, displaySettings.clockShowPeriod, displaySettings.clockShowSeconds, now]);
   const globalClockParts = React.useMemo(() => splitClockPeriod(globalClockValue), [globalClockValue]);
+  const showPausedGlobalClock = shouldShowGlobalClockDuringPause(timerState);
   const previewHasActiveSchedule = (timerState.running || timerState.paused)
     && Array.isArray(timerState.sets)
     && timerState.sets.length > 0;
@@ -147,7 +154,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = f
       >
         {showSecondaryText && (
           <div className="text-xs font-semibold mb-4" style={{ color: accent }}>
-            {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
+            {showPausedGlobalClock ? 'Current Time' : (timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label))}
           </div>
         )}
         <div
@@ -165,14 +172,15 @@ const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = f
             whiteSpace: 'nowrap',
           }}
         >
-          {displayValue}
+          {showPausedGlobalClock ? globalClockParts.time : displayValue}
+          {showPausedGlobalClock && globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
         </div>
-        {showSecondaryText && timerState.sets?.length > 1 && (
+        {showSecondaryText && !showPausedGlobalClock && timerState.sets?.length > 1 && (
           <div className="mt-4 text-xs text-white/70">
             {timerState.activeSetIndex + 1} of {timerState.sets.length}
           </div>
         )}
-        {displaySettings.showProgress && (
+        {displaySettings.showProgress && !showPausedGlobalClock && (
           <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
             <div className="h-full rounded-full" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
           </div>
@@ -201,7 +209,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = f
         </div>
       )}
 
-      {showSecondaryText && displaySettings.showGlobalClock && (
+      {showSecondaryText && displaySettings.showGlobalClock && !showPausedGlobalClock && (
         <div
           className="flex w-full items-center justify-between rounded-lg border px-6 py-4"
           style={{
@@ -240,6 +248,7 @@ const TimerControlModule = () => {
   const { darkMode } = useDarkModeState();
   const { settings: timerControlSettings, updateSettings: updateTimerControlSettings } = useTimerControlSettings();
   const { settings: timerDisplaySettings, updateSettings: updateTimerDisplaySettings } = useTimerDisplaySettings();
+  const appearanceTransitions = useLyricsStore((state) => state.appearanceTransitions);
   const { timerState, actions } = useSharedTimer({
     emitTimerUpdate: emitStageTimerUpdate,
     controller: true,
@@ -279,6 +288,7 @@ const TimerControlModule = () => {
     warningSeconds,
     criticalSeconds,
     overrunMode,
+    showGlobalClockDuringPause,
     useSets,
     sets = DEFAULT_TIMER_CONTROL_SETTINGS.sets,
     autoStartNext,
@@ -341,6 +351,7 @@ const TimerControlModule = () => {
           scheduleScheduledStartAt: null,
           scheduleIdealEndTime: '',
           scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
+          showGlobalClockDuringPause: DEFAULT_TIMER_CONTROL_SETTINGS.showGlobalClockDuringPause,
           scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
           autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
           indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
@@ -399,6 +410,9 @@ const TimerControlModule = () => {
       if (partial.overrunMode === false) {
         liveUpdates.overrunStartedAt = null;
       }
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'showGlobalClockDuringPause')) {
+      liveUpdates.showGlobalClockDuringPause = Boolean(partial.showGlobalClockDuringPause);
     }
     if (Object.prototype.hasOwnProperty.call(partial, 'autoStartNext')) {
       liveUpdates.autoStartNext = partial.autoStartNext !== false;
@@ -463,6 +477,9 @@ const TimerControlModule = () => {
   const effectiveNotificationsEnabled = activeTimerUsesSets
     ? timerState.scheduleNotificationsEnabled !== false
     : scheduleNotificationsEnabled;
+  const effectiveShowGlobalClockDuringPause = active
+    ? Boolean(timerState.showGlobalClockDuringPause)
+    : Boolean(showGlobalClockDuringPause);
   const effectiveShowGlobalTimeDuringManualItems = activeTimerUsesSets
     ? timerState.scheduleShowGlobalTimeDuringManualItems !== false
     : scheduleShowGlobalTimeDuringManualItems;
@@ -551,6 +568,20 @@ const TimerControlModule = () => {
     });
   }, [commitTimerState, updateTimerDisplaySettings]);
 
+  const lastAppearanceTimerTransitionRef = React.useRef('');
+  React.useEffect(() => {
+    if (!appearanceTransitions) return;
+    const nextAnimation = appearanceTransitions.timerStateTransitionAnimation;
+    const nextDuration = appearanceTransitions.timerStateTransitionDuration;
+    const signature = `${nextAnimation}:${nextDuration}`;
+    if (lastAppearanceTimerTransitionRef.current === signature) return;
+    lastAppearanceTimerTransitionRef.current = signature;
+    applyTimerDisplaySettings({
+      stateTransitionAnimation: nextAnimation,
+      stateTransitionDuration: nextDuration,
+    });
+  }, [appearanceTransitions, applyTimerDisplaySettings]);
+
   const applyTimerLabel = React.useCallback((label) => {
     applyTimerDisplaySettings({ label });
 
@@ -619,6 +650,7 @@ const TimerControlModule = () => {
         scheduleScheduledStartAt: resolvedScheduledStartAt,
         scheduleIdealEndAt,
         scheduleShowGlobalTimeDuringManualItems,
+        showGlobalClockDuringPause,
         scheduleNotificationsEnabled,
         display,
       };
@@ -637,6 +669,7 @@ const TimerControlModule = () => {
           idealEndTime: scheduleIdealEndTime,
           autoStartNext,
           showGlobalTimeDuringManualItems: scheduleShowGlobalTimeDuringManualItems,
+          showGlobalClockDuringPause,
           notificationsEnabled: scheduleNotificationsEnabled,
           indicator: {
             enabled: indicatorEnabled,
@@ -709,6 +742,7 @@ const TimerControlModule = () => {
                 schedulePausedOverrunMs: 0,
                 scheduleAssumedCompletedIds: schedule.items.map((item) => item.id),
                 scheduleShowGlobalTimeDuringManualItems,
+                showGlobalClockDuringPause,
                 scheduleNotificationsEnabled,
                 awaitingNext: false,
                 display,
@@ -748,6 +782,7 @@ const TimerControlModule = () => {
       warningMs: secondsToMs(warningSeconds),
       criticalMs: secondsToMs(criticalSeconds),
       overrunMode,
+      showGlobalClockDuringPause,
       display,
     });
   }, [
@@ -762,6 +797,7 @@ const TimerControlModule = () => {
     indicatorSeconds,
     mode,
     overrunMode,
+    showGlobalClockDuringPause,
     scheduleIdealEndTime,
     scheduleShowGlobalTimeDuringManualItems,
     scheduleNotificationsEnabled,
@@ -797,6 +833,7 @@ const TimerControlModule = () => {
         scheduleScheduledStartAt: current.scheduleScheduledStartAt || scheduleScheduledStartAt,
         scheduleIdealEndTime: timestampToTimeOfDay(current.scheduleIdealEndAt) || scheduleIdealEndTime,
         scheduleShowGlobalTimeDuringManualItems: current.scheduleShowGlobalTimeDuringManualItems !== false,
+        showGlobalClockDuringPause: Boolean(current.showGlobalClockDuringPause),
         scheduleNotificationsEnabled: current.scheduleNotificationsEnabled !== false,
         autoStartNext: current.autoStartNext !== false,
         indicatorEnabled: Boolean(current.indicatorEnabled),
@@ -814,6 +851,7 @@ const TimerControlModule = () => {
     scheduleEventStartTime,
     scheduleIdealEndTime,
     scheduleShowGlobalTimeDuringManualItems,
+    showGlobalClockDuringPause,
     scheduleScheduledStartAt,
     scheduleTitle,
     setTimerControlSettings,
@@ -891,7 +929,33 @@ const TimerControlModule = () => {
           value: 'save',
           variant: 'default',
           autoFocus: true,
-          onSelect: () => applyTimerDisplaySettings(draftDisplaySettings),
+          onSelect: () => {
+            const stateTransitionAnimation = normalizeTransitionAnimation(
+              draftDisplaySettings.stateTransitionAnimation,
+              DEFAULT_TIMER_DISPLAY.stateTransitionAnimation
+            );
+            const stateTransitionDuration = normalizeTransitionDuration(
+              draftDisplaySettings.stateTransitionDuration,
+              DEFAULT_TIMER_DISPLAY.stateTransitionDuration
+            );
+            applyTimerDisplaySettings({
+              ...draftDisplaySettings,
+              stateTransitionAnimation,
+              stateTransitionDuration,
+            });
+            if (window.electronAPI?.preferences?.set) {
+              void Promise.all([
+                window.electronAPI.preferences.set(
+                  'appearance.timerStateTransitionAnimation',
+                  stateTransitionAnimation
+                ),
+                window.electronAPI.preferences.set(
+                  'appearance.timerStateTransitionDuration',
+                  stateTransitionDuration
+                ),
+              ]);
+            }
+          },
         },
       ],
       displaySettings,
@@ -931,6 +995,7 @@ const TimerControlModule = () => {
       scheduleScheduledStartAt: null,
       scheduleIdealEndTime: '',
       scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
+      showGlobalClockDuringPause: DEFAULT_TIMER_CONTROL_SETTINGS.showGlobalClockDuringPause,
       scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
       autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
       indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
@@ -958,6 +1023,7 @@ const TimerControlModule = () => {
     idealEndTime: effectiveIdealEndTime,
     autoStartNext: effectiveAutoStartNext,
     showGlobalTimeDuringManualItems: effectiveShowGlobalTimeDuringManualItems,
+    showGlobalClockDuringPause: effectiveShowGlobalClockDuringPause,
     notificationsEnabled: effectiveNotificationsEnabled,
     indicator: {
       enabled: effectiveIndicatorEnabled,
@@ -974,6 +1040,7 @@ const TimerControlModule = () => {
     effectiveIndicatorLabel,
     effectiveIndicatorSeconds,
     effectiveNotificationsEnabled,
+    effectiveShowGlobalClockDuringPause,
     effectiveShowGlobalTimeDuringManualItems,
     scheduleItems,
     visibleScheduleTitle,
@@ -998,6 +1065,7 @@ const TimerControlModule = () => {
       scheduleScheduledStartAt: scheduledStartAt,
       scheduleIdealEndTime: schedule.idealEndTime,
       scheduleShowGlobalTimeDuringManualItems: schedule.showGlobalTimeDuringManualItems,
+      showGlobalClockDuringPause: schedule.showGlobalClockDuringPause,
       scheduleNotificationsEnabled: schedule.notificationsEnabled,
       autoStartNext: schedule.autoStartNext,
       indicatorEnabled: schedule.indicator.enabled,
@@ -1032,6 +1100,7 @@ const TimerControlModule = () => {
             ? resolveScheduleTime(schedule.idealEndTime, current.scheduleScheduledStartAt || current.scheduleStartedAt || Date.now())
             : null,
           scheduleShowGlobalTimeDuringManualItems: schedule.showGlobalTimeDuringManualItems,
+          showGlobalClockDuringPause: schedule.showGlobalClockDuringPause,
           scheduleNotificationsEnabled: schedule.notificationsEnabled,
           autoStartNext: schedule.autoStartNext,
           indicatorEnabled: schedule.indicator.enabled,
@@ -1129,6 +1198,7 @@ const TimerControlModule = () => {
       warningSeconds={effectiveWarningSeconds}
       criticalSeconds={effectiveCriticalSeconds}
       overrunMode={overrunMode}
+      showGlobalClockDuringPause={effectiveShowGlobalClockDuringPause}
       scheduleItems={scheduleItems}
       hasSavedSchedule={sets.length > 0}
       visibleScheduleTitle={visibleScheduleTitle}

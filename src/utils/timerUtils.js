@@ -5,6 +5,11 @@ import {
   normalizeScheduleItems,
   normalizeTimeOfDay,
 } from '../../shared/scheduleUtils.js';
+import {
+  DEFAULT_APPEARANCE_TRANSITIONS,
+  normalizeTransitionAnimation,
+  normalizeTransitionDuration,
+} from '../../shared/transitionSettings.js';
 
 export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
 export const MAX_TIMER_SETS = MAX_SCHEDULE_ITEMS;
@@ -25,6 +30,7 @@ export const DEFAULT_TIMER_CONTROL_SETTINGS = {
   warningSeconds: 60,
   criticalSeconds: 30,
   overrunMode: false,
+  showGlobalClockDuringPause: false,
   useSets: false,
   sets: [],
   autoStartNext: true,
@@ -68,6 +74,8 @@ export const DEFAULT_TIMER_DISPLAY = {
   clockHour12: false,
   clockShowSeconds: false,
   clockShowPeriod: true,
+  stateTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.timerStateTransitionAnimation,
+  stateTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.timerStateTransitionDuration,
 };
 
 const LEGACY_DEFAULT_OTHER_ITEMS_SCALE = 0.15;
@@ -94,6 +102,14 @@ export const normalizeTimerDisplaySettings = (raw) => {
       ? DEFAULT_TIMER_DISPLAY.globalClockScale
       : (settings.globalClockScale ?? otherItemsScale),
     displayUpdatedAt,
+    stateTransitionAnimation: normalizeTransitionAnimation(
+      settings.stateTransitionAnimation,
+      DEFAULT_TIMER_DISPLAY.stateTransitionAnimation
+    ),
+    stateTransitionDuration: normalizeTransitionDuration(
+      settings.stateTransitionDuration,
+      DEFAULT_TIMER_DISPLAY.stateTransitionDuration
+    ),
   };
 };
 
@@ -136,6 +152,7 @@ export const createIdleTimerState = () => ({
   schedulePausedOverrunMs: 0,
   scheduleAssumedCompletedIds: [],
   scheduleShowGlobalTimeDuringManualItems: true,
+  showGlobalClockDuringPause: false,
   scheduleNotificationsEnabled: true,
   display: { ...DEFAULT_TIMER_DISPLAY },
   updatedAt: Date.now(),
@@ -229,6 +246,7 @@ export const normalizeTimerControlSettings = (raw) => {
     warningSeconds,
     criticalSeconds,
     overrunMode: Boolean(settings.overrunMode),
+    showGlobalClockDuringPause: Boolean(settings.showGlobalClockDuringPause),
     useSets: Boolean(settings.useSets),
     sets: isLegacyPlaceholderSchedule ? [] : sets,
     autoStartNext: settings.autoStartNext !== false,
@@ -304,6 +322,7 @@ export const normalizeTimerState = (raw) => {
       ? raw.scheduleAssumedCompletedIds.map((id) => String(id || '').slice(0, 96)).filter(Boolean).slice(0, MAX_TIMER_SETS)
       : [],
     scheduleShowGlobalTimeDuringManualItems: raw.scheduleShowGlobalTimeDuringManualItems !== false,
+    showGlobalClockDuringPause: Boolean(raw.showGlobalClockDuringPause),
     scheduleNotificationsEnabled: raw.scheduleNotificationsEnabled !== false,
     awaitingNext: Boolean(raw.awaitingNext),
     display: normalizeTimerDisplaySettings(raw.display),
@@ -323,6 +342,15 @@ export const shouldShowGlobalTimeForManualScheduleItem = (timerState) => {
   ));
   return !isTimedScheduleItem(timerState.sets[activeIndex]);
 };
+
+export const shouldShowGlobalClockDuringPause = (timerState) => Boolean(
+  timerState
+  && typeof timerState === 'object'
+  && !Array.isArray(timerState)
+  && timerState.running
+  && timerState.paused
+  && timerState.showGlobalClockDuringPause
+);
 
 export const resetActiveTimerRuntime = (raw) => {
   const state = normalizeTimerState(raw);

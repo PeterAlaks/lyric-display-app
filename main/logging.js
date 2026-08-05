@@ -274,6 +274,8 @@ function logUserDataMigrationStatus() {
     ...(Array.isArray(status.legacyUserDataNdi?.conflicts) ? status.legacyUserDataNdi.conflicts : []),
     ...(Array.isArray(status.flatNdiInstall?.conflicts) ? status.flatNdiInstall.conflicts : []),
     ...(Array.isArray(status.legacyEasyWorshipSongs?.conflicts) ? status.legacyEasyWorshipSongs.conflicts : []),
+    ...(Array.isArray(status.legacyEasyWorshipLyrics?.conflicts) ? status.legacyEasyWorshipLyrics.conflicts : []),
+    ...(Array.isArray(status.legacyPresentationLyrics?.conflicts) ? status.legacyPresentationLyrics.conflicts : []),
   ];
   const errors = [
     ...(Array.isArray(status.errors) ? status.errors : []),
@@ -281,6 +283,8 @@ function logUserDataMigrationStatus() {
     ...(Array.isArray(status.legacyUserDataNdi?.errors) ? status.legacyUserDataNdi.errors : []),
     ...(Array.isArray(status.flatNdiInstall?.errors) ? status.flatNdiInstall.errors : []),
     ...(Array.isArray(status.legacyEasyWorshipSongs?.errors) ? status.legacyEasyWorshipSongs.errors : []),
+    ...(Array.isArray(status.legacyEasyWorshipLyrics?.errors) ? status.legacyEasyWorshipLyrics.errors : []),
+    ...(Array.isArray(status.legacyPresentationLyrics?.errors) ? status.legacyPresentationLyrics.errors : []),
   ];
   const didMigrationWork = Boolean(
     status.attempted ||
@@ -289,6 +293,8 @@ function logUserDataMigrationStatus() {
     status.legacyUserDataNdi?.attempted ||
     status.flatNdiInstall?.attempted ||
     status.legacyEasyWorshipSongs?.attempted ||
+    status.legacyEasyWorshipLyrics?.attempted ||
+    status.legacyPresentationLyrics?.attempted ||
     conflicts.length ||
     errors.length
   );
@@ -307,6 +313,8 @@ function logUserDataMigrationStatus() {
     legacyUserDataNdiDeleted: status.legacyUserDataNdi?.deletedLegacy,
     flatNdiInstallDeleted: status.flatNdiInstall?.deletedLegacy,
     legacyEasyWorshipSongsDeleted: status.legacyEasyWorshipSongs?.deletedLegacy,
+    legacyEasyWorshipLyricsDeleted: status.legacyEasyWorshipLyrics?.deletedLegacy,
+    legacyPresentationLyricsDeleted: status.legacyPresentationLyrics?.deletedLegacy,
   });
 }
 

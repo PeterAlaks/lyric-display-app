@@ -119,7 +119,7 @@ export default function QuickParserPopover({
                   variant="outline"
                   size="icon"
                   onClick={() => setQuickParserOpen(false)}
-                  className={darkMode ? 'border-gray-800 bg-gray-900 text-gray-200 hover:bg-gray-800' : ''}
+                  className={darkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:border-gray-500 hover:bg-gray-700 hover:text-white' : ''}
                   aria-label="Close quick parser"
                 >
                   <X className="h-4 w-4" />

@@ -3,6 +3,10 @@ import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,
 } from '../../../shared/capitalizedWords.js';
+import {
+  DEFAULT_APPEARANCE_TRANSITIONS,
+  normalizeAppearanceTransitions,
+} from '../../../shared/transitionSettings.js';
 
 let maxFileSizeLimit = 2;
 
@@ -20,6 +24,7 @@ export const createPreferencesSlice = (set) => ({
   formattingNormalizeTypographicChars: true,
   maxFileSizeLimit: 2,
   lyricsParsingOptions: normalizeLyricsParsingOptions(),
+  appearanceTransitions: { ...DEFAULT_APPEARANCE_TRANSITIONS },
 
   setShowTooltips: (show) => set({ showTooltips: show }),
   setShowTutorialPopovers: (show) => set({ showTutorialPopovers: show }),
@@ -36,6 +41,9 @@ export const createPreferencesSlice = (set) => ({
   setFormattingNormalizeTypographicChars: (enabled) => set({ formattingNormalizeTypographicChars: enabled }),
   setLyricsParsingOptions: (options) => set({
     lyricsParsingOptions: normalizeLyricsParsingOptions(options),
+  }),
+  setAppearanceTransitions: (settings) => set({
+    appearanceTransitions: normalizeAppearanceTransitions(settings),
   }),
 
   getMaxFileSize: () => maxFileSizeLimit,

@@ -8,6 +8,7 @@ import './appIdentity.js';
 import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setlistLimits.js';
 import { DEFAULT_CAPITALIZED_WORDS } from '../shared/capitalizedWords.js';
 import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
+import { DEFAULT_APPEARANCE_TRANSITIONS } from '../shared/transitionSettings.js';
 import {
   CURRENT_PREFERENCES_SCHEMA_VERSION,
   migratePreferences,
@@ -95,6 +96,7 @@ const preferencesStore = new Store({
       showTooltips: true,
       showTutorialPopovers: true,
       showCanvasFloatingToolbar: true,
+      ...DEFAULT_APPEARANCE_TRANSITIONS,
     },
 
     // Advanced Settings

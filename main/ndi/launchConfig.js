@@ -1,5 +1,35 @@
 export const COMPANION_USER_DATA_ENV = 'LYRICDISPLAY_NDI_USER_DATA_DIR';
 
+export function resolveAuthoritativeCompanionLocation({
+  isDevelopment,
+  developmentInstallPath,
+  developmentEntryPath,
+  managedInstallPath,
+  legacyInstallPaths = [],
+  resolveEntryPath,
+  entryExists,
+}) {
+  if (isDevelopment) {
+    return {
+      installPath: developmentInstallPath,
+      companionPath: developmentEntryPath,
+      source: 'development',
+    };
+  }
+
+  const installCandidates = [managedInstallPath, ...legacyInstallPaths];
+  const existingInstallPath = installCandidates.find((installPath) => (
+    entryExists(resolveEntryPath(installPath))
+  ));
+  const installPath = existingInstallPath || managedInstallPath;
+
+  return {
+    installPath,
+    companionPath: resolveEntryPath(installPath),
+    source: existingInstallPath && existingInstallPath !== managedInstallPath ? 'legacy' : 'managed',
+  };
+}
+
 export function createCompanionLaunchConfig({
   userDataPath,
   appPath = '',

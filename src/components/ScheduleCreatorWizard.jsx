@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker, formatDateLabel } from '@/components/ui/date-picker';
 import { TimePicker, formatTimeLabel, isTimeValueInFuture } from '@/components/ui/time-picker';
 import useModal from '../hooks/useModal';
+import useToast from '../hooks/useToast';
 import {
   MAX_SCHEDULE_ITEMS,
   calculateScheduleItemStartTimes,
@@ -136,13 +137,13 @@ const SortableScheduleItem = ({ id, disabled, children }) => {
 
 const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = false, onApply, onClose }) => {
   const { showModal } = useModal();
+  const { showToast } = useToast();
   const [step, setStep] = React.useState(0);
   const [draft, setDraft] = React.useState(() => normalizeScheduleDocument(initialSchedule));
   const [importMethod, setImportMethod] = React.useState(() => (isEditing ? '' : 'ldsch'));
   const [pasteText, setPasteText] = React.useState('');
   const [selectedFile, setSelectedFile] = React.useState(null);
   const [pendingImport, setPendingImport] = React.useState(null);
-  const [parseInfo, setParseInfo] = React.useState(null);
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [downloaded, setDownloaded] = React.useState(false);
@@ -210,7 +211,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     ? 'border-slate-700/80 bg-slate-900/55 shadow-black/10'
     : 'border-slate-200 bg-white shadow-slate-950/5';
   const insetClass = darkMode ? 'border-slate-700/70 bg-slate-950/35' : 'border-slate-200 bg-slate-50/85';
-  const outlineButtonClass = darkMode ? 'border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800' : 'border-slate-300 bg-white hover:bg-slate-50';
+  const outlineButtonClass = darkMode ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500 hover:bg-slate-700' : 'border-slate-300 bg-white hover:bg-slate-50';
   const fieldLabelClass = `block text-[11px] font-semibold tracking-wide ${darkMode ? 'text-slate-300' : 'text-slate-600'}`;
   const cardHeaderClass = darkMode ? 'border-slate-700/70 bg-slate-950/20' : 'border-slate-200 bg-slate-50/70';
   const hairlineBorder = darkMode ? 'border-slate-800' : 'border-slate-200';
@@ -304,7 +305,6 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     });
     if (result !== 'clear') return;
     setDraft((current) => ({ ...current, items: [] }));
-    setParseInfo(null);
     setActiveItemId(null);
     setPendingScrollItemId(null);
   }, [draft.items.length, showModal]);
@@ -327,7 +327,6 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
     const item = createBlankItem(0);
     setPendingScrollItemId(item.id);
     setDraft((current) => ({ ...current, items: [item] }));
-    setParseInfo(null);
     setPasteText('');
     setSelectedFile(null);
     setPendingImport(null);
@@ -366,11 +365,21 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
         ? importedSchedule
         : { ...current, items: importedSchedule.items }
     ));
-    setParseInfo(result);
+    const sourceName = result.sourceName || 'Imported schedule';
+    const itemCount = result.stats?.itemCount || importedSchedule.items.length;
+    const warningText = Array.isArray(result.warnings) && result.warnings.length > 0
+      ? ` ${result.warnings.join(' ')}`
+      : '';
+    showToast({
+      title: result.sourceType === 'ldsch' ? 'Schedule imported' : 'Schedule items imported',
+      message: `${sourceName}: ${itemCount} ${itemCount === 1 ? 'item' : 'items'} found.${warningText}`,
+      variant: warningText ? 'info' : 'success',
+      duration: warningText ? 8000 : 5000,
+    });
     setError('');
     setDownloaded(false);
     setStep(1);
-  }, []);
+  }, [showToast]);
 
   const handleFile = React.useCallback(async (event) => {
     const file = event.target.files?.[0];
@@ -869,25 +878,6 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                 </Button>
               </div>
 
-              {parseInfo && (
-                <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${darkMode ? 'border-emerald-400/20 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50/70'}`}>
-                  <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${darkMode ? 'text-emerald-300' : 'text-emerald-600'}`} />
-                  <div className="min-w-0 text-xs">
-                    <p><span className="font-semibold">{parseInfo.sourceName || 'Imported schedule'}</span><span className={mutedText}> · {parseInfo.stats?.itemCount || draft.items.length} items found</span></p>
-                    {parseInfo.warnings?.map((warning) => <p key={warning} className={`mt-1 leading-relaxed ${mutedText}`}>{warning}</p>)}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setParseInfo(null)}
-                    className={`ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors ${darkMode ? 'text-emerald-300/70 hover:bg-emerald-400/10 hover:text-emerald-200' : 'text-emerald-700/60 hover:bg-emerald-100 hover:text-emerald-800'}`}
-                    aria-label="Dismiss import summary"
-                    title="Dismiss"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-
               {draft.items.length > 0 ? (
                 <DndContext
                   sensors={sensors}
@@ -954,6 +944,15 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                       <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Displays the global time during schedule items without set duration.</p>
                     </div>
                     <Switch checked={draft.showGlobalTimeDuringManualItems} onCheckedChange={(checked) => updateDraft({ showGlobalTimeDuringManualItems: checked })} {...scheduleSwitchProps} />
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${darkMode ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-50 text-emerald-600'}`}><Clock3 className="h-4 w-4" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold">Show global clock during schedule pause</p>
+                      <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Replace the paused timer with the current time until the schedule resumes.</p>
+                    </div>
+                    <Switch checked={Boolean(draft.showGlobalClockDuringPause)} onCheckedChange={(checked) => updateDraft({ showGlobalClockDuringPause: checked })} {...scheduleSwitchProps} />
                   </div>
 
                   <div className="p-4">

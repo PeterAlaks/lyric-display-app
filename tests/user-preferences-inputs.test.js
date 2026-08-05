@@ -34,6 +34,7 @@ test('every numeric field in User Preferences uses the shared change-and-blur pe
   const paths = [
     '../src/components/UserPreferencesModal.jsx',
     '../src/components/UserPreferencesModal/AdvancedPreferencesSection.jsx',
+    '../src/components/UserPreferencesModal/DisplayTransitionsPreferencesPage.jsx',
     '../src/components/UserPreferencesModal/ExternalControlPreferencesSection.jsx',
   ];
 

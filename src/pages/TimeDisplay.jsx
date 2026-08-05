@@ -1,11 +1,13 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import useSocket from '../hooks/useSocket';
 import useSharedTimer from '../hooks/useSharedTimer';
 import {
   formatGlobalClock,
   getRemainingMs,
   isTimerVisiblyActive,
+  shouldShowGlobalClockDuringPause,
   shouldShowGlobalTimeForManualScheduleItem,
   splitClockPeriod,
 } from '../utils/timerUtils';
@@ -13,6 +15,10 @@ import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import { paintToCss } from '../utils/paint';
 import ProjectionExitHint from '../components/ProjectionExitHint';
 import { calculateScheduleProjection } from '../../shared/scheduleUtils.js';
+import {
+  getTransitionVariants,
+  normalizeTransitionDuration,
+} from '../../shared/transitionSettings.js';
 
 const PERIOD_STYLE = {
   fontSize: '0.38em',
@@ -193,8 +199,11 @@ const TimeDisplay = () => {
       : { ...stateDisplay, ...localDisplay };
   }, [timerDisplaySettings, timerState.display]);
   const hasActiveTimer = isTimerVisiblyActive(timerState, now);
+  const showPausedGlobalClock = shouldShowGlobalClockDuringPause(timerState);
   const showManualItemGlobalTime = shouldShowGlobalTimeForManualScheduleItem(timerState);
-  const shouldShowClock = showManualItemGlobalTime || (!hasActiveTimer && display.showClockWhenIdle !== false);
+  const shouldShowClock = showPausedGlobalClock
+    || showManualItemGlobalTime
+    || (!hasActiveTimer && display.showClockWhenIdle !== false);
   const clockValue = React.useMemo(() => formatGlobalClock(now, display), [display, now]);
   const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);
   const showGlobalClock = display.showGlobalClock !== false;
@@ -231,9 +240,13 @@ const TimeDisplay = () => {
   const showActiveSecondaryGlobalClock = showSecondaryText
     && showGlobalClock
     && hasActiveTimer
+    && !showPausedGlobalClock
     && !showManualItemGlobalTime;
 
   const value = isWaitingForTime ? 'Waiting for time...' : (isFullScreenClock ? clockParts.time : displayValue);
+  const displayModeKey = isWaitingForTime ? 'waiting' : (isFullScreenClock ? 'global-clock' : 'timer');
+  const stateTransitionVariants = getTransitionVariants(display.stateTransitionAnimation);
+  const stateTransitionDuration = normalizeTransitionDuration(display.stateTransitionDuration, 300) / 1000;
   const label = !showSecondaryText || isWaitingForTime
     ? ''
     : shouldShowClock
@@ -281,6 +294,16 @@ const TimeDisplay = () => {
       }}
     >
       <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
+      <AnimatePresence initial={false} mode="sync">
+        <motion.div
+          key={displayModeKey}
+          className="absolute inset-0 flex items-center justify-center"
+          variants={stateTransitionVariants || undefined}
+          initial={stateTransitionVariants ? 'hidden' : false}
+          animate={stateTransitionVariants ? 'visible' : undefined}
+          exit={stateTransitionVariants ? 'exit' : undefined}
+          transition={{ duration: stateTransitionVariants ? stateTransitionDuration : 0, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
       {label && (
       <div className="absolute inset-x-0 top-[7vh] flex justify-center px-[1vw]">
         <div
@@ -354,7 +377,7 @@ const TimeDisplay = () => {
           )}
         </div>
 
-        {display.showProgress !== false && hasActiveTimer && !showManualItemGlobalTime && (
+        {display.showProgress !== false && hasActiveTimer && !showPausedGlobalClock && !showManualItemGlobalTime && (
           <div
             className="mx-auto mt-4 rounded-full overflow-hidden"
             style={{
@@ -373,7 +396,7 @@ const TimeDisplay = () => {
           </div>
         )}
 
-        {showSecondaryText && hasActiveTimer && timerState.sets?.length > 1 && (
+        {showSecondaryText && hasActiveTimer && !showPausedGlobalClock && timerState.sets?.length > 1 && (
           <div className="mt-8 flex justify-center">
             <div
               className="px-5 py-2 rounded bg-white/10 text-white/80 text-sm font-sans"
@@ -409,6 +432,8 @@ const TimeDisplay = () => {
           </div>
         )}
       </div>
+        </motion.div>
+      </AnimatePresence>
 
       <style>{`
         @keyframes timerPulse {

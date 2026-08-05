@@ -131,6 +131,49 @@ export const getOutputRegistry = () => ({
   stageEnabled: state.currentStageEnabled,
 });
 
+let lastOutputPresenceSignature = '';
+
+export const getOutputPresenceSummary = () => {
+  let instanceCount = 0;
+  let remoteInstanceCount = 0;
+  let unknownInstanceCount = 0;
+
+  for (const outputId of state.registeredOutputs) {
+    for (const instance of state.outputInstances.get(outputId)?.values() || []) {
+      instanceCount += 1;
+      if (instance?.connectionScope === 'remote') remoteInstanceCount += 1;
+      if (instance?.connectionScope === 'unknown') unknownInstanceCount += 1;
+    }
+  }
+
+  return {
+    instanceCount,
+    remoteInstanceCount,
+    unknownInstanceCount,
+  };
+};
+
+export const notifyOutputPresenceChange = ({ force = false } = {}) => {
+  const summary = getOutputPresenceSummary();
+  const signature = `${summary.instanceCount}:${summary.remoteInstanceCount}:${summary.unknownInstanceCount}`;
+  if (!force && signature === lastOutputPresenceSignature) return summary;
+  lastOutputPresenceSignature = signature;
+
+  if (typeof process.send === 'function') {
+    try {
+      process.send({
+        type: 'output-presence',
+        ...summary,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.warn('Failed to report output presence to the desktop process:', error?.message || error);
+    }
+  }
+
+  return summary;
+};
+
 export const hasOutput = (outputId) => {
   if (outputId === 'output1' || outputId === 'output2') return true;
   if (outputId === 'stage') return true;

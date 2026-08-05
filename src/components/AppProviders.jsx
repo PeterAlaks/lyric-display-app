@@ -151,9 +151,18 @@ export default function AppProviders({ children, effectiveDarkMode, isDockRuntim
   useEffect(() => {
     if (!window.electronAPI) return;
 
-    loadPreferencesIntoStore(useLyricsStore);
+    const reloadPreferences = () => loadPreferencesIntoStore(useLyricsStore);
+    reloadPreferences();
     loadAdvancedSettings();
     loadDebugLoggingPreference();
+
+    const unsubscribe = window.electronAPI?.preferences?.onUpdated?.(({ category } = {}) => {
+      if (!category || ['appearance', 'general', 'formatting', 'parsing', 'lineSplitting', 'autoplay', 'fileHandling'].includes(category)) {
+        reloadPreferences();
+      }
+    });
+
+    return () => unsubscribe?.();
   }, []);
 
   useEffect(() => {

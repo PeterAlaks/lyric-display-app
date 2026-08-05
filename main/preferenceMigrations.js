@@ -6,8 +6,12 @@ import {
   DEFAULT_SECTION_TAG_PHRASES,
   normalizeSectionTagPhrases,
 } from '../shared/sectionTagPhrases.js';
+import {
+  DEFAULT_APPEARANCE_TRANSITIONS,
+  normalizeAppearanceTransitions,
+} from '../shared/transitionSettings.js';
 
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 7;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 8;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -133,6 +137,19 @@ export function migratePreferences(input) {
       ...migrated,
       fileHandling: nextFileHandling,
       _schemaVersion: 7,
+    };
+  }
+
+  if (sourceVersion < 8) {
+    const appearance = isPlainObject(migrated.appearance) ? migrated.appearance : {};
+    migrated = {
+      ...migrated,
+      appearance: {
+        ...appearance,
+        ...DEFAULT_APPEARANCE_TRANSITIONS,
+        ...normalizeAppearanceTransitions(appearance),
+      },
+      _schemaVersion: 8,
     };
   }
 

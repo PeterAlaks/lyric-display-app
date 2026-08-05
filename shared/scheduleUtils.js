@@ -186,6 +186,7 @@ export function normalizeScheduleDocument(raw = {}) {
     idealEndTime: normalizeTimeOfDay(document.idealEndTime),
     autoStartNext: document.autoStartNext !== false,
     showGlobalTimeDuringManualItems: document.showGlobalTimeDuringManualItems !== false,
+    showGlobalClockDuringPause: Boolean(document.showGlobalClockDuringPause),
     notificationsEnabled: document.notificationsEnabled !== false,
     indicator: {
       enabled: indicator.enabled !== false,

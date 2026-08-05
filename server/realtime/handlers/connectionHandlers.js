@@ -3,10 +3,17 @@ import {
   buildOutputList,
   buildPeriodicState,
   ensureOutputExists,
+  notifyOutputPresenceChange,
   state
 } from '../state.js';
 import { emitOutputMetricsUpdate } from '../broadcast.js';
-import { getPrimaryOutputInstance, isOutputClientType, isOutputDiscoveryClientType, isPlainObject } from '../utils.js';
+import {
+  getPrimaryOutputInstance,
+  getSocketConnectionScope,
+  isOutputClientType,
+  isOutputDiscoveryClientType,
+  isPlainObject,
+} from '../utils.js';
 import { performance } from 'node:perf_hooks';
 import {
   describeStatePayload,
@@ -41,6 +48,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
 
   const isOutputClient = isOutputClientType(clientType) && !isOutputDiscoveryClientType(clientType);
   const tracksOutputPresence = isOutputClient && !isPreview;
+  const connectionScope = getSocketConnectionScope(socket);
 
   if (isOutputClient) {
     if (!state.registeredOutputs.has(clientType)) {
@@ -58,7 +66,8 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     purpose,
     socket,
     permissions: socket.userData.permissions,
-    connectedAt: socket.userData.connectedAt
+    connectedAt: socket.userData.connectedAt,
+    connectionScope,
   });
 
   if (tracksOutputPresence) {
@@ -66,7 +75,8 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     state.outputInstances.get(clientType).set(socket.id, {
       socketId: socket.id,
       connectedAt,
-      lastUpdate: connectedAt
+      lastUpdate: connectedAt,
+      connectionScope,
     });
 
     const allInstances = Array.from(state.outputInstances.get(clientType).values());
@@ -77,6 +87,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
       allInstances,
       instanceCount: allInstances.length
     });
+    notifyOutputPresenceChange();
   }
 
   socket.on('clientConnect', (payload) => {
@@ -137,6 +148,7 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
           instanceCount: 0
         });
       }
+      notifyOutputPresenceChange();
     }
 
     socket.broadcast.emit('clientDisconnected', {

@@ -429,7 +429,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getParsingConfig: () => ipcRenderer.invoke('preferences:get-parsing-config'),
     getAutoplayDefaults: () => ipcRenderer.invoke('preferences:get-autoplay-defaults'),
     getAdvancedSettings: () => ipcRenderer.invoke('preferences:get-advanced-settings'),
-    getFileHandling: () => ipcRenderer.invoke('preferences:get-file-handling')
+    getFileHandling: () => ipcRenderer.invoke('preferences:get-file-handling'),
+    onUpdated: (callback) => {
+      const channel = 'preferences:updated';
+      const listener = (_event, payload) => callback?.(payload);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    }
   }
 });
 

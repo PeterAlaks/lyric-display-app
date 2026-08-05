@@ -92,39 +92,35 @@ const NdiPreferencesSection = ({
         The NDI companion broadcasts your lyric outputs as NDI video sources, allowing integration with OBS, vMix, and other NDI-compatible software.
       </p>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${ndiStatus.installed
-          ? darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700'
-          : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+        <span className={`inline-flex items-center gap-1.5 font-medium ${ndiStatus.installed
+          ? darkMode ? 'text-green-400' : 'text-green-700'
+          : mutedClass
           }`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${ndiStatus.installed ? 'bg-green-400' : 'bg-gray-400'}`} />
           {ndiStatus.installed ? 'Installed' : 'Not Installed'}
         </span>
         {ndiStatus.installed && ndiStatus.version && (
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${darkMode
-            ? 'bg-gray-700 text-gray-300'
-            : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            v{ndiStatus.version}
+          <span className={`border-l pl-3 font-medium ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${labelClass}`}>
+            Version v{ndiStatus.version}
           </span>
         )}
         {ndiStatus.installed && (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionRunning
-            ? darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-700'
-            : darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-            }`}
+          <span className={`inline-flex items-center gap-1.5 border-l pl-3 font-medium ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${companionRunning
+              ? darkMode ? 'text-blue-400' : 'text-blue-700'
+              : mutedClass
+              }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${companionRunning ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
             {companionStarting ? 'Starting' : companionRunning ? 'Running' : 'Stopped'}
           </span>
         )}
         {ndiStatus.installed && companionRunning && (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${companionReady
-            ? darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700'
-            : darkMode ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'
-            }`}
+          <span className={`inline-flex items-center gap-1.5 border-l pl-3 font-medium ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${companionReady
+              ? darkMode ? 'text-green-400' : 'text-green-700'
+              : darkMode ? 'text-amber-300' : 'text-amber-700'
+              }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${companionReady ? 'bg-green-400' : 'bg-amber-400'}`} />
             {companionReady ? 'Ready' : 'Syncing'}

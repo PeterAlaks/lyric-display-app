@@ -1,7 +1,9 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 import { buildLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
+import { normalizeAppearanceTransitions } from '../../shared/transitionSettings.js';
 import { normalizeTimerControlSettings, normalizeTimerDisplaySettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
@@ -64,6 +66,33 @@ export async function loadPreferencesIntoStore(store) {
       if (result.success && result.settings) {
         store.getState().updateMaxFileSize(result.settings.maxFileSize ?? 2);
         store.getState().updateMaxSetlistFiles(result.settings.maxSetlistFiles ?? DEFAULT_SETLIST_ITEMS);
+      }
+    }
+
+    if (window.electronAPI?.preferences?.getCategory) {
+      const result = await window.electronAPI.preferences.getCategory('appearance');
+      if (result.success && result.data) {
+        const transitions = normalizeAppearanceTransitions(result.data);
+        const currentState = store.getState();
+        currentState.setAppearanceTransitions(transitions);
+        currentState.updateTimerDisplaySettings({
+          stateTransitionAnimation: transitions.timerStateTransitionAnimation,
+          stateTransitionDuration: transitions.timerStateTransitionDuration,
+        });
+
+        const outputIds = [...DEFAULT_OUTPUT_IDS, ...(currentState.customOutputIds || [])];
+        for (const outputId of outputIds) {
+          currentState.updateOutputSettings(outputId, {
+            backgroundMediaTransitionAnimation: transitions.backgroundMediaTransitionAnimation,
+            backgroundMediaTransitionDuration: transitions.backgroundMediaTransitionDuration,
+            outputVisibilityTransitionAnimation: transitions.outputVisibilityTransitionAnimation,
+            outputVisibilityTransitionDuration: transitions.outputVisibilityTransitionDuration,
+          });
+        }
+
+        window.dispatchEvent?.(new CustomEvent('appearance-transitions-updated', {
+          detail: transitions,
+        }));
       }
     }
 

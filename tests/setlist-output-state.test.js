@@ -26,6 +26,7 @@ import {
   sanitizePersistedStageTimerState,
 } from '../server/realtime/sessionPersistence.js';
 import { buildCurrentState, buildPeriodicState, state } from '../server/realtime/state.js';
+import { getSocketConnectionScope } from '../server/realtime/utils.js';
 
 function createSocketHarness() {
   const handlers = new Map();
@@ -961,6 +962,8 @@ test('last output disconnect broadcasts zero active instances', () => {
         metrics: {},
         allInstances: [],
         instanceCount: 0,
+        remoteInstanceCount: 0,
+        hasRemoteInstances: false,
       },
     });
     assert.equal(state.outputInstances.has('output1'), false);
@@ -993,6 +996,7 @@ test('output connection immediately broadcasts an active instance', () => {
     const socket = {
       id: 'socket-output',
       connected: true,
+      handshake: { address: '203.0.113.25' },
       userData: {
         permissions: ['lyrics:read'],
         connectedAt: Date.now(),
@@ -1032,6 +1036,9 @@ test('output connection immediately broadcasts an active instance', () => {
     assert.equal(metricsEvent.payload.instanceCount, 1);
     assert.equal(metricsEvent.payload.allInstances.length, 1);
     assert.equal(metricsEvent.payload.allInstances[0].socketId, 'socket-output');
+    assert.equal(metricsEvent.payload.allInstances[0].connectionScope, 'remote');
+    assert.equal(metricsEvent.payload.remoteInstanceCount, 1);
+    assert.equal(metricsEvent.payload.hasRemoteInstances, true);
 
     handlers.get('disconnect')?.forEach((handler) => handler('test cleanup'));
   } finally {
@@ -1041,6 +1048,13 @@ test('output connection immediately broadcasts an active instance', () => {
     state.outputSettings = previousOutputSettings;
     state.outputEnabled = previousOutputEnabled;
   }
+});
+
+test('output connection scope recognizes loopback, remote, and missing peers', () => {
+  assert.equal(getSocketConnectionScope({ handshake: { address: '127.0.0.1' } }), 'local');
+  assert.equal(getSocketConnectionScope({ handshake: { address: '::ffff:127.0.0.1' } }), 'local');
+  assert.equal(getSocketConnectionScope({ handshake: { address: '203.0.113.25' } }), 'remote');
+  assert.equal(getSocketConnectionScope({}), 'unknown');
 });
 
 test('preview output connection does not broadcast production readiness presence', () => {
