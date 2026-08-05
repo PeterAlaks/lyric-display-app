@@ -78,7 +78,7 @@ const DisplayTransitionsPreferencesPage = ({
             </div>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px]">
               <label className="space-y-1.5">
-                <span className={`block text-sm font-medium ${labelClass}`}>Animation</span>
+                <span className={`block text-xs font-medium ${labelClass}`}>Animation</span>
                 <Select
                   value={animation}
                   onValueChange={(value) => updatePreference('appearance', field.animationKey, value)}
@@ -97,7 +97,7 @@ const DisplayTransitionsPreferencesPage = ({
                 </Select>
               </label>
               <label className={`space-y-1.5 ${durationDisabled ? 'opacity-50' : ''}`}>
-                <span className={`block text-sm font-medium ${labelClass}`}>Duration (ms)</span>
+                <span className={`block text-xs font-medium ${labelClass}`}>Duration (ms)</span>
                 <Input
                   type="number"
                   min={MIN_TRANSITION_DURATION_MS}

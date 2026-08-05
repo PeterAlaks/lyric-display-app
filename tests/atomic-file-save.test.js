@@ -11,10 +11,24 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { saveTextFileAtomically } from '../main/atomicFileSave.js';
+import { getStorageCapacityErrorCode, toStorageWriteFailure } from '../shared/storageErrors.js';
 import {
   grantLyricWritePath,
   validateLyricWrite,
 } from '../main/lyricFiles.js';
+
+test('storage capacity failures are normalized for user-facing write errors', () => {
+  const nestedError = new Error('upload failed', {
+    cause: Object.assign(new Error('no space left on device'), { code: 'ENOSPC' }),
+  });
+
+  assert.equal(getStorageCapacityErrorCode(nestedError), 'ENOSPC');
+  assert.deepEqual(toStorageWriteFailure(nestedError, { subject: 'this file' }), {
+    code: 'STORAGE_FULL',
+    error: 'LyricDisplay could not save this file because the drive is full. Free some disk space and try again.',
+    systemCode: 'ENOSPC',
+  });
+});
 
 async function withTemporaryDirectory(run) {
   const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'lyricdisplay-atomic-save-'));

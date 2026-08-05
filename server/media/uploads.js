@@ -6,6 +6,7 @@ import {
   buildBackgroundMediaFilename,
   normalizeBackgroundOutputKey,
 } from './backgroundMediaFilename.js';
+import { MAX_MEDIA_UPLOAD_BYTES } from '../../shared/apiContractRegistry.js';
 
 export function createUploadMiddleware({ backgroundMediaDir, getMediaDirectory }) {
   const backgroundStorage = multer.diskStorage({
@@ -27,7 +28,7 @@ export function createUploadMiddleware({ backgroundMediaDir, getMediaDirectory }
   const backgroundUpload = multer({
     storage: backgroundStorage,
     limits: {
-      fileSize: 200 * 1024 * 1024,
+      fileSize: MAX_MEDIA_UPLOAD_BYTES,
     },
     fileFilter: (req, file, cb) => {
       if (!file?.mimetype || !allowedMediaTypes.has(file.mimetype)) {
@@ -56,7 +57,7 @@ export function createUploadMiddleware({ backgroundMediaDir, getMediaDirectory }
   const userMediaUpload = multer({
     storage: userMediaStorage,
     limits: {
-      fileSize: 200 * 1024 * 1024,
+      fileSize: MAX_MEDIA_UPLOAD_BYTES,
     },
     fileFilter: (req, file, cb) => {
       const mediaKind = inferMediaKind(file?.mimetype);

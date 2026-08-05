@@ -29,6 +29,7 @@ import {
   EASYWORSHIP_IMPORT_FOLDER_NAME,
   PRESENTATION_IMPORT_FOLDER_NAME,
 } from './appIdentity.js';
+import { saveTextFileAtomically } from './atomicFileSave.js';
 
 const CONFIG_VERSION = 1;
 const MAX_INDEX_FILES = 100_000;
@@ -250,7 +251,7 @@ async function persistConfig() {
     initialized: true,
     roots,
   }, null, 2);
-  await fs.writeFile(getConfigPath(), payload, 'utf8');
+  await saveTextFileAtomically(getConfigPath(), payload);
 }
 
 async function loadConfig() {

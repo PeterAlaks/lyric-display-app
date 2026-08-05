@@ -40,11 +40,15 @@ flowchart LR
 | --- | --- | --- |
 | Renderer URL | Vite on `http://localhost:5173` | Backend serves `dist/` on `http://127.0.0.1:4000` |
 | Router | `BrowserRouter` | `HashRouter` |
-| Backend | Electron forks `server/index.js` with `NODE_ENV=development` | Electron forks the unpacked backend with `NODE_ENV=production` |
+| Backend | Electron forks `server/index.js` with `NODE_ENV=development` | Electron forks the ASAR-packaged backend with `NODE_ENV=production` and a real `userData` working directory |
 | API/socket access | Vite proxies `/api`, `/socket.io`, and `/media` to port `4000`; Electron renderers resolve port `4000` directly | Same origin as the backend-served renderer |
 | Native bridge | Electron windows only | Electron windows only |
 
-The backend is a separate npm package with its own [`server/package.json`](../server/package.json) and lockfile. A clean checkout therefore needs both root and server dependencies installed. The optional `lyricdisplay-ndi/` directory is a separately cloned, ignored repository, not part of this repository's tracked tree.
+The backend is a separate npm package with its own [`server/package.json`](../server/package.json) and lockfile. A clean checkout therefore needs both root and server dependencies installed. Backend production dependencies are also listed in the root manifest so electron-builder can package and resolve them beside the ASAR-hosted server; keep the two manifests aligned when those dependencies change. The optional `lyricdisplay-ndi/` directory is a separately cloned, ignored repository, not part of this repository's tracked tree.
+
+Electron-builder smart-unpacks the native runtime modules required by the packaged app. Packaging filters remove compiler sources and intermediate build products from `better-sqlite3` and `@julusian/midi`, but retain their runtime `.node` binaries and published prebuilds for each target platform.
+
+Windows upgrades intentionally retain electron-builder's default atomic NSIS replacement flow: the old installation directory is removed while app data is kept, then the new payload is installed. Do not define a custom NSIS `customRemoveFiles` macro without preserving that complete replacement behavior. macOS application bundles and Linux AppImages likewise keep packaged code separate from user data. Release and platform-test workflows run [`scripts/verify-packaged-runtime.js`](../scripts/verify-packaged-runtime.js) on each operating system before accepting an artifact.
 
 ## Top-Level Repository Map
 
@@ -61,7 +65,8 @@ lyric-display-app/
 |-- shared/                  # Cross-runtime contracts, parsing, validation, and bundled data
 |-- src/                     # Vite/React renderer application
 |-- tests/                   # Node test runner suites
-|-- dist/                    # Generated renderer/package output; ignored
+|-- dist/                    # Generated Vite renderer output; ignored
+|-- release/                 # Generated Electron packages/installers; ignored
 |-- uploads/                 # Development runtime media; ignored
 |-- lyricdisplay-ndi/        # Optional ignored clone of the NDI companion repository
 |-- index.html               # Vite HTML entry
@@ -76,7 +81,7 @@ lyric-display-app/
 `-- jsconfig.json            # Editor alias for @/* -> src/*
 ```
 
-Generated or machine-local paths are `node_modules/`, `server/node_modules/`, `dist/`, `release/`, `out/`, `uploads/`, logs, and the optional `lyricdisplay-ndi/` clone. The files inside `build/` are tracked packaging inputs and should be changed when installer behavior changes.
+Generated or machine-local paths are `node_modules/`, `server/node_modules/`, `dist/`, `release/`, `out/`, `uploads/`, logs, and the optional `lyricdisplay-ndi/` clone. The files inside `build/` are tracked packaging inputs and should be changed when installer behavior changes. Run `npm run generate:appx-assets` after changing the source icon; it regenerates the transparent, theme-aware Windows assets in `build/appx/` and the Partner Center upload image in `build/store/`.
 
 ## Entry Points and Startup
 

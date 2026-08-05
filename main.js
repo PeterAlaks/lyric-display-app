@@ -427,6 +427,28 @@ setBackendMessageHandler((message) => {
     return { success: updateNetworkOutputPresence(message) };
   }
 
+  if (message?.type === 'storage-write-failed') {
+    requestRendererModal({
+      title: 'Storage is full',
+      description: message.error || 'LyricDisplay cannot save changes because the drive containing its data folder is full.',
+      body: 'The current session can continue in memory, but new changes may be lost when the app closes. Free some disk space, then make another change to retry saving.',
+      variant: 'error',
+      dedupeKey: 'user-data-storage-full',
+      dismissible: true,
+      actions: [{ label: 'Dismiss', value: 'dismiss', variant: 'outline' }],
+    }, {
+      fallback: () => dialog.showMessageBox({
+        type: 'error',
+        title: 'Storage is full',
+        message: message.error || 'LyricDisplay cannot save changes because the drive is full.',
+        detail: 'Free some disk space before closing LyricDisplay to avoid losing current-session changes.',
+      }),
+    }).catch((error) => {
+      console.error('[Storage] Failed to show storage capacity alert:', error);
+    });
+    return { success: true };
+  }
+
   if (message?.type === 'switch-to-desktop-mode') {
     if (isHeadlessMode) {
       console.log('[Main] Desktop mode relaunch requested from Dock Mode');

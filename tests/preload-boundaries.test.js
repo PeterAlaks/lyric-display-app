@@ -55,10 +55,11 @@ test('data-document preloads expose only their role-specific IPC channels', () =
   assert.equal(updater.includes('write-file'), false);
 });
 
-test('packaging includes and unpacks role-specific preload files', () => {
+test('packaging includes role-specific preload files inside ASAR', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.equal(pkg.build.files.includes('preloads/**/*'), true);
-  assert.equal(pkg.build.asarUnpack.includes('preloads/**/*'), true);
+  assert.equal(pkg.build.asarUnpack, undefined);
+  assert.equal(pkg.build.directories.output, 'release');
 });
 
 test('window routes receive control, passive, or no preload by role', () => {

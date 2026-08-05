@@ -146,7 +146,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
         metadata: { keys: changedKeys.slice(0, 12) },
       });
     }
-    emitIndividualOutputEvent(io, 'styleUpdate', { output, settings });
+    emitIndividualOutputEvent(io, 'styleUpdate', { output, settings }, { excludeSocket: socket });
   });
 
   socket.on(REALTIME_EVENTS.outputRemove, (payload) => {

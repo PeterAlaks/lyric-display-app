@@ -3,6 +3,18 @@ import multer from 'multer';
 import { isOutputClientType } from '../config/clientTypes.js';
 import { parseBackgroundMediaFilename } from '../media/backgroundMediaFilename.js';
 import { inferMediaKind } from '../media/mediaTypes.js';
+import { isStorageCapacityError, toStorageWriteFailure } from '../../shared/storageErrors.js';
+
+const sendUploadError = (res, error, subject) => {
+  if (isStorageCapacityError(error)) {
+    const failure = toStorageWriteFailure(error, { subject });
+    return res.status(507).json(failure);
+  }
+  if (error instanceof multer.MulterError) {
+    return res.status(400).json({ error: error.message, code: error.code });
+  }
+  return res.status(400).json({ error: error?.message || 'Upload failed' });
+};
 
 export function registerMediaRoutes(app, {
   authenticateRequest,
@@ -19,10 +31,7 @@ export function registerMediaRoutes(app, {
       backgroundUpload.single('background')(req, res, async (err) => {
         if (err) {
           console.error('Background upload error:', err);
-          if (err instanceof multer.MulterError) {
-            return res.status(400).json({ error: err.message });
-          }
-          return res.status(400).json({ error: err.message || 'Upload failed' });
+          return sendUploadError(res, err, 'this background file');
         }
         if (!req.file) {
           return res.status(400).json({ error: 'No file uploaded' });
@@ -50,8 +59,11 @@ export function registerMediaRoutes(app, {
 
   app.get('/api/user-media', authenticateRequest('settings:read'), async (req, res) => {
     try {
-      const entries = await userMediaService.listUserMedia(req.query?.type || 'all');
-      res.json({ success: true, media: entries });
+      const [entries, usage] = await Promise.all([
+        userMediaService.listUserMedia(req.query?.type || 'all'),
+        userMediaService.getUserMediaUsage(),
+      ]);
+      res.json({ success: true, media: entries, usage });
     } catch (error) {
       if (error.statusCode) {
         return res.status(error.statusCode).json({ error: error.message });
@@ -62,32 +74,43 @@ export function registerMediaRoutes(app, {
   });
 
   app.post('/api/user-media', authenticateRequest('settings:write'), async (req, res) => {
-    userMediaUpload.single('media')(req, res, async (err) => {
-      if (err) {
-        console.error('User media upload error:', err);
-        if (err instanceof multer.MulterError) {
-          return res.status(400).json({ error: err.message });
-        }
-        return res.status(400).json({ error: err.message || 'Upload failed' });
-      }
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-      }
+    let releaseUploadSlot;
+    try {
+      releaseUploadSlot = await userMediaService.reserveUserMediaSlot();
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        error: error.message || 'Could not reserve media library space',
+        code: error.code,
+      });
+    }
 
+    userMediaUpload.single('media')(req, res, async (err) => {
       try {
-        const mediaKind = inferMediaKind(req.file.mimetype);
-        const payload = await userMediaService.toUserMediaPayload(mediaKind, req.file.filename);
-        res.json({
-          ...payload,
-          name: req.file.originalname,
-          originalName: req.file.originalname,
-          mimeType: req.file.mimetype,
-          size: req.file.size,
-          uploadedAt: Date.now(),
-        });
-      } catch (error) {
-        console.error('User media upload response error:', error);
-        res.status(500).json({ error: 'Upload completed but media could not be indexed' });
+        if (err) {
+          console.error('User media upload error:', err);
+          return sendUploadError(res, err, 'this media file');
+        }
+        if (!req.file) {
+          return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        try {
+          const mediaKind = inferMediaKind(req.file.mimetype);
+          const payload = await userMediaService.toUserMediaPayload(mediaKind, req.file.filename);
+          res.json({
+            ...payload,
+            name: req.file.originalname,
+            originalName: req.file.originalname,
+            mimeType: req.file.mimetype,
+            size: req.file.size,
+            uploadedAt: Date.now(),
+          });
+        } catch (error) {
+          console.error('User media upload response error:', error);
+          res.status(500).json({ error: 'Upload completed but media could not be indexed' });
+        }
+      } finally {
+        releaseUploadSlot?.();
       }
     });
   });

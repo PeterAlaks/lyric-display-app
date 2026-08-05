@@ -24,6 +24,10 @@ test('Windows user-data deletion is opt-in and confined to the uninstaller', () 
   assert.doesNotMatch(customInstallMacro, /DeleteUserDataSelection/);
 });
 
+test('Windows upgrades retain electron-builder atomic replacement of the install directory', () => {
+  assert.doesNotMatch(installerScript, /!macro\s+customRemoveFiles\b/);
+});
+
 test('Windows cleanup covers current, legacy, and local application data', () => {
   assert.match(
     installerScript,

@@ -64,7 +64,7 @@ export default function NetworkAddressChangedModal({
         <AlertTriangle className={`mt-0.5 h-5 w-5 shrink-0 ${darkMode ? 'text-amber-300' : 'text-amber-600'}`} />
         <div>
           <p className="font-semibold">External output pages may need to reconnect</p>
-          <p className={`mt-1 text-sm leading-relaxed ${darkMode ? 'text-amber-100/75' : 'text-amber-900/75'}`}>
+          <p className={`mt-1 text-xs leading-relaxed ${darkMode ? 'text-amber-100/75' : 'text-amber-900/75'}`}>
             This computer is now using a different local network address. {affectedOutputCopy}
           </p>
         </div>

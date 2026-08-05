@@ -1,14 +1,54 @@
 import fs from 'fs';
 import path from 'path';
 import { inferMediaKind, inferMimeTypeFromFilename } from './mediaTypes.js';
+import { MAX_USER_MEDIA_FILES } from '../../shared/apiContractRegistry.js';
 
 export function createUserMediaService({ userImageMediaDir, userVideoMediaDir }) {
+  let uploadReservations = 0;
   const mediaTypeDirectories = {
     image: userImageMediaDir,
     video: userVideoMediaDir,
   };
 
   const getMediaDirectory = (type) => mediaTypeDirectories[type] || null;
+
+  const countUserMedia = async () => {
+    let count = 0;
+    for (const [type, directory] of Object.entries(mediaTypeDirectories)) {
+      const filenames = await fs.promises.readdir(directory);
+      count += filenames.filter((filename) => (
+        type === inferMediaKind(inferMimeTypeFromFilename(filename))
+      )).length;
+    }
+    return count;
+  };
+
+  const getUserMediaUsage = async () => {
+    const count = await countUserMedia();
+    return {
+      count,
+      max: MAX_USER_MEDIA_FILES,
+      remaining: Math.max(0, MAX_USER_MEDIA_FILES - count),
+    };
+  };
+
+  const reserveUserMediaSlot = async () => {
+    const count = await countUserMedia();
+    if (count + uploadReservations >= MAX_USER_MEDIA_FILES) {
+      const error = new Error(`The media library can hold up to ${MAX_USER_MEDIA_FILES.toLocaleString()} files. Delete an item before uploading another.`);
+      error.statusCode = 409;
+      error.code = 'USER_MEDIA_LIMIT_REACHED';
+      throw error;
+    }
+
+    uploadReservations += 1;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      uploadReservations = Math.max(0, uploadReservations - 1);
+    };
+  };
 
   const safeMediaFilename = (filename = '') => {
     const base = path.basename(String(filename));
@@ -103,10 +143,11 @@ export function createUserMediaService({ userImageMediaDir, userVideoMediaDir })
 
   return {
     getMediaDirectory,
+    getUserMediaUsage,
+    reserveUserMediaSlot,
     toUserMediaPayload,
     listUserMedia,
     deleteUserMedia,
     deleteAllUserMedia,
   };
 }
-

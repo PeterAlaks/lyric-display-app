@@ -155,10 +155,6 @@ export const loadDataset = async () => {
   const overridePath = process.env.OPEN_HYMNAL_DATA_PATH || process.env.LYRICDISPLAY_OPEN_HYMNAL_PATH || null;
   let targetPath = overridePath ? path.resolve(overridePath) : DEFAULT_DATA_PATH;
 
-  if (process.env.NODE_ENV === 'production' && targetPath.includes('app.asar')) {
-    targetPath = targetPath.replace('app.asar', 'app.asar.unpacked');
-  }
-
   if (cachedDataset && targetPath === lastLoadedPath) {
     return cachedDataset;
   }

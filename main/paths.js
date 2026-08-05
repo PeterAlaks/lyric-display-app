@@ -11,7 +11,6 @@ export function resolveProductionPath(...segments) {
   if (isDev) {
     return path.join(appRoot, ...segments);
   } else {
-    return path.join(process.resourcesPath, 'app.asar.unpacked', ...segments);
+    return path.join(appRoot, ...segments);
   }
 }
-

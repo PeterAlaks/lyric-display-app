@@ -116,7 +116,9 @@ export const usePreferencesPersistence = ({ showToast }) => {
 
       const result = await window.electronAPI.preferences.saveAll(newPreferences);
       if (!result?.success) {
-        throw new Error(result?.error || 'Preference save was rejected');
+        const error = new Error(result?.error || 'Preference save was rejected');
+        error.code = result?.code;
+        throw error;
       }
 
       if (isMountedRef.current) {
@@ -139,6 +141,12 @@ export const usePreferencesPersistence = ({ showToast }) => {
       if (isMountedRef.current) {
         setLastSaved(null);
         setSaveError(true);
+        showToastRef.current?.({
+          title: error?.code === 'STORAGE_FULL' ? 'Storage is full' : 'Preferences not saved',
+          message: error?.message || 'LyricDisplay could not save your preferences.',
+          variant: 'error',
+          dedupeKey: 'preferences-storage-write-failed',
+        });
       }
     } finally {
       if (isMountedRef.current) setSaving(false);

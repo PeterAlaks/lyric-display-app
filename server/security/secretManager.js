@@ -5,10 +5,12 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 let keytar = null;
-try {
-  ({ default: keytar } = await import('keytar').catch(() => ({ default: null })));
-} catch {
-  keytar = null;
+if (process.env.LYRICDISPLAY_DISABLE_KEYTAR !== '1') {
+  try {
+    ({ default: keytar } = await import('keytar').catch(() => ({ default: null })));
+  } catch {
+    keytar = null;
+  }
 }
 
 const __filename = fileURLToPath(import.meta.url);

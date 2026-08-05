@@ -55,7 +55,8 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       const usageSharingWasEnabled = path === 'advanced.shareAnonymousUsageData'
         ? userPreferences.getPreference(path) === true
         : false;
-      userPreferences.setPreference(path, value);
+      const result = userPreferences.setPreference(path, value);
+      if (!result.success) return result;
       if (path === 'general.liveSafetyMode') {
         setUpdateSessionActive(Boolean(value));
       }
@@ -68,7 +69,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       if (app.isPackaged && path === 'advanced.shareAnonymousUsageData' && value === true && !usageSharingWasEnabled) {
         void recordSuccessfulAppLaunch({ enabled: true });
       }
-      return { success: true };
+      return result;
     } catch (error) {
       console.error('[UserPreferences] Error setting preference:', error);
       return { success: false, error: error.message };
@@ -98,9 +99,11 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
 
   ipcMain.handle('preferences:reset-category', async (_event, { category }) => {
     try {
-      userPreferences.resetCategoryToDefaults(category);
+      const result = userPreferences.resetCategoryToDefaults(category);
+      if (!result.success) return result;
       if (category === 'advanced') {
-        userPreferences.setPreference('advanced.telemetryConsentDecided', true);
+        const decisionResult = userPreferences.setPreference('advanced.telemetryConsentDecided', true);
+        if (!decisionResult.success) return decisionResult;
       }
       if (category === 'general') {
         setUpdateSessionActive(false);
@@ -109,7 +112,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
         syncParsingConfig();
       }
       broadcastPreferencesUpdated(category);
-      return { success: true };
+      return result;
     } catch (error) {
       console.error('[UserPreferences] Error resetting category:', error);
       return { success: false, error: error.message };
@@ -120,7 +123,8 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
     try {
       const result = userPreferences.resetAllToDefaults();
       if (result.success) {
-        userPreferences.setPreference('advanced.telemetryConsentDecided', true);
+        const decisionResult = userPreferences.setPreference('advanced.telemetryConsentDecided', true);
+        if (!decisionResult.success) return decisionResult;
         setUpdateSessionActive(false);
         syncParsingConfig();
         broadcastPreferencesUpdated(null);

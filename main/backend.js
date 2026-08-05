@@ -171,7 +171,10 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     const backendDataDir = path.join(userDataDir, 'backend');
 
     const child = fork(serverPath, [], {
-      cwd: path.dirname(serverPath),
+      // ASAR paths are readable by Electron's Node runtime but cannot be used
+      // as a real process working directory. Runtime data already lives under
+      // userData, so use that real directory while keeping the server code in ASAR.
+      cwd: app.isPackaged ? userDataDir : path.dirname(serverPath),
       env: {
         ...process.env,
         NODE_ENV: app.isPackaged ? 'production' : 'development',

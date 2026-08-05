@@ -38,20 +38,28 @@
   "dependencies": {
     "@julusian/midi": "^3.6.1",
     "better-sqlite3": "^12.11.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "extract-zip": "^2.0.1",
     "font-list": "^2.0.1",
     "fuse.js": "^7.1.0",
+    "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "keytar": "^7.9.0",
     "mammoth": "^1.12.0",
+    "multer": "^2.1.1",
     "paradox-reader": "^1.3.0",
-    "pdfkit": "^0.19.1"
+    "pdfkit": "^0.19.1",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
+    "@electron/asar": "^3.4.1",
     "@radix-ui/react-checkbox": "^1.3.7",
     "@radix-ui/react-popover": "^1.1.19",
     "@radix-ui/react-progress": "^1.1.12",
@@ -92,10 +100,25 @@
   "build": {
     "appId": "com.lyricdisplay",
     "productName": "LyricDisplay",
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**/*",
       "server/**/*",
       "!server/node_modules/**/*",
+      "!node_modules/better-sqlite3/deps/**/*",
+      "!node_modules/better-sqlite3/src/**/*",
+      "!node_modules/better-sqlite3/build/deps/**/*",
+      "!node_modules/better-sqlite3/build/Release/obj/**/*",
+      "!node_modules/better-sqlite3/build/Release/obj.target/**/*",
+      "!node_modules/better-sqlite3/build/Release/*.{iobj,ipdb,lib,a,exp,pdb}",
+      "!node_modules/better-sqlite3/build/Release/test_extension.node",
+      "!node_modules/@julusian/midi/src/**/*",
+      "!node_modules/@julusian/midi/vendor/**/*",
+      "!node_modules/@julusian/midi/build/Release/obj/**/*",
+      "!node_modules/@julusian/midi/build/Release/obj.target/**/*",
+      "!node_modules/@julusian/midi/build/Release/*.{iobj,ipdb,lib,a,exp,pdb}",
       "shared/**/*",
       "main/**/*",
       "public/**/*",
@@ -103,19 +126,6 @@
       "preload.js",
       "preloads/**/*",
       "package.json"
-    ],
-    "asarUnpack": [
-      "dist/**/*",
-      "server/**/*",
-      "preload.js",
-      "preloads/**/*",
-      "shared/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "server/node_modules",
-        "to": "app.asar.unpacked/server/node_modules"
-      }
     ],
     "extraFiles": [
       {
@@ -223,7 +233,7 @@
       "publisher": "CN=F3E198CD-5990-44B7-B90F-ED1EB321A87D",
       "publisherDisplayName": "Peter Alakembi",
       "displayName": "LyricDisplay",
-      "backgroundColor": "#7467E1",
+      "backgroundColor": "transparent",
       "artifactName": "${productName}-${version}-Microsoft-Store-${arch}.${ext}",
       "languages": [
         "en-US"

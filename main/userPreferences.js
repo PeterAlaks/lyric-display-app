@@ -13,6 +13,12 @@ import {
   CURRENT_PREFERENCES_SCHEMA_VERSION,
   migratePreferences,
 } from './preferenceMigrations.js';
+import { toStorageWriteFailure } from '../shared/storageErrors.js';
+
+const preferenceWriteFailure = (error) => toStorageWriteFailure(error, {
+  subject: 'preferences',
+  fallback: 'Preferences could not be saved.',
+});
 
 const preferencesStore = new Store({
   name: 'user-preferences',
@@ -181,8 +187,10 @@ export function setPreference(path, value) {
   try {
     preferencesStore.set(path, value);
     console.log(`[UserPreferences] Set ${path}:`, value);
+    return { success: true };
   } catch (error) {
     console.error(`[UserPreferences] Failed to set preference ${path}:`, error);
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -196,8 +204,10 @@ export function updatePreferenceCategory(category, values) {
     const current = preferencesStore.get(category) || {};
     preferencesStore.set(category, { ...current, ...values });
     console.log(`[UserPreferences] Updated category ${category}`);
+    return { success: true };
   } catch (error) {
     console.error(`[UserPreferences] Failed to update category ${category}:`, error);
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -207,16 +217,18 @@ export function updatePreferenceCategory(category, values) {
  */
 export function saveAllPreferences(preferences) {
   try {
+    const nextPreferences = { ...preferencesStore.store };
     Object.entries(preferences).forEach(([category, values]) => {
       if (values && typeof values === 'object') {
-        preferencesStore.set(category, values);
+        nextPreferences[category] = values;
       }
     });
+    preferencesStore.store = nextPreferences;
     console.log('[UserPreferences] Saved all preferences');
     return { success: true };
   } catch (error) {
     console.error('[UserPreferences] Failed to save preferences:', error);
-    return { success: false, error: error.message };
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -231,8 +243,10 @@ export function resetCategoryToDefaults(category) {
       preferencesStore.reset(category);
       console.log(`[UserPreferences] Reset category ${category} to defaults`);
     }
+    return { success: true };
   } catch (error) {
     console.error(`[UserPreferences] Failed to reset category ${category}:`, error);
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -247,7 +261,7 @@ export function resetAllToDefaults() {
     return { success: true };
   } catch (error) {
     console.error('[UserPreferences] Failed to reset preferences:', error);
-    return { success: false, error: error.message };
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 

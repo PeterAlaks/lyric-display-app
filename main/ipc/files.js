@@ -34,6 +34,7 @@ import {
   rememberLyricsGrouping,
 } from '../lyricsGroupingMetadata.js';
 import { saveTextFileAtomically } from '../atomicFileSave.js';
+import { isStorageCapacityError, toStorageWriteFailure } from '../../shared/storageErrors.js';
 
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
@@ -80,6 +81,12 @@ export function registerFileHandlers({ getMainWindow }) {
           success: false,
           code: 'FILE_EXISTS',
           error: 'A file with that name already exists',
+        };
+      }
+      if (isStorageCapacityError(error)) {
+        return {
+          success: false,
+          ...toStorageWriteFailure(error, { subject: 'this file' }),
         };
       }
       return {

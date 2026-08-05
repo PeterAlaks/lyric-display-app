@@ -14,8 +14,12 @@ import {
   searchFileNavigator,
 } from '../fileNavigator.js';
 import { readLyricsFileFromPath } from '../lyricFiles.js';
+import { isStorageCapacityError, toStorageWriteFailure } from '../../shared/storageErrors.js';
 
 function errorResult(error, fallback) {
+  if (isStorageCapacityError(error)) {
+    return { success: false, ...toStorageWriteFailure(error, { subject: 'the file navigator index' }) };
+  }
   return { success: false, error: error?.message || fallback };
 }
 

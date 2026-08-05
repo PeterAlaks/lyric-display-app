@@ -33,16 +33,31 @@ import { setLyricsParsingConfig } from './realtime/lyricsParsingConfig.js';
 import { emitControllerEvent } from './realtime/broadcast.js';
 import { notifyOutputPresenceChange } from './realtime/state.js';
 import { REALTIME_EVENTS } from '../shared/apiContractRegistry.js';
+import { isStorageCapacityError, toStorageWriteFailure } from '../shared/storageErrors.js';
 
 dotenv.config();
 
+const reportFatalStorageFailure = (error) => {
+  if (!isStorageCapacityError(error) || typeof process.send !== 'function') return;
+  try {
+    process.send({
+      type: 'storage-write-failed',
+      operation: 'backend',
+      ...toStorageWriteFailure(error, { subject: 'application data' }),
+    });
+  } catch {
+  }
+};
+
 process.on('uncaughtException', (error) => {
   console.error('Backend uncaught exception:', error);
+  reportFatalStorageFailure(error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
   console.error('Backend unhandled rejection:', reason);
+  reportFatalStorageFailure(reason);
   process.exit(1);
 });
 

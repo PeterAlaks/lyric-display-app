@@ -33,6 +33,12 @@ jobs:
         run: npm ci
         working-directory: server
 
+      - name: Audit production dependencies
+        run: npm run audit:prod
+
+      - name: Audit server dependencies
+        run: npm run audit:server
+
       - name: Run static checks
         run: npm run check:static
 
@@ -66,12 +72,6 @@ jobs:
         run: npm ci
         working-directory: server
 
-      - name: Audit production dependencies
-        run: npm run audit:prod
-
-      - name: Audit server dependencies
-        run: npm run audit:server
-
       - name: Rebuild native modules
         shell: powershell
         run: |
@@ -85,6 +85,9 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --win --publish never
+
+      - name: Smoke test packaged Windows runtime
+        run: node scripts/verify-packaged-runtime.js --windows --start-server
 
   build-macos:
     name: Build macOS
@@ -113,12 +116,6 @@ jobs:
         run: npm ci
         working-directory: server
 
-      - name: Audit production dependencies
-        run: npm run audit:prod
-
-      - name: Audit server dependencies
-        run: npm run audit:server
-
       - name: Rebuild native modules
         run: |
           npm rebuild better-sqlite3 --build-from-source
@@ -131,6 +128,9 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --mac --publish never
+
+      - name: Smoke test packaged macOS runtime
+        run: node scripts/verify-packaged-runtime.js --macos --start-server
 
   build-linux:
     name: Build Linux
@@ -164,12 +164,6 @@ jobs:
         run: npm ci
         working-directory: server
 
-      - name: Audit production dependencies
-        run: npm run audit:prod
-
-      - name: Audit server dependencies
-        run: npm run audit:server
-
       - name: Rebuild native modules
         run: |
           npm rebuild better-sqlite3 --build-from-source
@@ -182,3 +176,6 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --linux --publish never
+
+      - name: Smoke test packaged Linux runtime
+        run: node scripts/verify-packaged-runtime.js --linux --start-server

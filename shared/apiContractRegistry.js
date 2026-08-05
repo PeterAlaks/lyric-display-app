@@ -24,6 +24,8 @@ export const REALTIME_PERMISSIONS = Object.freeze({
 });
 
 export const ACTION_LOG_MAX_ENTRIES = 750;
+export const MAX_MEDIA_UPLOAD_BYTES = 200 * 1024 * 1024;
+export const MAX_USER_MEDIA_FILES = 1000;
 
 export const AUDITED_REALTIME_CONTRACTS = Object.freeze([
   { name: REALTIME_EVENTS.outputRemove, direction: 'client', permissions: [REALTIME_PERMISSIONS.outputRemove] },

@@ -1,10 +1,20 @@
 import { app } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
+import { toStorageWriteFailure } from '../shared/storageErrors.js';
+import { saveTextFileAtomically } from './atomicFileSave.js';
 
 const TEMPLATES_FOLDER = 'UserTemplates';
 const OUTPUT_TEMPLATES_FILE = 'output-templates.json';
 const STAGE_TEMPLATES_FILE = 'stage-templates.json';
+
+const templateWriteFailure = (error) => ({
+  success: false,
+  ...toStorageWriteFailure(error, {
+    subject: 'the template library',
+    fallback: 'The template library could not be saved.',
+  }),
+});
 
 function getTemplatesDir() {
   const userDataPath = app.getPath('userData');
@@ -86,13 +96,13 @@ export async function saveUserTemplate(type = 'output', template) {
 
     templates.push(newTemplate);
 
-    await fs.writeFile(filePath, JSON.stringify(templates, null, 2), 'utf8');
+    await saveTextFileAtomically(filePath, JSON.stringify(templates, null, 2));
 
     console.log(`[UserTemplates] Saved ${type} template:`, newTemplate.name);
     return { success: true, template: newTemplate };
   } catch (error) {
     console.error(`[UserTemplates] Error saving ${type} template:`, error);
-    return { success: false, error: error.message };
+    return templateWriteFailure(error);
   }
 }
 
@@ -119,13 +129,13 @@ export async function deleteUserTemplate(type = 'output', templateId) {
     const deletedTemplate = templates[index];
     templates.splice(index, 1);
 
-    await fs.writeFile(filePath, JSON.stringify(templates, null, 2), 'utf8');
+    await saveTextFileAtomically(filePath, JSON.stringify(templates, null, 2));
 
     console.log(`[UserTemplates] Deleted ${type} template:`, deletedTemplate.name);
     return { success: true };
   } catch (error) {
     console.error(`[UserTemplates] Error deleting ${type} template:`, error);
-    return { success: false, error: error.message };
+    return templateWriteFailure(error);
   }
 }
 
@@ -161,13 +171,13 @@ export async function updateUserTemplate(type = 'output', templateId, updates) {
     }
     templates[index].updatedAt = Date.now();
 
-    await fs.writeFile(filePath, JSON.stringify(templates, null, 2), 'utf8');
+    await saveTextFileAtomically(filePath, JSON.stringify(templates, null, 2));
 
     console.log(`[UserTemplates] Updated ${type} template:`, templates[index].name);
     return { success: true, template: templates[index] };
   } catch (error) {
     console.error(`[UserTemplates] Error updating ${type} template:`, error);
-    return { success: false, error: error.message };
+    return templateWriteFailure(error);
   }
 }
 
