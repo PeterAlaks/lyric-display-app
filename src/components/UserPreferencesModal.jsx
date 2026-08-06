@@ -36,6 +36,7 @@ import DisplayTransitionsPreferencesPage from './UserPreferencesModal/DisplayTra
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
 import IndexedLyricsFoldersPreferencesPage from './UserPreferencesModal/IndexedLyricsFoldersPreferencesPage';
 import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPreferencesPage';
+import PreviewPreferencesPage from './UserPreferencesModal/PreviewPreferencesPage';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
 import NdiTelemetryPreferencesPage from './UserPreferencesModal/NdiTelemetryPreferencesPage';
 import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagPhrasesPreferencesPage';
@@ -206,6 +207,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     DEFAULT_SECTION_TAG_PHRASES,
   );
   const isDisplayTransitionsPage = activeCategory === 'appearance' && appearancePage === 'displayTransitions';
+  const isPreviewPage = activeCategory === 'appearance' && appearancePage === 'preview';
   const isSectionTagPhrasesPage = activeCategory === 'parsing' && parsingPage === 'sectionTagPhrases';
   const isCapitalizedWordsPage = activeCategory === 'formatting' && formattingPage === 'capitalizedWords';
   const isIndexedLyricsFoldersPage = activeCategory === 'fileHandling' && fileHandlingPage === 'indexedFolders';
@@ -213,7 +215,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const isNdiTelemetryPage = activeCategory === 'ndi' && ndiPage === 'telemetry';
   const handleCategoryChange = (category) => {
     const isReturningFromNestedPage = (
-      (category === 'appearance' && isDisplayTransitionsPage)
+      (category === 'appearance' && (isDisplayTransitionsPage || isPreviewPage))
       || (category === 'parsing' && isSectionTagPhrasesPage)
       || (category === 'formatting' && isCapitalizedWordsPage)
       || (category === 'fileHandling' && isIndexedLyricsFoldersPage)
@@ -234,6 +236,14 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     setAppearancePage('displayTransitions');
   };
   const closeDisplayTransitionsPage = () => {
+    setContentDirection(-1);
+    setAppearancePage('main');
+  };
+  const openPreviewPage = () => {
+    setContentDirection(1);
+    setAppearancePage('preview');
+  };
+  const closePreviewPage = () => {
     setContentDirection(-1);
     setAppearancePage('main');
   };
@@ -353,6 +363,21 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
           labelClass={labelClass}
           mutedClass={mutedClass}
           onBack={closeDisplayTransitionsPage}
+          preferences={preferences}
+          selectContentClass={selectContentClass}
+          updatePreference={updatePreference}
+        />
+      );
+    }
+
+    if (isPreviewPage) {
+      return (
+        <PreviewPreferencesPage
+          darkMode={darkMode}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closePreviewPage}
           preferences={preferences}
           selectContentClass={selectContentClass}
           updatePreference={updatePreference}
@@ -625,6 +650,20 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <div className="min-w-0 flex-1">
                 <span className={`text-sm font-medium ${labelClass}`}>Display Transitions</span>
                 <p className={`text-xs ${mutedClass}`}>Configure timer, background media, and output visibility animations</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>Manage</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={openPreviewPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label="Configure Preview"
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Preview</span>
+                <p className={`text-xs ${mutedClass}`}>Arrange preview feeds and configure the operator grid</p>
               </div>
               <span className={`shrink-0 text-xs ${mutedClass}`}>Manage</span>
               <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
@@ -1293,15 +1332,17 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       contentDirection={contentDirection}
       contentKey={isDisplayTransitionsPage
         ? 'appearance-display-transitions'
-        : (isSectionTagPhrasesPage
-          ? 'parsing-section-tag-phrases'
-          : (isCapitalizedWordsPage
-            ? 'formatting-capitalized-words'
-            : (isIndexedLyricsFoldersPage
-              ? 'file-handling-indexed-folders'
-              : (isMidiMappingsPage
-                ? 'external-control-midi-mappings'
-                : (isNdiTelemetryPage ? 'ndi-runtime-telemetry' : activeCategory)))))}
+        : (isPreviewPage
+          ? 'appearance-preview'
+          : (isSectionTagPhrasesPage
+            ? 'parsing-section-tag-phrases'
+            : (isCapitalizedWordsPage
+              ? 'formatting-capitalized-words'
+              : (isIndexedLyricsFoldersPage
+                ? 'file-handling-indexed-folders'
+                : (isMidiMappingsPage
+                  ? 'external-control-midi-mappings'
+                  : (isNdiTelemetryPage ? 'ndi-runtime-telemetry' : activeCategory))))))}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}
@@ -1316,7 +1357,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       saveError={saveError || indexedFolderPersistence.saveError}
       saving={saving || indexedFolderPersistence.saving}
       setActiveCategory={handleCategoryChange}
-      hideContentHeader={isDisplayTransitionsPage || isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage || isNdiTelemetryPage}
+      hideContentHeader={isDisplayTransitionsPage || isPreviewPage || isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage || isNdiTelemetryPage}
     >
       {renderCategoryContent()}
     </UserPreferencesLayout>

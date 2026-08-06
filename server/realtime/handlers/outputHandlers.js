@@ -15,6 +15,7 @@ import {
 } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { REALTIME_EVENTS, REALTIME_PERMISSIONS } from '../../../shared/apiContractRegistry.js';
+import { normalizePreviewSettings } from '../../../shared/previewSettings.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { getPrimaryOutputInstance, getSocketConnectionScope, isOutputClientType, isPlainObject } from '../utils.js';
 
@@ -104,7 +105,8 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
   });
 
   socket.on('styleUpdate', (payload) => {
-    if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'styleUpdate' })) {
+    const isPreviewSettingsUpdate = isPlainObject(payload) && payload.output === 'preview';
+    if (!isPreviewSettingsUpdate && blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'styleUpdate' })) {
       return;
     }
 
@@ -120,6 +122,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
 
     const { output, settings } = payload;
     let changedKeys = [];
+    let emittedSettings = settings;
     if (isOutputClientType(output)) {
       if (!state.registeredOutputs.has(output)) {
         return;
@@ -131,8 +134,19 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     } else if (output === 'stage') {
       changedKeys = getChangedSettingKeys(state.currentStageSettings || {}, settings);
       state.currentStageSettings = { ...state.currentStageSettings, ...settings };
+    } else if (output === 'preview') {
+      const nextSettings = normalizePreviewSettings({
+        ...state.currentPreviewSettings,
+        ...settings,
+      });
+      changedKeys = getChangedSettingKeys(state.currentPreviewSettings, nextSettings);
+      state.currentPreviewSettings = nextSettings;
+      emittedSettings = nextSettings;
+    } else {
+      socket.emit('permissionError', 'Unknown style update target');
+      return;
     }
-    if (changedKeys.length > 0) {
+    if (changedKeys.length > 0 && output !== 'preview') {
       schedulePersistSessionState();
     }
     console.log(`Style updated for ${output} by ${clientType} client`);
@@ -146,7 +160,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
         metadata: { keys: changedKeys.slice(0, 12) },
       });
     }
-    emitIndividualOutputEvent(io, 'styleUpdate', { output, settings }, { excludeSocket: socket });
+    emitIndividualOutputEvent(io, 'styleUpdate', { output, settings: emittedSettings }, { excludeSocket: socket });
   });
 
   socket.on(REALTIME_EVENTS.outputRemove, (payload) => {

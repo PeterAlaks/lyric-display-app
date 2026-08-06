@@ -1,4 +1,5 @@
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+import { DEFAULT_PREVIEW_SETTINGS, normalizePreviewSettings } from '../../shared/previewSettings.js';
 import { getLyricsParsingOptions } from './lyricsParsingConfig.js';
 
 export const state = {
@@ -33,6 +34,7 @@ export const state = {
     ['output2', true],
   ]),
   currentStageSettings: {},
+  currentPreviewSettings: normalizePreviewSettings(DEFAULT_PREVIEW_SETTINGS),
   currentIsOutputOn: false,
   currentStageEnabled: true,
   setlistFiles: [],
@@ -236,6 +238,13 @@ export function buildCurrentState(clientInfo) {
     };
   }
 
+  if (clientPurpose === 'preview') {
+    return {
+      ...baseState,
+      previewSettings: normalizePreviewSettings(state.currentPreviewSettings),
+    };
+  }
+
   if (isOutputClientType(clientType)) {
     return appendOutputState({
       ...baseState,
@@ -307,6 +316,13 @@ export function buildPeriodicState(clientInfo) {
     return {
       ...baseState,
       stageTimerState: getStageTimerSnapshot(timestamp),
+    };
+  }
+
+  if (clientPurpose === 'preview') {
+    return {
+      ...baseState,
+      previewSettings: normalizePreviewSettings(state.currentPreviewSettings),
     };
   }
 

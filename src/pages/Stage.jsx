@@ -38,6 +38,7 @@ const useAutoFitText = (text, options = {}) => {
     heightRatio = 0.95,
     allowWrap = true,
     enabled = true,
+    fontKey = '',
   } = options;
 
   const [containerEl, setContainerEl] = useState(null);
@@ -64,9 +65,11 @@ const useAutoFitText = (text, options = {}) => {
       textEl.style.wordBreak = allowWrap ? 'break-word' : 'normal';
       const fitsAt = (fontSize) => {
         textEl.style.fontSize = `${fontSize}px`;
-        const measured = textEl.getBoundingClientRect();
-        const measuredWidth = allowWrap ? measured.width : textEl.scrollWidth;
-        const measuredHeight = measured.height;
+        // Layout dimensions stay accurate while Framer Motion scales an
+        // ancestor. getBoundingClientRect() includes that transient transform
+        // and can otherwise make the fitted text too large.
+        const measuredWidth = textEl.scrollWidth;
+        const measuredHeight = textEl.scrollHeight;
         const widthFits = measuredWidth <= availableWidth + 1;
         const heightFits = measuredHeight <= availableHeight + 1;
         return heightFits && widthFits;
@@ -105,33 +108,41 @@ const useAutoFitText = (text, options = {}) => {
     };
 
     let frameId = null;
-    let delayedFitId = null;
+    let cancelled = false;
     const scheduleFit = () => {
+      if (cancelled) return;
       if (frameId) window.cancelAnimationFrame(frameId);
       frameId = window.requestAnimationFrame(() => {
         frameId = null;
-        fit();
+        if (!cancelled) fit();
       });
     };
 
-    frameId = window.requestAnimationFrame(() => {
-      frameId = null;
-      fit();
-      // Re-fit shortly after mount to handle late layout/font metric updates.
-      delayedFitId = window.setTimeout(fit, 32);
-    });
-    const resizeObserver = new ResizeObserver(scheduleFit);
+    // Fit during the layout pass for a correct first frame, then once more on
+    // the next animation frame after surrounding layout has settled.
+    fit();
+    scheduleFit();
 
-    resizeObserver.observe(containerEl);
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(scheduleFit);
+
+    resizeObserver?.observe(containerEl);
     window.addEventListener('resize', scheduleFit);
 
+    const fontSet = document.fonts;
+    const handleFontsLoaded = () => scheduleFit();
+    fontSet?.ready?.then?.(handleFontsLoaded).catch?.(() => {});
+    fontSet?.addEventListener?.('loadingdone', handleFontsLoaded);
+
     return () => {
+      cancelled = true;
       if (frameId) window.cancelAnimationFrame(frameId);
-      if (delayedFitId) window.clearTimeout(delayedFitId);
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
       window.removeEventListener('resize', scheduleFit);
+      fontSet?.removeEventListener?.('loadingdone', handleFontsLoaded);
     };
-  }, [containerEl, textEl, text, minFontSize, maxFontSize, widthRatio, heightRatio, allowWrap, enabled]);
+  }, [containerEl, textEl, text, minFontSize, maxFontSize, widthRatio, heightRatio, allowWrap, enabled, fontKey]);
 
   return { containerRef, textRef };
 };
@@ -521,6 +532,7 @@ const Stage = () => {
       heightRatio: 0.97,
       allowWrap: true,
       enabled: upcomingSongFullScreen,
+      fontKey: fontStyle,
     }
   );
 
@@ -532,6 +544,7 @@ const Stage = () => {
       heightRatio: 0.992,
       allowWrap: false,
       enabled: shouldShowTimerFullScreen,
+      fontKey: 'monospace',
     }
   );
 
@@ -543,6 +556,7 @@ const Stage = () => {
       heightRatio: 0.97,
       allowWrap: true,
       enabled: customMessagesFullScreen && Boolean(currentMessageText),
+      fontKey: fontStyle,
     }
   );
 

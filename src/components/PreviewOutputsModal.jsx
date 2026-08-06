@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { AppWindowMac, Monitor, RefreshCw } from 'lucide-react';
+import { AppWindowMac, Monitor, MonitorUp, RefreshCw } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Tooltip } from '@/components/ui/tooltip';
 import useLyricsStore from '../context/LyricsStore';
+import useModal from '../hooks/useModal';
+import { createPreviewUrl } from '../integrations/sourceUrls';
 import { formatOutputLabel } from '../utils/outputLabels';
 
 const RESOLUTION_OPTIONS = [
@@ -14,17 +17,11 @@ const RESOLUTION_OPTIONS = [
   { label: '1600x900 (HD+)', width: 1600, height: 900 },
 ];
 
-const getPreviewUrl = (outputId) => {
-  if (!outputId) return '';
-  const isDev = window.location.port === '5173';
-  if (isDev) return `http://localhost:5173/${outputId}?preview=true`;
-  return `${window.location.origin}/#/${outputId}?preview=true`;
-};
-
 const PreviewOutputsModal = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [key, setKey] = useState(0);
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
+  const { showModal } = useModal();
 
   const customOutputIds = useLyricsStore((state) => state.customOutputIds || []);
   const previewCustomOutputId = useLyricsStore((state) => state.previewCustomOutputId);
@@ -246,18 +243,48 @@ const PreviewOutputsModal = ({ darkMode }) => {
             />
           </span>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-medium transition-colors ${darkMode
-            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 disabled:opacity-50'
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50'
-            }`}
-          title="Refresh all previews"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <Tooltip content="Project the full preview grid to a display" side="bottom">
+            <button
+              type="button"
+              onClick={() => {
+                showModal({
+                  title: 'Project Preview',
+                  headerDescription: 'Choose where to show the full preview grid.',
+                  component: 'ProjectOutput',
+                  variant: 'info',
+                  size: 'lg',
+                  className: 'max-w-4xl',
+                  actions: [],
+                  customLayout: true,
+                  initialOutputKey: 'preview',
+                });
+              }}
+              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${darkMode
+                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+              }`}
+              aria-label="Project Preview"
+            >
+              <MonitorUp className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
+          <Tooltip content="Refresh all previews" side="bottom">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={loading}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-medium transition-colors ${darkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 disabled:opacity-50'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50'
+                }`}
+              aria-label="Refresh all previews"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -266,13 +293,16 @@ const PreviewOutputsModal = ({ darkMode }) => {
             <h3 className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
               Output 1
             </h3>
-            <button
-              onClick={() => handleOpenOutput('output1')}
-              className={openOutputButtonClassName}
-              title="Open in window"
-            >
-              <AppWindowMac className="w-3 h-3" />
-            </button>
+            <Tooltip content="Open Output 1 in a window" side="bottom">
+              <button
+                type="button"
+                onClick={() => handleOpenOutput('output1')}
+                className={openOutputButtonClassName}
+                aria-label="Open Output 1 in a window"
+              >
+                <AppWindowMac className="w-3 h-3" />
+              </button>
+            </Tooltip>
           </div>
 
           <div className={`px-2.5 py-2 border-b flex flex-col gap-2 ${darkMode ? 'border-gray-700 bg-gray-850' : 'border-gray-200 bg-gray-50'}`}>
@@ -341,7 +371,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                     <iframe
                       ref={registerPreviewIframe}
                       key={`output1-${key}`}
-                      src={getPreviewUrl('output1') || null}
+                      src={createPreviewUrl('output1') || null}
                       title="Output 1 Preview"
                       style={{
                         ...transform.iframe,
@@ -367,13 +397,16 @@ const PreviewOutputsModal = ({ darkMode }) => {
             <h3 className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
               Output 2
             </h3>
-            <button
-              onClick={() => handleOpenOutput('output2')}
-              className={openOutputButtonClassName}
-              title="Open in window"
-            >
-              <AppWindowMac className="w-3 h-3" />
-            </button>
+            <Tooltip content="Open Output 2 in a window" side="bottom">
+              <button
+                type="button"
+                onClick={() => handleOpenOutput('output2')}
+                className={openOutputButtonClassName}
+                aria-label="Open Output 2 in a window"
+              >
+                <AppWindowMac className="w-3 h-3" />
+              </button>
+            </Tooltip>
           </div>
 
           <div className={`px-2.5 py-2 border-b flex flex-col gap-2 ${darkMode ? 'border-gray-700 bg-gray-850' : 'border-gray-200 bg-gray-50'}`}>
@@ -442,7 +475,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                     <iframe
                       ref={registerPreviewIframe}
                       key={`output2-${key}`}
-                      src={getPreviewUrl('output2') || null}
+                      src={createPreviewUrl('output2') || null}
                       title="Output 2 Preview"
                       style={{
                         ...transform.iframe,
@@ -468,13 +501,16 @@ const PreviewOutputsModal = ({ darkMode }) => {
             <h3 className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
               Stage
             </h3>
-            <button
-              onClick={() => handleOpenOutput('stage')}
-              className={openOutputButtonClassName}
-              title="Open in window"
-            >
-              <AppWindowMac className="w-3 h-3" />
-            </button>
+            <Tooltip content="Open Stage display in a window" side="bottom">
+              <button
+                type="button"
+                onClick={() => handleOpenOutput('stage')}
+                className={openOutputButtonClassName}
+                aria-label="Open Stage display in a window"
+              >
+                <AppWindowMac className="w-3 h-3" />
+              </button>
+            </Tooltip>
           </div>
           <div className={`px-2.5 py-2 border-b flex flex-col gap-2 ${darkMode ? 'border-gray-700 bg-gray-850' : 'border-gray-200 bg-gray-50'}`}>
             <div className="flex items-center gap-2">
@@ -514,7 +550,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                   <iframe
                     ref={registerPreviewIframe}
                     key={`stage-${key}`}
-                    src={getPreviewUrl('stage') || null}
+                    src={createPreviewUrl('stage') || null}
                     title="Stage Preview"
                     style={{
                       ...transform.iframe,
@@ -539,13 +575,16 @@ const PreviewOutputsModal = ({ darkMode }) => {
             <h3 className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
               Time
             </h3>
-            <button
-              onClick={() => handleOpenOutput('time')}
-              className={openOutputButtonClassName}
-              title="Open in window"
-            >
-              <AppWindowMac className="w-3 h-3" />
-            </button>
+            <Tooltip content="Open Time display in a window" side="bottom">
+              <button
+                type="button"
+                onClick={() => handleOpenOutput('time')}
+                className={openOutputButtonClassName}
+                aria-label="Open Time display in a window"
+              >
+                <AppWindowMac className="w-3 h-3" />
+              </button>
+            </Tooltip>
           </div>
           <div className={`px-2.5 py-2 border-b flex flex-col gap-2 ${darkMode ? 'border-gray-700 bg-gray-850' : 'border-gray-200 bg-gray-50'}`}>
             <div className="flex items-center gap-2">
@@ -585,7 +624,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                   <iframe
                     ref={registerPreviewIframe}
                     key={`time-${key}`}
-                    src={getPreviewUrl('time') || null}
+                    src={createPreviewUrl('time') || null}
                     title="Time Preview"
                     style={{
                       ...transform.iframe,
@@ -631,13 +670,16 @@ const PreviewOutputsModal = ({ darkMode }) => {
               )}
             </div>
             {previewCustomOutputId && (
-              <button
-                onClick={() => handleOpenOutput(previewCustomOutputId)}
-                className={openOutputButtonClassName}
-                title="Open in window"
-              >
-                <AppWindowMac className="w-3 h-3" />
-              </button>
+              <Tooltip content={`Open ${customPreviewTitle} in a window`} side="bottom">
+                <button
+                  type="button"
+                  onClick={() => handleOpenOutput(previewCustomOutputId)}
+                  className={openOutputButtonClassName}
+                  aria-label={`Open ${customPreviewTitle} in a window`}
+                >
+                  <AppWindowMac className="w-3 h-3" />
+                </button>
+              </Tooltip>
             )}
           </div>
           <div className={`px-2.5 py-2 border-b flex flex-col gap-2 ${darkMode ? 'border-gray-700 bg-gray-850' : 'border-gray-200 bg-gray-50'}`}>
@@ -707,7 +749,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
                       <iframe
                         ref={registerPreviewIframe}
                         key={`custom-${previewCustomOutputId}-${key}`}
-                        src={getPreviewUrl(previewCustomOutputId) || null}
+                        src={createPreviewUrl(previewCustomOutputId) || null}
                         title={`${formatOutputLabel(previewCustomOutputId)} Preview`}
                         style={{
                           ...transform.iframe,
@@ -758,6 +800,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
         <ul className="space-y-1 ml-4 list-disc">
           <li>Live previews update in real-time as you make changes</li>
           <li>Click the <AppWindowMac className="w-3 h-3 inline" /> icon to open full window</li>
+          <li>Use the <MonitorUp className="w-3 h-3 inline" /> button to project the full Preview grid</li>
           <li>Use the refresh button if previews do not update</li>
           <li>Custom preview selection is remembered across app restarts</li>
         </ul>

@@ -7,6 +7,10 @@ import {
   DEFAULT_APPEARANCE_TRANSITIONS,
   normalizeAppearanceTransitions,
 } from '../../../shared/transitionSettings.js';
+import {
+  DEFAULT_PREVIEW_SETTINGS,
+  normalizePreviewSettings,
+} from '../../../shared/previewSettings.js';
 
 let maxFileSizeLimit = 2;
 
@@ -25,6 +29,7 @@ export const createPreferencesSlice = (set) => ({
   maxFileSizeLimit: 2,
   lyricsParsingOptions: normalizeLyricsParsingOptions(),
   appearanceTransitions: { ...DEFAULT_APPEARANCE_TRANSITIONS },
+  previewSettings: { ...DEFAULT_PREVIEW_SETTINGS },
 
   setShowTooltips: (show) => set({ showTooltips: show }),
   setShowTutorialPopovers: (show) => set({ showTutorialPopovers: show }),
@@ -44,6 +49,9 @@ export const createPreferencesSlice = (set) => ({
   }),
   setAppearanceTransitions: (settings) => set({
     appearanceTransitions: normalizeAppearanceTransitions(settings),
+  }),
+  setPreviewSettings: (settings) => set({
+    previewSettings: normalizePreviewSettings(settings),
   }),
 
   getMaxFileSize: () => maxFileSizeLimit,

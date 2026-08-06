@@ -98,6 +98,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
   const setLyricsSections = useLyricsStore((state) => state.setLyricsSections);
   const setLineToSection = useLyricsStore((state) => state.setLineToSection);
   const setLyricsParsingOptions = useLyricsStore((state) => state.setLyricsParsingOptions);
+  const setPreviewSettings = useLyricsStore((state) => state.setPreviewSettings);
 
   const setlistNameRef = useRef(new Map());
   const desktopBootstrapSocketRef = useRef(null);
@@ -291,6 +292,10 @@ const useSocketEvents = (role, clientPurpose = role) => {
         dispatchTimerState(state.stageTimerState, state.timestamp || state.syncTimestamp);
       }
 
+      if (isPlainObject(state.previewSettings)) {
+        setPreviewSettings(state.previewSettings);
+      }
+
       if (role === 'stage') {
         if (state.stageMessages) {
           window.dispatchEvent(new CustomEvent('stage-messages-update', {
@@ -437,24 +442,29 @@ const useSocketEvents = (role, clientPurpose = role) => {
       role === 'stage' ||
       (typeof role === 'string' && role.startsWith('output') && role !== 'output-discovery');
 
+    socket.on('styleUpdate', (payload) => {
+      if (!isPlainObject(payload) || !isPlainObject(payload.settings)) return;
+      const { output, settings } = payload;
+
+      if (output === 'preview') {
+        setPreviewSettings(settings);
+        return;
+      }
+
+      if (!shouldHandleOutputMetrics || !isRoutableOutput(output)) return;
+      logDebug('Received style update for', output, ':', settings);
+
+      if (output === 'stage' && role === 'stage') {
+
+        updateOutputSettings(output, settings);
+      } else if (output !== 'stage') {
+
+        const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = settings;
+        updateOutputSettings(output, styleSettings);
+      }
+    });
+
     if (shouldHandleOutputMetrics) {
-      socket.on('styleUpdate', (payload) => {
-        if (!isPlainObject(payload) || !isRoutableOutput(payload.output) || !isPlainObject(payload.settings)) {
-          return;
-        }
-        const { output, settings } = payload;
-        logDebug('Received style update for', output, ':', settings);
-
-        if (output === 'stage' && role === 'stage') {
-
-          updateOutputSettings(output, settings);
-        } else if (output !== 'stage') {
-
-          const { autosizerActive, primaryViewportWidth, primaryViewportHeight, allInstances, instanceCount, ...styleSettings } = settings;
-          updateOutputSettings(output, styleSettings);
-        }
-      });
-
       socket.on('outputMetrics', (payload) => {
         if (!isPlainObject(payload) || !isOutputId(payload.output) || !isPlainObject(payload.metrics)) {
           return;
@@ -678,7 +688,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     socket.on('periodicStateSync', (state) => {
       applySnapshot(state, 'periodicStateSync');
     });
-  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata, setLyricsParsingOptions]);
+  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata, setLyricsParsingOptions, setPreviewSettings]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,

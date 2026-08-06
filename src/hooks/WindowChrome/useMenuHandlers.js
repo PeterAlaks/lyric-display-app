@@ -224,7 +224,7 @@ const useMenuHandlers = (closeMenu) => {
     closeMenu();
     showModal({
       title: 'Preview Outputs',
-      headerDescription: 'Preview output, stage, time and custom displays with current output visibility.',
+      headerDescription: 'Preview output, stage, time, and custom displays regardless of live visibility.',
       component: 'PreviewOutputs',
       variant: 'info',
       size: 'large',

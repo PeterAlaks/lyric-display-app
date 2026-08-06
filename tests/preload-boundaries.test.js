@@ -31,6 +31,7 @@ test('passive display preload excludes control, file, NDI, and update mutation c
   }
   assert.equal(source.includes('token-store:get'), true);
   assert.equal(source.includes('preferences:get-advanced-settings'), true);
+  assert.equal(source.includes('preferences:get-category'), false);
 });
 
 test('only the control preload can report main-window startup readiness', () => {
@@ -69,6 +70,7 @@ test('window routes receive control, passive, or no preload by role', () => {
   assert.equal(getWindowPreloadRole('/output12'), 'passive');
   assert.equal(getWindowPreloadRole('/stage'), 'passive');
   assert.equal(getWindowPreloadRole('/time'), 'passive');
+  assert.equal(getWindowPreloadRole('/preview?projection=1'), 'passive');
   assert.equal(getWindowPreloadRole('/lyric-video-live-output'), 'passive');
   assert.equal(getWindowPreloadRole('/lyric-video-export-frame'), 'none');
 });
@@ -85,7 +87,7 @@ test('time displays remain unthrottled with or without projection mode', () => {
 });
 
 test('native output preview windows use a black backing surface', () => {
-  for (const route of ['/output1', '/output6', '/stage', '/time', '/lyric-video-live-output']) {
+  for (const route of ['/output1', '/output6', '/stage', '/time', '/preview', '/lyric-video-live-output']) {
     assert.equal(resolveWindowBackgroundColor(route), '#000000', route);
   }
 

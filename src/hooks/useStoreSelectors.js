@@ -120,6 +120,9 @@ export const useKeyboardNavigationPreferences = () =>
 export const useCanvasFloatingToolbarPreference = () =>
     useLyricsStore((state) => state.showCanvasFloatingToolbar);
 
+export const usePreviewSettings = () =>
+    useLyricsStore((state) => state.previewSettings);
+
 export const useSetlistState = () =>
     useStoreWithEqualityFn(
         useLyricsStore,

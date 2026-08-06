@@ -4,6 +4,7 @@ import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 import { buildLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
 import { normalizeAppearanceTransitions } from '../../shared/transitionSettings.js';
+import { normalizePreviewSettings } from '../../shared/previewSettings.js';
 import { normalizeTimerControlSettings, normalizeTimerDisplaySettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
@@ -71,10 +72,11 @@ export async function loadPreferencesIntoStore(store) {
 
     if (window.electronAPI?.preferences?.getCategory) {
       const result = await window.electronAPI.preferences.getCategory('appearance');
-      if (result.success && result.data) {
+      if (result?.success && result.data) {
         const transitions = normalizeAppearanceTransitions(result.data);
         const currentState = store.getState();
         currentState.setAppearanceTransitions(transitions);
+        currentState.setPreviewSettings(result.data.preview);
         currentState.updateTimerDisplaySettings({
           stateTransitionAnimation: transitions.timerStateTransitionAnimation,
           stateTransitionDuration: transitions.timerStateTransitionDuration,
@@ -219,6 +221,7 @@ const useLyricsStore = create(
           stageEnabled: state.stageEnabled,
           darkMode: state.darkMode,
           themeMode: state.themeMode,
+          previewSettings: state.previewSettings,
           skipSectionTitlesOnKeyboard: state.skipSectionTitlesOnKeyboard,
           hasSeenWelcome: state.hasSeenWelcome,
           stageSettings: state.stageSettings,
@@ -236,6 +239,7 @@ const useLyricsStore = create(
       onRehydrateStorage: () => (state) => {
         if (state) {
           rehydrateOutputState(state);
+          state.previewSettings = normalizePreviewSettings(state.previewSettings);
           state.timerDisplaySettings = normalizeTimerDisplaySettings(state.timerDisplaySettings);
           state.timerControlSettings = normalizeTimerControlSettings(state.timerControlSettings);
         }

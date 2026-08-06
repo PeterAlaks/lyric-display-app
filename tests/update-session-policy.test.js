@@ -99,6 +99,15 @@ test('legacy preferences migrate once without overwriting valid operator choices
     backgroundMediaTransitionDuration: 300,
     outputVisibilityTransitionAnimation: 'fade',
     outputVisibilityTransitionDuration: 300,
+    preview: {
+      order: ['output1', 'output2', 'stage', 'time'],
+      gridStyle: 'featured',
+      gap: 'comfortable',
+      previewResolution: '720p',
+      showHeader: true,
+      showLabels: true,
+      showRoutePaths: false,
+    },
   });
 
   const repeated = migratePreferences(result.preferences);
@@ -201,6 +210,35 @@ test('schema 7 preferences gain normalized output transition settings', () => {
   assert.equal(result.preferences.appearance.backgroundMediaTransitionDuration, 100);
   assert.equal(result.preferences.appearance.outputVisibilityTransitionAnimation, 'blur');
   assert.equal(result.preferences.appearance.outputVisibilityTransitionDuration, 450);
+});
+
+test('schema 9 Preview settings migrate to the featured grid style', () => {
+  const result = migratePreferences({
+    _schemaVersion: 9,
+    appearance: {
+      preview: {
+        order: ['stage', 'output1', 'output2', 'time'],
+        columns: '3',
+        gap: 'compact',
+        previewResolution: '1080p',
+        showHeader: false,
+        showLabels: true,
+        showRoutePaths: true,
+      },
+    },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
+  assert.deepEqual(result.preferences.appearance.preview, {
+    order: ['stage', 'output1', 'output2', 'time'],
+    gridStyle: 'featured',
+    gap: 'compact',
+    previewResolution: '1080p',
+    showHeader: false,
+    showLabels: true,
+    showRoutePaths: true,
+  });
 });
 
 test('future preference and session schemas are rejected without mutation', () => {

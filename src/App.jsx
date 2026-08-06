@@ -19,6 +19,7 @@ const OutputPage = React.lazy(() => import('./pages/OutputPage'));
 const LyricVideoStudio = React.lazy(() => import('./pages/LyricVideoStudio'));
 const LyricVideoExportFrame = React.lazy(() => import('./pages/LyricVideoExportFrame'));
 const LyricVideoLiveOutput = React.lazy(() => import('./pages/LyricVideoLiveOutput'));
+const Preview = React.lazy(() => import('./pages/Preview'));
 const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
 
 const CUSTOM_OUTPUT_ROUTE_IDS = getCustomOutputRouteIds();
@@ -33,6 +34,7 @@ const isPassiveDisplayRoute = (pathname) => {
   return (
     path === '/stage' ||
     path === '/time' ||
+    path === '/preview' ||
     path === '/lyric-video-live-output' ||
     path === '/lyric-video-export-frame' ||
     /^\/output\d+$/.test(path)
@@ -47,8 +49,9 @@ const getDisplaySurface = (pathname, search = '') => {
   );
   const outputRoute = /^\/output\d+$/.test(path);
   const liveVideoRoute = path === '/lyric-video-live-output';
+  const previewRoute = path === '/preview';
 
-  if (projection && (outputRoute || liveVideoRoute || path === '/stage')) {
+  if (projection && (outputRoute || liveVideoRoute || previewRoute || path === '/stage')) {
     return 'projection';
   }
   if (outputRoute || liveVideoRoute || path === '/lyric-video-export-frame') {
@@ -84,6 +87,7 @@ function AppRoutes() {
         ))}
         <Route path="/stage" element={<Stage />} />
         <Route path="/time" element={<TimeDisplay />} />
+        <Route path="/preview" element={<Preview />} />
         <Route path="/obs-setup" element={<ObsSetupRoute />} />
         <Route path="/obs-dock" element={<ObsDockRoute />} />
         <Route path="/lyric-video-live-output" element={<LyricVideoLiveOutput />} />

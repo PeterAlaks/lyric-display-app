@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle, View } from 'lucide-react';
+import { FolderOpen, FilePlusCorner, FileMusic, Plus, PlusCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLyricsState, useOutputState, useOutput1Settings, useOutput2Settings, useStageSettings, useDarkModeState, useSetlistState, useIsDesktopApp, useAutoplaySettings, useIntelligentAutoplayState, useAllOutputIds, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
@@ -461,12 +461,8 @@ const LyricDisplayApp = () => {
               handleOpenOnlineLyricsSearch={handleOpenOnlineLyricsSearch}
               handleOpenSetlist={handleOpenSetlist}
               handleOpenTimerControl={handleOpenTimerControl}
-              handleSyncOutputs={handleSyncOutputs}
               iconButtonClass={iconButtonClass}
-              isAuthenticated={isAuthenticated}
-              isConnected={isConnected}
               maxSetlistFiles={maxSetlistFiles}
-              ready={ready}
               refreshAuthToken={refreshAuthToken}
               setDarkMode={setDarkMode}
               setThemeMode={setThemeMode}
@@ -541,30 +537,6 @@ const LyricDisplayApp = () => {
               </div>
 
               <div className="flex items-center gap-1">
-                <Tooltip content="Preview Outputs" side="bottom">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      showModal({
-                        title: 'Preview Outputs',
-                        headerDescription: 'Preview output, stage, time and custom displays with current output visibility.',
-                        component: 'PreviewOutputs',
-                        variant: 'info',
-                        size: 'large',
-                        dismissLabel: 'Close',
-                        className: 'max-w-4xl'
-                      });
-                    }}
-                    className={`rounded-lg p-2 transition-colors ${darkMode
-                      ? 'text-gray-400 hover:bg-gray-700 hover:text-gray-200'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                      }`}
-                    aria-label="Preview Outputs"
-                  >
-                    <View className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-
                 {/* Help remains the rightmost action. */}
                 <Tooltip content="Control Panel Help" side="bottom">
                   <button

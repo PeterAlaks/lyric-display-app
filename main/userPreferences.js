@@ -9,6 +9,7 @@ import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setl
 import { DEFAULT_CAPITALIZED_WORDS } from '../shared/capitalizedWords.js';
 import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
 import { DEFAULT_APPEARANCE_TRANSITIONS } from '../shared/transitionSettings.js';
+import { DEFAULT_PREVIEW_SETTINGS } from '../shared/previewSettings.js';
 import {
   CURRENT_PREFERENCES_SCHEMA_VERSION,
   migratePreferences,
@@ -103,6 +104,7 @@ const preferencesStore = new Store({
       showTooltips: true,
       showTutorialPopovers: true,
       showCanvasFloatingToolbar: true,
+      preview: DEFAULT_PREVIEW_SETTINGS,
       ...DEFAULT_APPEARANCE_TRANSITIONS,
     },
 

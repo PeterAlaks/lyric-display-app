@@ -6,6 +6,7 @@ export function getWindowPreloadRole(route = '/') {
     /^\/output\d+$/.test(routePath)
     || routePath === '/stage'
     || routePath === '/time'
+    || routePath === '/preview'
     || routePath === '/lyric-video-live-output'
   ) {
     return 'passive';

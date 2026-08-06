@@ -1239,6 +1239,92 @@ test('stage output toggle fanout reaches controllers and stage display only', ()
   }
 });
 
+test('Preview layout settings reach browser Preview clients and hydrate reconnect snapshots', () => {
+  const previousConnectedClients = state.connectedClients;
+  const previousPreviewSettings = state.currentPreviewSettings;
+  const previousLiveSafety = state.liveSafety;
+
+  state.connectedClients = new Map();
+  state.currentPreviewSettings = {
+    order: ['output1', 'output2', 'stage', 'time'],
+    gridStyle: 'featured',
+    gap: 'comfortable',
+    previewResolution: '720p',
+    showHeader: true,
+    showLabels: true,
+    showRoutePaths: false,
+  };
+  state.liveSafety = { enabled: true, updatedAt: Date.now(), updatedBy: 'test' };
+
+  const preview = createTrackedClient('socket-preview', {
+    type: 'output-discovery',
+    purpose: 'preview',
+  });
+  const otherDiscovery = createTrackedClient('socket-discovery', {
+    type: 'output-discovery',
+    purpose: 'output-discovery',
+  });
+  const output = createTrackedClient('socket-output', {
+    type: 'output1',
+    purpose: 'output1',
+  });
+  const controller = createTrackedClient('socket-controller', {
+    type: 'web',
+    purpose: 'control',
+  });
+
+  try {
+    const { handlers, io, socket } = createSocketHarness();
+    registerOutputHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'settings:write',
+      clientType: 'desktop',
+      deviceId: 'desktop-device',
+      sessionId: 'desktop-session',
+    });
+
+    const nextSettings = {
+      order: ['time', 'stage', 'output2', 'output1'],
+      gridStyle: 'responsive',
+      gap: 'compact',
+      previewResolution: '1080p',
+      showHeader: false,
+      showLabels: true,
+      showRoutePaths: true,
+    };
+    handlers.get('styleUpdate')?.({ output: 'preview', settings: nextSettings });
+
+    assert.deepEqual(state.currentPreviewSettings, nextSettings);
+    assert.deepEqual(preview.events.at(-1), {
+      eventName: 'styleUpdate',
+      payload: { output: 'preview', settings: nextSettings },
+    });
+    assert.equal(otherDiscovery.events.length, 0);
+    assert.equal(output.events.length, 0);
+    assert.equal(controller.events.length, 0);
+
+    const reconnectState = buildCurrentState({
+      type: 'output-discovery',
+      purpose: 'preview',
+      permissions: ['lyrics:read', 'settings:read'],
+    });
+    assert.deepEqual(reconnectState.previewSettings, nextSettings);
+    assert.equal(Object.hasOwn(reconnectState, 'lyrics'), false);
+
+    const periodicState = buildPeriodicState({
+      type: 'output-discovery',
+      purpose: 'preview',
+      permissions: ['lyrics:read', 'settings:read'],
+    });
+    assert.deepEqual(periodicState.previewSettings, nextSettings);
+  } finally {
+    state.connectedClients = previousConnectedClients;
+    state.currentPreviewSettings = previousPreviewSettings;
+    state.liveSafety = previousLiveSafety;
+  }
+});
+
 test('preview output metrics are ignored by production readiness tracking', () => {
   const previousOutputInstances = state.outputInstances;
   const previousOutputSettings = state.outputSettings;

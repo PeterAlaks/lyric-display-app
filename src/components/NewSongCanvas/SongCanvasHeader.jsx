@@ -398,7 +398,7 @@ const SongCanvasHeader = ({
           </Tooltip>
         </div>
 
-        <div className="flex w-full max-w-xl min-w-0 items-center justify-self-center gap-2.5 px-1">
+        <div className="flex w-full max-w-lg min-w-0 items-center justify-self-center gap-2.5 px-1">
           <FileText className={`hidden h-6 w-6 shrink-0 sm:block ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
           <div className="min-w-0 flex-1">
             <label htmlFor="lyrics-file-name" className="sr-only">Lyrics file name</label>

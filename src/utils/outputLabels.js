@@ -13,6 +13,10 @@ export const formatOutputLabel = (outputKey, { uppercase = false } = {}) => {
     return uppercase ? 'LYRIC VIDEO STUDIO' : 'Lyric Video Studio';
   }
 
+  if (outputKey === 'preview') {
+    return uppercase ? 'PREVIEW' : 'Preview';
+  }
+
   const match = /^output(\d+)$/i.exec(String(outputKey));
   if (match) {
     const num = match[1];

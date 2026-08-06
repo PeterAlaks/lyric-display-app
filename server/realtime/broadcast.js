@@ -121,6 +121,9 @@ export const emitOutputVisibilityEvent = (io, eventName, payload) => (
 export const emitIndividualOutputEvent = (io, eventName, payload = {}, { excludeSocket = null } = {}) => (
   emitToClients(io, eventName, payload, (client) => {
     if (excludeSocket && client?.socket === excludeSocket) return false;
+    if (payload.output === 'preview') {
+      return isOutputDiscoveryClient(client) && client?.purpose === 'preview';
+    }
     if (isControllerClient(client)) return true;
     if (payload.output === 'stage') return isStageDisplayClient(client);
     return isOutputDisplayClient(client) && client.type === payload.output;

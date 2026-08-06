@@ -289,6 +289,7 @@ export default function LyricVisualFrame({
     fullScreenBackgroundType = 'color',
     fullScreenBackgroundColor = '#000000',
     fullScreenBackgroundPaint,
+    fullScreenBackgroundOpacity = 10,
     fullScreenBackgroundMedia,
     backgroundMediaTransitionAnimation = 'fade',
     backgroundMediaTransitionDuration = 300,
@@ -319,6 +320,10 @@ export default function LyricVisualFrame({
   const backgroundTransitionSeconds = normalizeTransitionDuration(backgroundMediaTransitionDuration, 300) / 1000;
   const dropShadowStrength = clamp(Number(dropShadowOpacity) || 0, 0, 10);
   const backgroundStrength = clamp(Number(backgroundOpacity) || 0, 0, 10);
+  const parsedFullScreenBackgroundOpacity = Number(fullScreenBackgroundOpacity);
+  const fullScreenBackgroundStrength = Number.isFinite(parsedFullScreenBackgroundOpacity)
+    ? clamp(parsedFullScreenBackgroundOpacity, 0, 10) / 10
+    : 1;
   const verticalMarginRem = clamp(Number(yMargin) || 0, 0, 20);
   const horizontalMarginRem = clamp(Number(xMargin) || 0, 0, 20);
   const horizontalPaddingStyle = {
@@ -387,6 +392,8 @@ export default function LyricVisualFrame({
     && (!isBackgroundVideoPlaybackManaged || backgroundVideoPlaying);
 
   const desiredFullScreenBackground = useMemo(() => {
+    if (!fullScreenMode || !renderBackgroundLayer) return null;
+
     if (fullScreenBackgroundType === 'color') {
       return {
         key: `color-${fullScreenBackgroundColorValue}`,
@@ -412,6 +419,8 @@ export default function LyricVisualFrame({
     fullScreenBackgroundColorValue,
     fullScreenBackgroundMedia,
     fullScreenBackgroundType,
+    fullScreenMode,
+    renderBackgroundLayer,
   ]);
 
   const [backgroundState, setBackgroundState] = useState({
@@ -529,17 +538,26 @@ export default function LyricVisualFrame({
     }
 
     return layers.map(({ background, isReady, isVisible }) => (
-      <FullScreenBackgroundLayer
+      <div
         key={background.key}
-        background={background}
-        isReady={isReady}
-        isVisible={isVisible}
-        label={label}
-        onReady={handleBackgroundReady}
-        playbackRequested={background.kind === 'video' && shouldPlayBackgroundVideo}
-        transitionSeconds={backgroundTransitionSeconds}
-        transitionVariants={backgroundTransitionVariants}
-      />
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          opacity: fullScreenBackgroundStrength,
+          transition: previewMode ? undefined : 'opacity 150ms ease-out',
+        }}
+      >
+        <FullScreenBackgroundLayer
+          background={background}
+          isReady={isReady}
+          isVisible={isVisible}
+          label={label}
+          onReady={handleBackgroundReady}
+          playbackRequested={background.kind === 'video' && shouldPlayBackgroundVideo}
+          transitionSeconds={backgroundTransitionSeconds}
+          transitionVariants={backgroundTransitionVariants}
+        />
+      </div>
     ));
   };
 

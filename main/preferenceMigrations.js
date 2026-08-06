@@ -10,8 +10,12 @@ import {
   DEFAULT_APPEARANCE_TRANSITIONS,
   normalizeAppearanceTransitions,
 } from '../shared/transitionSettings.js';
+import {
+  DEFAULT_PREVIEW_SETTINGS,
+  normalizePreviewSettings,
+} from '../shared/previewSettings.js';
 
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 8;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 10;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -150,6 +154,38 @@ export function migratePreferences(input) {
         ...normalizeAppearanceTransitions(appearance),
       },
       _schemaVersion: 8,
+    };
+  }
+
+  if (sourceVersion < 9) {
+    const appearance = isPlainObject(migrated.appearance) ? migrated.appearance : {};
+    migrated = {
+      ...migrated,
+      appearance: {
+        ...appearance,
+        preview: normalizePreviewSettings(
+          isPlainObject(appearance.preview)
+            ? appearance.preview
+            : DEFAULT_PREVIEW_SETTINGS
+        ),
+      },
+      _schemaVersion: 9,
+    };
+  }
+
+  if (sourceVersion < 10) {
+    const appearance = isPlainObject(migrated.appearance) ? migrated.appearance : {};
+    migrated = {
+      ...migrated,
+      appearance: {
+        ...appearance,
+        preview: normalizePreviewSettings(
+          isPlainObject(appearance.preview)
+            ? appearance.preview
+            : DEFAULT_PREVIEW_SETTINGS
+        ),
+      },
+      _schemaVersion: 10,
     };
   }
 

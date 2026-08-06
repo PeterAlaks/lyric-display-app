@@ -20,6 +20,14 @@ export function createRouteUrl({ baseUrl, route, hash = !isDevelopmentRouter() }
   return `${origin}${createRoutePath(route, { hash })}`;
 }
 
+export function createPreviewUrl(routeId, { baseUrl, hash = !isDevelopmentRouter() } = {}) {
+  const safeRouteId = String(routeId || '').replace(/^\/+/, '');
+  if (!safeRouteId) return '';
+  const rendererOrigin = typeof window !== 'undefined' ? window.location?.origin : '';
+  const origin = trimTrailingSlash(baseUrl || rendererOrigin || resolveBackendOrigin());
+  return `${origin}${createRoutePath(`/${safeRouteId}?preview=true`, { hash })}`;
+}
+
 export function createSourcePath({ outputId, mode = 'transparent', preview = false, hash = !isDevelopmentRouter() }) {
   const safeOutputId = outputId || 'output1';
   const params = new URLSearchParams();

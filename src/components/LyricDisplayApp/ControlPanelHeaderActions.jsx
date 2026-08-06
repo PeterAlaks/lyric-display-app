@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, ListMusic, MonitorUp, Moon, RefreshCw, Settings, Sun, Timer } from 'lucide-react';
+import { Globe, ListMusic, MonitorUp, Moon, Settings, Sun, Timer, View } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import AuthStatusIndicator from '../AuthStatusIndicator';
 
@@ -11,12 +11,8 @@ export default function ControlPanelHeaderActions({
   handleOpenOnlineLyricsSearch,
   handleOpenSetlist,
   handleOpenTimerControl,
-  handleSyncOutputs,
   iconButtonClass,
-  isAuthenticated,
-  isConnected,
   maxSetlistFiles,
-  ready,
   refreshAuthToken,
   setDarkMode,
   setThemeMode,
@@ -45,16 +41,6 @@ export default function ControlPanelHeaderActions({
             onClick={handleOpenSetlist}
           >
             <ListMusic className="h-4 w-4" />
-          </button>
-        </Tooltip>
-
-        <Tooltip content="Force refresh all output displays with current state" side="bottom">
-          <button
-            disabled={!isConnected || !isAuthenticated || !ready}
-            className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
-            onClick={handleSyncOutputs}
-          >
-            <RefreshCw className="h-4 w-4" />
           </button>
         </Tooltip>
 
@@ -98,6 +84,26 @@ export default function ControlPanelHeaderActions({
             }}
           >
             <Settings className="h-4 w-4" />
+          </button>
+        </Tooltip>
+
+        <Tooltip content="Preview all output displays" side="bottom">
+          <button
+            aria-label="Preview Outputs"
+            className={iconButtonClass(false)}
+            onClick={() => {
+              showModal({
+                title: 'Preview Outputs',
+                headerDescription: 'Preview output, stage, time, and custom displays regardless of live visibility.',
+                component: 'PreviewOutputs',
+                variant: 'info',
+                size: 'large',
+                dismissLabel: 'Close',
+                className: 'max-w-4xl'
+              });
+            }}
+          >
+            <View className="h-4 w-4" />
           </button>
         </Tooltip>
 

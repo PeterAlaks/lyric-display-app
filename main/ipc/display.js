@@ -5,13 +5,14 @@ const resolveOutputRoute = (outputKey) => {
   if (outputKey === 'lyric-video-studio') return '/lyric-video-live-output';
   if (outputKey === 'stage') return '/stage';
   if (outputKey === 'time') return '/time';
+  if (outputKey === 'preview') return '/preview';
   if (typeof outputKey === 'string' && /^output\d+$/.test(outputKey)) return `/${outputKey}`;
   return null;
 };
 
 const resolveOutputKeyFromUrl = (url) => {
   if (!url) return null;
-  const match = String(url).match(/(?:#\/|\/)(lyric-video-live-output|stage|time|output\d+)(?:\?|$)/i);
+  const match = String(url).match(/(?:#\/|\/)(lyric-video-live-output|preview|stage|time|output\d+)(?:\?|$)/i);
   if (!match) return null;
   if (match[1].toLowerCase() === 'lyric-video-live-output') return 'lyric-video-studio';
   return match[1].toLowerCase();

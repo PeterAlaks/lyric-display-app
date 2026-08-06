@@ -633,10 +633,10 @@ components:
         properties:
           output:
             type: string
-            enum: ['output1', 'output2', 'stage']
+            enum: ['output1', 'output2', 'stage', 'preview']
           settings:
             type: object
-      description: Update styling for a specific output. Mirrors to all clients.
+      description: Update styling for a specific output or the Preview operator layout. Mirrors to relevant render clients.
       x-permissions: ['settings:write']
     stageTimerUpdate:
       name: stageTimerUpdate

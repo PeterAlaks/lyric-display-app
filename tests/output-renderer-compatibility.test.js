@@ -30,6 +30,7 @@ test('fullscreen colour uses a dedicated viewport layer', () => {
 });
 
 test('fullscreen paint and decoded media changes share the readiness-aware transition layer', () => {
+  assert.match(rendererSource, /if \(!fullScreenMode \|\| !renderBackgroundLayer\) return null/);
   assert.match(rendererSource, /fullScreenBackgroundType === 'color'[\s\S]*?kind: 'color'/);
   assert.match(rendererSource, /const kind = backgroundMediaIsVideo \? 'video' : 'image'/);
   assert.match(rendererSource, /image\.decode\(\)[\s\S]*?reportReadyAfterPaint/);
@@ -38,6 +39,12 @@ test('fullscreen paint and decoded media changes share the readiness-aware trans
   assert.match(rendererSource, /backgroundState\.incomingReady[\s\S]*?<FullScreenBackgroundLayer/);
   assert.match(rendererSource, /\{renderFullScreenBackground\(\)\}/);
   assert.doesNotMatch(rendererSource, /\{shouldRenderFullScreenBackgroundLayer && fullScreenBackgroundType === 'color' && \(/);
+});
+
+test('fullscreen colour and media share the bounded background opacity layer', () => {
+  assert.match(rendererSource, /fullScreenBackgroundOpacity = 10/);
+  assert.match(rendererSource, /clamp\(parsedFullScreenBackgroundOpacity, 0, 10\) \/ 10/);
+  assert.match(rendererSource, /opacity: fullScreenBackgroundStrength/);
 });
 
 test('output visibility keeps the visual frame mounted so selected media remains warm', () => {
