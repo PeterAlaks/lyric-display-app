@@ -356,7 +356,7 @@ const getFfmpegReadiness = async () => {
 const getExportFrameUrl = () => (
   isDev
     ? 'http://localhost:5173/lyric-video-export-frame'
-    : 'http://127.0.0.1:4000#/lyric-video-export-frame'
+    : 'http://127.0.0.1:4000/lyric-video-export-frame'
 );
 
 const getHardwareEncoderCandidates = async () => {

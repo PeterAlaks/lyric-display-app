@@ -17,7 +17,7 @@ All contributors and community participants are expected to follow the [Code of 
 
 For process boundaries, file ownership, runtime flows, the route map, and a feature-to-file index, use the [repository and architecture map](docs/PROJECT_STRUCTURE.md).
 
-- **Frontend (`src/`)**: React 19 + Vite + Tailwind. Zustand (`context/LyricsStore.js`) persists control state (lyrics, selections, styling). Routing uses HashRouter in production. Reusable UI lives in `components/ui`, modals/toasts are provided via `ModalProvider` and `ToastProvider`.
+- **Frontend (`src/`)**: React 19 + Vite + Tailwind. Zustand (`context/LyricsStore.js`) persists control state (lyrics, selections, styling). Routing uses clean browser paths. Reusable UI lives in `components/ui`, modals/toasts are provided via `ModalProvider` and `ToastProvider`.
 - **Output views (`pages/OutputPage.jsx`, `pages/Stage.jsx`)**: Socket-driven displays that render a single current line with styling/autosizing/background media, using framer-motion for transitions.
 - **Control panel (`components/LyricDisplayApp.jsx`)**: Desktop-first controller with setlists, online lyrics search, autoplay (interval and timestamp-driven), intelligent search, and styling panels for each output.
 - **Backend (`server/`)**: Express + Socket.IO with JWT auth, join-code guard for controllers, media upload endpoints (200 MB max, limited MIME types), and secret rotation support. Socket events live in `server/events.js` and enforce permissions.

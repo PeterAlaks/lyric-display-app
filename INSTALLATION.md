@@ -111,11 +111,11 @@ Use these routes in software that accepts a web/browser source:
 
 | View | Local URL | Notes |
 | --- | --- | --- |
-| Output 1 | `http://localhost:4000/#/output1` | Default lyric output |
-| Output 2 | `http://localhost:4000/#/output2` | Default lyric output |
-| Output 3–6 | `http://localhost:4000/#/output3` ... `output6` | Add the custom output in LyricDisplay first |
-| Stage | `http://localhost:4000/#/stage` | Confidence/stage display |
-| Timer | `http://localhost:4000/#/time` | Dedicated timer/clock display |
+| Output 1 | `http://localhost:4000/output1` | Default lyric output |
+| Output 2 | `http://localhost:4000/output2` | Default lyric output |
+| Output 3–6 | `http://localhost:4000/output3` ... `output6` | Add the custom output in LyricDisplay first |
+| Stage | `http://localhost:4000/stage` | Confidence/stage display |
+| Timer | `http://localhost:4000/time` | Dedicated timer/clock display |
 
 Replace `localhost` with the LyricDisplay computer's LAN address when the receiving software runs on another device. Output and Stage views support transparent production layouts; the Timer view is intended as a full display.
 
@@ -140,7 +140,7 @@ For OBS on the same computer, use host `127.0.0.1`. For OBS on another computer,
 2. Enter an output URL, for example:
 
 ```text
-http://localhost:4000/#/output1
+http://localhost:4000/output1
 ```
 
 3. Match the width and height to the OBS canvas, commonly `1920 × 1080`.
@@ -170,7 +170,7 @@ http://<LYRICDISPLAY-IP>:4000/api/health
 4. Use that address in the output URL:
 
 ```text
-http://<LYRICDISPLAY-IP>:4000/#/output1
+http://<LYRICDISPLAY-IP>:4000/output1
 ```
 
 5. If the address changes after a restart, reserve the address in the router's DHCP settings or ask the network administrator for a stable address. This is safer than guessing and manually assigning an address that may conflict with another device.

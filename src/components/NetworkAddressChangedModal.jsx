@@ -111,7 +111,7 @@ export default function NetworkAddressChangedModal({
             <p className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>What to do</p>
             <ol className={`mt-2 list-decimal space-y-2 pl-4 text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               <li>
-                On each remote output page, replace the old IP with the new one and keep its output route unchanged. For example: <code className="break-all font-semibold">{outputBaseUrl}/#/output1</code>.
+                On each remote output page, replace the old IP with the new one and keep its output route unchanged. For example: <code className="break-all font-semibold">{outputBaseUrl}/output1</code>.
               </li>
               <li>Reload the page, then update any saved browser-source or integration URL that still uses the previous IP address.</li>
             </ol>

@@ -33,7 +33,7 @@ const createLocationHarness = ({ isDevelopment, existingInstallPaths }) => {
   };
 };
 
-test('NDI launch config binds Chromium and companion storage to managed user data', () => {
+test('NDI launch config uses clean app routes and managed user data by default', () => {
   const userDataPath = path.resolve('managed NDI user data');
   const config = createCompanionLaunchConfig({
     userDataPath,
@@ -50,6 +50,7 @@ test('NDI launch config binds Chromium and companion storage to managed user dat
     '--port', '9137',
     '--auth-token', 'test-token',
     '--app-url', 'http://127.0.0.1:4000',
+    '--no-hash',
   ]);
 });
 

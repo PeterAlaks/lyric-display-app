@@ -49,7 +49,7 @@ The [installation and integration guide](INSTALLATION.md) covers platform trust 
 5. In OBS, use **Output > OBS Source Creator** or add a Browser Source manually:
 
 ```text
-http://localhost:4000/#/output1
+http://localhost:4000/output1
 ```
 
 LyricDisplay must remain running while browser sources or remote controllers are in use. See the [integration guide](INSTALLATION.md#browser-output-urls) for all output routes.

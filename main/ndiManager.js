@@ -631,7 +631,7 @@ async function launchCompanion() {
       port: ipcConfig.port,
       authToken: companionAuthToken,
       appUrl: isDev ? 'http://localhost:5173' : 'http://127.0.0.1:4000',
-      hashRouting: !isDev,
+      hashRouting: false,
     });
     const args = launchConfig.args;
 

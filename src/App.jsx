@@ -4,7 +4,12 @@ import { useDarkModeState } from './hooks/useStoreSelectors';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import { getCustomOutputRouteIds } from '../shared/outputRegistry.js';
 
-const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
+// Keep old browser-source URLs working while making clean paths the default.
+// The fragment is intentionally detected before React mounts so a legacy
+// `/#/output1` source continues to use the router semantics it was created with.
+const Router = typeof window !== 'undefined' && window.location.hash.startsWith('#/')
+  ? HashRouter
+  : BrowserRouter;
 
 const AppProviders = React.lazy(() => import('./components/AppProviders'));
 const MainWindowShell = React.lazy(() => import('./components/routes/MainWindowShell'));

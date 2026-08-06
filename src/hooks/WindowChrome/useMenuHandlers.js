@@ -6,6 +6,7 @@ import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useLyricsStore from '@/context/LyricsStore';
 import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '@/utils/lyricDisplayDock';
 import { openFileNavigator } from '@/utils/fileNavigatorEvents';
+import { CHECK_APP_ANNOUNCEMENTS_EVENT } from '@/constants/modalEvents';
 
 const useMenuHandlers = (closeMenu) => {
   const navigate = useNavigate();
@@ -488,6 +489,15 @@ const useMenuHandlers = (closeMenu) => {
     });
   }, [closeMenu, showModal]);
 
+  const handleCheckAnnouncements = useCallback(() => {
+    closeMenu();
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(CHECK_APP_ANNOUNCEMENTS_EVENT, {
+        detail: { manual: true },
+      }));
+    }, 0);
+  }, [closeMenu]);
+
   const handleSupportDev = useCallback(() => {
     closeMenu();
     window.dispatchEvent(new Event('open-support-dev-modal'));
@@ -588,6 +598,7 @@ const useMenuHandlers = (closeMenu) => {
     handleRepo,
     handleConnectionDiagnostics,
     handleIntegrationGuide,
+    handleCheckAnnouncements,
     handleAbout,
     handleSupportDev,
     handleCheckUpdates,

@@ -37,7 +37,7 @@ export function createCompanionLaunchConfig({
   port,
   authToken,
   appUrl,
-  hashRouting = true,
+  hashRouting = false,
 }) {
   const normalizedUserDataPath = String(userDataPath || '').trim();
   if (!normalizedUserDataPath) {

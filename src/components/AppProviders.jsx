@@ -14,6 +14,7 @@ import { REQUEST_MODAL_CLOSE_EVENT } from '../constants/modalEvents';
 import useReleasePointerFocus from '../hooks/useReleasePointerFocus';
 
 const ScheduleFileOpenBridge = React.lazy(() => import('./bridges/ScheduleFileOpenBridge'));
+const AppAnnouncementBridge = React.lazy(() => import('./bridges/AppAnnouncementBridge'));
 
 const formatScheduleVariance = (varianceMs) => {
   const minutes = Math.max(1, Math.ceil(Math.abs(Number(varianceMs) || 0) / 60_000));
@@ -219,6 +220,7 @@ export default function AppProviders({ children, effectiveDarkMode, isDockRuntim
       >
         <React.Suspense fallback={null}>
           <ScheduleFileOpenBridge />
+          {!isDockRuntime && <AppAnnouncementBridge />}
         </React.Suspense>
         {ownsScheduleAlerts && <ScheduleAlertBridge />}
         {children}

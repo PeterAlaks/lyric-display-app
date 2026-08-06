@@ -534,16 +534,15 @@ export function createWindow(route = '/', options = {}) {
   if (isDev) {
     win.loadURL(`http://localhost:5173${route}`);
   } else {
-    const hashRoute = route === '/' ? '/' : `#${route}`;
     const baseUrl = 'http://127.0.0.1:4000';
     win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
       console.error('Failed to load:', errorCode, errorDescription, validatedURL);
       setTimeout(() => {
         console.log('Retrying load...');
-        try { win.loadURL(`${baseUrl}${hashRoute}`); } catch { }
+        try { win.loadURL(`${baseUrl}${route}`); } catch { }
       }, 1000);
     });
-    win.loadURL(`${baseUrl}${hashRoute}`);
+    win.loadURL(`${baseUrl}${route}`);
   }
 
   return win;

@@ -39,7 +39,7 @@ flowchart LR
 | Concern | Development | Packaged application |
 | --- | --- | --- |
 | Renderer URL | Vite on `http://localhost:5173` | Backend serves `dist/` on `http://127.0.0.1:4000` |
-| Router | `BrowserRouter` | `HashRouter` |
+| Router | `BrowserRouter` | `BrowserRouter` |
 | Backend | Electron forks `server/index.js` with `NODE_ENV=development` | Electron forks the ASAR-packaged backend with `NODE_ENV=production` and a real `userData` working directory |
 | API/socket access | Vite proxies `/api`, `/socket.io`, and `/media` to port `4000`; Electron renderers resolve port `4000` directly | Same origin as the backend-served renderer |
 | Native bridge | Electron windows only | Electron windows only |
@@ -90,7 +90,7 @@ Generated or machine-local paths are `node_modules/`, `server/node_modules/`, `d
 1. [`main.js`](../main.js) establishes app identity and the custom media scheme, takes the single-instance lock, initializes file logging, registers IPC, and wires protocol/file-open lifecycle events.
 2. [`main/startup.js`](../main/startup.js) starts the backend, obtains the backend-generated admin key, prewarms providers/fonts, initializes display/NDI/external-control services, and creates the main window.
 3. [`main/backend.js`](../main/backend.js) forks [`server/index.js`](../server/index.js), passes the user-data paths and app-session ID, waits for health readiness, mirrors logs, and applies bounded restart recovery.
-4. [`main/windows.js`](../main/windows.js) creates secured `BrowserWindow` instances and loads either the Vite route or the backend-served hash route.
+4. [`main/windows.js`](../main/windows.js) creates secured `BrowserWindow` instances and loads either the Vite route or the backend-served clean route.
 5. [`src/main.jsx`](../src/main.jsx) initializes the persisted Zustand store, chunk recovery, global styles, and the React root. [`src/App.jsx`](../src/App.jsx) selects the router and route tree.
 
 Headless OBS Dock mode follows the same backend startup but deliberately skips creating renderer windows. Its relaunch/protocol behavior is owned by [`main/obsDockStartup.js`](../main/obsDockStartup.js), [`main/tray.js`](../main/tray.js), and the app-control backend route.
@@ -425,7 +425,7 @@ control panel action
   -> metrics reported to the control panel
 ```
 
-Projection changes should be checked on display reconnect/removal, custom-output deletion, crash recovery, fullscreen/focus behavior, and packaged hash routes.
+Projection changes should be checked on display reconnect/removal, custom-output deletion, crash recovery, fullscreen/focus behavior, and packaged routes.
 
 ### Authenticate and connect
 
