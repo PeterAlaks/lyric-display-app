@@ -94,6 +94,7 @@ const preferencesStore = new Store({
       maxRecentFiles: 10,
       maxFileSize: 2, // MB
       maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
+      fileNavigatorSort: 'name-asc',
     },
 
     // Appearance Settings
@@ -370,6 +371,7 @@ export function getFileHandlingSettings() {
       maxRecentFiles: fileHandling?.maxRecentFiles ?? 10,
       maxFileSize: fileHandling?.maxFileSize ?? 2,
       maxSetlistFiles: normalizeSetlistItemLimit(fileHandling?.maxSetlistFiles),
+      fileNavigatorSort: fileHandling?.fileNavigatorSort ?? 'name-asc',
     };
   } catch (error) {
     console.error('[UserPreferences] Failed to get file handling settings:', error);
@@ -377,6 +379,7 @@ export function getFileHandlingSettings() {
       maxRecentFiles: 10,
       maxFileSize: 2,
       maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
+      fileNavigatorSort: 'name-asc',
     };
   }
 }

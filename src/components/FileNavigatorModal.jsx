@@ -49,6 +49,9 @@ const SORT_OPTIONS = [
   { id: 'size-asc', label: 'Size (smallest)' },
   { id: 'type-asc', label: 'File type' },
 ];
+const DEFAULT_SORT_ID = 'name-asc';
+const SORT_PREFERENCE_PATH = 'fileHandling.fileNavigatorSort';
+const isValidSortId = (value) => SORT_OPTIONS.some((option) => option.id === value);
 
 const fileNameCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
@@ -191,12 +194,13 @@ export default function FileNavigatorModal() {
   const enterFrameRef = useRef(null);
   const removalConfirmationTimerRef = useRef(null);
   const wasIndexingRef = useRef(false);
+  const sortPreferenceSequenceRef = useRef(0);
 
   const [open, setOpen] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [query, setQuery] = useState('');
   const [filterId, setFilterId] = useState('all');
-  const [sortId, setSortId] = useState('name-asc');
+  const [sortId, setSortId] = useState(DEFAULT_SORT_ID);
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [destination, setDestination] = useState('control');
   const [navigatorState, setNavigatorState] = useState({ roots: [], recents: [], status: {}, limits: {} });
@@ -227,6 +231,35 @@ export default function FileNavigatorModal() {
   const remoteIndexing = Boolean(navigatorState.status?.scanning);
   const indexing = indexingPending || creatingLyricsFolder || remoteIndexing || stateHydrating;
   const navigatorBlocked = indexing;
+
+  const resetResultsToTop = useCallback(() => {
+    setSelectedIndex(0);
+    if (resultsRef.current) resultsRef.current.scrollTop = 0;
+    window.requestAnimationFrame(() => {
+      if (resultsRef.current) resultsRef.current.scrollTop = 0;
+    });
+  }, []);
+
+  useEffect(() => {
+    const api = window.electronAPI?.preferences;
+    if (!api?.get) return undefined;
+
+    let active = true;
+    const sequence = ++sortPreferenceSequenceRef.current;
+    void api.get(SORT_PREFERENCE_PATH).then((result) => {
+      if (!active || sequence !== sortPreferenceSequenceRef.current) return;
+      const storedSortId = result?.success ? result.value : null;
+      if (!isValidSortId(storedSortId)) return;
+      setSortId(storedSortId);
+      resetResultsToTop();
+    }).catch((error) => {
+      console.warn('Failed to load the file navigator sort preference:', error);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [resetResultsToTop]);
 
   const close = useCallback(() => {
     if (closeTimerRef.current !== null) return;
@@ -800,17 +833,32 @@ export default function FileNavigatorModal() {
   }, [applyState, indexing, showToast]);
 
   const handleSortChange = useCallback((nextSortId) => {
-    const selectedPath = displayedEntries[selectedIndex]?.filePath;
-    const nextEntries = sortFolderEntries(entries, nextSortId);
+    if (!isValidSortId(nextSortId)) return;
+    sortPreferenceSequenceRef.current += 1;
     setSortId(nextSortId);
     setSortPopoverOpen(false);
-    setSelectedIndex(() => {
-      if (!selectedPath) return 0;
-      const nextIndex = nextEntries.findIndex((entry) => entry.filePath === selectedPath);
-      return nextIndex >= 0 ? nextIndex : 0;
-    });
+    resetResultsToTop();
     window.requestAnimationFrame(() => inputRef.current?.focus());
-  }, [displayedEntries, entries, selectedIndex]);
+
+    const persistSort = window.electronAPI?.preferences?.set;
+    if (!persistSort) return;
+    void persistSort(SORT_PREFERENCE_PATH, nextSortId).then((result) => {
+      if (result?.success !== false) return;
+      showToast({
+        title: 'Sort preference not saved',
+        message: result?.error || 'The folder was sorted, but the choice could not be saved.',
+        variant: 'warning',
+        dedupeKey: 'file-navigator-sort-preference-failed',
+      });
+    }).catch((error) => {
+      showToast({
+        title: 'Sort preference not saved',
+        message: error?.message || 'The folder was sorted, but the choice could not be saved.',
+        variant: 'warning',
+        dedupeKey: 'file-navigator-sort-preference-failed',
+      });
+    });
+  }, [resetResultsToTop, showToast]);
 
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Escape') {
