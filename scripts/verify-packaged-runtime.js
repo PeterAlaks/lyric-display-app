@@ -232,7 +232,11 @@ const startPackagedServerProbe = async () => {
     if (renderer.statusCode !== 200 || !renderer.body.includes('id="root"')) {
       throw new Error(`Packaged renderer serving failed: ${renderer.statusCode}`);
     }
-    console.log(`Packaged ASAR server listened and served health/renderer routes on ${requestedPlatform}`);
+    const projectionRenderer = await requestText(port, '/output1?projection=1&escapeHint=1');
+    if (projectionRenderer.statusCode !== 200 || !projectionRenderer.body.includes('id="root"')) {
+      throw new Error(`Packaged projection renderer serving failed: ${projectionRenderer.statusCode}`);
+    }
+    console.log(`Packaged ASAR server listened and served health/root/projection routes on ${requestedPlatform}`);
   } finally {
     child.kill();
     await new Promise((resolve) => {

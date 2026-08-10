@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { once } from 'node:events';
+import express from 'express';
 import {
   evaluateNdiReadiness,
   evaluateOutputReadiness,
@@ -10,6 +15,57 @@ import {
 } from '../shared/productionReadiness.js';
 
 const NOW = 1_800_000_000_000;
+const serverSource = fs.readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
+const packagedRuntimeProbeSource = fs.readFileSync(
+  new URL('../scripts/verify-packaged-runtime.js', import.meta.url),
+  'utf8',
+);
+
+test('production SPA fallback safely serves clean projection routes from packaged paths', async () => {
+  assert.match(
+    serverSource,
+    /res\.sendFile\(['"]index\.html['"],\s*\{\s*root:\s*frontendPath\s*\}\)/,
+  );
+  assert.doesNotMatch(
+    serverSource,
+    /res\.sendFile\(path\.join\(frontendPath,\s*['"]index\.html['"]\)\)/,
+  );
+  assert.match(
+    packagedRuntimeProbeSource,
+    /requestText\(port,\s*['"]\/output1\?projection=1&escapeHint=1['"]\)/,
+  );
+
+  const hiddenMountRoot = fs.mkdtempSync(path.join(os.tmpdir(), '.mount_LyricDisplay-'));
+  const frontendPath = path.join(hiddenMountRoot, 'resources', 'app.asar', 'dist');
+  const indexHtml = '<!doctype html><html><body><div id="root"></div></body></html>';
+  const app = express();
+  let server;
+
+  try {
+    fs.mkdirSync(frontendPath, { recursive: true });
+    fs.writeFileSync(path.join(frontendPath, 'index.html'), indexHtml, 'utf8');
+    app.use(express.static(frontendPath));
+    app.get('/{*splat}', (_req, res) => (
+      res.sendFile('index.html', { root: frontendPath })
+    ));
+
+    server = app.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const { port } = server.address();
+    const response = await fetch(`http://127.0.0.1:${port}/output1?projection=1&escapeHint=1`);
+
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), indexHtml);
+  } finally {
+    if (server) {
+      server.closeAllConnections?.();
+      await new Promise((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+    fs.rmSync(hiddenMountRoot, { recursive: true, force: true });
+  }
+});
 
 test('readiness requires every enabled output to report fresh render health', () => {
   const result = evaluateOutputReadiness({

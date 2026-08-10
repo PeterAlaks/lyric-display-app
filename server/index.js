@@ -201,7 +201,7 @@ if (!isDev) {
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
     }
-    res.sendFile(path.join(frontendPath, 'index.html'));
+    return res.sendFile('index.html', { root: frontendPath });
   });
 }
 
