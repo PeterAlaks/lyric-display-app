@@ -75,3 +75,12 @@ test('renderer readiness follows document font loading without naming an interfa
   assert.match(reporter, /await document\.fonts\.ready/);
   assert.doesNotMatch(reporter, /Space Grotesk/);
 });
+
+test('control socket lifecycle cleanup resets startup rejection feedback before reconnect', () => {
+  const provider = read('src/context/ControlSocketProvider.jsx');
+
+  assert.match(
+    provider,
+    /return \(\) => \{[\s\S]*?hasCompletedInitialControlSyncRef\.current = false;[\s\S]*?cleanupSocket\(\);/,
+  );
+});

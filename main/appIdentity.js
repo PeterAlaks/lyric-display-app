@@ -1,10 +1,18 @@
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
+import {
+  DEVELOPMENT_RUNTIME_PROFILE,
+  PRODUCTION_RUNTIME_PROFILE,
+  RUNTIME_PROFILE_ENV,
+  USER_DATA_DIR_ENV,
+  getProfiledName,
+} from '../shared/runtimeProfile.js';
 
 const { app } = typeof electron === 'object' && electron ? electron : {};
 
 export const APP_NAME = 'LyricDisplay';
+export const DEV_APP_NAME = getProfiledName(APP_NAME, DEVELOPMENT_RUNTIME_PROFILE);
 export const LEGACY_APP_NAME = 'lyric-display-app';
 export const NDI_FOLDER_NAME = 'NDI';
 export const NDI_INSTALL_FOLDER_NAME = 'Companion';
@@ -66,6 +74,17 @@ const NDI_INSTALL_ENTRY_NAMES = new Set([
 
 let configured = false;
 let migrationResult = null;
+
+export function resolveAppIdentityProfile(isPackaged) {
+  const runtimeProfile = isPackaged
+    ? PRODUCTION_RUNTIME_PROFILE
+    : DEVELOPMENT_RUNTIME_PROFILE;
+  return {
+    runtimeProfile,
+    profileName: getProfiledName(APP_NAME, runtimeProfile),
+    shouldMigrateProductionData: runtimeProfile === PRODUCTION_RUNTIME_PROFILE,
+  };
+}
 
 function pathExists(filePath) {
   try {
@@ -770,12 +789,36 @@ export function configureAppIdentity() {
 
   try {
     const appDataPath = app.getPath('appData');
-    const documentsPath = app.getPath('documents');
-    const userDataPath = path.join(appDataPath, APP_NAME);
+    const {
+      runtimeProfile,
+      profileName,
+      shouldMigrateProductionData,
+    } = resolveAppIdentityProfile(app.isPackaged);
+    const userDataPath = path.join(appDataPath, profileName);
 
-    migrationResult = migrateUserData(appDataPath, documentsPath);
+    process.env[RUNTIME_PROFILE_ENV] = runtimeProfile;
+    process.env[USER_DATA_DIR_ENV] = userDataPath;
+
+    if (shouldMigrateProductionData) {
+      const documentsPath = app.getPath('documents');
+      migrationResult = migrateUserData(appDataPath, documentsPath);
+    } else {
+      migrationResult = {
+        profile: runtimeProfile,
+        targetPath: userDataPath,
+        attempted: false,
+        copiedFiles: 0,
+        skippedExisting: 0,
+        skippedSymlinks: 0,
+        skippedOther: 0,
+        skippedReason: 'Development uses an isolated profile; production migration was not run.',
+        errors: [],
+      };
+    }
+
     fs.mkdirSync(userDataPath, { recursive: true });
     app.setPath('userData', userDataPath);
+    app.setPath('sessionData', userDataPath);
   } catch (error) {
     migrationResult = {
       attempted: false,

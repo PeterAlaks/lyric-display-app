@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { migrateUserDataForTests } from '../main/appIdentity.js';
+import {
+  migrateUserDataForTests,
+  resolveAppIdentityProfile,
+} from '../main/appIdentity.js';
 
 const LEGACY_APP_NAME = 'lyric-display-app';
 const APP_NAME = 'LyricDisplay';
@@ -17,6 +20,19 @@ const EASYWORSHIP_LYRICS_FOLDER_NAME = 'Imported Lyrics from EW';
 const PRESENTATION_LYRICS_FOLDER_NAME = 'Imported Lyrics from Presentations';
 const MARKER_FILE = 'user-data-migration.json';
 const ORIGINAL_MIGRATED_AT = '2025-01-02T03:04:05.000Z';
+
+test('development and packaged builds resolve to separate application profiles', () => {
+  assert.deepEqual(resolveAppIdentityProfile(false), {
+    runtimeProfile: 'development',
+    profileName: 'LyricDisplay-Dev',
+    shouldMigrateProductionData: false,
+  });
+  assert.deepEqual(resolveAppIdentityProfile(true), {
+    runtimeProfile: 'production',
+    profileName: 'LyricDisplay',
+    shouldMigrateProductionData: true,
+  });
+});
 
 function makeTempAppData() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'lyricdisplay-migration-'));

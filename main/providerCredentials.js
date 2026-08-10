@@ -2,8 +2,14 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
+import {
+  DEVELOPMENT_RUNTIME_PROFILE,
+  USER_DATA_DIR_ENV,
+  getProfiledName,
+  getRuntimeProfile,
+} from '../shared/runtimeProfile.js';
 
-const SERVICE_NAME = 'LyricDisplayProviderKeys';
+const BASE_SERVICE_NAME = 'LyricDisplayProviderKeys';
 const CACHE = new Map();
 let keytarModule;
 let keytarLoadAttempted = false;
@@ -18,18 +24,26 @@ const resolveConfigDir = () => {
     return process.env.CONFIG_PATH;
   }
 
+  if (
+    getRuntimeProfile() === DEVELOPMENT_RUNTIME_PROFILE
+    && typeof process.env[USER_DATA_DIR_ENV] === 'string'
+    && process.env[USER_DATA_DIR_ENV].trim()
+  ) {
+    return path.join(path.resolve(process.env[USER_DATA_DIR_ENV]), 'credentials', 'providers');
+  }
+
   if (process.platform === 'win32') {
     const base = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-    return path.join(base, 'LyricDisplay', 'providers');
+    return path.join(base, getProfiledName('LyricDisplay'), 'providers');
   }
 
   if (process.platform === 'darwin') {
     const base = path.join(homeDir, 'Library', 'Application Support');
-    return path.join(base, 'LyricDisplay', 'providers');
+    return path.join(base, getProfiledName('LyricDisplay'), 'providers');
   }
 
   const base = process.env.XDG_CONFIG_HOME || path.join(homeDir, '.config');
-  return path.join(base, 'lyricdisplay', 'providers');
+  return path.join(base, getProfiledName('LyricDisplay').toLowerCase(), 'providers');
 };
 
 const ensureDirectory = async (dirPath) => {
@@ -139,7 +153,7 @@ export const getProviderKey = async (providerId) => {
   const keytar = await getKeytar();
   if (keytar) {
     try {
-      const raw = await keytar.getPassword(SERVICE_NAME, providerId);
+      const raw = await keytar.getPassword(getProfiledName(BASE_SERVICE_NAME), providerId);
       if (raw) {
         CACHE.set(providerId, raw);
         return raw;
@@ -181,7 +195,7 @@ export const setProviderKey = async (providerId, key) => {
   const keytar = await getKeytar();
   if (keytar) {
     try {
-      await keytar.setPassword(SERVICE_NAME, providerId, key);
+      await keytar.setPassword(getProfiledName(BASE_SERVICE_NAME), providerId, key);
       return;
     } catch (error) {
       console.warn('[provider-keys] Keytar write failed, persisting fallback copy:', error.message);
@@ -201,7 +215,7 @@ export const deleteProviderKey = async (providerId) => {
   const keytar = await getKeytar();
   if (keytar) {
     try {
-      await keytar.deletePassword(SERVICE_NAME, providerId);
+      await keytar.deletePassword(getProfiledName(BASE_SERVICE_NAME), providerId);
     } catch (error) {
       console.warn('[provider-keys] Keytar delete failed, clearing fallback entry:', error.message);
     }
@@ -220,7 +234,7 @@ export const listProviderKeys = async () => {
   const keytar = await getKeytar();
   if (keytar && typeof keytar.findCredentials === 'function') {
     try {
-      const creds = await keytar.findCredentials(SERVICE_NAME);
+      const creds = await keytar.findCredentials(getProfiledName(BASE_SERVICE_NAME));
       for (const { account, password } of creds) {
         if (account && password) {
           result[account] = password;

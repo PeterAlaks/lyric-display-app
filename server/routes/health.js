@@ -1,4 +1,19 @@
 import { getJoinCodeGuardSnapshot } from '../auth/joinCodeGuard.js';
+import {
+  BACKEND_INSTANCE_HEADER,
+  BACKEND_INSTANCE_TOKEN_ENV,
+} from '../../shared/backendInstance.js';
+
+function acknowledgeOwningBackend(req, res, instanceToken) {
+  const expectedToken = String(instanceToken || '').trim();
+  if (!expectedToken) return;
+
+  const requestToken = req?.get?.(BACKEND_INSTANCE_HEADER)
+    ?? req?.headers?.[BACKEND_INSTANCE_HEADER];
+  if (requestToken === expectedToken) {
+    res.setHeader?.(BACKEND_INSTANCE_HEADER, expectedToken);
+  }
+}
 
 export function registerHealthRoutes(app, {
   io,
@@ -7,6 +22,7 @@ export function registerHealthRoutes(app, {
   secretManager,
   startupSecretRotation,
   tokenRateLimit,
+  backendInstanceToken = process.env[BACKEND_INSTANCE_TOKEN_ENV],
 }) {
   const isDev = process.env.NODE_ENV === 'development';
 
@@ -18,6 +34,7 @@ export function registerHealthRoutes(app, {
   });
 
   app.get('/api/health/ready', async (req, res) => {
+    acknowledgeOwningBackend(req, res, backendInstanceToken);
     try {
       const secretsStatus = await secretManager.getSecretsStatus();
       const checks = {

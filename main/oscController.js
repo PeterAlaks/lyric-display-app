@@ -13,6 +13,7 @@ import {
   OSC_ALL_INTERFACES_ADDRESS,
   OSC_LOOPBACK_ADDRESS,
   OscMessageGuard,
+  emitErrorIfHandled,
   isOscSourceAllowed,
   normalizeOscAllowedSources,
   normalizeOscBindAddress,
@@ -168,6 +169,7 @@ class OSCController extends EventEmitter {
     this.allowedSources = [];
     this.blockedMessages = 0;
     this.lastBlockedSource = null;
+    this.lastError = null;
 
     this.store = new Store({
       name: 'osc-settings',
@@ -257,7 +259,13 @@ class OSCController extends EventEmitter {
 
       this.server.on('error', (err) => {
         console.error('[OSC] Server error:', err);
-        this.emit('error', err);
+        this.lastError = {
+          code: err?.code || null,
+          message: err?.message || String(err),
+          address: err?.address || this.bindAddress,
+          port: err?.port || this.port,
+        };
+        emitErrorIfHandled(this, err);
       });
 
       this.server.on('message', (msg, rinfo) => {
@@ -284,6 +292,8 @@ class OSCController extends EventEmitter {
         this.server.bind(this.port, this.bindAddress);
       });
 
+      this.lastError = null;
+
       // Restore enabled state
       if (this.store.get('enabled')) {
         this.enable();
@@ -293,8 +303,22 @@ class OSCController extends EventEmitter {
       return { success: true, port: this.port };
     } catch (error) {
       console.error('[OSC] Failed to initialize:', error);
+      const failedServer = this.server;
       this.server = null;
-      return { success: false, error: error.message };
+      if (failedServer) {
+        failedServer.removeAllListeners();
+        try {
+          failedServer.close();
+        } catch {
+        }
+      }
+      return {
+        success: false,
+        error: error.message,
+        code: error?.code || null,
+        address: error?.address || this.bindAddress,
+        port: error?.port || this.port,
+      };
     }
   }
 
@@ -676,6 +700,7 @@ class OSCController extends EventEmitter {
       blockedMessages: this.blockedMessages,
       guardStats: this.messageGuard.getStats(),
       lastBlockedSource: this.lastBlockedSource,
+      lastError: this.lastError,
       connectedClients: this.feedbackClients.size,
       currentState: this.currentState
     };

@@ -4,6 +4,7 @@ import { appendActionLog, resetActionLogForTests } from '../server/realtime/acti
 import { state } from '../server/realtime/state.js';
 import { registerConnectionRoutes } from '../server/routes/connection.js';
 import { registerHealthRoutes } from '../server/routes/health.js';
+import { BACKEND_INSTANCE_HEADER } from '../shared/backendInstance.js';
 
 const createRouteHarness = () => {
   const routes = new Map();
@@ -16,10 +17,14 @@ const createRouteHarness = () => {
 };
 
 const createResponseHarness = () => {
-  const result = { statusCode: 200, payload: null };
+  const result = { statusCode: 200, payload: null, headers: {} };
   return {
     result,
     res: {
+      setHeader(name, value) {
+        result.headers[String(name).toLowerCase()] = value;
+        return this;
+      },
       status(code) {
         result.statusCode = code;
         return this;
@@ -108,6 +113,7 @@ test('public health probes are redacted and detailed health requires admin', asy
     secretManager,
     startupSecretRotation: { rotated: false },
     tokenRateLimit: () => {},
+    backendInstanceToken: 'expected-backend-instance',
   });
 
   const health = createResponseHarness();
@@ -120,6 +126,26 @@ test('public health probes are redacted and detailed health requires admin', asy
     const ready = createResponseHarness();
     await routes.get('/api/health/ready')[0]({}, ready.res);
     assert.deepEqual(Object.keys(ready.result.payload).sort(), ['serverListening', 'status', 'timestamp']);
+    assert.equal(ready.result.headers[BACKEND_INSTANCE_HEADER], undefined);
+
+    const wrongInstance = createResponseHarness();
+    await routes.get('/api/health/ready')[0]({
+      headers: { [BACKEND_INSTANCE_HEADER]: 'another-backend-instance' },
+    }, wrongInstance.res);
+    assert.equal(wrongInstance.result.headers[BACKEND_INSTANCE_HEADER], undefined);
+
+    const owningInstance = createResponseHarness();
+    await routes.get('/api/health/ready')[0]({
+      headers: { [BACKEND_INSTANCE_HEADER]: 'expected-backend-instance' },
+    }, owningInstance.res);
+    assert.equal(
+      owningInstance.result.headers[BACKEND_INSTANCE_HEADER],
+      'expected-backend-instance'
+    );
+    assert.deepEqual(
+      Object.keys(owningInstance.result.payload).sort(),
+      ['serverListening', 'status', 'timestamp']
+    );
 
     secretManager.getSecretsStatus = async () => {
       throw new Error('C:/sensitive/secrets.json could not be read');

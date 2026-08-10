@@ -1,4 +1,5 @@
 import Store from 'electron-store';
+import './appIdentity.js';
 import { getLocalIPAddress } from './utils.js';
 
 const CHECK_INTERVAL_MS = 15_000;

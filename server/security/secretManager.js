@@ -3,6 +3,13 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import {
+  DEVELOPMENT_RUNTIME_PROFILE,
+  USER_DATA_DIR_ENV,
+  getProfiledName,
+  getRuntimeProfile,
+  normalizeRuntimeProfile,
+} from '../../shared/runtimeProfile.js';
 
 let keytar = null;
 if (process.env.LYRICDISPLAY_DISABLE_KEYTAR !== '1') {
@@ -16,9 +23,8 @@ if (process.env.LYRICDISPLAY_DISABLE_KEYTAR !== '1') {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SERVICE_NAME = 'LyricDisplay';
+const BASE_SERVICE_NAME = 'LyricDisplay';
 const ACCOUNT_NAME = 'server-secrets';
-const APP_CONFIG_DIR_NAME = 'LyricDisplay';
 const DEFAULT_ROTATION_MAX_AGE_DAYS = 180;
 const DEFAULT_TOKEN_EXPIRY = '24h';
 const DEFAULT_ADMIN_TOKEN_EXPIRY = '7d';
@@ -26,13 +32,22 @@ const MIN_PREVIOUS_SECRET_GRACE_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_SECRET_GRACE_BUFFER_MS = 5 * 60 * 1000;
 
 // ---------- Paths / dirs ----------
-const getDefaultConfigDir = () => {
+const getDefaultConfigDir = (runtimeProfile = getRuntimeProfile(), env = process.env) => {
+  if (
+    normalizeRuntimeProfile(runtimeProfile) === DEVELOPMENT_RUNTIME_PROFILE
+    && typeof env?.[USER_DATA_DIR_ENV] === 'string'
+    && env[USER_DATA_DIR_ENV].trim()
+  ) {
+    return path.join(path.resolve(env[USER_DATA_DIR_ENV]), 'credentials', 'server');
+  }
+
+  const appConfigDirName = getProfiledName(BASE_SERVICE_NAME, runtimeProfile);
   let homeDir;
 
   if (process.platform === 'win32') {
-    homeDir = process.env.USERPROFILE || process.env.HOME;
+    homeDir = env.USERPROFILE || env.HOME;
   } else {
-    homeDir = process.env.HOME;
+    homeDir = env.HOME;
   }
 
   if (!homeDir && typeof os.homedir === 'function') {
@@ -49,17 +64,17 @@ const getDefaultConfigDir = () => {
   }
 
   if (process.platform === 'win32') {
-    const base = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-    return path.join(base, APP_CONFIG_DIR_NAME, 'config');
+    const base = env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+    return path.join(base, appConfigDirName, 'config');
   }
 
   if (process.platform === 'darwin') {
     const base = path.join(homeDir, 'Library', 'Application Support');
-    return path.join(base, APP_CONFIG_DIR_NAME, 'config');
+    return path.join(base, appConfigDirName, 'config');
   }
 
-  const base = process.env.XDG_CONFIG_HOME || path.join(homeDir, '.config');
-  return path.join(base, APP_CONFIG_DIR_NAME.toLowerCase().replace(/\s+/g, '-'), 'config');
+  const base = env.XDG_CONFIG_HOME || path.join(homeDir, '.config');
+  return path.join(base, appConfigDirName.toLowerCase().replace(/\s+/g, '-'), 'config');
 };
 
 const keyFileName = 'secrets.key';
@@ -190,17 +205,19 @@ export { getDefaultConfigDir };
 // ---------- Secret Manager ----------
 class SimpleSecretManager {
   constructor(options = {}) {
+    const runtimeProfile = options.runtimeProfile ?? getRuntimeProfile();
     let configDir;
     if (options.configDir) {
       configDir = options.configDir;
     } else if (process.env.CONFIG_PATH) {
       configDir = process.env.CONFIG_PATH;
     } else {
-      configDir = getDefaultConfigDir();
+      configDir = getDefaultConfigDir(runtimeProfile);
     }
 
     this.configDir = configDir;
     this.secretsPath = getEncPath(this.configDir);
+    this.serviceName = options.serviceName || getProfiledName(BASE_SERVICE_NAME, runtimeProfile);
     this.keytar = Object.prototype.hasOwnProperty.call(options, 'keytarImpl') ? options.keytarImpl : keytar;
     this.lastStorageBackend = null;
 
@@ -263,7 +280,7 @@ class SimpleSecretManager {
       return {
         available: true,
         succeeded: true,
-        data: await this.keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME),
+        data: await this.keytar.getPassword(this.serviceName, ACCOUNT_NAME),
         error: null,
       };
     } catch (error) {
@@ -274,8 +291,8 @@ class SimpleSecretManager {
   async _writeToKeytar(dataStr) {
     if (!this.keytar) return false;
     try {
-      await this.keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, dataStr);
-      const verified = await this.keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
+      await this.keytar.setPassword(this.serviceName, ACCOUNT_NAME, dataStr);
+      const verified = await this.keytar.getPassword(this.serviceName, ACCOUNT_NAME);
       if (typeof verified !== 'string') return false;
       const expectedBuffer = Buffer.from(dataStr, 'utf8');
       const verifiedBuffer = Buffer.from(verified, 'utf8');

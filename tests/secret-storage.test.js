@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import SimpleSecretManager from '../server/security/secretManager.js';
+import SimpleSecretManager, { getDefaultConfigDir } from '../server/security/secretManager.js';
 import {
   clearAdminKeyCache,
   getAdminKey,
@@ -31,6 +31,42 @@ const createMemoryKeytar = () => {
     async setPassword(_service, _account, nextValue) { value = nextValue; },
   };
 };
+
+test('development secrets use isolated fallback and credential-vault namespaces', async () => {
+  const configDir = await fs.mkdtemp(path.join(os.tmpdir(), 'lyricdisplay-secrets-dev-profile-'));
+  const calls = [];
+  const keytarImpl = {
+    value: null,
+    async getPassword(service, account) {
+      calls.push({ operation: 'get', service, account });
+      return this.value;
+    },
+    async setPassword(service, account, value) {
+      calls.push({ operation: 'set', service, account });
+      this.value = value;
+    },
+  };
+
+  try {
+    const manager = new SimpleSecretManager({
+      configDir,
+      keytarImpl,
+      runtimeProfile: 'development',
+    });
+    await manager.saveSecrets(createSecrets());
+
+    assert.ok(calls.length > 0);
+    assert.ok(calls.every((call) => call.service === 'LyricDisplay-Dev'));
+    assert.match(getDefaultConfigDir('development'), /lyricdisplay-dev/i);
+    assert.doesNotMatch(getDefaultConfigDir('production'), /lyricdisplay-dev/i);
+    assert.equal(
+      getDefaultConfigDir('development', { LYRICDISPLAY_USER_DATA_DIR: configDir }),
+      path.join(configDir, 'credentials', 'server')
+    );
+  } finally {
+    await fs.rm(configDir, { recursive: true, force: true });
+  }
+});
 
 test('verified keytar storage leaves no adjacent encrypted backup artifacts', async () => {
   const configDir = await fs.mkdtemp(path.join(os.tmpdir(), 'lyricdisplay-secrets-keytar-'));

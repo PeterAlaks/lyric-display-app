@@ -1,12 +1,28 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import {
   OSC_ALL_INTERFACES_ADDRESS,
   OSC_LOOPBACK_ADDRESS,
   OscMessageGuard,
+  emitErrorIfHandled,
   isOscSourceAllowed,
   normalizeOscAllowedSources,
 } from '../main/oscSecurity.js';
+
+test('OSC errors are emitted only when a consumer is listening', () => {
+  const emitter = new EventEmitter();
+  const error = Object.assign(new Error('bind failed'), { code: 'EADDRINUSE' });
+
+  assert.equal(emitErrorIfHandled(emitter, error), false);
+
+  let received = null;
+  emitter.on('error', (nextError) => {
+    received = nextError;
+  });
+  assert.equal(emitErrorIfHandled(emitter, error), true);
+  assert.equal(received, error);
+});
 
 test('OSC loopback binding rejects non-loopback sources', () => {
   assert.equal(isOscSourceAllowed('127.0.0.1', { bindAddress: OSC_LOOPBACK_ADDRESS }), true);

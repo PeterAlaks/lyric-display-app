@@ -268,6 +268,15 @@ function logUserDataMigrationStatus() {
   const status = getUserDataMigrationResult();
   if (!status) return;
 
+  if (status.skippedReason) {
+    writeLog('INFO', 'User data migration skipped', {
+      profile: status.profile,
+      targetPath: status.targetPath,
+      reason: status.skippedReason,
+    });
+    return;
+  }
+
   const conflicts = [
     ...(Array.isArray(status.conflicts) ? status.conflicts : []),
     ...(Array.isArray(status.legacyNdi?.conflicts) ? status.legacyNdi.conflicts : []),

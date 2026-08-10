@@ -755,6 +755,9 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         connectSocketInternal();
 
         return () => {
+            // React StrictMode replays this effect in development. Wait for the
+            // replayed socket's own initial sync before showing rejection feedback.
+            hasCompletedInitialControlSyncRef.current = false;
             clearBackoffWarning();
             clearCurrentStateTimeout();
             if (reconnectTimeoutRef.current) {

@@ -43,8 +43,11 @@ flowchart LR
 | Backend | Electron forks `server/index.js` with `NODE_ENV=development` | Electron forks the ASAR-packaged backend with `NODE_ENV=production` and a real `userData` working directory |
 | API/socket access | Vite proxies `/api`, `/socket.io`, and `/media` to port `4000`; Electron renderers resolve port `4000` directly | Same origin as the backend-served renderer |
 | Native bridge | Electron windows only | Electron windows only |
+| Persistent profile | Isolated `LyricDisplay-Dev` Electron, Chromium, backend, and credential namespaces | Production `LyricDisplay` profile with legacy-data migration |
 
 The backend is a separate npm package with its own [`server/package.json`](../server/package.json) and lockfile. A clean checkout therefore needs both root and server dependencies installed. Backend production dependencies are also listed in the root manifest so electron-builder can package and resolve them beside the ASAR-hosted server; keep the two manifests aligned when those dependencies change. The optional `lyricdisplay-ndi/` directory is a separately cloned, ignored repository, not part of this repository's tracked tree.
+
+Development and packaged profiles can coexist on disk, but they intentionally retain the same backend and external-control ports and therefore are not supported concurrently. Backend readiness probes carry a per-child challenge so one profile cannot mistake the other profile's running backend for its own.
 
 Electron-builder smart-unpacks the native runtime modules required by the packaged app. Packaging filters remove compiler sources and intermediate build products from `better-sqlite3` and `@julusian/midi`, but retain their runtime `.node` binaries and published prebuilds for each target platform.
 
@@ -276,9 +279,9 @@ The backend accepts authenticated client types defined in `server/config/clientT
 
 ### Backend data and media
 
-In Electron, [`main/backend.js`](../main/backend.js) sets `LYRICDISPLAY_DATA_DIR` to `<Electron userData>/backend`. The backend stores its realtime snapshot and uploaded media beneath that root. When `server/index.js` is launched directly without that environment variable, it falls back to the repository root, which is why development `uploads/` is ignored.
+In Electron, [`main/backend.js`](../main/backend.js) sets `LYRICDISPLAY_DATA_DIR` to `<Electron userData>/backend`. The backend stores its realtime snapshot and uploaded media beneath that root. Development uses the persistent `LyricDisplay-Dev` profile while packaged builds use `LyricDisplay`, so development state and Chromium storage cannot alter installed state. User-authored and imported files beneath Documents remain shared intentionally. When `server/index.js` is launched directly without that environment variable, it falls back to the repository root, which is why development `uploads/` is ignored.
 
-Authentication secrets prefer the OS keychain and use an encrypted platform config fallback. Renderer auth/provider tokens likewise prefer secure main-process storage. Never add secrets, admin keys, raw JWTs, or user-data paths to logs or socket payloads.
+Authentication secrets prefer the OS keychain and use an encrypted platform config fallback. Renderer auth/provider tokens likewise prefer secure main-process storage. Development appends `-Dev` to credential-vault services and platform fallback roots; production names remain unchanged. Never add secrets, admin keys, raw JWTs, or user-data paths to logs or socket payloads.
 
 ## Renderer Map
 

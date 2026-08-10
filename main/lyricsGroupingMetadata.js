@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import path from 'path';
 import Store from 'electron-store';
+import './appIdentity.js';
 
 const MAX_ENTRIES = 250;
 const MAX_STORE_BYTES = 25 * 1024 * 1024;

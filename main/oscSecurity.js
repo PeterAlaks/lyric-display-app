@@ -5,6 +5,14 @@ export const OSC_ALL_INTERFACES_ADDRESS = '0.0.0.0';
 export const DEFAULT_OSC_RATE_LIMIT = 30;
 export const DEFAULT_OSC_DUPLICATE_WINDOW_MS = 75;
 
+export function emitErrorIfHandled(emitter, error) {
+  if (!emitter || typeof emitter.listenerCount !== 'function' || emitter.listenerCount('error') === 0) {
+    return false;
+  }
+  emitter.emit('error', error);
+  return true;
+}
+
 export function normalizeOscBindAddress(value) {
   return value === OSC_ALL_INTERFACES_ADDRESS
     ? OSC_ALL_INTERFACES_ADDRESS

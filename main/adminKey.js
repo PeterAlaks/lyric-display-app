@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { EventEmitter } from 'events';
 import { getDefaultConfigDir, decryptJson } from '../server/security/secretManager.js';
+import { getProfiledName } from '../shared/runtimeProfile.js';
 
 let keytar = null;
 try {
@@ -11,7 +12,7 @@ try {
   keytar = null;
 }
 
-const SERVICE_NAME = 'LyricDisplay';
+const BASE_SERVICE_NAME = 'LyricDisplay';
 const ACCOUNT_NAME = 'server-secrets';
 const ENC_FILE_NAME = 'secrets.json';
 const KEY_FILE_NAME = 'secrets.key';
@@ -114,12 +115,13 @@ export function setAdminKeyFromBackend(adminKey) {
 
 async function loadAdminKey() {
   const paths = resolveBackupPaths();
+  const serviceName = getProfiledName(BASE_SERVICE_NAME);
   console.log(`${LOG_PREFIX} Config dir resolved to ${paths.configDir}`);
 
   try {
     if (keytar) {
       try {
-        const raw = await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
+        const raw = await keytar.getPassword(serviceName, ACCOUNT_NAME);
         const adminKey = parseKeytarPayload(raw);
         if (adminKey) {
           console.log(`${LOG_PREFIX} Admin key loaded from keytar`);
