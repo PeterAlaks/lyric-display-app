@@ -4,7 +4,33 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Select = SelectPrimitive.Root
+const SelectFocusContext = React.createContext(null)
+
+const Select = ({ onOpenChange, onValueChange, ...props }) => {
+  const selectedRef = React.useRef(false)
+
+  const handleValueChange = React.useCallback((value) => {
+    selectedRef.current = true
+    onValueChange?.(value)
+  }, [onValueChange])
+
+  const handleOpenChange = React.useCallback((open) => {
+    if (open) selectedRef.current = false
+    onOpenChange?.(open)
+  }, [onOpenChange])
+
+  return (
+    <SelectFocusContext.Provider value={selectedRef}>
+      <SelectPrimitive.Root
+        {...props}
+        onOpenChange={handleOpenChange}
+        onValueChange={handleValueChange}
+      />
+    </SelectFocusContext.Provider>
+  )
+}
+
+Select.displayName = SelectPrimitive.Root.displayName
 
 const SelectGroup = SelectPrimitive.Group
 
@@ -47,34 +73,60 @@ const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) =
 SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
-const SelectContent = React.forwardRef(({ className, children, position = "popper", presentation = "default", ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        presentation === "sheet"
-          ? "!fixed !inset-2 !left-2 !top-2 !right-2 !bottom-2 z-[2200] !w-auto !min-w-0 max-h-[calc(100vh-1rem)] overflow-y-auto overflow-x-hidden rounded-lg border bg-popover text-popover-foreground shadow-2xl"
-          : "relative z-[2000] max-h-[min(var(--radix-select-content-available-height),20rem)] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
-        presentation !== "sheet" && position === "popper" &&
-        "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-        className
-      )}
-      position={presentation === "sheet" ? "item-aligned" : position}
-      {...props}>
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
+const SelectContent = React.forwardRef(({
+  className,
+  children,
+  position = "popper",
+  presentation = "default",
+  onCloseAutoFocus,
+  ...props
+}, ref) => {
+  const selectedRef = React.useContext(SelectFocusContext)
+
+  const handleCloseAutoFocus = React.useCallback((event) => {
+    onCloseAutoFocus?.(event)
+    if (!selectedRef?.current) return
+
+    // Radix normally restores focus to the trigger as the menu unmounts.
+    // A completed selection is a finished interaction, so leave focus free.
+    selectedRef.current = false
+    event.preventDefault()
+    globalThis.setTimeout(() => {
+      if (typeof document === "undefined") return
+      document.activeElement?.blur?.()
+    }, 0)
+  }, [onCloseAutoFocus, selectedRef])
+
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
         className={cn(
-          "p-1",
           presentation === "sheet"
-            ? "h-full w-full"
-            : position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]"
-        )}>
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-))
+            ? "!fixed !inset-2 !left-2 !top-2 !right-2 !bottom-2 z-[2200] !w-auto !min-w-0 max-h-[calc(100vh-1rem)] overflow-y-auto overflow-x-hidden rounded-lg border bg-popover text-popover-foreground shadow-2xl"
+            : "relative z-[2000] max-h-[min(var(--radix-select-content-available-height),20rem)] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
+          presentation !== "sheet" && position === "popper" &&
+          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          className
+        )}
+        position={presentation === "sheet" ? "item-aligned" : position}
+        onCloseAutoFocus={handleCloseAutoFocus}
+        {...props}>
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            "p-1",
+            presentation === "sheet"
+              ? "h-full w-full"
+              : position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]"
+          )}>
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  )
+})
 SelectContent.displayName = SelectPrimitive.Content.displayName
 
 const SelectLabel = React.forwardRef(({ className, ...props }, ref) => (

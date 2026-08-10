@@ -60,6 +60,9 @@ const OutputPage = ({ outputId }) => {
     outputSettings?.outputVisibilityTransitionDuration,
     300
   ) / 1000;
+  const keepFullScreenBackgroundVisible = Boolean(
+    outputSettings?.fullScreenMode && outputSettings?.alwaysShowBackground
+  );
   const effectiveOutputTransitionVariants = outputTransitionVariants || {
     hidden: { opacity: 0 },
     visible: { opacity: 1 },
@@ -101,6 +104,20 @@ const OutputPage = ({ outputId }) => {
       className="relative h-screen w-screen overflow-hidden"
       style={{ background: isProjectionMode ? '#000000' : 'transparent' }}
     >
+      {keepFullScreenBackgroundVisible && (
+        <LyricVisualFrame
+          line=""
+          settings={outputSettings}
+          visible={false}
+          active
+          previewMode={isPreviewMode}
+          label={label}
+          isProjectionMode={isProjectionMode}
+          className="absolute inset-0 h-full w-full overflow-hidden"
+          renderFullScreenElementLayer={false}
+          retainBackgroundLayerWhenInactive
+        />
+      )}
       <motion.div
         className="absolute inset-0"
         aria-hidden={!isOutputActive}
@@ -117,7 +134,7 @@ const OutputPage = ({ outputId }) => {
           line={line}
           currentLine={currentLine}
           settings={outputSettings}
-          visible={Boolean(isOutputActive && line)}
+          visible={Boolean(line)}
           active={isOutputActive}
           previewMode={isPreviewMode}
           frameKey={selectedLine ?? 'none'}
@@ -126,7 +143,9 @@ const OutputPage = ({ outputId }) => {
           showProjectionExitHint={showProjectionExitHint}
           className="relative h-full w-full overflow-hidden"
           onAutosizeChange={handleAutosizeChange}
+          renderBackgroundLayer={!keepFullScreenBackgroundVisible}
           retainBackgroundLayerWhenInactive
+          retainContentWhenInactive
         />
       </motion.div>
     </div>

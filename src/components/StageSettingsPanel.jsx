@@ -883,8 +883,8 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
 
       <div>
         <div className="flex items-center justify-between gap-4 mt-4">
-          <Tooltip content="Time between message transitions (1000-10000ms)" side="right">
-            <LabelWithIcon icon={GalleryVerticalEnd} text="Scroll Speed (ms)" darkMode={darkMode} />
+          <Tooltip content="How long each message remains visible (1000-10000ms)" side="right">
+            <LabelWithIcon icon={GalleryVerticalEnd} text="Message Duration (ms)" darkMode={darkMode} />
           </Tooltip>
           <div className="flex items-center gap-2 justify-end">
             <Tooltip content={(customMessagesAdvancedExpanded ? "Hide" : "Show") + " advanced settings"} side="top">

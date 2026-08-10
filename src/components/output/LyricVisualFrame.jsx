@@ -250,6 +250,7 @@ export default function LyricVisualFrame({
   renderBackgroundLayer = true,
   renderFullScreenElementLayer = true,
   retainBackgroundLayerWhenInactive = false,
+  retainContentWhenInactive = false,
 }) {
   const [adjustedFontSize, setAdjustedFontSize] = useState(null);
   const textContainerRef = useRef(null);
@@ -357,7 +358,7 @@ export default function LyricVisualFrame({
 
   const effectiveLyricsPosition = positionJustifyMap[lyricsPosition] ? lyricsPosition : 'lower';
   const justifyContent = positionJustifyMap[effectiveLyricsPosition] || 'flex-end';
-  const isVisible = Boolean(active && visible && displayLine);
+  const isVisible = Boolean((active || retainContentWhenInactive) && visible && displayLine);
   const shouldShowFullScreenBackground = fullScreenMode
     && (alwaysShowBackground || active || retainBackgroundLayerWhenInactive);
   const shouldRenderFullScreenBackgroundLayer = renderBackgroundLayer && shouldShowFullScreenBackground;
@@ -365,7 +366,7 @@ export default function LyricVisualFrame({
     fullScreenBackgroundPaint,
     fullScreenBackgroundColor || '#000000'
   );
-  const frameFallbackBackground = isProjectionMode ? '#000000' : 'transparent';
+  const frameFallbackBackground = isProjectionMode && renderBackgroundLayer ? '#000000' : 'transparent';
 
   const backgroundMediaSource = useMemo(() => {
     if (!fullScreenBackgroundMedia) return null;

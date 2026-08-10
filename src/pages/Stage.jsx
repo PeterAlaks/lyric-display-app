@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { useLyricsState, useOutputState, useStageSettings, useSetlistState, useIndividualOutputState, useKeyboardNavigationPreferences } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
@@ -11,24 +11,11 @@ import {
 import { logDebug } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
 import { normalizeStageMessages } from '../utils/stageMessages';
-import { getTimerDisplay, getTimerIntensity, isTimerVisiblyActive } from '../utils/timerUtils';
+import { getTimerDisplay, isTimerVisiblyActive } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
 import { hasSelectedStageLyricLine, shouldClearStageIdleScreen } from '../context/lyricsStore/stageSlice';
 import ProjectionExitHint from '../components/ProjectionExitHint';
 import useLyricsStore from '../context/LyricsStore';
-
-const pulseAnimation = `
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-`;
-
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = pulseAnimation;
-  document.head.appendChild(style);
-}
 
 const useAutoFitText = (text, options = {}) => {
   const {
@@ -170,7 +157,6 @@ const Stage = () => {
   const [customMessages, setCustomMessages] = useState([]);
   const [timerState, setTimerState] = useState({ running: false, paused: false, endTime: null, remaining: null });
   const [upcomingSongUpdateTrigger, setUpcomingSongUpdateTrigger] = useState(0);
-  const [isTimerWarning, setIsTimerWarning] = React.useState(false);
 
   useEffect(() => {
     const handleStageTimerUpdate = (event) => {
@@ -316,14 +302,12 @@ const Stage = () => {
   useEffect(() => {
     if (!timerState.running && !timerState.paused && !timerState.finished) {
       setTimerDisplay(timerState.remaining || null);
-      setIsTimerWarning(false);
       return;
     }
 
     const updateTimerDisplay = () => {
       const now = Date.now();
       setTimerDisplay(getTimerDisplay(timerState, now));
-      setIsTimerWarning(['warning', 'critical'].includes(getTimerIntensity(timerState, now)));
     };
 
     updateTimerDisplay();
@@ -345,7 +329,7 @@ const Stage = () => {
     });
   };
 
-  const renderLineContent = (text, color, fontSize, lineType = 'live', sourceLineIndex = null) => {
+  const renderLineContent = (text, lineType = 'live', sourceLineIndex = null) => {
 
     const getEmphasisStyles = () => {
       const styles = {};
@@ -412,8 +396,8 @@ const Stage = () => {
               <div
                 key={index}
                 style={{
-                  color: shouldUseTranslationColor ? (translationLineColor || '#FBBF24') : color,
-                  fontSize: isTranslationLine ? `${fontSize * 0.8}px` : `${fontSize}px`,
+                  color: shouldUseTranslationColor ? (translationLineColor || '#FBBF24') : 'inherit',
+                  fontSize: isTranslationLine ? '0.8em' : '1em',
                   lineHeight: currentLineSpacing ?? 1,
                   ...(index === 0 ? emphasisStyles : { fontWeight: emphasisStyles.fontWeight }),
                 }}
@@ -521,8 +505,12 @@ const Stage = () => {
   const shouldShowTimerFullScreen = Boolean(timerFullScreen) && (hasTimerCountdown || shouldShowTimerFallbackTime);
   const fullScreenTimerLabel = hasTimerCountdown ? (timerState.label || timerState.display?.label || 'Time Left:') : 'Current Time';
   const fullScreenTimerValue = hasTimerCountdown ? timerDisplay : formatTime(currentTime);
-  const fullScreenTimerAlert = hasTimerCountdown && isTimerWarning;
   const fullScreenTimerLabelFontSize = 'clamp(1.5rem, 3.2vh, 3.5rem)';
+  const hasFullScreenStageContent = Boolean(
+    upcomingSongFullScreen
+    || shouldShowTimerFullScreen
+    || (customMessagesFullScreen && currentMessage)
+  );
 
   const { containerRef: upcomingSongFullScreenContainerRef, textRef: upcomingSongFullScreenTextRef } = useAutoFitText(
     upcomingSongName,
@@ -580,23 +568,82 @@ const Stage = () => {
     return 'center';
   };
 
-  const prevLineRef = useRef(currentLine);
+  const stageTransitionMs = Math.min(1000, Math.max(100, Number(transitionSpeed) || 300));
+  const stageTransitionSeconds = stageTransitionMs / 1000;
+  const wheelTravelDistance = Math.max(36, responsiveLiveFontSize * 0.45);
+  const previousEffectiveLineRef = useRef(effectiveCurrentLine);
+  const lineChangeDirection = previousEffectiveLineRef.current === null
+    || effectiveCurrentLine === null
+    || previousEffectiveLineRef.current === effectiveCurrentLine
+    ? 0
+    : (effectiveCurrentLine > previousEffectiveLineRef.current ? 1 : -1);
+
+  const stageLyricRows = [
+    ...(shouldShowPrevLine ? [{ index: previousLine, role: 'prev' }] : []),
+    ...(effectiveCurrentLine !== null ? [{ index: effectiveCurrentLine, role: 'live' }] : []),
+    ...(shouldShowNextLine ? [{ index: nextLine, role: 'next' }] : []),
+  ];
+
+  const getStageLyricRowConfig = (role) => {
+    if (role === 'prev') {
+      return {
+        align: prevAlign,
+        bold: prevBold,
+        color: prevColor,
+        fontSize: responsivePrevFontSize,
+        italic: prevItalic,
+        letterSpacing: prevLetterSpacing,
+        lineSpacing: prevLineSpacing,
+        minHeight: responsivePrevFontSize * 1.5,
+        underline: prevUnderline,
+        verticalAlign: 'center',
+      };
+    }
+
+    if (role === 'next') {
+      return {
+        align: nextAlign,
+        bold: nextBold,
+        color: nextColor,
+        fontSize: responsiveNextFontSize,
+        italic: nextItalic,
+        letterSpacing: nextLetterSpacing,
+        lineSpacing: nextLineSpacing,
+        minHeight: responsiveNextFontSize * 1.5,
+        underline: nextUnderline,
+        verticalAlign: 'flex-start',
+      };
+    }
+
+    return {
+      align: liveAlign,
+      bold: liveBold,
+      color: liveColor,
+      fontSize: responsiveLiveFontSize,
+      italic: liveItalic,
+      letterSpacing: liveLetterSpacing,
+      lineSpacing: liveLineSpacing,
+      minHeight: responsiveLiveFontSize * 1.5,
+      underline: liveUnderline,
+      verticalAlign: 'center',
+    };
+  };
 
   useEffect(() => {
-    prevLineRef.current = effectiveCurrentLine;
+    previousEffectiveLineRef.current = effectiveCurrentLine;
   }, [effectiveCurrentLine]);
 
   return (
     <div
       className="relative w-screen h-screen overflow-hidden flex flex-col"
       style={{
-        background: isProjectionMode ? '#000000' : paintToCss(backgroundPaint, backgroundColor),
+        background: paintToCss(backgroundPaint, backgroundColor),
         fontFamily: fontStyle,
       }}
     >
       <ProjectionExitHint visible={!shouldClearIdleScreen && isProjectionMode && showProjectionExitHint} />
       {/* Top Bar - Song Names */}
-      {!shouldClearIdleScreen && <div className="shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center">
+      {!shouldClearIdleScreen && !hasFullScreenStageContent && <div className="shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center">
         <div
           className="leading-none"
           style={{
@@ -672,10 +719,9 @@ const Stage = () => {
                 className="leading-none font-bold absolute top-4 sm:top-6 md:top-8 left-1/2 -translate-x-1/2"
                 style={{
                   fontSize: fullScreenTimerLabelFontSize,
-                  color: fullScreenTimerAlert ? '#EF4444' : '#FFA500',
+                  color: '#FFA500',
                   textAlign: 'center',
                   opacity: 1,
-                  animation: fullScreenTimerAlert ? 'pulse 1s infinite' : 'none',
                 }}
               >
                 {fullScreenTimerLabel}
@@ -685,7 +731,7 @@ const Stage = () => {
               <div
                 className="leading-none font-bold font-mono w-full"
                 style={{
-                  color: fullScreenTimerAlert ? '#EF4444' : '#FFFFFF',
+                  color: '#FFFFFF',
                   textAlign: 'center',
                 }}
               >
@@ -700,7 +746,6 @@ const Stage = () => {
                         textAlign: 'center',
                         paddingInline: '0.04em',
                         opacity: 1,
-                        animation: fullScreenTimerAlert ? 'pulse 1s infinite' : 'none',
                       }}
                   >
                     {fullScreenTimerValue}
@@ -720,7 +765,7 @@ const Stage = () => {
               className="w-full h-full flex items-center justify-center"
             >
               <div
-                className="leading-tight font-bold w-full"
+                className="leading-tight font-bold w-full h-full"
                 style={{
                   color: '#FFFFFF',
                   textAlign: 'center',
@@ -747,197 +792,123 @@ const Stage = () => {
             </motion.div>
           </div>
         ) : isVisible ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-8 sm:px-12 md:px-16">
-            <motion.div
-              key={effectiveCurrentLine}
-              className={`w-full flex flex-col items-stretch ${shouldExpandCurrentLine ? 'h-full' : 'gap-4 sm:gap-6 md:gap-8'}`}
-              initial={
-                transitionAnimation === 'slide'
-                  ? { y: prevLineRef.current !== null && prevLineRef.current < effectiveCurrentLine ? 100 : -100 }
-                  : transitionAnimation === 'fade'
-                    ? { opacity: 0 }
-                    : {}
-              }
-              animate={
-                transitionAnimation === 'slide'
-                  ? { y: 0 }
-                  : transitionAnimation === 'fade'
-                    ? { opacity: 1 }
-                    : {}
-              }
-              exit={
-                transitionAnimation === 'slide'
-                  ? { y: prevLineRef.current !== null && prevLineRef.current < effectiveCurrentLine ? -100 : 100 }
-                  : transitionAnimation === 'fade'
-                    ? { opacity: 0 }
-                    : {}
-              }
-              transition={
-                transitionAnimation === 'slide'
-                  ? {
-                    type: 'spring',
-                    stiffness: 200,
-                    damping: 25,
-                    mass: 0.8,
-                  }
-                  : transitionAnimation === 'fade'
-                    ? {
-                      duration: (transitionSpeed || 300) / 1000,
-                      ease: 'easeInOut',
-                    }
-                    : {
-                      duration: 0,
-                    }
-              }
+          <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden px-8 sm:px-12 md:px-16">
+            <AnimatePresence
+              initial={false}
+              mode={transitionAnimation === 'fade' ? 'wait' : 'sync'}
             >
-              {prevLineEnabled && (
-                <div
-                  className="w-full shrink-0"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: getJustifyContent(prevAlign),
-                    minHeight: `${responsivePrevFontSize * 1.5}px`,
-                    opacity: shouldShowPrevLine ? 1 : 0,
-                  }}
-                >
-                  {shouldShowPrevLine && (
-                    <motion.div
-                      className="leading-none"
-                      initial={false}
-                      animate={{
-                        fontSize: `${responsivePrevFontSize}px`,
-                        color: prevColor,
-                        opacity: 1,
-                      }}
-                      transition={{
-                        fontSize: {
-                          type: 'spring',
-                          stiffness: 250,
-                          damping: 25,
-                        },
-                        color: {
-                          duration: transitionSpeed / 1000,
-                          ease: 'easeInOut',
-                        },
-                        opacity: {
-                          duration: 0.2,
-                          ease: 'easeInOut',
-                        },
-                      }}
-                      style={{
-                        fontWeight: prevBold ? 'bold' : 'normal',
-                        textAlign: getTextAlign(prevAlign),
-                        letterSpacing: prevLetterSpacing ? `${prevLetterSpacing}px` : undefined,
-                        lineHeight: prevLineSpacing ?? 1,
-                      }}
-                    >
-                      {renderLineContent(getLineText(previousLine), prevColor, responsivePrevFontSize, 'prev', previousLine)}
-                    </motion.div>
-                  )}
-                </div>
-              )}
-
-              {/* Current/Live Line */}
-              <div
-                className={`w-full ${shouldExpandCurrentLine ? 'flex-1' : 'shrink-0'}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: getJustifyContent(liveAlign),
-                  minHeight: `${responsiveLiveFontSize * 1.5}px`,
-                }}
+              <motion.div
+                key={transitionAnimation === 'slide' ? 'stage-wheel-stack' : `stage-line-${effectiveCurrentLine}`}
+                className={`flex w-full flex-col items-stretch ${shouldExpandCurrentLine ? 'h-full' : 'gap-4 sm:gap-6 md:gap-8'}`}
+                initial={transitionAnimation === 'fade' ? { opacity: 0 } : false}
+                animate={{ opacity: 1 }}
+                exit={transitionAnimation === 'fade' ? { opacity: 0 } : undefined}
+                transition={{ duration: transitionAnimation === 'fade' ? stageTransitionSeconds : 0, ease: 'easeInOut' }}
               >
-                <motion.div
-                  className="leading-none"
-                  initial={{ scale: 0.95 }}
-                  animate={{ scale: 1 }}
-                  transition={{
-                    type: 'spring',
-                    stiffness: 300,
-                    damping: 25,
-                  }}
-                  style={{
-                    fontSize: `${responsiveLiveFontSize}px`,
-                    color: liveColor,
-                    fontWeight: liveBold ? 'bold' : 'normal',
-                    textAlign: getTextAlign(liveAlign),
-                    letterSpacing: liveLetterSpacing ? `${liveLetterSpacing}px` : undefined,
-                    lineHeight: liveLineSpacing ?? 1,
-                  }}
-                >
-                  {renderLineContent(getLineText(effectiveCurrentLine), liveColor, responsiveLiveFontSize, 'live', effectiveCurrentLine)}
-                </motion.div>
-              </div>
+                <AnimatePresence initial={false} custom={lineChangeDirection} mode="popLayout">
+                  {stageLyricRows.map((row) => {
+                    const config = getStageLyricRowConfig(row.role);
+                    const wheelEnabled = transitionAnimation === 'slide';
+                    const wheelRowVariants = {
+                      enter: (direction) => ({
+                        color: config.color,
+                        filter: direction === 0 ? 'blur(0px)' : 'blur(3px)',
+                        fontSize: `${config.fontSize}px`,
+                        opacity: direction === 0 ? 1 : 0,
+                        y: direction * wheelTravelDistance,
+                      }),
+                      center: {
+                        color: config.color,
+                        filter: 'blur(0px)',
+                        fontSize: `${config.fontSize}px`,
+                        opacity: 1,
+                        y: 0,
+                      },
+                      exit: (direction) => ({
+                        filter: direction === 0 ? 'blur(0px)' : 'blur(3px)',
+                        opacity: 0,
+                        y: direction * -wheelTravelDistance,
+                      }),
+                    };
+                    const rowTransition = wheelEnabled
+                      ? {
+                        layout: { duration: stageTransitionSeconds, ease: [0.22, 1, 0.36, 1] },
+                        y: { duration: stageTransitionSeconds, ease: [0.22, 1, 0.36, 1] },
+                        opacity: { duration: stageTransitionSeconds * 0.75, ease: 'easeOut' },
+                        filter: { duration: stageTransitionSeconds * 0.75, ease: 'easeOut' },
+                        fontSize: { duration: stageTransitionSeconds, ease: [0.22, 1, 0.36, 1] },
+                        color: { duration: stageTransitionSeconds, ease: 'easeInOut' },
+                      }
+                      : { duration: 0 };
 
-              {nextLineEnabled && (
-                <div
-                  className="w-full shrink-0"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: getJustifyContent(nextAlign),
-                    minHeight: `${responsiveNextFontSize * 1.5}px`,
-                    opacity: shouldShowNextLine ? 1 : 0,
-                  }}
-                >
-                  {shouldShowNextLine && (
-                    <>
-                      {showNextArrow && (
-                        <motion.div
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{
-                            delay: 0.1,
-                            duration: 0.3,
-                            ease: 'easeOut',
-                          }}
-                          style={{
-                            paddingTop: '0.15em',
-                          }}
-                        >
-                          <ChevronRight
-                            size={responsiveNextFontSize * 0.8}
-                            style={{
-                              color: nextArrowColor,
-                              flexShrink: 0,
-                              marginRight: '0.5rem',
-                            }}
-                          />
-                        </motion.div>
-                      )}
+                    return (
                       <motion.div
-                        className="leading-none"
-                        initial={false}
-                        animate={{
-                          fontSize: `${responsiveNextFontSize}px`,
-                          color: nextColor,
+                        key={`stage-lyric-${row.index}`}
+                        layout={wheelEnabled ? 'position' : false}
+                        variants={wheelEnabled ? wheelRowVariants : undefined}
+                        initial={wheelEnabled ? 'enter' : false}
+                        animate={wheelEnabled ? 'center' : {
+                          color: config.color,
+                          fontSize: `${config.fontSize}px`,
+                          opacity: 1,
                         }}
-                        transition={{
-                          fontSize: {
-                            type: 'spring',
-                            stiffness: 250,
-                            damping: 25,
-                          },
-                          color: {
-                            duration: transitionSpeed / 1000,
-                            ease: 'easeInOut',
-                          },
-                        }}
+                        exit={wheelEnabled ? 'exit' : { opacity: 0 }}
+                        transition={rowTransition}
+                        className={`w-full ${row.role === 'live' && shouldExpandCurrentLine ? 'flex-1' : 'shrink-0'}`}
                         style={{
-                          fontWeight: nextBold ? 'bold' : 'normal',
-                          textAlign: getTextAlign(nextAlign),
-                          letterSpacing: nextLetterSpacing ? `${nextLetterSpacing}px` : undefined,
-                          lineHeight: nextLineSpacing ?? 1,
+                          alignItems: config.verticalAlign,
+                          display: 'flex',
+                          justifyContent: getJustifyContent(config.align),
+                          minHeight: `${config.minHeight}px`,
                         }}
                       >
-                        {renderLineContent(getLineText(nextLine), nextColor, responsiveNextFontSize, 'next', nextLine)}
+                        <motion.div
+                          layout={wheelEnabled ? 'position' : false}
+                          transition={wheelEnabled
+                            ? { layout: { duration: stageTransitionSeconds, ease: [0.22, 1, 0.36, 1] } }
+                            : { duration: 0 }}
+                          className="flex min-w-0 items-start leading-none"
+                          style={{
+                            fontStyle: config.italic ? 'italic' : 'normal',
+                            fontWeight: config.bold ? 'bold' : 'normal',
+                            letterSpacing: config.letterSpacing ? `${config.letterSpacing}px` : undefined,
+                            lineHeight: config.lineSpacing ?? 1,
+                            textAlign: getTextAlign(config.align),
+                            textDecoration: config.underline ? 'underline' : 'none',
+                          }}
+                        >
+                          <AnimatePresence initial={false}>
+                            {row.role === 'next' && showNextArrow && (
+                              <motion.span
+                                key="next-line-arrow"
+                                layout={wheelEnabled}
+                                initial={wheelEnabled ? { opacity: 0, x: -10 } : false}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                transition={{ duration: Math.min(0.3, stageTransitionSeconds), ease: 'easeOut' }}
+                                className="shrink-0"
+                                style={{ paddingTop: '0.15em' }}
+                              >
+                                <ChevronRight
+                                  size={config.fontSize * 0.8}
+                                  style={{
+                                    color: nextArrowColor,
+                                    marginRight: '0.5rem',
+                                  }}
+                                />
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                          <div className="min-w-0">
+                            {renderLineContent(getLineText(row.index), row.role, row.index)}
+                          </div>
+                        </motion.div>
                       </motion.div>
-                    </>
-                  )}
-                </div>
-              )}
-            </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
           </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center px-8">
@@ -955,7 +926,7 @@ const Stage = () => {
       </div>}
 
       {/* Bottom Bar - Time and Messages */}
-      {!shouldClearIdleScreen && <div
+      {!shouldClearIdleScreen && !hasFullScreenStageContent && <div
         className="shrink-0 px-8 sm:px-12 md:px-16 py-6 sm:py-8 flex justify-between items-center leading-none"
         style={{
           fontSize: `${responsiveBottomBarSize}px`,
