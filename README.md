@@ -6,7 +6,7 @@
 
 Real-time lyric control and multi-output display for live events, worship services, streaming, and production environments.
 
-**Version:** 6.8.1 · **License:** GPL-3.0-or-later
+**Version:** 6.8.0 · **License:** GPL-3.0-or-later
 
 [Download LyricDisplay](https://github.com/PeterAlaks/lyric-display-app/releases/latest) · [Installation guide](INSTALLATION.md) · [Contributing](CONTRIBUTING.md) · [Architecture map](docs/PROJECT_STRUCTURE.md)
 
