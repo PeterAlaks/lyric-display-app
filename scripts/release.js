@@ -2,7 +2,11 @@ import { execSync } from 'child_process';
 import prompts from 'prompts';
 import chalk from 'chalk';
 import fs from 'fs';
+import path from 'path';
 import { updateVersionNumbers, updateGitHubReleaseLinks } from './update-version.js';
+
+const RELEASE_ARTIFACT_PATTERN = /^LyricDisplay-(\d+\.\d+\.\d+)-/;
+const MAX_LOCAL_RELEASE_VERSIONS = 3;
 
 function getNextVersions(version) {
     const [major, minor, patch] = version.split('.').map(Number);
@@ -45,6 +49,63 @@ function checkGhCli() {
     } catch (e) {
         return false;
     }
+}
+
+function compareVersions(left, right) {
+    const leftParts = left.split('.').map(Number);
+    const rightParts = right.split('.').map(Number);
+
+    for (let index = 0; index < 3; index++) {
+        const difference = leftParts[index] - rightParts[index];
+        if (difference !== 0) return difference;
+    }
+
+    return 0;
+}
+
+function pruneLocalReleaseArtifacts(currentVersion, releaseDir = 'release') {
+    if (!fs.existsSync(releaseDir)) return;
+
+    const artifacts = fs.readdirSync(releaseDir, { withFileTypes: true })
+        .filter(entry => entry.isFile())
+        .map(entry => {
+            const match = entry.name.match(RELEASE_ARTIFACT_PATTERN);
+            return match ? { name: entry.name, version: match[1] } : null;
+        })
+        .filter(Boolean);
+
+    const olderVersions = [...new Set(artifacts.map(artifact => artifact.version))]
+        .filter(version => compareVersions(version, currentVersion) < 0)
+        .sort((left, right) => compareVersions(right, left))
+        .slice(0, MAX_LOCAL_RELEASE_VERSIONS - 1);
+    const retainedVersions = new Set([currentVersion, ...olderVersions]);
+    const staleArtifacts = artifacts.filter(artifact => !retainedVersions.has(artifact.version));
+
+    for (const artifact of staleArtifacts) {
+        fs.unlinkSync(path.join(releaseDir, artifact.name));
+    }
+
+    const retainedList = [...retainedVersions].sort((left, right) => compareVersions(right, left));
+    console.log(chalk.gray(`Retaining local artifacts for: ${retainedList.map(version => `v${version}`).join(', ')}`));
+    if (staleArtifacts.length > 0) {
+        console.log(chalk.gray(`Removed ${staleArtifacts.length} artifact(s) from older release versions.`));
+    }
+}
+
+function runReleasePreflight() {
+    const checks = [
+        { label: 'Production dependency audit', command: 'npm run audit:prod' },
+        { label: 'Server dependency audit', command: 'npm run audit:server' },
+        { label: 'Static checks', command: 'npm run check:static' },
+        { label: 'Unit tests', command: 'npm run test:unit' },
+    ];
+
+    console.log(chalk.blue('\nRunning release preflight checks...'));
+    for (const check of checks) {
+        console.log(chalk.gray(`${check.label}...`));
+        execSync(check.command, { stdio: 'inherit' });
+    }
+    console.log(chalk.green('Release preflight checks passed.'));
 }
 
 async function waitForGitHubActions(commitSha) {
@@ -250,6 +311,15 @@ async function main() {
         }
     }
 
+    try {
+        runReleasePreflight();
+    } catch (e) {
+        console.error(chalk.red.bold('\nRELEASE PREFLIGHT FAILED'));
+        console.error(chalk.gray(e.message));
+        console.log(chalk.yellow('No version files, commits, or tags were changed.'));
+        process.exit(1);
+    }
+
     console.log(chalk.blue(`\n🚀 Starting release process for ${tagName}...`));
 
     try {
@@ -262,6 +332,7 @@ async function main() {
 
         console.log(chalk.blue('\n🔨 Building Windows installer and Microsoft Store package locally...'));
         execSync('npm run electron-pack:windows-release', { stdio: 'inherit' });
+        pruneLocalReleaseArtifacts(targetVersion);
         console.log(chalk.green('✅ Local Windows builds complete.'));
 
         console.log(chalk.blue('\n📦 Committing and Tagging...'));
