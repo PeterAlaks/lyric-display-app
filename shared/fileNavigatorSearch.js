@@ -163,7 +163,7 @@ export function scoreNavigatorSearchRecord(record, parsedQuery) {
 
 function stripLrcDecorations(value) {
   return value
-    .replace(/^\s*\[(?:ar|al|ti|au|by|length|offset|re|ve):[^\]]*\]\s*$/gim, '')
+    .replace(/^\s*\[(?:ar|al|ti|au|by|length|offset|lr|re|tool|ve|id|#):[^\]]*\]\s*$/gim, '')
     .replace(/(?:\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\])+/g, '')
     .replace(/<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>/g, '');
 }

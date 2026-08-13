@@ -65,7 +65,7 @@ export const STRUCTURE_TAG_PATTERNS = createStructureTagPatterns();
 
 export const TIME_TAG_REGEX = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
 export const ENHANCED_TIME_TAG_REGEX = /<(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?>/g;
-export const META_TAG_REGEX = /^\s*\[\s*(ti|ar|al|by|offset|length|au|lr|re|tool|ve|#)\s*:.*\]\s*$/i;
+export const META_TAG_REGEX = /^\s*\[\s*(ti|ar|al|by|offset|length|au|lr|re|tool|ve|id|#)\s*:.*\]\s*$/i;
 
 export const TIMESTAMP_LIKE_PATTERNS = [
   /\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/g,

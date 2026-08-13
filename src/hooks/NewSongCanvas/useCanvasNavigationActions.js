@@ -6,6 +6,8 @@ export const useCanvasNavigationActions = ({
   navigate,
   showModal,
   showToast,
+  returnPath = '/',
+  newSongPath = '/new-song?mode=new',
 }) => {
   const handleBack = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -16,17 +18,17 @@ export const useCanvasNavigationActions = ({
         duration: 0,
         dedupeKey: 'unsaved-changes',
         actions: [
-          { label: 'Yes, discard', onClick: () => navigate('/') },
+          { label: 'Yes, discard', onClick: () => navigate(returnPath) },
           { label: 'Cancel', onClick: () => { } },
         ],
       });
       return;
     }
-    navigate('/');
-  }, [hasUnsavedChanges, navigate, showToast]);
+    navigate(returnPath);
+  }, [hasUnsavedChanges, navigate, returnPath, showToast]);
 
   const handleStartNewSong = useCallback(() => {
-    const navigateToNew = () => navigate('/new-song?mode=new');
+    const navigateToNew = () => navigate(newSongPath);
 
     if (hasUnsavedChanges) {
       showToast({
@@ -44,7 +46,7 @@ export const useCanvasNavigationActions = ({
     }
 
     navigateToNew();
-  }, [hasUnsavedChanges, navigate, showToast]);
+  }, [hasUnsavedChanges, navigate, newSongPath, showToast]);
 
   const handleOpenLyrics = useCallback(async () => {
     if (openFileNavigator({ destination: 'canvas' })) return;

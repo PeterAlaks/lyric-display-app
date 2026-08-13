@@ -63,7 +63,7 @@ export default function LyricVideoSettingsPanel({
             <AlwaysInfoButton
               side="left"
               ariaLabel="Sync offset help"
-              content="Positive values show lyrics a little earlier. Negative values hold them back if the words are arriving too soon."
+              content="Positive values show lyrics a little earlier. Negative values hold them back if the words are arriving too soon. Changes apply immediately, including during playback."
             />
           </div>
           <Field label="Global Offset (ms)">

@@ -52,7 +52,7 @@ const normalizeMetadataTag = (line) => {
   if (!line) return line;
   const trimmed = line.trim();
   // Match LRC metadata tags: [key: value] with optional extra spaces
-  const metaMatch = trimmed.match(/^\[\s*(ti|ar|al|by|offset|length|au|lr|re|tool|ve|#)\s*:\s*(.*?)\s*\]$/i);
+  const metaMatch = trimmed.match(/^\[\s*(ti|ar|al|by|offset|length|au|lr|re|tool|ve|id|#)\s*:\s*(.*?)\s*\]$/i);
   if (!metaMatch) return line;
   const key = metaMatch[1].toLowerCase();
   const value = metaMatch[2].trim();
@@ -66,7 +66,7 @@ const normalizeMetadataTag = (line) => {
  */
 const isMetadataTag = (line) => {
   if (!line) return false;
-  return /^\s*\[\s*(ti|ar|al|by|offset|length|au|lr|re|tool|ve|#)\s*:.*\]\s*$/i.test(line.trim());
+  return /^\s*\[\s*(ti|ar|al|by|offset|length|au|lr|re|tool|ve|id|#)\s*:.*\]\s*$/i.test(line.trim());
 };
 
 /**

@@ -1,7 +1,7 @@
 import { BrowserWindow, app, dialog, ipcMain } from 'electron';
 import { spawn } from 'child_process';
 import { createHash } from 'crypto';
-import { access, mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'fs/promises';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'fs/promises';
 import { constants as fsConstants } from 'fs';
 import path from 'path';
 import { isDev, resolveProductionPath } from '../paths.js';
@@ -715,10 +715,10 @@ const getBackgroundPlan = async (settings = {}) => {
   if (fullScreenMode && backgroundType === 'media' && media) {
     const filePath = await resolveMediaFilePath(media);
     if (filePath && isVideoMedia(media)) {
-      return { type: 'video', filePath, source: media.url };
+      return { type: 'video', filePath, source: media.url, bundled: media.bundled === true };
     }
     if (filePath && isImageMedia(media)) {
-      return { type: 'image', filePath, source: media.url };
+      return { type: 'image', filePath, source: media.url, bundled: media.bundled === true };
     }
     if (isVideoMedia(media)) {
       throw new Error('The selected background video could not be resolved to a local media file for export. Re-select it from User Media and try again.');
@@ -734,6 +734,24 @@ const getBackgroundPlan = async (settings = {}) => {
   }
 
   return { type: 'capture' };
+};
+
+const materializeBundledBackground = async ({ plan, exportState }) => {
+  if (!plan?.bundled || !plan.filePath) return plan;
+
+  // Electron can read files inside app.asar, but FFmpeg is an external process and
+  // cannot traverse the archive. Copy bundled media to a real temporary path first.
+  const tempDir = await mkdtemp(path.join(app.getPath('temp'), 'lyric-video-media-'));
+  exportState.tempDirs.push(tempDir);
+  const sourceExtension = path.extname(plan.filePath).toLowerCase();
+  const safeExtension = /^\.[a-z0-9]{1,10}$/.test(sourceExtension) ? sourceExtension : '';
+  const materializedPath = path.join(tempDir, `background${safeExtension}`);
+  await writeFile(materializedPath, await readFile(plan.filePath));
+
+  return {
+    ...plan,
+    filePath: materializedPath,
+  };
 };
 
 const setExportRenderMode = async (win, mode) => {
@@ -1090,6 +1108,10 @@ export function registerLyricVideoExportHandlers() {
       );
 
       let backgroundPlan = await getBackgroundPlan(normalized.settings);
+      backgroundPlan = await materializeBundledBackground({
+        plan: backgroundPlan,
+        exportState,
+      });
       if (backgroundPlan.type === 'capture') {
         const filePath = await captureStaticBackground({ win: exportWindow, exportState });
         backgroundPlan = { ...backgroundPlan, filePath };

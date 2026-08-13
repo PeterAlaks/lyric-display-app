@@ -1,4 +1,5 @@
 import { getLineDisplayText, getLineOutputText } from './parseLyrics.js';
+import { META_TAG_REGEX } from '../../shared/lyricsParsing/constants.js';
 
 export const GAP_BEHAVIORS = {
   BACKGROUND_ONLY: 'background-only',
@@ -22,7 +23,8 @@ const LEGACY_BLANK_MARKERS = new Set([
 
 const sanitizeLyricVideoText = (text) => {
   if (typeof text !== 'string') return '';
-  return LEGACY_BLANK_MARKERS.has(text.trim()) ? '' : text;
+  const trimmed = text.trim();
+  return LEGACY_BLANK_MARKERS.has(trimmed) || META_TAG_REGEX.test(trimmed) ? '' : text;
 };
 
 export const getLyricVideoLineDisplayText = (line) =>
@@ -37,7 +39,10 @@ function getTimedEntries(lyrics, timestamps) {
   return lyrics
     .map((line, index) => {
       const timeMs = timestampCsToMs(timestamps[index]);
-      return timeMs === null ? null : { index, line, timeMs };
+      const displayText = getLineDisplayText(line);
+      return timeMs === null || META_TAG_REGEX.test(displayText.trim())
+        ? null
+        : { index, line, timeMs };
     })
     .filter(Boolean)
     .sort((a, b) => {

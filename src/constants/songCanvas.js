@@ -14,6 +14,7 @@ export const METADATA_OPTIONS = [
   { key: 're', label: 'Player/Editor [re:]' },
   { key: 'tool', label: 'Tool [tool:]' },
   { key: 've', label: 'Version [ve:]' },
+  { key: 'id', label: 'ID [id:]' },
   { key: '#', label: 'Comment [#]' },
 ];
 

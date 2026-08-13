@@ -524,6 +524,17 @@ test('LRC parsing ignores metadata tags with inconsistent spacing', () => {
   assert.deepEqual(parsed.timestamps, [100]);
 });
 
+test('LRC parsing strips ID metadata even when it has a timestamp prefix', () => {
+  const parsed = parseLrcContent([
+    '[id: 42]',
+    '[00:00.00][id: 42]',
+    '[00:01.00]First line',
+  ].join('\n'), { enableSplitting: false });
+
+  assert.deepEqual(parsed.processedLines, ['First line']);
+  assert.deepEqual(parsed.timestamps, [100]);
+});
+
 test('plain text parser recognizes section descriptors separated by en dash', () => {
   const parsed = parseTxtContent('[Chorus \u2013 Leader]\nSing it again', { enableSplitting: false });
 

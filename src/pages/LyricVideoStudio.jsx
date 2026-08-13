@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AppWindowMac, ArrowLeft, CircleHelp, Download, FilePlus2, FileText, MonitorUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tooltip } from '../components/ui/tooltip';
@@ -133,6 +133,7 @@ const mergePersistedProject = (persistedProject) => {
 
 export default function LyricVideoStudio() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const { showModal } = useModal();
   const persistedStateRef = useRef(readLyricVideoStudioState());
@@ -722,7 +723,20 @@ export default function LyricVideoStudio() {
         variant: 'error',
       });
     }
-  }, [showToast]);
+  }, [clampVideoTime, showToast]);
+
+  useEffect(() => {
+    const pendingImport = location.state?.lyricVideoImport;
+    if (!pendingImport?.content || !pendingImport?.fileName) return;
+
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    const file = new File(
+      [pendingImport.content],
+      pendingImport.fileName,
+      { type: 'text/plain' }
+    );
+    void importLrcFile(file);
+  }, [importLrcFile, location.pathname, location.search, location.state, navigate]);
 
   const handleImportLrc = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -1161,7 +1175,7 @@ export default function LyricVideoStudio() {
               </Button>
             </Tooltip>
             <Tooltip content="Create or edit lyrics in New Song Canvas" side="bottom">
-              <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/new-song')} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
+              <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/new-song?mode=new&origin=lyric-video-studio')} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
                 <FilePlus2 className="h-4 w-4" />
                 Create LRC
               </Button>

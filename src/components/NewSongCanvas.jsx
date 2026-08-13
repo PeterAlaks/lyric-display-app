@@ -47,6 +47,8 @@ const NewSongCanvas = () => {
   const mode = params.get("mode") || "new";
   const editMode = mode === "edit";
   const composeMode = mode === "compose";
+  const canvasOrigin = params.get('origin') || '';
+  const isLyricVideoWorkflow = canvasOrigin === 'lyric-video-studio';
 
   const { darkMode, setDarkMode } = useDarkModeState();
   const showCanvasFloatingToolbar = useCanvasFloatingToolbarPreference();
@@ -243,7 +245,8 @@ const NewSongCanvas = () => {
     setSaveVersion,
     activeSetlistItemId: lyricsSource?.setlistItemId || null,
     updateSetlistItem,
-    editMode
+    editMode,
+    saveAndLoadDestination: isLyricVideoWorkflow ? 'lyric-video-studio' : 'control',
   });
 
   const { insertStandardTimestampAtLine, insertEnhancedTimestampAtCursor, insertMetadataTagAtCursor } = useTimestampOperations({
@@ -326,6 +329,10 @@ const NewSongCanvas = () => {
     navigate,
     showModal,
     showToast,
+    returnPath: isLyricVideoWorkflow ? '/lyric-video-studio' : '/',
+    newSongPath: isLyricVideoWorkflow
+      ? '/new-song?mode=new&origin=lyric-video-studio'
+      : '/new-song?mode=new',
   });
 
   useEffect(() => {

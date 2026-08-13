@@ -131,7 +131,10 @@ export function parseLrcContent(rawText = '', options = {}) {
         times.push(parseTimeMatch(match));
       }
 
-      const stripped = stripEnhancedTimestamps(line.replace(TIME_TAG_REGEX, '').trim());
+      const lineWithoutTimestamps = line.replace(TIME_TAG_REGEX, '').trim();
+      if (META_TAG_REGEX.test(lineWithoutTimestamps)) continue;
+
+      const stripped = stripEnhancedTimestamps(lineWithoutTimestamps);
       let text = stripped.text;
       text = preprocessText(text);
       const enhancedTimestamps = stripped.enhancedTimestamps;

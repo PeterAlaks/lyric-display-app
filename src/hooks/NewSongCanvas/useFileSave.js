@@ -33,7 +33,8 @@ const useFileSave = ({
   setSaveVersion,
   activeSetlistItemId,
   updateSetlistItem,
-  editMode = false
+  editMode = false,
+  saveAndLoadDestination = 'control',
 }) => {
   const navigate = useNavigate();
   const baseContentRef = externalBaseContentRef || useRef('');
@@ -243,6 +244,23 @@ const useFileSave = ({
     };
   }, [activeSetlistItemId, createEditorGroupingPlan, songMetadata]);
 
+  const navigateAfterSaveAndLoad = useCallback(({ payload, baseName, extension, filePath }) => {
+    if (saveAndLoadDestination === 'lyric-video-studio') {
+      navigate('/lyric-video-studio', {
+        state: {
+          lyricVideoImport: {
+            content: payload,
+            fileName: `${baseName}.${extension}`,
+            filePath: filePath || null,
+          },
+        },
+      });
+      return;
+    }
+
+    navigate('/');
+  }, [navigate, saveAndLoadDestination]);
+
   const writeLyricsFile = useCallback(async (targetPath, payload, options = {}) => {
     const result = await window.electronAPI.writeFile(targetPath, payload, {
       preserveGrouping: /\.txt$/i.test(targetPath || ''),
@@ -307,7 +325,7 @@ const useFileSave = ({
       const savedBaseName = result.baseName
         || result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
-      if (alsoLoad) {
+      if (alsoLoad && saveAndLoadDestination !== 'lyric-video-studio') {
         const blob = new Blob([filePayload], { type: 'text/plain' });
         const file = new File([blob], `${savedBaseName}.${selectedExtension}`, { type: 'text/plain' });
         setRawLyricsContent(filePayload);
@@ -349,7 +367,12 @@ const useFileSave = ({
       });
 
       if (alsoLoad) {
-        navigate('/');
+        navigateAfterSaveAndLoad({
+          payload: filePayload,
+          baseName: savedBaseName,
+          extension: selectedExtension,
+          filePath: result.filePath,
+        });
       }
 
       return { success: true, filePath: result.filePath, extension: selectedExtension };
@@ -363,7 +386,7 @@ const useFileSave = ({
       });
       return { success: false };
     }
-  }, [getReloadOptions, handleFileUpload, markSaved, navigate, serializePayload, setRawLyricsContent, showModal, showToast, syncActiveSetlistItem, writeLyricsFile]);
+  }, [getReloadOptions, handleFileUpload, markSaved, navigateAfterSaveAndLoad, saveAndLoadDestination, serializePayload, setRawLyricsContent, showModal, showToast, syncActiveSetlistItem, writeLyricsFile]);
 
   const tryDirectSaveToExistingPath = useCallback(async (payload, { alsoLoad = false } = {}) => {
     const target = getExistingTarget();
@@ -419,7 +442,7 @@ const useFileSave = ({
       });
       const savedBaseName = target.path.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
-      if (alsoLoad) {
+      if (alsoLoad && saveAndLoadDestination !== 'lyric-video-studio') {
         const blob = new Blob([filePayload], { type: 'text/plain' });
         const file = new File([blob], `${savedBaseName}.${target.extension}`, { type: 'text/plain' });
         await handleFileUpload(file, getReloadOptions({
@@ -460,7 +483,12 @@ const useFileSave = ({
       });
 
       if (alsoLoad) {
-        navigate('/');
+        navigateAfterSaveAndLoad({
+          payload: filePayload,
+          baseName: savedBaseName,
+          extension: target.extension,
+          filePath: target.path,
+        });
       }
 
       return { success: true, filePath: target.path };
@@ -473,7 +501,7 @@ const useFileSave = ({
       });
       return null;
     }
-  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, resolveBaseName, saveWithNavigator, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
+  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigateAfterSaveAndLoad, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim() || !isUsableLyricsTitle(title)) {
@@ -599,8 +627,10 @@ const useFileSave = ({
       const blob = new Blob([filePayload], { type: 'text/plain' });
       const file = new File([blob], `${baseName}.${extension}`, { type: 'text/plain' });
 
-      setRawLyricsContent(filePayload);
-      await handleFileUpload(file, getReloadOptions({ payload: filePayload, extension, filePath: null }));
+      if (saveAndLoadDestination !== 'lyric-video-studio') {
+        setRawLyricsContent(filePayload);
+        await handleFileUpload(file, getReloadOptions({ payload: filePayload, extension, filePath: null }));
+      }
       await syncActiveSetlistItem({ payload: filePayload, baseName, extension, filePath: null });
 
       const url = URL.createObjectURL(blob);
@@ -620,7 +650,7 @@ const useFileSave = ({
         filePath: null,
         notifyPendingReload: false
       });
-      navigate('/');
+      navigateAfterSaveAndLoad({ payload: filePayload, baseName, extension, filePath: null });
     } catch (err) {
       console.error('Failed to process lyrics:', err);
       showModal({
@@ -630,7 +660,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, saveWithNavigator, serializePayload, setRawLyricsContent, showModal, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
+  }, [content, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigateAfterSaveAndLoad, promptForFileFormat, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, setRawLyricsContent, showModal, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   return {
     handleSave,
