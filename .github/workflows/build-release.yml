@@ -71,10 +71,8 @@ jobs:
           npm run audit:prod
           npm run audit:server
 
-      - name: Rebuild native modules for Windows
-        run: |
-          npm rebuild better-sqlite3 --build-from-source
-          npm rebuild keytar --build-from-source
+      - name: Rebuild keytar native module for Windows
+        run: npm rebuild keytar --build-from-source
 
       - name: Build Vite app
         run: npm run build
@@ -129,10 +127,8 @@ jobs:
           npm run audit:prod
           npm run audit:server
 
-      - name: Rebuild native modules for macOS
-        run: |
-          npm rebuild better-sqlite3 --build-from-source
-          npm rebuild keytar --build-from-source
+      - name: Rebuild keytar native module for macOS
+        run: npm rebuild keytar --build-from-source
 
       - name: Build Vite app
         run: npm run build
@@ -195,10 +191,8 @@ jobs:
           npm run audit:prod
           npm run audit:server
 
-      - name: Rebuild native modules for Linux
-        run: |
-          npm rebuild better-sqlite3 --build-from-source
-          npm rebuild keytar --build-from-source
+      - name: Rebuild keytar native module for Linux
+        run: npm rebuild keytar --build-from-source
 
       - name: Build Vite app
         run: npm run build

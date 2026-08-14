@@ -30,14 +30,15 @@ if (platformMap[requestedPlatform] !== process.platform) {
   process.exit(1);
 }
 
-const findFiles = (root, targetName, maxDepth = 7, depth = 0, matches = []) => {
+const findFiles = (root, target, maxDepth = 7, depth = 0, matches = []) => {
   if (depth > maxDepth || !fs.existsSync(root)) return matches;
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const entryPath = path.join(root, entry.name);
-    if (entry.isFile() && entry.name === targetName) {
+    const isMatch = typeof target === 'function' ? target(entry.name, entryPath) : entry.name === target;
+    if (entry.isFile() && isMatch) {
       matches.push(entryPath);
     } else if (entry.isDirectory()) {
-      findFiles(entryPath, targetName, maxDepth, depth + 1, matches);
+      findFiles(entryPath, target, maxDepth, depth + 1, matches);
     }
   }
   return matches;
@@ -92,13 +93,18 @@ const packageCandidates = asarPaths.map((asarPath) => {
     throw new Error(`${asarPath} recursively contains release output`);
   }
 
-  const unpackedRoot = `${asarPath}.unpacked`;
-  const unpackedFiles = findFiles(unpackedRoot, 'better_sqlite3.node', 8)
-    .concat(findFiles(unpackedRoot, 'midi.node', 8))
-    .concat(findFiles(unpackedRoot, 'keytar.node', 8));
-  for (const nativeName of ['better_sqlite3.node', 'midi.node', 'keytar.node']) {
-    if (!unpackedFiles.some((filePath) => path.basename(filePath) === nativeName)) {
-      throw new Error(`${asarPath} is missing unpacked native runtime ${nativeName}`);
+  const unpackedModulesRoot = path.join(`${asarPath}.unpacked`, 'node_modules');
+  const nativePackages = [
+    ['better-sqlite3'],
+    ['@julusian', 'midi'],
+    ['keytar'],
+  ];
+  for (const packageSegments of nativePackages) {
+    const packageName = packageSegments.join('/');
+    const packageRoot = path.join(unpackedModulesRoot, ...packageSegments);
+    const nativeFiles = findFiles(packageRoot, (fileName) => fileName.endsWith('.node'), 8);
+    if (nativeFiles.length === 0) {
+      throw new Error(`${asarPath} is missing an unpacked native runtime for ${packageName}`);
     }
   }
 
