@@ -16,6 +16,7 @@ export function registerLyricVideoMediaScheme() {
         standard: true,
         secure: true,
         supportFetchAPI: true,
+        corsEnabled: true,
         stream: true,
       },
     },
@@ -64,6 +65,8 @@ export function registerLyricVideoMediaProtocol() {
       'Content-Type': grant.mimeType || 'application/octet-stream',
       'Content-Length': String(contentLength),
       'Accept-Ranges': 'bytes',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Expose-Headers': 'Accept-Ranges, Content-Length, Content-Range',
     };
 
     if (range) {

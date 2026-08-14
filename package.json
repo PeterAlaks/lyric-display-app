@@ -38,6 +38,8 @@
   "dependencies": {
     "@julusian/midi": "^3.6.1",
     "better-sqlite3": "^12.11.1",
+    "butterchurn": "3.0.0-beta.5",
+    "butterchurn-presets": "3.0.0-beta.4",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "electron-store": "^11.0.2",
@@ -131,6 +133,10 @@
       {
         "from": "INSTALLATION.md",
         "to": "INSTALLATION.md"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
       },
       {
         "from": "obs-dock.html",

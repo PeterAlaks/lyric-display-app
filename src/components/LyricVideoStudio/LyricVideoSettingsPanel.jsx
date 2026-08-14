@@ -6,6 +6,12 @@ import { Palette, SlidersHorizontal } from 'lucide-react';
 import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import AlwaysInfoButton from './AlwaysInfoButton';
+import {
+  BUTTERCHURN_QUALITY_LEVELS,
+  LYRIC_VIDEO_BACKGROUND_SOURCES,
+  normalizeLyricVideoVisualizer,
+} from '../../../shared/lyricVideoVisualizer.js';
+import { BUTTERCHURN_PRESET_OPTIONS } from '../../utils/butterchurnPresets.js';
 
 const inputClassName = 'h-9 rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
 const textareaClassName = 'min-h-[72px] rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
@@ -49,6 +55,14 @@ export default function LyricVideoSettingsPanel({
     },
   }));
   const intro = project.intro || project.openingScreen || {};
+  const visualizer = normalizeLyricVideoVisualizer(project.visualizer);
+  const patchVisualizer = (updates) => onProjectChange?.((current) => ({
+    ...current,
+    visualizer: normalizeLyricVideoVisualizer({
+      ...current.visualizer,
+      ...updates,
+    }),
+  }));
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-gray-900">
@@ -115,6 +129,86 @@ export default function LyricVideoSettingsPanel({
               <Palette className="h-4 w-4" />
               Edit Lyric Video Style
             </Button>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Background Source</h4>
+            <AlwaysInfoButton
+              side="left"
+              ariaLabel="Audio-reactive background help"
+              content="MilkDrop reacts to the attached song. It replaces the style background while preserving lyric text and layout styling."
+            />
+          </div>
+          <Select value={visualizer.source} onValueChange={(source) => patchVisualizer({ source })}>
+            <SelectTrigger className={selectTriggerClassName}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className={selectContentClassName}>
+              <SelectItem value={LYRIC_VIDEO_BACKGROUND_SOURCES.STYLE}>Style background</SelectItem>
+              <SelectItem value={LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN}>MilkDrop visualizer</SelectItem>
+            </SelectContent>
+          </Select>
+          {visualizer.source === LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN && (
+            <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+              <Field label="Preset">
+                <Select value={visualizer.presetId} onValueChange={(presetId) => patchVisualizer({ presetId })}>
+                  <SelectTrigger className={selectTriggerClassName}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className={selectContentClassName}>
+                    {BUTTERCHURN_PRESET_OPTIONS.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Sensitivity">
+                  <Input
+                    type="number"
+                    min="0.25"
+                    max="3"
+                    step="0.05"
+                    value={visualizer.sensitivity}
+                    onChange={(event) => patchVisualizer({ sensitivity: Number(event.target.value) || 1 })}
+                    className={inputClassName}
+                  />
+                </Field>
+                <Field label="Dim (%)">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="90"
+                    step="5"
+                    value={visualizer.dimming}
+                    onChange={(event) => patchVisualizer({ dimming: Number(event.target.value) || 0 })}
+                    className={inputClassName}
+                  />
+                </Field>
+              </div>
+              <Field label="Render Quality">
+                <Select value={visualizer.quality} onValueChange={(quality) => patchVisualizer({ quality })}>
+                  <SelectTrigger className={selectTriggerClassName}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className={selectContentClassName}>
+                    <SelectItem value={BUTTERCHURN_QUALITY_LEVELS.DRAFT}>Draft</SelectItem>
+                    <SelectItem value={BUTTERCHURN_QUALITY_LEVELS.BALANCED}>Balanced</SelectItem>
+                    <SelectItem value={BUTTERCHURN_QUALITY_LEVELS.HIGH}>High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Visual Seed">
+                <Input
+                  type="number"
+                  min="1"
+                  max="2147483647"
+                  step="1"
+                  value={visualizer.seed}
+                  onChange={(event) => patchVisualizer({ seed: Number(event.target.value) || 1 })}
+                  className={inputClassName}
+                />
+              </Field>
+            </div>
           )}
           <Field label="No-Lyric Behavior">
             <Select value={project.gapBehavior} onValueChange={(gapBehavior) => patchProject({ gapBehavior })}>

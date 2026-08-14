@@ -26,6 +26,10 @@ import {
   writeLyricVideoStudioState,
 } from '../utils/lyricVideoStudioState';
 import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
+import {
+  DEFAULT_LYRIC_VIDEO_VISUALIZER,
+  normalizeLyricVideoVisualizer,
+} from '../../shared/lyricVideoVisualizer.js';
 import { openFileNavigator } from '../utils/fileNavigatorEvents';
 
 const DEFAULT_LYRIC_VIDEO_SETTINGS = createDefaultOutputSettings({
@@ -62,6 +66,9 @@ const DEFAULT_PROJECT = {
   gapBehavior: 'keep-previous-line',
   clearAfterMs: 2500,
   styleSource: 'lyricVideo',
+  visualizer: {
+    ...DEFAULT_LYRIC_VIDEO_VISUALIZER,
+  },
   intro: {
     enabled: false,
     title: '',
@@ -124,6 +131,7 @@ const mergePersistedProject = (persistedProject) => {
       ...DEFAULT_PROJECT.exportSettings,
       ...(safeProject.exportSettings || {}),
     },
+    visualizer: normalizeLyricVideoVisualizer(safeProject.visualizer),
     intro: {
       ...DEFAULT_PROJECT.intro,
       ...(safeProject.intro || safeProject.openingScreen || {}),
@@ -280,10 +288,12 @@ export default function LyricVideoStudio() {
     audioStartTimeMs,
     previewTitle,
     visualSettings,
+    visualizerAudioSource: audioSource,
     styleLabel: project.styleSource === 'lyricVideo' ? 'Lyric Video' : project.styleSource.replace('output', 'Output '),
     updatedAt: Date.now(),
   }), [
     currentTimeMs,
+    audioSource,
     isPlaying,
     lyricVideoSettings,
     previewTitle,
@@ -332,6 +342,11 @@ export default function LyricVideoStudio() {
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return undefined;
     const channel = new BroadcastChannel(LYRIC_VIDEO_STUDIO_CHANNEL);
+    channel.onmessage = (event) => {
+      if (event.data?.type === 'request-snapshot') {
+        publishStudioSnapshot();
+      }
+    };
     liveChannelRef.current = channel;
     publishStudioSnapshot();
 
@@ -996,6 +1011,7 @@ export default function LyricVideoStudio() {
         clearAfterMs: project.clearAfterMs,
         title: project.name || 'Untitled Video 1',
         settings: visualSettings,
+        visualizer: project.visualizer,
         intro,
         audio: project.audio,
         exportSettings: {
@@ -1198,6 +1214,8 @@ export default function LyricVideoStudio() {
             resolvedLine={resolvedLine}
             currentLine={resolved.activeLine}
             settings={visualSettings}
+            visualizer={project.visualizer}
+            audioSource={audioSource}
             exportSettings={project.exportSettings}
             intro={intro}
             currentTimeMs={currentTimeMs}
@@ -1207,6 +1225,7 @@ export default function LyricVideoStudio() {
             gapBehavior={project.gapBehavior}
             styleLabel={project.styleSource === 'lyricVideo' ? 'Lyric Video' : project.styleSource.replace('output', 'Output ')}
             backgroundVideoPlaying={isPlaying}
+            audioStartTimeMs={audioStartTimeMs}
           />
         </section>
 

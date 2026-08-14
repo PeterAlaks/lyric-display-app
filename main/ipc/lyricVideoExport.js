@@ -5,7 +5,15 @@ import { access, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from '
 import { constants as fsConstants } from 'fs';
 import path from 'path';
 import { isDev, resolveProductionPath } from '../paths.js';
+import {
+  grantLyricVideoMediaFile,
+  revokeLyricVideoMediaFile,
+} from '../lyricVideoMediaProtocol.js';
 import * as userPreferences from '../userPreferences.js';
+import {
+  isButterchurnBackground,
+  normalizeLyricVideoVisualizer,
+} from '../../shared/lyricVideoVisualizer.js';
 
 let activeExport = null;
 let captureRawFormatCache = null;
@@ -24,6 +32,12 @@ const VALID_GAP_BEHAVIORS = new Set([
   'show-title',
   'keep-previous-line',
 ]);
+const AUDIO_MIME_TYPES = {
+  '.aac': 'audio/aac',
+  '.m4a': 'audio/mp4',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+};
 
 const clampNumber = (value, fallback, min, max) => {
   const parsed = Number(value);
@@ -817,7 +831,7 @@ const waitForExportApi = async (win) => {
     }
 
     const ready = await win.webContents.executeJavaScript(
-      'typeof window.__lyricVideoExportLoad === "function" && typeof window.__lyricVideoExportSeek === "function"',
+      'typeof window.__lyricVideoExportLoad === "function" && typeof window.__lyricVideoExportReset === "function" && typeof window.__lyricVideoExportSeek === "function"',
       true
     ).catch(() => false);
 
@@ -875,10 +889,12 @@ const sanitizeExportPayload = (payload = {}) => {
     clearAfterMs: clampNumber(payload.clearAfterMs, 2500, 0, 300_000),
     title: sanitizeFileNamePart(payload.title || 'Lyric Video', 'Lyric Video'),
     settings: payload.settings || {},
+    visualizer: normalizeLyricVideoVisualizer(payload.visualizer),
     intro,
     audio: {
       filePath: typeof payload.audio?.filePath === 'string' ? payload.audio.filePath : '',
       durationMs: audioDurationMs,
+      sourceUrl: '',
     },
     exportSettings: {
       format: 'mp4',
@@ -1083,6 +1099,7 @@ export function registerLyricVideoExportHandlers() {
       donePromise,
       resolveDone: resolveExportDone,
       tempDirs: [],
+      mediaSourceUrls: [],
     };
     activeExport = exportState;
 
@@ -1102,12 +1119,23 @@ export function registerLyricVideoExportHandlers() {
       await loadPromise;
       await waitForExportApi(exportWindow);
 
+      if (isButterchurnBackground(normalized.visualizer)) {
+        const extension = path.extname(normalized.audio.filePath).toLowerCase();
+        normalized.audio.sourceUrl = grantLyricVideoMediaFile(
+          normalized.audio.filePath,
+          AUDIO_MIME_TYPES[extension] || 'audio/*'
+        );
+        exportState.mediaSourceUrls.push(normalized.audio.sourceUrl);
+      }
+
       await exportWindow.webContents.executeJavaScript(
         `window.__lyricVideoExportLoad(${JSON.stringify(normalized)})`,
         true
       );
 
-      let backgroundPlan = await getBackgroundPlan(normalized.settings);
+      let backgroundPlan = isButterchurnBackground(normalized.visualizer)
+        ? { type: 'color', color: '#000000' }
+        : await getBackgroundPlan(normalized.settings);
       backgroundPlan = await materializeBundledBackground({
         plan: backgroundPlan,
         exportState,
@@ -1156,6 +1184,13 @@ export function registerLyricVideoExportHandlers() {
 
         if (exportState.canceled) {
           throw new Error('Export canceled');
+        }
+
+        if (isButterchurnBackground(normalized.visualizer)) {
+          await exportWindow.webContents.executeJavaScript(
+            'window.__lyricVideoExportReset()',
+            true
+          );
         }
 
         const allowRawPipeline = requestedMode === 'faster' && Boolean(encoderPlan.hardware);
@@ -1458,6 +1493,9 @@ export function registerLyricVideoExportHandlers() {
       await Promise.allSettled((exportState.tempDirs || []).map((tempDir) => (
         rm(tempDir, { recursive: true, force: true })
       )));
+      (exportState.mediaSourceUrls || []).forEach((sourceUrl) => {
+        revokeLyricVideoMediaFile(sourceUrl);
+      });
       if (activeExport === exportState) {
         activeExport = null;
       }

@@ -1,11 +1,15 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import LyricVisualFrame from '../output/LyricVisualFrame';
 import IntroOverlay, { isIntroActive } from './IntroOverlay';
+import ButterchurnBackground from './ButterchurnBackground';
+import { isButterchurnBackground } from '../../../shared/lyricVideoVisualizer.js';
 
 export default function LyricVideoPreview({
   resolvedLine,
   currentLine,
   settings,
+  visualizer,
+  audioSource,
   exportSettings,
   intro,
   currentTimeMs = 0,
@@ -15,11 +19,13 @@ export default function LyricVideoPreview({
   gapBehavior,
   styleLabel,
   backgroundVideoPlaying,
+  audioStartTimeMs = 0,
 }) {
   const frameRef = useRef(null);
   const [scale, setScale] = useState(1);
   const canvasWidth = Math.max(320, Number(exportSettings?.width) || 1920);
   const canvasHeight = Math.max(180, Number(exportSettings?.height) || 1080);
+  const butterchurnEnabled = isButterchurnBackground(visualizer);
 
   useLayoutEffect(() => {
     const node = frameRef.current;
@@ -64,13 +70,26 @@ export default function LyricVideoPreview({
           style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}` }}
         >
           <div
-            className="origin-top-left"
+            className="relative origin-top-left"
             style={{
               width: canvasWidth,
               height: canvasHeight,
               transform: `scale(${scale})`,
             }}
           >
+            <ButterchurnBackground
+              enabled={butterchurnEnabled}
+              visualizer={visualizer}
+              audioSource={audioSource}
+              currentTimeMs={currentTimeMs}
+              audioStartTimeMs={audioStartTimeMs}
+              width={canvasWidth}
+              height={canvasHeight}
+              fps={exportSettings?.fps}
+              preview
+              showStatus
+              statusScale={scale}
+            />
             <LyricVisualFrame
               line={line || ''}
               currentLine={currentLine}
@@ -80,8 +99,9 @@ export default function LyricVideoPreview({
               previewMode
               frameKey={line || 'gap'}
               label="Lyric Video Preview"
-              className="relative h-full w-full overflow-hidden"
+              className="absolute inset-0 h-full w-full overflow-hidden"
               backgroundVideoPlaying={backgroundVideoPlaying}
+              renderBackgroundLayer={!butterchurnEnabled}
             />
             <IntroOverlay
               intro={intro}
