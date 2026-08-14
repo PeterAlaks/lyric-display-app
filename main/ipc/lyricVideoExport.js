@@ -14,6 +14,7 @@ import {
   isButterchurnBackground,
   normalizeLyricVideoVisualizer,
 } from '../../shared/lyricVideoVisualizer.js';
+import { extractZipArchive } from '../archiveExtraction.js';
 
 let activeExport = null;
 let captureRawFormatCache = null;
@@ -279,8 +280,7 @@ const extractAndFindFfmpegExecutable = async (zipPath) => {
   if (!await fileExists(markerPath)) {
     await rm(targetDir, { recursive: true, force: true });
     await mkdir(targetDir, { recursive: true });
-    const extractZip = (await import('extract-zip')).default;
-    await extractZip(zipPath, { dir: targetDir });
+    await extractZipArchive(zipPath, { dir: targetDir });
     await writeFile(markerPath, new Date().toISOString(), 'utf8');
   }
 

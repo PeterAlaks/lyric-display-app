@@ -7,6 +7,7 @@ const packageLock = JSON.parse(fs.readFileSync(new URL('../package-lock.json', i
 const removedDirectDependencies = [
   '@tailwindcss/forms',
   'archiver',
+  'extract-zip',
   'rollup',
 ];
 

@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import JSZip from 'jszip';
+import { extractZipArchive } from '../main/archiveExtraction.js';
 import { createNdiInstaller, parseSha256Checksum, replaceDirectoryAtomically } from '../main/ndi/installer.js';
 
 const HASH = 'a'.repeat(64);
@@ -82,6 +84,67 @@ test('NDI installer parses standard SHA-256 sidecar formats', () => {
   assert.equal(parseSha256Checksum(HASH), HASH);
   assert.equal(parseSha256Checksum(`${HASH}  lyricdisplay-ndi-win.zip\n`), HASH);
   assert.equal(parseSha256Checksum(`${HASH} *lyricdisplay-ndi-win.zip`), HASH);
+});
+
+test('ZIP extraction rejects entries that escape the destination', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lyricdisplay-zip-security-'));
+  const archivePath = path.join(root, 'archive.zip');
+  const destinationPath = path.join(root, 'destination');
+  const zip = new JSZip();
+  zip.file('../escaped.txt', 'unsafe');
+  fs.writeFileSync(archivePath, await zip.generateAsync({ type: 'nodebuffer' }));
+
+  try {
+    await assert.rejects(
+      extractZipArchive(archivePath, { dir: destinationPath }),
+      /escapes the destination/,
+    );
+    assert.equal(fs.existsSync(path.join(root, 'escaped.txt')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ZIP extraction preserves normal nested files and entry progress', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lyricdisplay-zip-extract-'));
+  const archivePath = path.join(root, 'archive.zip');
+  const destinationPath = path.join(root, 'destination');
+  const zip = new JSZip();
+  zip.file('nested/companion.txt', 'ready');
+  fs.writeFileSync(archivePath, await zip.generateAsync({ type: 'nodebuffer' }));
+  const progress = [];
+
+  try {
+    await extractZipArchive(archivePath, {
+      dir: destinationPath,
+      onEntry(entry, archive) {
+        progress.push([entry.path, archive.entryCount]);
+      },
+    });
+    assert.equal(fs.readFileSync(path.join(destinationPath, 'nested', 'companion.txt'), 'utf8'), 'ready');
+    assert.deepEqual(progress, [['nested/', 2], ['nested/companion.txt', 2]]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ZIP extraction rejects symlinks that point outside the destination', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lyricdisplay-zip-symlink-'));
+  const archivePath = path.join(root, 'archive.zip');
+  const destinationPath = path.join(root, 'destination');
+  const zip = new JSZip();
+  zip.file('unsafe-link', '../../escaped.txt', { unixPermissions: 0o120777 });
+  fs.writeFileSync(archivePath, await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX' }));
+
+  try {
+    await assert.rejects(
+      extractZipArchive(archivePath, { dir: destinationPath }),
+      /escapes the destination/,
+    );
+    assert.equal(fs.existsSync(path.join(destinationPath, 'unsafe-link')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('NDI installer rejects malformed checksum sidecars', () => {

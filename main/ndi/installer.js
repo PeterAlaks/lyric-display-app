@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { Readable, Transform, Writable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { NDI_MANAGED_INSTALL_MARKER } from '../appIdentity.js';
+import { extractZipArchive } from '../archiveExtraction.js';
 
 const RELEASE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 const CHECKSUM_REQUIRED_FROM_VERSION = '1.0.6';
@@ -827,7 +828,7 @@ function createNdiInstaller({
   async function extractZip(zipPath, destPath, signal) {
     throwIfAborted(signal);
     validateZipSignature(zipPath);
-    const extract = extractArchive || (await import('extract-zip')).default;
+    const extract = extractArchive || extractZipArchive;
 
     const tempExtractPath = destPath + '-extracting-' + Date.now();
     console.log('[NDI] Starting extraction to temp:', tempExtractPath);
