@@ -1,10 +1,19 @@
 import path from 'path';
-import { MAX_SETLIST_ITEMS } from '../shared/setlistLimits.js';
+import {
+  MAX_SETLIST_FILE_BYTES,
+  MAX_SETLIST_ITEM_CONTENT_BYTES,
+  MAX_SETLIST_ITEMS,
+  MAX_SETLIST_STRING_LENGTH,
+} from '../shared/setlistLimits.js';
+import { isSupportedLyricFileType } from '../shared/lyricImportRegistry.js';
 
 export const SETLIST_FILE_EXTENSION = '.ldset';
-export const MAX_SETLIST_FILE_BYTES = 10 * 1024 * 1024;
-export const MAX_SETLIST_ITEM_CONTENT_BYTES = 2 * 1024 * 1024;
-export const MAX_SETLIST_STRING_LENGTH = 512;
+export const CURRENT_SETLIST_SCHEMA_VERSION = '1.0';
+export {
+  MAX_SETLIST_FILE_BYTES,
+  MAX_SETLIST_ITEM_CONTENT_BYTES,
+  MAX_SETLIST_STRING_LENGTH,
+};
 
 export function normalizeSetlistPath(filePath) {
   if (typeof filePath !== 'string' || !filePath.trim()) {
@@ -60,15 +69,24 @@ export function validateSetlistData(setlistData) {
     return { valid: false, error: 'Invalid setlist format' };
   }
 
-  if (!Array.isArray(setlistData.items)) {
+  const versionResult = normalizeSetlistSchemaVersion(setlistData.version);
+  if (!versionResult.valid) {
+    return versionResult;
+  }
+
+  const normalizedData = versionResult.migrated
+    ? { ...setlistData, version: CURRENT_SETLIST_SCHEMA_VERSION }
+    : setlistData;
+
+  if (!Array.isArray(normalizedData.items)) {
     return { valid: false, error: 'Setlist must contain an items array' };
   }
 
-  if (setlistData.items.length > MAX_SETLIST_ITEMS) {
+  if (normalizedData.items.length > MAX_SETLIST_ITEMS) {
     return { valid: false, error: `Setlist cannot contain more than ${MAX_SETLIST_ITEMS} items` };
   }
 
-  for (const [index, item] of setlistData.items.entries()) {
+  for (const [index, item] of normalizedData.items.entries()) {
     if (!isPlainObject(item)) {
       return { valid: false, error: `Setlist item ${index + 1} is invalid` };
     }
@@ -80,7 +98,7 @@ export function validateSetlistData(setlistData) {
     if (originalNameError) return { valid: false, error: originalNameError };
 
     const fileType = item.fileType || 'txt';
-    if (!['txt', 'lrc'].includes(fileType)) {
+    if (!isSupportedLyricFileType(fileType)) {
       return { valid: false, error: `Setlist item ${index + 1} has an unsupported file type` };
     }
 
@@ -97,5 +115,49 @@ export function validateSetlistData(setlistData) {
     }
   }
 
-  return { valid: true };
+  return {
+    valid: true,
+    setlistData: normalizedData,
+    migrated: versionResult.migrated,
+    sourceVersion: versionResult.sourceVersion,
+  };
+}
+
+function normalizeSetlistSchemaVersion(version) {
+  if (version == null || version === '') {
+    return { valid: true, migrated: true, sourceVersion: 'legacy' };
+  }
+
+  const versionText = typeof version === 'number' && Number.isInteger(version)
+    ? `${version}.0`
+    : String(version).trim();
+  const match = /^(\d+)\.(\d+)$/.exec(versionText);
+  if (!match) {
+    return {
+      valid: false,
+      error: `Unsupported setlist schema version "${versionText}". Open a valid .ldset file or re-save it with LyricDisplay.`,
+    };
+  }
+
+  const [currentMajor, currentMinor] = CURRENT_SETLIST_SCHEMA_VERSION.split('.').map(Number);
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  if (major > currentMajor || (major === currentMajor && minor > currentMinor)) {
+    return {
+      valid: false,
+      error: `This setlist uses schema ${versionText}, which requires a newer LyricDisplay version. Update LyricDisplay before opening it.`,
+    };
+  }
+  if (major !== currentMajor) {
+    return {
+      valid: false,
+      error: `Setlist schema ${versionText} is no longer supported. Open and re-save it with a compatible LyricDisplay version first.`,
+    };
+  }
+
+  return {
+    valid: true,
+    migrated: version !== CURRENT_SETLIST_SCHEMA_VERSION,
+    sourceVersion: versionText,
+  };
 }

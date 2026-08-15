@@ -19,8 +19,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { resolveBackendUrl } from '../utils/network';
 import useLyricsStore from '../context/LyricsStore';
+import useNdiStore from '../context/NdiStore';
 import { useLiveSafetyBridge } from '../hooks/useLiveSafetyBridge';
 import useToast from '../hooks/useToast';
+import {
+  evaluateNdiReadiness,
+  evaluateOutputReadiness,
+  evaluateProjectionReadiness,
+} from '../../shared/productionReadiness';
 
 const statusIcon = {
   pass: CheckCircle2,
@@ -83,12 +89,30 @@ const getDashboardState = ({ failCount, warnCount, checks, loading }) => {
 const collectMediaReferences = (storeState) => {
   const refs = [];
   const outputIds = ['output1', 'output2', ...(storeState.customOutputIds || [])];
+
+  const addReference = (output, media) => {
+    if (!media) return;
+    const source = typeof media === 'string' ? media : (media.dataUrl || media.url);
+    if (!source) return;
+    refs.push({
+      output,
+      source,
+      bundled: typeof media === 'object' && media.bundled === true,
+      embedded: typeof source === 'string' && source.startsWith('data:'),
+    });
+  };
+
   for (const id of outputIds) {
     const settings = storeState[`${id}Settings`] || {};
-    if (settings.fullScreenBackgroundMedia) refs.push({ output: id, url: settings.fullScreenBackgroundMedia });
-    if (settings.fullScreenElementMedia) refs.push({ output: id, url: settings.fullScreenElementMedia });
+    addReference(id, settings.fullScreenBackgroundMedia);
+    addReference(id, settings.fullScreenElementMedia);
   }
   return refs;
+};
+
+const resolveMediaReferenceUrl = ({ source, bundled }) => {
+  if (bundled || /^(?:https?:|blob:)/i.test(source)) return source;
+  return resolveBackendUrl(source);
 };
 
 export default function PreServiceHealthModal({ darkMode }) {
@@ -140,42 +164,27 @@ export default function PreServiceHealthModal({ darkMode }) {
     });
 
     const outputIds = ['output1', 'output2', ...(storeState.customOutputIds || [])];
-    const connectedOutputs = outputIds.filter((id) => Number(storeState[`${id}Settings`]?.instanceCount || 0) > 0);
-    nextChecks.push({
-      id: 'outputs',
-      label: 'Output Browser Sources',
-      status: connectedOutputs.length > 0 ? 'pass' : 'warn',
-      detail: connectedOutputs.length > 0
-        ? `${connectedOutputs.length}/${outputIds.length} output(s) reporting metrics`
-        : 'No output browser source has reported metrics yet',
-    });
+    nextChecks.push(evaluateOutputReadiness({ storeState }));
 
     try {
       const projection = await window.electronAPI?.display?.getProjectionState?.();
-      nextChecks.push({
-        id: 'displays',
-        label: 'Displays',
-        status: projection?.success ? 'pass' : 'warn',
-        detail: projection?.success
-          ? `${projection.displays?.length || 0} display(s), ${projection.projections?.length || 0} projection window(s)`
-          : 'Display state unavailable',
-      });
+      nextChecks.push(evaluateProjectionReadiness({ projection, storeState }));
     } catch (error) {
-      nextChecks.push({ id: 'displays', label: 'Displays', status: 'warn', detail: error.message });
+      nextChecks.push(evaluateProjectionReadiness({ projection: { success: false, error: error.message }, storeState }));
     }
 
     try {
       const ndi = await window.electronAPI?.ndi?.getCompanionStatus?.();
-      nextChecks.push({
-        id: 'ndi',
-        label: 'NDI Companion',
-        status: ndi?.running ? 'pass' : (ndi?.installed ? 'warn' : 'warn'),
-        detail: ndi?.running
-          ? `Running${ndi.version ? `, v${ndi.version}` : ''}`
-          : (ndi?.installed ? 'Installed but not running' : 'Not installed'),
-      });
+      const ndiSettingsEntries = await Promise.all(outputIds.map(async (outputId) => (
+        [outputId, await window.electronAPI?.ndi?.getOutputSettings?.(outputId)]
+      )));
+      nextChecks.push(evaluateNdiReadiness({
+        companionStatus: ndi,
+        outputSettings: Object.fromEntries(ndiSettingsEntries),
+        telemetry: useNdiStore.getState().telemetry,
+      }));
     } catch (error) {
-      nextChecks.push({ id: 'ndi', label: 'NDI Companion', status: 'warn', detail: error.message });
+      nextChecks.push({ id: 'ndi', label: 'NDI Routes', status: 'warn', detail: error.message });
     }
 
     try {
@@ -196,8 +205,9 @@ export default function PreServiceHealthModal({ darkMode }) {
     } else {
       const missing = [];
       await Promise.all(mediaRefs.map(async (media) => {
+        if (media.embedded) return;
         try {
-          const response = await fetch(resolveBackendUrl(media.url), { method: 'HEAD' });
+          const response = await fetch(resolveMediaReferenceUrl(media), { method: 'HEAD' });
           if (!response.ok) missing.push(media);
         } catch {
           missing.push(media);
@@ -272,7 +282,7 @@ export default function PreServiceHealthModal({ darkMode }) {
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 190px)' }}>
-      <div className={`flex items-center justify-between gap-4 border-b px-5 py-4 ${darkMode ? 'border-gray-800 bg-gray-950/40' : 'border-gray-200 bg-white'}`}>
+      <div className={`flex items-center justify-between gap-4 border-b px-5 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
         <div className="min-w-0">
           <p className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
             Production readiness dashboard

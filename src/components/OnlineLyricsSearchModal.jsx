@@ -512,7 +512,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   const modalClasses = [
     'rounded-xl border shadow-2xl ring-1 w-[94vw] max-w-5xl mx-4',
     'flex max-h-[calc(100vh-2rem)] h-[min(86vh,760px)] flex-col overflow-hidden sm:min-h-[620px]',
-    darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20',
+    darkMode ? 'bg-gray-900 text-gray-50 border-slate-800/80 ring-blue-500/35' : 'bg-white text-gray-900 border-slate-200/80 ring-blue-500/20',
     'transition-all duration-200 ease-out',
     (exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100',
   ].join(' ');
@@ -530,7 +530,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         onClick={handleCloseModal}
       />
       <div className={modalClasses}>
-        <div className={`flex items-center justify-between border-b px-5 py-4 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+        <div className={`flex items-center justify-between border-b px-5 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
           <div className="min-w-0">
             <h2 className={`truncate text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Online Lyrics Search</h2>
             <div className={`mt-1 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -564,7 +564,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
         <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1fr)_18rem]">
           <section className={`flex min-h-0 flex-col ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-            <div className={`border-b p-4 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+            <div className={`border-b p-4 ${darkMode ? 'border-slate-800/60 bg-gray-900' : 'border-slate-200/70 bg-white'}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                 <div className={`inline-flex w-fit rounded-lg p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                   <button type="button" onClick={() => setSearchMode('libraries')} className={sourceModeClasses('libraries')}>
@@ -741,7 +741,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           </section>
 
           <aside
-            className={`min-h-0 overflow-y-auto border-t p-4 md:border-l md:border-t-0 ${darkMode ? 'border-gray-800 bg-gray-950/60' : 'border-gray-200 bg-gray-50'}`}
+            className={`min-h-0 overflow-y-auto border-t p-4 md:border-l md:border-t-0 ${darkMode ? 'border-slate-800/60 bg-gray-950/60' : 'border-slate-200/70 bg-gray-50'}`}
             style={{ scrollbarGutter: 'stable' }}
           >
             <ProviderAdvancedPanel

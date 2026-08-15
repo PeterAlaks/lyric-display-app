@@ -377,7 +377,7 @@ export function createProgressWindow({ parent, initialState } = {}) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js')
+      preload: resolveProductionPath('preloads', 'updater.cjs')
     }
   });
 

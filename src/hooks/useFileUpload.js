@@ -5,12 +5,20 @@ import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from './useToast';
 import { detectArtistFromFilename } from '../utils/artistDetection';
 import useLyricsStore from '../context/LyricsStore';
+import { mergeLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
+import {
+  getLyricFormatLabel,
+  getLyricOriginLabel,
+  getLyricImportFormatForName,
+  stripLyricImportExtension,
+} from '../../shared/lyricImportRegistry.js';
 
 const useFileUpload = () => {
-  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps } = useLyricsState();
+  const { setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps } = useLyricsState();
   const { emitLyricsLoad, socket } = useControlSocket();
   const { showToast } = useToast();
   const maxFileSize = useLyricsStore((state) => state.maxFileSizeLimit);
+  const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
 
   const MAX_FILE_SIZE_BYTES = maxFileSize * 1024 * 1024;
 
@@ -22,17 +30,19 @@ const useFileUpload = () => {
         return false;
       }
 
-      const nameLower = (file.name || '').toLowerCase();
-      const isTxt = nameLower.endsWith('.txt');
-      const isLrc = nameLower.endsWith('.lrc');
-      if (!isTxt && !isLrc) {
-        showToast({ title: 'Unsupported file', message: 'Only .txt or .lrc files are supported.', variant: 'warn' });
+      const format = getLyricImportFormatForName(file.name || '');
+      if (!format) {
+        showToast({ title: 'Unsupported file', message: 'Supported lyric files: .txt, .lrc, .md, .markdown, .rtf, .docx.', variant: 'warn' });
         return false;
       }
+      const fileType = format.fileType;
+      const isLrc = fileType === 'lrc';
 
+      const parsingOptions = mergeLyricsParsingOptions(lyricsParsingOptions, additionalOptions);
       const parsed = await parseLyricsFileAsync(file, {
-        fileType: isLrc ? 'lrc' : 'txt',
-        ...additionalOptions
+        ...additionalOptions,
+        ...parsingOptions,
+        fileType,
       });
       if (!parsed || !Array.isArray(parsed.processedLines)) {
         throw new Error('Invalid lyrics parse response');
@@ -40,8 +50,10 @@ const useFileUpload = () => {
 
       setLyrics(parsed.processedLines);
 
-      let sourceContent = parsed.rawText || '';
-      if (file && typeof file.text === 'function') {
+      let sourceContent = typeof additionalOptions.rawText === 'string'
+        ? additionalOptions.rawText
+        : (parsed.rawText || '');
+      if ((isLrc || fileType === 'txt') && typeof additionalOptions.rawText !== 'string' && file && typeof file.text === 'function') {
         try {
           sourceContent = await file.text();
         } catch {
@@ -49,52 +61,64 @@ const useFileUpload = () => {
         }
       }
 
-      if (isLrc) {
-        setRawLyricsContent(sourceContent);
-      } else {
-        setRawLyricsContent(parsed.rawText);
-      }
+      setRawLyricsContent(sourceContent);
 
-      if (parsed.timestamps) {
-        setLyricsTimestamps(parsed.timestamps);
-      }
+      setLyricsTimestamps(parsed.timestamps || []);
+      setLyricsEnhancedTimestamps(parsed.enhancedTimestamps || []);
 
       selectLine(null);
 
-      const baseName = file.name.replace(/\.(txt|lrc)$/i, '');
+      const baseName = stripLyricImportExtension(file.name);
       const filePath = additionalOptions.filePath || file?.path || null;
       setLyricsFileName(baseName);
       setLyricsSource({
         content: sourceContent,
-        fileType: isLrc ? 'lrc' : 'txt',
+        fileType,
         filePath,
         fileName: file.name,
+        setlistItemId: additionalOptions.setlistItemId || null,
+        ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
       });
 
       const detected = detectArtistFromFilename(baseName);
-      const metadata = {
-        title: detected.title || baseName,
-        artists: detected.artist ? [detected.artist] : [],
-        album: null,
-        year: null,
-        lyricLines: parsed.processedLines.length,
-        origin: isLrc ? 'Local (.lrc)' : 'Local (.txt)',
-        filePath
-      };
+      const providedMetadata = additionalOptions.songMetadata && typeof additionalOptions.songMetadata === 'object'
+        ? additionalOptions.songMetadata
+        : null;
+      const metadata = providedMetadata
+        ? {
+          ...providedMetadata,
+          title: providedMetadata.title || detected.title || baseName,
+          lyricLines: parsed.processedLines.length,
+          filePath,
+          ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
+        }
+        : {
+          title: detected.title || baseName,
+          artists: detected.artist ? [detected.artist] : [],
+          album: null,
+          year: null,
+          lyricLines: parsed.processedLines.length,
+          origin: getLyricOriginLabel(fileType),
+          filePath,
+          ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
+        };
       setSongMetadata(metadata);
 
       emitLyricsLoad({
         lyrics: parsed.processedLines,
         fileName: baseName,
-        rawLyricsContent: isLrc ? sourceContent : parsed.rawText,
+        rawLyricsContent: sourceContent,
         lyricsSource: {
           content: sourceContent,
-          fileType: isLrc ? 'lrc' : 'txt',
+          fileType,
           filePath,
           fileName: file.name,
+          setlistItemId: additionalOptions.setlistItemId || null,
+          ...(fileType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
         },
         songMetadata: metadata,
         lyricsTimestamps: parsed.timestamps || [],
+        lyricsEnhancedTimestamps: parsed.enhancedTimestamps || [],
         sections: parsed.sections || [],
         lineToSection: parsed.lineToSection || {},
       });
@@ -111,7 +135,7 @@ const useFileUpload = () => {
         detail: {
           fileName: baseName,
           filePath,
-          fileType: isLrc ? 'lrc' : 'txt',
+          fileType,
         }
       }));
 
@@ -121,7 +145,7 @@ const useFileUpload = () => {
         }
       } catch { }
 
-      showToast({ title: 'File loaded', message: `${isLrc ? 'LRC' : 'Text'}: ${baseName}`, variant: 'success' });
+      showToast({ title: 'File loaded', message: `${getLyricFormatLabel(fileType)}: ${baseName}`, variant: 'success' });
 
       return true;
     } catch (err) {
@@ -129,7 +153,7 @@ const useFileUpload = () => {
       showToast({ title: 'Failed to load file', message: 'Please check the file and try again.', variant: 'error' });
       return false;
     }
-  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, emitLyricsLoad, socket, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
+  }, [setLyrics, setRawLyricsContent, selectLine, setLyricsFileName, setLyricsSource, setSongMetadata, setLyricsTimestamps, setLyricsEnhancedTimestamps, emitLyricsLoad, lyricsParsingOptions, socket, showToast, maxFileSize, MAX_FILE_SIZE_BYTES]);
 
   return handleFileUpload;
 };

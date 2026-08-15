@@ -1,6 +1,6 @@
 {
   "name": "lyric-display-app",
-  "version": "6.6.0",
+  "version": "6.8.1",
   "description": "Real-time lyric display app with control panel and multiple output displays",
   "license": "GPL-3.0-or-later",
   "author": {
@@ -11,7 +11,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "vite build && node scripts/write-build-info.js",
     "preview": "vite preview",
     "server": "node server/index.js",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
@@ -20,10 +20,14 @@
     "electron": "electron .",
     "update-version": "node scripts/update-version.js",
     "electron-pack": "npm run build && electron-builder",
+    "generate:appx-assets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-appx-assets.ps1",
+    "electron-pack:store": "npm run generate:appx-assets && npm run build && electron-builder --win appx --x64 --publish never",
+    "electron-pack:windows-release": "npm run generate:appx-assets && npm run build && electron-builder --win nsis appx --x64 --publish never",
     "postinstall": "electron-builder install-app-deps",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "audit:server": "npm --prefix server audit --omit=dev --audit-level=moderate",
     "check:static": "node scripts/check-static.js",
+    "check:contracts": "node scripts/validate-api-contracts.js",
     "test:unit": "node --test tests/*.test.js",
     "test:lyrics-canary": "node --test tests/*.canary.js",
     "test:security": "node --test tests/security-hardening.test.js",
@@ -33,92 +37,108 @@
   },
   "dependencies": {
     "@julusian/midi": "^3.6.1",
-    "better-sqlite3": "^12.4.1",
+    "better-sqlite3": "^13.0.3",
+    "butterchurn": "3.0.0-beta.5",
+    "butterchurn-presets": "3.0.0-beta.4",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "electron-store": "^11.0.2",
-    "electron-updater": "^6.6.2",
-    "extract-zip": "^2.0.1",
+    "electron-updater": "^6.8.9",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "font-list": "^2.0.1",
     "fuse.js": "^7.1.0",
     "i18next": "^26.3.4",
+    "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "keytar": "^7.9.0",
+    "mammoth": "^1.12.0",
+    "multer": "^2.1.1",
     "paradox-reader": "^1.3.0",
     "pdfkit": "^0.19.1",
-    "react-i18next": "^17.0.8"
+    "react-i18next": "^17.0.8",
+    "socket.io": "^4.8.3",
+    "unzipper": "^0.12.5"
   },
   "devDependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
-    "@radix-ui/react-checkbox": "^1.3.4",
-    "@radix-ui/react-popover": "^1.1.16",
-    "@radix-ui/react-progress": "^1.1.9",
-    "@radix-ui/react-select": "^2.3.0",
-    "@radix-ui/react-slider": "^1.4.0",
-    "@radix-ui/react-slot": "^1.2.5",
-    "@radix-ui/react-switch": "^1.3.0",
-    "@radix-ui/react-tabs": "^1.1.14",
-    "@tailwindcss/forms": "^0.5.7",
-    "@tailwindcss/postcss": "^4.3.1",
-    "@vitejs/plugin-react": "^6.0.2",
-    "archiver": "^8.0.0",
-    "autoprefixer": "^10.4.21",
+    "@electron/asar": "^4.2.1",
+    "@radix-ui/react-checkbox": "^1.3.7",
+    "@radix-ui/react-popover": "^1.1.19",
+    "@radix-ui/react-progress": "^1.1.12",
+    "@radix-ui/react-select": "^2.3.3",
+    "@radix-ui/react-slider": "^1.4.3",
+    "@radix-ui/react-slot": "^1.3.0",
+    "@radix-ui/react-switch": "^1.3.3",
+    "@radix-ui/react-tabs": "^1.1.17",
+    "@tailwindcss/postcss": "^4.3.2",
+    "@vitejs/plugin-react": "^6.0.3",
+    "autoprefixer": "^10.5.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^10.0.3",
-    "dompurify": "^3.4.10",
-    "electron": "^39.8.10",
-    "electron-builder": "^26.15.3",
-    "framer-motion": "^12.40.0",
+    "dompurify": "^3.4.12",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.6",
+    "framer-motion": "^13.1.0",
     "husky": "^9.1.7",
-    "lucide-react": "^1.18.0",
-    "postcss": "^8.5.15",
+    "lucide-react": "^1.24.0",
+    "postcss": "^8.5.18",
     "prompts": "^2.4.2",
     "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-colorful": "^5.7.0",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.17.0",
+    "react-router-dom": "^7.18.1",
     "react-window": "^2.2.7",
-    "rollup": "^4.62.0",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.6.0",
-    "tailwindcss": "^4.3.1",
+    "tailwindcss": "^4.3.2",
     "tailwindcss-animate": "^1.0.7",
     "use-sync-external-store": "^1.6.0",
-    "vite": "^8.0.16",
+    "vite": "^8.1.4",
     "wait-on": "^9.0.10",
     "zustand": "^5.0.14"
   },
   "build": {
     "appId": "com.lyricdisplay",
     "productName": "LyricDisplay",
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**/*",
       "server/**/*",
       "!server/node_modules/**/*",
+      "!node_modules/better-sqlite3/deps/**/*",
+      "!node_modules/better-sqlite3/src/**/*",
+      "!node_modules/better-sqlite3/build/deps/**/*",
+      "!node_modules/better-sqlite3/build/Release/obj/**/*",
+      "!node_modules/better-sqlite3/build/Release/obj.target/**/*",
+      "!node_modules/better-sqlite3/build/Release/*.{iobj,ipdb,lib,a,exp,pdb}",
+      "!node_modules/better-sqlite3/build/Release/test_extension.node",
+      "!node_modules/@julusian/midi/src/**/*",
+      "!node_modules/@julusian/midi/vendor/**/*",
+      "!node_modules/@julusian/midi/build/Release/obj/**/*",
+      "!node_modules/@julusian/midi/build/Release/obj.target/**/*",
+      "!node_modules/@julusian/midi/build/Release/*.{iobj,ipdb,lib,a,exp,pdb}",
       "shared/**/*",
       "main/**/*",
       "public/**/*",
       "main.js",
       "preload.js",
+      "preloads/**/*",
       "package.json"
-    ],
-    "asarUnpack": [
-      "dist/**/*",
-      "server/**/*",
-      "preload.js",
-      "shared/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "server/node_modules",
-        "to": "app.asar.unpacked/server/node_modules"
-      }
     ],
     "extraFiles": [
       {
         "from": "INSTALLATION.md",
         "to": "INSTALLATION.md"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
       },
       {
         "from": "obs-dock.html",
@@ -161,9 +181,44 @@
           "role": "Editor"
         },
         {
+          "ext": "md",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "rtf",
+          "name": "Rich Text Lyric File",
+          "description": "Rich text lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "docx",
+          "name": "Word Lyric Document",
+          "description": "Word lyric document",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
           "ext": "ldset",
           "name": "LyricDisplay Setlist",
           "description": "LyricDisplay setlist file",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "ldsch",
+          "name": "LyricDisplay Schedule",
+          "description": "LyricDisplay timer schedule file",
           "icon": "public/favicon.ico",
           "role": "Editor"
         }
@@ -179,6 +234,25 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "LyricDisplay"
+    },
+    "appx": {
+      "applicationId": "LyricDisplay",
+      "identityName": "PeterAlakembi.LyricDisplay",
+      "publisher": "CN=F3E198CD-5990-44B7-B90F-ED1EB321A87D",
+      "publisherDisplayName": "Peter Alakembi",
+      "displayName": "LyricDisplay",
+      "backgroundColor": "transparent",
+      "artifactName": "${productName}-${version}-Microsoft-Store-${arch}.${ext}",
+      "languages": [
+        "en-US"
+      ],
+      "minVersion": "10.0.17763.0",
+      "maxVersionTested": "10.0.26200.0",
+      "capabilities": [
+        "runFullTrust",
+        "internetClient",
+        "privateNetworkClientServer"
+      ]
     },
     "mac": {
       "category": "public.app-category.music",
@@ -215,9 +289,39 @@
           "role": "Editor"
         },
         {
+          "ext": "md",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "role": "Editor"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "role": "Editor"
+        },
+        {
+          "ext": "rtf",
+          "name": "Rich Text Lyric File",
+          "description": "Rich text lyric document",
+          "role": "Editor"
+        },
+        {
+          "ext": "docx",
+          "name": "Word Lyric Document",
+          "description": "Word lyric document",
+          "role": "Editor"
+        },
+        {
           "ext": "ldset",
           "name": "LyricDisplay Setlist",
           "description": "LyricDisplay setlist file",
+          "role": "Editor"
+        },
+        {
+          "ext": "ldsch",
+          "name": "LyricDisplay Schedule",
+          "description": "LyricDisplay timer schedule file",
           "role": "Editor"
         }
       ]
@@ -264,10 +368,40 @@
           "mimeType": "text/plain"
         },
         {
+          "ext": "md",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "mimeType": "text/markdown"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Lyric File",
+          "description": "Markdown lyric document",
+          "mimeType": "text/markdown"
+        },
+        {
+          "ext": "rtf",
+          "name": "Rich Text Lyric File",
+          "description": "Rich text lyric document",
+          "mimeType": "application/rtf"
+        },
+        {
+          "ext": "docx",
+          "name": "Word Lyric Document",
+          "description": "Word lyric document",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        {
           "ext": "ldset",
           "name": "LyricDisplay Setlist",
           "description": "LyricDisplay setlist file",
           "mimeType": "application/x-ldset"
+        },
+        {
+          "ext": "ldsch",
+          "name": "LyricDisplay Schedule",
+          "description": "LyricDisplay timer schedule file",
+          "mimeType": "application/x-lyricdisplay-schedule"
         }
       ]
     },

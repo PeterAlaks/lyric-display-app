@@ -7,16 +7,27 @@
  * NDI® is a registered trademark of Vizrt NDI AB. https://ndi.video
  */
 
-import { app, ipcMain, BrowserWindow } from 'electron';
+import { app, ipcMain, BrowserWindow, dialog, net } from 'electron';
 import Store from 'electron-store';
-import { NDI_FOLDER_NAME, LEGACY_NDI_FOLDER_NAME } from './appIdentity.js';
+import {
+  NDI_FOLDER_NAME,
+  NDI_INSTALL_FOLDER_NAME,
+  NDI_USER_DATA_FOLDER_NAME,
+  LEGACY_NDI_FOLDER_NAME,
+} from './appIdentity.js';
 import path from 'path';
 import fs from 'fs';
 import * as userPreferences from './userPreferences.js';
 import { spawn } from 'child_process';
+import { randomBytes } from 'crypto';
 import { createNdiIpcClient } from './ndi/ipcClient.js';
 import { createOutputSettingsManager } from './ndi/outputSettings.js';
 import { createNdiInstaller } from './ndi/installer.js';
+import { createElectronNetworkFetch } from './ndi/electronNetworkFetch.js';
+import {
+  createCompanionLaunchConfig,
+  resolveAuthoritativeCompanionLocation,
+} from './ndi/launchConfig.js';
 import { DEFAULT_OUTPUT_IDS } from '../shared/outputRegistry.js';
 
 const isDev = !app.isPackaged;
@@ -70,8 +81,16 @@ const ndiStore = new Store({
 let companionProcess = null;
 let commandSeq = 0;
 let statsInterval = null;
-let companionProtocolVersion = null; // set from hello handshake
+let companionProtocolVersion = null;
+let companionAppVersion = null;
 let companionLaunchGeneration = 0;
+let companionStarting = false;
+let companionReady = false;
+let companionBootstrapError = null;
+let companionAuthToken = '';
+let companionStopRequested = false;
+let companionRestartTimer = null;
+let companionRestartAttempts = [];
 
 const DEFAULT_BACKEND_PORT = Number(process.env.PORT) || 4000;
 const DEFAULT_BACKEND_HOST = '127.0.0.1';
@@ -80,6 +99,70 @@ const COMPANION_BOOTSTRAP_BASE_DELAY_MS = 250;
 const COMPANION_BOOTSTRAP_MAX_DELAY_MS = 2000;
 const COMPANION_SYNC_RETRY_ATTEMPTS = 6;
 const COMPANION_SYNC_RETRY_DELAY_MS = 350;
+const COMPANION_RESTART_WINDOW_MS = 5 * 60_000;
+const COMPANION_RESTART_DELAY_MS = 2000;
+const MAX_COMPANION_RESTARTS = 3;
+const MIN_COMPANION_PROTOCOL_VERSION = 1;
+const MAX_COMPANION_PROTOCOL_VERSION = 2;
+
+function scheduleCompanionRestart(reason) {
+  if (companionStopRequested || companionRestartTimer) return;
+
+  const now = Date.now();
+  companionRestartAttempts = companionRestartAttempts.filter((timestamp) => (
+    now - timestamp < COMPANION_RESTART_WINDOW_MS
+  ));
+
+  if (companionRestartAttempts.length >= MAX_COMPANION_RESTARTS) {
+    console.error('[NDI] Companion restart limit reached:', reason);
+    notifyCompanionStatus({
+      unexpectedExit: true,
+      restartExhausted: true,
+      error: reason,
+      restartAttempt: companionRestartAttempts.length,
+      maxRestartAttempts: MAX_COMPANION_RESTARTS,
+    });
+    return;
+  }
+
+  companionRestartAttempts.push(now);
+  const restartAttempt = companionRestartAttempts.length;
+  notifyCompanionStatus({
+    unexpectedExit: true,
+    restartScheduled: true,
+    restartAttempt,
+    maxRestartAttempts: MAX_COMPANION_RESTARTS,
+    error: reason,
+  });
+
+  companionRestartTimer = setTimeout(async () => {
+    companionRestartTimer = null;
+    if (companionStopRequested || companionProcess) return;
+
+    const result = await launchCompanion();
+    if (!result?.success) {
+      scheduleCompanionRestart(result?.error || 'NDI companion relaunch failed');
+    }
+  }, COMPANION_RESTART_DELAY_MS);
+  companionRestartTimer.unref?.();
+}
+
+function restartAfterBootstrapFailure(reason) {
+  const failedProcess = companionProcess;
+  companionLaunchGeneration += 1;
+  companionProcess = null;
+  resetCompanionRuntimeState();
+  companionBootstrapError = reason;
+  destroyPersistentSocket();
+  stopStatsLoop();
+  notifyCompanionStatus({ unexpectedExit: true, error: reason });
+  try {
+    failedProcess?.kill();
+  } catch (error) {
+    console.warn('[NDI] Failed to stop companion after bootstrap failure:', error);
+  }
+  scheduleCompanionRestart(reason);
+}
 
 // ============ IPC Helpers ============
 
@@ -99,7 +182,11 @@ function getNextSeq() {
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-const ipcClient = createNdiIpcClient({ getIpcConfig, getNextSeq });
+const ipcClient = createNdiIpcClient({
+  getIpcConfig,
+  getNextSeq,
+  getAuthToken: () => companionAuthToken,
+});
 const outputSettingsManager = createOutputSettingsManager({
   ndiStore,
   backendHost: DEFAULT_BACKEND_HOST,
@@ -117,12 +204,18 @@ const installer = createNdiInstaller({
   getInstallPath,
   getResolvedInstallPath,
   getLegacyInstallPaths,
+  getRemovableLegacyInstallPaths,
+  getUninstallPaths,
   getCompanionEntryPath,
+  resolveCompanionEntryPath: findCompanionEntryPath,
   getPlatformAssetName,
   stopCompanion,
+  networkFetch: createElectronNetworkFetch(net),
 });
 
 const normalizeOutputList = outputSettingsManager.normalizeOutputList;
+const normalizeOutputKey = outputSettingsManager.normalizeOutputKey;
+const normalizeOutputConfig = outputSettingsManager.normalizeOutputConfig;
 const ensureOutputSettings = outputSettingsManager.ensureOutputSettings;
 const syncOutputsFromRegistry = outputSettingsManager.syncOutputsFromRegistry;
 
@@ -141,16 +234,41 @@ function destroyPersistentSocket() {
 // ============ Path Helpers ============
 
 function getInstallPath() {
-  if (isDev) {
-    return path.join(app.getAppPath(), LEGACY_NDI_FOLDER_NAME);
-  }
+  return path.join(app.getPath('userData'), NDI_FOLDER_NAME, NDI_INSTALL_FOLDER_NAME);
+}
 
+function getDevelopmentSourcePath() {
+  return path.join(app.getAppPath(), LEGACY_NDI_FOLDER_NAME);
+}
+
+function getNdiRootPath() {
   return path.join(app.getPath('userData'), NDI_FOLDER_NAME);
+}
+
+function getCompanionUserDataPath() {
+  return path.join(getNdiRootPath(), NDI_USER_DATA_FOLDER_NAME);
 }
 
 function getLegacyInstallPaths() {
   if (isDev) return [];
+  return [
+    getNdiRootPath(),
+    path.join(app.getPath('userData'), LEGACY_NDI_FOLDER_NAME),
+  ];
+}
+
+function getRemovableLegacyInstallPaths() {
+  if (isDev) return [];
   return [path.join(app.getPath('userData'), LEGACY_NDI_FOLDER_NAME)];
+}
+
+function getUninstallPaths() {
+  if (isDev) return [getInstallPath()];
+  return [
+    getNdiRootPath(),
+    ...getRemovableLegacyInstallPaths(),
+    path.join(app.getPath('appData'), LEGACY_NDI_FOLDER_NAME),
+  ];
 }
 
 function getCompanionBinaryName() {
@@ -160,38 +278,24 @@ function getCompanionBinaryName() {
 }
 
 function getCompanionEntryPath() {
-  const installPath = getInstallPath();
-
-  if (isDev) {
-    return path.join(installPath, 'src', 'main.js');
-  }
-
-  const currentEntryPath = findCompanionEntryPath(installPath);
-  if (fs.existsSync(currentEntryPath)) return currentEntryPath;
-
-  for (const legacyInstallPath of getLegacyInstallPaths()) {
-    const legacyEntryPath = findCompanionEntryPath(legacyInstallPath);
-    if (fs.existsSync(legacyEntryPath)) return legacyEntryPath;
-  }
-
-  return currentEntryPath;
+  return getResolvedCompanionLocation().companionPath;
 }
 
 function getResolvedInstallPath() {
-  const installPath = getInstallPath();
-  if (isDev) return installPath;
+  return getResolvedCompanionLocation().installPath;
+}
 
-  if (fs.existsSync(findCompanionEntryPath(installPath))) {
-    return installPath;
-  }
-
-  for (const legacyInstallPath of getLegacyInstallPaths()) {
-    if (fs.existsSync(findCompanionEntryPath(legacyInstallPath))) {
-      return legacyInstallPath;
-    }
-  }
-
-  return installPath;
+function getResolvedCompanionLocation() {
+  const developmentInstallPath = getDevelopmentSourcePath();
+  return resolveAuthoritativeCompanionLocation({
+    isDevelopment: isDev,
+    developmentInstallPath,
+    developmentEntryPath: path.join(developmentInstallPath, 'src', 'main.js'),
+    managedInstallPath: getInstallPath(),
+    legacyInstallPaths: getLegacyInstallPaths(),
+    resolveEntryPath: findCompanionEntryPath,
+    entryExists: fs.existsSync,
+  });
 }
 
 function findCompanionEntryPath(installPath) {
@@ -249,6 +353,10 @@ function downloadCompanion(updateInfo = null) {
   return installer.downloadCompanion(updateInfo);
 }
 
+function installCompanionFromZip(zipPath) {
+  return installer.installCompanionFromZip(zipPath);
+}
+
 function cancelDownload() {
   return installer.cancelDownload();
 }
@@ -280,6 +388,33 @@ function buildOutputsPayload() {
   return {
     outputs: outputs && typeof outputs === 'object' ? outputs : {},
   };
+}
+
+function createCompanionAuthToken() {
+  return randomBytes(24).toString('hex');
+}
+
+function resetCompanionRuntimeState({ clearAuthToken = true } = {}) {
+  companionStarting = false;
+  companionReady = false;
+  companionBootstrapError = null;
+  companionProtocolVersion = null;
+  companionAppVersion = null;
+  if (clearAuthToken) {
+    companionAuthToken = '';
+  }
+}
+
+function notifyCompanionStatus(extra = {}) {
+  notifyAllWindows('ndi:companion-status', {
+    running: companionProcess !== null,
+    starting: companionStarting,
+    ready: companionReady,
+    bootstrapError: companionBootstrapError,
+    protocolVersion: companionProtocolVersion,
+    companionVersion: companionAppVersion,
+    ...extra,
+  });
 }
 
 /**
@@ -331,7 +466,10 @@ async function requestStats() {
 
   const stats = result.responses.find((e) => e?.type === 'stats');
   if (stats) {
-    notifyAllWindows('ndi:companion-telemetry', { stats: stats.payload || null });
+    notifyAllWindows('ndi:companion-telemetry', {
+      stats: stats.payload || null,
+      health: stats.payload?.health || null,
+    });
   }
 }
 
@@ -352,16 +490,24 @@ function stopStatsLoop() {
 }
 
 function applyHelloMetadata(helloResponse) {
-  const version = helloResponse?.payload?.version;
-  if (!version) return;
+  const version = helloResponse?.payload?.version || '';
+  const protocolVersion = Number(helloResponse?.payload?.protocolVersion || 1);
+  if (!Number.isInteger(protocolVersion)
+    || protocolVersion < MIN_COMPANION_PROTOCOL_VERSION
+    || protocolVersion > MAX_COMPANION_PROTOCOL_VERSION) {
+    console.error(`[NDI] Unsupported companion protocol version: ${protocolVersion}`);
+    return false;
+  }
 
-  companionProtocolVersion = version;
-  console.log(`[NDI] Companion protocol version: ${companionProtocolVersion}`);
+  companionProtocolVersion = protocolVersion;
+  companionAppVersion = version || null;
+  console.log(`[NDI] Companion v${version || 'unknown'}, protocol v${companionProtocolVersion}`);
 
   const expectedVersion = ndiStore.get('version') || '';
-  if (expectedVersion && companionProtocolVersion !== expectedVersion) {
-    console.warn(`[NDI] Version mismatch: expected v${expectedVersion}, companion reports v${companionProtocolVersion}`);
+  if (expectedVersion && version && version !== expectedVersion) {
+    console.warn(`[NDI] Version mismatch: expected v${expectedVersion}, companion reports v${version}`);
   }
+  return true;
 }
 
 async function bootstrapCompanionSession(launchGeneration) {
@@ -388,7 +534,7 @@ async function bootstrapCompanionSession(launchGeneration) {
     return false;
   }
 
-  applyHelloMetadata(helloResponse);
+  if (!applyHelloMetadata(helloResponse)) return false;
 
   if (isStaleLaunch()) return false;
   connectPersistentSocket();
@@ -412,30 +558,51 @@ async function bootstrapCompanionSession(launchGeneration) {
 }
 
 async function launchCompanion() {
+  companionStopRequested = false;
   if (companionProcess) {
     return { success: true, message: 'Already running' };
   }
 
-  const entryPath = getCompanionEntryPath();
+  const companionLocation = getResolvedCompanionLocation();
+  const entryPath = companionLocation.companionPath;
   const ipcConfig = getIpcConfig();
+  companionAuthToken = createCompanionAuthToken();
+  companionStarting = true;
+  companionReady = false;
+  companionBootstrapError = null;
 
-  if (isDev) {
+  let companionUserDataPath;
+  try {
+    companionUserDataPath = getCompanionUserDataPath();
+    fs.mkdirSync(companionUserDataPath, { recursive: true });
+  } catch (error) {
+    resetCompanionRuntimeState();
+    return { success: false, error: `Could not prepare NDI companion data directory: ${error.message}` };
+  }
+
+  const usingDevelopmentSource = companionLocation.source === 'development';
+
+  if (usingDevelopmentSource) {
     // In dev mode, launch via the running Electron binary pointing at the companion source.
     if (!fs.existsSync(entryPath)) {
+      resetCompanionRuntimeState();
       return { success: false, error: `Companion source not found at ${entryPath}` };
     }
 
     const electronBin = process.execPath;
-    const companionDir = getInstallPath();
-    const args = [
-      companionDir,
-      '--host', ipcConfig.host,
-      '--port', String(ipcConfig.port),
-      '--app-url', 'http://localhost:5173',
-      '--no-hash',
-    ];
+    const companionDir = companionLocation.installPath;
+    const launchConfig = createCompanionLaunchConfig({
+      userDataPath: companionUserDataPath,
+      appPath: companionDir,
+      host: ipcConfig.host,
+      port: ipcConfig.port,
+      authToken: companionAuthToken,
+      appUrl: 'http://localhost:5173',
+      hashRouting: false,
+    });
+    const args = launchConfig.args;
 
-    const childEnv = { ...process.env };
+    const childEnv = { ...process.env, ...launchConfig.env };
     delete childEnv.ELECTRON_RUN_AS_NODE;
 
     try {
@@ -449,18 +616,24 @@ async function launchCompanion() {
     } catch (error) {
       console.error('[NDI] Failed to launch companion (dev):', error);
       companionProcess = null;
+      resetCompanionRuntimeState();
       return { success: false, error: error.message };
     }
   } else {
     if (!fs.existsSync(entryPath)) {
+      resetCompanionRuntimeState();
       return { success: false, error: `NDI companion not found at ${entryPath}` };
     }
 
-    const args = [
-      '--host', ipcConfig.host,
-      '--port', String(ipcConfig.port),
-      '--app-url', 'http://127.0.0.1:4000',
-    ];
+    const launchConfig = createCompanionLaunchConfig({
+      userDataPath: companionUserDataPath,
+      host: ipcConfig.host,
+      port: ipcConfig.port,
+      authToken: companionAuthToken,
+      appUrl: isDev ? 'http://localhost:5173' : 'http://127.0.0.1:4000',
+      hashRouting: false,
+    });
+    const args = launchConfig.args;
 
     try {
       console.log(`[NDI] Launching companion: ${entryPath} ${args.join(' ')}`);
@@ -468,14 +641,17 @@ async function launchCompanion() {
         detached: false,
         stdio: ['ignore', 'pipe', 'pipe'],
         cwd: path.dirname(entryPath),
-        env: { ...process.env },
+        env: { ...process.env, ...launchConfig.env },
       });
     } catch (error) {
       console.error('[NDI] Failed to launch companion:', error);
       companionProcess = null;
+      resetCompanionRuntimeState();
       return { success: false, error: error.message };
     }
   }
+
+  const launchedProcess = companionProcess;
 
   companionProcess.stdout.on('data', (data) => {
     const msg = data.toString().trim();
@@ -489,25 +665,36 @@ async function launchCompanion() {
 
   companionProcess.on('exit', (code) => {
     console.log('[NDI] Companion exited with code:', code);
+    if (companionProcess !== launchedProcess) return;
+    const unexpectedExit = !companionStopRequested;
     companionLaunchGeneration += 1;
     companionProcess = null;
-    companionProtocolVersion = null;
+    resetCompanionRuntimeState();
     destroyPersistentSocket();
     stopStatsLoop();
-    notifyAllWindows('ndi:companion-status', { running: false });
+    notifyCompanionStatus({ unexpectedExit, exitCode: code });
+    if (unexpectedExit) {
+      scheduleCompanionRestart(`NDI companion exited with code ${code ?? 'unknown'}`);
+    }
   });
 
   companionProcess.on('error', (err) => {
     console.error('[NDI] Companion error:', err);
+    if (companionProcess !== launchedProcess) return;
+    const unexpectedExit = !companionStopRequested;
     companionLaunchGeneration += 1;
     companionProcess = null;
-    companionProtocolVersion = null;
+    resetCompanionRuntimeState();
+    companionBootstrapError = err.message;
     destroyPersistentSocket();
     stopStatsLoop();
-    notifyAllWindows('ndi:companion-status', { running: false, error: err.message });
+    notifyCompanionStatus({ error: err.message, unexpectedExit });
+    if (unexpectedExit) {
+      scheduleCompanionRestart(err.message || 'NDI companion process error');
+    }
   });
 
-  notifyAllWindows('ndi:companion-status', { running: true });
+  notifyCompanionStatus();
   startStatsLoop();
   const launchGeneration = companionLaunchGeneration + 1;
   companionLaunchGeneration = launchGeneration;
@@ -515,11 +702,22 @@ async function launchCompanion() {
 
   bootstrapCompanionSession(launchGeneration).then((success) => {
     if (!success && companionProcess && launchGeneration === companionLaunchGeneration) {
+      const reason = companionBootstrapError || 'Companion launched but did not finish setup';
       console.warn('[NDI] Companion launched but bootstrap did not fully complete');
+      restartAfterBootstrapFailure(reason);
+    } else if (success && companionProcess && launchGeneration === companionLaunchGeneration) {
+      const recovered = companionRestartAttempts.length > 0;
+      companionStarting = false;
+      companionReady = true;
+      companionBootstrapError = null;
+      companionRestartAttempts = [];
+      notifyCompanionStatus({ recovered });
     }
   }).catch((error) => {
     if (companionProcess && launchGeneration === companionLaunchGeneration) {
-      console.warn('[NDI] Companion bootstrap error:', error?.message || error);
+      const reason = error?.message || String(error);
+      console.warn('[NDI] Companion bootstrap error:', reason);
+      restartAfterBootstrapFailure(reason);
     }
   });
 
@@ -527,26 +725,52 @@ async function launchCompanion() {
   return { success: true };
 }
 
-function stopCompanion() {
+async function stopCompanion() {
+  companionStopRequested = true;
+  companionRestartAttempts = [];
+  if (companionRestartTimer) {
+    clearTimeout(companionRestartTimer);
+    companionRestartTimer = null;
+  }
+
   if (!companionProcess) {
     return { success: true, message: 'Not running' };
   }
 
   companionLaunchGeneration += 1;
 
-  sendCommand('shutdown', {}).catch((error) => {
-    console.warn('[NDI] Graceful shutdown request failed:', error?.message || error);
-  });
+  const processToStop = companionProcess;
+  const shutdownResult = await sendCommand('shutdown', {}, { timeoutMs: 2000 }).catch((error) => ({
+    success: false,
+    error: error?.message || String(error),
+  }));
+  if (!shutdownResult?.success) {
+    console.warn('[NDI] Graceful shutdown request failed:', shutdownResult?.error || 'No acknowledgement');
+  } else {
+    await new Promise((resolve) => {
+      if (processToStop.exitCode !== null) {
+        resolve();
+        return;
+      }
+      const timer = setTimeout(resolve, 2500);
+      processToStop.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
 
-  try { companionProcess.kill(); } catch (error) {
-    console.warn('[NDI] Error killing companion process:', error);
+  if (processToStop.exitCode === null && processToStop.signalCode === null) {
+    try { processToStop.kill(); } catch (error) {
+      console.warn('[NDI] Error killing companion process:', error);
+    }
   }
 
   stopStatsLoop();
   destroyPersistentSocket();
-  companionProcess = null;
-  companionProtocolVersion = null;
-  notifyAllWindows('ndi:companion-status', { running: false });
+  if (companionProcess === processToStop) companionProcess = null;
+  resetCompanionRuntimeState();
+  notifyCompanionStatus();
   console.log('[NDI] Companion stopped');
   return { success: true };
 }
@@ -560,20 +784,37 @@ function getCompanionStatus() {
     version: ndiStore.get('version') || '',
     protocolVersion: companionProtocolVersion,
     autoLaunch: ndiStore.get('autoLaunch') || false,
+    starting: companionStarting,
+    ready: companionReady,
+    bootstrapError: companionBootstrapError,
   };
 }
 
 // ============ Settings ============
 
 function getOutputSettings(outputKey) {
-  return outputSettingsManager.getOutputSettings(outputKey, companionProcess !== null);
+  const safeOutputKey = normalizeOutputKey(outputKey);
+  if (!safeOutputKey) {
+    return { success: false, error: 'Invalid output key' };
+  }
+  return outputSettingsManager.getOutputSettings(safeOutputKey, companionProcess !== null);
 }
 
 function setOutputSetting(outputKey, key, value) {
-  ensureOutputSettings(outputKey);
-  ndiStore.set(`outputs.${outputKey}.${key}`, value);
+  const safeOutputKey = normalizeOutputKey(outputKey);
+  if (!safeOutputKey) {
+    return { success: false, error: 'Invalid output key' };
+  }
+
+  const current = ensureOutputSettings(safeOutputKey);
+  const normalized = normalizeOutputConfig(safeOutputKey, { ...current, [key]: value });
+  if (!Object.prototype.hasOwnProperty.call(normalized, key)) {
+    return { success: false, error: 'Invalid setting key' };
+  }
+
+  ndiStore.set(`outputs.${safeOutputKey}.${key}`, normalized[key]);
   if (companionProcess) {
-    syncSingleOutputWithFallback(outputKey, 'output setting change');
+    syncSingleOutputWithFallback(safeOutputKey, 'output setting change');
   }
   return { success: true };
 }
@@ -647,11 +888,37 @@ export function registerNdiIpcHandlers() {
     }
   });
 
+  ipcMain.handle('ndi:install-from-zip', async () => {
+    try {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      const result = await dialog.showOpenDialog(focusedWindow || undefined, {
+        title: 'Install NDI Companion from ZIP',
+        properties: ['openFile'],
+        filters: [
+          { name: 'LyricDisplay NDI Companion', extensions: ['zip'] },
+        ],
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, cancelled: true, selectionCancelled: true };
+      }
+      return await installCompanionFromZip(result.filePaths[0]);
+    } catch (err) {
+      console.error('[NDI] Local ZIP install handler error:', err);
+      return {
+        success: false,
+        error: err?.message || 'Could not install the selected NDI Companion ZIP',
+        stage: err?.stage || 'local-archive-selection',
+        code: err?.code || 'LOCAL_INSTALL_FAILED',
+      };
+    }
+  });
+
   ipcMain.handle('ndi:update-companion', async () => {
     try {
-      const updateInfo = await checkForCompanionUpdate();
-      stopCompanion();
-      return await downloadCompanion(updateInfo);
+      // Keep the running companion alive until the replacement archive has
+      // downloaded and passed integrity verification. The installer owns the
+      // full cancellable lifecycle, including the release lookup.
+      return await downloadCompanion();
     } catch (err) {
       console.error('[NDI] Update handler error:', err);
       return { success: false, error: err?.message || 'Update failed' };
@@ -685,12 +952,23 @@ export function registerNdiIpcHandlers() {
   ipcMain.handle('ndi:set-resolution', (_, { outputKey, resolution }) => setOutputSetting(outputKey, 'resolution', resolution));
 
   ipcMain.handle('ndi:set-custom-resolution', (_, { outputKey, width, height }) => {
-    ensureOutputSettings(outputKey);
-    ndiStore.set(`outputs.${outputKey}.resolution`, 'custom');
-    ndiStore.set(`outputs.${outputKey}.customWidth`, Math.max(320, Math.min(7680, width)));
-    ndiStore.set(`outputs.${outputKey}.customHeight`, Math.max(240, Math.min(4320, height)));
+    const safeOutputKey = normalizeOutputKey(outputKey);
+    if (!safeOutputKey) {
+      return { success: false, error: 'Invalid output key' };
+    }
+
+    const current = ensureOutputSettings(safeOutputKey);
+    const normalized = normalizeOutputConfig(safeOutputKey, {
+      ...current,
+      resolution: 'custom',
+      customWidth: width,
+      customHeight: height,
+    });
+    ndiStore.set(`outputs.${safeOutputKey}.resolution`, normalized.resolution);
+    ndiStore.set(`outputs.${safeOutputKey}.customWidth`, normalized.customWidth);
+    ndiStore.set(`outputs.${safeOutputKey}.customHeight`, normalized.customHeight);
     if (companionProcess) {
-      syncSingleOutputWithFallback(outputKey, 'custom resolution change');
+      syncSingleOutputWithFallback(safeOutputKey, 'custom resolution change');
     }
     return { success: true };
   });

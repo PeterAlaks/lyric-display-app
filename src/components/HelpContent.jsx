@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, List, RefreshCw, Shield, FolderOpen, FileText, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings, Film, Music2, SlidersHorizontal } from 'lucide-react';
+import { Globe, List, ListMusic, RefreshCw, Shield, FolderOpen, FileText, FilePlusCorner, Type, PaintBucket, AlignVerticalSpaceAround, Scissors, Copy, ClipboardPaste, Wand2, Bold, ScreenShare, Search, Timer, Hand, Network, PlugZap, Key, Settings, Film, Music2, SlidersHorizontal, MonitorOff } from 'lucide-react';
 
 const HelpSection = ({ icon: Icon, title, description, darkMode }) => (
     <div className={`flex gap-3 p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -23,12 +23,12 @@ export const ControlPanelHelp = ({ darkMode }) => (
         <HelpSection
             icon={Globe}
             title="Search Online Lyrics"
-            description="Search multiple lyrics databases simultaneously. Find songs from LRCLIB, ChartLyrics, Lyrics.ovh, Open Hymnal, and more. Results include synced LRC files when available."
+            description="Search multiple lyrics databases simultaneously. Find songs from LRCLIB, Lyrics.ovh, and Open Hymnal. Results include synced LRC files when available."
             darkMode={darkMode}
         />
 
         <HelpSection
-            icon={List}
+            icon={ListMusic}
             title="Setlist Manager"
             description="Build and organize your service setlist. Add songs up to your configured limit, reorder with drag-and-drop, and load lyrics instantly during live events. Perfect for planning your worship services."
             darkMode={darkMode}
@@ -50,13 +50,13 @@ export const ControlPanelHelp = ({ darkMode }) => (
 
         <HelpSection
             icon={FolderOpen}
-            title="Load Lyrics File"
-            description="Import .txt or .lrc files from your computer. Supports plain text lyrics and timestamped LRC format. Files are automatically formatted with smart capitalization and religious term handling."
+            title="Load Lyrics"
+            description="Search indexed folders for .txt, .lrc, Markdown, RTF, or DOCX files. TXT and LRC files support lyric-content search and previews; document formats are converted when loaded."
             darkMode={darkMode}
         />
 
         <HelpSection
-            icon={FileText}
+            icon={FilePlusCorner}
             title="Create New Song"
             description="Open the song canvas to compose lyrics from scratch. Includes formatting tools, translation support, line duplication, and cleanup utilities. Save locally or load directly to the control panel."
             darkMode={darkMode}
@@ -64,7 +64,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
 
         <div className={`mt-4 p-4 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-700/30' : 'bg-blue-50 border border-blue-200'}`}>
             <p className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
-                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to quickly load files, Ctrl/Cmd+N for new songs, Ctrl/Cmd+P to toggle autoplay, and Ctrl/Cmd+Shift+P for intelligent autoplay (when timestamps are available). The Display Output toggle controls visibility on all connected displays simultaneously.
+                💡 <strong>Pro Tip:</strong> Use Ctrl/Cmd+O to open the file navigator, Ctrl/Cmd+N for new songs, Ctrl/Cmd+P to toggle autoplay, and Ctrl/Cmd+Shift+P for intelligent autoplay (when timestamps are available). The Display Output toggle controls visibility on all connected displays simultaneously.
             </p>
         </div>
     </div>
@@ -202,9 +202,23 @@ export const SongCanvasHelp = ({ darkMode }) => (
         />
 
         <HelpSection
+            icon={MonitorOff}
+            title="Stage-only & Line Tools"
+            description="Use the monitor toggle to add or remove // on the current line. Marked lines remain visible on Stage but are hidden from normal outputs. The adjacent controls copy, duplicate, delete, or move the current line, and every content change can be undone."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
+            icon={Type}
+            title="Selection Casing"
+            description="Highlight text, open the casing menu, and apply uppercase, sentence case, lowercase, capitalize each word, or toggle case without losing your selection."
+            darkMode={darkMode}
+        />
+
+        <HelpSection
             icon={FileText}
             title="Save & Load Options"
-            description="Save lyrics as .txt files to your computer, or use 'Save & Load' to save AND immediately load into the control panel. Desktop app remembers recent files for quick access."
+            description="Edit the flat file title at the top of the canvas, or let the first lyric line auto-fill it. New lyrics cannot be saved as 'Untitled Lyrics'. Save or Save & Load opens a compact indexed-folder picker; choose 'Save in different folder…' when you need the native Save As dialog."
             darkMode={darkMode}
         />
 

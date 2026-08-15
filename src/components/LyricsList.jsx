@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { List, useListRef } from 'react-window';
 import { useLyricsState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
+import useLyricsStore from '../context/LyricsStore';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useToast from '../hooks/useToast';
 import useStageOnlyTutorial from '../hooks/LyricsList/useStageOnlyTutorial';
@@ -8,11 +9,18 @@ import useSectionNavigation from '../hooks/LyricsList/useSectionNavigation';
 import useLyricsListHistory from '../hooks/LyricsList/useLyricsListHistory';
 import useLyricsListSelection from '../hooks/LyricsList/useLyricsListSelection';
 import useLyricsListGrouping from '../hooks/LyricsList/useLyricsListGrouping';
-import useLyricsListRows from '../hooks/LyricsList/useLyricsListRows';
+import useLyricsListRows, { HORIZONTAL_PADDING_PX, VIRTUALIZATION_THRESHOLD } from '../hooks/LyricsList/useLyricsListRows';
+import { useLyricsScrollRestoration } from '../hooks/LyricDisplayApp/useLyricsScrollRestoration';
 import LyricRow from './LyricsList/LyricRow';
 import SectionChips from './LyricsList/SectionChips';
 import LyricsListContextMenu from './LyricsList/LyricsListContextMenu';
-import { HORIZONTAL_PADDING_PX, VIRTUALIZATION_THRESHOLD } from './LyricsList/layout';
+import {
+  createLyricsScrollKey,
+  isLyricsScrollRestorePending,
+  observeLyricsScrollResetGuard,
+} from '../utils/lyricsScrollMemory.js';
+import { isPreviewLinesEnabled, resolvePreviewLineClick } from '../utils/previewLineInteraction.js';
+import { dispatchCommand } from '../../shared/commandSafetyPolicy.js';
 
 export default function LyricsList({
   searchQuery = '',
@@ -23,7 +31,6 @@ export default function LyricsList({
   onSelectionStateChange,
   onContextMenuApiReady,
   clickAwayIgnoreRefs = [],
-  maxLinesPerGroup = 2,
   density = 'default',
 }) {
   const compact = density === 'dock' || density === 'compact';
@@ -34,21 +41,40 @@ export default function LyricsList({
     lyricsSections = [],
     lineToSection = {},
     lyricsTimestamps = [],
+    lyricsEnhancedTimestamps = [],
     selectedLine,
+    previewLine,
+    lineStateClearRevision,
     lyricsFileName,
+    lyricsSource,
     selectLine,
+    setPreviewLine,
     setLyrics,
-    setLyricsTimestamps
+    setLyricsTimestamps,
+    setLyricsEnhancedTimestamps
   } = useLyricsState();
   const { darkMode: storedDarkMode } = useDarkModeState();
   const darkMode = forceDarkMode ? true : storedDarkMode;
   const isDesktopApp = useIsDesktopApp();
-  const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup } = useControlSocket();
+  const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup, liveSafety } = useControlSocket();
   const { showToast } = useToast();
+  const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
+  const savedPreviewLinesEnabled = useLyricsStore((state) => state.previewLinesEnabled);
+  const lyricsGroupingConfig = lyricsParsingOptions.groupingConfig;
   const [hoveredLineIndex, setHoveredLineIndex] = useState(null);
   const [hoveredButtonIndex, setHoveredButtonIndex] = useState(null);
+  const previewedAtRef = useRef(null);
   const lastResetKeyRef = React.useRef(null);
   const suppressScrollResetRef = React.useRef(false);
+  const previewLinesEnabled = isPreviewLinesEnabled({
+    preferenceEnabled: savedPreviewLinesEnabled,
+    liveSafetyEnabled: liveSafety?.enabled,
+  });
+
+  const clearPreviewLine = useCallback(() => {
+    setPreviewLine(null);
+    previewedAtRef.current = null;
+  }, [setPreviewLine]);
 
   const {
     stageOnlyTutorial,
@@ -72,23 +98,81 @@ export default function LyricsList({
     lyricsSections,
     lineToSection,
     selectedLine,
-    maxLinesPerGroup,
+    previewLine,
+    maxLinesPerGroup: lyricsGroupingConfig.maxLinesPerGroup,
+    sectionTagPhrases: lyricsGroupingConfig.sectionTagPhrases,
     highlightedLineIndex,
     searchQuery,
     darkMode,
     density,
   });
 
-  const handleLineClickPlain = useCallback(
+  const sendLineToOutput = useCallback(
     (index) => {
+      clearPreviewLine();
       if (onSelectLine) onSelectLine(index);
       else {
         selectLine(index);
         emitLineUpdate(index);
       }
     },
-    [onSelectLine, selectLine, emitLineUpdate]
+    [clearPreviewLine, onSelectLine, selectLine, emitLineUpdate]
   );
+
+  const handleLineClick = useCallback((index) => {
+    if (!previewLinesEnabled) {
+      sendLineToOutput(index);
+      return 'commit';
+    }
+
+    const clickedAt = Date.now();
+    const result = resolvePreviewLineClick({
+      currentPreviewLine: previewLine,
+      currentLiveLine: selectedLine,
+      clickedLine: index,
+      previewedAt: previewedAtRef.current,
+      clickedAt,
+    });
+
+    setPreviewLine(result.nextPreviewLine);
+    previewedAtRef.current = result.nextPreviewedAt;
+
+    if (result.action === 'commit') {
+      sendLineToOutput(index);
+    }
+
+    return result.action === 'clear' ? 'clear-preview' : result.action;
+  }, [previewLine, previewLinesEnabled, selectedLine, sendLineToOutput, setPreviewLine]);
+
+  useEffect(() => {
+    if (!previewLinesEnabled) clearPreviewLine();
+  }, [clearPreviewLine, previewLinesEnabled]);
+
+  useEffect(() => {
+    clearPreviewLine();
+  }, [clearPreviewLine, lyrics]);
+
+  useEffect(() => {
+    if (!previewLinesEnabled || previewLine == null) return undefined;
+
+    const handlePreviewEnter = (event) => {
+      if (event.key !== 'Enter' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const dispatched = dispatchCommand({
+        action: 'select-line',
+        source: 'keyboard',
+        focusTarget: event.target,
+        fallbackFocusTarget: document.activeElement,
+        enforceFocus: true,
+        execute: () => sendLineToOutput(previewLine),
+      });
+
+      if (dispatched.executed) event.preventDefault();
+    };
+
+    window.addEventListener('keydown', handlePreviewEnter);
+    return () => window.removeEventListener('keydown', handlePreviewEnter);
+  }, [previewLine, previewLinesEnabled, sendLineToOutput]);
 
   const {
     containerRef,
@@ -119,12 +203,23 @@ export default function LyricsList({
     onSelectionStateChange,
     onContextMenuApiReady,
     clickAwayIgnoreRefs,
-    onLineSelect: handleLineClickPlain,
+    onLineSelect: handleLineClick,
+    onSendLineToOutput: sendLineToOutput,
     selectLine,
     emitLineUpdate,
     getNormalGroupLines,
     showToast,
   });
+
+  const handleDeselectFromOutput = useCallback(() => {
+    clearPreviewLine();
+    handleDeselectFromMenu();
+  }, [clearPreviewLine, handleDeselectFromMenu]);
+
+  useEffect(() => {
+    setSelectedIndices(new Set());
+    selectionAnchorRef.current = null;
+  }, [lineStateClearRevision, selectionAnchorRef, setSelectedIndices]);
 
   const {
     canUndo,
@@ -137,10 +232,12 @@ export default function LyricsList({
   } = useLyricsListHistory({
     lyrics,
     lyricsTimestamps,
+    lyricsEnhancedTimestamps,
     selectedLine,
     selectedIndicesArray,
     setLyrics,
     setLyricsTimestamps,
+    setLyricsEnhancedTimestamps,
     selectLine,
     emitLyricsLoad,
     setSelectedIndices,
@@ -159,9 +256,11 @@ export default function LyricsList({
   } = useLyricsListGrouping({
     lyrics,
     lyricsTimestamps,
+    lyricsEnhancedTimestamps,
     selectedLine,
     selectedIndicesArray,
     effectiveMaxLinesPerGroup,
+    groupingConfig: lyricsGroupingConfig,
     getNormalGroupLines,
     isStructureTagLine,
     takeSnapshot,
@@ -171,6 +270,7 @@ export default function LyricsList({
     tutorialMutationRef,
     setLyrics,
     setLyricsTimestamps,
+    setLyricsEnhancedTimestamps,
     setSelectedIndices,
     selectionAnchorRef,
     selectLine,
@@ -185,6 +285,7 @@ export default function LyricsList({
   const rowPropsData = useMemo(
     () => ({
       lyrics,
+      lyricsTimestamps,
       virtualized: true,
       getLineClassName,
       handleRowClick,
@@ -194,6 +295,7 @@ export default function LyricsList({
       handleRowTouchMove,
       handleRowTouchEnd,
       selectedLine,
+      previewLine,
       darkMode,
       hoveredLineIndex,
       setHoveredLineIndex,
@@ -209,16 +311,29 @@ export default function LyricsList({
       handleStageOnlyTutorialOpenChange,
       handleNeverShowTutorialPopovers,
       searchQuery,
+      highlightedLineIndex,
       isStructureTagLine,
       getNormalGroupLines,
       density,
     }),
-    [lyrics, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, isStructureTagLine, getNormalGroupLines, density]
+    [lyrics, lyricsTimestamps, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, previewLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, highlightedLineIndex, isStructureTagLine, getNormalGroupLines, density]
   );
 
   const itemCount = useMemo(() => lyrics.length, [lyrics]);
   const useVirtualized = itemCount > VIRTUALIZATION_THRESHOLD;
   const hasSections = (lyricsSections?.length || 0) > 0;
+  const lyricsScrollKey = useMemo(
+    () => createLyricsScrollKey({ lyricsSource, lyricsFileName }),
+    [lyricsFileName, lyricsSource]
+  );
+  const getVirtualScrollElement = useCallback(() => listRef.current?.element || null, [listRef]);
+
+  useLyricsScrollRestoration({
+    enabled: useVirtualized,
+    getElement: getVirtualScrollElement,
+    lyricsKey: lyricsScrollKey,
+    scope: compact ? 'compact' : 'control',
+  });
 
   const {
     sectionChipsContainerRef,
@@ -227,12 +342,18 @@ export default function LyricsList({
   } = useSectionNavigation({
     listRef,
     useVirtualized,
-    onLineSelect: handleLineClickPlain,
+    onLineSelect: sendLineToOutput,
   });
 
   useEffect(() => {
     if (!lyrics || lyrics.length === 0) return;
     const key = `${lyrics.length}|${lyrics[0]?.id || (typeof lyrics[0] === 'string' ? lyrics[0] : '')}`;
+
+    if (isLyricsScrollRestorePending(lyricsScrollKey)) {
+      lastResetKeyRef.current = key;
+      observeLyricsScrollResetGuard(lyricsScrollKey);
+      return;
+    }
 
     if (suppressScrollResetRef.current) {
       suppressScrollResetRef.current = false;
@@ -243,8 +364,13 @@ export default function LyricsList({
     if (lastResetKeyRef.current === key) return;
     lastResetKeyRef.current = key;
 
-    window.dispatchEvent(new CustomEvent('reset-lyrics-scroll'));
-  }, [lyrics]);
+    if (useVirtualized) {
+      const virtualScroller = listRef.current?.element;
+      if (virtualScroller) virtualScroller.scrollTop = 0;
+    } else {
+      window.dispatchEvent(new CustomEvent('reset-lyrics-scroll'));
+    }
+  }, [lyrics, lyricsScrollKey, listRef, useVirtualized]);
 
   const sectionChips = hasSections ? (
     <SectionChips
@@ -266,6 +392,7 @@ export default function LyricsList({
           key={line?.id || `line_${i}`}
           index={i}
           line={line}
+          lyricsTimestamps={lyricsTimestamps}
           virtualized={false}
           getLineClassName={getLineClassName}
           handleRowClick={handleRowClick}
@@ -275,6 +402,7 @@ export default function LyricsList({
           handleRowTouchMove={handleRowTouchMove}
           handleRowTouchEnd={handleRowTouchEnd}
           selectedLine={selectedLine}
+          previewLine={previewLine}
           darkMode={darkMode}
           hoveredLineIndex={hoveredLineIndex}
           setHoveredLineIndex={setHoveredLineIndex}
@@ -290,6 +418,7 @@ export default function LyricsList({
           handleStageOnlyTutorialOpenChange={handleStageOnlyTutorialOpenChange}
           handleNeverShowTutorialPopovers={handleNeverShowTutorialPopovers}
           searchQuery={searchQuery}
+          highlightedLineIndex={highlightedLineIndex}
           isStructureTagLine={isStructureTagLine}
           getNormalGroupLines={getNormalGroupLines}
           density={density}
@@ -335,7 +464,7 @@ export default function LyricsList({
         canUndo={canUndo}
         canRedo={canRedo}
         onSendSelectionToOutput={handleSendSelectionToOutput}
-        onDeselectFromMenu={handleDeselectFromMenu}
+        onDeselectFromMenu={handleDeselectFromOutput}
         onGroupSelected={handleGroupSelected}
         onUngroupSelected={() => {
             if (selectedIndicesArray.length === 1) {

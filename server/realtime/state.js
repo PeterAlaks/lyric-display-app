@@ -1,8 +1,11 @@
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+import { DEFAULT_PREVIEW_SETTINGS, normalizePreviewSettings } from '../../shared/previewSettings.js';
+import { getLyricsParsingOptions } from './lyricsParsingConfig.js';
 
 export const state = {
   currentLyrics: [],
   currentLyricsTimestamps: [],
+  currentLyricsEnhancedTimestamps: [],
   currentLyricsFileName: '',
   currentRawLyricsContent: '',
   currentLyricsSource: {
@@ -31,6 +34,7 @@ export const state = {
     ['output2', true],
   ]),
   currentStageSettings: {},
+  currentPreviewSettings: normalizePreviewSettings(DEFAULT_PREVIEW_SETTINGS),
   currentIsOutputOn: false,
   currentStageEnabled: true,
   setlistFiles: [],
@@ -40,7 +44,17 @@ export const state = {
     ['output2', new Map()],
     ['stage', new Map()],
   ]),
-  currentStageTimerState: { running: false, paused: false, endTime: null, remaining: null },
+  currentStageTimerState: {
+    version: 2,
+    revision: 0,
+    status: 'idle',
+    running: false,
+    paused: false,
+    finished: false,
+    endTime: null,
+    remaining: null,
+    clockBasis: 'server',
+  },
   currentStageMessages: [],
   pendingDrafts: new Map(),
   registeredOutputs: new Set(DEFAULT_OUTPUT_IDS),
@@ -48,6 +62,10 @@ export const state = {
     enabled: false,
     updatedAt: null,
     updatedBy: null,
+  },
+  sessionAuthority: {
+    snapshotLoaded: false,
+    initialized: false,
   },
 };
 
@@ -104,10 +122,59 @@ export const buildOutputList = () => {
   return [...DEFAULT_OUTPUT_IDS, ...custom];
 };
 
+export const getStageTimerSnapshot = (timestamp = Date.now()) => ({
+  ...(state.currentStageTimerState || {}),
+  serverNow: timestamp,
+  clockBasis: 'server',
+});
+
 export const getOutputRegistry = () => ({
   outputs: buildOutputList(),
   stageEnabled: state.currentStageEnabled,
 });
+
+let lastOutputPresenceSignature = '';
+
+export const getOutputPresenceSummary = () => {
+  let instanceCount = 0;
+  let remoteInstanceCount = 0;
+  let unknownInstanceCount = 0;
+
+  for (const outputId of state.registeredOutputs) {
+    for (const instance of state.outputInstances.get(outputId)?.values() || []) {
+      instanceCount += 1;
+      if (instance?.connectionScope === 'remote') remoteInstanceCount += 1;
+      if (instance?.connectionScope === 'unknown') unknownInstanceCount += 1;
+    }
+  }
+
+  return {
+    instanceCount,
+    remoteInstanceCount,
+    unknownInstanceCount,
+  };
+};
+
+export const notifyOutputPresenceChange = ({ force = false } = {}) => {
+  const summary = getOutputPresenceSummary();
+  const signature = `${summary.instanceCount}:${summary.remoteInstanceCount}:${summary.unknownInstanceCount}`;
+  if (!force && signature === lastOutputPresenceSignature) return summary;
+  lastOutputPresenceSignature = signature;
+
+  if (typeof process.send === 'function') {
+    try {
+      process.send({
+        type: 'output-presence',
+        ...summary,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.warn('Failed to report output presence to the desktop process:', error?.message || error);
+    }
+  }
+
+  return summary;
+};
 
 export const hasOutput = (outputId) => {
   if (outputId === 'output1' || outputId === 'output2') return true;
@@ -125,6 +192,10 @@ const buildBaseState = (clientInfo, timestamp) => ({
   isDesktopClient: clientInfo?.type === 'desktop',
   clientPermissions: clientInfo?.permissions || [],
   liveSafety: state.liveSafety,
+  sessionAuthority: {
+    source: state.sessionAuthority?.snapshotLoaded ? 'restored' : 'new',
+    bootstrapAllowed: state.sessionAuthority?.initialized !== true,
+  },
   timestamp,
   syncTimestamp: timestamp,
 });
@@ -156,14 +227,21 @@ export function buildCurrentState(clientInfo) {
   if (clientPurpose === 'timer-control') {
     return {
       ...baseState,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     };
   }
 
   if (clientPurpose === 'time-display') {
     return {
       ...baseState,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
+    };
+  }
+
+  if (clientPurpose === 'preview') {
+    return {
+      ...baseState,
+      previewSettings: normalizePreviewSettings(state.currentPreviewSettings),
     };
   }
 
@@ -174,7 +252,7 @@ export function buildCurrentState(clientInfo) {
       selectedLine: state.currentSelectedLine,
       isOutputOn: state.currentIsOutputOn,
       lyricsFileName: state.currentLyricsFileName || '',
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     }, clientType);
   }
 
@@ -188,7 +266,7 @@ export function buildCurrentState(clientInfo) {
       stageEnabled: state.currentStageEnabled,
       setlistFiles: summarizeSetlistForDisplay(state.setlistFiles),
       lyricsFileName: state.currentLyricsFileName || '',
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
       stageMessages: state.currentStageMessages,
     };
   }
@@ -197,6 +275,7 @@ export function buildCurrentState(clientInfo) {
     ...baseState,
     lyrics: state.currentLyrics,
     lyricsTimestamps: state.currentLyricsTimestamps,
+    lyricsEnhancedTimestamps: state.currentLyricsEnhancedTimestamps,
     selectedLine: state.currentSelectedLine,
     lyricsSections: state.currentLyricsSections,
     lineToSection: state.currentLineToSection,
@@ -208,6 +287,7 @@ export function buildCurrentState(clientInfo) {
     rawLyricsContent: state.currentRawLyricsContent || '',
     lyricsSource: state.currentLyricsSource || null,
     songMetadata: state.currentSongMetadata || null,
+    lyricsParsingOptions: getLyricsParsingOptions(),
   };
 
   for (const [outputId, settings] of state.outputSettings) {
@@ -217,7 +297,7 @@ export function buildCurrentState(clientInfo) {
     currentState[`${outputId}Enabled`] = enabled;
   }
 
-  currentState.stageTimerState = state.currentStageTimerState;
+  currentState.stageTimerState = getStageTimerSnapshot(timestamp);
 
   if (clientInfo?.type === 'stage') {
     currentState.stageMessages = state.currentStageMessages;
@@ -235,7 +315,14 @@ export function buildPeriodicState(clientInfo) {
   if (clientPurpose === 'timer-control' || clientPurpose === 'time-display') {
     return {
       ...baseState,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
+    };
+  }
+
+  if (clientPurpose === 'preview') {
+    return {
+      ...baseState,
+      previewSettings: normalizePreviewSettings(state.currentPreviewSettings),
     };
   }
 
@@ -252,7 +339,7 @@ export function buildPeriodicState(clientInfo) {
       ...baseState,
       isOutputOn: state.currentIsOutputOn,
       stageEnabled: state.currentStageEnabled,
-      stageTimerState: state.currentStageTimerState,
+      stageTimerState: getStageTimerSnapshot(timestamp),
     };
   }
 

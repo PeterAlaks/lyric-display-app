@@ -1,8 +1,18 @@
+import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
+
 const TIMESTAMP_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
 const METADATA_TAG_REGEX = /^\s*\[[a-z]+:/i;
 const CHORUS_TAG_REGEX = /^\s*\[chorus\s*:\s*/i;
 const CHORUS_END_TAG_REGEX = /^\s*\[\/chorus\]/i;
 const INVALID_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
+
+export const UNTITLED_LYRICS_TITLE = 'Untitled Lyrics';
+
+export const isUsableLyricsTitle = (title) => {
+  const normalizedTitle = typeof title === 'string' ? title.trim() : '';
+  return Boolean(normalizedTitle)
+    && normalizedTitle.toLocaleLowerCase() !== UNTITLED_LYRICS_TITLE.toLocaleLowerCase();
+};
 
 /**
  * Removes timestamps from the beginning of a line
@@ -56,7 +66,7 @@ function hasInvalidFilenameChars(text) {
  * @param {string} content - The lyrics content
  * @returns {string|null} - The first valid line or null if none found
  */
-export function extractFirstValidLine(content) {
+export function extractFirstValidLine(content, { sectionTagPhrases } = {}) {
   if (!content || typeof content !== 'string') {
     return null;
   }
@@ -108,6 +118,10 @@ export function extractFirstValidLine(content) {
     const lineWithoutTimestamps = removeTimestamps(trimmedLine);
 
     if (!lineWithoutTimestamps) {
+      continue;
+    }
+
+    if (isStructureTag(lineWithoutTimestamps, sectionTagPhrases)) {
       continue;
     }
 

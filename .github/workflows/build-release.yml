@@ -9,7 +9,39 @@ permissions:
   contents: write
 
 jobs:
+  quality:
+    name: Static and unit checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install native module build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev libasound2-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Run static checks
+        run: npm run check:static
+
+      - name: Run unit tests
+        run: npm run test:unit
+
   build-windows:
+    needs: quality
     runs-on: windows-2022
     steps:
       - name: Checkout code
@@ -39,16 +71,17 @@ jobs:
           npm run audit:prod
           npm run audit:server
 
-      - name: Rebuild native modules for Windows
-        run: |
-          npm rebuild better-sqlite3 --build-from-source
-          npm rebuild keytar --build-from-source
+      - name: Rebuild keytar native module for Windows
+        run: npm rebuild keytar --build-from-source
 
       - name: Build Vite app
         run: npm run build
 
       - name: Build Windows installer
         run: npx electron-builder --win --publish never
+
+      - name: Smoke test packaged Windows runtime
+        run: node scripts/verify-packaged-runtime.js --windows --start-server
 
       - name: Verify Windows blockmaps
         run: node scripts/verify-blockmaps.js --windows
@@ -58,12 +91,13 @@ jobs:
         with:
           name: windows-installer
           path: |
-            dist/*.exe
-            dist/*.blockmap
-            dist/latest.yml
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
           retention-days: 5
 
   build-macos:
+    needs: quality
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -93,10 +127,8 @@ jobs:
           npm run audit:prod
           npm run audit:server
 
-      - name: Rebuild native modules for macOS
-        run: |
-          npm rebuild better-sqlite3 --build-from-source
-          npm rebuild keytar --build-from-source
+      - name: Rebuild keytar native module for macOS
+        run: npm rebuild keytar --build-from-source
 
       - name: Build Vite app
         run: npm run build
@@ -106,6 +138,9 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      - name: Smoke test packaged macOS runtime
+        run: node scripts/verify-packaged-runtime.js --macos --start-server
+
       - name: Verify macOS blockmaps
         run: node scripts/verify-blockmaps.js --macos
 
@@ -114,13 +149,14 @@ jobs:
         with:
           name: macos-installer
           path: |
-            dist/*.dmg
-            dist/*.zip
-            dist/*.blockmap
-            dist/latest-mac.yml
+            release/*.dmg
+            release/*.zip
+            release/*.blockmap
+            release/latest-mac.yml
           retention-days: 5
 
   build-linux:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -155,16 +191,17 @@ jobs:
           npm run audit:prod
           npm run audit:server
 
-      - name: Rebuild native modules for Linux
-        run: |
-          npm rebuild better-sqlite3 --build-from-source
-          npm rebuild keytar --build-from-source
+      - name: Rebuild keytar native module for Linux
+        run: npm rebuild keytar --build-from-source
 
       - name: Build Vite app
         run: npm run build
 
       - name: Build Linux installers
         run: npx electron-builder --linux --publish never
+
+      - name: Smoke test packaged Linux runtime
+        run: node scripts/verify-packaged-runtime.js --linux --start-server
 
       - name: Verify Linux blockmaps
         run: node scripts/verify-blockmaps.js --linux
@@ -174,11 +211,11 @@ jobs:
         with:
           name: linux-installer
           path: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
-            dist/*.blockmap
-            dist/latest-linux.yml
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.blockmap
+            release/latest-linux.yml
           retention-days: 5
 
   create-release:
@@ -232,7 +269,7 @@ jobs:
             dist-artifacts/linux-installer/*
           fail_on_unmatched_files: false
           body: |
-            ## LyricDisplay v${{ steps.get_version.outputs.VERSION }}
+            ## LyricDisplay ${{ steps.get_version.outputs.VERSION }}
             
             ${{ steps.release_notes.outputs.CUSTOM_NOTES }}
             

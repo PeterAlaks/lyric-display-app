@@ -5,11 +5,13 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cast, Zap } from 'lucide-react';
+import { Cast, Settings, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import useToast from '../hooks/useToast';
+import useModal from '../hooks/useModal';
 import useNdiStore from '../context/NdiStore';
 import { formatOutputLabel } from '../utils/outputLabels';
 
@@ -29,11 +31,13 @@ const FRAMERATE_OPTIONS = [
   { value: 60, label: '60 fps' },
 ];
 
-const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
+const NdiOutputSettingsModal = ({ darkMode, outputKey, onClose }) => {
   const [settings, setSettings] = useState(null);
   const companionRunning = useNdiStore((s) => s.companionRunning);
+  const companionReady = useNdiStore((s) => s.companionReady);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
+  const { showModal } = useModal();
 
   const outputLabel = formatOutputLabel(outputKey);
 
@@ -95,6 +99,26 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
     }
   }, [outputKey, showToast]);
 
+  const handleOpenNdiPreferences = useCallback(() => {
+    const openPreferences = () => showModal({
+      title: 'Preferences',
+      component: 'UserPreferences',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      initialCategory: 'ndi',
+      actions: []
+    });
+
+    if (onClose) {
+      onClose();
+      window.setTimeout(openPreferences, 240);
+      return;
+    }
+
+    openPreferences();
+  }, [onClose, showModal]);
+
   if (loading || !settings) {
     return (
       <div className="flex items-center justify-center h-[200px]">
@@ -104,9 +128,10 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
   }
 
   const inputClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300';
+  const selectContentClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300';
   const labelClass = darkMode ? 'text-gray-200' : 'text-gray-700';
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
-  const isBroadcasting = settings.enabled && companionRunning;
+  const isBroadcasting = settings.enabled && companionRunning && companionReady;
 
   return (
     <div className="overflow-y-auto px-6 py-5" style={{ maxHeight: 'calc(100vh - 260px)' }}>
@@ -118,8 +143,10 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
             <p className={`text-xs ${mutedClass}`}>
               {isBroadcasting
                 ? `Broadcasting as "${settings.sourceName}"`
-                : settings.enabled && !companionRunning
-                  ? 'Enabled but companion is not running'
+                : settings.enabled && companionRunning && !companionReady
+                  ? 'Enabled while companion is syncing'
+                  : settings.enabled && !companionRunning
+                    ? 'Enabled but companion is not running'
                   : 'Not broadcasting'}
             </p>
           </div>
@@ -170,7 +197,7 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   {RESOLUTION_PRESETS.map((preset) => (
                     <SelectItem key={preset.value} value={preset.value}>
                       {preset.label}
@@ -223,7 +250,7 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   {FRAMERATE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={String(opt.value)}>
                       {opt.label}
@@ -239,9 +266,24 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey }) => {
         {settings.enabled && !companionRunning && (
           <div className={`flex items-start gap-2 p-3 rounded-lg ${darkMode ? 'bg-yellow-900/20 border border-yellow-600/30' : 'bg-yellow-50 border border-yellow-200'}`}>
             <Zap className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
-            <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-              The NDI companion is not running. Launch it from Preferences -&gt; NDI to start broadcasting.
-            </p>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                The NDI companion is not running. Launch it from Preferences -&gt; NDI to start broadcasting.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleOpenNdiPreferences}
+                className={`h-8 rounded-lg px-3 text-xs ${darkMode
+                  ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 hover:text-yellow-100'
+                  : 'border-yellow-300 bg-white text-yellow-800 hover:bg-yellow-100 hover:text-yellow-900'
+                  }`}
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Open NDI Preferences
+              </Button>
+            </div>
           </div>
         )}
 

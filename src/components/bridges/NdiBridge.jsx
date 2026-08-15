@@ -5,10 +5,12 @@
  */
 import { useEffect } from 'react';
 import useNdiStore from '../../context/NdiStore';
+import useToast from '../../hooks/useToast';
 
 export default function NdiBridge() {
+  const { showToast } = useToast();
   const initialize = useNdiStore((s) => s.initialize);
-  const setCompanionRunning = useNdiStore((s) => s.setCompanionRunning);
+  const setCompanionStatus = useNdiStore((s) => s.setCompanionStatus);
   const setDownloadProgress = useNdiStore((s) => s.setDownloadProgress);
   const setTelemetry = useNdiStore((s) => s.setTelemetry);
   const setUpdateInfo = useNdiStore((s) => s.setUpdateInfo);
@@ -26,8 +28,30 @@ export default function NdiBridge() {
 
     if (api.onCompanionStatus) {
       cleanups.push(api.onCompanionStatus((status) => {
-        if (typeof status?.running === 'boolean') {
-          setCompanionRunning(status.running);
+        setCompanionStatus(status || {});
+        if (status?.restartExhausted) {
+          showToast({
+            title: 'NDI output stopped',
+            message: status.error || 'The NDI companion could not be restarted. Relaunch it from Preferences before continuing.',
+            variant: 'error',
+            duration: 12000,
+            dedupeKey: 'ndi-companion-recovery',
+          });
+        } else if (status?.restartScheduled) {
+          showToast({
+            title: 'NDI output interrupted',
+            message: `The NDI companion stopped unexpectedly. Recovery attempt ${status.restartAttempt}/${status.maxRestartAttempts} is starting.`,
+            variant: 'warn',
+            duration: 8000,
+            dedupeKey: 'ndi-companion-recovery',
+          });
+        } else if (status?.recovered) {
+          showToast({
+            title: 'NDI output recovered',
+            message: 'The NDI companion restarted and completed synchronization.',
+            variant: 'success',
+            dedupeKey: 'ndi-companion-recovery',
+          });
         }
       }));
     }
@@ -42,6 +66,7 @@ export default function NdiBridge() {
       cleanups.push(api.onDownloadComplete((result) => {
         resetOperationState();
         if (result?.success) {
+          useNdiStore.getState().setLastError(null);
           refreshInstallStatus();
         }
       }));
@@ -51,7 +76,7 @@ export default function NdiBridge() {
       cleanups.push(api.onDownloadFailed((result) => {
         resetOperationState();
         if (result?.error) {
-          useNdiStore.getState().setLastError(result.cancelled ? null : result.error);
+          useNdiStore.getState().setLastError(result.cancelled ? null : result);
         }
       }));
     }
@@ -75,7 +100,7 @@ export default function NdiBridge() {
         if (typeof cleanup === 'function') cleanup();
       });
     };
-  }, []);
+  }, [initialize, refreshInstallStatus, resetOperationState, setCompanionStatus, setDownloadProgress, setTelemetry, setUpdateInfo, showToast]);
 
   return null;
 }

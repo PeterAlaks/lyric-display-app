@@ -5,6 +5,8 @@ import useToast from '@/hooks/useToast';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useLyricsStore from '@/context/LyricsStore';
 import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '@/utils/lyricDisplayDock';
+import { openFileNavigator } from '@/utils/fileNavigatorEvents';
+import { CHECK_APP_ANNOUNCEMENTS_EVENT } from '@/constants/modalEvents';
 
 const useMenuHandlers = (closeMenu) => {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ const useMenuHandlers = (closeMenu) => {
   const { showToast } = useToast();
   const { darkMode, setDarkMode } = useDarkModeState();
   const isNewSongCanvas = location.pathname === '/new-song';
+  const isLyricVideoStudio = location.pathname === '/lyric-video-studio';
   const isDevMode = import.meta.env.MODE === 'development';
 
   const handleNewLyrics = useCallback(() => {
@@ -23,6 +26,10 @@ const useMenuHandlers = (closeMenu) => {
 
   const handleOpenLyrics = useCallback(async () => {
     closeMenu();
+
+    if (openFileNavigator({
+      destination: isNewSongCanvas ? 'canvas' : isLyricVideoStudio ? 'video' : 'control',
+    })) return;
 
     if (isNewSongCanvas) {
       try {
@@ -78,7 +85,7 @@ const useMenuHandlers = (closeMenu) => {
     } else {
       window.dispatchEvent(new Event('trigger-file-load'));
     }
-  }, [closeMenu, isNewSongCanvas, showModal, showToast, navigate]);
+  }, [closeMenu, isLyricVideoStudio, isNewSongCanvas, showModal, showToast, navigate]);
 
   const handleOpenRecent = useCallback(async (filePath) => {
     closeMenu();
@@ -218,7 +225,7 @@ const useMenuHandlers = (closeMenu) => {
     closeMenu();
     showModal({
       title: 'Preview Outputs',
-      headerDescription: 'Live preview of both output displays side-by-side',
+      headerDescription: 'Preview output, stage, time, and custom displays regardless of live visibility.',
       component: 'PreviewOutputs',
       variant: 'info',
       size: 'large',
@@ -447,7 +454,7 @@ const useMenuHandlers = (closeMenu) => {
       headerDescription: 'Inspect connected clients, sync state, and retry health',
       component: 'ConnectionDiagnostics',
       variant: 'info',
-      size: 'large',
+      size: 'md',
       actions: [
         { label: 'Close', variant: 'outline' },
         {
@@ -477,19 +484,44 @@ const useMenuHandlers = (closeMenu) => {
       component: 'IntegrationInstructions',
       variant: 'info',
       size: 'lg',
+      customLayout: true,
       dismissLabel: 'Close'
     });
   }, [closeMenu, showModal]);
+
+  const handleCheckAnnouncements = useCallback(() => {
+    closeMenu();
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(CHECK_APP_ANNOUNCEMENTS_EVENT, {
+        detail: { manual: true },
+      }));
+    }, 0);
+  }, [closeMenu]);
 
   const handleSupportDev = useCallback(() => {
     closeMenu();
     window.dispatchEvent(new Event('open-support-dev-modal'));
   }, [closeMenu]);
 
-  const handleCheckUpdates = useCallback(() => {
+  const handleCheckUpdates = useCallback(async () => {
     closeMenu();
-    window.electronAPI?.checkForUpdates?.(true);
-  }, [closeMenu]);
+    const result = await window.electronAPI?.checkForUpdates?.(true);
+    if (result?.state?.updateMode === 'store') {
+      showToast({
+        title: 'Updates managed by Microsoft Store',
+        message: 'Open Microsoft Store and select Library > Get updates to check manually.',
+        variant: 'info',
+        dedupeKey: 'app-update-store-managed',
+      });
+    } else if (result?.deferred) {
+      showToast({
+        title: 'Update check deferred',
+        message: 'LyricDisplay will check for updates when Live Safety is turned off.',
+        variant: 'info',
+        dedupeKey: 'app-update-check-deferred',
+      });
+    }
+  }, [closeMenu, showToast]);
 
   const handleAbout = useCallback(async (appVersion) => {
     closeMenu();
@@ -566,6 +598,7 @@ const useMenuHandlers = (closeMenu) => {
     handleRepo,
     handleConnectionDiagnostics,
     handleIntegrationGuide,
+    handleCheckAnnouncements,
     handleAbout,
     handleSupportDev,
     handleCheckUpdates,

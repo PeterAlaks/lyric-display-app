@@ -26,10 +26,37 @@ const splitLayoutClasses = (className) => {
   }
 }
 
-const Input = React.forwardRef(({ className, type, ...props }, ref) => {
+const Input = React.forwardRef(({
+  className,
+  type,
+  onBlur,
+  onChange,
+  onFocus,
+  value,
+  ...props
+}, ref) => {
   const inputRef = React.useRef(null)
+  const [numberDraft, setNumberDraft] = React.useState(null)
 
   React.useImperativeHandle(ref, () => inputRef.current)
+
+  const handleNumberFocus = React.useCallback((event) => {
+    setNumberDraft(event.currentTarget.value)
+    onFocus?.(event)
+  }, [onFocus])
+
+  const handleNumberChange = React.useCallback((event) => {
+    // Keep the exact text the user is composing visible. Consumers may clamp
+    // their controlled value immediately, but that normalized value should not
+    // replace an in-progress edit until focus leaves the field.
+    setNumberDraft(event.currentTarget.value)
+    onChange?.(event)
+  }, [onChange])
+
+  const handleNumberBlur = React.useCallback((event) => {
+    setNumberDraft(null)
+    onBlur?.(event)
+  }, [onBlur])
 
   const stepNumberInput = React.useCallback((direction) => {
     const input = inputRef.current
@@ -63,7 +90,12 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
             "w-full pr-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           )}
           ref={inputRef}
-          {...props} />
+          {...props}
+          value={numberDraft === null ? value : numberDraft}
+          onFocus={handleNumberFocus}
+          onChange={handleNumberChange}
+          onBlur={handleNumberBlur}
+        />
         <span className="pointer-events-none absolute bottom-1 right-1 top-1 flex w-5 flex-col text-gray-500 dark:text-gray-300">
           <button
             type="button"
@@ -100,7 +132,12 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
         className
       )}
       ref={inputRef}
-      {...props} />
+      {...props}
+      value={value}
+      onFocus={onFocus}
+      onChange={onChange}
+      onBlur={onBlur}
+    />
   );
 })
 Input.displayName = "Input"

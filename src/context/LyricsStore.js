@@ -1,6 +1,10 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
+import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+import { buildLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
+import { normalizeAppearanceTransitions } from '../../shared/transitionSettings.js';
+import { normalizePreviewSettings } from '../../shared/previewSettings.js';
 import { normalizeTimerControlSettings, normalizeTimerDisplaySettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
@@ -16,9 +20,6 @@ import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 import { createStageSlice } from './lyricsStore/stageSlice.js';
 import { createTimerSlice } from './lyricsStore/timerSlice.js';
 import i18n, { normalizeLanguageCode } from '../i18n';
-
-export { createDefaultOutputSettings, defaultOutput1Settings, defaultOutput2Settings } from './lyricsStore/outputSlice.js';
-export { defaultStageSettings } from './lyricsStore/stageSlice.js';
 
 const normalizePaintSettingUpdates = (settings = {}) => {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return {};
@@ -48,6 +49,13 @@ const normalizePaintSettingUpdates = (settings = {}) => {
 
 export async function loadPreferencesIntoStore(store) {
   try {
+    if (window.electronAPI?.preferences?.getParsingConfig) {
+      const result = await window.electronAPI.preferences.getParsingConfig();
+      if (result.success && result.config) {
+        store.getState().setLyricsParsingOptions(buildLyricsParsingOptions(result.config));
+      }
+    }
+
     if (window.electronAPI?.preferences?.getAutoplayDefaults) {
       const result = await window.electronAPI.preferences.getAutoplayDefaults();
       if (result.success && result.defaults) {
@@ -60,6 +68,34 @@ export async function loadPreferencesIntoStore(store) {
       if (result.success && result.settings) {
         store.getState().updateMaxFileSize(result.settings.maxFileSize ?? 2);
         store.getState().updateMaxSetlistFiles(result.settings.maxSetlistFiles ?? DEFAULT_SETLIST_ITEMS);
+      }
+    }
+
+    if (window.electronAPI?.preferences?.getCategory) {
+      const result = await window.electronAPI.preferences.getCategory('appearance');
+      if (result?.success && result.data) {
+        const transitions = normalizeAppearanceTransitions(result.data);
+        const currentState = store.getState();
+        currentState.setAppearanceTransitions(transitions);
+        currentState.setPreviewSettings(result.data.preview);
+        currentState.updateTimerDisplaySettings({
+          stateTransitionAnimation: transitions.timerStateTransitionAnimation,
+          stateTransitionDuration: transitions.timerStateTransitionDuration,
+        });
+
+        const outputIds = [...DEFAULT_OUTPUT_IDS, ...(currentState.customOutputIds || [])];
+        for (const outputId of outputIds) {
+          currentState.updateOutputSettings(outputId, {
+            backgroundMediaTransitionAnimation: transitions.backgroundMediaTransitionAnimation,
+            backgroundMediaTransitionDuration: transitions.backgroundMediaTransitionDuration,
+            outputVisibilityTransitionAnimation: transitions.outputVisibilityTransitionAnimation,
+            outputVisibilityTransitionDuration: transitions.outputVisibilityTransitionDuration,
+          });
+        }
+
+        window.dispatchEvent?.(new CustomEvent('appearance-transitions-updated', {
+          detail: transitions,
+        }));
       }
     }
 
@@ -109,6 +145,13 @@ export async function loadPreferencesIntoStore(store) {
       }
     }
 
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('general.previewLines');
+      if (result.success && typeof result.value === 'boolean') {
+        store.getState().setPreviewLinesEnabled(result.value);
+      }
+    }
+
     // Load formatting preferences
     if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('formatting.enableCleanupOnPaste');
@@ -126,6 +169,12 @@ export async function loadPreferencesIntoStore(store) {
       const result = await window.electronAPI.preferences.get('formatting.capitalizeReligiousTerms');
       if (result.success && typeof result.value === 'boolean') {
         store.getState().setFormattingCapitalizeReligiousTerms(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.capitalizedWords');
+      if (result.success) {
+        store.getState().setFormattingCapitalizedWords(result.value);
       }
     }
     if (window.electronAPI?.preferences?.get) {
@@ -185,6 +234,7 @@ const useLyricsStore = create(
           darkMode: state.darkMode,
           appLanguage: state.appLanguage,
           themeMode: state.themeMode,
+          previewSettings: state.previewSettings,
           skipSectionTitlesOnKeyboard: state.skipSectionTitlesOnKeyboard,
           hasSeenWelcome: state.hasSeenWelcome,
           stageSettings: state.stageSettings,
@@ -192,6 +242,7 @@ const useLyricsStore = create(
           timerDisplaySettings: state.timerDisplaySettings,
           autoplaySettings: state.autoplaySettings,
           lyricsTimestamps: state.lyricsTimestamps,
+          lyricsEnhancedTimestamps: state.lyricsEnhancedTimestamps,
           hasSeenIntelligentAutoplayInfo: state.hasSeenIntelligentAutoplayInfo,
           ...partializeOutputState(state),
         };
@@ -206,6 +257,7 @@ const useLyricsStore = create(
           if (i18n.language !== language) {
             i18n.changeLanguage(language);
           }
+          state.previewSettings = normalizePreviewSettings(state.previewSettings);
           state.timerDisplaySettings = normalizeTimerDisplaySettings(state.timerDisplaySettings);
           state.timerControlSettings = normalizeTimerControlSettings(state.timerControlSettings);
         }

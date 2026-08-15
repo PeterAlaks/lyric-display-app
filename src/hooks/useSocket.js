@@ -153,20 +153,14 @@ const useSocket = (role = 'output', options = {}) => {
     const canConnect = connectionManager.canAttemptConnection(clientId);
 
     if (!canConnect.allowed) {
-      if (canConnect.reason === 'max_attempts_reached') {
-        logError('Max connection attempts reached for ' + clientId);
-        setConnectionStatus('error');
-        setAuthStatus('failed');
-        clearBackoffWarning();
-        return;
-      }
-
       if (canConnect.reason === 'already_connecting') {
         logDebug('Connection already in progress for ' + clientId);
         return;
       }
 
-      if (canConnect.reason !== 'global_backoff' && canConnect.reason !== 'client_backoff') {
+      if (canConnect.reason !== 'global_backoff'
+        && canConnect.reason !== 'client_backoff'
+        && canConnect.reason !== 'attempt_limit_backoff') {
         logDebug('Connection attempt blocked for ' + clientId + ' (' + canConnect.reason + ')');
         clearBackoffWarning();
         return;
@@ -325,20 +319,14 @@ const useSocket = (role = 'output', options = {}) => {
     const canConnect = connectionManager.canAttemptConnection(clientId);
 
     if (!canConnect.allowed) {
-      if (canConnect.reason === 'max_attempts_reached') {
-        logError('Max connection attempts reached for ' + clientId);
-        setConnectionStatus('error');
-        setAuthStatus('failed');
-        clearBackoffWarning();
-        return;
-      }
-
       if (canConnect.reason === 'already_connecting') {
         logDebug('Connection already in progress for ' + clientId);
         return;
       }
 
-      if (canConnect.reason !== 'global_backoff' && canConnect.reason !== 'client_backoff') {
+      if (canConnect.reason !== 'global_backoff'
+        && canConnect.reason !== 'client_backoff'
+        && canConnect.reason !== 'attempt_limit_backoff') {
         logDebug('Connection attempt blocked for ' + clientId + ' (' + canConnect.reason + ')');
         clearBackoffWarning();
         return;
@@ -508,6 +496,27 @@ const useSocket = (role = 'output', options = {}) => {
       }, 100);
     });
   }, [clientId, cleanupSocket, connectSocket, clearBackoffWarning, setAuthStatus]);
+
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') return undefined;
+
+    const recoverConnection = () => {
+      if (connectionStatus === 'connected' || connectionStatus === 'connecting') return;
+      forceReconnect();
+    };
+    const recoverWhenVisible = () => {
+      if (document.visibilityState === 'visible') recoverConnection();
+    };
+
+    window.addEventListener('online', recoverConnection);
+    window.addEventListener('pageshow', recoverConnection);
+    document.addEventListener('visibilitychange', recoverWhenVisible);
+    return () => {
+      window.removeEventListener('online', recoverConnection);
+      window.removeEventListener('pageshow', recoverConnection);
+      document.removeEventListener('visibilitychange', recoverWhenVisible);
+    };
+  }, [connectionStatus, enabled, forceReconnect]);
 
   return {
     socket: enabled ? socketRef.current : null,

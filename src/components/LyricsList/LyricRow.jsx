@@ -1,15 +1,17 @@
 import React from 'react';
 import { Ungroup } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { HORIZONTAL_PADDING_PX, ROW_GAP } from './layout';
+import { HORIZONTAL_PADDING_PX, ROW_GAP } from '../../hooks/LyricsList/useLyricsListRows';
 import LyricLineContent from './LyricLineContent';
 import TutorialLineAnchor from './TutorialLineAnchor';
+import { formatTimestamp } from '../../utils/timestampHelpers';
 
 export default function LyricRow({
   index,
   line,
   style,
   lyrics,
+  lyricsTimestamps,
   virtualized = false,
   getLineClassName,
   handleRowClick,
@@ -19,6 +21,7 @@ export default function LyricRow({
   handleRowTouchMove,
   handleRowTouchEnd,
   selectedLine,
+  previewLine,
   darkMode,
   hoveredLineIndex,
   setHoveredLineIndex,
@@ -34,6 +37,7 @@ export default function LyricRow({
   handleStageOnlyTutorialOpenChange,
   handleNeverShowTutorialPopovers,
   searchQuery,
+  highlightedLineIndex,
   isStructureTagLine,
   getNormalGroupLines,
   density = 'default',
@@ -46,6 +50,9 @@ export default function LyricRow({
   const sectionLabel = sectionId ? sectionById.get(sectionId)?.label : null;
   const isActiveSection = sectionId && sectionId === activeSectionId;
   const isBatchSelected = selectedIndices?.has(index);
+  const isActiveSearchMatch = index === highlightedLineIndex && Boolean(searchQuery);
+  const timestamp = Array.isArray(lyricsTimestamps) ? lyricsTimestamps[index] : null;
+  const hasTimestamp = typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp >= 0;
 
   if (typeof currentLine === 'string' && isStructureTagLine(currentLine)) {
     if (!virtualized) {
@@ -75,6 +82,7 @@ export default function LyricRow({
       )}
       <div
         data-line-index={virtualized ? undefined : index}
+        data-preview-line={index === previewLine ? 'true' : undefined}
         className={`${getLineClassName(index, virtualized, isBatchSelected)} relative`}
         onClick={(event) => handleRowClick(event, index)}
         onContextMenu={(event) => handleContextMenuOpen(event, index)}
@@ -84,15 +92,30 @@ export default function LyricRow({
         onMouseEnter={() => setHoveredLineIndex(index)}
         onMouseLeave={() => setHoveredLineIndex(null)}
       >
-        <LyricLineContent
-          line={currentLine}
-          index={index}
-          searchQuery={searchQuery}
-          darkMode={darkMode}
-          isStructureTagLine={isStructureTagLine}
-          getNormalGroupLines={getNormalGroupLines}
-          density={density}
-        />
+        <div className={hasTimestamp ? 'flex items-stretch gap-3 pr-9' : 'pr-9'}>
+          {hasTimestamp && (
+            <div
+              className={`shrink-0 self-stretch rounded-md border px-2 py-1 font-mono ${compact ? 'w-[4.5rem] text-[10px]' : 'w-[5.25rem] text-[11px]'} flex items-center justify-center ${darkMode
+                ? 'border-gray-600 bg-gray-900/35 text-gray-300'
+                : 'border-gray-200 bg-white/80 text-gray-500'
+                }`}
+            >
+              {formatTimestamp(timestamp)}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <LyricLineContent
+              line={currentLine}
+              index={index}
+              searchQuery={searchQuery}
+              darkMode={darkMode}
+              isStructureTagLine={isStructureTagLine}
+              getNormalGroupLines={getNormalGroupLines}
+              density={density}
+              isActiveSearchMatch={isActiveSearchMatch}
+            />
+          </div>
+        </div>
 
         {isDesktopApp && currentLine?.type === 'normal-group' && hoveredLineIndex === index && (
           <Tooltip content="Split this group into two separate lines" side="top" sideOffset={5}>

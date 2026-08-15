@@ -299,6 +299,7 @@
         "installed": "Installe",
         "notInstalled": "Non installe",
         "running": "En cours",
+        "starting": "Demarrage",
         "stopped": "Arrete"
       },
       "telemetry": {
@@ -363,6 +364,7 @@
     },
     "status": {
       "autoSaved": "Les modifications sont enregistrees automatiquement",
+      "saveError": "Impossible d'enregistrer les parametres",
       "saved": "Parametres enregistres",
       "saving": "Enregistrement..."
     }

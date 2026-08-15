@@ -36,7 +36,7 @@ export function AboutAppModal({ darkMode = false, onClose, version = '1.0.0' }) 
           'text-sm font-medium',
           darkMode ? 'text-gray-200' : 'text-gray-900'
         )}>
-          &copy; {new Date().getFullYear()} LyricDisplay.
+          &copy; {new Date().getFullYear()} LyricDisplay Technologies. Trademarks reserved.
         </p>
         <p className={cn(
           'text-sm',

@@ -71,7 +71,7 @@ export const ContextMenu = forwardRef(function ContextMenu(
     <div
       ref={mergeRefs([forwardedRef, internalRef])}
       className={clsx(
-        'pointer-events-auto z-30 rounded-lg border py-1 text-[13px] shadow-lg',
+        'pointer-events-auto z-30 rounded-xl border py-1 text-[13px] shadow-lg',
         darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-800 border-gray-200',
         className
       )}
@@ -102,7 +102,7 @@ export const ContextMenuItem = forwardRef(function ContextMenuItem(
       ref={forwardedRef}
       type="button"
       className={clsx(
-        'flex w-full items-center px-4 py-2.5 text-left transition-colors duration-150',
+        'mx-1 flex w-[calc(100%-0.5rem)] items-center rounded-lg px-3 py-2.5 text-left transition-colors duration-150',
         inset && 'pl-9',
         disabled
           ? 'opacity-50 cursor-not-allowed'
@@ -157,7 +157,7 @@ export const ContextMenuSubmenu = forwardRef(function ContextMenuSubmenu(
     <div
       ref={forwardedRef}
       className={clsx(
-        'absolute z-40 w-48 rounded-lg border py-1 text-[13px] shadow-lg overflow-y-auto',
+        'absolute z-40 w-48 rounded-xl border py-1 text-[13px] shadow-lg overflow-y-auto',
         direction === 'right' ? 'left-[calc(100%+8px)]' : 'right-[calc(100%+8px)]',
         darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800',
         className

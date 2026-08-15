@@ -1,6 +1,8 @@
 import net from 'net';
 
-function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
+const MAX_IPC_RESPONSE_BUFFER_BYTES = 256 * 1024;
+
+function createNdiIpcClient({ getIpcConfig, getNextSeq, getAuthToken = () => '' }) {
   let persistentSocket = null;
   let persistentBuffer = '';
   let persistentConnecting = false;
@@ -9,15 +11,28 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
   /** @type {Map<number, { resolve: Function, responses: object[], timer: ReturnType<typeof setTimeout>, idleTimer: ReturnType<typeof setTimeout>|null }>} */
   const persistentPendingCallbacks = new Map();
 
+  function buildCommandResult(responses, fallbackError = null) {
+    const protocolError = responses.find((response) => response?.type === 'error');
+    if (protocolError) {
+      return {
+        success: false,
+        responses,
+        error: protocolError.payload?.message || fallbackError || 'Companion returned an error',
+      };
+    }
+
+    return {
+      success: responses.length > 0,
+      responses,
+      error: responses.length > 0 ? null : fallbackError,
+    };
+  }
+
   function drainPendingCallbacks(reason) {
     for (const [, pending] of persistentPendingCallbacks) {
       clearTimeout(pending.timer);
       if (pending.idleTimer) clearTimeout(pending.idleTimer);
-      pending.resolve({
-        success: pending.responses.length > 0,
-        responses: pending.responses,
-        error: pending.responses.length > 0 ? null : reason,
-      });
+      pending.resolve(buildCommandResult(pending.responses, reason));
     }
     persistentPendingCallbacks.clear();
   }
@@ -42,6 +57,11 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
 
     socket.on('data', (chunk) => {
       persistentBuffer += chunk.toString('utf8');
+      if (Buffer.byteLength(persistentBuffer, 'utf8') > MAX_IPC_RESPONSE_BUFFER_BYTES) {
+        console.warn('[NDI] Companion IPC response exceeded the buffer limit');
+        socket.destroy(new Error('IPC response too large'));
+        return;
+      }
       let idx = persistentBuffer.indexOf('\n');
       while (idx >= 0) {
         const line = persistentBuffer.slice(0, idx).trim();
@@ -58,7 +78,7 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
                 pending.idleTimer = setTimeout(() => {
                   clearTimeout(pending.timer);
                   persistentPendingCallbacks.delete(msg.seq);
-                  pending.resolve({ success: true, responses: pending.responses, error: null });
+                  pending.resolve(buildCommandResult(pending.responses));
                 }, 60);
               }
             }
@@ -99,7 +119,8 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
    * connection otherwise.
    */
   function sendCommand(type, payload = {}, extra = {}) {
-    const timeoutMs = 1500;
+    const timeoutMs = extra.timeoutMs ?? 3000;
+    const token = getAuthToken();
 
     const command = {
       type,
@@ -107,6 +128,7 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
       ts: Date.now(),
       output: extra.output,
       payload,
+      ...(token ? { token } : {}),
     };
 
     if (persistentReady && persistentSocket && !persistentSocket.destroyed) {
@@ -118,11 +140,7 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
           timer: setTimeout(() => {
             persistentPendingCallbacks.delete(command.seq);
             if (entry.idleTimer) clearTimeout(entry.idleTimer);
-            resolve({
-              success: entry.responses.length > 0,
-              responses: entry.responses,
-              error: entry.responses.length > 0 ? null : `IPC timeout after ${timeoutMs}ms`,
-            });
+            resolve(buildCommandResult(entry.responses, `IPC timeout after ${timeoutMs}ms`));
           }, timeoutMs),
         };
         persistentPendingCallbacks.set(command.seq, entry);
@@ -156,18 +174,14 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
       };
 
       const timeout = setTimeout(() => {
-        finish({
-          success: responses.length > 0,
-          responses,
-          error: responses.length > 0 ? null : `IPC timeout after ${timeoutMs}ms`,
-        });
+        finish(buildCommandResult(responses, `IPC timeout after ${timeoutMs}ms`));
       }, timeoutMs);
 
       const scheduleIdleFinish = () => {
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
           clearTimeout(timeout);
-          finish({ success: true, responses, error: null });
+          finish(buildCommandResult(responses));
         }, 60);
       };
 
@@ -182,6 +196,11 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
 
       socket.on('data', (chunk) => {
         buffer += chunk.toString('utf8');
+        if (Buffer.byteLength(buffer, 'utf8') > MAX_IPC_RESPONSE_BUFFER_BYTES) {
+          clearTimeout(timeout);
+          finish({ success: false, responses, error: 'IPC response too large' });
+          return;
+        }
         let idx = buffer.indexOf('\n');
         while (idx >= 0) {
           const line = buffer.slice(0, idx).trim();
@@ -201,7 +220,7 @@ function createNdiIpcClient({ getIpcConfig, getNextSeq }) {
 
       socket.on('end', () => {
         clearTimeout(timeout);
-        finish({ success: responses.length > 0, responses, error: responses.length > 0 ? null : 'connection closed' });
+        finish(buildCommandResult(responses, 'connection closed'));
       });
     });
   }

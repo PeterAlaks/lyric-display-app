@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, Clock, Zap, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ModalActionButton } from '@/components/modal/modalActions';
 
 const FEATURES = [
   {
@@ -107,23 +108,24 @@ const IntelligentAutoplayInfo = ({ darkMode, onStart, onClose, setDontShowAgain 
 
       {/* Footer actions */}
       <div className="flex items-center justify-end gap-2.5 pt-3">
-        <button
+        <ModalActionButton
+          type="button"
+          tone="tertiary"
+          darkMode={d}
           onClick={onClose}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            d
-              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/60'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-          }`}
         >
           Maybe later
-        </button>
-        <button
+        </ModalActionButton>
+        <ModalActionButton
+          type="button"
+          tone="primary"
+          darkMode={d}
           onClick={handleStart}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+          className="gap-2"
         >
           <Sparkles className="w-3.5 h-3.5" />
           Start Intelligent Autoplay
-        </button>
+        </ModalActionButton>
       </div>
     </div>
   );

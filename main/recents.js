@@ -3,6 +3,8 @@ import { requestRendererModal } from './modalBridge.js';
 import path from 'path';
 import { promises as fs } from 'fs';
 import * as userPreferences from './userPreferences.js';
+import { isStorageCapacityError, toStorageWriteFailure } from '../shared/storageErrors.js';
+import { saveTextFileAtomically } from './atomicFileSave.js';
 
 let recents = [];
 const subscribers = new Set();
@@ -37,25 +39,30 @@ async function loadRecents() {
 async function persist() {
   try {
     const p = getStorePath();
-    await fs.writeFile(p, JSON.stringify(recents, null, 2), 'utf8');
+    await saveTextFileAtomically(p, JSON.stringify(recents, null, 2));
   } catch (e) {
-
+    const storageFailure = isStorageCapacityError(e)
+      ? toStorageWriteFailure(e, { subject: 'the recent-files list' })
+      : null;
+    const title = storageFailure ? 'Storage is full' : 'Recent files error';
+    const description = storageFailure?.error || 'Could not persist recent files list.';
     try {
       await requestRendererModal({
-        title: 'Recent files error',
-        description: 'Could not persist recent files list.',
+        title,
+        description,
         variant: 'error',
+        dedupeKey: storageFailure ? 'user-data-storage-full' : 'recent-files-write-error',
         actions: [
           { label: 'Dismiss', value: { response: 0 }, variant: 'destructive' },
         ],
       }, {
         fallback: () => {
-          dialog.showErrorBox('Recent Files Error', 'Could not persist recent files list.');
+          dialog.showErrorBox(title, description);
           return { response: 0 };
         },
       });
     } catch {
-      try { dialog.showErrorBox('Recent Files Error', 'Could not persist recent files list.'); } catch { }
+      try { dialog.showErrorBox(title, description); } catch { }
     }
   }
 }

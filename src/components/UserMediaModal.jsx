@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Trash2, Upload, Video } from 'lucide-react';
+import { Image, LoaderCircle, Trash2, Upload, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -8,8 +8,8 @@ import { outputTemplates } from '../utils/outputTemplates';
 import useAuth from '../hooks/useAuth';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
-
-const MAX_MEDIA_SIZE_BYTES = 200 * 1024 * 1024;
+import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
+import { MAX_MEDIA_UPLOAD_BYTES, MAX_USER_MEDIA_FILES } from '../../shared/apiContractRegistry.js';
 
 const mediaTabs = [
   { value: 'image', label: 'Image', icon: Image, accept: 'image/*' },
@@ -63,6 +63,12 @@ const UserMediaModal = ({
   const [selectedId, setSelectedId] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [mediaUsage, setMediaUsage] = React.useState({
+    count: 0,
+    max: MAX_USER_MEDIA_FILES,
+    remaining: MAX_USER_MEDIA_FILES,
+  });
+  const [uploadProgress, setUploadProgress] = React.useState(null);
   const fileInputRef = React.useRef(null);
   const { ensureValidToken } = useAuth();
   const { showToast } = useToast();
@@ -96,12 +102,16 @@ const UserMediaModal = ({
 
     if (!response.ok) {
       let errorMessage = 'Media request failed';
+      let errorCode = null;
       try {
         const body = await response.json();
         if (body?.error) errorMessage = body.error;
+        if (body?.code) errorCode = body.code;
       } catch {
       }
-      throw new Error(errorMessage);
+      const error = new Error(errorMessage);
+      error.code = errorCode;
+      throw error;
     }
 
     return response.json();
@@ -115,6 +125,13 @@ const UserMediaModal = ({
       const userMedia = Array.isArray(payload.media) ? payload.media : [];
       const bundledMedia = normalizedAllowedTypes.includes('image') ? bundledTemplateMedia : [];
       setMedia([...bundledMedia, ...userMedia]);
+      if (payload.usage && Number.isFinite(payload.usage.count)) {
+        setMediaUsage({
+          count: payload.usage.count,
+          max: payload.usage.max || MAX_USER_MEDIA_FILES,
+          remaining: Math.max(0, payload.usage.remaining ?? (MAX_USER_MEDIA_FILES - payload.usage.count)),
+        });
+      }
     } catch (error) {
       setMedia(normalizedAllowedTypes.includes('image') ? bundledTemplateMedia : []);
       showToast({
@@ -142,53 +159,99 @@ const UserMediaModal = ({
   };
 
   const handleUpload = async (event) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.target.value = '';
-    if (!file) return;
+    if (files.length === 0) return;
 
     const expectedPrefix = activeTab === 'image' ? 'image/' : 'video/';
-    if (!file.type.startsWith(expectedPrefix)) {
+    const unsupportedFile = files.find((file) => !file.type.startsWith(expectedPrefix));
+    if (unsupportedFile) {
       showToast({
         title: 'Unsupported file',
-        message: `Please choose a ${activeTab} file.`,
+        message: `"${unsupportedFile.name}" is not a supported ${activeTab} file.`,
         variant: 'error',
       });
       return;
     }
 
-    if (file.size > MAX_MEDIA_SIZE_BYTES) {
+    const oversizedFile = files.find((file) => file.size > MAX_MEDIA_UPLOAD_BYTES);
+    if (oversizedFile) {
       showToast({
         title: 'File too large',
-        message: `Files must be ${Math.round(MAX_MEDIA_SIZE_BYTES / (1024 * 1024))}MB or smaller.`,
+        message: `"${oversizedFile.name}" exceeds the ${Math.round(MAX_MEDIA_UPLOAD_BYTES / (1024 * 1024))}MB per-file limit.`,
         variant: 'error',
+      });
+      return;
+    }
+
+    if (files.length > mediaUsage.remaining) {
+      showToast({
+        title: 'Media library limit',
+        message: mediaUsage.remaining > 0
+          ? `The library can hold ${mediaUsage.max.toLocaleString()} files. You can add ${mediaUsage.remaining.toLocaleString()} more, but selected ${files.length.toLocaleString()}.`
+          : `The library already contains ${mediaUsage.max.toLocaleString()} files. Delete an item before uploading another.`,
+        variant: 'warn',
       });
       return;
     }
 
     setBusy(true);
+    setUploadProgress({ current: 0, total: files.length });
+    const uploaded = [];
+    const failures = [];
     try {
-      const formData = new FormData();
-      formData.append('type', activeTab);
-      formData.append('media', file);
-      const payload = await request('/api/user-media', {
-        method: 'POST',
-        body: formData,
-      });
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        setUploadProgress({ current: index + 1, total: files.length });
+        try {
+          const formData = new FormData();
+          formData.append('type', activeTab);
+          formData.append('media', file);
+          const payload = await request('/api/user-media', {
+            method: 'POST',
+            body: formData,
+          });
+          uploaded.push(payload);
+        } catch (error) {
+          failures.push({ file, error });
+          if (error?.code === 'STORAGE_FULL' || error?.message?.includes('media library can hold')) break;
+        }
+      }
 
-      setMedia((current) => [payload, ...current.filter((item) => item.id !== payload.id)]);
-      setSelectedId(payload.id);
-      showToast({
-        title: 'Media uploaded',
-        message: `${payload.originalName || payload.name || file.name} is ready.`,
-        variant: 'success',
-      });
-    } catch (error) {
-      showToast({
-        title: 'Upload failed',
-        message: error?.message || 'Could not upload the media file.',
-        variant: 'error',
-      });
+      if (uploaded.length > 0) {
+        setMedia((current) => [
+          ...uploaded.slice().reverse(),
+          ...current.filter((item) => !uploaded.some((entry) => entry.id === item.id)),
+        ]);
+        setSelectedId(uploaded[uploaded.length - 1].id);
+        setMediaUsage((current) => ({
+          ...current,
+          count: current.count + uploaded.length,
+          remaining: Math.max(0, current.remaining - uploaded.length),
+        }));
+      }
+
+      if (failures.length > 0) {
+        showToast({
+          title: failures[0].error?.code === 'STORAGE_FULL'
+            ? 'Storage is full'
+            : (uploaded.length > 0 ? 'Upload incomplete' : 'Upload failed'),
+          message: uploaded.length > 0
+            ? `${uploaded.length} of ${files.length} files uploaded. ${failures[0].error?.message || 'One or more files could not be uploaded.'}`
+            : failures[0].error?.message || 'Could not upload the selected media files.',
+          variant: uploaded.length > 0 ? 'warn' : 'error',
+        });
+      } else {
+        showToast({
+          title: 'Media uploaded',
+          message: files.length === 1
+            ? `${uploaded[0].originalName || uploaded[0].name || files[0].name} is ready.`
+            : `${uploaded.length} media files are ready.`,
+          variant: 'success',
+        });
+      }
     } finally {
+      setUploadProgress(null);
       setBusy(false);
     }
   };
@@ -233,6 +296,11 @@ const UserMediaModal = ({
         method: 'DELETE',
       });
       setMedia((current) => current.filter((entry) => entry.id !== item.id));
+      setMediaUsage((current) => ({
+        ...current,
+        count: Math.max(0, current.count - 1),
+        remaining: Math.min(current.max, current.remaining + 1),
+      }));
       setSelectedId((current) => (current === item.id ? null : current));
       showToast({
         title: 'Media deleted',
@@ -266,7 +334,13 @@ const UserMediaModal = ({
       await request(`/api/user-media?type=${encodeURIComponent(activeTab)}`, {
         method: 'DELETE',
       });
+      const deletedCount = deletableVisibleMedia.length;
       setMedia((current) => current.filter((item) => item.type !== activeTab || item.bundled));
+      setMediaUsage((current) => ({
+        ...current,
+        count: Math.max(0, current.count - deletedCount),
+        remaining: Math.min(current.max, current.remaining + deletedCount),
+      }));
       setSelectedId((current) => {
         const selected = media.find((item) => item.id === current);
         return selected?.type === activeTab && !selected.bundled ? null : current;
@@ -298,8 +372,8 @@ const UserMediaModal = ({
   };
 
   return (
-    <div className={cn('flex h-full min-h-[520px] flex-col', darkMode ? 'text-gray-100' : 'text-gray-900')}>
-      <div className={cn('flex flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-gray-800' : 'border-gray-200')}>
+    <div className={cn('flex h-full min-h-0 flex-col overflow-hidden', darkMode ? 'text-gray-100' : 'text-gray-900')}>
+      <div className={cn('flex shrink-0 flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className={cn('h-10 p-1', darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600')}>
@@ -332,6 +406,7 @@ const UserMediaModal = ({
               type="file"
               className="hidden"
               accept={mediaTabs.find((tab) => tab.value === activeTab)?.accept}
+              multiple
               onChange={handleUpload}
             />
             <Button
@@ -346,14 +421,9 @@ const UserMediaModal = ({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="destructiveOutline"
               onClick={deleteAll}
               disabled={busy || deletableVisibleMedia.length === 0}
-              className={cn(
-                darkMode
-                  ? 'bg-red-950/60 border-red-700 text-red-100 hover:bg-red-900 hover:text-white hover:border-red-500'
-                  : 'border-red-200 text-red-600 hover:bg-red-50'
-              )}
             >
               <Trash2 className="h-4 w-4" />
               Delete All
@@ -368,7 +438,7 @@ const UserMediaModal = ({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 [scrollbar-gutter:stable]">
         {loading ? (
           <div className={cn('flex h-full items-center justify-center text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
             Loading media...
@@ -443,28 +513,47 @@ const UserMediaModal = ({
         )}
       </div>
 
-      <div className={cn('flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4', darkMode ? 'border-gray-800' : 'border-gray-200')}>
-        <p className={cn('min-w-0 flex-1 basis-[180px] truncate text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-          {canSelectMedia
-            ? (selectedMedia ? selectedMedia.name : 'Select a media item to continue.')
-            : `${visibleMedia.length} ${activeTab === 'image' ? 'image' : 'video'}${visibleMedia.length === 1 ? '' : 's'} in library.`}
-        </p>
+      <ModalFooter
+        darkMode={darkMode}
+        align="between"
+        leading={(
+          <div className="flex min-w-0 items-center gap-3">
+            {uploadProgress && (
+              <div className={cn('flex shrink-0 items-center gap-2 text-xs', darkMode ? 'text-gray-300' : 'text-gray-600')}>
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                <span>Uploading {uploadProgress.current} of {uploadProgress.total}</span>
+              </div>
+            )}
+            <p className={cn('truncate text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+              {canSelectMedia
+                ? (selectedMedia ? selectedMedia.name : 'Select a media item to continue.')
+                : `${visibleMedia.length} ${activeTab === 'image' ? 'image' : 'video'}${visibleMedia.length === 1 ? '' : 's'} in library.`}
+            </p>
+          </div>
+        )}
+      >
         <div className="flex shrink-0 items-center gap-3">
-          <Button
+          <ModalActionButton
             type="button"
-            variant="outline"
+            tone="secondary"
+            darkMode={darkMode}
             onClick={() => onClose?.({ dismissed: true })}
-            className={darkMode ? 'border-gray-700 text-gray-100 hover:bg-gray-800' : ''}
           >
             {canSelectMedia ? 'Cancel' : 'Close'}
-          </Button>
+          </ModalActionButton>
           {canSelectMedia && (
-            <Button type="button" onClick={proceed} disabled={!selectedMedia || busy}>
+            <ModalActionButton
+              type="button"
+              tone="primary"
+              darkMode={darkMode}
+              onClick={proceed}
+              disabled={!selectedMedia || busy}
+            >
               Use Selected Media
-            </Button>
+            </ModalActionButton>
           )}
         </div>
-      </div>
+      </ModalFooter>
     </div>
   );
 };

@@ -1,3 +1,5 @@
+import { normalizeSectionTagPhrases } from '../../shared/sectionTagPhrases.js';
+
 export const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
 
 export const METADATA_OPTIONS = [
@@ -12,21 +14,30 @@ export const METADATA_OPTIONS = [
   { key: 're', label: 'Player/Editor [re:]' },
   { key: 'tool', label: 'Tool [tool:]' },
   { key: 've', label: 'Version [ve:]' },
+  { key: 'id', label: 'ID [id:]' },
   { key: '#', label: 'Comment [#]' },
 ];
 
-export const SONG_SECTIONS = [
-  { key: 'Verse', label: 'Verse' },
-  { key: 'Verse 1', label: 'Verse 1' },
-  { key: 'Verse 2', label: 'Verse 2' },
-  { key: 'Verse 3', label: 'Verse 3' },
-  { key: 'Chorus', label: 'Chorus' },
-  { key: 'Pre-Chorus', label: 'Pre-Chorus' },
-  { key: 'Bridge', label: 'Bridge' },
-  { key: 'Intro', label: 'Intro' },
-  { key: 'Outro', label: 'Outro' },
-  { key: 'Hook', label: 'Hook' },
-  { key: 'Refrain', label: 'Refrain' },
-  { key: 'Interlude', label: 'Interlude' },
-  { key: 'Break', label: 'Break' },
-];
+const VERSE_SHORTCUTS = ['Verse 1', 'Verse 2', 'Verse 3'];
+
+export const buildSongSectionOptions = (sectionTagPhrases) => {
+  const recognizedPhrases = normalizeSectionTagPhrases(sectionTagPhrases);
+  const seen = new Set();
+  const sections = [];
+
+  const addSection = (label) => {
+    const dedupeKey = label.toLocaleLowerCase();
+    if (seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
+    sections.push({ key: label, label });
+  };
+
+  recognizedPhrases.forEach((phrase) => {
+    addSection(phrase);
+    if (phrase.toLocaleLowerCase() === 'verse') {
+      VERSE_SHORTCUTS.forEach(addSection);
+    }
+  });
+
+  return sections;
+};

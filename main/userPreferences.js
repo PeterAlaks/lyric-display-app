@@ -4,10 +4,22 @@
  */
 
 import Store from 'electron-store';
-import { app } from 'electron';
-import path from 'path';
 import './appIdentity.js';
 import { DEFAULT_SETLIST_ITEMS, normalizeSetlistItemLimit } from '../shared/setlistLimits.js';
+import { DEFAULT_CAPITALIZED_WORDS } from '../shared/capitalizedWords.js';
+import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
+import { DEFAULT_APPEARANCE_TRANSITIONS } from '../shared/transitionSettings.js';
+import { DEFAULT_PREVIEW_SETTINGS } from '../shared/previewSettings.js';
+import {
+  CURRENT_PREFERENCES_SCHEMA_VERSION,
+  migratePreferences,
+} from './preferenceMigrations.js';
+import { toStorageWriteFailure } from '../shared/storageErrors.js';
+
+const preferenceWriteFailure = (error) => toStorageWriteFailure(error, {
+  subject: 'preferences',
+  fallback: 'Preferences could not be saved.',
+});
 
 const preferencesStore = new Store({
   name: 'user-preferences',
@@ -18,6 +30,7 @@ const preferencesStore = new Store({
       autoCheckForUpdates: true,
       confirmOnClose: true,
       liveSafetyMode: false,
+      previewLines: false,
       toastSoundsMuted: false,
       skipSectionTitlesOnKeyboard: true,
       startMinimized: false,
@@ -32,6 +45,7 @@ const preferencesStore = new Store({
       maxLinesPerGroup: 2,
       enableCrossBlankLineGrouping: true,
       structureTagMode: 'isolate', // 'isolate', 'strip', 'keep'
+      sectionTagPhrases: [...DEFAULT_SECTION_TAG_PHRASES],
     },
 
     // Lyrics Formatting Settings
@@ -39,6 +53,7 @@ const preferencesStore = new Store({
       enableCleanupOnPaste: true,
       capitalizeFirstLetter: true,
       capitalizeReligiousTerms: true,
+      capitalizedWords: [...DEFAULT_CAPITALIZED_WORDS],
       normalizeTypographicChars: true,
     },
 
@@ -77,11 +92,11 @@ const preferencesStore = new Store({
 
     // File Handling
     fileHandling: {
-      defaultLyricsPath: '',
       rememberLastOpenedPath: true,
       maxRecentFiles: 10,
       maxFileSize: 2, // MB
       maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
+      fileNavigatorSort: 'name-asc',
     },
 
     // Appearance Settings
@@ -90,6 +105,8 @@ const preferencesStore = new Store({
       showTooltips: true,
       showTutorialPopovers: true,
       showCanvasFloatingToolbar: true,
+      preview: DEFAULT_PREVIEW_SETTINGS,
+      ...DEFAULT_APPEARANCE_TRANSITIONS,
     },
 
     // Advanced Settings
@@ -100,9 +117,19 @@ const preferencesStore = new Store({
       heartbeatInterval: 30000,
       maxConnectionAttempts: 10,
       ffmpegPath: '',
+      shareAnonymousUsageData: false,
+      telemetryConsentDecided: false,
     },
   },
 });
+
+const preferenceMigration = migratePreferences(preferencesStore.store);
+if (preferenceMigration.success && preferenceMigration.changed) {
+  preferencesStore.store = preferenceMigration.preferences;
+  console.log(`[UserPreferences] Migrated schema ${preferenceMigration.sourceVersion} to ${CURRENT_PREFERENCES_SCHEMA_VERSION}`);
+} else if (!preferenceMigration.success) {
+  console.warn(`[UserPreferences] ${preferenceMigration.error}; existing preferences were left unchanged`);
+}
 
 /**
  * Get all preferences
@@ -143,7 +170,7 @@ export function getPreferenceCategory(category) {
 
 /**
  * Get a specific preference value
- * @param {string} path - Dot-notation path (e.g., 'general.defaultLyricsPath')
+ * @param {string} path - Dot-notation path (e.g., 'general.confirmOnClose')
  * @returns {any} Preference value
  */
 export function getPreference(path) {
@@ -157,15 +184,17 @@ export function getPreference(path) {
 
 /**
  * Set a specific preference value
- * @param {string} path - Dot-notation path (e.g., 'general.defaultLyricsPath')
+ * @param {string} path - Dot-notation path (e.g., 'general.confirmOnClose')
  * @param {any} value - Value to set
  */
 export function setPreference(path, value) {
   try {
     preferencesStore.set(path, value);
     console.log(`[UserPreferences] Set ${path}:`, value);
+    return { success: true };
   } catch (error) {
     console.error(`[UserPreferences] Failed to set preference ${path}:`, error);
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -179,8 +208,10 @@ export function updatePreferenceCategory(category, values) {
     const current = preferencesStore.get(category) || {};
     preferencesStore.set(category, { ...current, ...values });
     console.log(`[UserPreferences] Updated category ${category}`);
+    return { success: true };
   } catch (error) {
     console.error(`[UserPreferences] Failed to update category ${category}:`, error);
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -190,16 +221,18 @@ export function updatePreferenceCategory(category, values) {
  */
 export function saveAllPreferences(preferences) {
   try {
+    const nextPreferences = { ...preferencesStore.store };
     Object.entries(preferences).forEach(([category, values]) => {
       if (values && typeof values === 'object') {
-        preferencesStore.set(category, values);
+        nextPreferences[category] = values;
       }
     });
+    preferencesStore.store = nextPreferences;
     console.log('[UserPreferences] Saved all preferences');
     return { success: true };
   } catch (error) {
     console.error('[UserPreferences] Failed to save preferences:', error);
-    return { success: false, error: error.message };
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -214,8 +247,10 @@ export function resetCategoryToDefaults(category) {
       preferencesStore.reset(category);
       console.log(`[UserPreferences] Reset category ${category} to defaults`);
     }
+    return { success: true };
   } catch (error) {
     console.error(`[UserPreferences] Failed to reset category ${category}:`, error);
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -225,29 +260,12 @@ export function resetCategoryToDefaults(category) {
 export function resetAllToDefaults() {
   try {
     preferencesStore.clear();
+    preferencesStore.set('_schemaVersion', CURRENT_PREFERENCES_SCHEMA_VERSION);
     console.log('[UserPreferences] Reset all preferences to defaults');
     return { success: true };
   } catch (error) {
     console.error('[UserPreferences] Failed to reset preferences:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Get the default lyrics path, falling back to documents folder
- * @returns {string} Default path for opening lyrics files
- */
-export function getDefaultLyricsPath() {
-  try {
-    const savedPath = preferencesStore.get('fileHandling.defaultLyricsPath');
-    if (savedPath && savedPath.trim()) {
-      return savedPath;
-    }
-    // Fall back to documents folder
-    return app.getPath('documents');
-  } catch (error) {
-    console.error('[UserPreferences] Failed to get default lyrics path:', error);
-    return '';
+    return { success: false, ...preferenceWriteFailure(error) };
   }
 }
 
@@ -277,6 +295,7 @@ export function getParsingConfig() {
       structureTagsConfig: {
         ENABLED: true,
         MODE: parsing?.structureTagMode ?? 'isolate',
+        PHRASES: parsing?.sectionTagPhrases ?? DEFAULT_SECTION_TAG_PHRASES,
       },
       enableTranslationGrouping: parsing?.enableTranslationGrouping ?? true,
     };
@@ -355,6 +374,7 @@ export function getFileHandlingSettings() {
       maxRecentFiles: fileHandling?.maxRecentFiles ?? 10,
       maxFileSize: fileHandling?.maxFileSize ?? 2,
       maxSetlistFiles: normalizeSetlistItemLimit(fileHandling?.maxSetlistFiles),
+      fileNavigatorSort: fileHandling?.fileNavigatorSort ?? 'name-asc',
     };
   } catch (error) {
     console.error('[UserPreferences] Failed to get file handling settings:', error);
@@ -362,6 +382,7 @@ export function getFileHandlingSettings() {
       maxRecentFiles: 10,
       maxFileSize: 2,
       maxSetlistFiles: DEFAULT_SETLIST_ITEMS,
+      fileNavigatorSort: 'name-asc',
     };
   }
 }

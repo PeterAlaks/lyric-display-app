@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   useCustomOutputIds,
   useLyricsState,
@@ -10,6 +11,10 @@ import {
 import useSocket from '../hooks/useSocket';
 import { getLineOutputText } from '../utils/parseLyrics';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
+import {
+  getTransitionVariants,
+  normalizeTransitionDuration,
+} from '../../shared/transitionSettings.js';
 
 /**
  * Generic output page component. Renders lyrics with full styling support.
@@ -43,70 +48,107 @@ const OutputPage = ({ outputId }) => {
   const outputEnabled = useOutputEnabled(outputId);
   const { lyrics, selectedLine } = useLyricsState();
   const { isOutputOn } = useOutputState();
+  const adjustedFontSizeRef = useRef(null);
 
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
 
-  useEffect(() => {
-    const modeStyle = isProjectionMode
-      ? 'background: #000000 !important'
-      : 'background: transparent !important';
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-
-    if (html) html.setAttribute('style', modeStyle);
-    if (body) body.setAttribute('style', modeStyle);
-    if (root) root.setAttribute('style', modeStyle);
-
-    return () => {
-      if (html) html.removeAttribute('style');
-      if (body) body.removeAttribute('style');
-      if (root) root.removeAttribute('style');
-    };
-  }, [isProjectionMode]);
-
   const isOutputActive = Boolean(outputSettings)
     && (isPreviewMode || Boolean(isOutputOn && (outputEnabled !== false)));
+  const outputTransitionVariants = getTransitionVariants(outputSettings?.outputVisibilityTransitionAnimation);
+  const outputTransitionSeconds = normalizeTransitionDuration(
+    outputSettings?.outputVisibilityTransitionDuration,
+    300
+  ) / 1000;
+  const keepFullScreenBackgroundVisible = Boolean(
+    outputSettings?.fullScreenMode && outputSettings?.alwaysShowBackground
+  );
+  const effectiveOutputTransitionVariants = outputTransitionVariants || {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  };
 
-  const handleAutosizeChange = useCallback(({ adjustedFontSize, autosizerActive }) => {
-    updateOutputSettings({ autosizerActive });
-
+  const publishOutputMetrics = useCallback((metrics = {}) => {
     if (!isPreviewMode && emitOutputMetrics && isConnected && isAuthenticated) {
       try {
         emitOutputMetrics(outputId, {
-          adjustedFontSize,
-          autosizerActive,
+          adjustedFontSize: adjustedFontSizeRef.current,
+          autosizerActive: Boolean(outputSettings?.autosizerActive),
           viewportWidth: window.innerWidth,
           viewportHeight: window.innerHeight,
           timestamp: Date.now(),
+          ...metrics,
         });
       } catch { }
     }
+  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode, outputId, outputSettings?.autosizerActive]);
+
+  const handleAutosizeChange = useCallback(({ adjustedFontSize, autosizerActive }) => {
+    adjustedFontSizeRef.current = adjustedFontSize;
+    updateOutputSettings({ autosizerActive });
+    publishOutputMetrics({ adjustedFontSize, autosizerActive });
   }, [
-    emitOutputMetrics,
-    isAuthenticated,
-    isConnected,
-    isPreviewMode,
-    outputId,
+    publishOutputMetrics,
     updateOutputSettings,
   ]);
 
+  useEffect(() => {
+    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
+    publishOutputMetrics();
+    const interval = window.setInterval(publishOutputMetrics, 5000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, isConnected, isPreviewMode, publishOutputMetrics]);
+
   return (
-    <LyricVisualFrame
-      line={line}
-      currentLine={currentLine}
-      settings={outputSettings}
-      visible={Boolean(isOutputActive && line)}
-      active={isOutputActive}
-      previewMode={isPreviewMode}
-      frameKey={selectedLine ?? 'none'}
-      label={label}
-      isProjectionMode={isProjectionMode}
-      showProjectionExitHint={showProjectionExitHint}
-      className="relative w-screen h-screen overflow-hidden"
-      onAutosizeChange={handleAutosizeChange}
-    />
+    <div
+      className="relative h-screen w-screen overflow-hidden"
+      style={{ background: isProjectionMode ? '#000000' : 'transparent' }}
+    >
+      {keepFullScreenBackgroundVisible && (
+        <LyricVisualFrame
+          line=""
+          settings={outputSettings}
+          visible={false}
+          active
+          previewMode={isPreviewMode}
+          label={label}
+          isProjectionMode={isProjectionMode}
+          className="absolute inset-0 h-full w-full overflow-hidden"
+          renderFullScreenElementLayer={false}
+          retainBackgroundLayerWhenInactive
+        />
+      )}
+      <motion.div
+        className="absolute inset-0"
+        aria-hidden={!isOutputActive}
+        variants={effectiveOutputTransitionVariants}
+        initial={isOutputActive ? 'visible' : 'hidden'}
+        animate={isOutputActive ? 'visible' : 'hidden'}
+        transition={{
+          duration: outputTransitionVariants ? outputTransitionSeconds : 0,
+          ease: [0.25, 0.46, 0.45, 0.94],
+        }}
+        style={{ pointerEvents: isOutputActive ? 'auto' : 'none' }}
+      >
+        <LyricVisualFrame
+          line={line}
+          currentLine={currentLine}
+          settings={outputSettings}
+          visible={Boolean(line)}
+          active={isOutputActive}
+          previewMode={isPreviewMode}
+          frameKey={selectedLine ?? 'none'}
+          label={label}
+          isProjectionMode={isProjectionMode}
+          showProjectionExitHint={showProjectionExitHint}
+          className="relative h-full w-full overflow-hidden"
+          onAutosizeChange={handleAutosizeChange}
+          renderBackgroundLayer={!keepFullScreenBackgroundVisible}
+          retainBackgroundLayerWhenInactive
+          retainContentWhenInactive
+        />
+      </motion.div>
+    </div>
   );
 };
 

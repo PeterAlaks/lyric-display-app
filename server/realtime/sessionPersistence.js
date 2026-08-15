@@ -1,14 +1,35 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { isStorageCapacityError, toStorageWriteFailure } from '../../shared/storageErrors.js';
 import { state, registerOutputs } from './state.js';
+import { validatePersistedSetlistFiles } from './setlistValidation.js';
 
 const SESSION_FILE_NAME = 'realtime-session-state.json';
 const SAVE_DEBOUNCE_MS = 250;
+export const CURRENT_SESSION_SCHEMA_VERSION = 1;
 
 let sessionFilePath = null;
 let saveTimer = null;
 let saveInFlight = null;
 let saveQueued = false;
+let lastStorageFailureNoticeAt = 0;
+
+const notifyStorageFailure = (error) => {
+  if (!isStorageCapacityError(error) || typeof process.send !== 'function') return;
+  const now = Date.now();
+  if (now - lastStorageFailureNoticeAt < 60_000) return;
+  lastStorageFailureNoticeAt = now;
+  const failure = toStorageWriteFailure(error, { subject: 'session changes' });
+  try {
+    process.send({
+      type: 'storage-write-failed',
+      operation: 'session-persistence',
+      ...failure,
+    });
+  } catch {
+  }
+};
+let sessionAppId = null;
 
 const mapToObject = (map) => Object.fromEntries(map instanceof Map ? map.entries() : []);
 
@@ -19,11 +40,57 @@ const objectToMap = (value, fallback = []) => {
   return new Map(Object.entries(value));
 };
 
-const createSnapshot = () => ({
-  version: 1,
+export const sanitizePersistedStageTimerState = (timerState) => {
+  if (!timerState || typeof timerState !== 'object' || Array.isArray(timerState)) {
+    return timerState;
+  }
+
+  const status = typeof timerState.status === 'string' ? timerState.status : '';
+  const isActiveRuntime = Boolean(timerState.running)
+    || Boolean(timerState.paused)
+    || status === 'running'
+    || status === 'paused';
+
+  if (!isActiveRuntime) return timerState;
+
+  return {
+    ...timerState,
+    status: 'idle',
+    running: false,
+    paused: false,
+    finished: false,
+    phase: 'timer',
+    durationMs: 0,
+    startTime: null,
+    endTime: null,
+    targetTime: null,
+    elapsedBeforePauseMs: 0,
+    pausedRemainingMs: null,
+    remaining: null,
+    overrunStartedAt: null,
+    sets: [],
+    activeSetIndex: 0,
+    scheduleRunId: '',
+    scheduleEventStartTime: '',
+    scheduleEventDate: '',
+    scheduleScheduledStartAt: null,
+    scheduleStartedAt: null,
+    scheduleJoinedAt: null,
+    scheduleReconciled: false,
+    scheduleReconciliationHold: false,
+    schedulePausedOverrunMs: 0,
+    scheduleAssumedCompletedIds: [],
+    updatedAt: Date.now(),
+  };
+};
+
+export const createSessionSnapshot = ({ appSessionId = sessionAppId } = {}) => ({
+  version: CURRENT_SESSION_SCHEMA_VERSION,
   savedAt: Date.now(),
+  appSessionId: appSessionId || null,
   currentLyrics: Array.isArray(state.currentLyrics) ? state.currentLyrics : [],
   currentLyricsTimestamps: Array.isArray(state.currentLyricsTimestamps) ? state.currentLyricsTimestamps : [],
+  currentLyricsEnhancedTimestamps: Array.isArray(state.currentLyricsEnhancedTimestamps) ? state.currentLyricsEnhancedTimestamps : [],
   currentLyricsFileName: state.currentLyricsFileName || '',
   currentRawLyricsContent: state.currentRawLyricsContent || '',
   currentLyricsSource: state.currentLyricsSource || null,
@@ -36,17 +103,51 @@ const createSnapshot = () => ({
   currentStageSettings: state.currentStageSettings || {},
   currentIsOutputOn: Boolean(state.currentIsOutputOn),
   currentStageEnabled: state.currentStageEnabled !== false,
-  currentStageTimerState: state.currentStageTimerState || null,
+  currentStageTimerState: sanitizePersistedStageTimerState(state.currentStageTimerState || null),
   currentStageMessages: Array.isArray(state.currentStageMessages) ? state.currentStageMessages : [],
+  setlistFiles: appSessionId && Array.isArray(state.setlistFiles) ? state.setlistFiles : [],
   registeredOutputs: Array.from(state.registeredOutputs || []),
   liveSafety: state.liveSafety || null,
 });
 
-const applySnapshot = (snapshot) => {
-  if (!snapshot || typeof snapshot !== 'object') return false;
+export const migrateSessionSnapshot = (snapshot) => {
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+    return { valid: false, error: 'Invalid realtime session snapshot' };
+  }
+
+  const sourceVersion = snapshot.version == null ? 0 : Number(snapshot.version);
+  if (!Number.isInteger(sourceVersion) || sourceVersion < 0) {
+    return { valid: false, error: 'Invalid realtime session schema version' };
+  }
+  if (sourceVersion > CURRENT_SESSION_SCHEMA_VERSION) {
+    return {
+      valid: false,
+      futureVersion: true,
+      error: `Realtime session schema ${sourceVersion} requires a newer LyricDisplay version`,
+    };
+  }
+
+  return {
+    valid: true,
+    migrated: sourceVersion !== CURRENT_SESSION_SCHEMA_VERSION,
+    sourceVersion,
+    snapshot: sourceVersion === CURRENT_SESSION_SCHEMA_VERSION
+      ? snapshot
+      : { ...snapshot, version: CURRENT_SESSION_SCHEMA_VERSION },
+  };
+};
+
+export const applySessionSnapshot = (snapshot, { appSessionId = sessionAppId } = {}) => {
+  const migration = migrateSessionSnapshot(snapshot);
+  if (!migration.valid) {
+    console.warn(`[SessionPersistence] ${migration.error}; snapshot was not applied`);
+    return false;
+  }
+  snapshot = migration.snapshot;
 
   state.currentLyrics = Array.isArray(snapshot.currentLyrics) ? snapshot.currentLyrics : [];
   state.currentLyricsTimestamps = Array.isArray(snapshot.currentLyricsTimestamps) ? snapshot.currentLyricsTimestamps : [];
+  state.currentLyricsEnhancedTimestamps = Array.isArray(snapshot.currentLyricsEnhancedTimestamps) ? snapshot.currentLyricsEnhancedTimestamps : [];
   state.currentLyricsFileName = typeof snapshot.currentLyricsFileName === 'string' ? snapshot.currentLyricsFileName : '';
   state.currentRawLyricsContent = typeof snapshot.currentRawLyricsContent === 'string' ? snapshot.currentRawLyricsContent : '';
   state.currentLyricsSource = snapshot.currentLyricsSource && typeof snapshot.currentLyricsSource === 'object'
@@ -73,9 +174,15 @@ const applySnapshot = (snapshot) => {
   state.currentIsOutputOn = typeof snapshot.currentIsOutputOn === 'boolean' ? snapshot.currentIsOutputOn : false;
   state.currentStageEnabled = typeof snapshot.currentStageEnabled === 'boolean' ? snapshot.currentStageEnabled : true;
   state.currentStageTimerState = snapshot.currentStageTimerState && typeof snapshot.currentStageTimerState === 'object'
-    ? snapshot.currentStageTimerState
+    ? sanitizePersistedStageTimerState(snapshot.currentStageTimerState)
     : state.currentStageTimerState;
   state.currentStageMessages = Array.isArray(snapshot.currentStageMessages) ? snapshot.currentStageMessages : [];
+  const persistedSetlist = snapshot.appSessionId
+    && appSessionId
+    && snapshot.appSessionId === appSessionId
+    ? validatePersistedSetlistFiles(snapshot.setlistFiles)
+    : { valid: true, files: [] };
+  state.setlistFiles = persistedSetlist.valid ? persistedSetlist.files : [];
   if (Array.isArray(snapshot.registeredOutputs)) {
     registerOutputs(snapshot.registeredOutputs);
     for (const [outputId, settings] of objectToMap(snapshot.outputSettings)) {
@@ -93,18 +200,24 @@ const applySnapshot = (snapshot) => {
     };
   }
 
+  state.sessionAuthority = {
+    snapshotLoaded: true,
+    initialized: true,
+  };
+
   return true;
 };
 
-export async function loadPersistedSessionState({ dataRoot } = {}) {
+export async function loadPersistedSessionState({ dataRoot, appSessionId = process.env.LYRICDISPLAY_APP_SESSION_ID || null } = {}) {
   if (!dataRoot) return false;
 
+  sessionAppId = appSessionId;
   sessionFilePath = path.join(dataRoot, SESSION_FILE_NAME);
 
   try {
     const raw = await fs.readFile(sessionFilePath, 'utf8');
     const snapshot = JSON.parse(raw);
-    const applied = applySnapshot(snapshot);
+    const applied = applySessionSnapshot(snapshot, { appSessionId });
     if (applied) {
       console.log(`Loaded persisted realtime session state from ${sessionFilePath}`);
     }
@@ -125,17 +238,22 @@ async function writeSnapshot() {
   }
 
   saveInFlight = (async () => {
-    const snapshot = createSnapshot();
+    const snapshot = createSessionSnapshot();
     await fs.mkdir(path.dirname(sessionFilePath), { recursive: true });
     const tmpPath = `${sessionFilePath}.${process.pid}.tmp`;
-    await fs.writeFile(tmpPath, JSON.stringify(snapshot), 'utf8');
-    await fs.rename(tmpPath, sessionFilePath);
+    try {
+      await fs.writeFile(tmpPath, JSON.stringify(snapshot), 'utf8');
+      await fs.rename(tmpPath, sessionFilePath);
+    } finally {
+      await fs.rm(tmpPath, { force: true }).catch(() => {});
+    }
   })();
 
   try {
     await saveInFlight;
   } catch (error) {
     console.warn('Failed to persist realtime session state:', error);
+    notifyStorageFailure(error);
   } finally {
     saveInFlight = null;
     if (saveQueued) {
@@ -146,6 +264,10 @@ async function writeSnapshot() {
 }
 
 export function schedulePersistSessionState() {
+  state.sessionAuthority = {
+    snapshotLoaded: Boolean(state.sessionAuthority?.snapshotLoaded),
+    initialized: true,
+  };
   if (!sessionFilePath) return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {

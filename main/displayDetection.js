@@ -16,14 +16,13 @@ export async function showDisplayDetectionModal(displayOrDisplays, isStartupChec
 
   try {
     const displaysInfo = displaysArray.map((display, index) => {
-      let displayName = display.name || display.label || 'External Display';
-      if (displaysArray.length > 1) {
-        displayName = `Display ${index + 1}`;
-      }
+      const nativeName = display.name || display.label;
+      const displayName = nativeName || (displaysArray.length > 1 ? `External Display ${index + 1}` : 'External Display');
 
       return {
         id: display.id,
         name: displayName,
+        label: display.label || null,
         bounds: display.bounds,
       };
     });
@@ -90,6 +89,43 @@ export async function handleDisplayChange(changeType, display, requestRendererMo
     } catch (error) {
       console.warn('[DisplayDetection] Falling back to display event payload:', error);
       await showDisplayDetectionModal(display, false, requestRendererModal);
+    }
+    return;
+  }
+
+  if (changeType === 'removed') {
+    const outputKey = display?.removedAssignment?.outputKey || null;
+    const displayName = display?.label || `Display ${display?.id ?? ''}`.trim();
+    const assignmentText = outputKey
+      ? ` It was assigned to ${outputKey.replace(/^output/i, 'Output ')}.`
+      : '';
+
+    const result = await requestRendererModal({
+      title: 'Display disconnected',
+      description: `${displayName} is no longer available.${assignmentText} Verify the remaining projection windows before continuing.`,
+      variant: 'warning',
+      size: 'sm',
+      dedupeKey: `display-removed:${display?.id ?? 'unknown'}`,
+      dismissible: true,
+      actions: [
+        { label: 'Dismiss', value: 'dismiss', variant: 'outline' },
+        { label: 'Review Output Routing', value: 'review', variant: 'default', autoFocus: true },
+      ],
+    }, {
+      timeout: false,
+      fallback: () => ({ dismissed: true }),
+    }).catch((error) => {
+      console.error('[DisplayDetection] Failed to show removal alert:', error);
+      return null;
+    });
+
+    if (result?.data !== 'review') return;
+
+    try {
+      const { getAllDisplays } = await import('./displayManager.js');
+      await showDisplayDetectionModal(getAllDisplays(), false, requestRendererModal, true);
+    } catch (error) {
+      console.error('[DisplayDetection] Failed to open output routing after removal:', error);
     }
   }
 }

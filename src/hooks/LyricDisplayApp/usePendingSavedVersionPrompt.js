@@ -20,7 +20,7 @@ export const usePendingSavedVersionPrompt = ({
     }
     handledSavedVersionRef.current = key;
 
-    const { rawText, fileName: savedBaseName, filePath, extension } = pendingSavedVersion;
+    const { rawText, fileName: savedBaseName, filePath, extension, setlistItemId, songMetadata } = pendingSavedVersion;
     const safeBaseName = savedBaseName || lyricsFileName || 'lyrics';
     const savedFileName = `${safeBaseName}.${extension || 'txt'}`;
 
@@ -33,7 +33,11 @@ export const usePendingSavedVersionPrompt = ({
             filePath: filePath || null,
             fileType: extension || 'txt'
           },
-          { fallbackFileName: savedFileName }
+          {
+            fallbackFileName: savedFileName,
+            setlistItemId: setlistItemId || null,
+            songMetadata: songMetadata || null,
+          }
         );
       } catch (error) {
         console.error('Failed to reload saved lyrics from pending version:', error);

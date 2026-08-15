@@ -16,6 +16,87 @@ import {
 
 const STOP_LABELS = ['Start', 'End'];
 
+const clampGradientAngle = (value) => Math.min(360, Math.max(0, Number(value) || 0));
+
+const GradientAngleDial = ({ value, onChange, darkMode }) => {
+  const angle = clampGradientAngle(value);
+  const dialAngle = angle === 360 ? 0 : angle;
+  const radians = dialAngle * (Math.PI / 180);
+  const handlePosition = {
+    left: `${50 + (Math.sin(radians) * 30)}%`,
+    top: `${50 - (Math.cos(radians) * 30)}%`,
+  };
+
+  const updateFromPointer = (event) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - (bounds.left + (bounds.width / 2));
+    const y = event.clientY - (bounds.top + (bounds.height / 2));
+    const degrees = (Math.atan2(x, -y) * 180) / Math.PI;
+    onChange(Math.round((degrees + 360) % 360));
+  };
+
+  const handlePointerDown = (event) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    updateFromPointer(event);
+  };
+
+  const handlePointerMove = (event) => {
+    if (!event.currentTarget.hasPointerCapture?.(event.pointerId)) return;
+    updateFromPointer(event);
+  };
+
+  const handleKeyDown = (event) => {
+    const step = event.shiftKey ? 15 : 1;
+    let nextAngle = null;
+
+    if (event.key === 'ArrowUp' || event.key === 'ArrowRight') nextAngle = angle + step;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') nextAngle = angle - step;
+    if (event.key === 'Home') nextAngle = 0;
+    if (event.key === 'End') nextAngle = 360;
+    if (nextAngle === null) return;
+
+    event.preventDefault();
+    onChange(clampGradientAngle(nextAngle));
+  };
+
+  return (
+    <div
+      role="slider"
+      tabIndex={0}
+      aria-label="Gradient angle"
+      aria-valuemin={0}
+      aria-valuemax={360}
+      aria-valuenow={angle}
+      aria-valuetext={`${angle} degrees`}
+      onKeyDown={handleKeyDown}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={(event) => event.currentTarget.releasePointerCapture?.(event.pointerId)}
+      onPointerCancel={(event) => event.currentTarget.releasePointerCapture?.(event.pointerId)}
+      className={cn(
+        "relative h-[30px] w-[30px] shrink-0 touch-none cursor-pointer rounded-full border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        darkMode ? "border-gray-500 bg-gray-700" : "border-gray-400 bg-white"
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn("pointer-events-none absolute left-1/2 top-1/2 h-px w-2 origin-left rounded-full", darkMode ? "bg-blue-300" : "bg-blue-600")}
+        style={{ transform: `translateY(-50%) rotate(${dialAngle - 90}deg)` }}
+      />
+      <span
+        aria-hidden="true"
+        className={cn("pointer-events-none absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full", darkMode ? "bg-blue-200" : "bg-blue-700")}
+      />
+      <span
+        aria-hidden="true"
+        className={cn("pointer-events-none absolute h-[4px] w-[4px] -translate-x-1/2 -translate-y-1/2 rounded-full border", darkMode ? "border-blue-200 bg-gray-800" : "border-blue-700 bg-white")}
+        style={handlePosition}
+      />
+    </div>
+  );
+};
+
 const activeButtonClass = (darkMode) => (
   darkMode
     ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300 !transition-none"
@@ -126,7 +207,7 @@ const PaintPicker = React.forwardRef(({
 
   const updateGradientAngle = (rawValue) => {
     if (localPaint.type !== 'linear') return;
-    const nextAngle = Math.min(360, Math.max(0, Number(rawValue) || 0));
+    const nextAngle = clampGradientAngle(rawValue);
     commitPaint({ ...localPaint, angle: nextAngle });
   };
 
@@ -216,25 +297,35 @@ const PaintPicker = React.forwardRef(({
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium w-12 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Angle</span>
-            <Input
-              type="number"
-              value={localPaint.angle}
-              onChange={(event) => updateGradientAngle(event.target.value)}
-              min={0}
-              max={360}
-              className={`flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={reverseGradient}
-              className={darkMode ? inactiveButtonClass(darkMode) : ""}
-            >
-              Flip
-            </Button>
+          <div className="space-y-2">
+            <div className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Angle
+            </div>
+            <div className="flex items-center gap-3">
+              <GradientAngleDial
+                value={localPaint.angle}
+                onChange={updateGradientAngle}
+                darkMode={darkMode}
+              />
+              <Input
+                type="number"
+                value={localPaint.angle}
+                onChange={(event) => updateGradientAngle(event.target.value)}
+                min={0}
+                max={360}
+                aria-label="Gradient angle in degrees"
+                className={`min-w-0 flex-1 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={reverseGradient}
+                className={cn("shrink-0", darkMode ? inactiveButtonClass(darkMode) : "")}
+              >
+                Reverse
+              </Button>
+            </div>
           </div>
         </div>
       )}

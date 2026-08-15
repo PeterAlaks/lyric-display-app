@@ -10,7 +10,13 @@ export default class AppErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
   componentDidCatch(error, info) {
-    try { console.error('AppErrorBoundary', error, info); } catch { }
+    try {
+      console.error(
+        'AppErrorBoundary',
+        error?.stack || error,
+        info?.componentStack ? `Component stack:${info.componentStack}` : 'Component stack unavailable'
+      );
+    } catch { }
     if (scheduleChunkLoadRecovery(error, 'AppErrorBoundary')) {
       this.setState({ recovering: true });
     }

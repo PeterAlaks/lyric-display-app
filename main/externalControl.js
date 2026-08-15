@@ -7,6 +7,7 @@
 import { ipcMain } from 'electron';
 import { getMIDIController, initializeMIDI, destroyMIDI } from './midiController.js';
 import { getOSCController, initializeOSC, destroyOSC } from './oscController.js';
+import { correlateExternalAction } from './externalControlCorrelation.js';
 
 let isInitialized = false;
 let getMainWindowFn = null;
@@ -22,7 +23,14 @@ function sendToRenderer(action) {
   }
 
   try {
-    mainWindow.webContents.send('external-control:action', action);
+    const correlatedAction = correlateExternalAction(action);
+    mainWindow.webContents.send('external-control:action', correlatedAction);
+    console.log('[ExternalControl] Dispatched action', {
+      commandId: correlatedAction.commandId,
+      action: correlatedAction.type,
+      source: correlatedAction.source,
+      sourceAddress: correlatedAction.sourceAddress || null,
+    });
     return true;
   } catch (error) {
     console.error('[ExternalControl] Error sending action to renderer:', error);
@@ -34,7 +42,6 @@ function sendToRenderer(action) {
  * Handle actions from MIDI controller
  */
 function handleMIDIAction(action) {
-  console.log('[ExternalControl] MIDI action:', action.type);
   sendToRenderer(action);
 }
 
@@ -42,7 +49,6 @@ function handleMIDIAction(action) {
  * Handle actions from OSC controller
  */
 function handleOSCAction(action) {
-  console.log('[ExternalControl] OSC action:', action.type);
   sendToRenderer(action);
 }
 
@@ -285,6 +291,38 @@ export function registerExternalControlIPC() {
     try {
       const controller = getOSCController();
       return controller.setFeedbackEnabled(enabled);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('osc:set-remote-access', (_event, { enabled }) => {
+    try {
+      return getOSCController().setRemoteAccessEnabled(Boolean(enabled));
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('osc:set-allowed-sources', (_event, { sources }) => {
+    try {
+      return getOSCController().setAllowedSources(sources);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('osc:set-rate-limit', (_event, { rateLimit }) => {
+    try {
+      return getOSCController().setRateLimit(rateLimit);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('osc:set-duplicate-window', (_event, { duplicateWindowMs }) => {
+    try {
+      return getOSCController().setDuplicateWindow(duplicateWindowMs);
     } catch (error) {
       return { success: false, error: error.message };
     }

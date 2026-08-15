@@ -3,11 +3,15 @@ import test from 'node:test';
 import { createTimerSlice } from '../src/context/lyricsStore/timerSlice.js';
 import {
   MAX_TIMER_SETS,
+  getTimerDisplay,
   getTimerProgress,
   isTimerVisiblyActive,
   normalizeTimerControlSettings,
   normalizeTimerDisplaySettings,
   normalizeTimerState,
+  resetActiveTimerRuntime,
+  shouldShowGlobalClockDuringPause,
+  shouldShowGlobalTimeForManualScheduleItem,
 } from '../src/utils/timerUtils.js';
 
 function createTimerStoreHarness() {
@@ -121,36 +125,55 @@ test('overrun and paused timers remain visibly active', () => {
   }, startTime + durationMs + 1), true);
 });
 
-test('timer display defaults use smaller secondary item scale', () => {
-  const settings = normalizeTimerDisplaySettings({});
+test('reconciled overdue schedule items display overtime and remain visibly active', () => {
+  const state = {
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs: 60_000,
+    startTime: 1_000_000,
+    endTime: 1_060_000,
+    scheduleReconciliationHold: true,
+    overrunMode: false,
+  };
 
-  assert.equal(settings.otherItemsScale, 0.1);
-  assert.equal(settings.globalClockScale, 0.1);
+  assert.equal(getTimerDisplay(state, 1_090_000), '+0:30');
+  assert.equal(isTimerVisiblyActive(state, 1_090_000), true);
+  assert.equal(getTimerDisplay({
+    ...state,
+    paused: true,
+    endTime: null,
+    pausedRemainingMs: 0,
+    schedulePausedOverrunMs: 45_000,
+  }, 1_090_000), '+0:45');
 });
 
-test('untouched legacy timer display scale migrates to smaller default', () => {
-  const settings = normalizeTimerDisplaySettings({
+test('timer display scale normalization preserves defaults, migrations, and custom settings', () => {
+  const defaults = normalizeTimerDisplaySettings({});
+
+  assert.equal(defaults.otherItemsScale, 0.1);
+  assert.equal(defaults.globalClockScale, 0.1);
+
+  const untouchedLegacy = normalizeTimerDisplaySettings({
     otherItemsScale: 0.15,
     globalClockScale: 0.15,
     displayUpdatedAt: 0,
   });
 
-  assert.equal(settings.otherItemsScale, 0.1);
-  assert.equal(settings.globalClockScale, 0.1);
-});
+  assert.equal(untouchedLegacy.otherItemsScale, 0.1);
+  assert.equal(untouchedLegacy.globalClockScale, 0.1);
 
-test('custom legacy-sized timer display scale is preserved', () => {
-  const settings = normalizeTimerDisplaySettings({
+  const customLegacySized = normalizeTimerDisplaySettings({
     otherItemsScale: 0.15,
     globalClockScale: 0.15,
     displayUpdatedAt: 1_000_000,
   });
 
-  assert.equal(settings.otherItemsScale, 0.15);
-  assert.equal(settings.globalClockScale, 0.15);
-});
+  assert.equal(customLegacySized.otherItemsScale, 0.15);
+  assert.equal(customLegacySized.globalClockScale, 0.15);
 
-test('timer state display normalization migrates untouched legacy scale', () => {
   const state = normalizeTimerState({
     display: {
       otherItemsScale: 0.15,
@@ -181,7 +204,7 @@ test('timer display sync ignores equal timestamped settings', () => {
   assert.equal(store.getState().timerDisplaySettings, syncedSettingsRef);
 });
 
-test('timer control settings cap timer sets at ten', () => {
+test('timer control settings cap timer sets at the schedule limit', () => {
   const settings = normalizeTimerControlSettings({
     sets: Array.from({ length: MAX_TIMER_SETS + 2 }, (_, index) => ({
       id: `set-${index + 1}`,
@@ -194,7 +217,40 @@ test('timer control settings cap timer sets at ten', () => {
   assert.equal(settings.sets.at(-1).label, `Timer ${MAX_TIMER_SETS}`);
 });
 
-test('timer state normalization caps runtime timer sets at ten', () => {
+test('timer control settings preserve an empty schedule as a clean slate', () => {
+  assert.deepEqual(normalizeTimerControlSettings({}).sets, []);
+  assert.deepEqual(normalizeTimerControlSettings({ sets: [] }).sets, []);
+  assert.deepEqual(normalizeTimerControlSettings({
+    sets: [
+      { id: 'timer-set-1', label: 'Timer 1', durationMs: 300_000 },
+      { id: 'timer-set-2', label: 'Timer 2', durationMs: 300_000 },
+    ],
+  }).sets, []);
+});
+
+test('timer control settings preserve a valid optional schedule event start', () => {
+  assert.equal(normalizeTimerControlSettings({ scheduleEventStartTime: '09:30' }).scheduleEventStartTime, '09:30');
+  assert.equal(normalizeTimerControlSettings({ scheduleEventStartTime: '25:00' }).scheduleEventStartTime, '');
+  assert.equal(normalizeTimerControlSettings({ scheduleEventDate: '2026-07-22' }).scheduleEventDate, '2026-07-22');
+  assert.equal(normalizeTimerControlSettings({ scheduleEventDate: '2026-02-30' }).scheduleEventDate, '');
+});
+
+test('timer control settings preserve threshold ordering and unique schedule item ids', () => {
+  const settings = normalizeTimerControlSettings({
+    warningSeconds: 10,
+    criticalSeconds: 30,
+    sets: [
+      { id: 'same', label: 'First', durationMs: 60_000 },
+      { id: 'same', label: 'Second', durationMs: 60_000 },
+    ],
+  });
+
+  assert.equal(settings.warningSeconds, 10);
+  assert.equal(settings.criticalSeconds, 10);
+  assert.deepEqual(settings.sets.map((item) => item.id), ['same', 'same-2']);
+});
+
+test('timer state normalization caps runtime timer sets at the schedule limit', () => {
   const state = normalizeTimerState({
     activeSetIndex: MAX_TIMER_SETS + 4,
     sets: Array.from({ length: MAX_TIMER_SETS + 3 }, (_, index) => ({
@@ -206,4 +262,101 @@ test('timer state normalization caps runtime timer sets at ten', () => {
 
   assert.equal(state.sets.length, MAX_TIMER_SETS);
   assert.equal(state.activeSetIndex, MAX_TIMER_SETS - 1);
+});
+
+test('timer normalization preserves manual schedule items', () => {
+  const state = normalizeTimerState({
+    sets: [
+      { id: 'manual', label: 'Open ministry', durationMs: null, timed: false },
+    ],
+  });
+
+  assert.equal(state.sets.length, 1);
+  assert.equal(state.sets[0].timed, false);
+  assert.equal(state.sets[0].durationMs, null);
+});
+
+test('manual schedule items show global time by default and respect the schedule opt-out', () => {
+  const manualState = normalizeTimerState({
+    status: 'running',
+    running: true,
+    mode: 'countup',
+    phase: 'timer',
+    sets: [{ id: 'manual', label: 'Open ministry', durationMs: null, timed: false }],
+  });
+
+  assert.equal(manualState.scheduleShowGlobalTimeDuringManualItems, true);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem(manualState), true);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem({
+    ...manualState,
+    scheduleShowGlobalTimeDuringManualItems: false,
+  }), false);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem({
+    ...manualState,
+    phase: 'indicator',
+  }), false);
+  assert.equal(shouldShowGlobalTimeForManualScheduleItem({
+    ...manualState,
+    mode: 'countdown',
+    sets: [{ id: 'timed', label: 'Welcome', durationMs: 60_000, timed: true }],
+  }), false);
+});
+
+test('paused timers show the global clock only when the explicit option is enabled', () => {
+  const pausedTimer = normalizeTimerState({
+    status: 'paused',
+    running: true,
+    paused: true,
+    showGlobalClockDuringPause: true,
+  });
+
+  assert.equal(shouldShowGlobalClockDuringPause(pausedTimer), true);
+  assert.equal(shouldShowGlobalClockDuringPause({ ...pausedTimer, showGlobalClockDuringPause: false }), false);
+  assert.equal(shouldShowGlobalClockDuringPause({ ...pausedTimer, paused: false }), false);
+  assert.equal(shouldShowGlobalClockDuringPause({ ...pausedTimer, running: false }), false);
+});
+
+test('timer state normalization keeps runtime schedule fields internally consistent', () => {
+  const state = normalizeTimerState({
+    warningMs: 10_000,
+    criticalMs: 30_000,
+    activeSetIndex: 1.8,
+    scheduleEventStartTime: '09:30',
+    indicatorDurationMs: 0,
+    sets: [
+      { id: 'same', label: 'First', durationMs: 60_000 },
+      { id: 'same', label: 'Second', durationMs: 60_000 },
+    ],
+  });
+
+  assert.equal(state.criticalMs, 10_000);
+  assert.equal(state.activeSetIndex, 1);
+  assert.equal(state.scheduleEventStartTime, '09:30');
+  assert.equal(state.indicatorDurationMs, 0);
+  assert.deepEqual(state.sets.map((item) => item.id), ['same', 'same-2']);
+});
+
+test('active timer runtime is reset when hydrating a new app session', () => {
+  const startTime = 1_000_000;
+  const state = resetActiveTimerRuntime({
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    durationMs: 5 * 60_000,
+    startTime,
+    endTime: startTime + (5 * 60_000),
+    display: {
+      label: 'Service Timer',
+      displayUpdatedAt: 10,
+    },
+  });
+
+  assert.equal(state.status, 'idle');
+  assert.equal(state.running, false);
+  assert.equal(state.paused, false);
+  assert.equal(state.endTime, null);
+  assert.equal(state.remaining, null);
+  assert.equal(state.durationMs, 0);
+  assert.equal(state.display.label, 'Service Timer');
 });

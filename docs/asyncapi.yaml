@@ -4,7 +4,7 @@ asyncapi: 3.0.0
 
 info:
   title: LyricDisplay App Socket.IO API
-  version: 6.6.0
+  version: 6.8.1
   description: |
     Real-time control surface for LyricDisplay over Socket.IO. All connections must provide
     a JWT in the Socket.IO auth payload (`auth.token`), minted via `/api/auth/token`.
@@ -31,6 +31,10 @@ channels:
         $ref: '#/components/messages/requestSetlist'
       setlistAdd:
         $ref: '#/components/messages/setlistAdd'
+      setlistReplace:
+        $ref: '#/components/messages/setlistReplace'
+      setlistItemUpdate:
+        $ref: '#/components/messages/setlistItemUpdate'
       setlistRemove:
         $ref: '#/components/messages/setlistRemove'
       setlistLoad:
@@ -45,6 +49,10 @@ channels:
         $ref: '#/components/messages/outputToggle'
       individualOutputToggle:
         $ref: '#/components/messages/individualOutputToggle'
+      outputRemove:
+        $ref: '#/components/messages/outputRemove'
+      outputsRegister:
+        $ref: '#/components/messages/outputsRegister'
       lyricsLoad:
         $ref: '#/components/messages/lyricsLoad'
       lyricsTimestampsUpdate:
@@ -67,6 +75,14 @@ channels:
         $ref: '#/components/messages/lyricsDraftReject'
       autoplayStateUpdate:
         $ref: '#/components/messages/autoplayStateUpdate'
+      liveSafetySet:
+        $ref: '#/components/messages/liveSafetySet'
+      requestLiveSafetyState:
+        $ref: '#/components/messages/requestLiveSafetyState'
+      requestActionLog:
+        $ref: '#/components/messages/requestActionLog'
+      actionLogClear:
+        $ref: '#/components/messages/actionLogClear'
       heartbeat:
         $ref: '#/components/messages/heartbeat'
       disconnect:
@@ -137,6 +153,22 @@ channels:
         $ref: '#/components/messages/clientDisconnected'
       periodicStateSync:
         $ref: '#/components/messages/periodicStateSync'
+      outputsRegistry:
+        $ref: '#/components/messages/outputsRegistry'
+      outputRemoved:
+        $ref: '#/components/messages/outputRemoved'
+      outputUnavailable:
+        $ref: '#/components/messages/outputUnavailable'
+      liveSafetyUpdate:
+        $ref: '#/components/messages/liveSafetyUpdate'
+      liveSafetyBlocked:
+        $ref: '#/components/messages/liveSafetyBlocked'
+      actionLogSnapshot:
+        $ref: '#/components/messages/actionLogSnapshot'
+      actionLogUpdate:
+        $ref: '#/components/messages/actionLogUpdate'
+      lyricsParsingOptionsUpdate:
+        $ref: '#/components/messages/lyricsParsingOptionsUpdate'
 
 operations:
   clientEvents:
@@ -149,6 +181,8 @@ operations:
       - $ref: '#/channels/socketChannel/messages/splitNormalGroup'
       - $ref: '#/channels/socketChannel/messages/requestSetlist'
       - $ref: '#/channels/socketChannel/messages/setlistAdd'
+      - $ref: '#/channels/socketChannel/messages/setlistReplace'
+      - $ref: '#/channels/socketChannel/messages/setlistItemUpdate'
       - $ref: '#/channels/socketChannel/messages/setlistRemove'
       - $ref: '#/channels/socketChannel/messages/setlistLoad'
       - $ref: '#/channels/socketChannel/messages/setlistClear'
@@ -156,6 +190,8 @@ operations:
       - $ref: '#/channels/socketChannel/messages/lineUpdate'
       - $ref: '#/channels/socketChannel/messages/outputToggle'
       - $ref: '#/channels/socketChannel/messages/individualOutputToggle'
+      - $ref: '#/channels/socketChannel/messages/outputRemove'
+      - $ref: '#/channels/socketChannel/messages/outputsRegister'
       - $ref: '#/channels/socketChannel/messages/lyricsLoad'
       - $ref: '#/channels/socketChannel/messages/lyricsTimestampsUpdate'
       - $ref: '#/channels/socketChannel/messages/styleUpdate'
@@ -167,6 +203,10 @@ operations:
       - $ref: '#/channels/socketChannel/messages/lyricsDraftApprove'
       - $ref: '#/channels/socketChannel/messages/lyricsDraftReject'
       - $ref: '#/channels/socketChannel/messages/autoplayStateUpdate'
+      - $ref: '#/channels/socketChannel/messages/liveSafetySet'
+      - $ref: '#/channels/socketChannel/messages/requestLiveSafetyState'
+      - $ref: '#/channels/socketChannel/messages/requestActionLog'
+      - $ref: '#/channels/socketChannel/messages/actionLogClear'
       - $ref: '#/channels/socketChannel/messages/heartbeat'
       - $ref: '#/channels/socketChannel/messages/disconnect'
   
@@ -207,9 +247,67 @@ operations:
       - $ref: '#/channels/socketChannel/messages/heartbeat_ack'
       - $ref: '#/channels/socketChannel/messages/clientDisconnected'
       - $ref: '#/channels/socketChannel/messages/periodicStateSync'
+      - $ref: '#/channels/socketChannel/messages/outputsRegistry'
+      - $ref: '#/channels/socketChannel/messages/outputRemoved'
+      - $ref: '#/channels/socketChannel/messages/outputUnavailable'
+      - $ref: '#/channels/socketChannel/messages/liveSafetyUpdate'
+      - $ref: '#/channels/socketChannel/messages/liveSafetyBlocked'
+      - $ref: '#/channels/socketChannel/messages/actionLogSnapshot'
+      - $ref: '#/channels/socketChannel/messages/actionLogUpdate'
+      - $ref: '#/channels/socketChannel/messages/lyricsParsingOptionsUpdate'
 
 components:
   schemas:
+    LyricsGroupingConfig:
+      type: object
+      properties:
+        enableAutoLineGrouping:
+          type: boolean
+        enableTranslationGrouping:
+          type: boolean
+        maxLineLength:
+          type: integer
+          minimum: 20
+          maximum: 100
+        maxLinesPerGroup:
+          type: integer
+          minimum: 2
+          maximum: 12
+        enableCrossBlankLineGrouping:
+          type: boolean
+        structureTagMode:
+          type: string
+          enum: [isolate, strip, keep]
+    LyricsSplitConfig:
+      type: object
+      required: [TARGET_LENGTH, MIN_LENGTH, MAX_LENGTH, OVERFLOW_TOLERANCE]
+      properties:
+        TARGET_LENGTH:
+          type: integer
+          minimum: 20
+          maximum: 150
+        MIN_LENGTH:
+          type: integer
+          minimum: 20
+          maximum: 80
+        MAX_LENGTH:
+          type: integer
+          minimum: 50
+          maximum: 150
+        OVERFLOW_TOLERANCE:
+          type: integer
+          minimum: 5
+          maximum: 30
+    LyricsParsingOptions:
+      type: object
+      required: [enableSplitting, splitConfig, groupingConfig]
+      properties:
+        enableSplitting:
+          type: boolean
+        splitConfig:
+          $ref: '#/components/schemas/LyricsSplitConfig'
+        groupingConfig:
+          $ref: '#/components/schemas/LyricsGroupingConfig'
     LyricLine:
       oneOf:
         - type: string
@@ -284,7 +382,7 @@ components:
           type: integer
         fileType:
           type: string
-          enum: ['lrc', 'txt']
+          enum: ['lrc', 'txt', 'md', 'rtf', 'docx']
         metadata:
           type: object
           nullable: true
@@ -305,6 +403,38 @@ components:
               type: string
             sessionId:
               type: string
+
+    ActionLogEntry:
+      type: object
+      required: [id, type, label, actor, createdAt]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        label:
+          type: string
+        detail:
+          type: string
+        actor:
+          type: object
+          properties:
+            clientType:
+              type: string
+            deviceId:
+              type: string
+              nullable: true
+            sessionId:
+              type: string
+              nullable: true
+        target:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
+          type: integer
 
   messages:
     # Client -> Server
@@ -343,9 +473,45 @@ components:
       name: setlistAdd
       payload:
         type: array
+        maxItems: 100
         items:
           $ref: '#/components/schemas/SetlistItemInput'
-      description: Adds up to 50 items total; rejects duplicates by normalized name.
+      description: Adds up to 100 items total; rejects duplicates by normalized name.
+      x-permissions: ['setlist:write']
+    setlistReplace:
+      name: setlistReplace
+      payload:
+        type: object
+        required: [files]
+        properties:
+          files:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items:
+              $ref: '#/components/schemas/SetlistItemInput'
+      description: >
+        Validates the complete replacement before atomically replacing the live setlist.
+        The Socket.IO acknowledgement returns success, replacedCount, and totalCount,
+        or success false with an error. Recovery persistence is scoped to the current
+        Electron app session and is not restored after a normal app relaunch.
+      x-permissions: ['setlist:write', 'setlist:delete']
+    setlistItemUpdate:
+      name: setlistItemUpdate
+      payload:
+        type: object
+        required: [fileId, file]
+        properties:
+          fileId:
+            type: string
+            description: Stable ID of the setlist item to update in place.
+          file:
+            $ref: '#/components/schemas/SetlistItemInput'
+      description: >
+        Validates and updates one existing setlist item without changing its ID,
+        position, ownership, or added timestamp. The Socket.IO acknowledgement
+        returns the updated item on success. Non-admin clients may update only
+        items they added.
       x-permissions: ['setlist:write']
     setlistRemove:
       name: setlistRemove
@@ -387,10 +553,14 @@ components:
       name: lineUpdate
       payload:
         type: object
+        required: [index]
         properties:
           index:
-            type: integer
-            description: Index of the selected line
+            description: Zero-based index within the active lyrics, or null to clear the selection.
+            oneOf:
+              - type: integer
+                minimum: 0
+              - type: 'null'
       x-permissions: ['output:control']
     outputToggle:
       name: outputToggle
@@ -408,6 +578,31 @@ components:
           enabled:
             type: boolean
       x-permissions: ['output:control']
+    outputRemove:
+      name: outputRemove
+      payload:
+        type: object
+        required: [output]
+        properties:
+          output:
+            type: string
+            pattern: '^output'
+      description: Removes a custom output. Built-in output1 and output2 cannot be removed.
+      x-permissions: ['settings:write']
+    outputsRegister:
+      name: outputsRegister
+      payload:
+        type: object
+        required: [outputs]
+        properties:
+          outputs:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+              pattern: '^output'
+      description: Replaces the registered custom-output list while retaining built-in outputs.
+      x-permissions: ['settings:write']
     lyricsLoad:
       name: lyricsLoad
       payload:
@@ -438,10 +633,10 @@ components:
         properties:
           output:
             type: string
-            enum: ['output1', 'output2', 'stage']
+            enum: ['output1', 'output2', 'stage', 'preview']
           settings:
             type: object
-      description: Update styling for a specific output. Mirrors to all clients.
+      description: Update styling for a specific output or the Preview operator layout. Mirrors to relevant render clients.
       x-permissions: ['settings:write']
     stageTimerUpdate:
       name: stageTimerUpdate
@@ -473,7 +668,8 @@ components:
         properties:
           output:
             type: string
-            enum: ['output1', 'output2']
+            pattern: '^output'
+            description: Optional compatibility field; when present it must match the authenticated output client type.
           metrics:
             type: object
             properties:
@@ -489,10 +685,10 @@ components:
                 type: integer
       description: >
         Output instances publish autosizer and viewport metrics.
-        Only accepted from output1 or output2 client types (enforced by
-        client-type check, not permission scope).
+        Metrics are recorded under the authenticated output client type;
+        clients cannot publish metrics for another output.
       x-permissions: []
-      x-client-types: ['output1', 'output2']
+      x-client-types: ['output*']
     fileNameUpdate:
       name: fileNameUpdate
       payload:
@@ -502,49 +698,58 @@ components:
       name: lyricsDraftSubmit
       payload:
         type: object
+        required: [processedLines]
         properties:
           title:
             type: string
+            maxLength: 256
           rawText:
             type: string
           processedLines:
             type: array
+            maxItems: 10000
             items:
               $ref: '#/components/schemas/LyricLine'
-      description: Controllers submit drafts; desktop must approve.
+      description: Controllers submit bounded drafts; a desktop/admin client must approve them within ten minutes.
       x-permissions: ['lyrics:draft']
     lyricsDraftApprove:
       name: lyricsDraftApprove
       payload:
         type: object
+        required: [draftId, processedLines]
         properties:
           draftId:
             type: string
           title:
             type: string
+            maxLength: 256
           rawText:
             type: string
           processedLines:
             type: array
+            maxItems: 10000
             items:
               $ref: '#/components/schemas/LyricLine'
       description: |
         Desktop client approves a pending draft. On success the server emits
         lyricsLoad, fileNameUpdate, lyricsSectionsUpdate to all clients, and
         optionally setlistLoadSuccess (with origin 'draft') if rawText is present.
-      x-permissions: ['lyrics:write']
+      x-permissions: ['lyrics:draft:approve']
     lyricsDraftReject:
       name: lyricsDraftReject
       payload:
         type: object
+        required: [draftId]
         properties:
           draftId:
             type: string
           title:
             type: string
+            maxLength: 256
           reason:
             type: string
-      x-permissions: ['lyrics:write']
+            maxLength: 1000
+      x-permissions: ['lyrics:draft:approve']
     autoplayStateUpdate:
       name: autoplayStateUpdate
       payload:
@@ -558,6 +763,37 @@ components:
         Updates autoplay state. The server broadcasts this to all clients
         except the sender (socket.broadcast.emit).
       x-permissions: ['output:control']
+    liveSafetySet:
+      name: liveSafetySet
+      payload:
+        oneOf:
+          - type: boolean
+          - type: object
+            required: [enabled]
+            properties:
+              enabled:
+                type: boolean
+      x-permissions: ['admin:full']
+    requestLiveSafetyState:
+      name: requestLiveSafetyState
+      payload:
+        type: 'null'
+      x-permissions: ['lyrics:read']
+    requestActionLog:
+      name: requestActionLog
+      payload:
+        type: object
+        properties:
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 750
+      x-permissions: ['admin:full']
+    actionLogClear:
+      name: actionLogClear
+      payload:
+        type: 'null'
+      x-permissions: ['admin:full']
     heartbeat:
       name: heartbeat
       payload:
@@ -569,6 +805,70 @@ components:
         description: Reason for disconnection
 
     # Server -> Client
+    outputsRegistry:
+      name: outputsRegistry
+      payload:
+        type: object
+        required: [outputs]
+        properties:
+          outputs:
+            type: array
+            items:
+              type: string
+    outputRemoved:
+      name: outputRemoved
+      payload:
+        type: object
+        required: [output]
+        properties:
+          output:
+            type: string
+    outputUnavailable:
+      name: outputUnavailable
+      payload:
+        type: object
+        required: [output]
+        properties:
+          output:
+            type: string
+    liveSafetyUpdate:
+      name: liveSafetyUpdate
+      payload:
+        type: object
+        required: [enabled]
+        properties:
+          enabled:
+            type: boolean
+          updatedAt:
+            type: integer
+            nullable: true
+          updatedBy:
+            type: object
+            nullable: true
+    liveSafetyBlocked:
+      name: liveSafetyBlocked
+      payload:
+        type: object
+        properties:
+          action:
+            type: string
+          liveSafety:
+            $ref: '#/components/messages/liveSafetyUpdate/payload'
+    actionLogSnapshot:
+      name: actionLogSnapshot
+      payload:
+        type: array
+        maxItems: 750
+        items:
+          $ref: '#/components/schemas/ActionLogEntry'
+    actionLogUpdate:
+      name: actionLogUpdate
+      payload:
+        $ref: '#/components/schemas/ActionLogEntry'
+    lyricsParsingOptionsUpdate:
+      name: lyricsParsingOptionsUpdate
+      payload:
+        $ref: '#/components/schemas/LyricsParsingOptions'
     authError:
       name: authError
       payload:
@@ -614,12 +914,24 @@ components:
             type: boolean
           lyricsFileName:
             type: string
+          lyricsParsingOptions:
+            $ref: '#/components/schemas/LyricsParsingOptions'
           isDesktopClient:
             type: boolean
           clientPermissions:
             type: array
             items:
               type: string
+          sessionAuthority:
+            type: object
+            description: Server session ownership metadata used during reconnect reconciliation.
+            properties:
+              source:
+                type: string
+                enum: [new, restored]
+              bootstrapAllowed:
+                type: boolean
+                description: True only until a new server session receives its first authoritative mutation.
           timestamp:
             type: integer
           syncTimestamp:

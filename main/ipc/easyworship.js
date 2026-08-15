@@ -1,5 +1,6 @@
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import * as easyWorship from '../easyWorship.js';
+import { addFileNavigatorRoot, refreshFileInNavigator } from '../fileNavigator.js';
 
 /**
  * Register EasyWorship import IPC handlers
@@ -38,7 +39,16 @@ export function registerEasyWorshipHandlers({ getMainWindow }) {
 
   ipcMain.handle('easyworship:import-song', async (_event, params) => {
     try {
-      return await easyWorship.importSong(params);
+      const result = await easyWorship.importSong(params);
+      if (result.success && result.filePath) {
+        try {
+          await addFileNavigatorRoot(params.destinationPath);
+          await refreshFileInNavigator(result.filePath);
+        } catch (indexError) {
+          console.warn('EasyWorship lyrics were imported but the destination could not be indexed:', indexError?.message || indexError);
+        }
+      }
+      return result;
     } catch (error) {
       console.error('Error importing song:', error);
       return { success: false, error: error.message };
@@ -58,7 +68,11 @@ export function registerEasyWorshipHandlers({ getMainWindow }) {
   ipcMain.handle('easyworship:get-user-home', async () => {
     try {
       const os = await import('os');
-      return { success: true, homedir: os.homedir() };
+      return {
+        success: true,
+        homedir: os.homedir(),
+        documentsPath: app.getPath('documents'),
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }

@@ -42,32 +42,32 @@ export default function ShortcutsHelpBridge() {
 
 function ShortcutsList({ darkMode }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+    <div className="grid grid-cols-1 gap-x-6 gap-y-4 text-xs md:grid-cols-2">
       {SHORTCUTS.map(({ category, items }) => (
         <div
           key={category}
-          className={`rounded-xl border p-4 ${darkMode
+          className={`rounded-xl border p-3.5 ${darkMode
             ? 'bg-gray-800/30 border-gray-700/50'
             : 'bg-gray-50/50 border-gray-200'
             }`}
         >
-          <h3 className={`text-xs font-bold uppercase tracking-wider mb-3 pb-2 border-b ${darkMode
+          <h3 className={`mb-2.5 border-b pb-1.5 text-[10px] font-bold uppercase tracking-wider ${darkMode
             ? 'text-blue-400 border-gray-700'
             : 'text-blue-600 border-gray-200'
             }`}>
             {category}
           </h3>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {items.map(({ label, combo }) => (
               <div
-                key={combo}
-                className="flex items-center justify-between gap-4"
+                key={`${label}-${combo}`}
+                className="flex items-center justify-between gap-3"
               >
-                <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                <span className={`text-xs leading-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'
                   }`}>
                   {label}
                 </span>
-                <kbd className={`inline-flex items-center px-2.5 py-1 text-xs font-mono font-semibold rounded-md border shadow-sm whitespace-nowrap ${darkMode
+                <kbd className={`inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 font-mono text-[10px] font-semibold leading-4 shadow-sm ${darkMode
                   ? 'bg-gray-900 text-blue-300 border-gray-600'
                   : 'bg-white text-gray-700 border-gray-300'
                   }`}>

@@ -105,7 +105,7 @@ test('calculateRelevanceScore returns normalized bounded scores', () => {
     analysis,
   );
   const weak = calculateRelevanceScore(
-    { provider: 'chartlyrics', title: 'Oceans', artist: 'Hillsong United' },
+    { provider: 'lyricsOvh', title: 'Oceans', artist: 'Hillsong United' },
     analysis,
   );
 
@@ -115,11 +115,11 @@ test('calculateRelevanceScore returns normalized bounded scores', () => {
   assert.equal(exact.isExact, true);
 });
 
-test('mergeResults treats ChartLyrics as lower-trust when relevance is otherwise tied', () => {
+test('mergeResults prefers higher-trust providers when relevance is otherwise tied', () => {
   const chunks = [{
     provider: { id: 'mock', displayName: 'Mock' },
     results: [
-      { provider: 'chartlyrics', title: 'Way Maker', artist: 'Sinach' },
+      { provider: 'lyricsOvh', title: 'Way Maker', artist: 'Sinach' },
       { provider: 'lrclib', title: 'Way Maker', artist: 'Sinach' },
     ],
   }];
@@ -138,7 +138,7 @@ test('mergeResults publishes bounded ranking diagnostics in merge metadata', () 
       { provider: 'lrclib', title: 'Way Maker', artist: 'Sinach' },
       { provider: 'lyricsOvh', title: 'Waymaker', artist: 'Sinach' },
       { provider: 'openHymnal', title: 'Amazing Grace', artist: 'John Newton' },
-      { provider: 'chartlyrics', title: 'Oceans', artist: 'Hillsong United' },
+      { provider: 'lyricsOvh', title: 'Oceans', artist: 'Hillsong United' },
       { provider: 'lrclib', title: 'Jireh', artist: 'Elevation Worship' },
     ],
   }];
@@ -189,6 +189,38 @@ test('mergeResults keeps same-title covers as distinct results', () => {
   const results = mergeResults(chunks, { query: 'Way Maker', limit: 5 });
 
   assert.equal(results.length, 2);
+});
+
+test('mergeResults promotes explicit lyric text matches above unrelated metadata matches', () => {
+  const chunks = [{
+    provider: { id: 'mock', displayName: 'Mock' },
+    results: [
+      {
+        provider: 'lrclib',
+        title: 'Sunshine in My Soul',
+        artist: 'The Mormon Tabernacle Choir',
+        snippet: 'Then Sings My Soul - 3:33',
+      },
+      {
+        provider: 'openHymnal',
+        title: 'How Great Thou Art',
+        artist: 'Stuart K. Hine',
+        snippet: 'Then sings my soul, my Savior God, to thee; how great thou art',
+        metadata: {
+          searchMatch: {
+            field: 'lyrics',
+            score: 1,
+            exactPhrase: true,
+          },
+        },
+      },
+    ],
+  }];
+
+  const [top] = mergeResults(chunks, { query: 'Then sings my soul', limit: 2 });
+
+  assert.equal(top.provider, 'openHymnal');
+  assert.equal(top.title, 'How Great Thou Art');
 });
 
 test('mergeResults prefers requested live versions over studio versions', () => {

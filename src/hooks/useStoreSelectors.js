@@ -12,10 +12,13 @@ export const useLyricsState = () =>
             lyrics: state.lyrics,
             rawLyricsContent: state.rawLyricsContent,
             selectedLine: state.selectedLine,
+            previewLine: state.previewLine,
+            lineStateClearRevision: state.lineStateClearRevision,
             lyricsFileName: state.lyricsFileName,
             lyricsSource: state.lyricsSource,
             songMetadata: state.songMetadata,
             lyricsTimestamps: state.lyricsTimestamps,
+            lyricsEnhancedTimestamps: state.lyricsEnhancedTimestamps,
             lyricsSections: state.lyricsSections,
             lineToSection: state.lineToSection,
             pendingSavedVersion: state.pendingSavedVersion,
@@ -27,7 +30,9 @@ export const useLyricsState = () =>
             setLyricsSource: state.setLyricsSource,
             setSongMetadata: state.setSongMetadata,
             setLyricsTimestamps: state.setLyricsTimestamps,
+            setLyricsEnhancedTimestamps: state.setLyricsEnhancedTimestamps,
             selectLine: state.selectLine,
+            setPreviewLine: state.setPreviewLine,
             setPendingSavedVersion: state.setPendingSavedVersion,
             clearPendingSavedVersion: state.clearPendingSavedVersion,
         }),
@@ -114,6 +119,9 @@ export const useKeyboardNavigationPreferences = () =>
 
 export const useCanvasFloatingToolbarPreference = () =>
     useLyricsStore((state) => state.showCanvasFloatingToolbar);
+
+export const usePreviewSettings = () =>
+    useLyricsStore((state) => state.previewSettings);
 
 export const useSetlistState = () =>
     useStoreWithEqualityFn(

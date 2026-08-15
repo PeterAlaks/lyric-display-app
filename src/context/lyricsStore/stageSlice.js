@@ -2,6 +2,7 @@ export const defaultStageSettings = {
   fontStyle: 'Bebas Neue',
   backgroundColor: '#000000',
   backgroundPaint: { type: 'solid', color: '#000000' },
+  clearEmptyLyricsScreen: false,
   liveFontSize: 120,
   liveColor: '#FFFFFF',
   liveBold: true,
@@ -52,6 +53,17 @@ export const defaultStageSettings = {
   transitionAnimation: 'slide',
   transitionSpeed: 300
 };
+
+export const hasSelectedStageLyricLine = (selectedLine, lyricCount) => (
+  Number.isInteger(selectedLine)
+  && selectedLine >= 0
+  && selectedLine < lyricCount
+);
+
+export const shouldClearStageIdleScreen = (clearEmptyLyricsScreen, selectedLine, lyricCount) => (
+  Boolean(clearEmptyLyricsScreen)
+  && !hasSelectedStageLyricLine(selectedLine, lyricCount)
+);
 
 export const createStageSlice = (set) => ({
   stageEnabled: true,

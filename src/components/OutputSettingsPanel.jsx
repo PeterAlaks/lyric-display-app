@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { useDarkModeState, useOutput1Settings, useOutput2Settings, useOutputSettings as useOutputSettingsSelector, useStageSettings, useIndividualOutputState, useOutputEnabled, useSetOutputEnabledAction } from '../hooks/useStoreSelectors';
+import { useDarkModeState, useOutputSettings as useOutputSettingsSelector, useStageSettings, useIndividualOutputState, useOutputEnabled, useSetOutputEnabledAction } from '../hooks/useStoreSelectors';
 import { useOptionalControlSocket } from '../context/ControlSocketProvider';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ import useAdvancedSectionPersistence from '../hooks/OutputSettingsPanel/useAdvan
 import useTypographyAndBands from '../hooks/OutputSettingsPanel/useTypographyAndBands';
 import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenModeState';
 import useFullscreenElementMedia from '../hooks/OutputSettingsPanel/useFullscreenElementMedia';
-import useFullscreenAdvancedAutoExpand from '../hooks/OutputSettingsPanel/useFullscreenAdvancedAutoExpand';
 import { Clock, Sparkles, Type, PaintBucket, Square, Move, AlignVerticalSpaceAround, TextAlignJustify, SquareMenu, User, X } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
@@ -26,11 +25,11 @@ import FullscreenSettingsSection from './OutputSettingsPanel/FullscreenSettingsS
 import PanelHeaderActions from './OutputSettingsPanel/PanelHeaderActions';
 import TransitionSettingsSection from './OutputSettingsPanel/TransitionSettingsSection';
 import TypographySpacingSection from './OutputSettingsPanel/TypographySpacingSection';
-import { blurInputOnEnter, AdvancedToggle, LabelWithIcon, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
+import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 import { outputTemplates } from '../utils/outputTemplates';
 
-const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true, darkMode }) => (
+const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
   <div className="flex items-center justify-between gap-4">
     <Tooltip content={tooltip} side="right">
       <div className="flex items-center gap-2 min-w-[140px]">
@@ -38,7 +37,7 @@ const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex ite
         <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
       </div>
     </Tooltip>
-    <div className={`${rightClassName} ${justifyEnd ? '' : ''}`}>
+    <div className={rightClassName}>
       {children}
     </div>
   </div>
@@ -48,7 +47,6 @@ const LyricsPositionSection = ({
   darkMode,
   lyricsPositionValue,
   handleLyricsPositionChange,
-  fullScreenModeChecked
 }) => (
   <SettingRow
     icon={AlignVerticalSpaceAround}
@@ -507,12 +505,11 @@ const OutputSettingsPanel = ({
     fullScreenBackgroundColorValue,
     fullScreenBackgroundPaintValue,
     backgroundDisabledTooltip,
-    fullScreenOptionsWrapperClass,
     handleLyricsPositionChange,
     handleFullScreenToggle,
     handleFullScreenBackgroundTypeChange,
     handleFullScreenPaintChange
-  } = useFullscreenModeState({ settings, applySettings, expand: fullScreenAdvancedExpanded });
+  } = useFullscreenModeState({ settings, applySettings });
 
   const {
     translationFontSizeMode,
@@ -547,17 +544,15 @@ const OutputSettingsPanel = ({
     showToast,
   });
 
-  const {
-    fullScreenAdvancedRef,
-    fullScreenAdvancedVisible,
-    fullScreenControlsDisabled,
-    handleFullScreenToggleWithExpand,
-  } = useFullscreenAdvancedAutoExpand({
-    fullScreenAdvancedExpanded,
-    fullScreenModeChecked,
-    handleFullScreenToggle,
-    setFullScreenAdvancedExpanded,
-  });
+  React.useEffect(() => {
+    if (!fullScreenModeChecked && !fullScreenAdvancedExpanded) {
+      setFullScreenAdvancedExpanded(true);
+    }
+  }, [fullScreenAdvancedExpanded, fullScreenModeChecked, setFullScreenAdvancedExpanded]);
+
+  const handleFullScreenHeaderToggle = React.useCallback((checked) => {
+    handleFullScreenToggle(checked);
+  }, [handleFullScreenToggle]);
 
   const applyDockTemplateSettings = React.useCallback((templateSettings, sourceLabel = 'Template') => {
     const sanitized = sanitizeDockTemplateSettings(templateSettings);
@@ -1155,38 +1150,53 @@ const OutputSettingsPanel = ({
     );
   }
 
-  const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', justifyEnd = true }) => (
-    <div className="flex items-center justify-between gap-4">
-      <Tooltip content={tooltip} side="right">
-        <LabelWithIcon icon={icon} text={label} darkMode={darkMode} />
-      </Tooltip>
-      <div className={`${rightClassName} ${justifyEnd ? '' : ''}`}>
-        {children}
-      </div>
-    </div>
-  );
-
   return (
     <div className="output-settings-panel space-y-4" onKeyDown={blurInputOnEnter}>
-      <PanelHeaderActions
-        applySettings={applySettings}
-        darkMode={darkMode}
-        hideLiveActions={localMode}
-        handleToggleOutput={handleToggleOutput}
-        isOutputEnabled={isOutputEnabled}
-        onDeleteOutput={onDeleteOutput}
-        outputKey={outputKey}
-        title={title}
-        settings={settings}
-        showModal={showModal}
-        showToast={showToast}
-      />
+      <div>
+        <PanelHeaderActions
+          applySettings={applySettings}
+          darkMode={darkMode}
+          hideLiveActions={localMode}
+          handleToggleOutput={handleToggleOutput}
+          handleFullScreenToggle={handleFullScreenHeaderToggle}
+          fullScreenModeChecked={fullScreenModeChecked}
+          isOutputEnabled={isOutputEnabled}
+          onDeleteOutput={onDeleteOutput}
+          outputKey={outputKey}
+          title={title}
+          settings={settings}
+          showModal={showModal}
+          showToast={showToast}
+        />
+        <AdvancedCollapse expanded={fullScreenModeChecked} openMarginTop={16}>
+          <div>
+            <FullscreenSettingsSection
+              darkMode={darkMode}
+              fullScreenAdvancedExpanded={fullScreenAdvancedExpanded}
+              setFullScreenAdvancedExpanded={setFullScreenAdvancedExpanded}
+              fullScreenBackgroundTypeValue={fullScreenBackgroundTypeValue}
+              handleFullScreenBackgroundTypeChange={handleFullScreenBackgroundTypeChange}
+              fullScreenBackgroundColorValue={fullScreenBackgroundColorValue}
+              fullScreenBackgroundPaintValue={fullScreenBackgroundPaintValue}
+              handleFullScreenPaintChange={handleFullScreenPaintChange}
+              openMediaLibrary={openMediaLibrary}
+              hasBackgroundMedia={hasBackgroundMedia}
+              uploadedMediaName={uploadedMediaName}
+              settings={settings}
+              update={update}
+              openFullScreenElementMediaLibrary={openFullScreenElementMediaLibrary}
+              hasFullScreenElementMedia={hasFullScreenElementMedia}
+              fullScreenElementMediaName={fullScreenElementMediaName}
+              handleFullScreenElementToggle={handleFullScreenElementToggle}
+            />
+          </div>
+        </AdvancedCollapse>
+      </div>
       {/* Lyrics Position */}
       <LyricsPositionSection
         darkMode={darkMode}
         lyricsPositionValue={lyricsPositionValue}
         handleLyricsPositionChange={handleLyricsPositionChange}
-        fullScreenModeChecked={fullScreenModeChecked}
       />
 
       {/* Font Picker */}
@@ -1209,35 +1219,30 @@ const OutputSettingsPanel = ({
         translationFontSizeMode={translationFontSizeMode}
         update={update}
       />
-      {/* Font Color */}
-      <FontColorSection
-        darkMode={darkMode}
-        fontColor={settings.fontColor}
-        onChange={(val) => update('fontColor', val)}
-        fontColorAdvancedExpanded={fontColorAdvancedExpanded}
-        setFontColorAdvancedExpanded={setFontColorAdvancedExpanded}
-      />
+      <div>
+        {/* Font Color */}
+        <FontColorSection
+          darkMode={darkMode}
+          fontColor={settings.fontColor}
+          onChange={(val) => update('fontColor', val)}
+          fontColorAdvancedExpanded={fontColorAdvancedExpanded}
+          setFontColorAdvancedExpanded={setFontColorAdvancedExpanded}
+        />
 
-      {/* Font Color Advanced Settings Row */}
-      <div
-        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${fontColorAdvancedExpanded
-          ? 'max-h-20 opacity-100 translate-y-0 pointer-events-auto mt-1'
-          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-          }`}
-        aria-hidden={!fontColorAdvancedExpanded}
-        style={{ marginTop: fontColorAdvancedExpanded ? undefined : 0 }}
-      >
-        <div className="flex items-center justify-between w-full">
-          <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-            Translation Colour
-          </label>
-          <ColorPicker
-            value={translationLineColor}
-            onChange={(val) => update('translationLineColor', val)}
-            darkMode={darkMode}
-            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
-          />
-        </div>
+        {/* Font Color Advanced Settings Row */}
+        <AdvancedCollapse expanded={fontColorAdvancedExpanded}>
+          <div className="flex items-center justify-between w-full">
+            <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+              Translation Colour
+            </label>
+            <ColorPicker
+              value={translationLineColor}
+              onChange={(val) => update('translationLineColor', val)}
+              darkMode={darkMode}
+              className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
+            />
+          </div>
+        </AdvancedCollapse>
       </div>
 
       {/* Bold / Italic / Underline / All Caps */}
@@ -1278,34 +1283,36 @@ const OutputSettingsPanel = ({
         settings={settings}
         update={update}
       />
-      {/* Background */}
-      <BackgroundSection
-        applySettings={applySettings}
-        darkMode={darkMode}
-        settings={settings}
-        update={update}
-        backgroundAdvancedExpanded={backgroundAdvancedExpanded}
-        setBackgroundAdvancedExpanded={setBackgroundAdvancedExpanded}
-        fullScreenModeChecked={fullScreenModeChecked}
-        backgroundDisabledTooltip={backgroundDisabledTooltip}
-      />
+      <div>
+        {/* Background */}
+        <BackgroundSection
+          applySettings={applySettings}
+          darkMode={darkMode}
+          settings={settings}
+          update={update}
+          backgroundAdvancedExpanded={backgroundAdvancedExpanded}
+          setBackgroundAdvancedExpanded={setBackgroundAdvancedExpanded}
+          fullScreenModeChecked={fullScreenModeChecked}
+          backgroundDisabledTooltip={backgroundDisabledTooltip}
+        />
 
-      <BackgroundBandSettingsSection
-        applySettings={applySettings}
-        backgroundAdvancedExpanded={backgroundAdvancedExpanded}
-        backgroundBandCustomLines={backgroundBandCustomLines}
-        backgroundBandHeightMode={backgroundBandHeightMode}
-        backgroundBandLockedToMaxLines={backgroundBandLockedToMaxLines}
-        backgroundBandVerticalPadding={backgroundBandVerticalPadding}
-        darkMode={darkMode}
-        fullScreenModeChecked={fullScreenModeChecked}
-        handleBackgroundHeightModeChange={handleBackgroundHeightModeChange}
-        handleCustomLinesChange={handleCustomLinesChange}
-        maxLinesEnabled={maxLinesEnabled}
-        maxLinesValue={maxLinesValue}
-        settings={settings}
-        update={update}
-      />
+        <BackgroundBandSettingsSection
+          applySettings={applySettings}
+          backgroundAdvancedExpanded={backgroundAdvancedExpanded}
+          backgroundBandCustomLines={backgroundBandCustomLines}
+          backgroundBandHeightMode={backgroundBandHeightMode}
+          backgroundBandLockedToMaxLines={backgroundBandLockedToMaxLines}
+          backgroundBandVerticalPadding={backgroundBandVerticalPadding}
+          darkMode={darkMode}
+          fullScreenModeChecked={fullScreenModeChecked}
+          handleBackgroundHeightModeChange={handleBackgroundHeightModeChange}
+          handleCustomLinesChange={handleCustomLinesChange}
+          maxLinesEnabled={maxLinesEnabled}
+          maxLinesValue={maxLinesValue}
+          settings={settings}
+          update={update}
+        />
+      </div>
       {/* X and Y Margins */}
       <MarginsSection
         darkMode={darkMode}
@@ -1320,32 +1327,6 @@ const OutputSettingsPanel = ({
         transitionAdvancedExpanded={transitionAdvancedExpanded}
         update={update}
       />
-      <FullscreenSettingsSection
-        darkMode={darkMode}
-        fullScreenAdvancedExpanded={fullScreenAdvancedExpanded}
-        setFullScreenAdvancedExpanded={setFullScreenAdvancedExpanded}
-        fullScreenModeChecked={fullScreenModeChecked}
-        handleFullScreenToggleWithExpand={handleFullScreenToggleWithExpand}
-        fullScreenAdvancedRef={fullScreenAdvancedRef}
-        fullScreenOptionsWrapperClass={fullScreenOptionsWrapperClass}
-        fullScreenAdvancedVisible={fullScreenAdvancedVisible}
-        fullScreenControlsDisabled={fullScreenControlsDisabled}
-        fullScreenBackgroundTypeValue={fullScreenBackgroundTypeValue}
-        handleFullScreenBackgroundTypeChange={handleFullScreenBackgroundTypeChange}
-        fullScreenBackgroundColorValue={fullScreenBackgroundColorValue}
-        fullScreenBackgroundPaintValue={fullScreenBackgroundPaintValue}
-        handleFullScreenPaintChange={handleFullScreenPaintChange}
-        openMediaLibrary={openMediaLibrary}
-        hasBackgroundMedia={hasBackgroundMedia}
-        uploadedMediaName={uploadedMediaName}
-        settings={settings}
-        update={update}
-        openFullScreenElementMediaLibrary={openFullScreenElementMediaLibrary}
-        hasFullScreenElementMedia={hasFullScreenElementMedia}
-        fullScreenElementMediaName={fullScreenElementMediaName}
-        handleFullScreenElementToggle={handleFullScreenElementToggle}
-      />
-
     </div>
   );
 };

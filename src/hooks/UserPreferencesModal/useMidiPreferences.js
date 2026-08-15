@@ -4,7 +4,6 @@ export const useMidiPreferences = ({ midiStatus, setMidiStatus, showToast, updat
   const [midiLearnActive, setMidiLearnActive] = useState(false);
   const [midiRefreshing, setMidiRefreshing] = useState(false);
   const [lastLearnedMidi, setLastLearnedMidi] = useState(null);
-  const [midiMappingsExpanded, setMidiMappingsExpanded] = useState(false);
   const [midiAssigningAction, setMidiAssigningAction] = useState(null);
 
   const handleMidiRefreshPorts = useCallback(async () => {
@@ -168,8 +167,6 @@ export const useMidiPreferences = ({ midiStatus, setMidiStatus, showToast, updat
     lastLearnedMidi,
     midiAssigningAction,
     midiLearnActive,
-    midiMappingsExpanded,
     midiRefreshing,
-    setMidiMappingsExpanded,
   };
 };

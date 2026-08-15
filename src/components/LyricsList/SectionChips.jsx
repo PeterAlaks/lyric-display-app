@@ -1,5 +1,5 @@
 import React from 'react';
-import { getCleanSectionLabel } from '../../../shared/lyricsParsing.js';
+import { getCleanSectionLabel } from '../../../shared/lyricsParsing/structureTags.js';
 
 export default function SectionChips({
   darkMode,

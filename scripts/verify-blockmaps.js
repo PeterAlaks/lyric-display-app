@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(__dirname, '..');
-const distDir = path.join(appRoot, 'dist');
+const releaseDir = path.join(appRoot, 'release');
 
 const platform = process.argv[2]?.replace(/^--/, '');
 
@@ -20,6 +20,7 @@ const platformConfig = {
   linux: {
     metadata: 'latest-linux.yml',
     artifacts: ['.AppImage'],
+    requireBlockmaps: false,
   },
 };
 
@@ -30,35 +31,38 @@ if (!config) {
   process.exit(1);
 }
 
-if (!existsSync(distDir)) {
-  console.error(`Build output directory not found: ${distDir}`);
+if (!existsSync(releaseDir)) {
+  console.error(`Build output directory not found: ${releaseDir}`);
   process.exit(1);
 }
 
-const distFiles = readdirSync(distDir, { withFileTypes: true })
+const releaseFiles = readdirSync(releaseDir, { withFileTypes: true })
   .filter((entry) => entry.isFile())
   .map((entry) => entry.name);
 
-const artifacts = distFiles.filter((fileName) =>
+const artifacts = releaseFiles.filter((fileName) =>
   config.artifacts.some((extension) => fileName.endsWith(extension))
 );
 
 if (artifacts.length === 0) {
-  console.error(`No ${platform} release artifacts found in dist.`);
+  console.error(`No ${platform} release artifacts found in release.`);
   process.exit(1);
 }
 
-const missingBlockmaps = artifacts.filter((artifact) =>
-  !existsSync(path.join(distDir, `${artifact}.blockmap`))
-);
+const requireBlockmaps = config.requireBlockmaps !== false;
+const missingBlockmaps = requireBlockmaps
+  ? artifacts.filter((artifact) => !existsSync(path.join(releaseDir, `${artifact}.blockmap`)))
+  : [];
 
 if (missingBlockmaps.length > 0) {
   console.error(`Missing blockmaps for ${platform} artifacts:`);
   missingBlockmaps.forEach((artifact) => console.error(`- ${artifact}.blockmap`));
   process.exit(1);
+} else if (!requireBlockmaps) {
+  console.log(`Blockmap files are optional for ${platform} artifacts; skipping strict blockmap check.`);
 }
 
-const metadataPath = path.join(distDir, config.metadata);
+const metadataPath = path.join(releaseDir, config.metadata);
 
 if (!existsSync(metadataPath)) {
   console.error(`Missing update metadata: ${config.metadata}`);

@@ -1,6 +1,5 @@
-import React from 'react';
+import { Check, ChevronRight, Music, Radio, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Check, Loader2, Music, Radio, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -8,72 +7,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const ExternalControlPreferencesSection = ({
   darkMode,
-  handleMidiAssignAction,
-  handleMidiLearn,
   handleMidiRefreshPorts,
-  handleMidiResetMappings,
   handleMidiSelectPort,
   handleMidiToggle,
   handleOscFeedbackPortChange,
   handleOscFeedbackToggle,
+  handleOscAllowedSourcesChange,
   handleOscPortChange,
+  handleOscRateLimitChange,
+  handleOscRemoteAccessToggle,
   handleOscToggle,
+  getNumberPreferenceInputProps,
   inputClass,
   labelClass,
-  lastLearnedMidi,
-  midiAssigningAction,
-  midiLearnActive,
-  midiMappingsExpanded,
   midiRefreshing,
   midiStatus,
   mutedClass,
+  onOpenMidiMappings,
   oscStatus,
   preferenceFieldLabelClass,
-  setMidiMappingsExpanded,
 }) => {
   const { t } = useTranslation();
-  const noteEntries = Object.entries(midiStatus?.mappings?.notes || {})
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([note, mapping]) => ({
-      type: 'NOTE',
-      key: note,
-      mapping
-    }));
-
-  const ccEntries = Object.entries(midiStatus?.mappings?.controlChanges || {})
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([cc, mapping]) => ({
-      type: 'CC',
-      key: cc,
-      mapping
-    }));
-
-  const allEntries = [...noteEntries, ...ccEntries];
-  const visibleEntries = midiMappingsExpanded ? allEntries : allEntries.slice(0, 5);
-  const hiddenCount = Math.max(0, allEntries.length - visibleEntries.length);
-  const quickAssignActions = [
-    ['prev-line', t('preferences.externalControl.midi.quickAssign.actions.previousLine')],
-    ['next-line', t('preferences.externalControl.midi.quickAssign.actions.nextLine')],
-    ['toggle-output', t('preferences.externalControl.midi.quickAssign.actions.toggleOutput')],
-    ['clear-output', t('preferences.externalControl.midi.quickAssign.actions.clearOutput')],
-  ];
-
-  const formatLastLearnedMidi = () => {
-    if (!lastLearnedMidi) return '';
-    const channel = ((lastLearnedMidi.channel ?? 0) + 1);
-    if (lastLearnedMidi.type === 'note') {
-      return t('preferences.externalControl.midi.noteLastLearned', {
-        note: lastLearnedMidi.note,
-        velocity: lastLearnedMidi.velocity ?? '--',
-        channel,
-      });
-    }
-    return t('preferences.externalControl.midi.ccLastLearned', {
-      controller: lastLearnedMidi.controller,
-      value: lastLearnedMidi.value ?? '--',
-      channel,
-    });
-  };
+  const selectContentClass = darkMode
+    ? 'bg-gray-700 border-gray-600 text-gray-200'
+    : 'bg-white border-gray-300';
+  const midiMappingCount = Object.keys(midiStatus?.mappings?.notes || {}).length
+    + Object.keys(midiStatus?.mappings?.controlChanges || {}).length;
 
   return (
     <div className="space-y-6">
@@ -127,7 +86,7 @@ const ExternalControlPreferencesSection = ({
                 <SelectTrigger className={inputClass}>
                   <SelectValue placeholder={t('preferences.externalControl.midi.selectDevicePlaceholder')} />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   <SelectItem value="-1">{t('preferences.externalControl.midi.none')}</SelectItem>
                   {midiStatus?.availablePorts?.map((port) => (
                     <SelectItem key={port.index} value={String(port.index)}>
@@ -138,134 +97,19 @@ const ExternalControlPreferencesSection = ({
               </Select>
             </div>
 
-            <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-white'}`}>
-              <div className={`px-3 py-2 flex items-center justify-between gap-3 ${darkMode ? 'bg-gray-800/60 border-b border-gray-700' : 'bg-gray-50 border-b border-gray-200'}`}>
-                <p className={`text-xs font-semibold tracking-wide ${labelClass}`}>{t('preferences.externalControl.midi.mappings')}</p>
-                <div className="flex items-center gap-2 shrink-0">
-                  {lastLearnedMidi && (
-                    <span className={`text-[11px] ${mutedClass}`}>
-                      {t('preferences.externalControl.midi.lastLearned', { value: formatLastLearnedMidi() })}
-                    </span>
-                  )}
-
-                  {hiddenCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setMidiMappingsExpanded(true)}
-                      className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
-                    >
-                      {t('preferences.externalControl.midi.expand', { count: hiddenCount })}
-                    </Button>
-                  )}
-
-                  {midiMappingsExpanded && allEntries.length > 5 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setMidiMappingsExpanded(false)}
-                      className={darkMode ? 'text-gray-300 hover:bg-gray-700/60 hover:text-gray-100' : ''}
-                    >
-                      {t('preferences.externalControl.midi.collapse')}
-                    </Button>
-                  )}
-                </div>
+            <button
+              type="button"
+              onClick={onOpenMidiMappings}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label={`Manage ${midiMappingCount} MIDI ${midiMappingCount === 1 ? 'mapping' : 'mappings'}`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>{t('preferences.externalControl.midi.mappings')}</span>
+                <p className={`text-xs ${mutedClass}`}>View mappings and assign actions to MIDI controls</p>
               </div>
-
-              <div className={`grid grid-cols-12 gap-0 text-[11px] ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>{t('preferences.externalControl.table.type')}</div>
-                <div className={`col-span-2 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>{t('preferences.externalControl.table.key')}</div>
-                <div className={`col-span-8 px-3 py-2 font-medium ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>{t('preferences.externalControl.table.action')}</div>
-
-                {visibleEntries.length === 0 ? (
-                  <div className={`col-span-12 px-3 py-3 border-t ${darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-                    {t('preferences.externalControl.midi.noMappings')}
-                  </div>
-                ) : (
-                  visibleEntries.map((entry) => (
-                    <React.Fragment key={`${entry.type}-${entry.key}`}>
-                      <div className={`col-span-2 px-3 py-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                        {entry.type === 'NOTE' ? (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] ${darkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-                            NOTE
-                          </span>
-                        ) : (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] ${darkMode ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
-                            CC
-                          </span>
-                        )}
-                      </div>
-                      <div className={`col-span-2 px-3 py-2 border-t tabular-nums ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>{entry.key}</div>
-                      <div className={`col-span-8 px-3 py-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                        <p className="font-medium truncate">{entry.mapping?.description || entry.mapping?.action || '--'}</p>
-                        {entry.mapping?.action && (
-                          <p className={`text-[10px] mt-0.5 ${mutedClass} truncate`}>
-                            {t('preferences.externalControl.midi.actionKey', { action: entry.mapping.action })}
-                            {entry.type === 'NOTE' && typeof entry.mapping?.line === 'number' ? ` (line ${entry.mapping.line + 1})` : ''}
-                          </p>
-                        )}
-                      </div>
-                    </React.Fragment>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className={`rounded-lg border p-3 ${darkMode ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'}`}>
-                <p className={`text-xs font-medium ${labelClass}`}>{t('preferences.externalControl.midi.quickAssign.label')}</p>
-                <p className={`text-[11px] mt-0.5 ${mutedClass}`}>
-                  {t('preferences.externalControl.midi.quickAssign.description')}
-                </p>
-
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {quickAssignActions.map(([key, label]) => (
-                    <Button
-                      key={key}
-                      variant="outline"
-                      onClick={() => handleMidiAssignAction({ key, label })}
-                      disabled={!midiStatus?.enabled || midiLearnActive}
-                      className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                    >
-                      {midiAssigningAction?.key === key && midiLearnActive ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          {t('preferences.externalControl.midi.waiting')}
-                        </>
-                      ) : (
-                        label
-                      )}
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleMidiLearn}
-                    disabled={!midiStatus?.enabled || midiLearnActive}
-                    className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                  >
-                    {midiLearnActive ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {t('preferences.externalControl.midi.waiting')}
-                      </>
-                    ) : (
-                      t('preferences.externalControl.midi.learn')
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={handleMidiResetMappings}
-                    className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                  >
-                    {t('preferences.externalControl.midi.resetDefaults')}
-                  </Button>
-                </div>
-              </div>
-            </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>{midiMappingCount}</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
           </div>
         )}
       </div>
@@ -304,13 +148,67 @@ const ExternalControlPreferencesSection = ({
               <label className={preferenceFieldLabelClass}>{t('preferences.externalControl.osc.listeningPort')}</label>
               <Input
                 type="number"
-                value={oscStatus?.port || 8000}
-                onChange={(e) => handleOscPortChange(e.target.value)}
                 min="1"
                 max="65535"
+                {...getNumberPreferenceInputProps('externalControl', 'oscPort', {
+                  min: 1,
+                  max: 65535,
+                  fallbackValue: 8000,
+                  currentValue: oscStatus?.port,
+                  parse: 'int',
+                }, handleOscPortChange)}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>{t('preferences.externalControl.osc.requiresRestart')}</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${labelClass}`}>Allow OSC from LAN</label>
+                <p className={`text-xs ${mutedClass}`}>Off binds OSC to this computer only. Interface changes require restart.</p>
+              </div>
+              <Switch
+                checked={oscStatus?.remoteAccessEnabled || false}
+                onCheckedChange={handleOscRemoteAccessToggle}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-amber-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-amber-600 data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            {oscStatus?.remoteAccessEnabled && (
+              <div className="space-y-2">
+                <label className={preferenceFieldLabelClass}>Allowed Source IPs</label>
+                <Input
+                  key={(oscStatus?.allowedSources || []).join(',')}
+                  type="text"
+                  defaultValue={(oscStatus?.allowedSources || []).join(', ')}
+                  placeholder="Empty allows any LAN source"
+                  onBlur={(event) => handleOscAllowedSourcesChange(event.target.value)}
+                  className={inputClass}
+                />
+                <p className={`text-xs ${mutedClass}`}>Comma-separated IPv4 addresses. Leave empty only on a trusted production network.</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className={preferenceFieldLabelClass}>Messages per Second</label>
+              <Input
+                type="number"
+                min="5"
+                max="200"
+                {...getNumberPreferenceInputProps('externalControl', 'oscRateLimit', {
+                  min: 5,
+                  max: 200,
+                  fallbackValue: 30,
+                  currentValue: oscStatus?.rateLimit,
+                  parse: 'int',
+                }, handleOscRateLimitChange)}
+                className={inputClass}
+              />
+              <p className={`text-xs ${mutedClass}`}>Per-source limit; excess packets are dropped before reaching live controls.</p>
             </div>
 
             <div className="flex items-center justify-between">
@@ -334,10 +232,15 @@ const ExternalControlPreferencesSection = ({
                 <label className={preferenceFieldLabelClass}>{t('preferences.externalControl.osc.feedbackPort')}</label>
                 <Input
                   type="number"
-                  value={oscStatus?.feedbackPort || 9000}
-                  onChange={(e) => handleOscFeedbackPortChange(e.target.value)}
                   min="1"
                   max="65535"
+                  {...getNumberPreferenceInputProps('externalControl', 'oscFeedbackPort', {
+                    min: 1,
+                    max: 65535,
+                    fallbackValue: 9000,
+                    currentValue: oscStatus?.feedbackPort,
+                    parse: 'int',
+                  }, handleOscFeedbackPortChange)}
                   className={inputClass}
                 />
               </div>

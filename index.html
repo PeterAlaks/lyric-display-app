@@ -5,7 +5,55 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-       content=" default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://localhost:* http://127.0.0.1:* https:; media-src 'self' data: blob: lyricdisplay-media: http://localhost:* http://127.0.0.1:* https:; connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* https:; font-src 'self' data:; frame-src 'self' http://localhost:* http://127.0.0.1:*;" />
+       content=" default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://localhost:* http://127.0.0.1:* https:; media-src 'self' data: blob: lyricdisplay-media: http://localhost:* http://127.0.0.1:* https:; connect-src 'self' lyricdisplay-media: ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* https:; font-src 'self' data:; frame-src 'self' http://localhost:* http://127.0.0.1:*;" />
+  <script>
+    // Browser-source hosts can paint the page before the React bundle runs. Mark
+    // output documents now so their very first paint has the correct backdrop.
+    (() => {
+      const hashRoute = window.location.hash.replace(/^#/, '');
+      const routeUrl = new URL(
+        hashRoute.startsWith('/')
+          ? hashRoute
+          : `${window.location.pathname}${window.location.search}`,
+        window.location.origin
+      );
+      const path = routeUrl.pathname.replace(/\/+$/, '') || '/';
+      const projection = ['1', 'true'].includes(
+        (routeUrl.searchParams.get('projection') || '').toLowerCase()
+      );
+      const outputRoute = /^\/output\d+$/.test(path);
+      const liveVideoRoute = path === '/lyric-video-live-output';
+
+      if (projection && (outputRoute || liveVideoRoute || path === '/stage')) {
+        document.documentElement.dataset.lyricDisplaySurface = 'projection';
+      } else if (outputRoute || liveVideoRoute || path === '/lyric-video-export-frame') {
+        document.documentElement.dataset.lyricDisplaySurface = 'transparent';
+      }
+    })();
+  </script>
+  <style>
+    html[data-lyric-display-surface="transparent"],
+    html[data-lyric-display-surface="transparent"] body,
+    html[data-lyric-display-surface="transparent"] #root {
+      background: transparent !important;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    html[data-lyric-display-surface="projection"],
+    html[data-lyric-display-surface="projection"] body,
+    html[data-lyric-display-surface="projection"] #root {
+      background: #000000 !important;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
   <title>LyricDisplay</title>
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
 </head>

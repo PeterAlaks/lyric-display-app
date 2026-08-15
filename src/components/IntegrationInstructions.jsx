@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Monitor, Video, Cast, Check, Network, Copy, ExternalLink } from 'lucide-react';
+import { Monitor, Check, Network, Copy, ExternalLink } from 'lucide-react';
 import { createRoutePath, createRouteUrl } from '@/integrations/sourceUrls';
 import { getAllRoutableOutputIds } from '../../shared/outputRegistry.js';
 
@@ -20,6 +20,7 @@ function usePlatform() {
 export function IntegrationInstructions({ darkMode, onRequestClose }) {
     const [localIP, setLocalIP] = useState('localhost');
     const [activeTab, setActiveTab] = useState('obs');
+    const scrollContainerRef = React.useRef(null);
     const platform = usePlatform();
 
     useEffect(() => {
@@ -40,34 +41,38 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
         if (activeTab === 'wirecast' && !showWirecast) setActiveTab('obs');
     }, [platform, activeTab, showVmix, showWirecast]);
 
+    const handleTabChange = (nextTab) => {
+        setActiveTab(nextTab);
+        requestAnimationFrame(() => {
+            scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+        });
+    };
+
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex min-h-0 flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 190px)' }}>
             {/* Fixed Header with Tabs */}
-            <div className={`shrink-0 pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className={`shrink-0 border-b px-6 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
+                <Tabs value={activeTab} onValueChange={handleTabChange}>
                     <TabsList className={`w-full h-12 p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                         <TabsTrigger
                             value="obs"
-                            className={`flex-1 h-10 gap-2 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                            className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
                         >
-                            <Monitor className="w-4 h-4" />
                             <span className="font-medium">OBS Studio</span>
                         </TabsTrigger>
                         {showVmix && (
                             <TabsTrigger
                                 value="vmix"
-                                className={`flex-1 h-10 gap-2 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
                             >
-                                <Video className="w-4 h-4" />
                                 <span className="font-medium">vMix</span>
                             </TabsTrigger>
                         )}
                         {showWirecast && (
                             <TabsTrigger
                                 value="wirecast"
-                                className={`flex-1 h-10 gap-2 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
                             >
-                                <Cast className="w-4 h-4" />
                                 <span className="font-medium">Wirecast</span>
                             </TabsTrigger>
                         )}
@@ -76,7 +81,11 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto pt-6 px-1 min-h-0">
+            <div
+                ref={scrollContainerRef}
+                className="min-h-0 flex-1 overflow-y-auto px-6 pb-24 pt-5"
+                style={{ maxHeight: 'calc(100vh - 285px)' }}
+            >
                 <Tabs value={activeTab}>
                     <TabsContent value="obs" className="mt-0">
                         <OBSInstructions darkMode={darkMode} localIP={localIP} platform={platform} onRequestClose={onRequestClose} />
@@ -305,7 +314,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Copy and paste this URL:
-                        <URLBox darkMode={darkMode}>http://localhost:4000/#/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://localhost:4000/output1</URLBox>
                     </Step>
                     <Step number={5} darkMode={darkMode}>
                         Set these values:
@@ -374,7 +383,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Use this network URL instead:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000/#/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:4000/output1</URLBox>
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Set Width: <InlineCode darkMode={darkMode}>1920</InlineCode>, Height: <InlineCode darkMode={darkMode}>1080</InlineCode>, FPS: <InlineCode darkMode={darkMode}>30</InlineCode>
@@ -394,7 +403,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
             </TipBox>
 
             <TipBox darkMode={darkMode} type="info">
-                <Strong>For Additional Outputs:</Strong> Add more browser sources and change the URL suffix to <InlineCode darkMode={darkMode}>#/output2</InlineCode> through <InlineCode darkMode={darkMode}>#/{lastOutputId}</InlineCode> as needed.
+                <Strong>For Additional Outputs:</Strong> Add more browser sources and change the URL suffix to <InlineCode darkMode={darkMode}>/output2</InlineCode> through <InlineCode darkMode={darkMode}>/{lastOutputId}</InlineCode> as needed.
             </TipBox>
         </div>
     );
@@ -432,7 +441,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Enter this URL:
-                        <URLBox darkMode={darkMode}>http://localhost:4000/#/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://localhost:4000/output1</URLBox>
                     </Step>
                     <Step number={5} darkMode={darkMode}>
                         Set these values:
@@ -495,7 +504,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Use this network URL:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000/#/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:4000/output1</URLBox>
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Set Width/Height/Frame Rate (same as above)
@@ -553,7 +562,7 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Enter this URL:
-                        <URLBox darkMode={darkMode}>http://localhost:4000/#/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://localhost:4000/output1</URLBox>
                     </Step>
                     <Step number={5} darkMode={darkMode}>
                         Configure these settings:
@@ -628,7 +637,7 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Use network URL:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000/#/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:4000/output1</URLBox>
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Enable <Strong>Transparent Background</Strong> checkbox
@@ -701,7 +710,7 @@ function SourceCreatorCallout({ darkMode, localIP, onRequestClose }) {
 
 function IntroSection({ children, darkMode }) {
     return (
-        <div className={`p-3 rounded-lg text-sm leading-relaxed ${darkMode ? 'bg-blue-500/10 text-blue-300 border border-blue-500/30' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}>
+        <div className={`p-3 rounded-lg text-xs leading-relaxed ${darkMode ? 'bg-blue-500/10 text-blue-300 border border-blue-500/30' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}>
             {children}
         </div>
     );
@@ -759,7 +768,7 @@ function Step({ number, children, darkMode }) {
             <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
                 {number}
             </div>
-            <div className={`flex-1 pt-0.5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className={`flex-1 pt-0.5 text-xs leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {children}
             </div>
         </div>

@@ -4,16 +4,29 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: '/',
   build: {
     outDir: 'dist',
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'dnd-kit',
+              test: /node_modules[\\/]@dnd-kit[\\/]/,
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
   },
   worker: {
     format: 'es'
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(import.meta.dirname, 'src')
     }
   },
   server: {

@@ -1,19 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CircleHelp, Download, FilePlus2, FileText, ScreenShare, Video } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AppWindowMac, ArrowLeft, CircleHelp, Download, FilePlus2, FileText, MonitorUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tooltip } from '../components/ui/tooltip';
 import useToast from '../hooks/useToast';
 import useModal from '../hooks/useModal';
-import { parseLrc } from '../utils/parseLrc';
-import { createDefaultOutputSettings } from '../context/LyricsStore';
+import { parseLrc } from '../utils/asyncLyricsParser';
+import { createDefaultOutputSettings } from '../context/lyricsStore/outputSlice.js';
 import {
   useAllOutputIds,
   useLyricsState,
   useOutputSettings,
 } from '../hooks/useStoreSelectors';
-import { getActiveLyricVideoLine } from '../utils/lyricVideoTimeline';
-import { getLyricVideoLineOutputText } from '../utils/lyricVideoLineText';
+import { getActiveLyricVideoLine, getLyricVideoLineOutputText } from '../utils/lyricVideoTimeline';
 import LyricVideoTimeline from '../components/LyricVideoStudio/LyricVideoTimeline';
 import LyricVideoPreview from '../components/LyricVideoStudio/LyricVideoPreview';
 import LyricVideoTransport from '../components/LyricVideoStudio/LyricVideoTransport';
@@ -26,6 +25,12 @@ import {
   sanitizeLyricVideoProjectForPersistence,
   writeLyricVideoStudioState,
 } from '../utils/lyricVideoStudioState';
+import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
+import {
+  DEFAULT_LYRIC_VIDEO_VISUALIZER,
+  normalizeLyricVideoVisualizer,
+} from '../../shared/lyricVideoVisualizer.js';
+import { openFileNavigator } from '../utils/fileNavigatorEvents';
 
 const DEFAULT_LYRIC_VIDEO_SETTINGS = createDefaultOutputSettings({
   fontSize: 86,
@@ -61,6 +66,9 @@ const DEFAULT_PROJECT = {
   gapBehavior: 'keep-previous-line',
   clearAfterMs: 2500,
   styleSource: 'lyricVideo',
+  visualizer: {
+    ...DEFAULT_LYRIC_VIDEO_VISUALIZER,
+  },
   intro: {
     enabled: false,
     title: '',
@@ -123,6 +131,7 @@ const mergePersistedProject = (persistedProject) => {
       ...DEFAULT_PROJECT.exportSettings,
       ...(safeProject.exportSettings || {}),
     },
+    visualizer: normalizeLyricVideoVisualizer(safeProject.visualizer),
     intro: {
       ...DEFAULT_PROJECT.intro,
       ...(safeProject.intro || safeProject.openingScreen || {}),
@@ -132,6 +141,7 @@ const mergePersistedProject = (persistedProject) => {
 
 export default function LyricVideoStudio() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const { showModal } = useModal();
   const persistedStateRef = useRef(readLyricVideoStudioState());
@@ -278,10 +288,12 @@ export default function LyricVideoStudio() {
     audioStartTimeMs,
     previewTitle,
     visualSettings,
+    visualizerAudioSource: audioSource,
     styleLabel: project.styleSource === 'lyricVideo' ? 'Lyric Video' : project.styleSource.replace('output', 'Output '),
     updatedAt: Date.now(),
   }), [
     currentTimeMs,
+    audioSource,
     isPlaying,
     lyricVideoSettings,
     previewTitle,
@@ -330,6 +342,11 @@ export default function LyricVideoStudio() {
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return undefined;
     const channel = new BroadcastChannel(LYRIC_VIDEO_STUDIO_CHANNEL);
+    channel.onmessage = (event) => {
+      if (event.data?.type === 'request-snapshot') {
+        publishStudioSnapshot();
+      }
+    };
     liveChannelRef.current = channel;
     publishStudioSnapshot();
 
@@ -697,9 +714,7 @@ export default function LyricVideoStudio() {
     window.open('https://ffmpeg.org/download.html', '_blank', 'noopener,noreferrer');
   }, []);
 
-  const handleImportLrc = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
+  const importLrcFile = useCallback(async (file) => {
     if (!file) return;
 
     try {
@@ -723,7 +738,41 @@ export default function LyricVideoStudio() {
         variant: 'error',
       });
     }
-  };
+  }, [clampVideoTime, showToast]);
+
+  useEffect(() => {
+    const pendingImport = location.state?.lyricVideoImport;
+    if (!pendingImport?.content || !pendingImport?.fileName) return;
+
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    const file = new File(
+      [pendingImport.content],
+      pendingImport.fileName,
+      { type: 'text/plain' }
+    );
+    void importLrcFile(file);
+  }, [importLrcFile, location.pathname, location.search, location.state, navigate]);
+
+  const handleImportLrc = useCallback((event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    void importLrcFile(file);
+  }, [importLrcFile]);
+
+  useEffect(() => {
+    const handleNavigatorLrc = (event) => {
+      const payload = event?.detail || {};
+      if (payload.fileType !== 'lrc' || typeof payload.content !== 'string') return;
+      const file = new File([payload.content], payload.fileName || 'lyrics.lrc', { type: 'text/plain' });
+      void importLrcFile(file);
+    };
+    window.addEventListener('file-navigator:video-lrc-selection', handleNavigatorLrc);
+    return () => window.removeEventListener('file-navigator:video-lrc-selection', handleNavigatorLrc);
+  }, [importLrcFile]);
+
+  const handleChooseLrc = useCallback(() => {
+    if (!openFileNavigator({ destination: 'video' })) lrcInputRef.current?.click();
+  }, []);
 
   const setAudioProject = (audio, { resetPlayback = true } = {}) => {
     if (resetPlayback) {
@@ -906,29 +955,35 @@ export default function LyricVideoStudio() {
   ]);
 
   useEffect(() => {
-    const handleStudioSpacebar = (event) => {
-      if (event.code !== 'Space' || event.repeat || exportOpen || styleOpen) return;
-
+    const handleStudioShortcut = (event) => {
       const target = event.target;
-      const isTextEntry = target && (
-        target.tagName === 'INPUT'
-        || target.tagName === 'TEXTAREA'
-        || target.tagName === 'SELECT'
-        || target.isContentEditable
-      );
-      if (isTextEntry) return;
+      if (isCommandFocusProtected(target, document.activeElement)) return;
 
       const activeModal = document.querySelector('[data-modal-root="true"]');
       if (activeModal?.contains?.(target)) return;
+
+      if (
+        !event.repeat
+        && (event.ctrlKey || event.metaKey)
+        && !event.shiftKey
+        && String(event.key || '').toLowerCase() === 'o'
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleChooseLrc();
+        return;
+      }
+
+      if (event.code !== 'Space' || event.repeat || exportOpen || styleOpen) return;
 
       event.preventDefault();
       event.stopPropagation();
       handlePlayPause();
     };
 
-    window.addEventListener('keydown', handleStudioSpacebar, true);
-    return () => window.removeEventListener('keydown', handleStudioSpacebar, true);
-  }, [exportOpen, handlePlayPause, styleOpen]);
+    window.addEventListener('keydown', handleStudioShortcut, true);
+    return () => window.removeEventListener('keydown', handleStudioShortcut, true);
+  }, [exportOpen, handleChooseLrc, handlePlayPause, styleOpen]);
 
   const handleStartExport = async (performanceMode = 'balanced') => {
     if (!window.electronAPI?.lyricVideo?.exportVideo) {
@@ -956,6 +1011,7 @@ export default function LyricVideoStudio() {
         clearAfterMs: project.clearAfterMs,
         title: project.name || 'Untitled Video 1',
         settings: visualSettings,
+        visualizer: project.visualizer,
         intro,
         audio: project.audio,
         exportSettings: {
@@ -1103,12 +1159,12 @@ export default function LyricVideoStudio() {
         <div className="flex items-center gap-2">
           <Tooltip content="Project live studio preview" side="bottom">
             <Button type="button" variant="ghost" size="icon" onClick={handleOpenProjectOutput} aria-label="Project Lyric Video Studio" className="text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
-              <Video className="h-4 w-4" />
+              <MonitorUp className="h-4 w-4" />
             </Button>
           </Tooltip>
           <Tooltip content="Open live studio preview window" side="bottom">
             <Button type="button" variant="ghost" size="icon" onClick={handleOpenLiveOutput} aria-label="Open Live Studio Preview" className="text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
-              <ScreenShare className="h-4 w-4" />
+              <AppWindowMac className="h-4 w-4" />
             </Button>
           </Tooltip>
           <Tooltip content="Lyric Video Studio help" side="bottom">
@@ -1129,13 +1185,13 @@ export default function LyricVideoStudio() {
         <aside className="row-span-2 flex min-h-0 flex-col overflow-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
           <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-5 dark:border-gray-800">
             <Tooltip content="Import a timestamped .lrc file" side="bottom">
-              <Button type="button" variant="ghost" size="sm" onClick={() => lrcInputRef.current?.click()} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
+              <Button type="button" variant="ghost" size="sm" onClick={handleChooseLrc} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
                 <FileText className="h-4 w-4" />
                 Import LRC
               </Button>
             </Tooltip>
             <Tooltip content="Create or edit lyrics in New Song Canvas" side="bottom">
-              <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/new-song')} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
+              <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/new-song?mode=new&origin=lyric-video-studio')} className="rounded-full text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300">
                 <FilePlus2 className="h-4 w-4" />
                 Create LRC
               </Button>
@@ -1158,6 +1214,8 @@ export default function LyricVideoStudio() {
             resolvedLine={resolvedLine}
             currentLine={resolved.activeLine}
             settings={visualSettings}
+            visualizer={project.visualizer}
+            audioSource={audioSource}
             exportSettings={project.exportSettings}
             intro={intro}
             currentTimeMs={currentTimeMs}
@@ -1167,6 +1225,7 @@ export default function LyricVideoStudio() {
             gapBehavior={project.gapBehavior}
             styleLabel={project.styleSource === 'lyricVideo' ? 'Lyric Video' : project.styleSource.replace('output', 'Output ')}
             backgroundVideoPlaying={isPlaying}
+            audioStartTimeMs={audioStartTimeMs}
           />
         </section>
 

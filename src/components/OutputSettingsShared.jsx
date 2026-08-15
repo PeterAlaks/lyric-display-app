@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp, TextCursorInput, PaintBucket, Bold, Italic, Underline, CaseUpper, AlignVerticalSpaceAround, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
 import { sanitizeIntegerInput } from '../utils/numberInput';
+import { getEmphasisToggleStateClassName } from '../utils/emphasisToggleStyles.js';
 
 export const LabelWithIcon = ({ icon: Icon, text, darkMode }) => (
   <div className="flex items-center gap-2 min-w-[140px]">
@@ -46,6 +48,49 @@ export const AdvancedToggle = ({ expanded, onToggle, darkMode, ariaLabel, disabl
     )}
   </button>
 );
+
+const advancedCollapseTransition = {
+  gridTemplateRows: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  marginTop: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  opacity: { duration: 0.2, ease: 'easeOut' },
+  y: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+};
+
+export const AdvancedCollapse = React.forwardRef(({
+  expanded,
+  children,
+  className = '',
+  contentClassName = '',
+  openMarginTop = 16,
+}, ref) => {
+  const isOpen = Boolean(expanded);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={false}
+      animate={{
+        gridTemplateRows: isOpen ? '1fr' : '0fr',
+        marginTop: isOpen ? openMarginTop : 0,
+        opacity: isOpen ? 1 : 0,
+        y: isOpen ? 0 : -3,
+      }}
+      transition={advancedCollapseTransition}
+      className={`grid overflow-hidden ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${className}`}
+      aria-hidden={!isOpen}
+      style={{
+        marginBlockEnd: 0,
+        willChange: 'grid-template-rows, margin, opacity, transform',
+      }}
+    >
+      <div className={`min-h-0 overflow-hidden ${contentClassName}`}>
+        {children}
+      </div>
+    </motion.div>
+  );
+});
+
+AdvancedCollapse.displayName = 'AdvancedCollapse';
 
 export const FontSettingsRow = ({
   darkMode,
@@ -116,15 +161,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onBoldChange(!boldValue)}
           disabled={disabled}
-          className={
-            boldValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(boldValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(boldValue, darkMode)}`}
         >
           <Bold className="h-3.5 w-3.5" />
         </Button>
@@ -135,15 +173,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onItalicChange(!italicValue)}
           disabled={disabled}
-          className={
-            italicValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(italicValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(italicValue, darkMode)}`}
         >
           <Italic className="h-3.5 w-3.5" />
         </Button>
@@ -154,15 +185,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onUnderlineChange(!underlineValue)}
           disabled={disabled}
-          className={
-            underlineValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(underlineValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(underlineValue, darkMode)}`}
         >
           <Underline className="h-3.5 w-3.5" />
         </Button>
@@ -173,15 +197,8 @@ export const EmphasisRow = ({
           variant="outline"
           onClick={() => onAllCapsChange(!allCapsValue)}
           disabled={disabled}
-          className={
-            allCapsValue
-              ? darkMode
-                ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
-              : darkMode
-                ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
-          }
+          aria-pressed={Boolean(allCapsValue)}
+          className={`${compactOptionButtonClass} ${getEmphasisToggleStateClassName(allCapsValue, darkMode)}`}
         >
           <CaseUpper className="h-3.5 w-3.5" />
         </Button>

@@ -2,6 +2,7 @@ import { ArrowUpDown, Rows3 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
+import { AdvancedCollapse } from '../OutputSettingsShared';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const BackgroundBandSettingsSection = ({
@@ -20,14 +21,7 @@ const BackgroundBandSettingsSection = ({
   settings,
   update,
 }) => (
-  <div
-    className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${backgroundAdvancedExpanded && !fullScreenModeChecked
-      ? 'max-h-32 opacity-100 translate-y-0 pointer-events-auto mt-1'
-      : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-      }`}
-    aria-hidden={!backgroundAdvancedExpanded || fullScreenModeChecked}
-    style={{ marginTop: (backgroundAdvancedExpanded && !fullScreenModeChecked) ? undefined : 0 }}
-  >
+  <AdvancedCollapse expanded={backgroundAdvancedExpanded && !fullScreenModeChecked}>
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
         <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
@@ -130,7 +124,7 @@ const BackgroundBandSettingsSection = ({
         </div>
       </Tooltip>
     </div>
-  </div>
+  </AdvancedCollapse>
 );
 
 export default BackgroundBandSettingsSection;

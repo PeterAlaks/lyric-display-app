@@ -5,6 +5,7 @@ import { getLoadingWindow } from './loadingWindow.js';
 import { destroyExternalControl } from './externalControl.js';
 import { cleanupNdiManager } from './ndiManager.js';
 import { stopObsDockDevServer } from './devServer.js';
+import { cleanupFileNavigator } from './fileNavigator.js';
 
 const isOutputRoute = (url) => /(?:#\/|\/)(stage|time|output\d+)(?:\?|$)/i.test(String(url || ''));
 
@@ -34,7 +35,6 @@ let isCleaningUp = false;
 
 export function performCleanup() {
   if (isCleaningUp) {
-    console.log('[Cleanup] Already cleaning up, skipping duplicate call');
     return;
   }
 
@@ -79,6 +79,12 @@ export function performCleanup() {
     stopObsDockDevServer();
   } catch (error) {
     console.error('[Cleanup] Error stopping LyricDisplay Dock dev server:', error);
+  }
+
+  try {
+    cleanupFileNavigator();
+  } catch (error) {
+    console.error('[Cleanup] Error cleaning up file navigator:', error);
   }
 
   closeOutputWindows();

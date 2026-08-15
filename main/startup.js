@@ -4,7 +4,7 @@ import { prewarmCredentials } from './providerCredentials.js';
 import { isDev } from './paths.js';
 import { startBackend } from './backend.js';
 import { createWindow } from './windows.js';
-import { checkForUpdates } from './updater.js';
+import { checkForUpdates, setUpdateSessionActive } from './updater.js';
 import { getAdminKeyWithRetry } from './adminKey.js';
 import { initDisplayManager } from './displayManager.js';
 import { performStartupDisplayCheck } from './displayDetection.js';
@@ -15,6 +15,7 @@ import { getSavedDarkMode } from './themePreferences.js';
 import { initializeExternalControl, registerExternalControlIPC } from './externalControl.js';
 import { initializeNdiManager, registerNdiIpcHandlers } from './ndiManager.js';
 import * as userPreferences from './userPreferences.js';
+import { waitForRendererStartup } from './startupReadiness.js';
 
 const isOutputRoute = (url) => /(?:#\/|\/)(stage|time|output\d+)(?:\?|$)/i.test(String(url || ''));
 
@@ -163,7 +164,11 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
   registerLyricVideoMediaProtocol();
   try {
     updateLoadingStatus('Starting backend server');
-    await startBackend({ obsDockPairingToken, allowLocalObsDockAuth: headless });
+    await startBackend({
+      obsDockPairingToken,
+      allowLocalObsDockAuth: headless,
+      parsingConfig: userPreferences.getParsingConfig(),
+    });
     console.log('[Startup] Backend started successfully');
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -198,7 +203,8 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
       return null;
     }
 
-    const mainWindow = createWindow('/');
+    const mainWindow = createWindow('/', { deferShow: true });
+    const rendererStartupPromise = waitForRendererStartup(mainWindow.webContents);
 
     setupMainWindowCloseHandler(mainWindow);
 
@@ -219,13 +225,48 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     initializeNdiManager();
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    updateLoadingStatus('Finalizing');
+    updateLoadingStatus('Establishing secure session');
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    const rendererStartup = await rendererStartupPromise;
+    if (rendererStartup.outcome === 'ready') {
+      console.log('[Startup] Renderer readiness confirmed', {
+        waitMs: rendererStartup.elapsedMs,
+        ...rendererStartup.payload,
+      });
+    } else {
+      console.warn('[Startup] Renderer readiness wait ended without confirmation', rendererStartup);
+    }
+
+    if (mainWindow.isDestroyed()) {
+      closeLoadingWindow();
+      return null;
+    }
+
+    updateLoadingStatus('Opening control panel');
+    try {
+      if (typeof mainWindow.showInactive === 'function') {
+        mainWindow.showInactive();
+      } else {
+        mainWindow.show();
+      }
+    } catch (error) {
+      console.warn('[Startup] Failed to reveal main window:', error);
+    }
     closeLoadingWindow();
+
+    const focusTimer = setTimeout(() => {
+      try {
+        if (!mainWindow.isDestroyed()) mainWindow.focus();
+      } catch {
+      }
+    }, 350);
+    focusTimer.unref?.();
 
     setTimeout(() => {
       const autoCheck = userPreferences.getPreference('general.autoCheckForUpdates') ?? true;
+      const liveSession = userPreferences.getPreference('general.liveSafetyMode') ?? false;
+      setUpdateSessionActive(liveSession);
       if (!isDev && autoCheck) checkForUpdates(false);
     }, 2000);
 

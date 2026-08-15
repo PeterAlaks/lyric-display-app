@@ -2,8 +2,14 @@
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
+import {
+  DEVELOPMENT_RUNTIME_PROFILE,
+  USER_DATA_DIR_ENV,
+  getProfiledName,
+  getRuntimeProfile,
+} from '../shared/runtimeProfile.js';
 
-const SERVICE_NAME = 'LyricDisplayAuthTokens';
+const BASE_SERVICE_NAME = 'LyricDisplayAuthTokens';
 const CACHE = new Map();
 let keytarModule;
 let keytarLoadErrorLogged = false;
@@ -18,18 +24,26 @@ const resolveConfigDir = () => {
     return process.env.CONFIG_PATH;
   }
 
+  if (
+    getRuntimeProfile() === DEVELOPMENT_RUNTIME_PROFILE
+    && typeof process.env[USER_DATA_DIR_ENV] === 'string'
+    && process.env[USER_DATA_DIR_ENV].trim()
+  ) {
+    return path.join(path.resolve(process.env[USER_DATA_DIR_ENV]), 'credentials', 'auth');
+  }
+
   if (process.platform === 'win32') {
     const base = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-    return path.join(base, 'LyricDisplay', 'auth');
+    return path.join(base, getProfiledName('LyricDisplay'), 'auth');
   }
 
   if (process.platform === 'darwin') {
     const base = path.join(homeDir, 'Library', 'Application Support');
-    return path.join(base, 'LyricDisplay', 'auth');
+    return path.join(base, getProfiledName('LyricDisplay'), 'auth');
   }
 
   const base = process.env.XDG_CONFIG_HOME || path.join(homeDir, '.config');
-  return path.join(base, 'lyricdisplay', 'auth');
+  return path.join(base, getProfiledName('LyricDisplay').toLowerCase(), 'auth');
 };
 
 const ensureDirectory = async (dirPath) => {
@@ -148,7 +162,7 @@ export const readToken = async ({ clientType, deviceId }) => {
   if (keytar) {
     try {
       const account = getAccountId({ clientType, deviceId });
-      const raw = await keytar.getPassword(SERVICE_NAME, account);
+      const raw = await keytar.getPassword(getProfiledName(BASE_SERVICE_NAME), account);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       CACHE.set(cacheKey, parsed);
@@ -196,7 +210,7 @@ export const writeToken = async ({ clientType, deviceId, token, expiresAt }) => 
   if (keytar) {
     try {
       const account = getAccountId({ clientType, deviceId });
-      await keytar.setPassword(SERVICE_NAME, account, JSON.stringify(payload));
+      await keytar.setPassword(getProfiledName(BASE_SERVICE_NAME), account, JSON.stringify(payload));
       return;
     } catch (error) {
       console.warn('[token-store] Keytar write failed, persisting to fallback:', error.message);
@@ -218,7 +232,7 @@ export const clearToken = async ({ clientType, deviceId }) => {
   if (keytar) {
     try {
       const account = getAccountId({ clientType, deviceId });
-      await keytar.deletePassword(SERVICE_NAME, account);
+      await keytar.deletePassword(getProfiledName(BASE_SERVICE_NAME), account);
     } catch (error) {
       console.warn('[token-store] Keytar delete failed, clearing fallback copy:', error.message);
     }
@@ -238,9 +252,10 @@ export const clearAllTokens = async () => {
   const keytar = await getKeytar();
   if (keytar) {
     try {
-      const credentials = await keytar.findCredentials(SERVICE_NAME);
+      const serviceName = getProfiledName(BASE_SERVICE_NAME);
+      const credentials = await keytar.findCredentials(serviceName);
       await Promise.all(
-        credentials.map((credential) => keytar.deletePassword(SERVICE_NAME, credential.account))
+        credentials.map((credential) => keytar.deletePassword(serviceName, credential.account))
       );
     } catch (error) {
       console.warn('[token-store] Keytar bulk delete failed, clearing fallback store:', error.message);

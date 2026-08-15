@@ -1,14 +1,27 @@
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { fork } from 'child_process';
 import { resolveProductionPath } from './paths.js';
 import { app } from 'electron';
 import { mirrorStreamToLog } from './logging.js';
+import {
+  DEVELOPMENT_RUNTIME_PROFILE,
+  PRODUCTION_RUNTIME_PROFILE,
+  RUNTIME_PROFILE_ENV,
+  USER_DATA_DIR_ENV,
+} from '../shared/runtimeProfile.js';
+import {
+  BACKEND_INSTANCE_HEADER,
+  BACKEND_INSTANCE_TOKEN_ENV,
+} from '../shared/backendInstance.js';
 
 let backendProcess = null;
 let backendStopRequested = false;
 let backendRestartTimer = null;
 let lastStartOptions = {};
 let backendMessageHandler = null;
+let backendStatusHandler = null;
+export const backendAppSessionId = randomUUID();
 
 const BACKEND_TAIL_LIMIT = 64 * 1024;
 const BACKEND_RESTART_WINDOW_MS = 5 * 60_000;
@@ -17,9 +30,27 @@ const BACKEND_HARD_STARTUP_TIMEOUT_MS = 120_000;
 const MAX_BACKEND_RESTARTS = 3;
 let backendRestartAttempts = [];
 
+function notifyBackendStatus(payload) {
+  if (typeof backendStatusHandler !== 'function') return;
+  try {
+    backendStatusHandler({ timestamp: Date.now(), ...payload });
+  } catch (error) {
+    console.warn('[Backend] Status handler failed:', error);
+  }
+}
+
 function appendTail(current, chunk) {
   const next = `${current}${Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk)}`;
   return next.length > BACKEND_TAIL_LIMIT ? next.slice(-BACKEND_TAIL_LIMIT) : next;
+}
+
+function serializeParsingConfig(config) {
+  try {
+    return JSON.stringify(config && typeof config === 'object' ? config : {});
+  } catch (error) {
+    console.warn('[Backend] Failed to serialize lyrics parsing configuration:', error.message);
+    return '{}';
+  }
 }
 
 function getRecentRestartAttempts() {
@@ -40,6 +71,12 @@ function scheduleBackendRestart(reason) {
       attempts: attempts.length,
       windowMs: BACKEND_RESTART_WINDOW_MS,
     });
+    notifyBackendStatus({
+      state: 'failed',
+      reason,
+      attempts: attempts.length,
+      maxAttempts: MAX_BACKEND_RESTARTS,
+    });
     return;
   }
 
@@ -51,6 +88,13 @@ function scheduleBackendRestart(reason) {
     attempt: backendRestartAttempts.length,
     maxAttempts: MAX_BACKEND_RESTARTS,
     windowMs: BACKEND_RESTART_WINDOW_MS,
+  });
+  notifyBackendStatus({
+    state: 'restarting',
+    reason,
+    attempt: backendRestartAttempts.length,
+    maxAttempts: MAX_BACKEND_RESTARTS,
+    delayMs,
   });
 
   backendRestartTimer = setTimeout(() => {
@@ -66,17 +110,31 @@ function scheduleBackendRestart(reason) {
   backendRestartTimer.unref?.();
 }
 
-async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
+async function waitForBackendHealth(instanceToken, maxAttempts = 60, intervalMs = 500) {
   let attempts = 0;
 
   while (attempts < maxAttempts) {
     try {
-      const response = await fetch('http://127.0.0.1:4000/api/health/ready', {
-        method: 'GET',
-        timeout: 2000,
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+      timeout.unref?.();
+      let response;
+      try {
+        response = await fetch('http://127.0.0.1:4000/api/health/ready', {
+          method: 'GET',
+          headers: {
+            [BACKEND_INSTANCE_HEADER]: instanceToken,
+          },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
-      if (response.ok) {
+      if (
+        response.ok
+        && response.headers.get(BACKEND_INSTANCE_HEADER) === instanceToken
+      ) {
         const data = await response.json();
         if (data.status === 'ready' && data.serverListening) {
           console.log(`Backend health check passed after ${attempts + 1} attempts`);
@@ -96,9 +154,12 @@ async function waitForBackendHealth(maxAttempts = 60, intervalMs = 500) {
   return false;
 }
 
-export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false } = {}) {
+export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false, parsingConfig = null } = {}) {
   return new Promise((resolve, reject) => {
     if (backendProcess && !backendProcess.killed) {
+      if (parsingConfig) {
+        syncBackendParsingConfig(parsingConfig);
+      }
       if (obsDockPairingToken) {
         registerObsDockPairingToken(obsDockPairingToken);
       }
@@ -114,7 +175,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       return;
     }
 
-    lastStartOptions = { allowLocalObsDockAuth };
+    lastStartOptions = { allowLocalObsDockAuth, parsingConfig };
     backendStopRequested = false;
     if (backendRestartTimer) {
       clearTimeout(backendRestartTimer);
@@ -124,14 +185,24 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     const serverPath = resolveProductionPath('server', 'index.js');
     const userDataDir = app.getPath('userData');
     const backendDataDir = path.join(userDataDir, 'backend');
+    const backendInstanceToken = randomUUID();
 
     const child = fork(serverPath, [], {
-      cwd: path.dirname(serverPath),
+      // ASAR paths are readable by Electron's Node runtime but cannot be used
+      // as a real process working directory. Runtime data already lives under
+      // userData, so use that real directory while keeping the server code in ASAR.
+      cwd: app.isPackaged ? userDataDir : path.dirname(serverPath),
       env: {
         ...process.env,
         NODE_ENV: app.isPackaged ? 'production' : 'development',
+        [RUNTIME_PROFILE_ENV]: app.isPackaged
+          ? PRODUCTION_RUNTIME_PROFILE
+          : DEVELOPMENT_RUNTIME_PROFILE,
         LYRICDISPLAY_DATA_DIR: backendDataDir,
-        LYRICDISPLAY_USER_DATA_DIR: userDataDir,
+        [USER_DATA_DIR_ENV]: userDataDir,
+        [BACKEND_INSTANCE_TOKEN_ENV]: backendInstanceToken,
+        LYRICDISPLAY_APP_SESSION_ID: backendAppSessionId,
+        LYRICDISPLAY_PARSING_CONFIG: serializeParsingConfig(parsingConfig),
         LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
         LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },
@@ -143,8 +214,9 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     let stdoutTail = '';
     let stderrTail = '';
 
-    mirrorStreamToLog(child.stdout, 'BACKEND', process.stdout);
-    mirrorStreamToLog(child.stderr, 'BACKEND_ERROR', process.stderr);
+    const backendLogContext = { process: 'backend', pid: child.pid, source: 'child-process' };
+    mirrorStreamToLog(child.stdout, 'BACKEND', process.stdout, backendLogContext);
+    mirrorStreamToLog(child.stderr, 'BACKEND_ERROR', process.stderr, backendLogContext);
     child.stdout?.on('data', (chunk) => {
       stdoutTail = appendTail(stdoutTail, chunk);
     });
@@ -153,6 +225,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     });
 
     let isResolved = false;
+    let startupSucceeded = false;
     let softStartupTimeout = null;
     let hardStartupTimeout = null;
 
@@ -172,7 +245,12 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         return false;
       }
       isResolved = true;
+      startupSucceeded = true;
       clearStartupTimers();
+      notifyBackendStatus({
+        state: backendRestartAttempts.length > 0 ? 'recovered' : 'running',
+        attempts: backendRestartAttempts.length,
+      });
       resolve();
       return true;
     };
@@ -192,7 +270,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
 
       console.log('Backend process soft timeout, attempting health check...');
 
-      const isHealthy = await waitForBackendHealth(10, 1000);
+      const isHealthy = await waitForBackendHealth(backendInstanceToken, 10, 1000);
 
       if (isHealthy) {
         console.log('Backend is healthy despite missing ready signal');
@@ -207,7 +285,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
 
       console.error('Backend startup hard timeout, performing final health check...');
 
-      const isHealthy = await waitForBackendHealth(10, 1000);
+      const isHealthy = await waitForBackendHealth(backendInstanceToken, 10, 1000);
 
       if (isHealthy) {
         console.log('Backend is healthy after extended startup wait');
@@ -225,7 +303,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       }
       if (!isResolved) {
         rejectStartup(err);
-      } else {
+      } else if (startupSucceeded) {
         scheduleBackendRestart(err?.message || 'process error');
       }
     });
@@ -234,7 +312,10 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       if (backendProcess === child) {
         backendProcess = null;
       }
-      const unexpectedExit = !backendStopRequested && (isResolved || code !== 0 || signal);
+      const unexpectedExit = !backendStopRequested && (
+        startupSucceeded
+        || (!isResolved && (code !== 0 || signal))
+      );
       const exitContext = {
         code,
         signal,
@@ -254,7 +335,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         return;
       }
 
-      if (isResolved && unexpectedExit) {
+      if (startupSucceeded && unexpectedExit) {
         scheduleBackendRestart(`exit code ${code}, signal ${signal}`);
       }
     });
@@ -301,7 +382,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       if (msg?.status === 'ready' && !isResolved) {
         console.log('Backend reported ready, verifying health...');
 
-        const isHealthy = await waitForBackendHealth(5, 200);
+        const isHealthy = await waitForBackendHealth(backendInstanceToken, 5, 200);
 
         if (isHealthy) {
           console.log('Backend startup completed successfully');
@@ -315,7 +396,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     setTimeout(async () => {
       if (!isResolved) {
         console.log('Attempting early health check...');
-        const isHealthy = await waitForBackendHealth(3, 500);
+        const isHealthy = await waitForBackendHealth(backendInstanceToken, 3, 500);
 
         if (isHealthy) {
           console.log('Early health check succeeded');
@@ -338,8 +419,25 @@ export function registerObsDockPairingToken(token) {
   }
 }
 
+export function syncBackendParsingConfig(config) {
+  lastStartOptions = { ...lastStartOptions, parsingConfig: config };
+  if (!backendProcess || backendProcess.killed) return false;
+
+  try {
+    backendProcess.send({ type: 'lyrics-parsing-config', config });
+    return true;
+  } catch (error) {
+    console.warn('[Backend] Failed to synchronize lyrics parsing configuration:', error);
+    return false;
+  }
+}
+
 export function setBackendMessageHandler(handler) {
   backendMessageHandler = typeof handler === 'function' ? handler : null;
+}
+
+export function setBackendStatusHandler(handler) {
+  backendStatusHandler = typeof handler === 'function' ? handler : null;
 }
 
 export function stopBackend() {

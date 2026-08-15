@@ -41,8 +41,8 @@ export default function useSectionNavigation({
   useVirtualized,
   onLineSelect,
 }) {
-  const sectionChipsContainerRef = useRef(null);
   const sectionChipsScrollerRef = useRef(null);
+  const sectionChipsWheelCleanupRef = useRef(null);
 
   const scrollToVirtualizedLine = useCallback((lineIndex, behavior = 'smooth') => {
     if (!listRef.current) return;
@@ -108,18 +108,26 @@ export default function useSectionNavigation({
     scroller.scrollLeft = nextScrollLeft;
   }, []);
 
-  useEffect(() => {
-    const container = sectionChipsContainerRef.current;
-    const scroller = sectionChipsScrollerRef.current;
-    if (!container || !scroller) return;
+  // The chips are rendered conditionally after section data arrives. A callback
+  // ref ensures the native listener follows the actual DOM node instead of an
+  // effect running once while the ref is still null.
+  const sectionChipsContainerRef = useCallback((container) => {
+    sectionChipsWheelCleanupRef.current?.();
+    sectionChipsWheelCleanupRef.current = null;
+    if (!container) return;
 
     const handleNativeWheel = (event) => handleSectionChipsWheel(event);
     container.addEventListener('wheel', handleNativeWheel, { passive: false, capture: true });
 
-    return () => {
+    sectionChipsWheelCleanupRef.current = () => {
       container.removeEventListener('wheel', handleNativeWheel, { capture: true });
     };
   }, [handleSectionChipsWheel]);
+
+  useEffect(() => () => {
+    sectionChipsWheelCleanupRef.current?.();
+    sectionChipsWheelCleanupRef.current = null;
+  }, []);
 
   useEffect(() => {
     const handleScrollToLine = (event) => {

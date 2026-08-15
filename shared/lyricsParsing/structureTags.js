@@ -1,4 +1,4 @@
-import { STRUCTURE_TAG_PATTERNS, STRUCTURE_TAGS_CONFIG } from './constants.js';
+import { createStructureTagPatterns, STRUCTURE_TAGS_CONFIG } from './constants.js';
 import { getEffectiveGroupingConfig } from './runtimeConfig.js';
 
 /**
@@ -38,10 +38,11 @@ export function getCleanSectionLabel(line = '') {
  * @param {string} line
  * @returns {boolean}
  */
-export function isStructureTag(line) {
+export function isStructureTag(line, sectionTagPhrases) {
   if (!line || typeof line !== 'string') return false;
   const trimmed = line.trim();
-  return STRUCTURE_TAG_PATTERNS.some((pattern) => pattern.test(trimmed));
+  const phrases = sectionTagPhrases ?? getEffectiveGroupingConfig().sectionTagPhrases;
+  return createStructureTagPatterns(phrases).some((pattern) => pattern.test(trimmed));
 }
 
 /**
@@ -50,12 +51,15 @@ export function isStructureTag(line) {
  * @param {string} text
  * @returns {string}
  */
-export function extractStructureTags(text) {
+export function extractStructureTags(text, configOverride) {
   if (!text || typeof text !== 'string') return text;
   if (!STRUCTURE_TAGS_CONFIG.ENABLED) return text;
 
-  const config = getEffectiveGroupingConfig();
+  const config = configOverride
+    ? { ...getEffectiveGroupingConfig(), ...configOverride }
+    : getEffectiveGroupingConfig();
   const structureTagMode = config.structureTagMode || STRUCTURE_TAGS_CONFIG.MODE;
+  const structureTagPatterns = createStructureTagPatterns(config.sectionTagPhrases);
 
   const lines = text.split(/\r?\n/);
   const processedLines = [];
@@ -68,7 +72,7 @@ export function extractStructureTags(text) {
 
     let processed = false;
 
-    for (const pattern of STRUCTURE_TAG_PATTERNS) {
+    for (const pattern of structureTagPatterns) {
       const match = line.match(pattern);
       if (!match) continue;
 

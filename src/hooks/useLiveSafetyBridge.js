@@ -50,10 +50,10 @@ export function useLiveSafetyBridge() {
     return () => window.removeEventListener('control-socket-state-updated', handleUpdate);
   }, []);
 
-  const setLiveSafetyEnabled = React.useCallback((enabled) => {
+  const setLiveSafetyEnabled = React.useCallback((enabled, { persistPreference = true } = {}) => {
     if (typeof window === 'undefined') return false;
     const nextEnabled = Boolean(enabled);
-    if (window.electronAPI?.preferences?.set) {
+    if (persistPreference && window.electronAPI?.preferences?.set) {
       window.electronAPI.preferences.set(LIVE_SAFETY_PREFERENCE_PATH, nextEnabled)
         .then((result) => {
           if (result?.success === false) {

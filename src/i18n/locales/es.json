@@ -299,6 +299,7 @@
         "installed": "Instalado",
         "notInstalled": "No instalado",
         "running": "En ejecucion",
+        "starting": "Iniciando",
         "stopped": "Detenido"
       },
       "telemetry": {
@@ -363,6 +364,7 @@
     },
     "status": {
       "autoSaved": "Los cambios se guardan automaticamente",
+      "saveError": "No se pudo guardar la configuracion",
       "saved": "Configuracion guardada",
       "saving": "Guardando..."
     }

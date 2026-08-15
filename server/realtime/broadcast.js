@@ -1,5 +1,6 @@
 import { state, summarizeSetlistForDisplay } from './state.js';
 import { isOutputClientType, isOutputDiscoveryClientType } from './utils.js';
+import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 
 const CONTROLLER_TYPES = new Set(['desktop', 'web', 'mobile', 'obsDock']);
 
@@ -117,8 +118,12 @@ export const emitOutputVisibilityEvent = (io, eventName, payload) => (
   ))
 );
 
-export const emitIndividualOutputEvent = (io, eventName, payload = {}) => (
+export const emitIndividualOutputEvent = (io, eventName, payload = {}, { excludeSocket = null } = {}) => (
   emitToClients(io, eventName, payload, (client) => {
+    if (excludeSocket && client?.socket === excludeSocket) return false;
+    if (payload.output === 'preview') {
+      return isOutputDiscoveryClient(client) && client?.purpose === 'preview';
+    }
     if (isControllerClient(client)) return true;
     if (payload.output === 'stage') return isStageDisplayClient(client);
     return isOutputDisplayClient(client) && client.type === payload.output;
@@ -126,16 +131,26 @@ export const emitIndividualOutputEvent = (io, eventName, payload = {}) => (
 );
 
 export const emitOutputRegistry = (io, payload) => (
-  emitToClients(io, 'outputsRegistry', payload, (client) => (
+  emitToClients(io, REALTIME_EVENTS.outputsRegistry, payload, (client) => (
     isControllerClient(client) ||
     isOutputDisplayClient(client) ||
     isOutputDiscoveryClient(client)
   ))
 );
 
-export const emitOutputMetricsUpdate = (io, payload = {}) => (
-  emitToClients(io, 'outputMetrics', payload, (client) => (
+export const emitOutputMetricsUpdate = (io, payload = {}) => {
+  const allInstances = Array.isArray(payload.allInstances) ? payload.allInstances : [];
+  const remoteInstanceCount = allInstances.reduce((count, instance) => (
+    count + (instance?.connectionScope === 'remote' ? 1 : 0)
+  ), 0);
+  const enrichedPayload = {
+    ...payload,
+    remoteInstanceCount,
+    hasRemoteInstances: remoteInstanceCount > 0,
+  };
+
+  return emitToClients(io, 'outputMetrics', enrichedPayload, (client) => (
     isControllerClient(client) ||
     (isOutputDisplayClient(client) && client.type === payload.output)
-  ))
-);
+  ));
+};

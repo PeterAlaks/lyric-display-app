@@ -1,0 +1,99 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import {
+  getWindowPreloadRole,
+  isTimeDisplayRoute,
+  resolveWindowBackgroundColor,
+  shouldDisableBackgroundThrottling,
+} from '../main/windowSecurity.js';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
+
+test('passive display preload excludes control, file, NDI, and update mutation channels', () => {
+  const source = read('preloads/passive.cjs');
+  for (const forbidden of [
+    'write-file',
+    'file-navigator:',
+    'display:project-output',
+    'ndi:set-output-enabled',
+    'osc:enable',
+    'security:rotate-jwt-and-restart',
+    'updater:install',
+    'updater:set-session-active',
+    'app:renderer-ready',
+    'app:logs:clear',
+  ]) {
+    assert.equal(source.includes(forbidden), false, forbidden);
+  }
+  assert.equal(source.includes('token-store:get'), true);
+  assert.equal(source.includes('preferences:get-advanced-settings'), true);
+  assert.equal(source.includes('preferences:get-category'), false);
+});
+
+test('only the control preload can report main-window startup readiness', () => {
+  const control = read('preload.js');
+  const loading = read('preloads/loading.cjs');
+
+  assert.equal(control.includes("ipcRenderer.send('app:renderer-ready'"), true);
+  assert.equal(control.includes("ipcRenderer.invoke('app:logs:clear')"), true);
+  assert.equal(loading.includes('app:renderer-ready'), false);
+});
+
+test('data-document preloads expose only their role-specific IPC channels', () => {
+  const browser = read('preloads/browser.cjs');
+  const loading = read('preloads/loading.cjs');
+  const updater = read('preloads/updater.cjs');
+
+  assert.equal(browser.includes('browser-nav'), true);
+  assert.equal(browser.includes('token-store:'), false);
+  assert.equal(loading.includes('loading-status'), true);
+  assert.equal(loading.includes('ipcRenderer.invoke'), false);
+  assert.equal(updater.includes('updater:install'), true);
+  assert.equal(updater.includes('write-file'), false);
+});
+
+test('packaging includes role-specific preload files inside ASAR', () => {
+  const pkg = JSON.parse(read('package.json'));
+  assert.equal(pkg.build.files.includes('preloads/**/*'), true);
+  assert.equal(pkg.build.asarUnpack, undefined);
+  assert.equal(pkg.build.directories.output, 'release');
+});
+
+test('window routes receive control, passive, or no preload by role', () => {
+  assert.equal(getWindowPreloadRole('/'), 'control');
+  assert.equal(getWindowPreloadRole('/timer-control'), 'control');
+  assert.equal(getWindowPreloadRole('/output1?projection=true'), 'passive');
+  assert.equal(getWindowPreloadRole('/output12'), 'passive');
+  assert.equal(getWindowPreloadRole('/stage'), 'passive');
+  assert.equal(getWindowPreloadRole('/time'), 'passive');
+  assert.equal(getWindowPreloadRole('/preview?projection=1'), 'passive');
+  assert.equal(getWindowPreloadRole('/lyric-video-live-output'), 'passive');
+  assert.equal(getWindowPreloadRole('/lyric-video-export-frame'), 'none');
+});
+
+test('time displays remain unthrottled with or without projection mode', () => {
+  assert.equal(isTimeDisplayRoute('/time'), true);
+  assert.equal(isTimeDisplayRoute('/time?escapeHint=1'), true);
+  assert.equal(isTimeDisplayRoute('/timer-control'), false);
+
+  assert.equal(shouldDisableBackgroundThrottling('/time'), true);
+  assert.equal(shouldDisableBackgroundThrottling('/time?projection=1'), true);
+  assert.equal(shouldDisableBackgroundThrottling('/output1', { projection: true }), true);
+  assert.equal(shouldDisableBackgroundThrottling('/output1'), false);
+});
+
+test('native output preview windows use a black backing surface', () => {
+  for (const route of ['/output1', '/output6', '/stage', '/time', '/preview', '/lyric-video-live-output']) {
+    assert.equal(resolveWindowBackgroundColor(route), '#000000', route);
+  }
+
+  assert.equal(resolveWindowBackgroundColor('/output1?preview=true'), '#000000');
+  assert.equal(resolveWindowBackgroundColor('/output1', { projection: true }), '#000000');
+  assert.equal(resolveWindowBackgroundColor('/output1', { backgroundColor: '#123456' }), '#123456');
+  assert.equal(resolveWindowBackgroundColor('/', { development: true }), '#ffffff');
+  assert.equal(resolveWindowBackgroundColor('/'), '#f9fafb');
+});

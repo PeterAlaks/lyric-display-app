@@ -1,9 +1,17 @@
 import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
+import { extractExplicitGroupingDirective, parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
+import useLyricsStore from '../../context/LyricsStore.js';
+import {
+  canUseFileNavigator,
+  saveWithFileNavigator,
+} from '../../utils/fileNavigatorEvents.js';
+import { isUsableLyricsTitle } from '../../utils/titlePrefill.js';
 
 /**
  * Hook for handling file save operations (Save, Save & Load)
- * Adds awareness of existing file paths so overwrites can bypass the native dialog
+ * Adds awareness of existing file paths and uses the indexed-folder save navigator.
  */
 const useFileSave = ({
   content,
@@ -23,15 +31,34 @@ const useFileSave = ({
   setSongMetadata,
   setPendingSavedVersion,
   setSaveVersion,
-  editMode = false
+  activeSetlistItemId,
+  updateSetlistItem,
+  editMode = false,
+  saveAndLoadDestination = 'control',
 }) => {
   const navigate = useNavigate();
   const baseContentRef = externalBaseContentRef || useRef('');
   const baseTitleRef = externalBaseTitleRef || useRef('');
 
+  const serializePayload = useCallback((editorContent, extension) => (
+    extension === 'txt' ? extractExplicitGroupingDirective(editorContent).content : editorContent
+  ), []);
+
+  const createEditorGroupingPlan = useCallback((editorContent, extension) => {
+    if (extension !== 'txt') return null;
+    const parsingOptions = useLyricsStore.getState().lyricsParsingOptions;
+    return parseTxtContent(editorContent, {
+      ...parsingOptions,
+      groupingConfig: {
+        ...parsingOptions.groupingConfig,
+        enableCrossBlankLineGrouping: false,
+      },
+    }).groupingPlan;
+  }, []);
+
   const resolveBaseName = useCallback(() => {
     const rawBase = (title && title.trim()) || fileName || 'lyrics';
-    const cleaned = rawBase.replace(/\.(txt|lrc)$/i, '');
+    const cleaned = stripLyricImportExtension(rawBase);
     return cleaned || 'lyrics';
   }, [fileName, title]);
 
@@ -39,7 +66,9 @@ const useFileSave = ({
     if (!editMode) return null;
     const normalizedPath = (existingFilePath || '').trim();
     if (!normalizedPath) return null;
-    const extension = normalizedPath.toLowerCase().endsWith('.lrc') ? 'lrc' : 'txt';
+    const lowerPath = normalizedPath.toLowerCase();
+    if (!lowerPath.endsWith('.txt') && !lowerPath.endsWith('.lrc')) return null;
+    const extension = lowerPath.endsWith('.lrc') ? 'lrc' : 'txt';
     return { path: normalizedPath, extension };
   }, [editMode, existingFilePath]);
 
@@ -108,7 +137,7 @@ const useFileSave = ({
     }
 
     const description = titleChanged
-      ? 'The song title was changed. Save a new file instead of overwriting the original.'
+      ? 'The file name was changed. Save a new file instead of overwriting the original.'
       : 'Saving will automatically replace the lyrics file at this location:';
 
     const body = titleChanged
@@ -138,8 +167,8 @@ const useFileSave = ({
     }
   }, []);
 
-  const markSaved = useCallback(({ payload, baseName, extension, filePath, notifyPendingReload }) => {
-    baseContentRef.current = payload;
+  const markSaved = useCallback(({ payload, editorContent, baseName, extension, filePath, notifyPendingReload }) => {
+    baseContentRef.current = editorContent ?? payload;
     baseTitleRef.current = baseName;
 
     setFileName(baseName);
@@ -156,51 +185,171 @@ const useFileSave = ({
           fileName: baseName,
           rawText: payload,
           extension,
+          setlistItemId: activeSetlistItemId || null,
+          songMetadata: songMetadata || null,
           createdAt: Date.now(),
         });
       } else {
         setPendingSavedVersion(null);
       }
     }
-  }, [baseContentRef, baseTitleRef, setFileName, setPendingSavedVersion, setSaveVersion, setTitle]);
+  }, [activeSetlistItemId, baseContentRef, baseTitleRef, setFileName, setPendingSavedVersion, setSaveVersion, setTitle, songMetadata]);
 
-  const writeLyricsFile = useCallback(async (targetPath, payload) => {
-    const result = await window.electronAPI.writeFile(targetPath, payload);
+  const syncActiveSetlistItem = useCallback(async ({ payload, baseName, extension, filePath, groupingPlan = null }) => {
+    if (!activeSetlistItemId || typeof updateSetlistItem !== 'function') return true;
+    const effectiveGroupingPlan = groupingPlan || createEditorGroupingPlan(payload, extension);
+
+    try {
+      const result = await updateSetlistItem(activeSetlistItemId, {
+        name: `${baseName}.${extension}`,
+        content: payload,
+        fileType: extension,
+        lastModified: Date.now(),
+        metadata: {
+          ...(songMetadata || {}),
+          title: songMetadata?.title || baseName,
+          filePath: filePath || songMetadata?.filePath || null,
+          groupingPlan: extension === 'txt' ? effectiveGroupingPlan : null,
+        },
+      });
+      if (result?.success) return true;
+
+      showToast({
+        title: 'Setlist copy not updated',
+        message: result?.error || 'The file was saved, but its setlist entry could not be refreshed.',
+        variant: 'warn',
+      });
+      return false;
+    } catch (error) {
+      console.error('Failed to update the active setlist item:', error);
+      showToast({
+        title: 'Setlist copy not updated',
+        message: 'The file was saved, but its setlist entry could not be refreshed.',
+        variant: 'warn',
+      });
+      return false;
+    }
+  }, [activeSetlistItemId, createEditorGroupingPlan, showToast, songMetadata, updateSetlistItem]);
+
+  const getReloadOptions = useCallback(({ payload, extension, filePath, groupingPlan = null }) => {
+    const effectiveGroupingPlan = groupingPlan || createEditorGroupingPlan(payload, extension);
+    return {
+      rawText: payload,
+      fileType: extension,
+      filePath: filePath || null,
+      path: filePath || null,
+      setlistItemId: activeSetlistItemId || null,
+      songMetadata: songMetadata || null,
+      groupingPlan: effectiveGroupingPlan,
+    };
+  }, [activeSetlistItemId, createEditorGroupingPlan, songMetadata]);
+
+  const navigateAfterSaveAndLoad = useCallback(({ payload, baseName, extension, filePath }) => {
+    if (saveAndLoadDestination === 'lyric-video-studio') {
+      navigate('/lyric-video-studio', {
+        state: {
+          lyricVideoImport: {
+            content: payload,
+            fileName: `${baseName}.${extension}`,
+            filePath: filePath || null,
+          },
+        },
+      });
+      return;
+    }
+
+    navigate('/');
+  }, [navigate, saveAndLoadDestination]);
+
+  const writeLyricsFile = useCallback(async (targetPath, payload, options = {}) => {
+    const result = await window.electronAPI.writeFile(targetPath, payload, {
+      preserveGrouping: /\.txt$/i.test(targetPath || ''),
+      ...options,
+    });
     if (result && result.success === false) {
       throw new Error(result.error || 'File write failed');
     }
     return result;
   }, []);
 
-  const saveWithDialog = useCallback(async ({ payload, extension, baseName, defaultDir, notifyPendingReload, alsoLoad }) => {
-    if (!window.electronAPI?.showSaveDialog) return null;
-
-    const sep = defaultDir && /\\/.test(defaultDir) ? '\\' : '/';
-    const normalizedDir = (defaultDir || '').replace(/[\\/]+$/, '');
-    const defaultPath = normalizedDir ? `${normalizedDir}${sep}${baseName}.${extension}` : `${baseName}.${extension}`;
-
+  const saveWithNavigator = useCallback(async ({
+    payload,
+    extension,
+    availableExtensions,
+    baseName,
+    defaultDir,
+    notifyPendingReload,
+    alsoLoad,
+  }) => {
+    if (!canUseFileNavigator()) return null;
     try {
-      const result = await window.electronAPI.showSaveDialog({
-        defaultPath,
-        filters: [{ name: extension === 'lrc' ? 'LRC Files' : 'Text Files', extensions: [extension] }]
+      let usedNativeDialog = false;
+      let result = await saveWithFileNavigator({
+        suggestedName: baseName,
+        extension,
+        availableExtensions,
+        initialDirectory: defaultDir,
+        contentByExtension: Object.fromEntries(availableExtensions.map((candidateExtension) => [
+          candidateExtension,
+          serializePayload(payload, candidateExtension),
+        ])),
       });
 
-      if (result.canceled) return { canceled: true };
+      if (result?.unavailable) return null;
+      if (result?.canceled) return { canceled: true };
+      const selectedExtension = result?.extension === 'lrc' ? 'lrc' : 'txt';
+      if (result?.nativeDialog) {
+        usedNativeDialog = true;
+        if (!window.electronAPI?.showSaveDialog) return { canceled: true };
+        const effectiveDefaultDirectory = result.defaultDirectory || defaultDir || '';
+        const sep = /\\/.test(effectiveDefaultDirectory) ? '\\' : '/';
+        const normalizedDir = effectiveDefaultDirectory.replace(/[\\/]+$/, '');
+        const defaultPath = normalizedDir
+          ? `${normalizedDir}${sep}${baseName}.${selectedExtension}`
+          : `${baseName}.${selectedExtension}`;
+        result = await window.electronAPI.showSaveDialog({
+          defaultPath,
+          filters: [{
+            name: selectedExtension === 'lrc' ? 'LRC Files' : 'Text Files',
+            extensions: [selectedExtension],
+          }],
+        });
+        if (result.canceled) return { canceled: true };
+      }
+      if (!result?.filePath) throw new Error('No save destination was selected');
 
-      await writeLyricsFile(result.filePath, payload);
-      const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
+      const filePayload = serializePayload(payload, selectedExtension);
+      const writeResult = result.writeResult || await writeLyricsFile(result.filePath, filePayload, {
+        collisionPolicy: usedNativeDialog || result.replaced ? 'replace' : 'create',
+      });
+      const savedBaseName = result.baseName
+        || result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
-      if (alsoLoad) {
-        const blob = new Blob([payload], { type: 'text/plain' });
-        const file = new File([blob], `${savedBaseName}.${extension}`, { type: 'text/plain' });
-        setRawLyricsContent(payload);
-        await handleFileUpload(file, { rawText: payload, fileType: extension, filePath: result.filePath, path: result.filePath });
+      if (alsoLoad && saveAndLoadDestination !== 'lyric-video-studio') {
+        const blob = new Blob([filePayload], { type: 'text/plain' });
+        const file = new File([blob], `${savedBaseName}.${selectedExtension}`, { type: 'text/plain' });
+        setRawLyricsContent(filePayload);
+        await handleFileUpload(file, getReloadOptions({
+          payload: filePayload,
+          extension: selectedExtension,
+          filePath: result.filePath,
+          groupingPlan: writeResult?.groupingPlan,
+        }));
       }
 
-      markSaved({
-        payload,
+      await syncActiveSetlistItem({
+        payload: filePayload,
         baseName: savedBaseName,
-        extension,
+        extension: selectedExtension,
+        filePath: result.filePath,
+        groupingPlan: writeResult?.groupingPlan,
+      });
+
+      markSaved({
+        payload: filePayload,
+        editorContent: payload,
+        baseName: savedBaseName,
+        extension: selectedExtension,
         filePath: result.filePath,
         notifyPendingReload: notifyPendingReload && !alsoLoad
       });
@@ -213,17 +362,22 @@ const useFileSave = ({
 
       showToast({
         title: 'File saved',
-        message: `"${savedBaseName}.${extension}" saved successfully`,
+        message: `"${savedBaseName}.${selectedExtension}" saved successfully`,
         variant: 'success'
       });
 
       if (alsoLoad) {
-        navigate('/');
+        navigateAfterSaveAndLoad({
+          payload: filePayload,
+          baseName: savedBaseName,
+          extension: selectedExtension,
+          filePath: result.filePath,
+        });
       }
 
-      return { success: true, filePath: result.filePath };
+      return { success: true, filePath: result.filePath, extension: selectedExtension };
     } catch (err) {
-      console.error('Failed to save lyrics file via dialog:', err);
+      console.error('Failed to save lyrics file via navigator:', err);
       showModal({
         title: 'Save failed',
         description: 'We could not save the lyric file. Please try again.',
@@ -232,7 +386,7 @@ const useFileSave = ({
       });
       return { success: false };
     }
-  }, [handleFileUpload, markSaved, navigate, setRawLyricsContent, showModal, showToast, writeLyricsFile]);
+  }, [getReloadOptions, handleFileUpload, markSaved, navigateAfterSaveAndLoad, saveAndLoadDestination, serializePayload, setRawLyricsContent, showModal, showToast, syncActiveSetlistItem, writeLyricsFile]);
 
   const tryDirectSaveToExistingPath = useCallback(async (payload, { alsoLoad = false } = {}) => {
     const target = getExistingTarget();
@@ -263,17 +417,15 @@ const useFileSave = ({
     });
     if (action === 'cancel') return { canceled: true };
     if (action === 'save-new') {
+      if (!canUseFileNavigator()) return null;
       const preferredExtension = target.extension;
-      const format = await promptForFileFormat(preferredExtension);
-      if (!format) return { canceled: true };
-      if (format === 'lrc' && !lrcEligibility.eligible) return { canceled: true };
-
-      const extension = format === 'lrc' ? 'lrc' : 'txt';
+      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
       const dir = getDirectoryFromPath(target.path);
       const baseName = resolveBaseName();
-      const res = await saveWithDialog({
+      const res = await saveWithNavigator({
         payload,
         extension,
+        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
         baseName,
         defaultDir: dir,
         notifyPendingReload: !alsoLoad,
@@ -284,17 +436,34 @@ const useFileSave = ({
     if (action !== 'overwrite') return { canceled: true };
 
     try {
-      await writeLyricsFile(target.path, payload);
+      const filePayload = serializePayload(payload, target.extension);
+      const writeResult = await writeLyricsFile(target.path, filePayload, {
+        collisionPolicy: 'replace',
+      });
       const savedBaseName = target.path.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
 
-      if (alsoLoad) {
-        const blob = new Blob([payload], { type: 'text/plain' });
+      if (alsoLoad && saveAndLoadDestination !== 'lyric-video-studio') {
+        const blob = new Blob([filePayload], { type: 'text/plain' });
         const file = new File([blob], `${savedBaseName}.${target.extension}`, { type: 'text/plain' });
-        await handleFileUpload(file, { rawText: payload, fileType: target.extension, filePath: target.path, path: target.path });
+        await handleFileUpload(file, getReloadOptions({
+          payload: filePayload,
+          extension: target.extension,
+          filePath: target.path,
+          groupingPlan: writeResult?.groupingPlan,
+        }));
       }
 
+      await syncActiveSetlistItem({
+        payload: filePayload,
+        baseName: savedBaseName,
+        extension: target.extension,
+        filePath: target.path,
+        groupingPlan: writeResult?.groupingPlan,
+      });
+
       markSaved({
-        payload,
+        payload: filePayload,
+        editorContent: payload,
         baseName: savedBaseName,
         extension: target.extension,
         filePath: target.path,
@@ -314,7 +483,12 @@ const useFileSave = ({
       });
 
       if (alsoLoad) {
-        navigate('/');
+        navigateAfterSaveAndLoad({
+          payload: filePayload,
+          baseName: savedBaseName,
+          extension: target.extension,
+          filePath: target.path,
+        });
       }
 
       return { success: true, filePath: target.path };
@@ -327,13 +501,13 @@ const useFileSave = ({
       });
       return null;
     }
-  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, saveWithDialog, showToast, title, verifyExistingPath, writeLyricsFile]);
+  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigateAfterSaveAndLoad, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
 
   const handleSave = useCallback(async () => {
-    if (!content.trim() || !title.trim()) {
+    if (!content.trim() || !isUsableLyricsTitle(title)) {
       showModal({
         title: 'Missing song details',
-        description: 'Enter both a song title and lyrics before saving.',
+        description: 'Replace “Untitled Lyrics” with a file name and add lyrics before saving.',
         variant: 'warn',
         dismissLabel: 'Will do',
       });
@@ -348,58 +522,30 @@ const useFileSave = ({
     }
 
     const preferredExtension = getExistingTarget()?.extension;
+    const baseName = resolveBaseName();
+    if (canUseFileNavigator()) {
+      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
+      await saveWithNavigator({
+        payload,
+        extension,
+        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+        baseName,
+        defaultDir: getDirectoryFromPath(getExistingTarget()?.path),
+        notifyPendingReload: editMode,
+        alsoLoad: false,
+      });
+      return;
+    }
+
     const format = await promptForFileFormat(preferredExtension);
     if (!format) return;
     if (format === 'lrc' && !lrcEligibility.eligible) return;
 
     const extension = format === 'lrc' ? 'lrc' : 'txt';
-    const baseName = resolveBaseName();
-
-    if (window.electronAPI && window.electronAPI.showSaveDialog) {
-      try {
-        const result = await window.electronAPI.showSaveDialog({
-          defaultPath: `${baseName}.${extension}`,
-          filters: [{ name: extension === 'lrc' ? 'LRC Files' : 'Text Files', extensions: [extension] }]
-        });
-
-        if (!result.canceled) {
-          await writeLyricsFile(result.filePath, payload);
-          const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
-
-          markSaved({
-            payload,
-            baseName: savedBaseName,
-            extension,
-            filePath: result.filePath,
-            notifyPendingReload: editMode
-          });
-
-          try {
-            if (window.electronAPI?.addRecentFile) {
-              await window.electronAPI.addRecentFile(result.filePath);
-            }
-          } catch { }
-
-          showToast({
-            title: 'File saved',
-            message: `"${savedBaseName}.${extension}" saved successfully`,
-            variant: 'success'
-          });
-        }
-      } catch (err) {
-        console.error('Failed to save file:', err);
-        showModal({
-          title: 'Save failed',
-          description: 'We could not save the lyric file. Please try again.',
-          variant: 'error',
-          dismissLabel: 'Close',
-        });
-      }
-      return;
-    }
+    const filePayload = serializePayload(payload, extension);
 
     try {
-      const blob = new Blob([payload], { type: 'text/plain' });
+      const blob = new Blob([filePayload], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -409,8 +555,11 @@ const useFileSave = ({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      await syncActiveSetlistItem({ payload: filePayload, baseName, extension, filePath: null });
+
       markSaved({
-        payload,
+        payload: filePayload,
+        editorContent: payload,
         baseName,
         extension,
         filePath: null,
@@ -431,13 +580,13 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, showModal, showToast, title, tryDirectSaveToExistingPath, writeLyricsFile]);
+  }, [content, editMode, getDirectoryFromPath, getExistingTarget, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, saveWithNavigator, serializePayload, showModal, showToast, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   const handleSaveAndLoad = useCallback(async () => {
-    if (!content.trim() || !title.trim()) {
+    if (!content.trim() || !isUsableLyricsTitle(title)) {
       showModal({
         title: 'Missing song details',
-        description: 'Enter both a song title and lyrics before saving and loading.',
+        description: 'Replace “Untitled Lyrics” with a file name and add lyrics before saving and loading.',
         variant: 'warn',
         dismissLabel: 'Got it',
       });
@@ -452,64 +601,37 @@ const useFileSave = ({
     }
 
     const preferredExtension = getExistingTarget()?.extension;
+    const baseName = resolveBaseName();
+    if (canUseFileNavigator()) {
+      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
+      await saveWithNavigator({
+        payload,
+        extension,
+        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+        baseName,
+        defaultDir: getDirectoryFromPath(getExistingTarget()?.path),
+        notifyPendingReload: false,
+        alsoLoad: true,
+      });
+      return;
+    }
+
     const format = await promptForFileFormat(preferredExtension);
     if (!format) return;
     if (format === 'lrc' && !lrcEligibility.eligible) return;
 
     const extension = format === 'lrc' ? 'lrc' : 'txt';
-    const baseName = resolveBaseName();
-
-    if (window.electronAPI && window.electronAPI.showSaveDialog) {
-      try {
-        const result = await window.electronAPI.showSaveDialog({
-          defaultPath: `${baseName}.${extension}`,
-          filters: [{ name: extension === 'lrc' ? 'LRC Files' : 'Text Files', extensions: [extension] }]
-        });
-
-        if (!result.canceled) {
-          await writeLyricsFile(result.filePath, payload);
-          const savedBaseName = result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
-
-          const blob = new Blob([payload], { type: 'text/plain' });
-          const file = new File([blob], `${savedBaseName}.${extension}`, { type: 'text/plain' });
-
-          setRawLyricsContent(payload);
-          await handleFileUpload(file, { rawText: payload, fileType: extension, filePath: result.filePath, path: result.filePath });
-
-          markSaved({
-            payload,
-            baseName: savedBaseName,
-            extension,
-            filePath: result.filePath,
-            notifyPendingReload: false
-          });
-
-          try {
-            if (window.electronAPI?.addRecentFile) {
-              await window.electronAPI.addRecentFile(result.filePath);
-            }
-          } catch { }
-
-          navigate('/');
-        }
-      } catch (err) {
-        console.error('Failed to save and load file:', err);
-        showModal({
-          title: 'Save and load failed',
-          description: 'We could not save and reload the lyrics. Please try again.',
-          variant: 'error',
-          dismissLabel: 'Close',
-        });
-      }
-      return;
-    }
+    const filePayload = serializePayload(payload, extension);
 
     try {
-      const blob = new Blob([payload], { type: 'text/plain' });
+      const blob = new Blob([filePayload], { type: 'text/plain' });
       const file = new File([blob], `${baseName}.${extension}`, { type: 'text/plain' });
 
-      setRawLyricsContent(payload);
-      await handleFileUpload(file, { rawText: payload, fileType: extension, filePath: null });
+      if (saveAndLoadDestination !== 'lyric-video-studio') {
+        setRawLyricsContent(filePayload);
+        await handleFileUpload(file, getReloadOptions({ payload: filePayload, extension, filePath: null }));
+      }
+      await syncActiveSetlistItem({ payload: filePayload, baseName, extension, filePath: null });
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -521,13 +643,14 @@ const useFileSave = ({
       URL.revokeObjectURL(url);
 
       markSaved({
-        payload,
+        payload: filePayload,
+        editorContent: payload,
         baseName,
         extension,
         filePath: null,
         notifyPendingReload: false
       });
-      navigate('/');
+      navigateAfterSaveAndLoad({ payload: filePayload, baseName, extension, filePath: null });
     } catch (err) {
       console.error('Failed to process lyrics:', err);
       showModal({
@@ -537,7 +660,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, handleFileUpload, lrcEligibility.eligible, markSaved, navigate, promptForFileFormat, resolveBaseName, setRawLyricsContent, showModal, title, tryDirectSaveToExistingPath, writeLyricsFile]);
+  }, [content, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigateAfterSaveAndLoad, promptForFileFormat, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, setRawLyricsContent, showModal, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   return {
     handleSave,

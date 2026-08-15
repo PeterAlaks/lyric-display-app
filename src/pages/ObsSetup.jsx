@@ -19,6 +19,12 @@ const TRANSFORM_MODE_OPTIONS = [
   { value: 'height', label: 'Scale to height' },
   { value: 'none', label: 'Do not change transform' },
 ];
+const obsInputClass = 'h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500';
+const obsSelectTriggerClass = 'bg-white border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200';
+const obsSelectContentClass = 'bg-white border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200';
+const obsPanelClass = 'rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700/70 dark:bg-gray-800/45';
+const obsSurfaceClass = 'rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700/70 dark:bg-gray-900/35';
+const obsToggleSurfaceClass = 'flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-700/70 dark:bg-gray-900/25';
 
 const readProfile = () => {
   try {
@@ -434,7 +440,7 @@ export default function ObsSetup() {
   };
 
   return (
-    <div className="h-full min-h-screen overflow-y-auto bg-[#f8fafc] pb-4 text-gray-950 dark:bg-gray-950 dark:text-gray-100">
+    <div className="h-full min-h-screen overflow-y-auto bg-[#f8fafc] pb-4 text-gray-950 dark:bg-gray-900 dark:text-gray-100">
       <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-4 pb-6 pt-5 sm:px-6">
         <header className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-4 dark:border-gray-800">
           <div className="flex items-center gap-3">
@@ -458,7 +464,7 @@ export default function ObsSetup() {
         )}
 
         <div className="grid flex-1 items-start gap-4 pb-4 lg:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)]">
-          <section className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:mb-0">
+          <section className={`mb-4 lg:mb-0 ${obsPanelClass}`}>
             <div className="mb-4 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <PlugZap className="h-5 w-5 text-blue-600 dark:text-blue-300" />
@@ -475,7 +481,7 @@ export default function ObsSetup() {
                 <input
                   value={obsHost}
                   onChange={(event) => setObsHost(event.target.value)}
-                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                  className={obsInputClass}
                 />
               </Field>
               <Field label="Port">
@@ -485,7 +491,7 @@ export default function ObsSetup() {
                   max="65535"
                   value={obsPort}
                   onChange={(event) => setObsPort(event.target.value)}
-                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                  className={obsInputClass}
                 />
               </Field>
               <div className="sm:col-span-2">
@@ -494,18 +500,18 @@ export default function ObsSetup() {
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                    className={obsInputClass}
                   />
                 </Field>
               </div>
             </div>
 
-            <div className="mt-4 space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950">
+            <div className={`mt-4 space-y-3 ${obsSurfaceClass}`}>
               <Field label="Source Base URL" hint="Use LAN for an OBS computer on the network. Use Local when OBS is on this computer.">
                 <input
                   value={sourceBaseUrl}
                   onChange={(event) => setSourceBaseUrl(event.target.value)}
-                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                  className={obsInputClass}
                 />
               </Field>
               <div className="grid grid-cols-2 gap-2">
@@ -523,7 +529,7 @@ export default function ObsSetup() {
               <StatusBox status={status} port={obsPort} />
             </div>
 
-            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-800 dark:bg-gray-950">
+            <div className={`mt-4 text-sm ${obsSurfaceClass}`}>
               <div className="mb-2 flex items-center gap-2 font-semibold">
                 <Network className="h-4 w-4" />
                 {isNetworkSetup ? 'Network Setup' : 'Same Computer Setup'}
@@ -536,7 +542,7 @@ export default function ObsSetup() {
             </div>
           </section>
 
-          <section className="relative mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:mb-0">
+          <section className={`relative mb-4 lg:mb-0 ${obsPanelClass}`}>
             <div className="mb-4 flex items-center gap-2">
               <ExternalLink className="h-5 w-5 text-blue-600 dark:text-blue-300" />
               <h2 className="text-base font-semibold">Source Settings</h2>
@@ -552,10 +558,10 @@ export default function ObsSetup() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="LyricDisplay Output">
                 <Select value={selectedOutput} onValueChange={handleOutputChange}>
-                  <SelectTrigger className="bg-white dark:bg-gray-950">
+                  <SelectTrigger className={obsSelectTriggerClass}>
                     <SelectValue placeholder="Select output" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={obsSelectContentClass}>
                     {sources.map((source) => (
                       <SelectItem key={source.id} value={source.id}>{source.label}</SelectItem>
                     ))}
@@ -565,10 +571,10 @@ export default function ObsSetup() {
 
               <Field label="OBS Scene">
                 <Select value={selectedScene} onValueChange={setSelectedScene} disabled={scenes.length === 0}>
-                  <SelectTrigger className="bg-white dark:bg-gray-950">
+                  <SelectTrigger className={obsSelectTriggerClass}>
                     <SelectValue placeholder={scenes.length ? 'Select scene' : 'Connect first'} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={obsSelectContentClass}>
                     {scenes.map((scene) => (
                       <SelectItem key={scene.sceneName} value={scene.sceneName}>{scene.sceneName}</SelectItem>
                     ))}
@@ -580,23 +586,23 @@ export default function ObsSetup() {
                 <input
                   value={sourceName}
                   onChange={(event) => setSourceName(event.target.value)}
-                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                  className={obsInputClass}
                 />
               </Field>
 
               <Field label="Mode">
                 <Select value={mode} onValueChange={setMode}>
-                  <SelectTrigger className="bg-white dark:bg-gray-950">
+                  <SelectTrigger className={obsSelectTriggerClass}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={obsSelectContentClass}>
                     <SelectItem value="transparent">Transparent Overlay</SelectItem>
                     <SelectItem value="projection">Projection Black Background</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
 
-              <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800 sm:col-span-2">
+              <div className={`${obsToggleSurfaceClass} sm:col-span-2`}>
                 <div>
                   <span className="text-sm font-medium">Use OBS Base Resolution</span>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -616,7 +622,7 @@ export default function ObsSetup() {
                   value={width}
                   onChange={(event) => setWidth(event.target.value)}
                   disabled={useObsBaseResolution}
-                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                  className={obsInputClass}
                 />
               </Field>
 
@@ -628,7 +634,7 @@ export default function ObsSetup() {
                   value={height}
                   onChange={(event) => setHeight(event.target.value)}
                   disabled={useObsBaseResolution}
-                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                  className={obsInputClass}
                 />
               </Field>
 
@@ -639,16 +645,16 @@ export default function ObsSetup() {
                   max="120"
                   value={fps}
                   onChange={(event) => setFps(event.target.value)}
-                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950"
+                  className={obsInputClass}
                 />
               </Field>
 
               <Field label="OBS Transform">
                 <Select value={transformMode} onValueChange={setTransformMode}>
-                  <SelectTrigger className="bg-white dark:bg-gray-950">
+                  <SelectTrigger className={obsSelectTriggerClass}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={obsSelectContentClass}>
                     {TRANSFORM_MODE_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                     ))}
@@ -656,17 +662,17 @@ export default function ObsSetup() {
                 </Select>
               </Field>
 
-              <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800">
+              <div className={obsToggleSurfaceClass}>
                 <span className="text-sm font-medium">Lock new source</span>
                 <Switch checked={lockSource} onCheckedChange={setLockSource} {...getSwitchProps(false)} />
               </div>
 
-              <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400 sm:col-span-2">
+              <div className={`${obsSurfaceClass} text-xs text-gray-600 dark:text-gray-400 sm:col-span-2`}>
                 Source size used for OBS: <span className="font-mono text-gray-900 dark:text-gray-100">{effectiveWidth} x {effectiveHeight}</span>
               </div>
             </div>
 
-            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950">
+            <div className={`mt-4 ${obsSurfaceClass}`}>
               <div className="mb-1 text-xs font-semibold text-gray-600 dark:text-gray-300">Browser Source URL</div>
               <div className="break-all font-mono text-xs text-blue-700 dark:text-blue-300">{sourceUrl}</div>
               <div className="mt-3 flex flex-wrap gap-2">

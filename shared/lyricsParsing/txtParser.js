@@ -1,6 +1,22 @@
 import { clearRuntimeGroupingConfig, setRuntimeGroupingConfig } from './runtimeConfig.js';
 import { processRawTextToLines } from './txtProcessor.js';
 import { deriveSectionsFromProcessedLines } from './sections.js';
+import { applyGroupingPlan, createGroupingPlan } from './groupingPlan.js';
+
+export const EXPLICIT_GROUPING_DIRECTIVE = '[#:LyricDisplay grouping=explicit]';
+
+const ESCAPED_DIRECTIVE = EXPLICIT_GROUPING_DIRECTIVE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const DIRECTIVE_LINE_REGEX = new RegExp(`^\\s*${ESCAPED_DIRECTIVE}\\s*(?:\\r?\\n|$)`, 'i');
+
+export function extractExplicitGroupingDirective(rawText = '') {
+  const content = typeof rawText === 'string' ? rawText : '';
+  const explicitGrouping = DIRECTIVE_LINE_REGEX.test(content);
+
+  return {
+    explicitGrouping,
+    content: explicitGrouping ? content.replace(DIRECTIVE_LINE_REGEX, '') : content,
+  };
+}
 
 /**
  * Parse plain text lyric content into processed lines with translation and normal groupings.
@@ -10,12 +26,20 @@ import { deriveSectionsFromProcessedLines } from './sections.js';
  * @returns {{ rawText: string, processedLines: Array<string | object> }}
  */
 export function parseTxtContent(rawText = '', options = {}) {
-  if (options.groupingConfig) {
-    setRuntimeGroupingConfig(options.groupingConfig);
+  const directive = extractExplicitGroupingDirective(rawText);
+  if (options.groupingConfig || directive.explicitGrouping) {
+    setRuntimeGroupingConfig({
+      ...(options.groupingConfig || {}),
+      ...(directive.explicitGrouping ? {
+        enableCrossBlankLineGrouping: false,
+      } : {}),
+    });
   }
 
   try {
-    const processedLines = processRawTextToLines(rawText, options);
+    const initiallyProcessedLines = processRawTextToLines(directive.content, options);
+    const groupingResult = applyGroupingPlan(initiallyProcessedLines, options.groupingPlan);
+    const processedLines = groupingResult.processedLines;
     const { sections, lineToSection } = deriveSectionsFromProcessedLines(processedLines);
 
     const reconstructed = processedLines.map((line) => {
@@ -32,7 +56,14 @@ export function parseTxtContent(rawText = '', options = {}) {
       return '';
     }).join('\n\n');
 
-    return { rawText: reconstructed, processedLines, sections, lineToSection };
+    return {
+      rawText: reconstructed,
+      processedLines,
+      sections,
+      lineToSection,
+      groupingPlan: createGroupingPlan(processedLines),
+      groupingPlanApplied: groupingResult.applied,
+    };
   } finally {
     clearRuntimeGroupingConfig();
   }

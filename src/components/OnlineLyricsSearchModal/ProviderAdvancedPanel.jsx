@@ -6,14 +6,12 @@ const providerLogoMap = {
   lyricsOvh: '/logos/lyricsovh-logo.png',
   openHymnal: '/logos/openhymnal-logo.png',
   lrclib: '/logos/lrclib-logo.png',
-  chartlyrics: '/logos/chartlyrics-logo.png',
 };
 
 const providerIconMap = {
   openHymnal: '/logos/openhymnal-icon.png',
   lyricsOvh: '/logos/lyricsovh-icon.png',
   lrclib: '/logos/lrclib-icon.png',
-  chartlyrics: '/logos/chartlyrics-icon.png',
 };
 
 const FeaturedLibraries = ({ compact = false, darkMode, providerDefinitions }) => {

@@ -1,5 +1,6 @@
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import * as presentation from '../presentation.js';
+import { addFileNavigatorRoot, refreshFileInNavigator } from '../fileNavigator.js';
 
 /**
  * Register presentation import IPC handlers
@@ -38,7 +39,16 @@ export function registerPresentationHandlers({ getMainWindow }) {
 
   ipcMain.handle('presentation:import-file', async (_event, params) => {
     try {
-      return await presentation.importPresentation(params);
+      const result = await presentation.importPresentation(params);
+      if (result.success && result.filePath) {
+        try {
+          await addFileNavigatorRoot(params.destinationPath);
+          await refreshFileInNavigator(result.filePath);
+        } catch (indexError) {
+          console.warn('Presentation lyrics were imported but the destination could not be indexed:', indexError?.message || indexError);
+        }
+      }
+      return result;
     } catch (error) {
       console.error('Error importing presentation:', error);
       return { success: false, error: error.message };
@@ -58,7 +68,11 @@ export function registerPresentationHandlers({ getMainWindow }) {
   ipcMain.handle('presentation:get-user-home', async () => {
     try {
       const os = await import('os');
-      return { success: true, homedir: os.homedir() };
+      return {
+        success: true,
+        homedir: os.homedir(),
+        documentsPath: app.getPath('documents'),
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }

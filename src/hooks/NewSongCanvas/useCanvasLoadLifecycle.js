@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { reconstructEditableText } from '../../utils/lyricsFormat';
+import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
+import { extractExplicitGroupingDirective } from '../../../shared/lyricsParsing/txtParser.js';
+import { UNTITLED_LYRICS_TITLE } from '../../utils/titlePrefill.js';
 
 const resetCanvasState = ({ baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setFileName, setTitle }) => {
   resetHistory('');
   setFileName('');
-  setTitle('');
+  setTitle(UNTITLED_LYRICS_TITLE);
   baseContentRef.current = '';
-  baseTitleRef.current = '';
+  baseTitleRef.current = UNTITLED_LYRICS_TITLE;
   if (loadSignatureRef) {
     loadSignatureRef.current = null;
   }
@@ -19,6 +22,7 @@ export const useCanvasLoadLifecycle = ({
   loadSignatureRef,
   lyrics,
   lyricsFileName,
+  lyricsSource,
   navigate,
   rawLyricsContent,
   resetHistory,
@@ -54,16 +58,17 @@ export const useCanvasLoadLifecycle = ({
 
       if (!content) return;
 
-      const baseName = fileName ? fileName.replace(/\.(txt|lrc)$/i, '') : 'Untitled';
+      const baseName = fileName ? stripLyricImportExtension(fileName) : UNTITLED_LYRICS_TITLE;
+      const editableContent = extractExplicitGroupingDirective(content).content;
 
-      resetHistory(content);
+      resetHistory(editableContent);
       setTitle(baseName);
       setFileName(baseName);
       setCurrentFilePath(filePath || '');
-      baseContentRef.current = content;
+      baseContentRef.current = editableContent;
       baseTitleRef.current = baseName;
 
-      loadSignatureRef.current = `${baseName}::${content}`;
+      loadSignatureRef.current = `${baseName}::${editableContent}`;
 
       showToast({
         title: 'File loaded',
@@ -74,7 +79,16 @@ export const useCanvasLoadLifecycle = ({
 
     window.addEventListener('load-into-canvas', handleLoadIntoCanvas);
 
+    const pendingLoadTimer = window.__pendingCanvasLyricsLoad
+      ? window.setTimeout(() => {
+        const pending = window.__pendingCanvasLyricsLoad;
+        delete window.__pendingCanvasLyricsLoad;
+        handleLoadIntoCanvas({ detail: pending });
+      }, 0)
+      : null;
+
     return () => {
+      if (pendingLoadTimer !== null) window.clearTimeout(pendingLoadTimer);
       window.removeEventListener('load-into-canvas', handleLoadIntoCanvas);
     };
   }, [baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setCurrentFilePath, setFileName, setTitle, showToast]);
@@ -88,12 +102,13 @@ export const useCanvasLoadLifecycle = ({
   useEffect(() => {
     if (!editMode) return;
 
-    const nextContent = rawLyricsContent
-      ? rawLyricsContent
+    const isLrcSource = lyricsSource?.fileType === 'lrc';
+    const nextContent = isLrcSource && rawLyricsContent
+      ? extractExplicitGroupingDirective(rawLyricsContent).content
       : (lyrics && lyrics.length > 0)
         ? reconstructEditableText(lyrics)
-        : '';
-    const nextTitle = lyricsFileName || '';
+        : extractExplicitGroupingDirective(rawLyricsContent || '').content;
+    const nextTitle = lyricsFileName || UNTITLED_LYRICS_TITLE;
     const loadSignature = `${nextTitle}::${nextContent}`;
     if (loadSignatureRef.current !== loadSignature) {
       resetHistory(nextContent);
@@ -104,7 +119,7 @@ export const useCanvasLoadLifecycle = ({
       baseTitleRef.current = nextTitle || '';
       loadSignatureRef.current = loadSignature;
     }
-  }, [baseContentRef, baseTitleRef, editMode, loadSignatureRef, lyrics, lyricsFileName, rawLyricsContent, resetHistory, setCurrentFilePath, setFileName, setTitle, songMetadata]);
+  }, [baseContentRef, baseTitleRef, editMode, loadSignatureRef, lyrics, lyricsFileName, lyricsSource?.fileType, rawLyricsContent, resetHistory, setCurrentFilePath, setFileName, setTitle, songMetadata]);
 
   useEffect(() => {
     if (editMode) return;

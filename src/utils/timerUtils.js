@@ -1,10 +1,25 @@
-export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
-export const MAX_TIMER_SETS = 10;
+import {
+  MAX_SCHEDULE_ITEMS,
+  isTimedScheduleItem,
+  normalizeDateOnly,
+  normalizeScheduleItems,
+  normalizeTimeOfDay,
+} from '../../shared/scheduleUtils.js';
+import {
+  DEFAULT_APPEARANCE_TRANSITIONS,
+  normalizeTransitionAnimation,
+  normalizeTransitionDuration,
+} from '../../shared/transitionSettings.js';
 
-export const createDefaultTimerControlSet = (index = 0) => ({
-  id: `timer-set-${index + 1}`,
-  label: `Timer ${index + 1}`,
-  durationMs: 5 * 60000,
+export const TIMER_STORAGE_KEY = 'lyricdisplay_timer_state_v2';
+export const MAX_TIMER_SETS = MAX_SCHEDULE_ITEMS;
+
+export const getTimerToggleProps = (darkMode, disabled = false) => ({
+  className: `!h-6 !w-11 !border-0 shadow-sm transition-colors ${darkMode
+    ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+    : 'data-[state=checked]:bg-black'
+  } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`,
+  thumbClassName: '!h-5 !w-5 data-[state=checked]:!translate-x-[22px] data-[state=unchecked]:!translate-x-[2px]',
 });
 
 export const DEFAULT_TIMER_CONTROL_SETTINGS = {
@@ -15,15 +30,21 @@ export const DEFAULT_TIMER_CONTROL_SETTINGS = {
   warningSeconds: 60,
   criticalSeconds: 30,
   overrunMode: false,
+  showGlobalClockDuringPause: false,
   useSets: false,
-  sets: [
-    createDefaultTimerControlSet(0),
-    createDefaultTimerControlSet(1),
-  ],
+  sets: [],
   autoStartNext: true,
   indicatorEnabled: true,
   indicatorSeconds: 10,
-  indicatorLabel: 'Next timer starts in',
+  indicatorLabel: 'Next item starts in',
+  scheduleTitle: 'Service Schedule',
+  scheduleEventStartTime: '',
+  scheduleEventDate: '',
+  scheduleScheduledStartAt: null,
+  scheduleIdealEndTime: '',
+  scheduleShowGlobalTimeDuringManualItems: true,
+  scheduleNotificationsEnabled: true,
+  awaitingNext: false,
 };
 
 export const DEFAULT_TIMER_DISPLAY = {
@@ -53,6 +74,8 @@ export const DEFAULT_TIMER_DISPLAY = {
   clockHour12: false,
   clockShowSeconds: false,
   clockShowPeriod: true,
+  stateTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.timerStateTransitionAnimation,
+  stateTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.timerStateTransitionDuration,
 };
 
 const LEGACY_DEFAULT_OTHER_ITEMS_SCALE = 0.15;
@@ -79,6 +102,14 @@ export const normalizeTimerDisplaySettings = (raw) => {
       ? DEFAULT_TIMER_DISPLAY.globalClockScale
       : (settings.globalClockScale ?? otherItemsScale),
     displayUpdatedAt,
+    stateTransitionAnimation: normalizeTransitionAnimation(
+      settings.stateTransitionAnimation,
+      DEFAULT_TIMER_DISPLAY.stateTransitionAnimation
+    ),
+    stateTransitionDuration: normalizeTransitionDuration(
+      settings.stateTransitionDuration,
+      DEFAULT_TIMER_DISPLAY.stateTransitionDuration
+    ),
   };
 };
 
@@ -107,7 +138,22 @@ export const createIdleTimerState = () => ({
   autoStartNext: true,
   indicatorEnabled: false,
   indicatorDurationMs: 10000,
-  indicatorLabel: 'Next timer starts in',
+  indicatorLabel: 'Next item starts in',
+  scheduleTitle: '',
+  scheduleRunId: '',
+  scheduleEventStartTime: '',
+  scheduleEventDate: '',
+  scheduleScheduledStartAt: null,
+  scheduleIdealEndAt: null,
+  scheduleStartedAt: null,
+  scheduleJoinedAt: null,
+  scheduleReconciled: false,
+  scheduleReconciliationHold: false,
+  schedulePausedOverrunMs: 0,
+  scheduleAssumedCompletedIds: [],
+  scheduleShowGlobalTimeDuringManualItems: true,
+  showGlobalClockDuringPause: false,
+  scheduleNotificationsEnabled: true,
   display: { ...DEFAULT_TIMER_DISPLAY },
   updatedAt: Date.now(),
 });
@@ -152,21 +198,43 @@ const isValidTargetTime = (value) => {
     && minutes <= 59;
 };
 
+const normalizeNullableTimestamp = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  return Number.isFinite(Number(value)) ? Number(value) : null;
+};
+
 export const normalizeTimerControlSettings = (raw) => {
   const settings = raw && typeof raw === 'object' && !Array.isArray(raw)
     ? raw
     : {};
 
   const sets = Array.isArray(settings.sets)
-    ? settings.sets
-      .map((set, index) => ({
-        id: String(set?.id || `timer-set-${index + 1}`),
-        label: typeof set?.label === 'string' ? set.label : `Timer ${index + 1}`,
-        durationMs: clampNumber(set?.durationMs, 5 * 60000, 0),
-      }))
-      .filter((set) => set.durationMs > 0)
-      .slice(0, MAX_TIMER_SETS)
+    ? normalizeScheduleItems(settings.sets)
     : DEFAULT_TIMER_CONTROL_SETTINGS.sets;
+  const isLegacyPlaceholderSchedule = sets.length > 0
+    && sets.length <= 2
+    && sets.every((set, index) => (
+      set.id === `timer-set-${index + 1}`
+      && set.label === `Timer ${index + 1}`
+      && set.durationMs === 5 * 60_000
+    ));
+  const warningSeconds = normalizeTimerNumberInput(
+    settings.warningSeconds,
+    DEFAULT_TIMER_CONTROL_SETTINGS.warningSeconds,
+    0,
+    86400
+  );
+  const rawCriticalSeconds = normalizeTimerNumberInput(
+    settings.criticalSeconds,
+    DEFAULT_TIMER_CONTROL_SETTINGS.criticalSeconds,
+    0,
+    86400
+  );
+  const criticalSeconds = warningSeconds !== ''
+    && rawCriticalSeconds !== ''
+    && Number(rawCriticalSeconds) > Number(warningSeconds)
+    ? warningSeconds
+    : rawCriticalSeconds;
 
   return {
     ...DEFAULT_TIMER_CONTROL_SETTINGS,
@@ -175,15 +243,25 @@ export const normalizeTimerControlSettings = (raw) => {
     durationMinutes: normalizeTimerNumberInput(settings.durationMinutes, DEFAULT_TIMER_CONTROL_SETTINGS.durationMinutes, 0, 1440),
     targetTime: isValidTargetTime(settings.targetTime) ? settings.targetTime : '',
     targetHourFormat: settings.targetHourFormat === '24' ? '24' : '12',
-    warningSeconds: normalizeTimerNumberInput(settings.warningSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.warningSeconds, 0, 86400),
-    criticalSeconds: normalizeTimerNumberInput(settings.criticalSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.criticalSeconds, 0, 86400),
+    warningSeconds,
+    criticalSeconds,
     overrunMode: Boolean(settings.overrunMode),
+    showGlobalClockDuringPause: Boolean(settings.showGlobalClockDuringPause),
     useSets: Boolean(settings.useSets),
-    sets: sets.length > 0 ? sets : [createDefaultTimerControlSet(0)],
+    sets: isLegacyPlaceholderSchedule ? [] : sets,
     autoStartNext: settings.autoStartNext !== false,
     indicatorEnabled: settings.indicatorEnabled !== false,
     indicatorSeconds: normalizeTimerNumberInput(settings.indicatorSeconds, DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds, 0, 86400),
     indicatorLabel: typeof settings.indicatorLabel === 'string' ? settings.indicatorLabel : DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+    scheduleTitle: typeof settings.scheduleTitle === 'string'
+      ? settings.scheduleTitle.slice(0, 160)
+      : DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
+    scheduleEventStartTime: isValidTargetTime(settings.scheduleEventStartTime) ? settings.scheduleEventStartTime : '',
+    scheduleEventDate: normalizeDateOnly(settings.scheduleEventDate),
+    scheduleScheduledStartAt: normalizeNullableTimestamp(settings.scheduleScheduledStartAt),
+    scheduleIdealEndTime: isValidTargetTime(settings.scheduleIdealEndTime) ? settings.scheduleIdealEndTime : '',
+    scheduleShowGlobalTimeDuringManualItems: settings.scheduleShowGlobalTimeDuringManualItems !== false,
+    scheduleNotificationsEnabled: settings.scheduleNotificationsEnabled !== false,
     settingsUpdatedAt: Number.isFinite(Number(settings.settingsUpdatedAt)) ? Number(settings.settingsUpdatedAt) : 0,
   };
 };
@@ -198,16 +276,9 @@ export const normalizeTimerState = (raw) => {
   const paused = Boolean(raw.paused);
   const status = raw.status || (running ? (paused ? 'paused' : 'running') : (raw.finished ? 'finished' : 'idle'));
   const durationMs = clampNumber(raw.durationMs ?? raw.durationMinutes * 60000, 0, 0);
-  const sets = Array.isArray(raw.sets)
-    ? raw.sets
-      .map((set, index) => ({
-        id: set?.id || `set-${index + 1}`,
-        label: String(set?.label || `Timer ${index + 1}`),
-        durationMs: clampNumber(set?.durationMs, 0, 0),
-      }))
-      .filter((set) => set.durationMs > 0)
-      .slice(0, MAX_TIMER_SETS)
-    : [];
+  const sets = Array.isArray(raw.sets) ? normalizeScheduleItems(raw.sets) : [];
+  const warningMs = clampNumber(raw.warningMs, 60000, 0);
+  const criticalMs = Math.min(clampNumber(raw.criticalMs, 30000, 0), warningMs);
 
   return {
     ...idle,
@@ -221,24 +292,76 @@ export const normalizeTimerState = (raw) => {
     phase: raw.phase === 'indicator' ? 'indicator' : 'timer',
     label: String(raw.label || ''),
     durationMs,
-    startTime: Number.isFinite(Number(raw.startTime)) ? Number(raw.startTime) : null,
-    endTime: Number.isFinite(Number(raw.endTime)) ? Number(raw.endTime) : null,
-    targetTime: Number.isFinite(Number(raw.targetTime)) ? Number(raw.targetTime) : null,
+    startTime: normalizeNullableTimestamp(raw.startTime),
+    endTime: normalizeNullableTimestamp(raw.endTime),
+    targetTime: normalizeNullableTimestamp(raw.targetTime),
     elapsedBeforePauseMs: clampNumber(raw.elapsedBeforePauseMs, 0, 0),
     pausedRemainingMs: Number.isFinite(Number(raw.pausedRemainingMs)) ? Math.max(0, Number(raw.pausedRemainingMs)) : null,
-    warningMs: clampNumber(raw.warningMs, 60000, 0),
-    criticalMs: clampNumber(raw.criticalMs, 30000, 0),
+    warningMs,
+    criticalMs,
     overrunMode: Boolean(raw.overrunMode),
-    overrunStartedAt: Number.isFinite(Number(raw.overrunStartedAt)) ? Number(raw.overrunStartedAt) : null,
+    overrunStartedAt: normalizeNullableTimestamp(raw.overrunStartedAt),
     sets,
-    activeSetIndex: clampNumber(raw.activeSetIndex, 0, 0, Math.max(0, sets.length - 1)),
+    activeSetIndex: Math.trunc(clampNumber(raw.activeSetIndex, 0, 0, Math.max(0, sets.length - 1))),
     autoStartNext: raw.autoStartNext !== false,
     indicatorEnabled: Boolean(raw.indicatorEnabled),
     indicatorDurationMs: clampNumber(raw.indicatorDurationMs, 10000, 0),
-    indicatorLabel: String(raw.indicatorLabel || 'Next timer starts in'),
+    indicatorLabel: typeof raw.indicatorLabel === 'string' ? raw.indicatorLabel : 'Next item starts in',
+    scheduleTitle: String(raw.scheduleTitle || ''),
+    scheduleRunId: String(raw.scheduleRunId || '').slice(0, 96),
+    scheduleEventStartTime: normalizeTimeOfDay(raw.scheduleEventStartTime),
+    scheduleEventDate: normalizeDateOnly(raw.scheduleEventDate),
+    scheduleScheduledStartAt: normalizeNullableTimestamp(raw.scheduleScheduledStartAt),
+    scheduleIdealEndAt: normalizeNullableTimestamp(raw.scheduleIdealEndAt),
+    scheduleStartedAt: normalizeNullableTimestamp(raw.scheduleStartedAt),
+    scheduleJoinedAt: normalizeNullableTimestamp(raw.scheduleJoinedAt),
+    scheduleReconciled: Boolean(raw.scheduleReconciled),
+    scheduleReconciliationHold: Boolean(raw.scheduleReconciliationHold),
+    schedulePausedOverrunMs: clampNumber(raw.schedulePausedOverrunMs, 0, 0, 24 * 60 * 60 * 1000),
+    scheduleAssumedCompletedIds: Array.isArray(raw.scheduleAssumedCompletedIds)
+      ? raw.scheduleAssumedCompletedIds.map((id) => String(id || '').slice(0, 96)).filter(Boolean).slice(0, MAX_TIMER_SETS)
+      : [],
+    scheduleShowGlobalTimeDuringManualItems: raw.scheduleShowGlobalTimeDuringManualItems !== false,
+    showGlobalClockDuringPause: Boolean(raw.showGlobalClockDuringPause),
+    scheduleNotificationsEnabled: raw.scheduleNotificationsEnabled !== false,
+    awaitingNext: Boolean(raw.awaitingNext),
     display: normalizeTimerDisplaySettings(raw.display),
     updatedAt: Number.isFinite(Number(raw.updatedAt)) ? Number(raw.updatedAt) : Date.now(),
   };
+};
+
+export const shouldShowGlobalTimeForManualScheduleItem = (timerState) => {
+  if (!timerState || typeof timerState !== 'object' || Array.isArray(timerState)) return false;
+  if (timerState.scheduleShowGlobalTimeDuringManualItems === false || timerState.phase === 'indicator') return false;
+  if (!timerState.running && !timerState.paused) return false;
+  if (!Array.isArray(timerState.sets) || timerState.sets.length === 0) return false;
+
+  const activeIndex = Math.max(0, Math.min(
+    timerState.sets.length - 1,
+    Math.trunc(Number(timerState.activeSetIndex) || 0)
+  ));
+  return !isTimedScheduleItem(timerState.sets[activeIndex]);
+};
+
+export const shouldShowGlobalClockDuringPause = (timerState) => Boolean(
+  timerState
+  && typeof timerState === 'object'
+  && !Array.isArray(timerState)
+  && timerState.running
+  && timerState.paused
+  && timerState.showGlobalClockDuringPause
+);
+
+export const resetActiveTimerRuntime = (raw) => {
+  const state = normalizeTimerState(raw);
+  const isActiveRuntime = state.running || state.paused || ['running', 'paused'].includes(state.status);
+
+  if (!isActiveRuntime) return state;
+
+  return normalizeTimerState({
+    ...createIdleTimerState(),
+    display: state.display,
+  });
 };
 
 export const getRemainingMs = (timerState, now = Date.now()) => {
@@ -294,9 +417,13 @@ export const getTimerDisplay = (timerState, now = Date.now()) => {
     return formatDuration(getElapsedMs(state, now), format);
   }
 
+  if (state.paused && state.scheduleReconciliationHold && state.schedulePausedOverrunMs > 0) {
+    return `+${formatDuration(state.schedulePausedOverrunMs, format)}`;
+  }
+
   const remainingMs = getRemainingMs(state, now);
   if (Number.isFinite(remainingMs)) {
-    if (remainingMs < 0 && state.overrunMode) {
+    if (remainingMs < 0 && (state.overrunMode || state.scheduleReconciliationHold)) {
       return `+${formatDuration(Math.abs(remainingMs), format)}`;
     }
     return formatDuration(Math.max(0, remainingMs), format);
@@ -329,7 +456,7 @@ export const isTimerVisiblyActive = (timerState, now = Date.now()) => {
   const state = normalizeTimerState(timerState);
   if (state.paused) return true;
   if (!state.running) return false;
-  if (state.mode === 'countup' || state.overrunMode) return true;
+  if (state.mode === 'countup' || state.overrunMode || state.scheduleReconciliationHold) return true;
 
   const remainingMs = getRemainingMs(state, now);
   if (!Number.isFinite(remainingMs) || remainingMs > 0) return true;

@@ -5,6 +5,10 @@ import { readFileSync } from 'fs';
 
 let loadingWindow = null;
 
+const LOADING_CARD_WIDTH = 728;
+const LOADING_CARD_HEIGHT = 408;
+const LOADING_WINDOW_GUTTER = 24;
+
 function getAppVersion() {
   try {
     const packagePath = path.join(appRoot, 'package.json');
@@ -24,8 +28,8 @@ export function createLoadingWindow() {
   const version = getAppVersion();
 
   loadingWindow = new BrowserWindow({
-    width: 760,
-    height: 440,
+    width: LOADING_CARD_WIDTH + (LOADING_WINDOW_GUTTER * 2),
+    height: LOADING_CARD_HEIGHT + (LOADING_WINDOW_GUTTER * 2),
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -38,7 +42,7 @@ export function createLoadingWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js')
+      preload: resolveProductionPath('preloads', 'loading.cjs')
     }
   });
 
@@ -86,11 +90,11 @@ export function createLoadingWindow() {
         body {
           font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           overflow: hidden;
-          width: 760px;
-          height: 440px;
+          width: 100vw;
+          height: 100vh;
           background: transparent;
           -webkit-app-region: drag;
-          padding: 16px;
+          padding: ${LOADING_WINDOW_GUTTER}px;
           box-sizing: border-box;
         }
         
@@ -101,12 +105,12 @@ export function createLoadingWindow() {
           border-radius: 22px;
           display: flex;
           overflow: hidden;
-          box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.42);
+          box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.42);
           position: relative;
         }
 
         .photo-panel {
-          width: 44%;
+          width: 48%;
           min-width: 320px;
           height: 100%;
           background: #111827;
@@ -198,7 +202,7 @@ export function createLoadingWindow() {
         .credits {
           font-size: 9px;
           color: #6B7280;
-          letter-spacing: 0.28em;
+          letter-spacing: 0.18em;
           text-transform: uppercase;
           font-weight: 500;
           line-height: 1.5;

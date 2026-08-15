@@ -7,9 +7,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Settings, FolderOpen, FileText, Radio, Play, Sliders,
+  Settings, FileText, Radio, Play, Sliders,
   AlertTriangle, RotateCcw, Loader2,
-  HardDrive, Cast, Palette, Wand2
+  ChevronRight, HardDrive, Cast, Palette, Wand2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,19 +32,45 @@ import { useOscPreferences } from '../hooks/UserPreferencesModal/useOscPreferenc
 import { usePreferencesPersistence } from '../hooks/UserPreferencesModal/usePreferencesPersistence';
 import { useSecurityPreferences } from '../hooks/UserPreferencesModal/useSecurityPreferences';
 import AdvancedPreferencesSection from './UserPreferencesModal/AdvancedPreferencesSection';
+import CapitalizedWordsPreferencesPage from './UserPreferencesModal/CapitalizedWordsPreferencesPage';
+import DisplayTransitionsPreferencesPage from './UserPreferencesModal/DisplayTransitionsPreferencesPage';
 import ExternalControlPreferencesSection from './UserPreferencesModal/ExternalControlPreferencesSection';
+import IndexedLyricsFoldersPreferencesPage from './UserPreferencesModal/IndexedLyricsFoldersPreferencesPage';
+import MidiMappingsPreferencesPage from './UserPreferencesModal/MidiMappingsPreferencesPage';
+import PreviewPreferencesPage from './UserPreferencesModal/PreviewPreferencesPage';
 import NdiPreferencesSection from './UserPreferencesModal/NdiPreferencesSection';
+import NdiTelemetryPreferencesPage from './UserPreferencesModal/NdiTelemetryPreferencesPage';
+import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagPhrasesPreferencesPage';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
 import i18n, { normalizeLanguageCode, SUPPORTED_LANGUAGES } from '../i18n';
+import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing/preferenceOptions.js';
+import {
+  DEFAULT_CAPITALIZED_WORDS,
+  normalizeCapitalizedWords,
+} from '../../shared/capitalizedWords.js';
+import {
+  DEFAULT_SECTION_TAG_PHRASES,
+  normalizeSectionTagPhrases,
+} from '../../shared/sectionTagPhrases.js';
 
 // Category definitions
 const CATEGORIES = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'fileHandling', label: 'File Handling', icon: HardDrive },
-  { id: 'parsing', label: 'Lyrics Parsing', icon: FileText },
+  {
+    id: 'parsing',
+    label: 'Lyrics Parsing',
+    icon: FileText,
+    info: 'Controls how imported lyrics are arranged for display. When line splitting is on, it runs first; eligible short lines can then be combined into groups using the limits below.',
+  },
   { id: 'formatting', label: 'Lyrics Formatting', icon: Wand2 },
-  { id: 'lineSplitting', label: 'Line Splitting', icon: Sliders },
+  {
+    id: 'lineSplitting',
+    label: 'Line Splitting',
+    icon: Sliders,
+    info: 'Breaks long imported lyrics at natural word boundaries for easier reading. Minimum sets when a break may happen, Target guides the preferred length, and Maximum prevents lines from running too long.',
+  },
   { id: 'externalControl', label: 'External Control', icon: Radio },
   { id: 'ndi', label: 'NDI', icon: Cast },
   { id: 'autoplay', label: 'Autoplay', icon: Play },
@@ -54,29 +80,41 @@ const CATEGORIES = [
 const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'general');
+  const [appearancePage, setAppearancePage] = useState('main');
+  const [parsingPage, setParsingPage] = useState('main');
+  const [formattingPage, setFormattingPage] = useState('main');
+  const [fileHandlingPage, setFileHandlingPage] = useState('main');
+  const [externalControlPage, setExternalControlPage] = useState('main');
+  const [ndiPage, setNdiPage] = useState('main');
+  const [contentDirection, setContentDirection] = useState(0);
+  const [restoringAllDefaults, setRestoringAllDefaults] = useState(false);
+  const [indexedFolderPersistence, setIndexedFolderPersistence] = useState({
+    saving: false,
+    saveError: false,
+    lastSaved: null,
+  });
   const { showToast } = useToast();
   const { showModal } = useModal();
   const { liveSafety, setLiveSafetyEnabled, isAuthenticated, ready } = useLiveSafetyBridge();
   const {
-    handleBrowseDefaultPath,
+    handleResetAll,
     handleResetCategory,
     lastSaved,
     loading,
     midiStatus,
     oscStatus,
     preferences,
+    saveError,
     saving,
     setMidiStatus,
     setOscStatus,
     updateNestedPreference,
     updatePreference,
+    updatePreferenceGroup,
   } = usePreferencesPersistence({ showToast });
 
   const {
-    commitNumberPreference,
-    getNumberInputValue,
-    handleNumberInputKeyDown,
-    setNumberInputDraft,
+    getNumberPreferenceInputProps,
   } = useNumberPreferenceDrafts({ preferences, updatePreference });
 
   const {
@@ -98,25 +136,30 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     lastLearnedMidi,
     midiAssigningAction,
     midiLearnActive,
-    midiMappingsExpanded,
     midiRefreshing,
-    setMidiMappingsExpanded,
   } = useMidiPreferences({ midiStatus, setMidiStatus, showToast, updateNestedPreference });
 
   const {
     handleOscFeedbackPortChange,
     handleOscFeedbackToggle,
+    handleOscAllowedSourcesChange,
     handleOscPortChange,
+    handleOscRateLimitChange,
+    handleOscRemoteAccessToggle,
     handleOscToggle,
-  } = useOscPreferences({ oscStatus, setOscStatus, updateNestedPreference });
+  } = useOscPreferences({ oscStatus, setOscStatus, updateNestedPreference, showToast });
 
   const {
     companionRunning,
+    companionStarting,
+    companionReady,
+    companionBootstrapError,
     downloadProgress,
     handleNdiAutoLaunchToggle,
     handleNdiCancelDownload,
     handleNdiCheckForUpdate,
     handleNdiDownload,
+    handleNdiInstallFromZip,
     handleNdiLaunch,
     handleNdiStop,
     handleNdiUninstall,
@@ -125,6 +168,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     ndiAutoLaunch,
     ndiCheckingUpdate,
     ndiStatus,
+    ndiLastError,
     ndiTelemetry,
     ndiUpdateInfo,
     ndiUpdating,
@@ -146,6 +190,9 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const inputClass = darkMode
     ? 'bg-gray-700 border-gray-600 text-gray-300'
     : 'bg-white border-gray-300';
+  const selectContentClass = darkMode
+    ? 'bg-gray-700 border-gray-600 text-gray-200'
+    : 'bg-white border-gray-300';
 
   const labelClass = darkMode ? 'text-gray-300' : 'text-gray-700';
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
@@ -154,10 +201,270 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
   const preferenceFieldLabelClass = `block mb-1.5 text-sm font-medium ${labelClass}`;
   const preferenceToggleRowClass = "flex items-center justify-between gap-6 [&>button]:shrink-0";
   const preferenceToggleTextClass = "min-w-0 flex-1";
+  const previewLinesLocked = Boolean(liveSafety?.enabled);
+  const splitMinimum = Number(preferences?.lineSplitting?.minLength ?? 40);
+  const splitTarget = Number(preferences?.lineSplitting?.targetLength ?? 60);
+  const splitMaximum = Number(preferences?.lineSplitting?.maxLength ?? 80);
+  const hasInvalidSplitRelationship = splitMinimum > splitTarget || splitTarget > splitMaximum;
+  const capitalizedWords = normalizeCapitalizedWords(
+    preferences?.formatting?.capitalizedWords,
+    DEFAULT_CAPITALIZED_WORDS,
+  );
+  const sectionTagPhrases = normalizeSectionTagPhrases(
+    preferences?.parsing?.sectionTagPhrases,
+    DEFAULT_SECTION_TAG_PHRASES,
+  );
+  const isDisplayTransitionsPage = activeCategory === 'appearance' && appearancePage === 'displayTransitions';
+  const isPreviewPage = activeCategory === 'appearance' && appearancePage === 'preview';
+  const isSectionTagPhrasesPage = activeCategory === 'parsing' && parsingPage === 'sectionTagPhrases';
+  const isCapitalizedWordsPage = activeCategory === 'formatting' && formattingPage === 'capitalizedWords';
+  const isIndexedLyricsFoldersPage = activeCategory === 'fileHandling' && fileHandlingPage === 'indexedFolders';
+  const isMidiMappingsPage = activeCategory === 'externalControl' && externalControlPage === 'midiMappings';
+  const isNdiTelemetryPage = activeCategory === 'ndi' && ndiPage === 'telemetry';
+  const handleCategoryChange = (category) => {
+    const isReturningFromNestedPage = (
+      (category === 'appearance' && (isDisplayTransitionsPage || isPreviewPage))
+      || (category === 'parsing' && isSectionTagPhrasesPage)
+      || (category === 'formatting' && isCapitalizedWordsPage)
+      || (category === 'fileHandling' && isIndexedLyricsFoldersPage)
+      || (category === 'externalControl' && isMidiMappingsPage)
+      || (category === 'ndi' && isNdiTelemetryPage)
+    );
+    setContentDirection(isReturningFromNestedPage ? -1 : 0);
+    setAppearancePage('main');
+    setParsingPage('main');
+    setFormattingPage('main');
+    setFileHandlingPage('main');
+    setExternalControlPage('main');
+    setNdiPage('main');
+    setActiveCategory(category);
+  };
+  const openDisplayTransitionsPage = () => {
+    setContentDirection(1);
+    setAppearancePage('displayTransitions');
+  };
+  const closeDisplayTransitionsPage = () => {
+    setContentDirection(-1);
+    setAppearancePage('main');
+  };
+  const openPreviewPage = () => {
+    setContentDirection(1);
+    setAppearancePage('preview');
+  };
+  const closePreviewPage = () => {
+    setContentDirection(-1);
+    setAppearancePage('main');
+  };
+  const openSectionTagPhrasesPage = () => {
+    setContentDirection(1);
+    setParsingPage('sectionTagPhrases');
+  };
+  const closeSectionTagPhrasesPage = () => {
+    setContentDirection(-1);
+    setParsingPage('main');
+  };
+  const openCapitalizedWordsPage = () => {
+    setContentDirection(1);
+    setFormattingPage('capitalizedWords');
+  };
+  const closeCapitalizedWordsPage = () => {
+    setContentDirection(-1);
+    setFormattingPage('main');
+  };
+  const openIndexedLyricsFoldersPage = () => {
+    setContentDirection(1);
+    setFileHandlingPage('indexedFolders');
+  };
+  const closeIndexedLyricsFoldersPage = () => {
+    setContentDirection(-1);
+    setFileHandlingPage('main');
+  };
+  const handleIndexedFolderPersistenceChange = (phase) => {
+    setIndexedFolderPersistence((current) => {
+      if (phase === 'start') {
+        return { saving: true, saveError: false, lastSaved: null };
+      }
+      if (phase === 'success') {
+        return { saving: false, saveError: false, lastSaved: Date.now() };
+      }
+      if (phase === 'error') {
+        return { saving: false, saveError: true, lastSaved: null };
+      }
+      return { ...current, saving: false };
+    });
+  };
+  const openMidiMappingsPage = () => {
+    setContentDirection(1);
+    setExternalControlPage('midiMappings');
+  };
+  const closeMidiMappingsPage = () => {
+    setContentDirection(-1);
+    setExternalControlPage('main');
+  };
+  const openNdiTelemetryPage = () => {
+    setContentDirection(1);
+    setNdiPage('telemetry');
+  };
+  const closeNdiTelemetryPage = () => {
+    setContentDirection(-1);
+    setNdiPage('main');
+  };
+  const handleCapitalizedWordsChange = (words) => {
+    const normalizedWords = normalizeCapitalizedWords(words);
+    updatePreference('formatting', 'capitalizedWords', normalizedWords);
+    useLyricsStore.getState().setFormattingCapitalizedWords(normalizedWords);
+  };
+  const handleSectionTagPhrasesChange = (phrases) => {
+    updatePreference('parsing', 'sectionTagPhrases', normalizeSectionTagPhrases(phrases));
+  };
+  const commitLineSplittingPreference = (key, value) => {
+    const normalized = normalizeLineSplittingConfig({
+      ...(preferences?.lineSplitting || {}),
+      [key]: value,
+    });
+    updatePreferenceGroup('lineSplitting', {
+      targetLength: normalized.TARGET_LENGTH,
+      minLength: normalized.MIN_LENGTH,
+      maxLength: normalized.MAX_LENGTH,
+      overflowTolerance: normalized.OVERFLOW_TOLERANCE,
+    });
+  };
+  const handleRestoreAllDefaults = async () => {
+    const confirmation = await showModal({
+      title: 'Restore All Default Settings?',
+      description: 'Every category in User Preferences will be restored to its original defaults.',
+      body: 'Your lyric files, indexed folders, setlists, and system logs will not be removed. Settings marked as requiring a restart will take full effect after restarting LyricDisplay.',
+      variant: 'warning',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Restore Defaults', value: 'restore', variant: 'destructive' },
+      ],
+    });
+    if (confirmation !== 'restore') return;
+
+    setRestoringAllDefaults(true);
+    try {
+      const restored = await handleResetAll();
+      if (!restored) return;
+
+      setLiveSafetyEnabled(false, { persistPreference: false });
+      showToast({
+        title: 'Default Settings Restored',
+        message: 'All user preference categories have been restored to their defaults.',
+        variant: 'success',
+      });
+    } finally {
+      setRestoringAllDefaults(false);
+    }
+  };
 
   // Render category content
   const renderCategoryContent = () => {
     if (!preferences) return null;
+
+    if (isDisplayTransitionsPage) {
+      return (
+        <DisplayTransitionsPreferencesPage
+          getNumberPreferenceInputProps={getNumberPreferenceInputProps}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeDisplayTransitionsPage}
+          preferences={preferences}
+          selectContentClass={selectContentClass}
+          updatePreference={updatePreference}
+        />
+      );
+    }
+
+    if (isPreviewPage) {
+      return (
+        <PreviewPreferencesPage
+          darkMode={darkMode}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closePreviewPage}
+          preferences={preferences}
+          selectContentClass={selectContentClass}
+          updatePreference={updatePreference}
+        />
+      );
+    }
+
+    if (isSectionTagPhrasesPage) {
+      return (
+        <SectionTagPhrasesPreferencesPage
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeSectionTagPhrasesPage}
+          onPhrasesChange={handleSectionTagPhrasesChange}
+          phrases={sectionTagPhrases}
+          showModal={showModal}
+        />
+      );
+    }
+
+    if (isCapitalizedWordsPage) {
+      return (
+        <CapitalizedWordsPreferencesPage
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeCapitalizedWordsPage}
+          onWordsChange={handleCapitalizedWordsChange}
+          showModal={showModal}
+          words={capitalizedWords}
+        />
+      );
+    }
+
+    if (isIndexedLyricsFoldersPage) {
+      return (
+        <IndexedLyricsFoldersPreferencesPage
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          onBack={closeIndexedLyricsFoldersPage}
+          onPersistenceChange={handleIndexedFolderPersistenceChange}
+          showModal={showModal}
+          showToast={showToast}
+        />
+      );
+    }
+
+    if (isMidiMappingsPage) {
+      return (
+        <MidiMappingsPreferencesPage
+          darkMode={darkMode}
+          handleMidiAssignAction={handleMidiAssignAction}
+          handleMidiLearn={handleMidiLearn}
+          handleMidiResetMappings={handleMidiResetMappings}
+          labelClass={labelClass}
+          lastLearnedMidi={lastLearnedMidi}
+          midiAssigningAction={midiAssigningAction}
+          midiLearnActive={midiLearnActive}
+          midiStatus={midiStatus}
+          mutedClass={mutedClass}
+          onBack={closeMidiMappingsPage}
+        />
+      );
+    }
+
+    if (isNdiTelemetryPage) {
+      return (
+        <NdiTelemetryPreferencesPage
+          companionRunning={companionRunning}
+          darkMode={darkMode}
+          labelClass={labelClass}
+          mutedClass={mutedClass}
+          ndiTelemetry={ndiTelemetry}
+          onBack={closeNdiTelemetryPage}
+        />
+      );
+    }
 
     switch (activeCategory) {
       case 'general':
@@ -198,7 +505,36 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={Boolean(liveSafety?.enabled)}
                 disabled={!isAuthenticated || !ready}
-                onCheckedChange={(checked) => setLiveSafetyEnabled(checked)}
+                onCheckedChange={(checked) => {
+                  updatePreference('general', 'liveSafetyMode', checked);
+                  setLiveSafetyEnabled(checked, { persistPreference: false });
+                }}
+                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+                  }`}
+                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              />
+            </div>
+
+            <div
+              className={`${preferenceToggleRowClass} ${previewLinesLocked ? 'cursor-not-allowed' : ''}`}
+              aria-disabled={previewLinesLocked}
+            >
+              <div className={`${preferenceToggleTextClass} ${previewLinesLocked ? 'opacity-50' : ''}`}>
+                <label className={`text-sm font-medium ${labelClass}`}>Preview Lyric Lines</label>
+                <p className={`text-xs ${mutedClass}`}>
+                  First click previews a lyric line; double-click or Enter sends it live.
+                  {previewLinesLocked ? ' Live Safety requires this setting.' : ''}
+                </p>
+              </div>
+              <Switch
+                checked={previewLinesLocked || (preferences.general?.previewLines ?? false)}
+                disabled={previewLinesLocked}
+                onCheckedChange={(checked) => {
+                  updatePreference('general', 'previewLines', checked);
+                  useLyricsStore.getState().setPreviewLinesEnabled(checked);
+                }}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                   : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -322,7 +658,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   <SelectItem value="light">{t('preferences.appearance.themeOptions.light')}</SelectItem>
                   <SelectItem value="dark">{t('preferences.appearance.themeOptions.dark')}</SelectItem>
                   <SelectItem value="system">{t('preferences.appearance.themeOptions.system')}</SelectItem>
@@ -339,6 +675,34 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 </div>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={openDisplayTransitionsPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label="Configure display transitions"
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Display Transitions</span>
+                <p className={`text-xs ${mutedClass}`}>Configure timer, background media, and output visibility animations</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>Manage</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={openPreviewPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label="Configure Preview"
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Preview</span>
+                <p className={`text-xs ${mutedClass}`}>Arrange preview feeds and configure the operator grid</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>Manage</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
 
             <div className="flex items-center justify-between">
               <div>
@@ -423,29 +787,24 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            {(preferences.parsing?.enableAutoLineGrouping ?? true) && (
-              <div className="space-y-2">
-                <label className={preferenceFieldLabelClass}>{t('preferences.parsing.maxLinesPerGroup.label')}</label>
-                <Input
-                  type="number"
-                  min="2"
-                  max="12"
-                  value={getNumberInputValue('parsing', 'maxLinesPerGroup', 2)}
-                  onChange={(e) => setNumberInputDraft('parsing', 'maxLinesPerGroup', e.target.value)}
-                  onBlur={() => commitNumberPreference('parsing', 'maxLinesPerGroup', {
-                    min: 2,
-                    max: 12,
-                    fallbackValue: 2,
-                    parse: 'int',
-                  })}
-                  onKeyDown={handleNumberInputKeyDown}
-                  className={inputClass}
-                />
-                <p className={`text-xs ${mutedClass}`}>
-                  {t('preferences.parsing.maxLinesPerGroup.description')}
-                </p>
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className={preferenceFieldLabelClass}>{t('preferences.parsing.maxLinesPerGroup.label')}</label>
+              <Input
+                type="number"
+                min="2"
+                max="12"
+                {...getNumberPreferenceInputProps('parsing', 'maxLinesPerGroup', {
+                  min: 2,
+                  max: 12,
+                  fallbackValue: 2,
+                  parse: 'int',
+                })}
+                className={inputClass}
+              />
+              <p className={`text-xs ${mutedClass}`}>
+                {t('preferences.parsing.maxLinesPerGroup.description')}
+              </p>
+            </div>
 
             <div className="flex items-center justify-between">
               <div>
@@ -469,15 +828,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="20"
                 max="100"
-                value={getNumberInputValue('parsing', 'maxLineLength', 45)}
-                onChange={(e) => setNumberInputDraft('parsing', 'maxLineLength', e.target.value)}
-                onBlur={() => commitNumberPreference('parsing', 'maxLineLength', {
+                {...getNumberPreferenceInputProps('parsing', 'maxLineLength', {
                   min: 20,
                   max: 100,
                   fallbackValue: 45,
                   parse: 'int',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -493,6 +849,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.parsing?.enableCrossBlankLineGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableCrossBlankLineGrouping', checked)}
+                disabled={!(preferences.parsing?.enableAutoLineGrouping ?? true)}
                 className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
                   ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
                   : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
@@ -510,7 +867,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600' : ''}>
+                <SelectContent className={selectContentClass}>
                   <SelectItem value="isolate">{t('preferences.parsing.structureTagHandling.options.isolate')}</SelectItem>
                   <SelectItem value="strip">{t('preferences.parsing.structureTagHandling.options.strip')}</SelectItem>
                   <SelectItem value="keep">{t('preferences.parsing.structureTagHandling.options.keep')}</SelectItem>
@@ -520,14 +877,28 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 {t('preferences.parsing.structureTagHandling.description')}
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={openSectionTagPhrasesPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label={`Manage ${sectionTagPhrases.length} recognized section tag phrases`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Recognized Section Tags</span>
+                <p className={`text-xs ${mutedClass}`}>Choose phrases treated as Verse, Chorus, Bridge, and other headings</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>{sectionTagPhrases.length}</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
           </div>
         );
 
       case 'formatting':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.autoCleanupOnPaste.label')}</label>
                 <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.autoCleanupOnPaste.description')}</p>
               </div>
@@ -545,8 +916,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.capitalizeFirstLetter.label')}</label>
                 <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.capitalizeFirstLetter.description')}</p>
               </div>
@@ -564,8 +935,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.capitalizeReligiousTerms.label')}</label>
                 <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.capitalizeReligiousTerms.description')}</p>
               </div>
@@ -583,8 +954,22 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
+            <button
+              type="button"
+              onClick={openCapitalizedWordsPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label={`Manage ${capitalizedWords.length} capitalized ${capitalizedWords.length === 1 ? 'word' : 'words'}`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Capitalized Words</span>
+                <p className={`text-xs ${mutedClass}`}>Choose the words and phrases this formatting rule applies to</p>
+              </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>{capitalizedWords.length}</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
+
+            <div className={preferenceToggleRowClass}>
+              <div className={preferenceToggleTextClass}>
                 <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.formatting.normalizeTypographicChars.label')}</label>
                 <p className={`text-xs ${mutedClass}`}>{t('preferences.formatting.normalizeTypographicChars.description')}</p>
               </div>
@@ -607,6 +992,13 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'lineSplitting':
         return (
           <div className="space-y-6">
+            {hasInvalidSplitRelationship && (
+              <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${darkMode ? 'border-amber-700 bg-amber-950/30 text-amber-200' : 'border-amber-300 bg-amber-50 text-amber-800'}`}>
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>The current values overlap. Parsing will safely constrain the target between the configured minimum and maximum.</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <div>
                 <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.lineSplitting.enableLineSplitting.label')}</label>
@@ -629,15 +1021,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="30"
                 max="120"
-                value={getNumberInputValue('lineSplitting', 'targetLength', 60)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'targetLength', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'targetLength', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'targetLength', {
                   min: 30,
                   max: 120,
                   fallbackValue: 60,
                   parse: 'int',
-                })}
-                onKeyDown={handleNumberInputKeyDown}
+                }, (value) => commitLineSplittingPreference('targetLength', value))}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -652,15 +1041,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="20"
                 max="80"
-                value={getNumberInputValue('lineSplitting', 'minLength', 40)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'minLength', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'minLength', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'minLength', {
                   min: 20,
                   max: 80,
                   fallbackValue: 40,
                   parse: 'int',
-                })}
-                onKeyDown={handleNumberInputKeyDown}
+                }, (value) => commitLineSplittingPreference('minLength', value))}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -675,15 +1061,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="50"
                 max="150"
-                value={getNumberInputValue('lineSplitting', 'maxLength', 80)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'maxLength', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'maxLength', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'maxLength', {
                   min: 50,
                   max: 150,
                   fallbackValue: 80,
                   parse: 'int',
-                })}
-                onKeyDown={handleNumberInputKeyDown}
+                }, (value) => commitLineSplittingPreference('maxLength', value))}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -698,15 +1081,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="5"
                 max="30"
-                value={getNumberInputValue('lineSplitting', 'overflowTolerance', 15)}
-                onChange={(e) => setNumberInputDraft('lineSplitting', 'overflowTolerance', e.target.value)}
-                onBlur={() => commitNumberPreference('lineSplitting', 'overflowTolerance', {
+                {...getNumberPreferenceInputProps('lineSplitting', 'overflowTolerance', {
                   min: 5,
                   max: 30,
                   fallbackValue: 15,
                   parse: 'int',
-                })}
-                onKeyDown={handleNumberInputKeyDown}
+                }, (value) => commitLineSplittingPreference('overflowTolerance', value))}
                 className={inputClass}
                 disabled={!preferences.lineSplitting?.enabled}
               />
@@ -720,60 +1100,31 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'fileHandling':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className={`text-sm font-medium ${labelClass}`}>{t('preferences.fileHandling.rememberLastOpenedPath.label')}</label>
-                <p className={`text-xs ${mutedClass}`}>{t('preferences.fileHandling.rememberLastOpenedPath.description')}</p>
+            <button
+              type="button"
+              onClick={openIndexedLyricsFoldersPage}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-4 rounded-lg px-3 py-2.5 text-left transition-colors ${darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-100'}`}
+              aria-label="Manage indexed lyrics folders"
+            >
+              <div className="min-w-0 flex-1">
+                <span className={`text-sm font-medium ${labelClass}`}>Indexed Lyrics Folders</span>
+                <p className={`text-xs ${mutedClass}`}>Choose the folders searched by the Load Lyrics navigator</p>
               </div>
-              <Switch
-                checked={preferences.fileHandling?.rememberLastOpenedPath ?? true}
-                onCheckedChange={(checked) => updatePreference('fileHandling', 'rememberLastOpenedPath', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className={preferenceFieldLabelClass}>{t('preferences.fileHandling.defaultLyricsFolder.label')}</label>
-              <div className="flex gap-2">
-                <Input
-                  value={preferences.fileHandling?.defaultLyricsPath || ''}
-                  onChange={(e) => updatePreference('fileHandling', 'defaultLyricsPath', e.target.value)}
-                  placeholder={t('preferences.fileHandling.defaultLyricsFolder.placeholder')}
-                  className={`flex-1 ${inputClass}`}
-                  disabled={preferences.fileHandling?.rememberLastOpenedPath ?? true}
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleBrowseDefaultPath}
-                  className={darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : ''}
-                  disabled={preferences.fileHandling?.rememberLastOpenedPath ?? true}
-                >
-                  <FolderOpen className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className={`text-xs ${mutedClass}`}>
-                {t('preferences.fileHandling.defaultLyricsFolder.description')}
-              </p>
-            </div>
+              <span className={`shrink-0 text-xs ${mutedClass}`}>Manage</span>
+              <ChevronRight className={`h-4 w-4 shrink-0 ${mutedClass}`} />
+            </button>
             <div className="space-y-2">
               <label className={preferenceFieldLabelClass}>{t('preferences.fileHandling.maxRecentFiles.label')}</label>
               <Input
                 type="number"
                 min="5"
                 max="50"
-                value={getNumberInputValue('fileHandling', 'maxRecentFiles', 10)}
-                onChange={(e) => setNumberInputDraft('fileHandling', 'maxRecentFiles', e.target.value)}
-                onBlur={() => commitNumberPreference('fileHandling', 'maxRecentFiles', {
+                {...getNumberPreferenceInputProps('fileHandling', 'maxRecentFiles', {
                   min: 5,
                   max: 50,
                   fallbackValue: 10,
                   parse: 'int',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -787,15 +1138,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min={MIN_SETLIST_ITEMS}
                 max={MAX_SETLIST_ITEMS}
-                value={getNumberInputValue('fileHandling', 'maxSetlistFiles', DEFAULT_SETLIST_ITEMS)}
-                onChange={(e) => setNumberInputDraft('fileHandling', 'maxSetlistFiles', e.target.value)}
-                onBlur={() => commitNumberPreference('fileHandling', 'maxSetlistFiles', {
+                {...getNumberPreferenceInputProps('fileHandling', 'maxSetlistFiles', {
                   min: MIN_SETLIST_ITEMS,
                   max: MAX_SETLIST_ITEMS,
                   fallbackValue: DEFAULT_SETLIST_ITEMS,
                   parse: 'int',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -818,15 +1166,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 min="1"
                 max="10"
                 step="0.5"
-                value={getNumberInputValue('fileHandling', 'maxFileSize', 2)}
-                onChange={(e) => setNumberInputDraft('fileHandling', 'maxFileSize', e.target.value)}
-                onBlur={() => commitNumberPreference('fileHandling', 'maxFileSize', {
+                {...getNumberPreferenceInputProps('fileHandling', 'maxFileSize', {
                   min: 1,
                   max: 10,
                   fallbackValue: 2,
                   parse: 'float',
                 })}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -840,39 +1185,40 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
         return (
           <ExternalControlPreferencesSection
             darkMode={darkMode}
-            handleMidiAssignAction={handleMidiAssignAction}
-            handleMidiLearn={handleMidiLearn}
             handleMidiRefreshPorts={handleMidiRefreshPorts}
-            handleMidiResetMappings={handleMidiResetMappings}
             handleMidiSelectPort={handleMidiSelectPort}
             handleMidiToggle={handleMidiToggle}
             handleOscFeedbackPortChange={handleOscFeedbackPortChange}
             handleOscFeedbackToggle={handleOscFeedbackToggle}
+            handleOscAllowedSourcesChange={handleOscAllowedSourcesChange}
             handleOscPortChange={handleOscPortChange}
+            handleOscRateLimitChange={handleOscRateLimitChange}
+            handleOscRemoteAccessToggle={handleOscRemoteAccessToggle}
             handleOscToggle={handleOscToggle}
+            getNumberPreferenceInputProps={getNumberPreferenceInputProps}
             inputClass={inputClass}
             labelClass={labelClass}
-            lastLearnedMidi={lastLearnedMidi}
-            midiAssigningAction={midiAssigningAction}
-            midiLearnActive={midiLearnActive}
-            midiMappingsExpanded={midiMappingsExpanded}
             midiRefreshing={midiRefreshing}
             midiStatus={midiStatus}
             mutedClass={mutedClass}
+            onOpenMidiMappings={openMidiMappingsPage}
             oscStatus={oscStatus}
             preferenceFieldLabelClass={preferenceFieldLabelClass}
-            setMidiMappingsExpanded={setMidiMappingsExpanded}
           />
         );
       case 'ndi':
         return (
           <NdiPreferencesSection
             companionRunning={companionRunning}
+            companionStarting={companionStarting}
+            companionReady={companionReady}
+            companionBootstrapError={companionBootstrapError}
             darkMode={darkMode}
             downloadProgress={downloadProgress}
             handleNdiAutoLaunchToggle={handleNdiAutoLaunchToggle}
             handleNdiCancelDownload={handleNdiCancelDownload}
             handleNdiDownload={handleNdiDownload}
+            handleNdiInstallFromZip={handleNdiInstallFromZip}
             handleNdiUpdate={handleNdiUpdate}
             inputClass={inputClass}
             isDownloading={isDownloading}
@@ -880,9 +1226,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             mutedClass={mutedClass}
             ndiAutoLaunch={ndiAutoLaunch}
             ndiStatus={ndiStatus}
+            ndiLastError={ndiLastError}
             ndiTelemetry={ndiTelemetry}
             ndiUpdateInfo={ndiUpdateInfo}
             ndiUpdating={ndiUpdating}
+            onOpenTelemetry={openNdiTelemetryPage}
             preferenceFieldLabelClass={preferenceFieldLabelClass}
           />
         );
@@ -915,15 +1263,12 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 type="number"
                 min="1"
                 max="60"
-                value={getNumberInputValue('autoplay', 'defaultInterval', 5)}
-                onChange={(e) => setNumberInputDraft('autoplay', 'defaultInterval', e.target.value)}
-                onBlur={() => commitNumberPreference('autoplay', 'defaultInterval', {
+                {...getNumberPreferenceInputProps('autoplay', 'defaultInterval', {
                   min: 1,
                   max: 60,
                   fallbackValue: 5,
                   parse: 'int',
                 }, (value) => updateAutoplaySetting('defaultInterval', value))}
-                onKeyDown={handleNumberInputKeyDown}
                 className={inputClass}
               />
               <p className={`text-xs ${mutedClass}`}>
@@ -984,12 +1329,11 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       case 'advanced':
         return (
           <AdvancedPreferencesSection
-            commitNumberPreference={commitNumberPreference}
             darkMode={darkMode}
             formatSecurityDate={formatSecurityDate}
-            getNumberInputValue={getNumberInputValue}
-            handleNumberInputKeyDown={handleNumberInputKeyDown}
+            getNumberPreferenceInputProps={getNumberPreferenceInputProps}
             handleResetCategory={handleResetCategory}
+            handleRestoreAllDefaults={handleRestoreAllDefaults}
             handleRotateSecurityTokenKey={handleRotateSecurityTokenKey}
             inputClass={inputClass}
             labelClass={labelClass}
@@ -997,13 +1341,14 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             mutedClass={mutedClass}
             preferenceFieldLabelClass={preferenceFieldLabelClass}
             preferences={preferences}
+            restoringAllDefaults={restoringAllDefaults}
             securityLoading={securityLoading}
             securityRotating={securityRotating}
             securityStatus={securityStatus}
-            setNumberInputDraft={setNumberInputDraft}
             showModal={showModal}
             showToast={showToast}
             updatePreference={updatePreference}
+            updatePreferenceGroup={updatePreferenceGroup}
           />
         );
 
@@ -1018,19 +1363,36 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
       activeCategoryBg={activeCategoryBg}
       categories={categories}
       companionRunning={companionRunning}
+      companionStarting={companionStarting}
+      contentDirection={contentDirection}
+      contentKey={isDisplayTransitionsPage
+        ? 'appearance-display-transitions'
+        : (isPreviewPage
+          ? 'appearance-preview'
+          : (isSectionTagPhrasesPage
+            ? 'parsing-section-tag-phrases'
+            : (isCapitalizedWordsPage
+              ? 'formatting-capitalized-words'
+              : (isIndexedLyricsFoldersPage
+                ? 'file-handling-indexed-folders'
+                : (isMidiMappingsPage
+                  ? 'external-control-midi-mappings'
+                  : (isNdiTelemetryPage ? 'ndi-runtime-telemetry' : activeCategory))))))}
       darkMode={darkMode}
       handleNdiCheckForUpdate={handleNdiCheckForUpdate}
       handleNdiLaunch={handleNdiLaunch}
       handleNdiStop={handleNdiStop}
       handleNdiUninstall={handleNdiUninstall}
       labelClass={labelClass}
-      lastSaved={lastSaved}
+      lastSaved={indexedFolderPersistence.lastSaved || lastSaved}
       mutedClass={mutedClass}
       ndiCheckingUpdate={ndiCheckingUpdate}
       ndiStatus={ndiStatus}
       panelBg={panelBg}
-      saving={saving}
-      setActiveCategory={setActiveCategory}
+      saveError={saveError || indexedFolderPersistence.saveError}
+      saving={saving || indexedFolderPersistence.saving}
+      setActiveCategory={handleCategoryChange}
+      hideContentHeader={isDisplayTransitionsPage || isPreviewPage || isSectionTagPhrasesPage || isCapitalizedWordsPage || isIndexedLyricsFoldersPage || isMidiMappingsPage || isNdiTelemetryPage}
     >
       {renderCategoryContent()}
     </UserPreferencesLayout>

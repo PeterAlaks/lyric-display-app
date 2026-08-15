@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { extractFirstValidLine } from '../../utils/titlePrefill';
+import {
+  extractFirstValidLine,
+  isUsableLyricsTitle,
+  UNTITLED_LYRICS_TITLE,
+} from '../../utils/titlePrefill';
 
 /**
  * Hook for managing automatic title prefilling from lyrics content
@@ -7,28 +11,30 @@ import { extractFirstValidLine } from '../../utils/titlePrefill';
  * @param {string} title - The current title value
  * @param {Function} setTitle - Function to update the title
  * @param {boolean} editMode - Whether in edit mode (prefill disabled in edit mode)
+ * @param {React.RefObject} textareaRef - Lyrics textarea reference
+ * @param {Array<string>} sectionTagPhrases - Currently recognized section headings
  * @returns {Object} - Title prefill state and handlers
  */
-export default function useTitlePrefill(content, title, setTitle, editMode, textareaRef) {
+export default function useTitlePrefill(content, title, setTitle, editMode, textareaRef, sectionTagPhrases) {
   const [isTitlePrefilled, setIsTitlePrefilled] = useState(false);
   const pasteTimeoutRef = useRef(null);
 
   const updateTitlePrefill = useCallback((overrideContent) => {
     if (editMode) return;
-    if (title && !isTitlePrefilled) return;
+    if (isUsableLyricsTitle(title) && !isTitlePrefilled) return;
 
     const contentToUse = overrideContent !== undefined ? overrideContent : content;
-    const firstLine = extractFirstValidLine(contentToUse);
+    const firstLine = extractFirstValidLine(contentToUse, { sectionTagPhrases });
 
     if (firstLine && firstLine !== title) {
       const truncatedTitle = firstLine.slice(0, 65);
       setTitle(truncatedTitle);
       setIsTitlePrefilled(true);
     } else if (!firstLine && isTitlePrefilled) {
-      setTitle('');
+      setTitle(UNTITLED_LYRICS_TITLE);
       setIsTitlePrefilled(false);
     }
-  }, [content, title, isTitlePrefilled, editMode, setTitle]);
+  }, [content, title, isTitlePrefilled, editMode, sectionTagPhrases, setTitle]);
 
   const handleContentKeyDown = useCallback((event, textareaRef) => {
     if (event.key === 'Enter' && !editMode) {
@@ -47,18 +53,24 @@ export default function useTitlePrefill(content, title, setTitle, editMode, text
     }
   }, [content, editMode, updateTitlePrefill]);
 
-  const handleContentPaste = useCallback(() => {
+  const handleContentPaste = useCallback((overrideContent) => {
     if (editMode) return;
 
     if (pasteTimeoutRef.current) {
       clearTimeout(pasteTimeoutRef.current);
     }
 
+    if (typeof overrideContent === 'string') {
+      updateTitlePrefill(overrideContent);
+      pasteTimeoutRef.current = null;
+      return;
+    }
+
     pasteTimeoutRef.current = setTimeout(() => {
       const currentContent = textareaRef?.current?.value || '';
       updateTitlePrefill(currentContent);
       pasteTimeoutRef.current = null;
-    }, 1000);
+    }, 0);
   }, [editMode, updateTitlePrefill, textareaRef]);
 
   const handleTitleChange = useCallback((e) => {
@@ -69,6 +81,12 @@ export default function useTitlePrefill(content, title, setTitle, editMode, text
       setIsTitlePrefilled(false);
     }
   }, [isTitlePrefilled, setTitle]);
+
+  const handleTitleBlur = useCallback((event) => {
+    if (event.currentTarget.value.trim()) return;
+    setTitle(UNTITLED_LYRICS_TITLE);
+    setIsTitlePrefilled(false);
+  }, [setTitle]);
 
   useEffect(() => {
     return () => {
@@ -85,7 +103,7 @@ export default function useTitlePrefill(content, title, setTitle, editMode, text
     }
 
     if (!content.trim() && isTitlePrefilled) {
-      setTitle('');
+      setTitle(UNTITLED_LYRICS_TITLE);
       setIsTitlePrefilled(false);
     }
   }, [editMode, content, isTitlePrefilled, setTitle]);
@@ -94,6 +112,7 @@ export default function useTitlePrefill(content, title, setTitle, editMode, text
     isTitlePrefilled,
     handleContentKeyDown,
     handleContentPaste,
+    handleTitleBlur,
     handleTitleChange
   };
 }

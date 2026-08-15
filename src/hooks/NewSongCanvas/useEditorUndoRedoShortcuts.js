@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { isTextEditingFocusProtected } from '../../../shared/commandSafetyPolicy.js';
 
 export const useEditorUndoRedoShortcuts = ({
   lastKnownScrollRef,
@@ -74,6 +75,11 @@ export const useEditorUndoRedoShortcuts = ({
       const usesModifier = event.ctrlKey || event.metaKey;
       if (!usesModifier) return;
 
+      const activeElement = document.activeElement;
+      const editor = textareaRef.current;
+      const targetsEditor = event.target === editor || activeElement === editor;
+      if (!targetsEditor && isTextEditingFocusProtected(event.target, activeElement)) return;
+
       if (event.key === 'z' || event.key === 'Z') {
         if (event.shiftKey) {
           event.preventDefault();
@@ -89,7 +95,7 @@ export const useEditorUndoRedoShortcuts = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRedo, handleUndo]);
+  }, [handleRedo, handleUndo, textareaRef]);
 
   return { handleRedo, handleUndo };
 };

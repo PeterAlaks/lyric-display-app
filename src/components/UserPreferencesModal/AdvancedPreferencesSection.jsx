@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, FileText, Info, Loader2, Monitor, Play, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, FileText, Info, Loader2, Monitor, Play, RefreshCw, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import useIsPackagedApp from '../../hooks/useIsPackagedApp';
 import { setDebugLogging } from '../../utils/logger';
 import { confirmAndLaunchHeadlessMode, createLyricDisplayDockSetupActions } from '../../utils/lyricDisplayDock';
 
 const AdvancedPreferencesSection = ({
-  commitNumberPreference,
   darkMode,
   formatSecurityDate,
-  getNumberInputValue,
-  handleNumberInputKeyDown,
+  getNumberPreferenceInputProps,
   handleResetCategory,
+  handleRestoreAllDefaults,
   handleRotateSecurityTokenKey,
   inputClass,
   labelClass,
@@ -21,18 +21,21 @@ const AdvancedPreferencesSection = ({
   mutedClass,
   preferenceFieldLabelClass,
   preferences,
+  restoringAllDefaults,
   securityLoading,
   securityRotating,
   securityStatus,
-  setNumberInputDraft,
   showModal,
   showToast,
   updatePreference,
+  updatePreferenceGroup,
 }) => {
   const { t } = useTranslation();
   const isDevMode = import.meta.env.MODE === 'development';
+  const isPackagedApp = useIsPackagedApp();
   const [obsDockStartup, setObsDockStartup] = useState(null);
   const [obsDockStartupSaving, setObsDockStartupSaving] = useState(false);
+  const [clearingSystemLogs, setClearingSystemLogs] = useState(false);
   const dockModeText = {
     cancel: t('preferences.advanced.dockMode.cancel'),
     close: t('preferences.advanced.dockMode.close'),
@@ -97,6 +100,51 @@ const AdvancedPreferencesSection = ({
     });
   };
 
+  const handleClearSystemLogs = async () => {
+    const confirmation = await showModal?.({
+      title: 'Clear All System Logs?',
+      description: 'This permanently deletes all troubleshooting logs stored in LyricDisplay’s user-data logs folder.',
+      body: 'The current session will continue with a fresh, empty log. This action cannot be undone.',
+      variant: 'warning',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Clear Logs', value: 'clear', variant: 'destructive' },
+      ],
+    });
+
+    if (confirmation !== 'clear') return;
+    if (!window.electronAPI?.clearSystemLogs) {
+      showToast?.({
+        title: 'Log Cleanup Unavailable',
+        message: 'This build does not expose system log cleanup.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    setClearingSystemLogs(true);
+    try {
+      const result = await window.electronAPI.clearSystemLogs();
+      if (!result?.success) {
+        throw new Error(result?.error || 'Could not clear the system logs.');
+      }
+      showToast?.({
+        title: 'System Logs Cleared',
+        message: 'All saved system logs were removed. A fresh session log is now active.',
+        variant: 'success',
+      });
+    } catch (error) {
+      showToast?.({
+        title: 'Log Cleanup Failed',
+        message: error?.message || 'Could not clear the system logs.',
+        variant: 'error',
+      });
+    } finally {
+      setClearingSystemLogs(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -110,6 +158,29 @@ const AdvancedPreferencesSection = ({
           {t('preferences.advanced.intro.description')}
         </p>
       </div>
+
+    {isPackagedApp && (
+      <div className="flex items-center justify-between gap-6">
+        <div className="min-w-0 flex-1">
+          <label className={`text-sm font-medium ${labelClass}`}>Share minimal app activity</label>
+          <p className={`mt-1 text-xs ${mutedClass}`}>
+            Share a random installation ID, platform, app version, and successful launch or update events for analytics.
+          </p>
+        </div>
+        <Switch
+          checked={preferences.advanced?.shareAnonymousUsageData ?? false}
+          onCheckedChange={(checked) => updatePreferenceGroup('advanced', {
+            shareAnonymousUsageData: checked,
+            telemetryConsentDecided: true,
+          })}
+          className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
+            ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
+            : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
+            }`}
+          thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+        />
+      </div>
+    )}
 
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
       <div className="mb-4 flex items-start gap-3">
@@ -352,6 +423,26 @@ const AdvancedPreferencesSection = ({
       />
     </div>
 
+    <div className="flex items-center justify-between gap-6">
+      <div className="min-w-0 flex-1">
+        <label className={`text-sm font-medium ${labelClass}`}>Clear All System Logs</label>
+        <p className={`text-xs ${mutedClass}`}>Delete troubleshooting logs stored in the user-data logs folder</p>
+      </div>
+      <Button
+        type="button"
+        variant="destructiveOutline"
+        size="sm"
+        onClick={handleClearSystemLogs}
+        disabled={clearingSystemLogs}
+        className="shrink-0"
+      >
+        {clearingSystemLogs
+          ? <Loader2 className="h-4 w-4 animate-spin" />
+          : <Trash2 className="h-4 w-4" />}
+        Clear Logs
+      </Button>
+    </div>
+
     <div className="space-y-2">
       <label className={preferenceFieldLabelClass}>{t('preferences.advanced.connectionTimeout')}</label>
       <Input
@@ -359,15 +450,12 @@ const AdvancedPreferencesSection = ({
         min="5000"
         max="60000"
         step="1000"
-        value={getNumberInputValue('advanced', 'connectionTimeout', 10000)}
-        onChange={(e) => setNumberInputDraft('advanced', 'connectionTimeout', e.target.value)}
-        onBlur={() => commitNumberPreference('advanced', 'connectionTimeout', {
+        {...getNumberPreferenceInputProps('advanced', 'connectionTimeout', {
           min: 5000,
           max: 60000,
           fallbackValue: 10000,
           parse: 'int',
         })}
-        onKeyDown={handleNumberInputKeyDown}
         className={inputClass}
       />
     </div>
@@ -379,15 +467,12 @@ const AdvancedPreferencesSection = ({
         min="10000"
         max="120000"
         step="5000"
-        value={getNumberInputValue('advanced', 'heartbeatInterval', 30000)}
-        onChange={(e) => setNumberInputDraft('advanced', 'heartbeatInterval', e.target.value)}
-        onBlur={() => commitNumberPreference('advanced', 'heartbeatInterval', {
+        {...getNumberPreferenceInputProps('advanced', 'heartbeatInterval', {
           min: 10000,
           max: 120000,
           fallbackValue: 30000,
           parse: 'int',
         })}
-        onKeyDown={handleNumberInputKeyDown}
         className={inputClass}
       />
     </div>
@@ -398,27 +483,48 @@ const AdvancedPreferencesSection = ({
         type="number"
         min="3"
         max="20"
-        value={getNumberInputValue('advanced', 'maxConnectionAttempts', 10)}
-        onChange={(e) => setNumberInputDraft('advanced', 'maxConnectionAttempts', e.target.value)}
-        onBlur={() => commitNumberPreference('advanced', 'maxConnectionAttempts', {
+        {...getNumberPreferenceInputProps('advanced', 'maxConnectionAttempts', {
           min: 3,
           max: 20,
           fallbackValue: 10,
           parse: 'int',
         })}
-        onKeyDown={handleNumberInputKeyDown}
         className={inputClass}
       />
+      <p className={`text-xs ${mutedClass}`}>After each cycle, LyricDisplay waits briefly and continues retrying so long outages recover automatically.</p>
     </div>
 
     <Button
       variant="outline"
       onClick={() => handleResetCategory('advanced')}
+      disabled={restoringAllDefaults}
       className={darkMode ? 'w-full bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' : 'w-full'}
     >
       <RotateCcw className="w-4 h-4 mr-2" />
       {t('preferences.advanced.resetDefaults')}
     </Button>
+
+    <div className={`border-t pt-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <label className={`text-sm font-medium ${labelClass}`}>Restore All Default Settings</label>
+          <p className={`mt-1 text-xs ${mutedClass}`}>Reset every User Preferences category without deleting your lyrics or indexed folders</p>
+        </div>
+        <Button
+          type="button"
+          variant="destructiveOutline"
+          size="sm"
+          onClick={handleRestoreAllDefaults}
+          disabled={restoringAllDefaults}
+          className="shrink-0"
+        >
+          {restoringAllDefaults
+            ? <Loader2 className="h-4 w-4 animate-spin" />
+            : <RotateCcw className="h-4 w-4" />}
+          {restoringAllDefaults ? 'Restoring...' : 'Restore Defaults'}
+        </Button>
+      </div>
+    </div>
   </div>
   );
 };

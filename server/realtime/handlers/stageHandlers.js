@@ -3,6 +3,8 @@ import { emitStageMessagesUpdate, emitStageTimerUpdate } from '../broadcast.js';
 import { blockIfLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { state } from '../state.js';
+import { applyAuthoritativeTimerUpdate } from '../../../shared/timerAuthority.js';
+import { scheduleStageTimerBoundary } from '../timerScheduler.js';
 
 export function registerStageHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
   const actor = { clientType, deviceId, sessionId };
@@ -17,21 +19,32 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
       return;
     }
 
-    const nextStageTimerState = {
-      ...state.currentStageTimerState,
-      ...timerData,
-      display: {
-        ...(state.currentStageTimerState?.display || {}),
-        ...(timerData?.display || {}),
-      },
-    };
-    if (typeof timerData.status !== 'string') {
-      nextStageTimerState.status = nextStageTimerState.running
-        ? (nextStageTimerState.paused ? 'paused' : 'running')
-        : (nextStageTimerState.finished ? 'finished' : 'idle');
+    if (timerData?.type === 'upcomingSongUpdate') {
+      emitStageTimerUpdate(io, {
+        type: 'upcomingSongUpdate',
+        customName: String(timerData.customName || '').slice(0, 240),
+        mode: String(timerData.mode || '').slice(0, 32),
+      });
+      return;
     }
-    state.currentStageTimerState = nextStageTimerState;
+
+    const authoritative = applyAuthoritativeTimerUpdate(
+      state.currentStageTimerState,
+      timerData,
+      Date.now()
+    );
+    if (!authoritative.accepted) {
+      socket.emit('stageTimerRejected', {
+        reason: authoritative.error,
+        stale: Boolean(authoritative.stale),
+        timerState: { ...state.currentStageTimerState, serverNow: Date.now() },
+      });
+      socket.emit('stageTimerUpdate', { ...state.currentStageTimerState, serverNow: Date.now() });
+      return;
+    }
+    state.currentStageTimerState = authoritative.state;
     schedulePersistSessionState();
+    scheduleStageTimerBoundary(io);
     console.log(`Stage timer updated by ${clientType} client:`, state.currentStageTimerState);
     appendActionLog(io, {
       type: 'stage',
@@ -42,6 +55,7 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
       metadata: {
         status: state.currentStageTimerState.status,
         running: Boolean(state.currentStageTimerState.running),
+        revision: state.currentStageTimerState.revision,
       },
     });
     emitStageTimerUpdate(io, state.currentStageTimerState);

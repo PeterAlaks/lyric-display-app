@@ -1,5 +1,5 @@
 export function registerConnectionRoutes(app, { authenticateRequest }) {
-  app.get('/api/connection/clients', authenticateRequest('lyrics:read'), (req, res) => {
+  app.get('/api/connection/clients', authenticateRequest('admin:full'), (req, res) => {
     try {
       const connectedClientsData = global.getConnectedClients ? global.getConnectedClients() : [];
 
@@ -18,4 +18,3 @@ export function registerConnectionRoutes(app, { authenticateRequest }) {
     }
   });
 }
-

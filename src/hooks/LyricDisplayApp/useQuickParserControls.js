@@ -1,10 +1,12 @@
 import React from 'react';
-
-const DEFAULT_PARSER_SETTINGS = {
-  enableAutoLineGrouping: true,
-  enableTranslationGrouping: true,
-  maxLinesPerGroup: 2,
-};
+import { normalizeLyricFileType } from '../../../shared/lyricImportRegistry.js';
+import {
+  buildLyricsParsingOptions,
+  mergeLyricsParsingOptions,
+} from '../../../shared/lyricsParsing/preferenceOptions.js';
+import { sanitizeMaxLinesPerGroup } from '../../../shared/lyricsParsing/runtimeConfig.js';
+import useLyricsStore from '../../context/LyricsStore.js';
+import { RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT } from '../../utils/lyricsReloadEvents.js';
 
 export const useQuickParserControls = ({
   hasLyrics,
@@ -18,32 +20,33 @@ export const useQuickParserControls = ({
   const [quickParserOpen, setQuickParserOpen] = React.useState(false);
   const [quickParserLoading, setQuickParserLoading] = React.useState(false);
   const [reloadingWithParser, setReloadingWithParser] = React.useState(false);
-  const [quickParserSettings, setQuickParserSettings] = React.useState(DEFAULT_PARSER_SETTINGS);
+  const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
+  const setLyricsParsingOptions = useLyricsStore((state) => state.setLyricsParsingOptions);
+  const lyricsGroupingConfig = lyricsParsingOptions.groupingConfig;
+  const quickParserSettings = React.useMemo(() => ({
+    enableAutoLineGrouping: lyricsGroupingConfig.enableAutoLineGrouping,
+    enableTranslationGrouping: lyricsGroupingConfig.enableTranslationGrouping,
+    maxLinesPerGroup: lyricsGroupingConfig.maxLinesPerGroup,
+  }), [lyricsGroupingConfig]);
 
   const clampGroupSize = React.useCallback((value) => {
-    const parsed = parseInt(value, 10);
-    if (!Number.isFinite(parsed)) return 2;
-    return Math.max(2, Math.min(12, parsed));
+    return sanitizeMaxLinesPerGroup(value);
   }, []);
 
   const loadQuickParserSettings = React.useCallback(async () => {
-    if (!window.electronAPI?.preferences?.getCategory) return;
+    if (!window.electronAPI?.preferences?.getParsingConfig) return;
     setQuickParserLoading(true);
     try {
-      const result = await window.electronAPI.preferences.getCategory('parsing');
-      if (result?.success && result.data) {
-        setQuickParserSettings({
-          enableAutoLineGrouping: result.data.enableAutoLineGrouping ?? true,
-          enableTranslationGrouping: result.data.enableTranslationGrouping ?? true,
-          maxLinesPerGroup: clampGroupSize(result.data.maxLinesPerGroup ?? 2),
-        });
+      const result = await window.electronAPI.preferences.getParsingConfig();
+      if (result?.success && result.config) {
+        setLyricsParsingOptions(buildLyricsParsingOptions(result.config));
       }
     } catch (error) {
       console.error('Failed to load quick parser settings:', error);
     } finally {
       setQuickParserLoading(false);
     }
-  }, [clampGroupSize]);
+  }, [setLyricsParsingOptions]);
 
   React.useEffect(() => {
     if (hasLyrics) {
@@ -60,20 +63,23 @@ export const useQuickParserControls = ({
   React.useEffect(() => {
     const handleParsingPreferencesUpdated = (event) => {
       const next = event?.detail || {};
-      setQuickParserSettings((prev) => ({
-        ...prev,
-        enableAutoLineGrouping: next.enableAutoLineGrouping ?? prev.enableAutoLineGrouping,
-        enableTranslationGrouping: next.enableTranslationGrouping ?? prev.enableTranslationGrouping,
-        maxLinesPerGroup: clampGroupSize(next.maxLinesPerGroup ?? prev.maxLinesPerGroup),
+      const current = useLyricsStore.getState().lyricsParsingOptions;
+      setLyricsParsingOptions(mergeLyricsParsingOptions(current, {
+        groupingConfig: next,
       }));
     };
 
     window.addEventListener('parsing-preferences-updated', handleParsingPreferencesUpdated);
     return () => window.removeEventListener('parsing-preferences-updated', handleParsingPreferencesUpdated);
-  }, [clampGroupSize]);
+  }, [setLyricsParsingOptions]);
 
   const updateQuickParserSetting = React.useCallback(async (key, value) => {
-    setQuickParserSettings((prev) => ({ ...prev, [key]: value }));
+    const current = useLyricsStore.getState().lyricsParsingOptions;
+    setLyricsParsingOptions(mergeLyricsParsingOptions(current, {
+      groupingConfig: {
+        [key]: key === 'maxLinesPerGroup' ? clampGroupSize(value) : value,
+      },
+    }));
 
     window.dispatchEvent(new CustomEvent('parsing-preferences-updated', {
       detail: { [key]: value }
@@ -91,7 +97,7 @@ export const useQuickParserControls = ({
         variant: 'error',
       });
     }
-  }, [showToast]);
+  }, [clampGroupSize, setLyricsParsingOptions, showToast]);
 
   const songFilePath = songMetadata?.filePath || null;
 
@@ -99,11 +105,11 @@ export const useQuickParserControls = ({
     if (!hasLyrics || reloadingWithParser || typeof processLoadedLyrics !== 'function') return;
 
     const inferredType = (() => {
-      const sourceType = (lyricsSource?.fileType || '').toLowerCase();
-      if (sourceType === 'lrc' || sourceType === 'txt') return sourceType;
-      const pathLower = (lyricsSource?.filePath || songFilePath || '').toLowerCase();
-      if (pathLower.endsWith('.lrc')) return 'lrc';
-      return 'txt';
+      return normalizeLyricFileType({
+        fileType: lyricsSource?.fileType,
+        fileName: lyricsSource?.fileName || lyricsSource?.filePath || songFilePath,
+        fallback: 'txt',
+      });
     })();
 
     const sourceContent = lyricsSource?.content || rawLyricsContent || '';
@@ -133,6 +139,7 @@ export const useQuickParserControls = ({
           fallbackFileName: sourceFileName,
           toastTitle: 'Lyrics reloaded',
           toastMessage: 'Loaded lyrics were reparsed with updated parser settings.',
+          ignoreSavedGroupingPlan: true,
           groupingConfig: {
             enableAutoLineGrouping: quickParserSettings.enableAutoLineGrouping,
             enableTranslationGrouping: quickParserSettings.enableTranslationGrouping,
@@ -148,6 +155,15 @@ export const useQuickParserControls = ({
       setReloadingWithParser(false);
     }
   }, [hasLyrics, lyricsFileName, lyricsSource, processLoadedLyrics, quickParserSettings, rawLyricsContent, reloadingWithParser, showToast, songFilePath]);
+
+  React.useEffect(() => {
+    const handleReloadRequest = () => {
+      void handleReloadWithQuickParser();
+    };
+
+    window.addEventListener(RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT, handleReloadRequest);
+    return () => window.removeEventListener(RELOAD_LYRICS_WITH_CURRENT_PARSER_EVENT, handleReloadRequest);
+  }, [handleReloadWithQuickParser]);
 
   return {
     quickParserOpen,

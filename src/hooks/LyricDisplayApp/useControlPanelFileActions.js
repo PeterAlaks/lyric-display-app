@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { openFileNavigator } from '../../utils/fileNavigatorEvents';
 
 export const useControlPanelFileActions = ({
   clearSearch,
@@ -22,11 +23,13 @@ export const useControlPanelFileActions = ({
       return;
     }
 
+    if (openFileNavigator({ destination: 'control' })) return;
+
     try {
       if (window?.electronAPI?.loadLyricsFile) {
         const result = await window.electronAPI.loadLyricsFile();
         if (result && result.success && result.content) {
-          const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath };
+          const payload = { content: result.content, fileName: result.fileName, filePath: result.filePath, fileType: result.fileType };
           window.dispatchEvent(new CustomEvent('lyrics-opened', { detail: payload }));
           trackAction('song_loaded');
           return;

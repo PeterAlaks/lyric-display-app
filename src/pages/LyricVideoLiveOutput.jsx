@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
 import IntroOverlay from '../components/LyricVideoStudio/IntroOverlay';
-import { getActiveLyricVideoLine } from '../utils/lyricVideoTimeline';
-import { getLyricVideoLineOutputText } from '../utils/lyricVideoLineText';
+import ButterchurnBackground from '../components/LyricVideoStudio/ButterchurnBackground';
+import { getActiveLyricVideoLine, getLyricVideoLineOutputText } from '../utils/lyricVideoTimeline';
+import { isButterchurnBackground } from '../../shared/lyricVideoVisualizer.js';
 import {
   LYRIC_VIDEO_STUDIO_CHANNEL,
   LYRIC_VIDEO_STUDIO_STATE_KEY,
@@ -32,25 +33,6 @@ export default function LyricVideoLiveOutput() {
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
   useEffect(() => {
-    const modeStyle = isProjectionMode
-      ? 'background: #000000 !important'
-      : 'background: transparent !important';
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-
-    if (html) html.setAttribute('style', modeStyle);
-    if (body) body.setAttribute('style', modeStyle);
-    if (root) root.setAttribute('style', modeStyle);
-
-    return () => {
-      if (html) html.removeAttribute('style');
-      if (body) body.removeAttribute('style');
-      if (root) root.removeAttribute('style');
-    };
-  }, [isProjectionMode]);
-
-  useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return undefined;
 
     const channel = new BroadcastChannel(LYRIC_VIDEO_STUDIO_CHANNEL);
@@ -61,6 +43,7 @@ export default function LyricVideoLiveOutput() {
         setClockNow(Date.now());
       }
     };
+    channel.postMessage({ type: 'request-snapshot' });
 
     return () => channel.close();
   }, []);
@@ -133,6 +116,8 @@ export default function LyricVideoLiveOutput() {
   const introDurationMs = intro.enabled ? Math.max(0, Number(intro.durationMs) || 0) : 0;
   const introPaddingMs = Math.max(0, Number(project.exportSettings?.introPaddingMs) || 0);
   const preMainTimeline = currentTimeMs < introDurationMs + introPaddingMs;
+  const audioStartTimeMs = introDurationMs + introPaddingMs;
+  const butterchurnEnabled = isButterchurnBackground(project.visualizer);
   const title = snapshot.previewTitle || snapshot.studioFileName?.replace(/\.[^.]+$/, '') || 'Lyric Video';
   let line = getLyricVideoLineOutputText(resolved?.activeLine) || '';
   if (preMainTimeline) {
@@ -143,6 +128,17 @@ export default function LyricVideoLiveOutput() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-transparent">
+      <ButterchurnBackground
+        enabled={butterchurnEnabled}
+        visualizer={project.visualizer}
+        audioSource={snapshot.visualizerAudioSource}
+        currentTimeMs={currentTimeMs}
+        audioStartTimeMs={audioStartTimeMs}
+        width={project.exportSettings?.width}
+        height={project.exportSettings?.height}
+        fps={project.exportSettings?.fps}
+        preview
+      />
       <LyricVisualFrame
         line={line}
         currentLine={resolved?.activeLine}
@@ -156,6 +152,7 @@ export default function LyricVideoLiveOutput() {
         showProjectionExitHint={showProjectionExitHint}
         className="relative h-screen w-screen overflow-hidden"
         backgroundVideoPlaying={Boolean(snapshot.isPlaying)}
+        renderBackgroundLayer={!butterchurnEnabled}
       />
       <IntroOverlay
         intro={intro}

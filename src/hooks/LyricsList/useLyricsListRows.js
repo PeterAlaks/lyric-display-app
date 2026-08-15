@@ -1,14 +1,21 @@
 import { useCallback, useMemo } from 'react';
 import { useDynamicRowHeight } from 'react-window';
-import { STRUCTURE_TAG_PATTERNS } from '../../../shared/lyricsParsing.js';
-import { DEFAULT_ROW_HEIGHT, ROW_GAP } from '../../components/LyricsList/layout';
+import { createStructureTagPatterns } from '../../../shared/lyricsParsing/constants.js';
+import { sanitizeMaxLinesPerGroup } from '../../../shared/lyricsParsing/runtimeConfig.js';
+
+export const DEFAULT_ROW_HEIGHT = 48;
+export const ROW_GAP = 8;
+export const VIRTUALIZATION_THRESHOLD = 200;
+export const HORIZONTAL_PADDING_PX = 16;
 
 export default function useLyricsListRows({
   lyrics,
   lyricsSections,
   lineToSection,
   selectedLine,
+  previewLine,
   maxLinesPerGroup,
+  sectionTagPhrases,
   highlightedLineIndex,
   searchQuery,
   darkMode,
@@ -18,17 +25,20 @@ export default function useLyricsListRows({
   const baseRowHeight = compact ? 38 : DEFAULT_ROW_HEIGHT;
   const rowGap = compact ? 4 : ROW_GAP;
 
+  const structureTagPatterns = useMemo(
+    () => createStructureTagPatterns(sectionTagPhrases),
+    [sectionTagPhrases],
+  );
+
   const isStructureTagLine = useCallback((line) => {
     if (!line || typeof line !== 'string') return false;
     const trimmed = line.trim();
     if (!trimmed) return false;
-    return STRUCTURE_TAG_PATTERNS.some((pattern) => pattern.test(trimmed));
-  }, []);
+    return structureTagPatterns.some((pattern) => pattern.test(trimmed));
+  }, [structureTagPatterns]);
 
   const effectiveMaxLinesPerGroup = useMemo(() => {
-    const parsed = parseInt(maxLinesPerGroup, 10);
-    if (!Number.isFinite(parsed)) return 2;
-    return Math.max(2, Math.min(12, parsed));
+    return sanitizeMaxLinesPerGroup(maxLinesPerGroup);
   }, [maxLinesPerGroup]);
 
   const getNormalGroupLines = useCallback((line) => {
@@ -124,6 +134,9 @@ export default function useLyricsListRows({
       let base = `${padding} ${compact ? 'rounded-md border text-[13px] leading-snug' : 'rounded'} cursor-pointer transition-colors duration-150 select-none `;
 
       if (compact && darkMode) {
+        if (index === previewLine) {
+          return `${base}border-amber-300 bg-amber-500/20 text-amber-100 ring-2 ring-amber-300/80 shadow-sm`;
+        }
         if (index === selectedLine) {
           return `${base}border-blue-400 bg-blue-400 text-white shadow-sm`;
         }
@@ -136,7 +149,12 @@ export default function useLyricsListRows({
         return `${base}border-gray-800 bg-gray-900/80 text-gray-200 hover:border-gray-700 hover:bg-gray-800/90`;
       }
 
-      if (index === selectedLine) base += 'bg-blue-400 text-white';
+      if (index === previewLine) {
+        base += darkMode
+          ? 'bg-amber-500/20 text-amber-100 ring-2 ring-amber-300/90'
+          : 'bg-amber-100 text-amber-950 ring-2 ring-amber-500';
+      }
+      else if (index === selectedLine) base += 'bg-blue-400 text-white';
       else if (index === highlightedLineIndex && searchQuery)
         base += 'bg-orange-200 text-orange-900 border-2 border-orange-400';
       else if (isMultiSelected)
@@ -149,7 +167,7 @@ export default function useLyricsListRows({
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200';
       return base;
     },
-    [compact, selectedLine, highlightedLineIndex, searchQuery, darkMode]
+    [compact, selectedLine, previewLine, highlightedLineIndex, searchQuery, darkMode]
   );
 
   return {

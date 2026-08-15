@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, ListMusic, Moon, RefreshCw, Settings, Sun, Timer, Video } from 'lucide-react';
+import { Globe, ListMusic, MonitorUp, Moon, Settings, Sun, Timer, View } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import AuthStatusIndicator from '../AuthStatusIndicator';
 
@@ -11,12 +11,8 @@ export default function ControlPanelHeaderActions({
   handleOpenOnlineLyricsSearch,
   handleOpenSetlist,
   handleOpenTimerControl,
-  handleSyncOutputs,
   iconButtonClass,
-  isAuthenticated,
-  isConnected,
   maxSetlistFiles,
-  ready,
   refreshAuthToken,
   setDarkMode,
   setThemeMode,
@@ -28,6 +24,8 @@ export default function ControlPanelHeaderActions({
       <div className="grid grid-cols-8 gap-2 w-full">
         <Tooltip content={<span>Search and import lyrics from online providers - <strong>Ctrl+Shift+O</strong></span>} side="bottom">
           <button
+            data-tour="online-lyrics"
+            aria-label="Search online lyrics"
             className={iconButtonClass(false)}
             onClick={handleOpenOnlineLyricsSearch}
           >
@@ -37,20 +35,12 @@ export default function ControlPanelHeaderActions({
 
         <Tooltip content={<span>View and manage your song setlist (up to {maxSetlistFiles} songs) - <strong>Ctrl+Shift+S</strong></span>} side="bottom">
           <button
+            data-tour="setlist-manager"
+            aria-label="Open setlist manager"
             className={iconButtonClass(false)}
             onClick={handleOpenSetlist}
           >
             <ListMusic className="h-4 w-4" />
-          </button>
-        </Tooltip>
-
-        <Tooltip content="Force refresh all output displays with current state" side="bottom">
-          <button
-            disabled={!isConnected || !isAuthenticated || !ready}
-            className={iconButtonClass(!isConnected || !isAuthenticated || !ready)}
-            onClick={handleSyncOutputs}
-          >
-            <RefreshCw className="h-4 w-4" />
           </button>
         </Tooltip>
 
@@ -97,8 +87,30 @@ export default function ControlPanelHeaderActions({
           </button>
         </Tooltip>
 
+        <Tooltip content="Preview all output displays" side="bottom">
+          <button
+            aria-label="Preview Outputs"
+            className={iconButtonClass(false)}
+            onClick={() => {
+              showModal({
+                title: 'Preview Outputs',
+                headerDescription: 'Preview output, stage, time, and custom displays regardless of live visibility.',
+                component: 'PreviewOutputs',
+                variant: 'info',
+                size: 'large',
+                dismissLabel: 'Close',
+                className: 'max-w-4xl'
+              });
+            }}
+          >
+            <View className="h-4 w-4" />
+          </button>
+        </Tooltip>
+
         <Tooltip content="Project an output to this monitor or an external display" side="bottom">
           <button
+            data-tour="project-output"
+            aria-label="Project to display"
             className={iconButtonClass(false)}
             onClick={() => {
               showModal({
@@ -113,7 +125,7 @@ export default function ControlPanelHeaderActions({
               });
             }}
           >
-            <Video className="h-4 w-4" />
+            <MonitorUp className="h-4 w-4" />
           </button>
         </Tooltip>
 

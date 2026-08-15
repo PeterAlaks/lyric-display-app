@@ -105,7 +105,7 @@ const TutorialPopover = ({
         sideOffset={sideOffset}
         onOpenAutoFocus={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => event.preventDefault()}
-        className={`w-80 p-3 text-sm shadow-lg ${darkMode
+        className={`w-80 rounded-xl p-4 text-sm shadow-lg ${darkMode
           ? 'bg-gray-900 border-gray-700 text-gray-100'
           : 'bg-white border-gray-200 text-gray-900'
         }`}

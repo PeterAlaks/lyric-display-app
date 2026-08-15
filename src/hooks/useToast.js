@@ -8,8 +8,9 @@ export default function useToast() {
   const showToast = useCallback((opts) => {
     const target = ctx || globalToastRef.current;
     if (target) {
-      target.show({ playTone, ...opts });
+      return target.show({ playTone, ...opts });
     }
+    return null;
   }, [ctx]);
 
   const removeToast = useCallback((id) => {

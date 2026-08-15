@@ -32,7 +32,9 @@ const useAdvancedSectionPersistence = (storageKeyPrefix, options = {}) => {
 
   const [fullScreenAdvancedExpanded, setFullScreenAdvancedExpanded] = useState(() => {
     const stored = sessionStorage.getItem(getKey('fullScreenAdvancedExpanded'));
-    return stored === 'true';
+    return stored === null
+      ? Boolean(autoOpenTriggers.fullScreenAdvancedExpanded)
+      : stored === 'true';
   });
 
   const stateMap = useMemo(() => ({

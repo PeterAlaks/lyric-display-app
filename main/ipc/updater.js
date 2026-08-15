@@ -3,7 +3,8 @@ import {
   downloadAvailableUpdate,
   getUpdaterState,
   hideUpdaterProgressWindow,
-  installDownloadedUpdate
+  installDownloadedUpdate,
+  setUpdateSessionActive,
 } from '../updater.js';
 
 /**
@@ -13,8 +14,13 @@ export function registerUpdaterHandlers({ getMainWindow, checkForUpdates }) {
   ipcMain.handle('updater:check', async (_event, showNoUpdateDialog = false) => {
     try {
       if (typeof checkForUpdates === 'function') {
-        checkForUpdates(showNoUpdateDialog);
-        return { success: true, state: getUpdaterState() };
+        await checkForUpdates(showNoUpdateDialog);
+        const state = getUpdaterState();
+        return {
+          success: true,
+          deferred: Boolean(state.sessionPolicy?.sessionActive && state.sessionPolicy?.checkDeferred),
+          state,
+        };
       }
       return { success: false, error: 'checkForUpdates function not available', state: getUpdaterState() };
     } catch (e) {
@@ -42,6 +48,10 @@ export function registerUpdaterHandlers({ getMainWindow, checkForUpdates }) {
       return { success: false, error: e?.message || String(e), state: getUpdaterState() };
     }
   });
+
+  ipcMain.handle('updater:set-session-active', async (_event, active) => (
+    setUpdateSessionActive(Boolean(active))
+  ));
 
   ipcMain.handle('updater:hide-progress', async () => hideUpdaterProgressWindow());
 }

@@ -1,75 +1,101 @@
 export const SHORTCUTS = [
   {
-    category: 'File Operations',
+    category: 'General & Window',
     items: [
-      { label: 'Open Lyrics File', combo: 'Ctrl/Cmd + O' },
-      { label: 'New Lyrics', combo: 'Ctrl/Cmd + N' },
-      { label: 'Edit Lyrics', combo: 'Ctrl/Cmd + E' },
-      { label: 'Open Setlist Modal', combo: 'Ctrl/Cmd + Shift + S' },
+      { label: 'Close the active modal or popup', combo: 'Escape' },
+      { label: 'Open Preferences (Control Panel / Canvas)', combo: 'Ctrl/Cmd + I' },
+      { label: 'Reload the Control Panel window', combo: 'Ctrl/Cmd + R' },
+      { label: 'Toggle Developer Tools', combo: 'Ctrl/Cmd + Shift + I' },
+      { label: 'Zoom in', combo: 'Ctrl/Cmd + + / =' },
+      { label: 'Zoom out', combo: 'Ctrl/Cmd + -' },
+      { label: 'Reset zoom', combo: 'Ctrl/Cmd + 0' },
+      { label: 'Toggle fullscreen', combo: 'F11' },
+      { label: 'Quit LyricDisplay', combo: 'Alt + F4' },
+    ],
+  },
+  {
+    category: 'Control Panel — Files & Setlist',
+    items: [
+      { label: 'Open file navigator', combo: 'Ctrl/Cmd + O' },
+      { label: 'Create new lyrics', combo: 'Ctrl/Cmd + N' },
+      { label: 'Edit loaded lyrics', combo: 'Ctrl/Cmd + E' },
+      { label: 'Open Setlist Manager', combo: 'Ctrl/Cmd + Shift + S' },
       { label: 'Open Online Lyrics Search', combo: 'Ctrl/Cmd + Shift + O' },
-      { label: 'Add Current Song to Setlist', combo: 'Ctrl/Cmd + Alt + S' },
-      { label: 'Open Preferences', combo: 'Ctrl/Cmd + I' },
-    ]
+      { label: 'Add current song to setlist', combo: 'Ctrl/Cmd + Alt + S' },
+      { label: 'Previous / next setlist song', combo: 'Ctrl/Cmd + Shift + ← / →' },
+    ],
   },
   {
-    category: 'Search & Navigation',
+    category: 'Control Panel — Search',
     items: [
-      { label: 'Focus Search Bar', combo: 'Ctrl/Cmd + F' },
-      { label: 'Clear Search', combo: 'Escape' },
-      { label: 'Jump to First Match', combo: 'Enter' },
-      { label: 'Navigate Previous Search Results', combo: 'Shift + ↑' },
-      { label: 'Navigate Next Search Results', combo: 'Shift + ↓' },
-      { label: 'Navigate to Previous Setlist Song', combo: 'Ctrl/Cmd + Shift + ←' },
-      { label: 'Navigate to Next Setlist Song', combo: 'Ctrl/Cmd + Shift + →' },
-    ]
+      { label: 'Focus lyric search', combo: 'Ctrl/Cmd + F' },
+      { label: 'Clear lyric search', combo: 'Escape' },
+      { label: 'Send highlighted search match', combo: 'Enter' },
+      { label: 'Previous / next search match', combo: 'Shift + ↑ / ↓' },
+    ],
   },
   {
-    category: 'Playback Control',
+    category: 'Control Panel — Live Control',
     items: [
-      { label: 'Toggle Autoplay', combo: 'Ctrl/Cmd + P' },
-      { label: 'Toggle Intelligent Autoplay', combo: 'Ctrl/Cmd + Shift + P' },
-      { label: 'Toggle Display Output', combo: 'Spacebar' },
-      { label: 'Clear Output (deselect active line)', combo: 'Ctrl/Cmd + C' },
-    ]
+      { label: 'Toggle output visibility', combo: 'Space' },
+      { label: 'Toggle autoplay', combo: 'Ctrl/Cmd + P' },
+      { label: 'Toggle intelligent autoplay (timestamped lyrics)', combo: 'Ctrl/Cmd + Shift + P' },
+      { label: 'Clear output outside text fields', combo: 'Ctrl/Cmd + C' },
+      { label: 'Send previewed lyric line', combo: 'Enter' },
+      { label: 'Previous / next lyric line', combo: '↑ / ↓' },
+      { label: 'First / last lyric line', combo: 'Home / End' },
+    ],
   },
   {
-    category: 'Lyric Navigation',
+    category: 'Control Panel — Output Tabs',
     items: [
-      { label: 'Navigate to Previous Line', combo: '↑ / Numpad ↑' },
-      { label: 'Navigate to Next Line', combo: '↓ / Numpad ↓' },
-      { label: 'Jump to First Line', combo: 'Home' },
-      { label: 'Jump to Last Line', combo: 'End' },
-    ]
+      { label: 'Switch to Output 1–6 (when available)', combo: '1–6' },
+      { label: 'Switch to Stage', combo: '0' },
+    ],
   },
   {
-    category: 'Song Canvas',
+    category: 'Song Canvas — File & Search',
     items: [
-      { label: 'Go Back to Control Panel', combo: 'Escape / Backspace' },
-      { label: 'Save File', combo: 'Ctrl/Cmd + S' },
-      { label: 'Save and Load', combo: 'Ctrl/Cmd + Shift + L' },
-      { label: 'Cleanup Lyrics', combo: 'Ctrl/Cmd + Shift + C' },
-      { label: 'Undo', combo: 'Ctrl/Cmd + Z' },
-      { label: 'Redo', combo: 'Ctrl/Cmd + Shift + Z' },
-    ]
+      { label: 'Start new lyrics', combo: 'Ctrl/Cmd + N' },
+      { label: 'Open file navigator', combo: 'Ctrl/Cmd + O' },
+      { label: 'Save file', combo: 'Ctrl/Cmd + S' },
+      { label: 'Save and load into Control Panel', combo: 'Ctrl/Cmd + Shift + L' },
+      { label: 'Clean up lyrics', combo: 'Ctrl/Cmd + Shift + C' },
+      { label: 'Open Find', combo: 'Ctrl/Cmd + F' },
+      { label: 'Open Find and Replace', combo: 'Ctrl/Cmd + H' },
+      { label: 'Previous / next search match', combo: 'Shift + ↑ / ↓' },
+      { label: 'Close search/selection or return', combo: 'Escape' },
+      { label: 'Return when outside an editor', combo: 'Backspace' },
+    ],
   },
   {
-    category: 'Canvas Editing',
+    category: 'Song Canvas — Line Editing',
     items: [
-      { label: 'Add Translation Line', combo: 'Ctrl/Cmd + T' },
-      { label: 'Duplicate Line', combo: 'Ctrl/Cmd + D' },
-      { label: 'Select Line', combo: 'Ctrl/Cmd + L' },
-    ]
+      { label: 'Add translation line', combo: 'Ctrl/Cmd + T' },
+      { label: 'Duplicate current line', combo: 'Ctrl/Cmd + D' },
+      { label: 'Select current line', combo: 'Ctrl/Cmd + L' },
+    ],
   },
   {
-    category: 'Output Settings',
+    category: 'Online Lyrics Search',
     items: [
-      { label: 'Switch to Output 1 tab', combo: '1' },
-      { label: 'Switch to Output 2 tab', combo: '2' },
-      { label: 'Switch to Output 3 tab (if available)', combo: '3' },
-      { label: 'Switch to Output 4 tab (if available)', combo: '4' },
-      { label: 'Switch to Output 5 tab (if available)', combo: '5' },
-      { label: 'Switch to Output 6 tab (if available)', combo: '6' },
-      { label: 'Switch to Stage tab', combo: '0' },
-    ]
+      { label: 'Move through library results', combo: '↑ / ↓' },
+      { label: 'Select result or run search', combo: 'Enter' },
+      { label: 'Close Online Lyrics Search', combo: 'Escape' },
+    ],
+  },
+  {
+    category: 'Lyric Video & Timer',
+    items: [
+      { label: 'Play / pause Lyric Video Studio', combo: 'Space' },
+      { label: 'Start, pause, resume, or advance timer', combo: 'Space' },
+    ],
+  },
+  {
+    category: 'First-Run Tour',
+    items: [
+      { label: 'Previous / next tour step', combo: '← / →' },
+      { label: 'Skip tour or close skip confirmation', combo: 'Escape' },
+    ],
   },
 ];

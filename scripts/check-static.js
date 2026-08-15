@@ -1,11 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateApiContracts } from './validate-api-contracts.js';
 
 const root = process.cwd();
-const checkDirs = ['main', 'server', 'shared', 'scripts', 'src', 'tests'];
+const checkDirs = ['main', 'preloads', 'server', 'shared', 'scripts', 'src', 'tests'];
 const rootFiles = ['main.js', 'preload.js', 'vite.config.js', 'tailwind.config.js', 'postcss.config.js'];
-const sourceExtensions = new Set(['.js', '.jsx', '.json', '.css', '.html', '.md']);
+const sourceExtensions = new Set(['.js', '.cjs', '.jsx', '.json', '.css', '.html', '.md']);
 const conflictMarkerPattern = /^(<<<<<<<|=======|>>>>>>>)($|[\s:])/m;
 
 function walk(dir, visitor) {
@@ -33,7 +34,7 @@ for (const file of rootFiles) {
 for (const dir of checkDirs) {
   walk(path.join(root, dir), (file) => {
     const ext = path.extname(file);
-    if (ext === '.js') syntaxFiles.push(file);
+    if (ext === '.js' || ext === '.cjs') syntaxFiles.push(file);
     if (sourceExtensions.has(ext)) conflictFiles.push(file);
   });
 }
@@ -56,6 +57,11 @@ for (const file of conflictFiles) {
     failed = true;
     console.error(`Conflict marker found: ${path.relative(root, file)}`);
   }
+}
+
+for (const error of validateApiContracts(root)) {
+  failed = true;
+  console.error(`API contract validation failed: ${error}`);
 }
 
 if (failed) {

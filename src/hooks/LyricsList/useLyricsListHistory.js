@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useElectronListeners from './useElectronListeners';
+import useLyricsStore from '../../context/LyricsStore';
+import { buildLyricsSyncPayload } from '../../utils/lyricsSyncPayload.js';
 
 const isInputLike = (target) => {
   if (!target) return false;
@@ -8,13 +10,25 @@ const isInputLike = (target) => {
   return editable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 };
 
+const cloneEnhancedTimestampEntry = (entry) => {
+  if (Array.isArray(entry)) {
+    return entry.map(cloneEnhancedTimestampEntry);
+  }
+  if (entry && typeof entry === 'object') {
+    return { ...entry };
+  }
+  return entry;
+};
+
 export default function useLyricsListHistory({
   lyrics,
   lyricsTimestamps,
+  lyricsEnhancedTimestamps,
   selectedLine,
   selectedIndicesArray,
   setLyrics,
   setLyricsTimestamps,
+  setLyricsEnhancedTimestamps,
   selectLine,
   emitLyricsLoad,
   setSelectedIndices,
@@ -41,12 +55,18 @@ export default function useLyricsListHistory({
     [lyricsTimestamps]
   );
 
+  const cloneEnhancedTimestamps = useCallback(
+    () => (Array.isArray(lyricsEnhancedTimestamps) ? lyricsEnhancedTimestamps.map(cloneEnhancedTimestampEntry) : []),
+    [lyricsEnhancedTimestamps]
+  );
+
   const takeSnapshot = useCallback(() => ({
     lyrics: cloneLyrics(),
     selectedLine,
     selection: selectedIndicesArray,
-    timestamps: cloneTimestamps()
-  }), [cloneLyrics, cloneTimestamps, selectedIndicesArray, selectedLine]);
+    timestamps: cloneTimestamps(),
+    enhancedTimestamps: cloneEnhancedTimestamps()
+  }), [cloneEnhancedTimestamps, cloneLyrics, cloneTimestamps, selectedIndicesArray, selectedLine]);
 
   const pushHistorySnapshot = useCallback((snapshot) => {
     setHistoryPast((prev) => {
@@ -62,18 +82,29 @@ export default function useLyricsListHistory({
     return snapshot.selectedLine;
   }, []);
 
+  const emitSnapshotLyricsLoad = useCallback((snapshot) => {
+    if (!emitLyricsLoad) return;
+    emitLyricsLoad(buildLyricsSyncPayload({
+      ...useLyricsStore.getState(),
+      lyrics: snapshot.lyrics,
+      lyricsTimestamps: snapshot.timestamps || [],
+      lyricsEnhancedTimestamps: snapshot.enhancedTimestamps || [],
+    }, snapshot.lyrics));
+  }, [emitLyricsLoad]);
+
   const applySnapshot = useCallback((snapshot) => {
     historyMutationRef.current = true;
     suppressScrollResetRef.current = true;
     tutorialMutationRef.current = true;
     setLyrics(snapshot.lyrics);
     setLyricsTimestamps(snapshot.timestamps || []);
-    if (emitLyricsLoad) emitLyricsLoad(snapshot.lyrics);
+    setLyricsEnhancedTimestamps(snapshot.enhancedTimestamps || []);
+    emitSnapshotLyricsLoad(snapshot);
     const nextSelected = remapSelectedLineFromSnapshot(snapshot);
     selectLine(nextSelected);
     setSelectedIndices(new Set(snapshot.selection || []));
     selectionAnchorRef.current = snapshot.selection?.[snapshot.selection.length - 1] ?? null;
-  }, [emitLyricsLoad, remapSelectedLineFromSnapshot, selectLine, selectionAnchorRef, setLyrics, setLyricsTimestamps, setSelectedIndices, suppressScrollResetRef, tutorialMutationRef]);
+  }, [emitSnapshotLyricsLoad, remapSelectedLineFromSnapshot, selectLine, selectionAnchorRef, setLyrics, setLyricsEnhancedTimestamps, setLyricsTimestamps, setSelectedIndices, suppressScrollResetRef, tutorialMutationRef]);
 
   const handleUndo = useCallback(() => {
     setHistoryPast((past) => {

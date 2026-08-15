@@ -14,6 +14,9 @@ const useNdiStore = create((set, get) => ({
 
   // Companion process
   companionRunning: false,
+  companionStarting: false,
+  companionReady: false,
+  companionBootstrapError: null,
   autoLaunch: false,
 
   // Download / update progress
@@ -44,6 +47,20 @@ const useNdiStore = create((set, get) => ({
   }),
 
   setCompanionRunning: (running) => set({ companionRunning: running }),
+  setCompanionStatus: (status = {}) => set((state) => {
+    const hasBootstrapError = Object.prototype.hasOwnProperty.call(status, 'bootstrapError');
+    const hasError = Object.prototype.hasOwnProperty.call(status, 'error');
+    return {
+      companionRunning: typeof status.running === 'boolean' ? status.running : state.companionRunning,
+      companionStarting: typeof status.starting === 'boolean' ? status.starting : state.companionStarting,
+      companionReady: typeof status.ready === 'boolean' ? status.ready : state.companionReady,
+      companionBootstrapError: hasBootstrapError
+        ? status.bootstrapError
+        : hasError
+          ? status.error
+          : state.companionBootstrapError,
+    };
+  }),
   setAutoLaunch: (enabled) => set({ autoLaunch: enabled }),
 
   setDownloading: (downloading) => set({ isDownloading: downloading }),
@@ -82,6 +99,9 @@ const useNdiStore = create((set, get) => ({
     installPath: '',
     companionPath: '',
     companionRunning: false,
+    companionStarting: false,
+    companionReady: false,
+    companionBootstrapError: null,
     updateInfo: null,
     isDownloading: false,
     isUpdating: false,
@@ -117,6 +137,9 @@ const useNdiStore = create((set, get) => ({
 
       if (statusResult) {
         updates.companionRunning = statusResult.running ?? false;
+        updates.companionStarting = statusResult.starting ?? false;
+        updates.companionReady = statusResult.ready ?? false;
+        updates.companionBootstrapError = statusResult.bootstrapError ?? null;
         updates.autoLaunch = statusResult.autoLaunch ?? false;
       }
 

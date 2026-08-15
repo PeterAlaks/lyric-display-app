@@ -1,10 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useDarkModeState } from './hooks/useStoreSelectors';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import { getCustomOutputRouteIds } from '../shared/outputRegistry.js';
 
-const Router = import.meta.env.MODE === 'development' ? BrowserRouter : HashRouter;
+// Keep old browser-source URLs working while making clean paths the default.
+// The fragment is intentionally detected before React mounts so a legacy
+// `/#/output1` source continues to use the router semantics it was created with.
+const Router = typeof window !== 'undefined' && window.location.hash.startsWith('#/')
+  ? HashRouter
+  : BrowserRouter;
 
 const AppProviders = React.lazy(() => import('./components/AppProviders'));
 const MainWindowShell = React.lazy(() => import('./components/routes/MainWindowShell'));
@@ -12,15 +17,14 @@ const ObsDockRoute = React.lazy(() => import('./components/routes/ObsDockRoute')
 const ObsSetupRoute = React.lazy(() => import('./components/routes/ObsSetupRoute'));
 const TimerControlRoute = React.lazy(() => import('./components/routes/TimerControlRoute'));
 
-const ControlPanel = React.lazy(() => import('./pages/ControlPanel'));
-const Output1 = React.lazy(() => import('./pages/Output1'));
-const Output2 = React.lazy(() => import('./pages/Output2'));
+const LyricDisplayApp = React.lazy(() => import('./components/LyricDisplayApp'));
 const Stage = React.lazy(() => import('./pages/Stage'));
 const TimeDisplay = React.lazy(() => import('./pages/TimeDisplay'));
 const OutputPage = React.lazy(() => import('./pages/OutputPage'));
 const LyricVideoStudio = React.lazy(() => import('./pages/LyricVideoStudio'));
 const LyricVideoExportFrame = React.lazy(() => import('./pages/LyricVideoExportFrame'));
 const LyricVideoLiveOutput = React.lazy(() => import('./pages/LyricVideoLiveOutput'));
+const Preview = React.lazy(() => import('./pages/Preview'));
 const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
 
 const CUSTOM_OUTPUT_ROUTE_IDS = getCustomOutputRouteIds();
@@ -35,10 +39,30 @@ const isPassiveDisplayRoute = (pathname) => {
   return (
     path === '/stage' ||
     path === '/time' ||
+    path === '/preview' ||
     path === '/lyric-video-live-output' ||
     path === '/lyric-video-export-frame' ||
     /^\/output\d+$/.test(path)
   );
+};
+
+const getDisplaySurface = (pathname, search = '') => {
+  const path = normalizePath(pathname);
+  const searchParams = new URLSearchParams(search);
+  const projection = ['1', 'true'].includes(
+    (searchParams.get('projection') || '').toLowerCase()
+  );
+  const outputRoute = /^\/output\d+$/.test(path);
+  const liveVideoRoute = path === '/lyric-video-live-output';
+  const previewRoute = path === '/preview';
+
+  if (projection && (outputRoute || liveVideoRoute || previewRoute || path === '/stage')) {
+    return 'projection';
+  }
+  if (outputRoute || liveVideoRoute || path === '/lyric-video-export-frame') {
+    return 'transparent';
+  }
+  return null;
 };
 
 function AppRoutes() {
@@ -50,17 +74,25 @@ function AppRoutes() {
     <React.Suspense fallback={null}>
       <Routes>
         <Route element={<MainWindowShell />}>
-          <Route path="/" element={isObsDockEntry ? <ObsDockRoute /> : <ControlPanel />} />
+          <Route
+            path="/"
+            element={isObsDockEntry ? <ObsDockRoute /> : (
+              <div className="w-full h-full text-black font-grotesk">
+                <LyricDisplayApp />
+              </div>
+            )}
+          />
           <Route path="/lyric-video-studio" element={<LyricVideoStudio />} />
           <Route path="/new-song" element={<NewSongCanvas />} />
         </Route>
-        <Route path="/output1" element={<Output1 />} />
-        <Route path="/output2" element={<Output2 />} />
+        <Route path="/output1" element={<OutputPage outputId="output1" />} />
+        <Route path="/output2" element={<OutputPage outputId="output2" />} />
         {CUSTOM_OUTPUT_ROUTE_IDS.map((outputId) => (
           <Route key={outputId} path={`/${outputId}`} element={<OutputPage outputId={outputId} />} />
         ))}
         <Route path="/stage" element={<Stage />} />
         <Route path="/time" element={<TimeDisplay />} />
+        <Route path="/preview" element={<Preview />} />
         <Route path="/obs-setup" element={<ObsSetupRoute />} />
         <Route path="/obs-dock" element={<ObsDockRoute />} />
         <Route path="/lyric-video-live-output" element={<LyricVideoLiveOutput />} />
@@ -83,6 +115,15 @@ function AppShell() {
   }, []);
   const effectiveDarkMode = isDockRuntime ? true : darkMode;
   const passiveDisplay = isPassiveDisplayRoute(location.pathname);
+
+  useLayoutEffect(() => {
+    const surface = getDisplaySurface(location.pathname, location.search);
+    if (surface) {
+      document.documentElement.dataset.lyricDisplaySurface = surface;
+    } else {
+      delete document.documentElement.dataset.lyricDisplaySurface;
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (effectiveDarkMode) {

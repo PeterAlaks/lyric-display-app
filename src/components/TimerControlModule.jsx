@@ -1,40 +1,46 @@
 import React from 'react';
-import { ChevronDown, Pause, Play, Plus, ScreenShare, SkipForward, Square, Timer, Trash2, Video } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip } from '@/components/ui/tooltip';
-import { ColorPicker } from '@/components/ui/color-picker';
-import { PaintPicker } from '@/components/ui/paint-picker';
+import { CalendarClock, Settings2 } from 'lucide-react';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
 import useSharedTimer from '../hooks/useSharedTimer';
+import useToast from '../hooks/useToast';
 import {
   DEFAULT_TIMER_CONTROL_SETTINGS,
   DEFAULT_TIMER_DISPLAY,
-  MAX_TIMER_SETS,
   formatGlobalClock,
+  getRemainingMs,
   getTimerDisplay,
   getTimerIntensity,
   getTimerProgress,
+  getTimerToggleProps,
   minutesToMs,
-  msToMinutesInput,
+  normalizeTimerControlSettings,
   secondsToMs,
+  shouldShowGlobalClockDuringPause,
   splitClockPeriod,
 } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
+import useLyricsStore from '../context/LyricsStore';
+import {
+  normalizeTransitionAnimation,
+  normalizeTransitionDuration,
+} from '../../shared/transitionSettings.js';
+import {
+  TIMER_SCHEDULE_STORAGE_KEY,
+  readTimerScheduleSnapshot,
+  saveTimerScheduleSnapshot,
+} from '../utils/timerScheduleStorage.js';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
-import FontSelect from './FontSelect';
+import TimerControlLayout from './TimerControlLayout';
+import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
+import {
+  calculateScheduleProjection,
+  normalizeScheduleDocument,
+  resolveScheduleOccurrence,
+  resolveScheduleTime,
+  SCHEDULE_START_GRACE_MS,
+} from '../../shared/scheduleUtils.js';
 
-const QUICK_MINUTES = [1, 3, 5, 10, 15, 30];
-const TARGET_PERIODS = ['AM', 'PM'];
-const TARGET_12_HOUR_MIN = 1;
-const TARGET_12_HOUR_MAX = 12;
-const TARGET_24_HOUR_MIN = 0;
-const TARGET_24_HOUR_MAX = 24;
-const TARGET_MINUTE_MIN = 0;
-const TARGET_MINUTE_MAX = 60;
 const PERIOD_STYLE = {
   fontSize: '0.42em',
   marginLeft: '0.12em',
@@ -42,190 +48,16 @@ const PERIOD_STYLE = {
   lineHeight: 1,
 };
 
-const createTimerSet = (index = 0) => ({
-  id: `timer-set-${Date.now()}-${index}`,
-  label: `Timer ${index + 1}`,
-  durationMs: minutesToMs(5),
-});
+const formatScheduleClock = (timestamp) => new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+}).format(new Date(timestamp));
 
-const toTargetTimeParts = (value, hourFormat = '12') => {
-  if (!value) {
-    return { hour: '', minute: '', period: '' };
-  }
-  const [rawHours, rawMinutes] = value.split(':').map((part) => Number(part));
-  if (!Number.isFinite(rawHours) || !Number.isFinite(rawMinutes)) {
-    return { hour: '', minute: '', period: '' };
-  }
-  const normalizedHours = ((rawHours % 24) + 24) % 24;
-  return {
-    hour: hourFormat === '24'
-      ? String(normalizedHours).padStart(2, '0')
-      : String(normalizedHours % 12 || 12),
-    minute: String(rawMinutes).padStart(2, '0'),
-    period: normalizedHours >= 12 ? 'PM' : 'AM',
-  };
-};
-
-const getCurrentTargetTimeParts = (hourFormat = '12') => {
-  const now = new Date();
-  return {
-    hour: hourFormat === '24'
-      ? String(now.getHours()).padStart(2, '0')
-      : String(now.getHours() % 12 || 12),
-    minute: String(now.getMinutes()).padStart(2, '0'),
-    period: now.getHours() >= 12 ? 'PM' : 'AM',
-  };
-};
-
-const fromTargetTimeParts = ({ hour, minute, period }, hourFormat = '12') => {
-  const hourNumber = Math.trunc(Number(hour));
-  const minuteNumber = Math.trunc(Number(minute));
-  if (!Number.isFinite(hourNumber)
-    || !Number.isFinite(minuteNumber)
-    || minuteNumber < TARGET_MINUTE_MIN
-    || minuteNumber > TARGET_MINUTE_MAX) {
-    return '';
-  }
-
-  const formatTotalMinutes = (totalMinutes) => {
-    const normalizedTotalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
-    const normalizedHour = Math.floor(normalizedTotalMinutes / 60);
-    const normalizedMinute = normalizedTotalMinutes % 60;
-    return `${String(normalizedHour).padStart(2, '0')}:${String(normalizedMinute).padStart(2, '0')}`;
-  };
-
-  if (hourFormat === '24') {
-    if (hourNumber < TARGET_24_HOUR_MIN || hourNumber > TARGET_24_HOUR_MAX) return '';
-    return formatTotalMinutes((hourNumber * 60) + minuteNumber);
-  }
-  if (hourNumber < TARGET_12_HOUR_MIN || hourNumber > TARGET_12_HOUR_MAX) return '';
-  if (!period) return '';
-  const baseHour = period === 'PM' ? (hourNumber % 12) + 12 : hourNumber % 12;
-  return formatTotalMinutes((baseHour * 60) + minuteNumber);
-};
-
-const formatTargetTimePreview = (value, hourFormat = '12') => {
-  if (!value) return '';
-  const [hours, minutes] = value.split(':').map((part) => Number(part));
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return '';
-  const next = new Date();
-  next.setHours(hours, minutes, 0, 0);
-  const dayLabel = next.getTime() <= Date.now() ? 'Tomorrow' : 'Today';
-  if (dayLabel === 'Tomorrow') {
-    next.setDate(next.getDate() + 1);
-  }
-  return `${dayLabel} at ${next.toLocaleTimeString([], {
-    hour: hourFormat === '24' ? '2-digit' : 'numeric',
-    minute: '2-digit',
-    hour12: hourFormat !== '24',
-  })}`;
-};
-
-const clampTargetPart = (value, min, max) => {
-  if (value === '') return '';
-  const number = Math.trunc(Number(value));
-  if (!Number.isFinite(number)) return '';
-  return String(Math.min(max, Math.max(min, number)));
-};
-
-const TargetNumberInput = ({ value, onChange, min, max, placeholder, ariaLabel, disabled, inputClass }) => (
-  <Input
-    type="number"
-    min={min}
-    max={max}
-    step="1"
-    inputMode="numeric"
-    value={value}
-    onChange={(event) => onChange(clampTargetPart(event.target.value, min, max))}
-    placeholder={placeholder}
-    aria-label={ariaLabel}
-    disabled={disabled}
-    className={`${inputClass} text-center tabular-nums`}
-  />
-);
-
-const TargetTimePicker = ({ value, onChange, disabled, inputClass, selectTriggerClass, mutedText, darkMode, hourFormat, onHourFormatChange }) => {
-  const parts = React.useMemo(() => toTargetTimeParts(value, hourFormat), [hourFormat, value]);
-  const preview = React.useMemo(() => formatTargetTimePreview(value, hourFormat), [hourFormat, value]);
-  const selectContentClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300';
-  const hourMin = hourFormat === '24' ? TARGET_24_HOUR_MIN : TARGET_12_HOUR_MIN;
-  const hourMax = hourFormat === '24' ? TARGET_24_HOUR_MAX : TARGET_12_HOUR_MAX;
-
-  const updatePart = (part, partValue) => {
-    if (partValue === '') {
-      onChange('');
-      return;
-    }
-
-    const fallback = getCurrentTargetTimeParts(hourFormat);
-    const nextParts = {
-      hour: parts.hour || fallback.hour,
-      minute: parts.minute || '00',
-      period: parts.period || fallback.period,
-      [part]: partValue,
-    };
-    onChange(fromTargetTimeParts(nextParts, hourFormat));
-  };
-
-  return (
-    <div className="space-y-2">
-      <Select value={hourFormat} onValueChange={onHourFormatChange} disabled={disabled}>
-        <SelectTrigger className={selectTriggerClass}>
-          <SelectValue placeholder="Time format" />
-        </SelectTrigger>
-        <SelectContent className={selectContentClass}>
-          <SelectItem value="12">12-hour time</SelectItem>
-          <SelectItem value="24">24-hour time</SelectItem>
-        </SelectContent>
-      </Select>
-      <div className={`grid gap-2 ${hourFormat === '24' ? 'grid-cols-[1fr_1fr]' : 'grid-cols-[1fr_1fr_1fr]'}`}>
-        <TargetNumberInput
-          value={parts.hour}
-          onChange={(nextHour) => updatePart('hour', nextHour)}
-          min={hourMin}
-          max={hourMax}
-          placeholder="HH"
-          ariaLabel="Target hour"
-          disabled={disabled}
-          inputClass={inputClass}
-        />
-        <TargetNumberInput
-          value={parts.minute}
-          onChange={(nextMinute) => updatePart('minute', nextMinute)}
-          min={TARGET_MINUTE_MIN}
-          max={TARGET_MINUTE_MAX}
-          placeholder="MM"
-          ariaLabel="Target minute"
-          disabled={disabled}
-          inputClass={inputClass}
-        />
-        {hourFormat === '12' && (
-          <Select value={parts.period || undefined} onValueChange={(nextPeriod) => updatePart('period', nextPeriod)} disabled={disabled}>
-            <SelectTrigger className={selectTriggerClass}>
-              <SelectValue placeholder="AM" />
-            </SelectTrigger>
-            <SelectContent className={selectContentClass}>
-              {TARGET_PERIODS.map((period) => (
-                <SelectItem key={period} value={period}>{period}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-      <div className="flex min-h-5 items-center justify-between gap-2">
-        <span className={`text-xs ${mutedText}`}>{preview}</span>
-        {value && !disabled && (
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className={`text-xs font-medium transition-colors ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-          >
-            Clear
-          </button>
-        )}
-      </div>
-    </div>
-  );
+const timestampToTimeOfDay = (timestamp) => {
+  const numeric = Number(timestamp);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '';
+  const date = new Date(numeric);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
 const usePreviewClock = (enabled, intervalMs = 1000) => {
@@ -265,11 +97,36 @@ const useWindowActive = () => {
   return active;
 };
 
-const TimerPreview = React.memo(({ timerState, displaySettings }) => {
+const usePageVisible = () => {
+  const getVisible = React.useCallback(() => {
+    if (typeof document === 'undefined') return true;
+    return document.visibilityState !== 'hidden';
+  }, []);
+  const [visible, setVisible] = React.useState(getVisible);
+
+  React.useEffect(() => {
+    const updateVisible = () => setVisible(getVisible());
+    document.addEventListener('visibilitychange', updateVisible);
+    updateVisible();
+
+    return () => {
+      document.removeEventListener('visibilitychange', updateVisible);
+    };
+  }, [getVisible]);
+
+  return visible;
+};
+
+const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = false, scheduleItems = [] }) => {
   const showSecondaryText = displaySettings.showSecondaryText !== false;
   const needsClock = timerState.running || timerState.paused || displaySettings.showGlobalClock;
   const windowActive = useWindowActive();
-  const now = usePreviewClock(needsClock, windowActive ? 1000 : 5000);
+  const pageVisible = usePageVisible();
+  const timerActive = timerState.running || timerState.paused;
+  const previewTickMs = pageVisible
+    ? (timerActive ? (windowActive ? 1000 : 2000) : (windowActive ? 1000 : 5000))
+    : 15000;
+  const now = usePreviewClock(needsClock, previewTickMs);
   const displayValue = React.useMemo(() => getTimerDisplay(timerState, now), [timerState, now]);
   const intensity = React.useMemo(() => getTimerIntensity(timerState, now), [timerState, now]);
   const progress = React.useMemo(() => getTimerProgress(timerState, now), [timerState, now]);
@@ -280,16 +137,24 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
     clockShowPeriod: displaySettings.clockShowPeriod,
   }), [displaySettings.clockHour12, displaySettings.clockShowPeriod, displaySettings.clockShowSeconds, now]);
   const globalClockParts = React.useMemo(() => splitClockPeriod(globalClockValue), [globalClockValue]);
+  const showPausedGlobalClock = shouldShowGlobalClockDuringPause(timerState);
+  const previewHasActiveSchedule = (timerState.running || timerState.paused)
+    && Array.isArray(timerState.sets)
+    && timerState.sets.length > 0;
+  const nextScheduleIndex = previewHasActiveSchedule
+    ? timerState.activeSetIndex + 1
+    : 0;
+  const nextScheduleItem = scheduleItems[nextScheduleIndex] || null;
 
   return (
-    <>
+    <div className="space-y-3">
       <div
-        className="rounded-lg min-h-[255px] flex flex-col items-center justify-center px-6"
+        className="flex min-h-[285px] flex-col items-center justify-center rounded-lg px-6"
         style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
       >
         {showSecondaryText && (
           <div className="text-xs font-semibold mb-4" style={{ color: accent }}>
-            {timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label)}
+            {showPausedGlobalClock ? 'Current Time' : (timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label))}
           </div>
         )}
         <div
@@ -307,23 +172,46 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
             whiteSpace: 'nowrap',
           }}
         >
-          {displayValue}
+          {showPausedGlobalClock ? globalClockParts.time : displayValue}
+          {showPausedGlobalClock && globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
         </div>
-        {showSecondaryText && timerState.sets?.length > 1 && (
+        {showSecondaryText && !showPausedGlobalClock && timerState.sets?.length > 1 && (
           <div className="mt-4 text-xs text-white/70">
             {timerState.activeSetIndex + 1} of {timerState.sets.length}
           </div>
         )}
-        {displaySettings.showProgress && (
+        {displaySettings.showProgress && !showPausedGlobalClock && (
           <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
             <div className="h-full rounded-full" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
           </div>
         )}
       </div>
 
-      {showSecondaryText && displaySettings.showGlobalClock && (
+      {scheduleMode && (
         <div
-          className="mt-3 w-full rounded-lg border px-6 py-4 flex items-center justify-between"
+          className="flex w-full items-center justify-between gap-6 rounded-lg border px-6 py-4"
+          style={{
+            background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000'),
+            borderColor: 'rgba(255,255,255,0.14)',
+          }}
+        >
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-white/55">Next Schedule Item</span>
+          <span className="min-w-0 text-right">
+            <span className="block truncate text-sm font-semibold text-white/85">
+              {nextScheduleItem?.label || (scheduleItems.length > 0 ? 'End of schedule' : 'No schedule loaded')}
+            </span>
+            {nextScheduleItem && (
+              <span className="mt-0.5 block text-[10px] text-white/45">
+                Item {nextScheduleIndex + 1} of {scheduleItems.length}
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {showSecondaryText && displaySettings.showGlobalClock && !showPausedGlobalClock && (
+        <div
+          className="flex w-full items-center justify-between rounded-lg border px-6 py-4"
           style={{
             background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000'),
             borderColor: 'rgba(255,255,255,0.14)',
@@ -342,18 +230,25 @@ const TimerPreview = React.memo(({ timerState, displaySettings }) => {
           </span>
         </div>
       )}
-    </>
+    </div>
   );
 });
 
 TimerPreview.displayName = 'TimerPreview';
 
 const TimerControlModule = () => {
-  const { emitStageTimerUpdate } = useControlSocket();
+  const {
+    emitStageTimerUpdate,
+    ready: controlReady,
+    isConnected: controlConnected,
+    authStatus: controlAuthStatus,
+  } = useControlSocket();
   const { showModal } = useModal();
+  const { showToast } = useToast();
   const { darkMode } = useDarkModeState();
   const { settings: timerControlSettings, updateSettings: updateTimerControlSettings } = useTimerControlSettings();
   const { settings: timerDisplaySettings, updateSettings: updateTimerDisplaySettings } = useTimerDisplaySettings();
+  const appearanceTransitions = useLyricsStore((state) => state.appearanceTransitions);
   const { timerState, actions } = useSharedTimer({
     emitTimerUpdate: emitStageTimerUpdate,
     controller: true,
@@ -362,11 +257,28 @@ const TimerControlModule = () => {
   });
   const { commitTimerState } = actions;
   const latestTimerStateRef = React.useRef(timerState);
-  const styleControlsRef = React.useRef(null);
-  const globalTimeFormatRef = React.useRef(null);
-  const [styleControlsExpanded, setStyleControlsExpanded] = React.useState(false);
-  const [globalTimeFormatExpanded, setGlobalTimeFormatExpanded] = React.useState(false);
+  const latestDisplaySettingsRef = React.useRef(null);
+  const scheduleClearedDuringRunRef = React.useRef(false);
   const controlSettings = timerControlSettings || DEFAULT_TIMER_CONTROL_SETTINGS;
+  const latestControlSettingsRef = React.useRef(controlSettings);
+  const liveControlReady = Boolean(controlReady && controlConnected && controlAuthStatus === 'authenticated');
+  const liveControlReadyRef = React.useRef(liveControlReady);
+
+  React.useEffect(() => {
+    liveControlReadyRef.current = liveControlReady;
+  }, [liveControlReady]);
+
+  React.useEffect(() => {
+    const handleTimerRejected = (event) => {
+      showToast({
+        title: 'Timer update not applied',
+        message: event?.detail?.reason || 'The timer changed on another controller. The latest state has been restored.',
+        variant: 'warning',
+      });
+    };
+    window.addEventListener('stage-timer-rejected', handleTimerRejected);
+    return () => window.removeEventListener('stage-timer-rejected', handleTimerRejected);
+  }, [showToast]);
 
   const {
     mode,
@@ -376,16 +288,106 @@ const TimerControlModule = () => {
     warningSeconds,
     criticalSeconds,
     overrunMode,
+    showGlobalClockDuringPause,
     useSets,
     sets = DEFAULT_TIMER_CONTROL_SETTINGS.sets,
     autoStartNext,
     indicatorEnabled,
     indicatorSeconds,
     indicatorLabel,
+    scheduleTitle,
+    scheduleEventStartTime,
+    scheduleEventDate,
+    scheduleScheduledStartAt,
+    scheduleIdealEndTime,
+    scheduleShowGlobalTimeDuringManualItems,
+    scheduleNotificationsEnabled,
   } = controlSettings;
-  const maxTimerSetsReached = sets.length >= MAX_TIMER_SETS;
+
+  React.useEffect(() => {
+    latestControlSettingsRef.current = controlSettings;
+  }, [controlSettings]);
+
+  const restoredScheduleRef = React.useRef(false);
+  React.useEffect(() => {
+    if (restoredScheduleRef.current) return;
+    restoredScheduleRef.current = true;
+
+    const storedSchedule = readTimerScheduleSnapshot();
+    if (!storedSchedule) {
+      if (controlSettings.sets?.length > 0) saveTimerScheduleSnapshot(controlSettings);
+      return;
+    }
+
+    const currentHasSchedule = Array.isArray(controlSettings.sets) && controlSettings.sets.length > 0;
+    const storedIsNewer = Number(storedSchedule.settingsUpdatedAt) > Number(controlSettings.settingsUpdatedAt || 0);
+    if (!currentHasSchedule || storedIsNewer) {
+      latestControlSettingsRef.current = normalizeTimerControlSettings({
+        ...controlSettings,
+        ...storedSchedule,
+      });
+      updateTimerControlSettings(storedSchedule);
+    } else {
+      saveTimerScheduleSnapshot(controlSettings);
+    }
+  }, [controlSettings, updateTimerControlSettings]);
+
+  React.useEffect(() => {
+    const handleScheduleStorage = (event) => {
+      if (event.key !== TIMER_SCHEDULE_STORAGE_KEY) return;
+
+      if (!event.newValue) {
+        const currentTimer = latestTimerStateRef.current;
+        scheduleClearedDuringRunRef.current = Boolean(
+          (currentTimer?.running || currentTimer?.paused) && currentTimer?.sets?.length > 0
+        );
+        const clearedSettings = {
+          ...latestControlSettingsRef.current,
+          useSets: true,
+          sets: [],
+          scheduleTitle: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
+          scheduleEventStartTime: '',
+          scheduleEventDate: '',
+          scheduleScheduledStartAt: null,
+          scheduleIdealEndTime: '',
+          scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
+          showGlobalClockDuringPause: DEFAULT_TIMER_CONTROL_SETTINGS.showGlobalClockDuringPause,
+          scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
+          autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
+          indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
+          indicatorSeconds: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds,
+          indicatorLabel: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+          settingsUpdatedAt: Date.now(),
+        };
+        latestControlSettingsRef.current = clearedSettings;
+        updateTimerControlSettings(clearedSettings, { touch: false });
+        return;
+      }
+
+      const storedSchedule = readTimerScheduleSnapshot();
+      if (!storedSchedule) return;
+      const currentUpdatedAt = Number(latestControlSettingsRef.current?.settingsUpdatedAt) || 0;
+      const incomingUpdatedAt = Number(storedSchedule.settingsUpdatedAt) || 0;
+      if (incomingUpdatedAt < currentUpdatedAt) return;
+      latestControlSettingsRef.current = normalizeTimerControlSettings({
+        ...latestControlSettingsRef.current,
+        ...storedSchedule,
+      });
+      updateTimerControlSettings(storedSchedule, { touch: false });
+    };
+
+    window.addEventListener('storage', handleScheduleStorage);
+    return () => window.removeEventListener('storage', handleScheduleStorage);
+  }, [updateTimerControlSettings]);
 
   const setTimerControlSettings = React.useCallback((partial) => {
+    const nextSettings = {
+      ...latestControlSettingsRef.current,
+      ...partial,
+      settingsUpdatedAt: Date.now(),
+    };
+    latestControlSettingsRef.current = nextSettings;
+    saveTimerScheduleSnapshot(nextSettings);
     updateTimerControlSettings(partial);
   }, [updateTimerControlSettings]);
 
@@ -409,6 +411,9 @@ const TimerControlModule = () => {
         liveUpdates.overrunStartedAt = null;
       }
     }
+    if (Object.prototype.hasOwnProperty.call(partial, 'showGlobalClockDuringPause')) {
+      liveUpdates.showGlobalClockDuringPause = Boolean(partial.showGlobalClockDuringPause);
+    }
     if (Object.prototype.hasOwnProperty.call(partial, 'autoStartNext')) {
       liveUpdates.autoStartNext = partial.autoStartNext !== false;
     }
@@ -423,6 +428,20 @@ const TimerControlModule = () => {
       if (current.phase === 'indicator') {
         liveUpdates.label = partial.indicatorLabel;
       }
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'scheduleTitle')) {
+      liveUpdates.scheduleTitle = partial.scheduleTitle;
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'scheduleIdealEndTime')) {
+      liveUpdates.scheduleIdealEndAt = partial.scheduleIdealEndTime
+        ? resolveScheduleTime(partial.scheduleIdealEndTime, current.scheduleScheduledStartAt || current.scheduleStartedAt || Date.now())
+        : null;
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'scheduleShowGlobalTimeDuringManualItems')) {
+      liveUpdates.scheduleShowGlobalTimeDuringManualItems = partial.scheduleShowGlobalTimeDuringManualItems !== false;
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'scheduleNotificationsEnabled')) {
+      liveUpdates.scheduleNotificationsEnabled = partial.scheduleNotificationsEnabled !== false;
     }
 
     if (Object.keys(liveUpdates).length > 0) {
@@ -443,33 +462,93 @@ const TimerControlModule = () => {
     return settings;
   }, [timerDisplaySettings]);
 
+  React.useEffect(() => {
+    latestDisplaySettingsRef.current = displaySettings;
+  }, [displaySettings]);
+
   const active = timerState.running || timerState.paused;
   const activeTimerUsesSets = active && Array.isArray(timerState.sets) && timerState.sets.length > 0;
-  const setRuntimeOptionsEnabled = useSets || activeTimerUsesSets;
-  const showSecondaryText = displaySettings.showSecondaryText !== false;
+  const effectiveAutoStartNext = activeTimerUsesSets ? timerState.autoStartNext !== false : autoStartNext;
+  const effectiveIndicatorEnabled = activeTimerUsesSets ? Boolean(timerState.indicatorEnabled) : indicatorEnabled;
+  const effectiveIndicatorSeconds = activeTimerUsesSets
+    ? Math.max(0, Number(timerState.indicatorDurationMs) || 0) / 1000
+    : indicatorSeconds;
+  const effectiveIndicatorLabel = activeTimerUsesSets ? timerState.indicatorLabel : indicatorLabel;
+  const effectiveNotificationsEnabled = activeTimerUsesSets
+    ? timerState.scheduleNotificationsEnabled !== false
+    : scheduleNotificationsEnabled;
+  const effectiveShowGlobalClockDuringPause = active
+    ? Boolean(timerState.showGlobalClockDuringPause)
+    : Boolean(showGlobalClockDuringPause);
+  const effectiveShowGlobalTimeDuringManualItems = activeTimerUsesSets
+    ? timerState.scheduleShowGlobalTimeDuringManualItems !== false
+    : scheduleShowGlobalTimeDuringManualItems;
+  const effectiveWarningSeconds = activeTimerUsesSets
+    ? Math.max(0, Number(timerState.warningMs) || 0) / 1000
+    : warningSeconds;
+  const effectiveCriticalSeconds = activeTimerUsesSets
+    ? Math.max(0, Number(timerState.criticalMs) || 0) / 1000
+    : criticalSeconds;
+  const effectiveEventStartTime = activeTimerUsesSets
+    ? (timerState.scheduleEventStartTime || scheduleEventStartTime)
+    : scheduleEventStartTime;
+  const effectiveEventDate = activeTimerUsesSets
+    ? (timerState.scheduleEventDate || scheduleEventDate)
+    : scheduleEventDate;
+  const effectiveIdealEndTime = activeTimerUsesSets
+    ? timestampToTimeOfDay(timerState.scheduleIdealEndAt)
+    : scheduleIdealEndTime;
+  const scheduleNow = usePreviewClock(useSets || activeTimerUsesSets, active ? 5_000 : 30_000);
+  const projectionItems = activeTimerUsesSets ? timerState.sets : sets;
+  const scheduleProjectionNow = activeTimerUsesSets
+    ? scheduleNow
+    : (resolveScheduleOccurrence({
+      eventStartTime: scheduleEventStartTime,
+      eventDate: scheduleEventDate,
+      boundStartAt: scheduleScheduledStartAt,
+      now: scheduleNow,
+    }) ?? scheduleNow);
+  const currentScheduleRemainingMs = activeTimerUsesSets && timerState.mode !== 'countup'
+    ? getRemainingMs(timerState, scheduleNow)
+    : null;
+  const scheduleProjection = React.useMemo(() => calculateScheduleProjection({
+    items: projectionItems,
+    active: activeTimerUsesSets,
+    activeIndex: timerState.activeSetIndex,
+    now: scheduleProjectionNow,
+    currentRemainingMs: currentScheduleRemainingMs,
+    currentIsTransition: timerState.phase === 'indicator',
+    currentIsUnbounded: Boolean(timerState.scheduleReconciliationHold),
+    transitionMs: effectiveIndicatorEnabled ? secondsToMs(effectiveIndicatorSeconds) : 0,
+    idealEndAt: activeTimerUsesSets ? timerState.scheduleIdealEndAt : null,
+    idealEndTime: activeTimerUsesSets ? '' : scheduleIdealEndTime,
+  }), [
+    activeTimerUsesSets,
+    currentScheduleRemainingMs,
+    effectiveIndicatorEnabled,
+    effectiveIndicatorSeconds,
+    projectionItems,
+    scheduleEventDate,
+    scheduleIdealEndTime,
+    scheduleNow,
+    scheduleProjectionNow,
+    scheduleScheduledStartAt,
+    timerState.activeSetIndex,
+    timerState.phase,
+    timerState.scheduleReconciliationHold,
+    timerState.scheduleIdealEndAt,
+  ]);
 
   React.useEffect(() => {
     latestTimerStateRef.current = timerState;
   }, [timerState]);
 
-  const scrollSectionIntoView = React.useCallback((sectionRef) => {
-    window.requestAnimationFrame(() => {
-      sectionRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      });
-    });
-  }, []);
-
-  const toggleStyleControls = React.useCallback(() => {
-    if (!styleControlsExpanded) scrollSectionIntoView(styleControlsRef);
-    setStyleControlsExpanded((expanded) => !expanded);
-  }, [scrollSectionIntoView, styleControlsExpanded]);
-
-  const toggleGlobalTimeFormat = React.useCallback(() => {
-    if (!globalTimeFormatExpanded) scrollSectionIntoView(globalTimeFormatRef);
-    setGlobalTimeFormatExpanded((expanded) => !expanded);
-  }, [globalTimeFormatExpanded, scrollSectionIntoView]);
+  const handleTimingAlertsChange = React.useCallback(async (enabled) => {
+    applyTimerControlSettings({ scheduleNotificationsEnabled: enabled });
+    if (enabled && typeof window.Notification === 'function' && window.Notification.permission === 'default') {
+      try { await window.Notification.requestPermission(); } catch { /* In-app alerts remain available. */ }
+    }
+  }, [applyTimerControlSettings]);
 
   const applyTimerDisplaySettings = React.useCallback((partial) => {
     const displayUpdatedAt = Date.now();
@@ -478,15 +557,30 @@ const TimerControlModule = () => {
       normalizedPartial.globalClockScale = normalizedPartial.otherItemsScale;
     }
     const nextDisplay = {
-      ...displaySettings,
+      ...(latestDisplaySettingsRef.current || DEFAULT_TIMER_DISPLAY),
       ...normalizedPartial,
     };
+    latestDisplaySettingsRef.current = nextDisplay;
     updateTimerDisplaySettings(normalizedPartial);
     commitTimerState({
       ...latestTimerStateRef.current,
       display: nextDisplay,
     });
-  }, [commitTimerState, displaySettings, updateTimerDisplaySettings]);
+  }, [commitTimerState, updateTimerDisplaySettings]);
+
+  const lastAppearanceTimerTransitionRef = React.useRef('');
+  React.useEffect(() => {
+    if (!appearanceTransitions) return;
+    const nextAnimation = appearanceTransitions.timerStateTransitionAnimation;
+    const nextDuration = appearanceTransitions.timerStateTransitionDuration;
+    const signature = `${nextAnimation}:${nextDuration}`;
+    if (lastAppearanceTimerTransitionRef.current === signature) return;
+    lastAppearanceTimerTransitionRef.current = signature;
+    applyTimerDisplaySettings({
+      stateTransitionAnimation: nextAnimation,
+      stateTransitionDuration: nextDuration,
+    });
+  }, [appearanceTransitions, applyTimerDisplaySettings]);
 
   const applyTimerLabel = React.useCallback((label) => {
     applyTimerDisplaySettings({ label });
@@ -500,11 +594,11 @@ const TimerControlModule = () => {
     }
   }, [applyTimerDisplaySettings, commitTimerState]);
 
-  const buildDisplay = () => ({
+  const buildDisplay = React.useCallback(() => ({
     ...displaySettings,
-  });
+  }), [displaySettings]);
 
-  const getTargetTimestamp = () => {
+  const getTargetTimestamp = React.useCallback(() => {
     if (!targetTime) return null;
     const [hours, minutes] = targetTime.split(':').map((part) => Number(part));
     if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
@@ -514,22 +608,169 @@ const TimerControlModule = () => {
       next.setDate(next.getDate() + 1);
     }
     return next.getTime();
-  };
+  }, [targetTime]);
 
-  const handleStart = () => {
+  const canStartTimer = liveControlReady
+    && !active
+    && (useSets ? sets.length > 0 : (mode !== 'target' || Boolean(targetTime)));
+
+  const handleStart = React.useCallback(() => {
+    if (!liveControlReady) return;
     const display = buildDisplay();
     if (useSets) {
-      actions.startTimerSet({
+      scheduleClearedDuringRunRef.current = false;
+      if (scheduleNotificationsEnabled && typeof window.Notification === 'function' && window.Notification.permission === 'default') {
+        try { void window.Notification.requestPermission(); } catch { /* In-app alerts remain available. */ }
+      }
+      const startRequestedAt = Date.now();
+      const resolvedScheduledStartAt = resolveScheduleOccurrence({
+        eventStartTime: scheduleEventStartTime,
+        eventDate: scheduleEventDate,
+        boundStartAt: scheduleScheduledStartAt,
+        now: startRequestedAt,
+      });
+      if (resolvedScheduledStartAt !== scheduleScheduledStartAt) {
+        setTimerControlSettings({ scheduleScheduledStartAt: resolvedScheduledStartAt });
+      }
+      const scheduleIdealEndAt = scheduleIdealEndTime
+        ? resolveScheduleTime(scheduleIdealEndTime, resolvedScheduledStartAt || startRequestedAt)
+        : null;
+      const scheduleOptions = {
         sets,
         warningMs: secondsToMs(warningSeconds),
         criticalMs: secondsToMs(criticalSeconds),
-        overrunMode,
+        overrunMode: false,
         autoStartNext,
         indicatorEnabled,
         indicatorDurationMs: secondsToMs(indicatorSeconds),
         indicatorLabel,
+        scheduleTitle,
+        scheduleEventStartTime,
+        scheduleEventDate,
+        scheduleScheduledStartAt: resolvedScheduledStartAt,
+        scheduleIdealEndAt,
+        scheduleShowGlobalTimeDuringManualItems,
+        showGlobalClockDuringPause,
+        scheduleNotificationsEnabled,
         display,
-      });
+      };
+
+      const shouldReconcile = Boolean(scheduleEventStartTime)
+        && Number.isFinite(Number(resolvedScheduledStartAt))
+        && startRequestedAt - Number(resolvedScheduledStartAt) > SCHEDULE_START_GRACE_MS;
+      if (shouldReconcile) {
+        const openingState = latestTimerStateRef.current;
+        const openingRevision = Math.max(0, Number(openingState?.revision) || 0);
+        const openingSettingsUpdatedAt = Math.max(0, Number(latestControlSettingsRef.current?.settingsUpdatedAt) || 0);
+        const schedule = normalizeScheduleDocument({
+          title: scheduleTitle,
+          eventStartTime: scheduleEventStartTime,
+          eventDate: scheduleEventDate,
+          idealEndTime: scheduleIdealEndTime,
+          autoStartNext,
+          showGlobalTimeDuringManualItems: scheduleShowGlobalTimeDuringManualItems,
+          showGlobalClockDuringPause,
+          notificationsEnabled: scheduleNotificationsEnabled,
+          indicator: {
+            enabled: indicatorEnabled,
+            durationSeconds: indicatorSeconds,
+            label: indicatorLabel,
+          },
+          items: sets,
+        });
+        showModal({
+          title: 'Sync Schedule Progress',
+          headerDescription: 'Join an event that is already in progress without replaying earlier schedule items.',
+          icon: <CalendarClock className="h-5 w-5" />,
+          variant: 'warning',
+          size: 'lg',
+          className: 'h-full',
+          component: 'ScheduleStartReconciliation',
+          customLayout: true,
+          actions: [],
+          dedupeKey: 'schedule-start-reconciliation',
+          schedule,
+          scheduledStartAt: resolvedScheduledStartAt,
+          hourFormat: targetHourFormat,
+          getCanCommit: () => {
+            const current = latestTimerStateRef.current;
+            return liveControlReadyRef.current
+              && !current.running
+              && !current.paused
+              && Math.max(0, Number(current.revision) || 0) === openingRevision
+              && Math.max(0, Number(latestControlSettingsRef.current?.settingsUpdatedAt) || 0) === openingSettingsUpdatedAt;
+          },
+          onConfirmScheduleStart: async (result) => {
+            const current = latestTimerStateRef.current;
+            if (!liveControlReadyRef.current || current.running || current.paused) {
+              throw new Error('The timer changed on another controller before this schedule could start.');
+            }
+            if (Math.max(0, Number(current.revision) || 0) !== openingRevision) {
+              throw new Error('The timer changed while the schedule was being reviewed. Reopen synchronization to use the latest state.');
+            }
+            if (Math.max(0, Number(latestControlSettingsRef.current?.settingsUpdatedAt) || 0) !== openingSettingsUpdatedAt) {
+              throw new Error('The schedule changed while it was being reviewed. Reopen synchronization to use the latest schedule.');
+            }
+            if (result.action === 'finished') {
+              commitTimerState({
+                ...current,
+                status: 'finished',
+                running: false,
+                paused: false,
+                finished: true,
+                mode: 'countdown',
+                phase: 'timer',
+                label: schedule.items.at(-1)?.label || schedule.title,
+                durationMs: 0,
+                startTime: null,
+                endTime: null,
+                elapsedBeforePauseMs: 0,
+                pausedRemainingMs: null,
+                remaining: '0:00',
+                sets: schedule.items,
+                activeSetIndex: Math.max(0, schedule.items.length - 1),
+                scheduleTitle: schedule.title,
+                scheduleRunId: `schedule-run-${result.joinedAt}`,
+                scheduleEventStartTime: schedule.eventStartTime,
+                scheduleEventDate: schedule.eventDate,
+                scheduleScheduledStartAt: result.scheduledStartAt,
+                scheduleIdealEndAt,
+                scheduleStartedAt: result.actualStartAt,
+                scheduleJoinedAt: result.joinedAt,
+                scheduleReconciled: true,
+                scheduleReconciliationHold: false,
+                schedulePausedOverrunMs: 0,
+                scheduleAssumedCompletedIds: schedule.items.map((item) => item.id),
+                scheduleShowGlobalTimeDuringManualItems,
+                showGlobalClockDuringPause,
+                scheduleNotificationsEnabled,
+                awaitingNext: false,
+                display,
+              });
+              showToast({ title: 'Schedule marked finished', message: `${schedule.title} was recorded as already complete.`, variant: 'info' });
+              return;
+            }
+            actions.startScheduleRun({
+              ...scheduleOptions,
+              activeSetIndex: result.activeSetIndex,
+              phase: result.phase,
+              phaseStartAt: result.phaseStartAt,
+              joinedAt: result.joinedAt,
+              scheduleStartedAt: result.actualStartAt,
+              scheduleScheduledStartAt: result.scheduledStartAt,
+              scheduleAssumedCompletedIds: result.scheduleAssumedCompletedIds,
+            });
+            showToast({
+              title: 'Schedule synchronized',
+              message: `Live control joined ${schedule.items[result.phase === 'indicator' ? result.activeSetIndex + 1 : result.activeSetIndex]?.label || schedule.title}.`,
+              variant: 'success',
+            });
+          },
+        });
+        return;
+      }
+
+      actions.startTimerSet(scheduleOptions);
       return;
     }
 
@@ -541,9 +782,117 @@ const TimerControlModule = () => {
       warningMs: secondsToMs(warningSeconds),
       criticalMs: secondsToMs(criticalSeconds),
       overrunMode,
+      showGlobalClockDuringPause,
       display,
     });
-  };
+  }, [
+    actions,
+    autoStartNext,
+    buildDisplay,
+    criticalSeconds,
+    durationMinutes,
+    getTargetTimestamp,
+    indicatorEnabled,
+    indicatorLabel,
+    indicatorSeconds,
+    mode,
+    overrunMode,
+    showGlobalClockDuringPause,
+    scheduleIdealEndTime,
+    scheduleShowGlobalTimeDuringManualItems,
+    scheduleNotificationsEnabled,
+    scheduleEventDate,
+    scheduleEventStartTime,
+    scheduleScheduledStartAt,
+    scheduleTitle,
+    setTimerControlSettings,
+    showModal,
+    showToast,
+    sets,
+    targetHourFormat,
+    useSets,
+    warningSeconds,
+    liveControlReady,
+    commitTimerState,
+  ]);
+
+  const handleStop = React.useCallback(() => {
+    if (!liveControlReady) return;
+    const current = latestTimerStateRef.current;
+    const runtimeSchedule = Array.isArray(current.sets) ? current.sets : [];
+    if ((current.running || current.paused)
+      && runtimeSchedule.length > 0
+      && sets.length === 0
+      && !scheduleClearedDuringRunRef.current) {
+      setTimerControlSettings({
+        useSets: true,
+        sets: runtimeSchedule,
+        scheduleTitle: current.scheduleTitle || scheduleTitle,
+        scheduleEventStartTime: current.scheduleEventStartTime || scheduleEventStartTime,
+        scheduleEventDate: current.scheduleEventDate || scheduleEventDate,
+        scheduleScheduledStartAt: current.scheduleScheduledStartAt || scheduleScheduledStartAt,
+        scheduleIdealEndTime: timestampToTimeOfDay(current.scheduleIdealEndAt) || scheduleIdealEndTime,
+        scheduleShowGlobalTimeDuringManualItems: current.scheduleShowGlobalTimeDuringManualItems !== false,
+        showGlobalClockDuringPause: Boolean(current.showGlobalClockDuringPause),
+        scheduleNotificationsEnabled: current.scheduleNotificationsEnabled !== false,
+        autoStartNext: current.autoStartNext !== false,
+        indicatorEnabled: Boolean(current.indicatorEnabled),
+        indicatorSeconds: Math.max(0, Number(current.indicatorDurationMs) || 0) / 1000,
+        indicatorLabel: current.indicatorLabel || indicatorLabel,
+        warningSeconds: Math.max(0, Number(current.warningMs) || 0) / 1000,
+        criticalSeconds: Math.max(0, Number(current.criticalMs) || 0) / 1000,
+      });
+    }
+    actions.stopTimer();
+  }, [
+    actions,
+    indicatorLabel,
+    scheduleEventDate,
+    scheduleEventStartTime,
+    scheduleIdealEndTime,
+    scheduleShowGlobalTimeDuringManualItems,
+    showGlobalClockDuringPause,
+    scheduleScheduledStartAt,
+    scheduleTitle,
+    setTimerControlSettings,
+    sets.length,
+    liveControlReady,
+  ]);
+
+  const toggleTimerPlayback = React.useCallback(() => {
+    if (!liveControlReady) return;
+    if (timerState.running) {
+      if (timerState.awaitingNext) {
+        actions.advanceSchedule();
+        return;
+      }
+      if (timerState.paused) {
+        actions.resumeTimer();
+      } else {
+        actions.pauseTimer();
+      }
+      return;
+    }
+
+    if (canStartTimer) {
+      handleStart();
+    }
+  }, [actions, canStartTimer, handleStart, liveControlReady, timerState.awaitingNext, timerState.paused, timerState.running]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.defaultPrevented || event.repeat) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key !== ' ' && event.code !== 'Space') return;
+      if (isCommandFocusProtected(event.target, document.activeElement)) return;
+
+      event.preventDefault();
+      toggleTimerPlayback();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleTimerPlayback]);
 
   const handleOpenProjectOutput = React.useCallback(() => {
     showModal({
@@ -563,533 +912,309 @@ const TimerControlModule = () => {
     window.electronAPI?.display?.openOutputWindow?.('time');
   }, []);
 
-  const updateSet = (id, updates) => {
-    const nextSets = sets.map((set) => (set.id === id ? { ...set, ...updates } : set));
-    setTimerControlSettings({ sets: nextSets });
+  const handleOpenDisplaySettings = React.useCallback(() => {
+    let draftDisplaySettings = { ...displaySettings };
+    showModal({
+      title: 'Timer Display',
+      headerDescription: 'Choose the information shown with the timer.',
+      icon: <Settings2 className="h-5 w-5" />,
+      variant: 'info',
+      size: 'lg',
+      className: 'max-w-3xl',
+      component: 'TimerDisplaySettings',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        {
+          label: 'Save settings',
+          value: 'save',
+          variant: 'default',
+          autoFocus: true,
+          onSelect: () => {
+            const stateTransitionAnimation = normalizeTransitionAnimation(
+              draftDisplaySettings.stateTransitionAnimation,
+              DEFAULT_TIMER_DISPLAY.stateTransitionAnimation
+            );
+            const stateTransitionDuration = normalizeTransitionDuration(
+              draftDisplaySettings.stateTransitionDuration,
+              DEFAULT_TIMER_DISPLAY.stateTransitionDuration
+            );
+            applyTimerDisplaySettings({
+              ...draftDisplaySettings,
+              stateTransitionAnimation,
+              stateTransitionDuration,
+            });
+            if (window.electronAPI?.preferences?.set) {
+              void Promise.all([
+                window.electronAPI.preferences.set(
+                  'appearance.timerStateTransitionAnimation',
+                  stateTransitionAnimation
+                ),
+                window.electronAPI.preferences.set(
+                  'appearance.timerStateTransitionDuration',
+                  stateTransitionDuration
+                ),
+              ]);
+            }
+          },
+        },
+      ],
+      displaySettings,
+      onDraftDisplaySettingsChange: (nextSettings) => {
+        draftDisplaySettings = nextSettings;
+      },
+    });
+  }, [applyTimerDisplaySettings, displaySettings, showModal]);
+
+  const handleControlViewChange = React.useCallback((nextView) => {
+    setTimerControlSettings({ useSets: nextView === 'schedule' });
+  }, [setTimerControlSettings]);
+
+  const handleClearSchedule = React.useCallback(async () => {
+    if (sets.length === 0) return;
+    const result = await showModal({
+      title: 'Clear schedule?',
+      description: activeTimerUsesSets
+        ? 'Remove the saved schedule for future runs? The schedule currently running will continue unchanged.'
+        : `Remove all ${sets.length} ${sets.length === 1 ? 'item' : 'items'} and reset the schedule setup?`,
+      variant: 'warn',
+      size: 'xs',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Clear schedule', value: 'clear', variant: 'destructive', autoFocus: true },
+      ],
+    });
+    if (result !== 'clear') return;
+
+    scheduleClearedDuringRunRef.current = activeTimerUsesSets;
+    setTimerControlSettings({
+      useSets: true,
+      sets: [],
+      scheduleTitle: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
+      scheduleEventStartTime: '',
+      scheduleEventDate: '',
+      scheduleScheduledStartAt: null,
+      scheduleIdealEndTime: '',
+      scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
+      showGlobalClockDuringPause: DEFAULT_TIMER_CONTROL_SETTINGS.showGlobalClockDuringPause,
+      scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
+      autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
+      indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
+      indicatorSeconds: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds,
+      indicatorLabel: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
+    });
+    showToast({
+      title: 'Schedule cleared',
+      message: activeTimerUsesSets
+        ? 'The saved schedule was cleared. The current run was left unchanged.'
+        : 'The timer is ready for a new schedule.',
+      variant: 'success',
+    });
+  }, [activeTimerUsesSets, sets.length, setTimerControlSettings, showModal, showToast]);
+
+  const scheduleItems = activeTimerUsesSets ? timerState.sets : sets;
+  const visibleScheduleTitle = activeTimerUsesSets
+    ? (timerState.scheduleTitle || scheduleTitle)
+    : scheduleTitle;
+
+  const editableSchedule = React.useMemo(() => normalizeScheduleDocument({
+    title: visibleScheduleTitle,
+    eventStartTime: effectiveEventStartTime,
+    eventDate: effectiveEventDate,
+    idealEndTime: effectiveIdealEndTime,
+    autoStartNext: effectiveAutoStartNext,
+    showGlobalTimeDuringManualItems: effectiveShowGlobalTimeDuringManualItems,
+    showGlobalClockDuringPause: effectiveShowGlobalClockDuringPause,
+    notificationsEnabled: effectiveNotificationsEnabled,
+    indicator: {
+      enabled: effectiveIndicatorEnabled,
+      durationSeconds: effectiveIndicatorSeconds,
+      label: effectiveIndicatorLabel,
+    },
+    items: scheduleItems,
+  }), [
+    effectiveAutoStartNext,
+    effectiveEventDate,
+    effectiveEventStartTime,
+    effectiveIdealEndTime,
+    effectiveIndicatorEnabled,
+    effectiveIndicatorLabel,
+    effectiveIndicatorSeconds,
+    effectiveNotificationsEnabled,
+    effectiveShowGlobalClockDuringPause,
+    effectiveShowGlobalTimeDuringManualItems,
+    scheduleItems,
+    visibleScheduleTitle,
+  ]);
+
+  const handleApplySchedule = React.useCallback((scheduleInput) => {
+    const schedule = normalizeScheduleDocument(scheduleInput);
+    const scheduledStartAt = resolveScheduleOccurrence({
+      eventStartTime: schedule.eventStartTime,
+      eventDate: schedule.eventDate,
+    });
+    scheduleClearedDuringRunRef.current = false;
+    if (schedule.notificationsEnabled && typeof window.Notification === 'function' && window.Notification.permission === 'default') {
+      try { void window.Notification.requestPermission(); } catch { /* In-app alerts remain available. */ }
+    }
+    setTimerControlSettings({
+      useSets: true,
+      sets: schedule.items,
+      scheduleTitle: schedule.title,
+      scheduleEventStartTime: schedule.eventStartTime,
+      scheduleEventDate: schedule.eventDate,
+      scheduleScheduledStartAt: scheduledStartAt,
+      scheduleIdealEndTime: schedule.idealEndTime,
+      scheduleShowGlobalTimeDuringManualItems: schedule.showGlobalTimeDuringManualItems,
+      showGlobalClockDuringPause: schedule.showGlobalClockDuringPause,
+      scheduleNotificationsEnabled: schedule.notificationsEnabled,
+      autoStartNext: schedule.autoStartNext,
+      indicatorEnabled: schedule.indicator.enabled,
+      indicatorSeconds: schedule.indicator.durationSeconds,
+      indicatorLabel: schedule.indicator.label,
+    });
 
     const current = latestTimerStateRef.current;
-    const isActive = current.running || current.paused;
-    if (!isActive || !Array.isArray(current.sets) || current.sets.length === 0) return;
-
-    const runtimeSetIndex = current.sets.findIndex((set) => set.id === id);
-    if (runtimeSetIndex === -1) return;
-
-    const runtimeUpdates = {};
-    if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
-      runtimeUpdates.label = updates.label;
+    const liveScheduleActive = (current.running || current.paused)
+      && Array.isArray(current.sets)
+      && current.sets.length > 0;
+    if (liveScheduleActive && !liveControlReady) {
+      showToast({
+        title: 'Schedule saved for the next run',
+        message: 'Live control is reconnecting, so the currently running schedule was left unchanged.',
+        variant: 'warning',
+      });
+      return;
     }
-    if (
-      Object.prototype.hasOwnProperty.call(updates, 'durationMs')
-      && runtimeSetIndex > current.activeSetIndex
-    ) {
-      runtimeUpdates.durationMs = updates.durationMs;
+    if (liveScheduleActive) {
+      const activeId = current.sets?.[current.activeSetIndex]?.id;
+      const nextActiveIndex = schedule.items.findIndex((item) => item.id === activeId);
+      if (nextActiveIndex >= 0) {
+        const activeItem = schedule.items[nextActiveIndex];
+        const liveUpdates = {
+          sets: schedule.items,
+          activeSetIndex: nextActiveIndex,
+          scheduleTitle: schedule.title,
+          scheduleEventStartTime: schedule.eventStartTime,
+          scheduleEventDate: schedule.eventDate,
+          scheduleIdealEndAt: schedule.idealEndTime
+            ? resolveScheduleTime(schedule.idealEndTime, current.scheduleScheduledStartAt || current.scheduleStartedAt || Date.now())
+            : null,
+          scheduleShowGlobalTimeDuringManualItems: schedule.showGlobalTimeDuringManualItems,
+          showGlobalClockDuringPause: schedule.showGlobalClockDuringPause,
+          scheduleNotificationsEnabled: schedule.notificationsEnabled,
+          autoStartNext: schedule.autoStartNext,
+          indicatorEnabled: schedule.indicator.enabled,
+          indicatorDurationMs: secondsToMs(schedule.indicator.durationSeconds),
+          indicatorLabel: schedule.indicator.label,
+        };
+        if (current.phase === 'timer') liveUpdates.label = activeItem.label;
+        if (current.phase === 'indicator') liveUpdates.label = schedule.indicator.label;
+        commitTimerState({ ...current, ...liveUpdates });
+      } else {
+        showToast({
+          title: 'Schedule saved for the next run',
+          message: 'The live item was removed, so the currently running schedule was left unchanged.',
+          variant: 'warning',
+        });
+      }
     }
-    if (Object.keys(runtimeUpdates).length === 0) return;
 
-    const nextRuntimeSets = current.sets.map((set, index) => (
-      index === runtimeSetIndex ? { ...set, ...runtimeUpdates } : set
-    ));
-    const activeSet = nextRuntimeSets[current.activeSetIndex];
-    const liveUpdates = { sets: nextRuntimeSets };
-    if (current.phase === 'timer' && activeSet?.id === id && Object.prototype.hasOwnProperty.call(runtimeUpdates, 'label')) {
-      liveUpdates.label = runtimeUpdates.label;
-    }
-
-    commitTimerState({
-      ...current,
-      ...liveUpdates,
+    showToast({
+      title: 'Schedule ready',
+      message: `${schedule.title} has ${schedule.items.length} ${schedule.items.length === 1 ? 'item' : 'items'}.`,
+      variant: 'success',
     });
-  };
+  }, [commitTimerState, liveControlReady, setTimerControlSettings, showToast]);
 
-  const addSet = () => {
-    if (maxTimerSetsReached) return;
-    setTimerControlSettings({
-      sets: [...sets, createTimerSet(sets.length)],
+  const handleOpenScheduleCreator = React.useCallback(() => {
+    const isEditingSchedule = scheduleItems.length > 0;
+    showModal({
+      title: isEditingSchedule ? 'Edit Schedule' : 'Schedule Creator',
+      headerDescription: isEditingSchedule ? 'Update this timer schedule.' : 'Create a timer schedule.',
+      icon: <CalendarClock className="h-5 w-5" />,
+      variant: 'info',
+      size: 'lg',
+      className: 'h-full',
+      component: 'ScheduleCreator',
+      customLayout: true,
+      actions: [],
+      initialSchedule: editableSchedule,
+      isEditingSchedule,
+      onApplySchedule: handleApplySchedule,
     });
-  };
+  }, [editableSchedule, handleApplySchedule, scheduleItems.length, showModal]);
 
-  const removeSet = (id) => {
-    setTimerControlSettings({
-      sets: sets.length <= 1 ? sets : sets.filter((set) => set.id !== id),
-    });
+  const theme = {
+    columnBorderClass: darkMode ? 'border-gray-800' : 'border-gray-200/80',
+    dividerClass: darkMode ? 'border-gray-800' : 'border-gray-200/80',
+    mutedText: darkMode ? 'text-gray-400' : 'text-gray-500',
+    inputClass: darkMode
+      ? 'bg-gray-700 border-gray-600 text-gray-100 text-xs md:text-xs'
+      : 'bg-white border-gray-300 text-xs md:text-xs',
+    selectTriggerClass: darkMode
+      ? 'bg-gray-700 border-gray-600 text-gray-200 text-xs md:text-xs'
+      : 'bg-white border-gray-300 text-xs md:text-xs',
+    selectContentClass: darkMode
+      ? 'bg-gray-700 border-gray-600 text-gray-200'
+      : 'bg-white border-gray-300',
+    outlineButtonClass: darkMode
+      ? 'bg-gray-800 border-gray-600 text-gray-100 hover:bg-gray-700 hover:text-white'
+      : '',
+    headerIconButtonClass: 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300',
+    subtleButtonClass: darkMode
+      ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 disabled:bg-gray-700 disabled:text-gray-500'
+      : 'bg-gray-100 hover:bg-gray-200 text-gray-800 disabled:text-gray-400',
+    surfaceClass: darkMode
+      ? 'border-gray-800 bg-gray-800/35'
+      : 'border-gray-200 bg-white',
+    getSwitchProps: (disabled = false) => getTimerToggleProps(darkMode, disabled),
   };
-
-  const panelClass = darkMode ? 'text-gray-100' : 'text-gray-900';
-  const columnBorderClass = darkMode ? 'border-gray-800' : 'border-gray-200/80';
-  const dividerClass = darkMode ? 'border-gray-800' : 'border-gray-200/80';
-  const mutedText = darkMode ? 'text-gray-400' : 'text-gray-500';
-  const inputClass = darkMode
-    ? 'bg-gray-700 border-gray-600 text-gray-100 text-xs md:text-xs'
-    : 'bg-white border-gray-300 text-xs md:text-xs';
-  const selectTriggerClass = darkMode
-    ? 'bg-gray-700 border-gray-600 text-gray-200 text-xs md:text-xs'
-    : 'bg-white border-gray-300 text-xs md:text-xs';
-  const selectContentClass = darkMode
-    ? 'bg-gray-700 border-gray-600 text-gray-200'
-    : 'bg-white border-gray-300';
-  const outlineButtonClass = darkMode
-    ? 'bg-gray-800 border-gray-600 text-gray-100 hover:bg-gray-700 hover:text-white'
-    : '';
-  const headerIconButtonClass = 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300';
-  const subtleButtonClass = darkMode
-    ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 disabled:bg-gray-700 disabled:text-gray-500'
-    : 'bg-gray-100 hover:bg-gray-200 text-gray-800 disabled:text-gray-400';
-  const sectionToggleClass = darkMode
-    ? 'text-gray-100 hover:bg-gray-800/70'
-    : 'text-gray-900 hover:bg-gray-100';
-  const switchBaseClasses = `!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-    ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-    : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-    }`;
-  const switchThumbClass = '!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1';
-  const getSwitchProps = (disabled = false) => ({
-    className: `${switchBaseClasses} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
-    thumbClassName: switchThumbClass,
-  });
 
   return (
-    <div
-      className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#f8fafc] text-gray-900'}`}
-      style={{ scrollbarGutter: 'stable' }}
-    >
-      <div className="min-h-full p-5 space-y-5">
-        <div className={`flex items-center justify-between border-b pb-4 ${dividerClass}`}>
-          <div className="flex items-center gap-2">
-            <Timer className="w-5 h-5" />
-            <h1 className="text-lg font-semibold">Timer Control</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Tooltip content="Project time display to this monitor or an external display" side="bottom">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={headerIconButtonClass}
-                onClick={handleOpenProjectOutput}
-                aria-label="Project Time Display"
-              >
-                <Video className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Open time display window" side="bottom">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={headerIconButtonClass}
-                onClick={handleOpenTimeDisplay}
-                aria-label="Open Time Display"
-              >
-                <ScreenShare className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-          </div>
-        </div>
-
-        <div className="grid justify-center grid-cols-[minmax(240px,280px)_minmax(0,640px)_minmax(240px,280px)] gap-5">
-          <section className={`min-w-0 space-y-4 lg:border-r lg:pr-5 ${columnBorderClass} ${panelClass}`}>
-            <div>
-              <h2 className="text-xs font-semibold">Timer Setup</h2>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium">Mode</label>
-              <Select value={mode} onValueChange={(value) => setTimerControlSettings({ mode: value })} disabled={useSets}>
-                <SelectTrigger className={selectTriggerClass}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className={selectContentClass}>
-                  <SelectItem value="countdown">Countdown</SelectItem>
-                  <SelectItem value="countup">Count up</SelectItem>
-                  <SelectItem value="target">Until time</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {!useSets && mode !== 'target' && mode !== 'countup' && (
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Duration</label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={durationMinutes}
-                    onChange={(event) => setTimerControlSettings({ durationMinutes: event.target.value })}
-                    className={inputClass}
-                  />
-                  <span className={`self-center text-xs ${mutedText}`}>minutes</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {QUICK_MINUTES.map((minutes) => (
-                    <button
-                      key={minutes}
-                      onClick={() => setTimerControlSettings({ durationMinutes: minutes })}
-                      className={`h-8 rounded text-xs font-medium transition-colors disabled:opacity-50 ${subtleButtonClass}`}
-                    >
-                      {minutes}m
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!useSets && mode === 'target' && (
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Target Time</label>
-                <TargetTimePicker
-                  value={targetTime}
-                  onChange={(value) => setTimerControlSettings({ targetTime: value })}
-                  disabled={false}
-                  inputClass={inputClass}
-                  selectTriggerClass={selectTriggerClass}
-                  mutedText={mutedText}
-                  darkMode={darkMode}
-                  hourFormat={targetHourFormat}
-                  onHourFormatChange={(value) => setTimerControlSettings({ targetHourFormat: value })}
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium">Display Label</label>
-              <Input
-                value={displaySettings.label || ''}
-                onChange={(event) => applyTimerLabel(event.target.value)}
-                className={inputClass}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Warn At</label>
-                <Input type="number" min="0" value={warningSeconds} onChange={(event) => applyTimerControlSettings({ warningSeconds: event.target.value })} className={inputClass} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Critical At</label>
-                <Input type="number" min="0" value={criticalSeconds} onChange={(event) => applyTimerControlSettings({ criticalSeconds: event.target.value })} className={inputClass} />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs">Continue as overrun</span>
-              <Switch checked={overrunMode} onCheckedChange={(checked) => applyTimerControlSettings({ overrunMode: checked })} {...getSwitchProps(false)} />
-            </div>
-
-          </section>
-
-          <section className={`min-w-0 flex flex-col ${panelClass}`}>
-            <TimerPreview timerState={timerState} displaySettings={displaySettings} />
-
-            <div className="mt-4 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                {!timerState.running ? (
-                  <Button onClick={handleStart} disabled={active || (mode === 'target' && !targetTime)} className="w-full bg-green-600 hover:bg-green-700 text-white">
-                    <Play className="w-4 h-4 mr-2" />
-                    Start
-                  </Button>
-                ) : timerState.paused ? (
-                  <Button onClick={actions.resumeTimer} className="w-full bg-green-600 hover:bg-green-700 text-white">
-                    <Play className="w-4 h-4 mr-2" />
-                    Resume
-                  </Button>
-                ) : (
-                  <Button onClick={actions.pauseTimer} className="w-full bg-amber-600 hover:bg-amber-700 text-white">
-                    <Pause className="w-4 h-4 mr-2" />
-                    Pause
-                  </Button>
-                )}
-                <Button variant="destructive" onClick={actions.stopTimer} disabled={!active} className="w-full">
-                  <Square className="w-4 h-4 mr-2" />
-                  Stop
-                </Button>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                <Button variant="outline" className={outlineButtonClass} onClick={() => actions.addTime(-60000)} disabled={!active || timerState.mode === 'countup'}>-1m</Button>
-                <Button variant="outline" className={outlineButtonClass} onClick={() => actions.addTime(60000)} disabled={!active || timerState.mode === 'countup'}>+1m</Button>
-                <Button variant="outline" className={outlineButtonClass} onClick={() => actions.addTime(300000)} disabled={!active || timerState.mode === 'countup'}>+5m</Button>
-                <Button variant="outline" className={outlineButtonClass} onClick={actions.skipToNextSet} disabled={!active || !timerState.sets?.[timerState.activeSetIndex + 1]}>
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Skip
-                </Button>
-              </div>
-            </div>
-
-            <section ref={styleControlsRef} className={`mt-5 border-t pt-3 ${dividerClass}`}>
-              <button
-                type="button"
-                onClick={toggleStyleControls}
-                className={`flex w-full items-center justify-between rounded px-2 py-3 text-left transition-colors ${sectionToggleClass}`}
-                aria-expanded={styleControlsExpanded}
-                aria-controls="timer-style-controls"
-              >
-                <span className="text-xs font-semibold">Styling</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${styleControlsExpanded ? 'rotate-180' : ''}`} />
-              </button>
-
-              {styleControlsExpanded && (
-                <div id="timer-style-controls" className="mt-3 space-y-4">
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-2 min-w-0">
-                        <label className="block text-xs font-medium truncate">Timer</label>
-                        <ColorPicker
-                          value={displaySettings.textColor}
-                          onChange={(value) => applyTimerDisplaySettings({ textColor: value })}
-                          darkMode={darkMode}
-                          showHex
-                          className={inputClass}
-                        />
-                      </div>
-                      <div className="space-y-2 min-w-0">
-                        <label className="block text-xs font-medium truncate">Label/accent</label>
-                        <ColorPicker
-                          value={displaySettings.accentColor}
-                          onChange={(value) => applyTimerDisplaySettings({ accentColor: value })}
-                          darkMode={darkMode}
-                          showHex
-                          className={inputClass}
-                        />
-                      </div>
-                      <div className="space-y-2 min-w-0">
-                        <label className="block text-xs font-medium truncate">Background</label>
-                        <PaintPicker
-                          value={displaySettings.backgroundPaint}
-                          fallbackColor={displaySettings.backgroundColor || '#000000'}
-                          onChange={(value) => applyTimerDisplaySettings({
-                            backgroundPaint: value,
-                            ...(value?.type === 'solid' ? { backgroundColor: value.color } : {}),
-                          })}
-                          darkMode={darkMode}
-                          showValue
-                          className={inputClass}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2 min-w-0">
-                      <label className="block text-xs font-medium truncate">Timer Font</label>
-                      <FontSelect
-                        value={displaySettings.timerFontFamily}
-                        onChange={(value) => applyTimerDisplaySettings({ timerFontFamily: value })}
-                        darkMode={darkMode}
-                        containerClassName="relative w-full min-w-0"
-                        triggerClassName={`w-full min-w-0 ${inputClass}`}
-                      />
-                    </div>
-                    <div className="space-y-2 min-w-0">
-                      <label className="block text-xs font-medium truncate">Secondary text font</label>
-                      <FontSelect
-                        value={displaySettings.fontFamily}
-                        onChange={(value) => applyTimerDisplaySettings({ fontFamily: value })}
-                        darkMode={darkMode}
-                        containerClassName="relative w-full min-w-0"
-                        triggerClassName={`w-full min-w-0 ${inputClass}`}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Size</label>
-                      <Select
-                        value={displaySettings.timerFontSizeMode}
-                        onValueChange={(value) => applyTimerDisplaySettings({ timerFontSizeMode: value })}
-                      >
-                        <SelectTrigger className={selectTriggerClass}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className={selectContentClass}>
-                          <SelectItem value="auto">Auto-fit width</SelectItem>
-                          <SelectItem value="manual">Manual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Manual px</label>
-                      <Input
-                        type="number"
-                        min="48"
-                        max="420"
-                        disabled={displaySettings.timerFontSizeMode !== 'manual'}
-                        value={displaySettings.timerFontSize}
-                        onChange={(event) => applyTimerDisplaySettings({ timerFontSize: event.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Alignment</label>
-                      <Select
-                        value={displaySettings.timerAlign}
-                        onValueChange={(value) => applyTimerDisplaySettings({ timerAlign: value })}
-                      >
-                        <SelectTrigger className={selectTriggerClass}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className={selectContentClass}>
-                          <SelectItem value="left">Left</SelectItem>
-                          <SelectItem value="center">Center</SelectItem>
-                          <SelectItem value="right">Right</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Secondary text scale</label>
-                      <Input
-                        type="number"
-                        min="0.08"
-                        max="2"
-                        step="0.01"
-                        value={displaySettings.otherItemsScale}
-                        onChange={(event) => applyTimerDisplaySettings({ otherItemsScale: event.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button type="button" onClick={() => applyTimerDisplaySettings({ timerBold: !displaySettings.timerBold })} className={`h-9 rounded text-xs font-bold transition-colors ${displaySettings.timerBold ? 'bg-blue-600 text-white' : subtleButtonClass}`}>B</button>
-                    <button type="button" onClick={() => applyTimerDisplaySettings({ timerItalic: !displaySettings.timerItalic })} className={`h-9 rounded text-xs italic transition-colors ${displaySettings.timerItalic ? 'bg-blue-600 text-white' : subtleButtonClass}`}>I</button>
-                    <button type="button" onClick={() => applyTimerDisplaySettings({ timerUnderline: !displaySettings.timerUnderline })} className={`h-9 rounded text-xs underline transition-colors ${displaySettings.timerUnderline ? 'bg-blue-600 text-white' : subtleButtonClass}`}>U</button>
-                  </div>
-                </div>
-              )}
-            </section>
-          </section>
-
-          <section className={`min-w-0 space-y-5 lg:border-l lg:pl-5 ${columnBorderClass} ${panelClass}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xs font-semibold">Timer Sets</h2>
-                <p className={`text-xs ${mutedText}`}>Run multiple timers in sequence.</p>
-              </div>
-              <Switch checked={useSets} onCheckedChange={(checked) => setTimerControlSettings({ useSets: checked })} {...getSwitchProps(false)} />
-            </div>
-
-            {useSets && (
-              <div className="space-y-2">
-                {sets.map((set, index) => (
-                  <div key={set.id} className={`rounded-md p-2 space-y-2 ${darkMode ? 'bg-gray-900/35' : 'bg-white/65'}`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs w-5 ${mutedText}`}>{index + 1}</span>
-                      <Input value={set.label} onChange={(event) => updateSet(set.id, { label: event.target.value })} className={inputClass} />
-                      <button disabled={sets.length <= 1} onClick={() => removeSet(set.id)} className={`p-2 rounded ${darkMode ? 'hover:bg-gray-700 disabled:opacity-40' : 'hover:bg-gray-200 disabled:opacity-40'}`}>
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2 pl-7">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={msToMinutesInput(set.durationMs)}
-                        onChange={(event) => updateSet(set.id, { durationMs: minutesToMs(event.target.value) })}
-                        className={inputClass}
-                      />
-                      <span className={`text-xs ${mutedText}`}>minutes</span>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className={outlineButtonClass} onClick={addSet} disabled={maxTimerSetsReached}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  {maxTimerSetsReached ? `Max ${MAX_TIMER_SETS} Timers` : 'Add Timer'}
-                </Button>
-              </div>
-            )}
-
-            <div className={`space-y-3 pt-4 border-t ${dividerClass}`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs">Auto-start next</span>
-                <Switch checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} disabled={!setRuntimeOptionsEnabled} {...getSwitchProps(!setRuntimeOptionsEnabled)} />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs">Indicator period</span>
-                <Switch checked={indicatorEnabled} onCheckedChange={(checked) => applyTimerControlSettings({ indicatorEnabled: checked })} disabled={!setRuntimeOptionsEnabled} {...getSwitchProps(!setRuntimeOptionsEnabled)} />
-              </div>
-              <div className="grid grid-cols-[1fr_90px] gap-2">
-                <Input disabled={!setRuntimeOptionsEnabled || !indicatorEnabled} value={indicatorLabel} onChange={(event) => applyTimerControlSettings({ indicatorLabel: event.target.value })} className={inputClass} />
-                <Input type="number" min="0" disabled={!setRuntimeOptionsEnabled || !indicatorEnabled} value={indicatorSeconds} onChange={(event) => applyTimerControlSettings({ indicatorSeconds: event.target.value })} className={inputClass} />
-              </div>
-            </div>
-
-            <div className={`space-y-3 pt-4 border-t ${dividerClass}`}>
-              <h2 className="text-xs font-semibold">Display</h2>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Format</label>
-                <Select
-                  value={displaySettings.format}
-                  onValueChange={(value) => applyTimerDisplaySettings({ format: value })}
-                >
-                  <SelectTrigger className={selectTriggerClass}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className={selectContentClass}>
-                    <SelectItem value="auto">M:SS / H:MM:SS</SelectItem>
-                    <SelectItem value="mmss">MM:SS</SelectItem>
-                    <SelectItem value="hhmmss">H:MM:SS</SelectItem>
-                    <SelectItem value="minutes">Minutes</SelectItem>
-                    <SelectItem value="verbose">Verbose</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs">Progress bar</span>
-                <Switch checked={displaySettings.showProgress} onCheckedChange={(checked) => applyTimerDisplaySettings({ showProgress: checked })} {...getSwitchProps(false)} />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs">Secondary text</span>
-                <Switch checked={showSecondaryText} onCheckedChange={(checked) => applyTimerDisplaySettings({ showSecondaryText: checked })} {...getSwitchProps(false)} />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs">Show global time</span>
-                <Switch
-                  checked={displaySettings.showGlobalClock}
-                  onCheckedChange={(checked) => applyTimerDisplaySettings({ showGlobalClock: checked })}
-                  disabled={!showSecondaryText}
-                  {...getSwitchProps(!showSecondaryText)}
-                />
-              </div>
-              <section ref={globalTimeFormatRef} className={`border-t pt-2 ${dividerClass}`}>
-                <button
-                  type="button"
-                  onClick={toggleGlobalTimeFormat}
-                  className={`flex w-full items-center justify-between rounded px-2 py-3 text-left transition-colors ${sectionToggleClass}`}
-                  aria-expanded={globalTimeFormatExpanded}
-                  aria-controls="global-time-format-controls"
-                >
-                  <span className="text-xs font-medium">Global Time Format</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${globalTimeFormatExpanded ? 'rotate-180' : ''}`} />
-                </button>
-
-                {globalTimeFormatExpanded && (
-                  <div id="global-time-format-controls" className="mt-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs">12-hour clock</span>
-                      <Switch checked={displaySettings.clockHour12} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockHour12: checked })} {...getSwitchProps(false)} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs">Show seconds</span>
-                      <Switch checked={displaySettings.clockShowSeconds} onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowSeconds: checked })} {...getSwitchProps(false)} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs">Show AM/PM</span>
-                      <Switch
-                        checked={displaySettings.clockShowPeriod}
-                        onCheckedChange={(checked) => applyTimerDisplaySettings({ clockShowPeriod: checked })}
-                        disabled={!displaySettings.clockHour12}
-                        {...getSwitchProps(!displaySettings.clockHour12)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </section>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
+    <TimerControlLayout
+      darkMode={darkMode}
+      theme={theme}
+      useSets={useSets}
+      active={active}
+      activeTimerUsesSets={activeTimerUsesSets}
+      liveControlReady={liveControlReady}
+      timerState={timerState}
+      actions={actions}
+      preview={<TimerPreview timerState={timerState} displaySettings={displaySettings} scheduleMode={useSets} scheduleItems={scheduleItems} />}
+      canStartTimer={canStartTimer}
+      handleStart={handleStart}
+      handleStop={handleStop}
+      handleControlViewChange={handleControlViewChange}
+      handleOpenProjectOutput={handleOpenProjectOutput}
+      handleOpenTimeDisplay={handleOpenTimeDisplay}
+      handleOpenDisplaySettings={handleOpenDisplaySettings}
+      handleOpenScheduleCreator={handleOpenScheduleCreator}
+      handleClearSchedule={handleClearSchedule}
+      handleTimingAlertsChange={handleTimingAlertsChange}
+      mode={mode}
+      durationMinutes={durationMinutes}
+      targetTime={targetTime}
+      targetHourFormat={targetHourFormat}
+      warningSeconds={effectiveWarningSeconds}
+      criticalSeconds={effectiveCriticalSeconds}
+      overrunMode={overrunMode}
+      showGlobalClockDuringPause={effectiveShowGlobalClockDuringPause}
+      scheduleItems={scheduleItems}
+      hasSavedSchedule={sets.length > 0}
+      visibleScheduleTitle={visibleScheduleTitle}
+      scheduleIdealEndTime={effectiveIdealEndTime}
+      scheduleProjection={scheduleProjection}
+      autoStartNext={effectiveAutoStartNext}
+      indicatorEnabled={effectiveIndicatorEnabled}
+      indicatorSeconds={effectiveIndicatorSeconds}
+      indicatorLabel={effectiveIndicatorLabel}
+      scheduleNotificationsEnabled={effectiveNotificationsEnabled}
+      displaySettings={displaySettings}
+      setTimerControlSettings={setTimerControlSettings}
+      applyTimerControlSettings={applyTimerControlSettings}
+      applyTimerDisplaySettings={applyTimerDisplaySettings}
+      applyTimerLabel={applyTimerLabel}
+    />
   );
 };
 

@@ -59,13 +59,13 @@ function buildSource(outputId, port) {
   return {
     id: outputId,
     label: formatOutputLabel(outputId),
-    path: `/#/${outputId}`,
+    path: `/${outputId}`,
     defaultWidth: 1920,
     defaultHeight: 1080,
     fps: 30,
     transparent: outputId !== 'time',
-    projectionPath: `/#/${outputId}?projection=true`,
-    previewPath: outputId.startsWith('output') ? `/#/${outputId}?preview=true` : `/#/${outputId}`,
+    projectionPath: `/${outputId}?projection=true`,
+    previewPath: outputId.startsWith('output') ? `/${outputId}?preview=true` : `/${outputId}`,
     port,
   };
 }

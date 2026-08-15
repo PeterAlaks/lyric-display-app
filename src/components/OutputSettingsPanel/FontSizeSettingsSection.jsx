@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
-import { AdvancedToggle, LabelWithIcon } from '../OutputSettingsShared';
+import { AdvancedCollapse, AdvancedToggle, LabelWithIcon } from '../OutputSettingsShared';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const getAutosizerDisplayState = (settings) => {
@@ -128,7 +128,7 @@ const FontSizeSettingsSection = ({
     : 'bg-white border-gray-300';
 
   return (
-    <>
+    <div>
       <div className="flex items-center justify-between gap-4">
         <Tooltip content="Adjust text size in pixels (24-300)" side="right">
           <LabelWithIcon icon={TextCursorInput} text="Font Size" darkMode={darkMode} />
@@ -202,14 +202,7 @@ const FontSizeSettingsSection = ({
         </div>
       </div>
 
-      <div
-        className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${fontSizeAdvancedExpanded
-          ? 'max-h-48 opacity-100 translate-y-0 pointer-events-auto mt-1'
-          : 'max-h-0 opacity-0 -translate-y-2 pointer-events-none m-0 p-0'
-          }`}
-        aria-hidden={!fontSizeAdvancedExpanded}
-        style={{ marginTop: fontSizeAdvancedExpanded ? undefined : 0 }}
-      >
+      <AdvancedCollapse expanded={fontSizeAdvancedExpanded}>
         <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
@@ -287,8 +280,8 @@ const FontSizeSettingsSection = ({
             )}
           </div>
         </div>
-      </div>
-    </>
+      </AdvancedCollapse>
+    </div>
   );
 };
 

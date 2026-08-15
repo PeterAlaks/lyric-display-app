@@ -22,7 +22,7 @@ const useOutputToggle = ({ outputKey, isOutputEnabled, setOutputEnabled, emitInd
 
     showToast({
       title: `${outputName} Turned Off`,
-      message: `${outputName} has been disabled. The global toggle still controls overall state.`,
+      message: `${outputName} has been disabled.`,
       variant: 'success',
       duration: 6000,
       actions: [

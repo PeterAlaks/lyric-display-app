@@ -4,7 +4,7 @@ openapi: 3.0.0
 
 info:
   title: LyricDisplay App REST API
-  version: 6.6.0
+  version: 6.8.1
   description: >
     API documentation for the LyricDisplay App's Express REST API. JWTs minted here
     are required for Socket.IO connections (`auth.token`). Desktop tokens in production
@@ -203,6 +203,26 @@ paths:
         '401':
           description: Invalid token
 
+  /api/app/capabilities:
+    get:
+      summary: Get local Electron app-control capabilities
+      description: Local-only capability discovery used by LyricDisplay Dock.
+      security: []
+      responses:
+        '200':
+          description: Available app-control capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  switchToDesktopMode:
+                    type: boolean
+                  obsDockLocalAuth:
+                    type: boolean
+        '403':
+          description: Request did not come from a local application page
+
   /api/app/switch-to-desktop-mode:
     post:
       summary: Ask Electron to restart Dock Mode as the desktop app
@@ -225,6 +245,26 @@ paths:
                     type: boolean
         '403':
           description: Request did not come from a local dock page
+        '503':
+          description: Backend is not running under Electron
+
+  /api/app/switch-to-dock-mode:
+    post:
+      summary: Ask Electron to restart the desktop app in Dock Mode
+      description: Local-only endpoint used by the desktop application and dock setup flow.
+      security: []
+      responses:
+        '200':
+          description: Dock Mode switch accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '403':
+          description: Request did not come from a local application page
         '503':
           description: Backend is not running under Electron
 
@@ -256,7 +296,7 @@ paths:
   /api/connection/clients:
     get:
       summary: Get connected clients
-      description: Requires 'lyrics:read' permission
+      description: Requires desktop administrator permission
       security:
         - BearerAuth: []
       responses:
@@ -298,6 +338,54 @@ paths:
           description: Insufficient permissions
         '500':
           description: Failed to fetch connected clients
+
+  /api/outputs:
+    get:
+      summary: Get the registered output capability list
+      security: []
+      responses:
+        '200':
+          description: Registered built-in and custom outputs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, outputs, stageEnabled]
+                properties:
+                  success:
+                    type: boolean
+                  outputs:
+                    type: array
+                    items:
+                      type: string
+                  stageEnabled:
+                    type: boolean
+
+  /api/outputs/{outputId}:
+    get:
+      summary: Check whether an output identifier is registered
+      security: []
+      parameters:
+        - in: path
+          name: outputId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Output capability result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, output, exists]
+                properties:
+                  success:
+                    type: boolean
+                  output:
+                    type: string
+                  exists:
+                    type: boolean
 
   /api/media/backgrounds:
     post:
@@ -408,22 +496,6 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
-                  environment:
-                    type: string
-                    enum: [development, production]
-                  security:
-                    type: object
-                    properties:
-                      secretsLoaded:
-                        type: boolean
-                      daysSinceRotation:
-                        type: integer
-                        nullable: true
-                      needsRotation:
-                        type: boolean
-                      joinCodeGuard:
-                        type: object
-                        description: Join code rate-limiting metrics snapshot
 
   /api/health/ready:
     get:
@@ -453,8 +525,40 @@ paths:
                       timestamp:
                         type: string
                         format: date-time
-                      error:
-                        type: string
+
+  /api/health/details:
+    get:
+      summary: Detailed administrator health diagnostics
+      description: Includes internal readiness, security rotation, and storage diagnostics.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Detailed health diagnostics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  environment:
+                    type: string
+                  port:
+                    type: integer
+                  uptime:
+                    type: number
+                  checks:
+                    type: object
+                  security:
+                    type: object
+        '401':
+          description: Authentication required
+        '403':
+          description: Administrator permission required
 
 components:
   securitySchemes:
@@ -495,11 +599,22 @@ components:
           nullable: true
         needsRotation:
           type: boolean
+        rotationMaxAgeDays:
+          type: integer
+        previousSecretExpiry:
+          type: string
+          nullable: true
         configPath:
           type: string
+          nullable: true
         storageBackend:
           type: string
+          enum: [keytar, encrypted-file-fallback]
+        legacyBackupPresent:
+          type: boolean
         hasGraceSecret:
+          type: boolean
+        graceActive:
           type: boolean
 
     ReadinessStatus:
@@ -511,26 +626,3 @@ components:
           type: boolean
         timestamp:
           type: string
-        checks:
-          type: object
-          properties:
-            serverListening:
-              type: boolean
-            secretsLoaded:
-              type: boolean
-            joinCodeGenerated:
-              type: boolean
-            socketIOReady:
-              type: boolean
-            rateLimiterActive:
-              type: boolean
-        uptime:
-          type: number
-        port:
-          type: integer
-        secretsStatus:
-          $ref: '#/components/schemas/SecretsStatus'
-        failedChecks:
-          type: array
-          items:
-            type: string

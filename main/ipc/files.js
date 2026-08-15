@@ -1,127 +1,138 @@
-import { ipcMain, dialog } from 'electron';
-import { readFile, stat, writeFile } from 'fs/promises';
+import { BrowserWindow, ipcMain, dialog } from 'electron';
+import { readFile, stat } from 'fs/promises';
 import path from 'path';
-import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
-import { addRecent } from '../recents.js';
+import { parseLyricImportContent } from '../../shared/documentTextExtraction.js';
+import {
+  getLyricOpenDialogFilters,
+  normalizeLyricFileType,
+} from '../../shared/lyricImportRegistry.js';
+import {
+  assertLyricImportSize,
+  getBinaryByteLength,
+} from '../../shared/lyricImportLimits.js';
+import {
+  buildLyricsParsingOptions,
+  mergeLyricsParsingOptions,
+} from '../../shared/lyricsParsing/preferenceOptions.js';
+import {
+  extractExplicitGroupingDirective,
+  parseTxtContent,
+} from '../../shared/lyricsParsing/txtParser.js';
 import * as userPreferences from '../userPreferences.js';
 import { grantLyricVideoMediaFile, revokeLyricVideoMediaFile } from '../lyricVideoMediaProtocol.js';
+import {
+  getActiveLyricImportByteLimit,
+  grantLyricWritePath,
+  normalizeLyricPath,
+  readLyricsFileFromPath,
+  validateLyricImportPath,
+  validateLyricWrite,
+} from '../lyricFiles.js';
+import { refreshFileInNavigator } from '../fileNavigator.js';
+import {
+  getRememberedLyricsGrouping,
+  rememberLyricsGrouping,
+} from '../lyricsGroupingMetadata.js';
+import { saveTextFileAtomically } from '../atomicFileSave.js';
+import { isStorageCapacityError, toStorageWriteFailure } from '../../shared/storageErrors.js';
 
-const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc']);
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
   '.m4a': 'audio/mp4',
   '.aac': 'audio/aac',
 };
-const MAX_WRITE_CONTENT_BYTES = 10 * 1024 * 1024;
-const writeGrantPaths = new Set();
-
-function normalizeFilePath(filePath) {
-  if (typeof filePath !== 'string' || !filePath.trim()) {
-    return null;
-  }
-  const resolved = path.resolve(filePath);
-  if (!path.isAbsolute(resolved)) {
-    return null;
-  }
-  return resolved;
-}
-
-function grantWritePath(filePath) {
-  const normalized = normalizeFilePath(filePath);
-  if (normalized) {
-    writeGrantPaths.add(normalized);
-  }
-  return normalized;
-}
-
-function validateLyricWrite(filePath, content) {
-  const normalized = normalizeFilePath(filePath);
-  if (!normalized) {
-    return { valid: false, error: 'Invalid file path' };
-  }
-
-  const extension = path.extname(normalized).toLowerCase();
-  if (!ALLOWED_WRITE_EXTENSIONS.has(extension)) {
-    return { valid: false, error: 'Only .txt and .lrc lyric files can be written here' };
-  }
-
-  if (!writeGrantPaths.has(normalized)) {
-    return { valid: false, error: 'File write was not granted by a LyricDisplay file workflow' };
-  }
-
-  if (typeof content !== 'string') {
-    return { valid: false, error: 'File content must be text' };
-  }
-
-  if (Buffer.byteLength(content, 'utf8') > MAX_WRITE_CONTENT_BYTES) {
-    return { valid: false, error: 'File content is too large' };
-  }
-
-  return { valid: true, normalized };
-}
-
 /**
  * Register file operation IPC handlers
  * Handles file dialogs, reading, writing, and parsing lyrics files
  */
 export function registerFileHandlers({ getMainWindow }) {
 
-  ipcMain.handle('show-save-dialog', async (_event, options) => {
-    const win = getMainWindow?.();
+  ipcMain.handle('show-save-dialog', async (event, options) => {
+    const senderWindow = event?.sender ? BrowserWindow.fromWebContents(event.sender) : null;
+    const win = senderWindow && !senderWindow.isDestroyed()
+      ? senderWindow
+      : getMainWindow?.();
     const result = await dialog.showSaveDialog(win || undefined, options);
     if (!result.canceled && result.filePath) {
-      grantWritePath(result.filePath);
+      grantLyricWritePath(result.filePath);
     }
     return result;
   });
 
-  ipcMain.handle('write-file', async (_event, filePath, content) => {
-    const validation = validateLyricWrite(filePath, content);
+  ipcMain.handle('write-file', async (_event, filePath, content, options = {}) => {
+    const extension = path.extname(filePath || '').toLowerCase();
+    const collisionPolicy = options?.collisionPolicy === 'create' ? 'create' : 'replace';
+    const cleanContent = extension === '.txt' && typeof content === 'string'
+      ? extractExplicitGroupingDirective(content).content
+      : content;
+    const validation = validateLyricWrite(filePath, cleanContent, { collisionPolicy });
     if (!validation.valid) {
       return { success: false, error: validation.error };
     }
 
-    await writeFile(validation.normalized, content, 'utf8');
-    return { success: true };
+    try {
+      await saveTextFileAtomically(validation.normalized, cleanContent, {
+        mode: collisionPolicy,
+      });
+    } catch (error) {
+      if (error?.code === 'FILE_EXISTS') {
+        return {
+          success: false,
+          code: 'FILE_EXISTS',
+          error: 'A file with that name already exists',
+        };
+      }
+      if (isStorageCapacityError(error)) {
+        return {
+          success: false,
+          ...toStorageWriteFailure(error, { subject: 'this file' }),
+        };
+      }
+      return {
+        success: false,
+        code: error?.code || 'WRITE_FAILED',
+        error: error?.message || 'File write failed',
+      };
+    }
+    void refreshFileInNavigator(validation.normalized);
+
+    let groupingPlan = null;
+    if (extension === '.txt' && options?.preserveGrouping === true) {
+      const parsingOptions = buildLyricsParsingOptions(userPreferences.getParsingConfig());
+      const parsed = parseTxtContent(cleanContent, {
+        ...parsingOptions,
+        groupingConfig: {
+          ...parsingOptions.groupingConfig,
+          enableCrossBlankLineGrouping: false,
+        },
+      });
+      groupingPlan = parsed.groupingPlan;
+      rememberLyricsGrouping(validation.normalized, cleanContent, groupingPlan);
+    }
+
+    return { success: true, content: cleanContent, groupingPlan };
   });
 
   ipcMain.handle('load-lyrics-file', async () => {
     try {
       const win = getMainWindow?.();
       const rememberLastPath = userPreferences.getPreference('fileHandling.rememberLastOpenedPath') ?? true;
-
-      let defaultPath;
-
+      let defaultPath = null;
       if (rememberLastPath) {
         const { getLastOpenedDirectory } = await import('../recents.js');
         defaultPath = await getLastOpenedDirectory();
-      } else {
-        const configuredPath = userPreferences.getPreference('fileHandling.defaultLyricsPath');
-        if (configuredPath && configuredPath.trim()) {
-          defaultPath = configuredPath;
-        }
-      }
-
-      if (!defaultPath) {
-        defaultPath = userPreferences.getDefaultLyricsPath();
       }
 
       const result = await dialog.showOpenDialog(win || undefined, {
         properties: ['openFile'],
-        filters: [{ name: 'Text Files', extensions: ['txt', 'lrc'] }],
+        filters: getLyricOpenDialogFilters(),
         defaultPath: defaultPath || undefined
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
-        const filePath = result.filePaths[0];
-        const content = await readFile(filePath, 'utf8');
-        const fileName = filePath.split(/[\\/]/).pop();
-        grantWritePath(filePath);
-        try {
-          await addRecent(filePath);
-        } catch { }
-        return { success: true, content, fileName, filePath };
+        const payload = await readLyricsFileFromPath(result.filePaths[0]);
+        return { success: true, ...payload };
       }
       return { success: false, canceled: true };
     } catch (error) {
@@ -163,7 +174,7 @@ export function registerFileHandlers({ getMainWindow }) {
 
   ipcMain.handle('lyric-video:restore-audio', async (_event, payload = {}) => {
     try {
-      const normalized = normalizeFilePath(payload?.filePath);
+      const normalized = normalizeLyricPath(payload?.filePath);
       if (!normalized) {
         return { success: false, error: 'Invalid audio file path' };
       }
@@ -195,43 +206,68 @@ export function registerFileHandlers({ getMainWindow }) {
 
   ipcMain.handle('parse-lyrics-file', async (_event, payload = {}) => {
     try {
-      const { fileType = 'txt', path: filePath, rawText } = payload || {};
-      let content = typeof rawText === 'string' ? rawText : null;
-      let readFromPath = false;
+      const {
+        fileType,
+        name,
+        path: filePath,
+        rawText,
+        rawBytes,
+        groupingConfig,
+        groupingPlan: requestedGroupingPlan,
+        ignoreSavedGroupingPlan,
+        enableSplitting,
+        splitConfig,
+      } = payload || {};
+      const content = typeof rawText === 'string' ? rawText : null;
+      const finalFileType = normalizeLyricFileType({ fileType, fileName: name || filePath });
+      const maxImportBytes = await getActiveLyricImportByteLimit();
 
-      if (!content && filePath) {
-        content = await readFile(filePath, 'utf8');
-        readFromPath = true;
-      }
-
-      if (typeof content !== 'string') {
+      if (typeof content !== 'string' && !rawBytes && !filePath) {
         return { success: false, error: 'No lyric content available for parsing' };
       }
 
-      // Get user preferences for parsing
-      const parsingConfig = userPreferences.getParsingConfig();
-      const parsingOptions = {
-        enableSplitting: parsingConfig.enableSplitting ?? true,
-        splitConfig: parsingConfig.splitConfig || {
-          TARGET_LENGTH: 60,
-          MIN_LENGTH: 40,
-          MAX_LENGTH: 80,
-          OVERFLOW_TOLERANCE: 15,
-        },
-        groupingConfig: {
-          enableAutoLineGrouping: parsingConfig.normalGroupConfig?.ENABLED ?? true,
-          enableTranslationGrouping: parsingConfig.enableTranslationGrouping ?? true,
-          maxLineLength: parsingConfig.normalGroupConfig?.MAX_LINE_LENGTH ?? 45,
-          maxLinesPerGroup: parsingConfig.normalGroupConfig?.MAX_LINES_PER_GROUP ?? 2,
-          enableCrossBlankLineGrouping: parsingConfig.normalGroupConfig?.CROSS_BLANK_LINE_GROUPING ?? true,
-          structureTagMode: parsingConfig.structureTagsConfig?.MODE ?? 'isolate',
-        }
-      };
+      let validatedFilePath = null;
+      if (filePath) {
+        const validated = await validateLyricImportPath(filePath, finalFileType);
+        validatedFilePath = validated.normalized;
+      }
+      if (content !== null) {
+        assertLyricImportSize(Buffer.byteLength(content, 'utf8'), maxImportBytes);
+      }
+      if (rawBytes) {
+        assertLyricImportSize(getBinaryByteLength(rawBytes), maxImportBytes);
+      }
 
-      const parser = fileType === 'lrc' ? parseLrcContent : parseTxtContent;
-      const result = parser(content, parsingOptions);
-      if (readFromPath && filePath) {
-        grantWritePath(filePath);
+      // Get user preferences for parsing
+      const configuredOptions = buildLyricsParsingOptions(userPreferences.getParsingConfig());
+      const parsingOptions = mergeLyricsParsingOptions(configuredOptions, {
+        ...(typeof enableSplitting === 'boolean' ? { enableSplitting } : {}),
+        ...(splitConfig && typeof splitConfig === 'object' ? { splitConfig } : {}),
+        ...(groupingConfig && typeof groupingConfig === 'object' ? { groupingConfig } : {}),
+      });
+
+      if (finalFileType === 'txt') {
+        const groupingContent = content ?? (
+          validatedFilePath ? await readFile(validatedFilePath, 'utf8') : null
+        );
+        parsingOptions.groupingPlan = requestedGroupingPlan || (
+          !ignoreSavedGroupingPlan && typeof groupingContent === 'string'
+            ? getRememberedLyricsGrouping(validatedFilePath, groupingContent)
+            : null
+        );
+      }
+
+      const result = await parseLyricImportContent({
+        fileType: finalFileType,
+        fileName: name || filePath,
+        rawText: content,
+        rawBytes,
+        path: validatedFilePath,
+        readFile,
+        parsingOptions,
+      });
+      if (validatedFilePath) {
+        grantLyricWritePath(validatedFilePath);
       }
 
       return { success: true, payload: result };

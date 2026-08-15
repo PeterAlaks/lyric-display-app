@@ -1,14 +1,35 @@
-import React from 'react';
-import { ArrowLeft, ClipboardPaste, Copy, FilePlusCorner, FolderOpen, ListOrdered, Redo, Save, Scissors, Search, Undo, Wand2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  CaseSensitive,
+  ChevronDown,
+  ClipboardCopy,
+  ClipboardPaste,
+  Copy,
+  CopyPlus,
+  FilePlusCorner,
+  FileText,
+  FolderOpen,
+  Languages,
+  ListOrdered,
+  MonitorOff,
+  Redo,
+  Save,
+  Scissors,
+  Search,
+  Tags,
+  Timer,
+  Trash2,
+  Undo,
+  Wand2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
-import { SONG_SECTIONS } from '../../constants/songCanvas';
-
-const titleText = (composeMode, editMode, mobile = false) => {
-  if (composeMode) return mobile ? 'Create Lyrics' : 'Compose Lyrics';
-  return editMode ? 'Edit Song Canvas' : 'New Song Canvas';
-};
+import { METADATA_OPTIONS } from '../../constants/songCanvas';
+import { TEXT_CASING } from '../../utils/textCasing';
 
 const HelpButton = ({ darkMode, showModal }) => (
   <button
@@ -22,13 +43,14 @@ const HelpButton = ({ darkMode, showModal }) => (
         dismissLabel: 'Got it'
       });
     }}
-    className={`p-1.5 rounded-lg transition-all ${darkMode
+    className={`rounded-lg p-1.5 transition-all ${darkMode
       ? 'bg-transparent text-gray-400 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
       : 'bg-transparent text-gray-500 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'
       }`}
     title="Song Canvas Help"
+    aria-label="Open lyrics canvas help"
   >
-    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   </button>
@@ -45,15 +67,14 @@ const SaveActions = ({
   hasUnsavedChanges,
   isContentEmpty,
   isTitleEmpty,
-  mobile = false,
   toolbarGhostClass,
 }) => {
   const disabled = isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges);
-  const gradientActionClass = `${mobile ? 'whitespace-nowrap' : 'flex items-center gap-2 px-3 py-1.5'} rounded-full bg-linear-to-r from-blue-400 to-purple-600 text-sm text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55`;
+  const gradientActionClass = 'flex h-10 items-center gap-1.5 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55';
 
   if (composeMode) {
     return (
-      <Tooltip content={getSaveAndLoadButtonTooltip()} side={mobile ? 'left' : 'bottom'}>
+      <Tooltip content={getSaveAndLoadButtonTooltip()} side="bottom">
         <span className="inline-block">
           <Button
             onClick={handleLoadDraft}
@@ -61,7 +82,7 @@ const SaveActions = ({
             className={gradientActionClass}
             size="sm"
           >
-            <FolderOpen className="w-4 h-4 mr-1" /> {mobile ? 'Load' : 'Load Draft'}
+            <FolderOpen className="h-4 w-4" /> Load Draft
           </Button>
         </span>
       </Tooltip>
@@ -70,7 +91,7 @@ const SaveActions = ({
 
   return (
     <>
-      <Tooltip content={getSaveButtonTooltip()} side={mobile ? 'left' : 'bottom'}>
+      <Tooltip content={getSaveButtonTooltip()} side="bottom">
         <span className="inline-block">
           <Button
             onClick={handleSave}
@@ -78,13 +99,13 @@ const SaveActions = ({
             variant="ghost"
             size="sm"
             title="Save"
-            className={`${toolbarGhostClass} text-sm`}
+            className={`${toolbarGhostClass} h-10 px-5 py-2.5 text-sm font-semibold`}
           >
-            <Save className="w-4 h-4" /> {!mobile && 'Save'}
+            <Save className="h-4 w-4" /> Save
           </Button>
         </span>
       </Tooltip>
-      <Tooltip content={getSaveAndLoadButtonTooltip()} side={mobile ? 'left' : 'bottom'}>
+      <Tooltip content={getSaveAndLoadButtonTooltip()} side="bottom">
         <span className="inline-block">
           <Button
             onClick={handleSaveAndLoad}
@@ -92,7 +113,7 @@ const SaveActions = ({
             className={gradientActionClass}
             size="sm"
           >
-            <FolderOpen className="w-4 h-4 mr-1" /> Save & Load
+            <FolderOpen className="h-4 w-4" /> Save &amp; Load
           </Button>
         </span>
       </Tooltip>
@@ -100,64 +121,131 @@ const SaveActions = ({
   );
 };
 
-const SectionDropdown = ({
+const IconAction = ({
+  active = false,
+  ariaLabel,
+  children,
   darkMode,
-  insertSectionAtCursor,
-  isCursorAtEligiblePosition,
-  sectionDropdownOpen,
-  sectionDropdownRef,
-  setSectionDropdownOpen,
-  showToast,
+  disabled = false,
+  onClick,
+  pressed,
+  title,
   toolbarGhostClass,
-}) => (
-  <div className="relative">
-    <Tooltip content="Add song section" side="bottom">
+}) => {
+  const selected = typeof pressed === 'boolean' ? pressed : active;
+
+  return (
+    <Tooltip content={title} side="bottom">
       <Button
-        onClick={() => {
-          if (isCursorAtEligiblePosition()) {
-            setSectionDropdownOpen(!sectionDropdownOpen);
-          } else {
-            showToast({
-              title: 'Invalid cursor position',
-              message: 'Move cursor to beginning/end of line or blank line to add section',
-              variant: 'warn'
-            });
-          }
-        }}
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
         variant="ghost"
         size="sm"
-        className={`${toolbarGhostClass} text-sm relative`}
+        className={`h-8 w-8 shrink-0 p-0 ${toolbarGhostClass} ${selected
+          ? (darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-100 text-blue-700')
+          : ''}`}
+        title={title}
+        aria-label={ariaLabel || title}
+        aria-pressed={typeof pressed === 'boolean' ? pressed : (active || undefined)}
       >
-        <ListOrdered className="w-4 h-4" />
+        {children}
       </Button>
     </Tooltip>
-    {sectionDropdownOpen && (
-      <div
-        ref={sectionDropdownRef}
-        className={`absolute top-full left-0 mt-1 w-40 rounded-xl border shadow-lg z-50 max-h-80 overflow-y-auto ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-          }`}
-      >
-        {SONG_SECTIONS.map((section) => (
-          <button
-            key={section.key}
-            onClick={() => {
-              insertSectionAtCursor(section.key);
-              setSectionDropdownOpen(false);
-            }}
-            className={`w-full text-left px-3 py-2 text-sm transition-colors ${darkMode
-              ? 'text-gray-200 hover:bg-blue-500/10 hover:text-blue-300'
-              : 'text-gray-900 hover:bg-blue-50 hover:text-blue-600'
-              }`}
-          >
-            {section.label}
-          </button>
-        ))}
-      </div>
-    )}
+  );
+};
+
+const ToolbarDropdown = ({
+  align = 'left',
+  darkMode,
+  disabled = false,
+  icon: Icon,
+  id,
+  items,
+  label,
+  openMenu,
+  setOpenMenu,
+  toolbarGhostClass,
+}) => {
+  const open = openMenu === id;
+  const menuClass = darkMode
+    ? 'border-gray-700/90 bg-gray-900/98 text-gray-100 shadow-black/35'
+    : 'border-gray-200 bg-white/98 text-gray-800 shadow-slate-900/15';
+  const itemClass = darkMode
+    ? 'text-gray-200 hover:bg-blue-500/10 hover:text-blue-200 focus-visible:bg-blue-500/10'
+    : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700 focus-visible:bg-blue-50';
+
+  return (
+    <div className="relative" data-song-canvas-menu>
+      <Tooltip content={label} side="bottom" disabled={open}>
+        <Button
+          type="button"
+          onClick={() => setOpenMenu((current) => current === id ? null : id)}
+          disabled={disabled}
+          variant="ghost"
+          size="sm"
+          className={`h-8 min-w-8 shrink-0 gap-0.5 px-1.5 ${toolbarGhostClass} ${open
+            ? (darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-100 text-blue-700')
+            : ''}`}
+          aria-label={label}
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          <Icon className="h-4 w-4" />
+          <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </Button>
+      </Tooltip>
+
+      {open && (
+        <div
+          className={`absolute top-full z-50 mt-2 max-h-80 w-max min-w-52 max-w-72 overflow-y-auto rounded-xl border py-1.5 text-[13px] shadow-xl backdrop-blur-xl ${align === 'right' ? 'right-0' : 'left-0'} ${menuClass}`}
+          role="menu"
+        >
+          {items.map((item, index) => item.separator ? (
+            <div
+              key={`separator-${index}`}
+              className={`my-1 h-px ${darkMode ? 'bg-gray-700/80' : 'bg-gray-200'}`}
+              role="separator"
+            />
+          ) : (
+            <button
+              key={item.key || item.label}
+              type="button"
+              disabled={item.disabled}
+              onClick={() => {
+                item.onSelect();
+                setOpenMenu(null);
+              }}
+              className={`flex w-full items-center gap-2.5 px-3 py-2 text-left outline-none transition-colors ${item.emphasis ? 'font-semibold' : ''} ${item.disabled ? 'cursor-not-allowed opacity-45' : itemClass}`}
+              role="menuitem"
+            >
+              {item.icon ? <item.icon className="h-4 w-4 shrink-0 opacity-75" /> : null}
+              <span className="min-w-0 whitespace-normal break-words">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ActionGroup = ({ children, darkMode }) => (
+  <div className={`flex items-center gap-2 rounded-xl border p-1 ${darkMode
+    ? 'border-gray-700/70 bg-gray-950/30'
+    : 'border-slate-200/90 bg-white/80 shadow-sm'
+    }`}>
+    {children}
   </div>
 );
 
 const SongCanvasHeader = ({
+  activeLineHasContent,
+  activeLineHasTimestamp,
+  activeLineIndex,
+  activeLineIsStageOnly,
+  canAddTranslationOnActiveLine,
+  canMoveActiveLineDown,
+  canMoveActiveLineUp,
   canRedo,
   canUndo,
   composeMode,
@@ -165,273 +253,325 @@ const SongCanvasHeader = ({
   editMode,
   getSaveAndLoadButtonTooltip,
   getSaveButtonTooltip,
+  handleAddDefaultTags,
+  handleAddTranslationAtActiveLine,
   handleBack,
   handleCleanup,
+  handleChangeSelectionCase,
   handleCopy,
+  handleCopyActiveLine,
   handleCut,
+  handleDeleteActiveLine,
+  handleDuplicateActiveLine,
   handleLoadDraft,
+  handleMoveActiveLineDown,
+  handleMoveActiveLineUp,
   handlePaste,
   handleRedo,
   handleSave,
   handleSaveAndLoad,
   handleSearchButtonClick,
   handleStartNewSong,
+  handleTitleBlur,
   handleTitleChange,
+  handleToggleStageOnlyActiveLine,
   handleUndo,
   hasUnsavedChanges,
+  hasTextSelection,
+  insertEnhancedTimestampAtActiveLine,
+  insertMetadataAtActiveLine,
   insertSectionAtCursor,
+  insertStandardTimestampAtActiveLine,
   isContentEmpty,
   isCursorAtEligiblePosition,
   isTitleEmpty,
   isTitlePrefilled,
   searchBarVisible,
-  sectionDropdownOpen,
-  sectionDropdownRef,
-  setSectionDropdownOpen,
   showModal,
-  showToast,
+  songSections = [],
   title,
   toolbarGhostClass,
 }) => {
+  const [openMenu, setOpenMenu] = useState(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!event.target.closest?.('[data-song-canvas-menu]')) {
+        setOpenMenu(null);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenMenu(null);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const navButtonClass = darkMode
     ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
     : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600';
   const titleInputClass = darkMode
-    ? `rounded-full border-gray-700/70 bg-gray-900/80 text-[13px] placeholder:text-gray-500 focus-visible:border-blue-500/50 focus-visible:ring-blue-500/20 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-200'}`
-    : `rounded-full border-gray-200 bg-white text-[13px] placeholder:text-gray-400 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 ${isTitlePrefilled ? 'text-gray-500' : 'text-gray-900'}`;
+    ? `border-0 bg-transparent text-gray-100 shadow-none hover:text-white focus-visible:border-0 focus-visible:ring-0 ${isTitlePrefilled || isTitleEmpty ? 'italic text-gray-400' : ''}`
+    : `border-0 bg-transparent text-gray-900 shadow-none hover:text-blue-700 focus-visible:border-0 focus-visible:ring-0 ${isTitlePrefilled || isTitleEmpty ? 'italic text-gray-500' : ''}`;
+  const hasActiveLine = activeLineIndex !== null && activeLineIndex !== undefined;
+
+  const timestampItems = [
+    {
+      key: 'standard',
+      label: 'Add Standard Timestamp',
+      onSelect: insertStandardTimestampAtActiveLine,
+      disabled: !hasActiveLine,
+    },
+    {
+      key: 'enhanced',
+      label: 'Add Enhanced Timestamp',
+      onSelect: insertEnhancedTimestampAtActiveLine,
+      disabled: !activeLineHasTimestamp,
+    },
+  ];
+  const sectionItems = songSections.map((section) => ({
+    key: section.key,
+    label: section.label,
+    onSelect: () => insertSectionAtCursor(section.key),
+  }));
+  const metadataItems = [
+    {
+      key: 'defaults',
+      label: 'Add Default Tags',
+      onSelect: handleAddDefaultTags,
+      emphasis: true,
+    },
+    { separator: true },
+    ...METADATA_OPTIONS.map((option) => ({
+      key: option.key,
+      label: option.label,
+      onSelect: () => insertMetadataAtActiveLine(option.key),
+      disabled: !hasActiveLine,
+    })),
+  ];
+  const casingItems = [
+    {
+      key: TEXT_CASING.UPPERCASE,
+      label: 'UPPERCASE',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.UPPERCASE),
+    },
+    {
+      key: TEXT_CASING.SENTENCE,
+      label: 'Sentence case',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.SENTENCE),
+    },
+    {
+      key: TEXT_CASING.LOWERCASE,
+      label: 'lower case',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.LOWERCASE),
+    },
+    {
+      key: TEXT_CASING.CAPITALIZE_WORDS,
+      label: 'Capitalize Each Word',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.CAPITALIZE_WORDS),
+    },
+    {
+      key: TEXT_CASING.TOGGLE,
+      label: 'tOGGLE cASE',
+      onSelect: () => handleChangeSelectionCase(TEXT_CASING.TOGGLE),
+    },
+  ];
 
   return (
-  <div className={`border-b px-4 py-3 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-    <div className="md:hidden">
-      <div className="flex items-center justify-between mb-3">
-        <Tooltip content="Return to control panel" side="right">
-          <button
-            onClick={handleBack}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all ${navButtonClass}`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-        </Tooltip>
-        <div className="flex items-center gap-2">
-          <h1 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {titleText(composeMode, editMode, true)}
-          </h1>
+    <header className={`relative border-b px-4 py-3 md:px-5 md:py-4 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-slate-200 bg-white'}`}>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-500/70 to-transparent" />
+
+      <div className="mb-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 md:mb-4">
+        <div className="justify-self-start">
+          <Tooltip content="Return to control panel" side="right">
+            <button
+              onClick={handleBack}
+              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 font-medium transition-all md:w-[120px] md:px-4 ${navButtonClass}`}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          </Tooltip>
+        </div>
+
+        <div className="flex w-full max-w-lg min-w-0 items-center justify-self-center gap-2.5 px-1">
+          <FileText className={`hidden h-6 w-6 shrink-0 sm:block ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
+          <div className="min-w-0 flex-1">
+            <label htmlFor="lyrics-file-name" className="sr-only">Lyrics file name</label>
+            <Input
+              id="lyrics-file-name"
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              onFocus={(event) => event.currentTarget.select()}
+              onBlur={(event) => {
+                event.currentTarget.scrollLeft = 0;
+                handleTitleBlur(event);
+              }}
+              maxLength={65}
+              placeholder="Untitled Lyrics"
+              aria-label="Lyrics file name"
+              title={title}
+              className={`h-9 min-w-0 truncate rounded-none px-0 py-0 text-left text-sm font-semibold sm:text-base md:text-lg ${titleInputClass}`}
+            />
+          </div>
+          {isTitlePrefilled && (
+            <span className={`hidden shrink-0 text-[10px] italic sm:inline ${darkMode ? 'text-blue-300/70' : 'text-blue-600/70'}`}>Auto-filled</span>
+          )}
           <HelpButton darkMode={darkMode} showModal={showModal} />
         </div>
-        <div className="flex items-center justify-end min-w-[96px]">
-          {editMode && (
-            <Tooltip content="Start a new song canvas" side="left">
+
+        <div className="justify-self-end">
+          {editMode ? (
+            <Tooltip content="Start a new lyrics file" side="left">
               <button
                 onClick={handleStartNewSong}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all ${navButtonClass}`}
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 font-medium transition-all md:w-[120px] md:px-4 ${navButtonClass}`}
               >
-                <FilePlusCorner className="w-4 h-4" />
-                New
+                <FilePlusCorner className="h-4 w-4" />
+                <span className="hidden sm:inline">New</span>
               </button>
             </Tooltip>
+          ) : (
+            <div className="w-8 sm:w-[72px] md:w-[120px]" />
           )}
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-1 mb-3">
-        <Tooltip content="Undo last change" side="top">
-          <Button onClick={handleUndo} disabled={!canUndo} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Undo (Ctrl+Z)">
-            <Undo className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Redo last undone change" side="top">
-          <Button onClick={handleRedo} disabled={!canRedo} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Redo (Ctrl+Shift+Z)">
-            <Redo className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Search in canvas (Ctrl+F)" side="top">
-          <Button onClick={handleSearchButtonClick} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Search (Ctrl+F)">
-            <Search className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Cut selected text" side="top">
-          <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Cut">
-            <Scissors className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Copy selected text" side="top">
-          <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Copy">
-            <Copy className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Paste from clipboard" side="top">
-          <Button onClick={handlePaste} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Paste">
-            <ClipboardPaste className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Auto-format and clean up lyrics" side="top">
-          <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`flex-1 ${toolbarGhostClass}`} title="Cleanup">
-            <Wand2 className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Input
-          type="text"
-          value={title}
-          onChange={handleTitleChange}
-          maxLength={65}
-          placeholder="Enter song title..."
-          className={`h-10 flex-1 px-4 ${isTitlePrefilled ? 'italic' : ''} ${titleInputClass}`}
-        />
-        <SaveActions
-          composeMode={composeMode}
-          editMode={editMode}
-          getSaveAndLoadButtonTooltip={getSaveAndLoadButtonTooltip}
-          getSaveButtonTooltip={getSaveButtonTooltip}
-          handleLoadDraft={handleLoadDraft}
-          handleSave={handleSave}
-          handleSaveAndLoad={handleSaveAndLoad}
-          hasUnsavedChanges={hasUnsavedChanges}
-          isContentEmpty={isContentEmpty}
-          isTitleEmpty={isTitleEmpty}
-          mobile
-          toolbarGhostClass={toolbarGhostClass}
-        />
-      </div>
-    </div>
-
-    <div className="hidden md:block">
-      <div className="flex items-center justify-between mb-4">
-        <Tooltip content="Return to control panel" side="right">
-          <button
-            onClick={handleBack}
-            className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg font-medium transition-all w-[120px] ${navButtonClass}`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-        </Tooltip>
-        <div className="flex items-center gap-2">
-          <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {titleText(composeMode, editMode)}
-          </h1>
-          <HelpButton darkMode={darkMode} showModal={showModal} />
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex w-fit max-w-full min-w-0 flex-wrap items-center gap-3" role="toolbar" aria-label="Lyrics actions">
+            <ActionGroup darkMode={darkMode}>
+              <IconAction onClick={handleUndo} disabled={!canUndo} title="Undo last change — Ctrl+Z" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Undo className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleRedo} disabled={!canRedo} title="Redo last change — Ctrl+Shift+Z" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Redo className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleSearchButtonClick} active={searchBarVisible} title="Search and replace — Ctrl+F" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Search className="h-4 w-4" />
+              </IconAction>
+            </ActionGroup>
+            <ActionGroup darkMode={darkMode}>
+              <IconAction onClick={handleCut} disabled={isContentEmpty} title="Cut selected text" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Scissors className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleCopy} disabled={isContentEmpty} title="Copy selected text" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Copy className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handlePaste} title="Paste from clipboard" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <ClipboardPaste className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleCleanup} disabled={isContentEmpty} title="Clean up and format lyrics" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Wand2 className="h-4 w-4" />
+              </IconAction>
+            </ActionGroup>
+            <ActionGroup darkMode={darkMode}>
+              <ToolbarDropdown
+                align="right"
+                darkMode={darkMode}
+                disabled={!hasActiveLine}
+                icon={Timer}
+                id="timestamp"
+                items={timestampItems}
+                label="Timestamp actions"
+                openMenu={openMenu}
+                setOpenMenu={setOpenMenu}
+                toolbarGhostClass={toolbarGhostClass}
+              />
+              <IconAction onClick={handleAddTranslationAtActiveLine} disabled={!canAddTranslationOnActiveLine} title="Add translation to current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Languages className="h-4 w-4" />
+              </IconAction>
+              <IconAction
+                onClick={handleToggleStageOnlyActiveLine}
+                disabled={!hasActiveLine || !activeLineHasContent}
+                pressed={activeLineIsStageOnly}
+                title={activeLineIsStageOnly
+                  ? 'Mark current line for all outputs'
+                  : 'Mark current line for Stage only'}
+                toolbarGhostClass={toolbarGhostClass}
+                darkMode={darkMode}
+              >
+                <MonitorOff className="h-4 w-4" />
+              </IconAction>
+            </ActionGroup>
+            <ActionGroup darkMode={darkMode}>
+              <IconAction onClick={handleCopyActiveLine} disabled={!hasActiveLine} title="Copy current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <ClipboardCopy className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleDuplicateActiveLine} disabled={!hasActiveLine} title="Duplicate current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <CopyPlus className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleDeleteActiveLine} disabled={!hasActiveLine || isContentEmpty} title="Delete current line" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <Trash2 className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleMoveActiveLineUp} disabled={!canMoveActiveLineUp} title="Move current line up" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <ArrowUp className="h-4 w-4" />
+              </IconAction>
+              <IconAction onClick={handleMoveActiveLineDown} disabled={!canMoveActiveLineDown} title="Move current line down" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+                <ArrowDown className="h-4 w-4" />
+              </IconAction>
+            </ActionGroup>
+            <ActionGroup darkMode={darkMode}>
+              <ToolbarDropdown
+                align="right"
+                darkMode={darkMode}
+                disabled={sectionItems.length === 0 || !isCursorAtEligiblePosition()}
+                icon={ListOrdered}
+                id="section"
+                items={sectionItems}
+                label="Add song section"
+                openMenu={openMenu}
+                setOpenMenu={setOpenMenu}
+                toolbarGhostClass={toolbarGhostClass}
+              />
+              <ToolbarDropdown
+                darkMode={darkMode}
+                icon={Tags}
+                id="metadata"
+                items={metadataItems}
+                label="Add lyrics metadata"
+                openMenu={openMenu}
+                setOpenMenu={setOpenMenu}
+                toolbarGhostClass={toolbarGhostClass}
+              />
+              <ToolbarDropdown
+                align="right"
+                darkMode={darkMode}
+                disabled={!hasTextSelection}
+                icon={CaseSensitive}
+                id="casing"
+                items={casingItems}
+                label="Change casing"
+                openMenu={openMenu}
+                setOpenMenu={setOpenMenu}
+                toolbarGhostClass={toolbarGhostClass}
+              />
+            </ActionGroup>
         </div>
-        {editMode ? (
-          <Tooltip content="Start a new song canvas" side="left">
-            <button
-              onClick={handleStartNewSong}
-              className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg font-medium transition-all w-[120px] ${navButtonClass}`}
-            >
-              <FilePlusCorner className="w-4 h-4" />
-              New
-            </button>
-          </Tooltip>
-        ) : (
-          <div className="w-[120px]"></div>
-        )}
-      </div>
 
-      <div className="flex flex-wrap items-center justify-start gap-2">
-        <Tooltip content={<span>Undo last change - <strong>Ctrl+Z</strong></span>} side="bottom">
-          <Button onClick={handleUndo} disabled={!canUndo} variant="ghost" className={`${toolbarGhostClass}`}>
-            <Undo className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content={<span>Redo last undone change - <strong>Ctrl+Shift+Z</strong></span>} side="bottom">
-          <Button onClick={handleRedo} disabled={!canRedo} variant="ghost" className={`${toolbarGhostClass}`}>
-            <Redo className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content={<span>Search in canvas - <strong>Ctrl+F</strong></span>} side="bottom">
-          <Button
-            onClick={handleSearchButtonClick}
-            variant="ghost"
-            size="sm"
-            className={`${toolbarGhostClass} ${searchBarVisible ? (darkMode ? 'bg-blue-900/40' : 'bg-blue-50 text-blue-700') : ''}`}
-            title="Search (Ctrl+F)"
-          >
-            <Search className="w-4 h-4" />
-          </Button>
-        </Tooltip>
-        <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Tooltip content="Cut selected text" side="bottom">
-            <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
-              <Scissors className="w-4 h-4" /> Cut
-            </Button>
-          </Tooltip>
-          <Tooltip content="Copy selected text" side="bottom">
-            <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
-              <Copy className="w-4 h-4" /> Copy
-            </Button>
-          </Tooltip>
-          <Tooltip content="Paste from clipboard" side="bottom">
-            <Button onClick={handlePaste} variant="ghost" size="sm" className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
-              <ClipboardPaste className="w-4 h-4" /> Paste
-            </Button>
-          </Tooltip>
-          <Tooltip content="Auto-format and clean up lyrics" side="bottom">
-            <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={`${toolbarGhostClass} hidden lg:flex text-sm`}>
-              <Wand2 className="w-4 h-4" /> Cleanup
-            </Button>
-          </Tooltip>
-          <div className="flex lg:hidden gap-1">
-            <Tooltip content="Cut" side="bottom">
-              <Button onClick={handleCut} disabled={isContentEmpty} variant="ghost" size="sm" className={toolbarGhostClass} title="Cut">
-                <Scissors className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Copy" side="bottom">
-              <Button onClick={handleCopy} disabled={isContentEmpty} variant="ghost" size="sm" className={toolbarGhostClass} title="Copy">
-                <Copy className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Paste" side="bottom">
-              <Button onClick={handlePaste} variant="ghost" size="sm" className={toolbarGhostClass} title="Paste">
-                <ClipboardPaste className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Cleanup" side="bottom">
-              <Button onClick={handleCleanup} disabled={isContentEmpty} variant="ghost" size="sm" className={toolbarGhostClass} title="Cleanup">
-                <Wand2 className="w-4 h-4" />
-              </Button>
-            </Tooltip>
+        <div className="flex shrink-0 items-center justify-end self-end md:ml-auto md:self-center" role="group" aria-label="File actions">
+          <div className="flex items-center justify-end gap-1.5">
+            <SaveActions
+              composeMode={composeMode}
+              editMode={editMode}
+              getSaveAndLoadButtonTooltip={getSaveAndLoadButtonTooltip}
+              getSaveButtonTooltip={getSaveButtonTooltip}
+              handleLoadDraft={handleLoadDraft}
+              handleSave={handleSave}
+              handleSaveAndLoad={handleSaveAndLoad}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isContentEmpty={isContentEmpty}
+              isTitleEmpty={isTitleEmpty}
+              toolbarGhostClass={toolbarGhostClass}
+            />
           </div>
         </div>
-        <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
-        <SectionDropdown
-          darkMode={darkMode}
-          insertSectionAtCursor={insertSectionAtCursor}
-          isCursorAtEligiblePosition={isCursorAtEligiblePosition}
-          sectionDropdownOpen={sectionDropdownOpen}
-          sectionDropdownRef={sectionDropdownRef}
-          setSectionDropdownOpen={setSectionDropdownOpen}
-          showToast={showToast}
-          toolbarGhostClass={toolbarGhostClass}
-        />
-        <Input
-          type="text"
-          value={title}
-          onChange={handleTitleChange}
-          maxLength={65}
-          placeholder="Enter song title..."
-          className={`h-10 flex-shrink min-w-[100px] max-w-xs px-4 ${isTitlePrefilled ? 'italic' : ''} ${titleInputClass}`}
-        />
-        <SaveActions
-          composeMode={composeMode}
-          editMode={editMode}
-          getSaveAndLoadButtonTooltip={getSaveAndLoadButtonTooltip}
-          getSaveButtonTooltip={getSaveButtonTooltip}
-          handleLoadDraft={handleLoadDraft}
-          handleSave={handleSave}
-          handleSaveAndLoad={handleSaveAndLoad}
-          hasUnsavedChanges={hasUnsavedChanges}
-          isContentEmpty={isContentEmpty}
-          isTitleEmpty={isTitleEmpty}
-          toolbarGhostClass={toolbarGhostClass}
-        />
       </div>
-    </div>
-  </div>
+    </header>
   );
 };
 

@@ -13,6 +13,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
   syncNativeThemeSource: (themeSource) => ipcRenderer.invoke('sync-native-theme-source', themeSource),
   loadLyricsFile: () => ipcRenderer.invoke('load-lyrics-file'),
   parseLyricsFile: (payload) => ipcRenderer.invoke('parse-lyrics-file', payload),
+  fileNavigator: {
+    getState: () => ipcRenderer.invoke('file-navigator:get-state'),
+    getSaveDestinations: (preferredDirectory) => ipcRenderer.invoke('file-navigator:save-destinations', preferredDirectory),
+    addRoot: () => ipcRenderer.invoke('file-navigator:add-root'),
+    createLyricsFolder: () => ipcRenderer.invoke('file-navigator:create-lyrics-folder'),
+    removeRoot: (rootPath) => ipcRenderer.invoke('file-navigator:remove-root', rootPath),
+    reindex: () => ipcRenderer.invoke('file-navigator:reindex'),
+    search: (payload) => ipcRenderer.invoke('file-navigator:search', payload),
+    browse: (directoryPath) => ipcRenderer.invoke('file-navigator:browse', directoryPath),
+    prepareSave: (payload) => ipcRenderer.invoke('file-navigator:prepare-save', payload),
+    preview: (filePath) => ipcRenderer.invoke('file-navigator:preview', filePath),
+    open: (filePath) => ipcRenderer.invoke('file-navigator:open', filePath),
+    openMany: (filePaths) => ipcRenderer.invoke('file-navigator:open-many', filePaths),
+    reveal: (filePath) => ipcRenderer.invoke('file-navigator:reveal', filePath),
+    onChange: (callback) => {
+      const channel = 'file-navigator:update';
+      const listener = (_event, payload) => callback?.(payload);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    }
+  },
   lyricVideo: {
     selectAudio: () => ipcRenderer.invoke('lyric-video:select-audio'),
     restoreAudio: (payload) => ipcRenderer.invoke('lyric-video:restore-audio', payload),
@@ -28,7 +49,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeListener(channel, listener);
     }
   },
-  getAdminKey: () => ipcRenderer.invoke('get-admin-key'),
   getJoinCode: () => ipcRenderer.invoke('get-join-code'),
   getDesktopJWT: (payload) => ipcRenderer.invoke('get-desktop-jwt', payload),
   getConnectionDiagnostics: () => ipcRenderer.invoke('get-connection-diagnostics'),
@@ -41,7 +61,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSystemFonts: () => ipcRenderer.invoke('fonts:list'),
   getPlatform: () => process.platform,
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  getRuntimeInfo: () => ipcRenderer.invoke('app:get-runtime-info'),
   getLogPaths: () => ipcRenderer.invoke('app:get-log-paths'),
+  clearSystemLogs: () => ipcRenderer.invoke('app:logs:clear'),
+  signalStartupReady: (payload) => ipcRenderer.send('app:renderer-ready', payload),
   obsDockStartup: {
     get: () => ipcRenderer.invoke('app:obs-dock-startup:get'),
     set: (enabled) => ipcRenderer.invoke('app:obs-dock-startup:set', { enabled }),
@@ -86,18 +109,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
-  writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
-
-  onProgressUpdate: (callback) => {
-    ipcRenderer.removeAllListeners('progress-update');
-    ipcRenderer.on('progress-update', (event, progress) => callback(progress));
-  },
-
-  onLoadingStatus: (callback) => {
-    ipcRenderer.removeAllListeners('loading-status');
-    ipcRenderer.on('loading-status', (event, status) => callback(status));
-  },
-
+  writeFile: (filePath, content, options) => ipcRenderer.invoke('write-file', filePath, content, options),
 
   onAdminKeyAvailable: (callback) => {
     const channel = 'admin-key:available';
@@ -163,6 +175,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   requestUpdateDownload: () => ipcRenderer.invoke('updater:download'),
   requestInstallAndRestart: () => ipcRenderer.invoke('updater:install'),
   hideUpdateProgressWindow: () => ipcRenderer.invoke('updater:hide-progress'),
+  setUpdateSessionActive: (active) => ipcRenderer.invoke('updater:set-session-active', Boolean(active)),
 
   onOpenShortcutsHelp: (callback) => {
     const channel = 'open-shortcuts-help';
@@ -219,15 +232,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, (_e, payload) => callback(payload));
     return () => ipcRenderer.removeAllListeners(channel);
   },
-
-  browserBack: () => ipcRenderer.send('browser-nav', 'back'),
-  browserForward: () => ipcRenderer.send('browser-nav', 'forward'),
-  browserReload: () => ipcRenderer.send('browser-nav', 'reload'),
-  browserNavigate: (url) => ipcRenderer.send('browser-nav', 'navigate', url),
-  browserOpenExternal: () => ipcRenderer.send('browser-open-external'),
-  onBrowserLocation: (callback) => {
-    ipcRenderer.removeAllListeners('browser-location');
-    ipcRenderer.on('browser-location', (_e, url) => callback(url));
+  onOpenScheduleFromPath: (callback) => {
+    const channel = 'open-schedule-from-path';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, payload) => callback(payload));
+    return () => ipcRenderer.removeAllListeners(channel);
+  },
+  onOpenScheduleFromPathError: (callback) => {
+    const channel = 'open-schedule-from-path-error';
+    ipcRenderer.removeAllListeners(channel);
+    ipcRenderer.on(channel, (_e, payload) => callback(payload));
+    return () => ipcRenderer.removeAllListeners(channel);
   },
 
   removeAllListeners: (channel) => {
@@ -334,6 +349,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setFeedbackPort: (port) => ipcRenderer.invoke('osc:set-feedback-port', { port }),
     setAddressPrefix: (prefix) => ipcRenderer.invoke('osc:set-address-prefix', { prefix }),
     setFeedbackEnabled: (enabled) => ipcRenderer.invoke('osc:set-feedback-enabled', { enabled }),
+    setRemoteAccessEnabled: (enabled) => ipcRenderer.invoke('osc:set-remote-access', { enabled }),
+    setAllowedSources: (sources) => ipcRenderer.invoke('osc:set-allowed-sources', { sources }),
+    setRateLimit: (rateLimit) => ipcRenderer.invoke('osc:set-rate-limit', { rateLimit }),
+    setDuplicateWindow: (duplicateWindowMs) => ipcRenderer.invoke('osc:set-duplicate-window', { duplicateWindowMs }),
     getSupportedAddresses: () => ipcRenderer.invoke('osc:get-supported-addresses'),
     sendFeedback: (address, args) => ipcRenderer.invoke('osc:send-feedback', { address, args })
   },
@@ -342,6 +361,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ndi: {
     checkInstalled: () => ipcRenderer.invoke('ndi:check-installed'),
     download: () => ipcRenderer.invoke('ndi:download'),
+    installFromZip: () => ipcRenderer.invoke('ndi:install-from-zip'),
     updateCompanion: () => ipcRenderer.invoke('ndi:update-companion'),
     checkForUpdate: () => ipcRenderer.invoke('ndi:check-for-update'),
     onDownloadProgress: (callback) => {
@@ -406,11 +426,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveAll: (preferences) => ipcRenderer.invoke('preferences:save-all', { preferences }),
     resetCategory: (category) => ipcRenderer.invoke('preferences:reset-category', { category }),
     resetAll: () => ipcRenderer.invoke('preferences:reset-all'),
-    browseDefaultPath: () => ipcRenderer.invoke('preferences:browse-default-path'),
     getParsingConfig: () => ipcRenderer.invoke('preferences:get-parsing-config'),
     getAutoplayDefaults: () => ipcRenderer.invoke('preferences:get-autoplay-defaults'),
     getAdvancedSettings: () => ipcRenderer.invoke('preferences:get-advanced-settings'),
-    getFileHandling: () => ipcRenderer.invoke('preferences:get-file-handling')
+    getFileHandling: () => ipcRenderer.invoke('preferences:get-file-handling'),
+    onUpdated: (callback) => {
+      const channel = 'preferences:updated';
+      const listener = (_event, payload) => callback?.(payload);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    }
   }
 });
 

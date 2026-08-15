@@ -5,6 +5,35 @@ import { resolveBackendOrigin } from '../utils/network';
 import { getUrlParam, requiresJoinCode } from '../utils/clientType';
 
 const LOCKOUT_STORAGE_KEY = 'lyric_display_join_code_lock_until';
+const SECURE_TOKEN_READ_TIMEOUT_MS = 3000;
+const AUTH_REQUEST_TIMEOUT_MS = 5000;
+
+const withTimeout = (promise, timeoutMs, message) => {
+  let timeoutId = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+};
+
+const fetchAuth = async (url, options = {}) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Authentication request timed out after ${AUTH_REQUEST_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 class AuthService {
   constructor() {
@@ -232,6 +261,17 @@ class AuthService {
     this.adminKeyAvailablePromise = null;
   }
 
+  async persistToken(payload) {
+    const persistence = writeSecureToken(payload);
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      persistence.catch((error) => {
+        logWarn('Failed to persist authentication token:', error);
+      });
+      return;
+    }
+    await persistence;
+  }
+
   async promptForJoinCode(reason = 'missing', options = {}) {
     if (typeof window === 'undefined' || !window.dispatchEvent) {
       return null;
@@ -318,29 +358,12 @@ class AuthService {
     return this.joinCodeRequest;
   }
 
-  async getAdminKey() {
-    if (window.electronAPI?.getAdminKey) {
-      try {
-        return await window.electronAPI.getAdminKey();
-      } catch (error) {
-        logWarn('Failed to get admin key from Electron API:', error);
-      }
-    }
-
-    if (import.meta.env.DEV && import.meta.env.VITE_ADMIN_KEY) {
-      logWarn('Using admin key from environment variable (development only)');
-      return import.meta.env.VITE_ADMIN_KEY;
-    }
-
-    return null;
-  }
-
   async requestPairedObsDockToken(deviceId, sessionId) {
     const pairingToken = this.getObsDockPairingTokenFromURL();
 
     let response;
     try {
-      response = await fetch(`${this.getServerUrl()}/api/auth/obs-dock/token`, {
+      response = await fetchAuth(`${this.getServerUrl()}/api/auth/obs-dock/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -365,7 +388,7 @@ class AuthService {
     this.token = data.token;
     this.tokenExpiry = Date.now() + (this.parseExpiryTime(data.expiresIn) * 1000);
     this.lastClientType = data.clientType || 'obsDock';
-    await writeSecureToken({
+    await this.persistToken({
       clientType: this.lastClientType,
       deviceId,
       token: this.token,
@@ -402,23 +425,21 @@ class AuthService {
 
         if (clientType === 'desktop') {
           if (window.electronAPI?.getDesktopJWT) {
-            const jwt = await window.electronAPI.getDesktopJWT({ deviceId, sessionId });
+            const jwt = await withTimeout(
+              window.electronAPI.getDesktopJWT({ deviceId, sessionId }),
+              AUTH_REQUEST_TIMEOUT_MS,
+              `Desktop token request timed out after ${AUTH_REQUEST_TIMEOUT_MS}ms`
+            );
             if (jwt) {
               this.token = jwt;
               this.tokenExpiry = Date.now() + (this.parseExpiryTime('7d') * 1000);
               this.lastClientType = clientType;
-              await writeSecureToken({ clientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
+              await this.persistToken({ clientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
               return this.token;
             }
           }
 
-          const adminKey = await this.getAdminKey();
-          if (adminKey) {
-            baseBody.adminKey = adminKey;
-            logDebug('Including admin key in token request');
-          } else {
-            logWarn('No admin key available for desktop client token request');
-          }
+          logWarn('Desktop JWT minting through Electron failed; raw administrator keys are not exposed to renderers');
         }
 
         const requiresJoinCode = this.requiresJoinCode(clientType);
@@ -453,7 +474,7 @@ class AuthService {
 
           let response;
           try {
-            response = await fetch(`${this.getServerUrl()}/api/auth/token`, {
+            response = await fetchAuth(`${this.getServerUrl()}/api/auth/token`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -512,7 +533,7 @@ class AuthService {
           this.tokenExpiry = Date.now() + (this.parseExpiryTime(data.expiresIn) * 1000);
 
           this.lastClientType = clientType;
-          await writeSecureToken({ clientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
+          await this.persistToken({ clientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
           this.serverValidated = true;
           this.clearLockout();
 
@@ -538,7 +559,7 @@ class AuthService {
     if (!token) return false;
 
     try {
-      const response = await fetch(`${this.getServerUrl()}/api/auth/validate`, {
+      const response = await fetchAuth(`${this.getServerUrl()}/api/auth/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -569,7 +590,7 @@ class AuthService {
 
     this.refreshPromise = (async () => {
       try {
-        const response = await fetch(`${this.getServerUrl()}/api/auth/refresh`, {
+        const response = await fetchAuth(`${this.getServerUrl()}/api/auth/refresh`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -590,7 +611,7 @@ class AuthService {
         this.tokenExpiry = Date.now() + (this.parseExpiryTime(data.expiresIn) * 1000);
         this.lastClientType = resolvedClientType;
         const deviceId = this.generateDeviceId();
-        await writeSecureToken({ clientType: resolvedClientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
+        await this.persistToken({ clientType: resolvedClientType, deviceId, token: this.token, expiresAt: this.tokenExpiry });
         this.serverValidated = true;
 
         logDebug('Authentication token refreshed');
@@ -607,7 +628,11 @@ class AuthService {
     const deviceId = this.generateDeviceId();
 
     try {
-      const stored = await readSecureToken({ clientType, deviceId });
+      const stored = await withTimeout(
+        readSecureToken({ clientType, deviceId }),
+        SECURE_TOKEN_READ_TIMEOUT_MS,
+        `Secure token read timed out after ${SECURE_TOKEN_READ_TIMEOUT_MS}ms`
+      );
       if (!stored?.token) {
         return false;
       }

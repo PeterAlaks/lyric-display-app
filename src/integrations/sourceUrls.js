@@ -2,25 +2,31 @@ import { resolveBackendOrigin } from '@/utils/network';
 
 const trimTrailingSlash = (value = '') => String(value).replace(/\/+$/, '');
 
-const isDevelopmentRouter = () => import.meta.env.MODE === 'development';
-
 export const DEFAULT_SOURCE_SIZE = {
   width: 1920,
   height: 1080,
   fps: 30,
 };
 
-export function createRoutePath(route, { hash = !isDevelopmentRouter() } = {}) {
+export function createRoutePath(route, { hash = false } = {}) {
   const normalizedRoute = String(route || '/').startsWith('/') ? String(route || '/') : `/${route}`;
   return hash ? `/#${normalizedRoute}` : normalizedRoute;
 }
 
-export function createRouteUrl({ baseUrl, route, hash = !isDevelopmentRouter() }) {
+export function createRouteUrl({ baseUrl, route, hash = false }) {
   const origin = trimTrailingSlash(baseUrl || resolveBackendOrigin());
   return `${origin}${createRoutePath(route, { hash })}`;
 }
 
-export function createSourcePath({ outputId, mode = 'transparent', preview = false, hash = !isDevelopmentRouter() }) {
+export function createPreviewUrl(routeId, { baseUrl, hash = false } = {}) {
+  const safeRouteId = String(routeId || '').replace(/^\/+/, '');
+  if (!safeRouteId) return '';
+  const rendererOrigin = typeof window !== 'undefined' ? window.location?.origin : '';
+  const origin = trimTrailingSlash(baseUrl || rendererOrigin || resolveBackendOrigin());
+  return `${origin}${createRoutePath(`/${safeRouteId}?preview=true`, { hash })}`;
+}
+
+export function createSourcePath({ outputId, mode = 'transparent', preview = false, hash = false }) {
   const safeOutputId = outputId || 'output1';
   const params = new URLSearchParams();
 
@@ -36,7 +42,7 @@ export function createSourcePath({ outputId, mode = 'transparent', preview = fal
   return createRoutePath(route, { hash });
 }
 
-export function createSourceUrl({ baseUrl, outputId, mode = 'transparent', preview = false, hash = !isDevelopmentRouter() }) {
+export function createSourceUrl({ baseUrl, outputId, mode = 'transparent', preview = false, hash = false }) {
   const origin = trimTrailingSlash(baseUrl || resolveBackendOrigin());
   return `${origin}${createSourcePath({ outputId, mode, preview, hash })}`;
 }

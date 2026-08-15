@@ -85,7 +85,6 @@ export const useKeyboardShortcuts = ({
       }
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'i' || event.key === 'I')) {
-        if (isTypingInInput || isTypingInTextarea) return;
         if (handleOpenPreferences) {
           event.preventDefault();
           handleOpenPreferences();

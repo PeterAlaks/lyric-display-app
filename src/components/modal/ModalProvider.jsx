@@ -1,10 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Info, View, X } from 'lucide-react';
 import ConnectionDiagnosticsModal from '../ConnectionDiagnosticsModal';
 import PreviewOutputsModal from '../PreviewOutputsModal';
 import { ControlPanelHelp, OutputSettingsHelp, SongCanvasHelp, LyricVideoStudioHelp, StageDisplayHelp, MobileControllerHelp, ObsWebSocketHelp } from '../HelpContent';
-import { WelcomeSplash } from '../WelcomeSplash';
 import { IntegrationInstructions } from '../IntegrationInstructions';
 import SongInfoModal from '../SongInfoModal';
 import ProjectOutputModal from '../ProjectOutputModal';
@@ -21,9 +20,15 @@ import UserMediaModal from '../UserMediaModal';
 import PreServiceHealthModal from '../PreServiceHealthModal';
 import OperatorActionLogModal from '../OperatorActionLogModal';
 import ObsDockInfoModal from '../ObsDockInfoModal';
-import { Button } from '@/components/ui/button';
+import TelemetryConsentModal from '../TelemetryConsentModal';
+import ScheduleCreatorWizard from '../ScheduleCreatorWizard';
+import ScheduleStartReconciliationWizard from '../ScheduleStartReconciliationWizard';
+import TimerDisplaySettingsModal from '../TimerDisplaySettingsModal';
+import NetworkAddressChangedModal from '../NetworkAddressChangedModal';
+import AppAnnouncementModal from '../AppAnnouncementModal';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
+import { ModalActionButton, ModalFooter } from './modalActions';
 
 export const ModalContext = createContext(null);
 
@@ -367,6 +372,21 @@ export function ModalProvider({ children, isDark = false }) {
     }
   }, [finalizeRemoval, setModalStack]);
 
+  const closeModalByDedupeKey = useCallback((dedupeKey, result) => {
+    if (typeof dedupeKey !== 'string' || !dedupeKey) return false;
+    const matching = modalsRef.current.filter((modal) => modal.dedupeKey === dedupeKey);
+    matching.forEach((modal) => closeModal(modal.id, result, { reason: 'dedupe-key' }));
+
+    const queuedMatches = queuedModals.current.filter((entry) => entry.modal.dedupeKey === dedupeKey);
+    queuedModals.current = queuedModals.current.filter((entry) => entry.modal.dedupeKey !== dedupeKey);
+    queuedMatches.forEach(({ modal }) => {
+      resolverMap.current.get(modal.id)?.(result);
+      resolverMap.current.delete(modal.id);
+      modalPromises.current.delete(modal.id);
+    });
+    return matching.length + queuedMatches.length > 0;
+  }, [closeModal]);
+
   useEffect(() => () => {
     removalTimers.current.forEach((timer) => clearTimeout(timer));
     removalTimers.current.clear();
@@ -424,38 +444,51 @@ export function ModalProvider({ children, isDark = false }) {
   }, [closeModal, modals]);
 
   const contextValue = useMemo(
-    () => ({ showModal, closeModal }),
-    [showModal, closeModal]
+    () => ({ showModal, closeModal, closeModalByDedupeKey }),
+    [showModal, closeModal, closeModalByDedupeKey]
   );
 
-  const modalMaxHeight = `calc(100vh - ${topMenuHeight} - 80px)`;
+  const modalMaxHeight = `calc(100dvh - ${topMenuHeight} - 24px)`;
 
   const content = modals.length > 0 ? (
     <div
-      className="pointer-events-none fixed inset-0 z-[1300] flex flex-col">
+      className="pointer-events-none fixed inset-0 z-1300 flex flex-col">
       {modals.map((modal, index) => {
         const palette = variantPalette(modal.variant, isDark);
-        const IconComponent = variantIcon(modal.variant);
+        const IconComponent = modal.component === 'PreviewOutputs'
+          ? View
+          : variantIcon(modal.variant);
         const zIndex = 1300 + index;
         const isTopModal = index === modals.length - 1;
         const sizeClass =
           modal.size === 'lg' || modal.size === 'large'
             ? 'max-w-3xl'
-            : modal.size === 'sm'
-              ? 'max-w-md'
-              : modal.size === 'xs'
-                ? 'max-w-sm'
-                : modal.size === 'auto'
-                  ? 'max-w-xl'
-                  : 'max-w-2xl';
+            : modal.size === 'announcement'
+              ? 'max-w-xl'
+              : modal.size === 'sm'
+                ? 'max-w-md'
+                : modal.size === 'xs'
+                  ? 'max-w-sm'
+                  : modal.size === 'auto'
+                    ? 'max-w-xl'
+                    : 'max-w-2xl';
         const widthClass = modal.size === 'auto' ? 'w-auto max-w-full' : 'w-full';
         const anyAutoFocus = modal.actions.some((action) => action.autoFocus);
+        const defaultFocusIndex = anyAutoFocus ? -1 : Math.max(0, modal.actions.length - 1);
         const overlayStateClass = modal.entering || modal.exiting ? 'opacity-0' : 'opacity-100';
         const panelStateClass = modal.entering || modal.exiting
           ? 'translate-y-8 opacity-0 scale-95'
           : isTopModal
             ? 'opacity-100'
             : 'translate-y-2 opacity-90 scale-[0.98]';
+        const panelStyle = {
+          maxHeight: modalMaxHeight,
+          ...(modal.component === 'UserMedia'
+            ? { height: `min(620px, ${modalMaxHeight})` }
+            : modal.component === 'AppAnnouncement'
+              ? { height: `min(560px, ${modalMaxHeight})` }
+              : {}),
+        };
 
         return (
           <div
@@ -483,11 +516,11 @@ export function ModalProvider({ children, isDark = false }) {
             />
 
             <div
-              className="pointer-events-none relative flex h-full items-center justify-center px-4 py-10">
+              className="pointer-events-none relative flex h-full items-center justify-center px-3 py-3 sm:px-4">
               <div
                 className={cn(
                   'pointer-events-auto rounded-2xl border ring-1 transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
-                  isDark ? 'bg-gray-900 text-gray-50 border-gray-800' : 'bg-white text-gray-900 border-gray-200',
+                  isDark ? 'bg-gray-900 text-gray-50 border-slate-800/80' : 'bg-white text-gray-900 border-slate-200/80',
                   palette.ring,
                   isTopModal ? 'shadow-2xl' : 'shadow-xl',
                   widthClass,
@@ -496,16 +529,16 @@ export function ModalProvider({ children, isDark = false }) {
                   modal.className
                 )}
                 data-modal-root="true"
-                style={{ maxHeight: modalMaxHeight }}
+                style={panelStyle}
               >
                 {/* Fixed Header */}
-                <div className={cn(
-                  'flex gap-4 px-6 py-5 border-b shrink-0',
+                {!modal.hideHeader && <div className={cn(
+                  'flex shrink-0 gap-3 border-b px-4 py-4 sm:gap-4 sm:px-6 sm:py-5',
                   modal.headerDescription ? 'items-start' : 'items-center',
-                  isDark ? 'border-gray-800' : 'border-gray-200'
+                  isDark ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'
                 )}>
                   <div className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ring-1 ring-inset ring-white/25',
                     palette.badge
                   )}>
                     {modal.icon ? modal.icon : <IconComponent className={cn('h-6 w-6', palette.accent)} aria-hidden />}
@@ -543,7 +576,7 @@ export function ModalProvider({ children, isDark = false }) {
                       <X className="h-5 w-5" aria-hidden />
                     </button>
                   )}
-                </div>
+                </div>}
 
                 {/* Scrollable Content */}
                 <div className={cn(
@@ -586,9 +619,6 @@ export function ModalProvider({ children, isDark = false }) {
                       {modal.component === 'ObsWebSocketHelp' && (
                         <ObsWebSocketHelp darkMode={isDark} />
                       )}
-                      {modal.component === 'WelcomeSplash' && (
-                        <WelcomeSplash darkMode={isDark} onOpenIntegration={modal.onOpenIntegration} />
-                      )}
                       {modal.component === 'IntegrationInstructions' && (
                         <IntegrationInstructions
                           darkMode={isDark}
@@ -614,6 +644,7 @@ export function ModalProvider({ children, isDark = false }) {
                               component: 'IntegrationInstructions',
                               variant: 'info',
                               size: 'lg',
+                              customLayout: true,
                               dismissLabel: 'Close'
                             });
                           }}
@@ -717,6 +748,57 @@ export function ModalProvider({ children, isDark = false }) {
                       {modal.component === 'ObsDockInfo' && (
                         <ObsDockInfoModal darkMode={isDark} />
                       )}
+                      {modal.component === 'TelemetryConsent' && (
+                        <TelemetryConsentModal
+                          darkMode={isDark}
+                          onDecision={modal.onDecision}
+                          onClose={(result) => closeModal(modal.id, result)}
+                        />
+                      )}
+                      {modal.component === 'ScheduleCreator' && (
+                        <ScheduleCreatorWizard
+                          initialSchedule={modal.initialSchedule}
+                          isEditing={modal.isEditingSchedule}
+                          darkMode={isDark}
+                          onApply={modal.onApplySchedule}
+                          onClose={(result) => closeModal(modal.id, result)}
+                        />
+                      )}
+                      {modal.component === 'ScheduleStartReconciliation' && (
+                        <ScheduleStartReconciliationWizard
+                          schedule={modal.schedule}
+                          scheduledStartAt={modal.scheduledStartAt}
+                          hourFormat={modal.hourFormat}
+                          darkMode={isDark}
+                          getCanCommit={modal.getCanCommit}
+                          onConfirm={modal.onConfirmScheduleStart}
+                          onClose={(result) => closeModal(modal.id, result)}
+                        />
+                      )}
+                      {modal.component === 'TimerDisplaySettings' && (
+                        <TimerDisplaySettingsModal
+                          displaySettings={modal.displaySettings}
+                          onDraftChange={modal.onDraftDisplaySettingsChange}
+                          darkMode={isDark}
+                        />
+                      )}
+                      {modal.component === 'NetworkAddressChanged' && (
+                        <NetworkAddressChangedModal
+                          darkMode={isDark}
+                          previousIPAddress={modal.previousIPAddress}
+                          newIPAddress={modal.newIPAddress}
+                          serverPort={modal.serverPort}
+                          affectedRemoteOutputCount={modal.affectedRemoteOutputCount}
+                        />
+                      )}
+                      {modal.component === 'AppAnnouncement' && (
+                        <AppAnnouncementModal
+                          announcement={modal.announcement}
+                          darkMode={isDark}
+                          modalId={modal.id}
+                          onClose={(result) => closeModal(modal.id, result || { dismissed: true })}
+                        />
+                      )}
 
                       {/* Render standard description/body modals */}
                       {!modal.component && modal.description && (
@@ -737,30 +819,17 @@ export function ModalProvider({ children, isDark = false }) {
                 </div>
 
                 {/* Fixed Footer with Actions */}
-                {modal.actions.length > 0 && (
-                  <div className={cn(
-                    'flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t shrink-0',
-                    isDark ? 'border-gray-800' : 'border-gray-200'
-                  )}>
+                {!modal.hideFooter && modal.actions.length > 0 && (
+                  <ModalFooter darkMode={isDark}>
                     {modal.actions.map((action, idx) => {
-                      const buttonVariant = isDark
-                        ? (action.variant || (action.destructive ? 'destructive' : 'outline'))
-                        : (action.variant || (action.destructive ? 'destructive' : idx === 0 ? 'default' : 'outline'));
-                      const darkTextClass = isDark
-                        ? buttonVariant === 'destructive'
-                          ? 'dark:text-red-200 dark:hover:text-red-100'
-                          : 'bg-transparent border border-gray-500 text-white hover:text-white hover:border-gray-400 hover:bg-gray-800/40'
-                        : '';
-                      const destructiveOverride = buttonVariant === 'destructive'
-                        ? isDark
-                          ? '!bg-red-600 hover:!bg-red-700'
-                          : '!bg-red-500 hover:!bg-red-600'
-                        : '';
                       return (
-                        <Button
+                        <ModalActionButton
                           key={`${modal.id}-action-${idx}`}
                           type="button"
-                          variant={buttonVariant}
+                          action={action}
+                          actionIndex={idx}
+                          actionCount={modal.actions.length}
+                          darkMode={isDark}
                           onClick={async () => {
                             if (!isTopModal || action.disabled) return;
                             let shouldClose = action.closeOnClick !== false;
@@ -779,15 +848,15 @@ export function ModalProvider({ children, isDark = false }) {
                               closeModal(modal.id, actionResult, { actionIndex: idx });
                             }
                           }}
-                          className={cn('min-w-[96px] justify-center', darkTextClass, destructiveOverride, action.className)}
-                          autoFocus={action.autoFocus ?? (!anyAutoFocus && idx === 0)}
+                          className={action.className}
+                          autoFocus={action.autoFocus ?? idx === defaultFocusIndex}
                           disabled={action.disabled}
                         >
                           {action.label}
-                        </Button>
+                        </ModalActionButton>
                       );
                     })}
-                  </div>
+                  </ModalFooter>
                 )}
               </div>
             </div>

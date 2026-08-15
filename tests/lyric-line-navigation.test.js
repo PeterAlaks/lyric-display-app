@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   findNavigableLyricLineIndex,
   isStructureTagLyricLine,
-} from '../src/utils/lyricLineNavigation.js';
+} from '../src/utils/parseLyrics.js';
 
 test('detects common section title lines', () => {
   assert.equal(isStructureTagLyricLine('[Verse 1]'), true);

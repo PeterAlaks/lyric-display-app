@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import useToast from '@/hooks/useToast';
 import useModal from '@/hooks/useModal';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from '../../utils/markdownParser';
+import { useLiveSafetyBridge } from '../../hooks/useLiveSafetyBridge';
 
 const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const normalizeVersionText = (value = '') => String(value).trim().toLowerCase().replace(/^v/, '');
@@ -23,8 +24,30 @@ const isDuplicateVersionLabel = (label, version) => {
 };
 
 export default function UpdaterBridge() {
-  const { showToast } = useToast();
-  const { showModal } = useModal();
+  const { showToast, removeToast } = useToast();
+  const { showModal, closeModalByDedupeKey } = useModal();
+  const { liveSafety, ready } = useLiveSafetyBridge();
+  const liveSafetyEnabledRef = useRef(Boolean(liveSafety?.enabled));
+  const readyToastIdRef = useRef(null);
+
+  useEffect(() => {
+    const sessionActive = Boolean(liveSafety?.enabled);
+    liveSafetyEnabledRef.current = sessionActive;
+    if (sessionActive) {
+      closeModalByDedupeKey?.('app-update-available', 'live-safety-deferred');
+      closeModalByDedupeKey?.('app-update-install', 'live-safety-deferred');
+      if (readyToastIdRef.current != null) {
+        removeToast(readyToastIdRef.current);
+        readyToastIdRef.current = null;
+      }
+      window.electronAPI?.hideUpdateProgressWindow?.();
+    }
+
+    if (!ready || !window.electronAPI?.setUpdateSessionActive) return;
+    window.electronAPI.setUpdateSessionActive(sessionActive).catch((error) => {
+      console.warn('[Updater] Failed to synchronize Live Safety state:', error);
+    });
+  }, [closeModalByDedupeKey, liveSafety?.enabled, ready, removeToast]);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -52,7 +75,18 @@ export default function UpdaterBridge() {
     };
 
     const requestInstall = async () => {
+      if (liveSafetyEnabledRef.current) {
+        showToast({
+          title: 'Update deferred by Live Safety',
+          message: 'Turn off Live Safety when the session ends to install the downloaded update.',
+          variant: 'info',
+          dedupeKey: 'app-update-live-safety-deferred',
+        });
+        return;
+      }
+
       const result = await showModal({
+        dedupeKey: 'app-update-install',
         title: 'Install Update?',
         description: 'LyricDisplay will restart to finish installing the downloaded update.',
         body: 'Save any unsaved work before continuing. Output and stage windows will close during the restart.',
@@ -64,7 +98,7 @@ export default function UpdaterBridge() {
         ],
       });
 
-      if (result !== 'install') return;
+      if (result !== 'install' || liveSafetyEnabledRef.current) return;
 
       const installResult = await window.electronAPI.requestInstallAndRestart?.();
       if (installResult && installResult.success === false) {
@@ -73,7 +107,8 @@ export default function UpdaterBridge() {
     };
 
     const showUpdateReadyToast = () => {
-      showToast({
+      if (liveSafetyEnabledRef.current) return;
+      readyToastIdRef.current = showToast({
         title: 'Update ready to install',
         message: 'Restart LyricDisplay when you are ready to finish the update.',
         variant: 'success',
@@ -87,10 +122,14 @@ export default function UpdaterBridge() {
     };
 
     const offAvail = window.electronAPI.onUpdateAvailable?.((info) => {
+      if (liveSafetyEnabledRef.current) return;
       const version = info?.version || '';
       const releaseName = info?.releaseName || '';
       const releaseNotes = info?.releaseNotes || '';
       const releaseDate = info?.releaseDate || '';
+      const isManualMacUpdate = Boolean(info?.manualDownload);
+      const assetName = info?.assetName || '';
+      const hasMacDmgAsset = Boolean(assetName);
       let formattedNotes = formatReleaseNotes(releaseNotes);
       formattedNotes = trimReleaseNotes(formattedNotes);
       formattedNotes = convertMarkdownToHTML(formattedNotes);
@@ -123,6 +162,7 @@ export default function UpdaterBridge() {
       const description = descriptionParts.join('\n');
 
       showModal({
+        dedupeKey: 'app-update-available',
         title: 'Update Available',
         description: description,
         body: ({ isDark }) => (
@@ -153,8 +193,16 @@ export default function UpdaterBridge() {
             )}
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'
               }`}>
-              Would you like to download and install this update now?
+              {isManualMacUpdate
+                ? 'macOS updates currently need to be installed manually because this build is unsigned. Download the DMG, quit LyricDisplay, open the DMG, and replace the app in Applications.'
+                : 'Would you like to download and install this update now?'}
             </p>
+            {isManualMacUpdate && hasMacDmgAsset && (
+              <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'
+                }`}>
+                Download: {assetName}
+              </p>
+            )}
           </div>
         ),
         variant: 'info',
@@ -167,30 +215,52 @@ export default function UpdaterBridge() {
             value: 'later'
           },
           {
-            label: 'Update Now',
+            label: isManualMacUpdate
+              ? (hasMacDmgAsset ? 'Download DMG' : 'Open Release Page')
+              : 'Update Now',
             variant: 'default',
             value: 'update',
-            onSelect: async () => {
-              const result = await window.electronAPI.requestUpdateDownload?.();
-              if (result && result.success === false) {
-                showToast({
-                  title: 'Unable to download update',
-                  message: result.error || 'The update download could not be started. Please try again.',
-                  variant: 'error',
-                  duration: 8000,
-                  dedupeKey: 'app-update-download-error',
-                });
-              } else if (result?.alreadyDownloaded) {
-                showUpdateReadyToast();
-              } else if (result?.inProgress) {
-                showToast({
-                  title: 'Update download already running',
-                  message: 'The download is already in progress.',
-                  variant: 'info',
-                  duration: 4000,
-                  dedupeKey: 'app-update-download-running',
-                });
-              }
+            onSelect: () => {
+              void (async () => {
+                try {
+                  const result = await window.electronAPI.requestUpdateDownload?.();
+                  if (result && result.success === false) {
+                    showToast({
+                      title: 'Unable to download update',
+                      message: result.error || 'The update download could not be started. Please try again.',
+                      variant: 'error',
+                      duration: 8000,
+                      dedupeKey: 'app-update-download-error',
+                    });
+                  } else if (result?.alreadyDownloaded) {
+                    showUpdateReadyToast();
+                  } else if (result?.manualDownload) {
+                    showToast({
+                      title: 'Update download opened',
+                      message: 'After the DMG downloads, quit LyricDisplay and replace the app in Applications.',
+                      variant: 'info',
+                      duration: 8000,
+                      dedupeKey: 'app-update-manual-download-opened',
+                    });
+                  } else if (result?.inProgress) {
+                    showToast({
+                      title: 'Update download already running',
+                      message: 'The download is already in progress.',
+                      variant: 'info',
+                      duration: 4000,
+                      dedupeKey: 'app-update-download-running',
+                    });
+                  }
+                } catch (error) {
+                  showToast({
+                    title: 'Unable to download update',
+                    message: error?.message || 'The update download could not be started. Please try again.',
+                    variant: 'error',
+                    duration: 8000,
+                    dedupeKey: 'app-update-download-error',
+                  });
+                }
+              })();
             }
           },
         ],

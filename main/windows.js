@@ -2,6 +2,14 @@ import { app, BrowserWindow, shell } from 'electron';
 import path from 'path';
 import { isDev, resolveProductionPath, appRoot } from './paths.js';
 import { getLogPaths, writeLog } from './logging.js';
+import { requestRendererModal } from './modalBridge.js';
+import { isTrustedAppRendererUrl, normalizeBrowserUrl } from './ipc/senderValidation.js';
+import {
+  getWindowPreloadRole,
+  isTimeDisplayRoute,
+  resolveWindowBackgroundColor,
+  shouldDisableBackgroundThrottling,
+} from './windowSecurity.js';
 
 const MEMORY_LOG_INTERVAL_MS = 60_000;
 const RENDERER_SNAPSHOT_TIMEOUT_MS = 1_500;
@@ -128,9 +136,45 @@ async function getRendererRuntimeSnapshot(webContents) {
 }
 
 function shouldRecoverRenderer(route, projection, details) {
-  if (projection) return false;
+  if (!RECOVERABLE_RENDERER_REASONS.has(details?.reason)) return false;
+  if (projection) return true;
   const isControlRoute = route === '/' || route.startsWith('/new-song') || route.startsWith('/timer-control') || route.startsWith('/obs-setup');
-  return isControlRoute && RECOVERABLE_RENDERER_REASONS.has(details?.reason);
+  return isControlRoute;
+}
+
+function showProjectionRecoveryAlert(win, route, details, attemptCount) {
+  if (win.__projectionRecoveryAlertPending) return;
+  win.__projectionRecoveryAlertPending = true;
+
+  requestRendererModal({
+    title: 'Projection output stopped',
+    description: `The ${route || 'projection'} renderer crashed repeatedly and automatic recovery was paused to prevent a crash loop. The projected output may be frozen or blank.`,
+    body: `Reason: ${details?.reason || 'unknown'} · Exit code: ${details?.exitCode ?? 'unknown'} · ${attemptCount} recovery attempts`,
+    variant: 'error',
+    dedupeKey: `projection-recovery:${route || 'unknown'}`,
+    dismissible: true,
+    actions: [
+      { label: 'Dismiss', value: 'dismiss', variant: 'outline' },
+      { label: 'Retry Projection', value: 'retry', variant: 'destructive', autoFocus: true },
+    ],
+  }, {
+    timeout: false,
+    fallback: () => ({ dismissed: true }),
+  }).then((result) => {
+    if (result?.data !== 'retry' || !win || win.isDestroyed()) return;
+    win.__rendererRecoveryAttempts = [];
+    try {
+      win.reload();
+    } catch (error) {
+      console.error('[Window] Failed to retry projection renderer:', route, error);
+    }
+  }).catch((error) => {
+    console.error('[Window] Failed to show projection recovery alert:', route, error);
+  }).finally(() => {
+    if (win && !win.isDestroyed()) {
+      win.__projectionRecoveryAlertPending = false;
+    }
+  });
 }
 
 function escapeHtml(value) {
@@ -275,7 +319,11 @@ function attachRendererDiagnostics(win, route, { projection = false } = {}) {
         attempts: recovery.attempts.length,
         windowMs: RECOVERY_WINDOW_MS,
       });
-      showRendererRecoveryFallback(win, route, details, recovery.attempts.length);
+      if (projection) {
+        showProjectionRecoveryAlert(win, route, details, recovery.attempts.length);
+      } else {
+        showRendererRecoveryFallback(win, route, details, recovery.attempts.length);
+      }
       return;
     }
 
@@ -380,14 +428,19 @@ export function createWindow(route = '/', options = {}) {
     minHeight = 650,
     title = null,
     projectionFocusable = false,
+    deferShow = false,
   } = options;
   const isTimerControlWindow = route.startsWith('/timer-control');
+  const isTimeDisplayWindow = isTimeDisplayRoute(route);
   const isObsSetupWindow = route.startsWith('/obs-setup');
+  const preloadRole = getWindowPreloadRole(route);
   const isControlWindow = route === '/' || route.startsWith('/new-song') || isTimerControlWindow || isObsSetupWindow;
   const windowTitle = title || (isTimerControlWindow ? 'LyricDisplay Timer' : isObsSetupWindow ? 'LyricDisplay OBS Source Creator' : 'LyricDisplay');
-  const defaultBackground = projection
-    ? '#000000'
-    : (backgroundColor || (isDev ? '#ffffff' : '#f9fafb'));
+  const defaultBackground = resolveWindowBackgroundColor(route, {
+    projection,
+    backgroundColor,
+    development: isDev,
+  });
 
   const win = new BrowserWindow({
     width,
@@ -397,7 +450,13 @@ export function createWindow(route = '/', options = {}) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: resolveProductionPath('preload.js')
+      preload: preloadRole === 'none'
+        ? undefined
+        : (preloadRole === 'passive'
+          ? resolveProductionPath('preloads', 'passive.cjs')
+          : resolveProductionPath('preload.js')),
+      backgroundThrottling: shouldDisableBackgroundThrottling(route, { projection }) ? false : true,
+      spellcheck: projection || isTimeDisplayWindow ? false : true,
     },
     show: false,
     icon: path.join(appRoot, 'public', 'favicon.ico'),
@@ -423,7 +482,11 @@ export function createWindow(route = '/', options = {}) {
     try {
       win.setMenuBarVisibility(false);
       win.setAlwaysOnTop(false);
-      win.setIgnoreMouseEvents(true, { forward: true });
+      if (projectionFocusable) {
+        win.setIgnoreMouseEvents(false);
+      } else {
+        win.setIgnoreMouseEvents(true, { forward: true });
+      }
       win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true });
       win.setFullScreenable(true);
       win.setFocusable(Boolean(projectionFocusable));
@@ -431,6 +494,8 @@ export function createWindow(route = '/', options = {}) {
   }
 
   win.once('ready-to-show', () => {
+    if (deferShow) return;
+
     setTimeout(() => {
       try {
         if (projection && typeof win.showInactive === 'function') {
@@ -442,8 +507,21 @@ export function createWindow(route = '/', options = {}) {
     }, 100);
   });
 
+  const senderValidationOptions = {
+    development: isDev,
+    backendPort: Number(process.env.PORT) || 4000,
+  };
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isTrustedAppRendererUrl(url, senderValidationOptions)) return;
+    event.preventDefault();
+    try { shell.openExternal(normalizeBrowserUrl(url)); } catch (error) {
+      console.warn('Blocked renderer navigation:', url, error.message);
+    }
+  });
+
   win.webContents.setWindowOpenHandler(({ url }) => {
-    try { shell.openExternal(url); } catch (e) { console.error('Failed to open external URL:', url, e); }
+    try { shell.openExternal(normalizeBrowserUrl(url)); } catch (e) { console.error('Failed to open external URL:', url, e); }
     return { action: 'deny' };
   });
 
@@ -456,16 +534,15 @@ export function createWindow(route = '/', options = {}) {
   if (isDev) {
     win.loadURL(`http://localhost:5173${route}`);
   } else {
-    const hashRoute = route === '/' ? '/' : `#${route}`;
     const baseUrl = 'http://127.0.0.1:4000';
     win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
       console.error('Failed to load:', errorCode, errorDescription, validatedURL);
       setTimeout(() => {
         console.log('Retrying load...');
-        try { win.loadURL(`${baseUrl}${hashRoute}`); } catch { }
+        try { win.loadURL(`${baseUrl}${route}`); } catch { }
       }, 1000);
     });
-    win.loadURL(`${baseUrl}${hashRoute}`);
+    win.loadURL(`${baseUrl}${route}`);
   }
 
   return win;

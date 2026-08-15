@@ -32,7 +32,7 @@ test('provider reliability chooses mode and timeout budgets', () => {
   assert.equal(normalizeSearchMode({ limit: 10 }), 'suggestions');
   assert.equal(normalizeSearchMode({ limit: 25 }), 'full');
   assert.equal(normalizeSearchMode({ mode: 'full', limit: 10 }), 'full');
-  assert.equal(getProviderSearchTimeout('chartlyrics', 'suggestions'), 1500);
+  assert.equal(getProviderSearchTimeout('lyricsOvh', 'suggestions'), 2500);
   assert.equal(getProviderSearchTimeout('lrclib', 'suggestions'), 12000);
   assert.equal(getProviderSearchTimeout('lrclib', 'full'), 15000);
 });

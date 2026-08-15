@@ -98,6 +98,18 @@ test('seeking before first lyric reports next index only', () => {
   assert.equal(result.progressToNext, 0);
 });
 
+test('metadata never becomes the pre-lyric active line', () => {
+  const result = getActiveLyricVideoLine({
+    lyrics: ['[id: 42]', 'First lyric'],
+    timestamps: [0, 300],
+    currentTimeMs: 2000,
+  });
+
+  assert.equal(result.activeIndex, null);
+  assert.equal(result.activeLine, null);
+  assert.equal(result.nextIndex, 1);
+});
+
 test('seeking after last lyric can clear the last line', () => {
   const result = getActiveLyricVideoLine({
     lyrics,

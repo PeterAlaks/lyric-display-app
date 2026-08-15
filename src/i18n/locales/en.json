@@ -299,6 +299,7 @@
         "installed": "Installed",
         "notInstalled": "Not Installed",
         "running": "Running",
+        "starting": "Starting",
         "stopped": "Stopped"
       },
       "telemetry": {
@@ -363,6 +364,7 @@
     },
     "status": {
       "autoSaved": "Changes are saved automatically",
+      "saveError": "Settings could not be saved",
       "saved": "Settings saved",
       "saving": "Saving..."
     }

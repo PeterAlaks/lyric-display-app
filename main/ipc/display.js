@@ -5,13 +5,14 @@ const resolveOutputRoute = (outputKey) => {
   if (outputKey === 'lyric-video-studio') return '/lyric-video-live-output';
   if (outputKey === 'stage') return '/stage';
   if (outputKey === 'time') return '/time';
+  if (outputKey === 'preview') return '/preview';
   if (typeof outputKey === 'string' && /^output\d+$/.test(outputKey)) return `/${outputKey}`;
   return null;
 };
 
 const resolveOutputKeyFromUrl = (url) => {
   if (!url) return null;
-  const match = String(url).match(/(?:#\/|\/)(lyric-video-live-output|stage|time|output\d+)(?:\?|$)/i);
+  const match = String(url).match(/(?:#\/|\/)(lyric-video-live-output|preview|stage|time|output\d+)(?:\?|$)/i);
   if (!match) return null;
   if (match[1].toLowerCase() === 'lyric-video-live-output') return 'lyric-video-studio';
   return match[1].toLowerCase();
@@ -23,6 +24,10 @@ const normalizeOutputKey = (value) => (typeof value === 'string' ? value.toLower
 
 const shouldMakeDesktopProjectionFocusable = (targetType) => (
   targetType === 'desktop' && process.platform !== 'win32'
+);
+
+const shouldMakeProjectionFocusable = (targetType) => (
+  targetType === 'display' || shouldMakeDesktopProjectionFocusable(targetType)
 );
 
 const buildProjectionRoute = (route, { escapeHint = false } = {}) => (
@@ -163,15 +168,21 @@ const waitForWindowLoad = async (win) => {
   });
 };
 
-const applyProjectionWindowBehavior = (win, { keyboardFocusable = false } = {}) => {
+const applyProjectionWindowBehavior = (win, { keyboardFocusable = false, coverShell = false } = {}) => {
   if (!win || win.isDestroyed()) return;
 
   try { win.setMenuBarVisibility(false); } catch { }
   try { win.setBackgroundColor('#000000'); } catch { }
-  try { win.setAlwaysOnTop(false); } catch { }
+  try { win.setAlwaysOnTop(Boolean(coverShell), 'screen-saver'); } catch { }
   try { win.setSkipTaskbar(true); } catch { }
   try { win.setFocusable(Boolean(keyboardFocusable)); } catch { }
-  try { win.setIgnoreMouseEvents(true, { forward: true }); } catch { }
+  try {
+    if (keyboardFocusable) {
+      win.setIgnoreMouseEvents(false);
+    } else {
+      win.setIgnoreMouseEvents(true, { forward: true });
+    }
+  } catch { }
   try { win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true }); } catch { }
   try { win.setFullScreenable(true); } catch { }
   try { win.setResizable(false); } catch { }
@@ -299,10 +310,10 @@ const openTimerControlWindow = async () => {
   }
 
   createWindow('/timer-control', {
-    width: 1100,
-    height: 700,
+    width: 1200,
+    height: 760,
     minWidth: 1100,
-    minHeight: 560,
+    minHeight: 620,
     title: 'LyricDisplay Timer',
   });
   return { success: true, route: '/timer-control', reused: false };
@@ -364,7 +375,8 @@ export function registerDisplayHandlers({ getMainWindow }) {
       const outputKey = normalizeOutputKey(payload?.outputKey);
       const targetType = payload?.targetType === 'display' ? 'display' : 'desktop';
       const displayId = normalizeDisplayId(payload?.displayId);
-      const keyboardFocusable = shouldMakeDesktopProjectionFocusable(targetType);
+      const keyboardFocusable = shouldMakeProjectionFocusable(targetType);
+      const coverShell = targetType === 'display';
 
       const route = resolveOutputRoute(outputKey);
       if (!route) {
@@ -414,13 +426,14 @@ export function registerDisplayHandlers({ getMainWindow }) {
           projection: true,
           backgroundColor: '#000000',
           projectionFocusable: keyboardFocusable,
+          deferShow: true,
         });
       } else if (!isProjectionUrl(projectionWindow.webContents.getURL())) {
         projectionWindow.loadURL(projectionWindow.webContents.getURL().replace(route, projectionRoute));
       }
 
       await waitForWindowLoad(projectionWindow);
-      applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable });
+      applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable, coverShell });
 
       displayManager.removeAssignmentsByOutput(outputKey);
 
@@ -436,6 +449,8 @@ export function registerDisplayHandlers({ getMainWindow }) {
           return { success: false, error: 'Failed to project to primary display' };
         }
       }
+
+      applyProjectionWindowBehavior(projectionWindow, { keyboardFocusable, coverShell });
 
       try {
         if (typeof projectionWindow.showInactive === 'function') {

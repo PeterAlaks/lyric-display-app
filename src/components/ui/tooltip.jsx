@@ -6,7 +6,7 @@ import useLyricsStore from '@/context/LyricsStore';
 
 let globalActiveTooltip = null;
 
-export function Tooltip({ children, content, delay = 1000, side = 'top', className }) {
+export function Tooltip({ children, content, delay = 1000, side = 'top', className, disabled = false }) {
     const showTooltips = useLyricsStore((state) => state.showTooltips);
     const [visible, setVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -75,20 +75,22 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
         }
     }, [childTitle]);
 
-    // When tooltips are disabled, dismiss any visible tooltip and render children directly
+    const suppressed = !showTooltips || disabled;
+
+    // Keep the trigger wrapper mounted while suppressed so interactive children retain
+    // their state and CSS transitions when a tooltip is disabled dynamically.
     useEffect(() => {
-        if (!showTooltips && visible) {
+        if (suppressed) {
             setVisible(false);
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
                 timeoutRef.current = null;
             }
+            if (globalActiveTooltip === instanceId.current) {
+                globalActiveTooltip = null;
+            }
         }
-    }, [showTooltips, visible]);
-
-    if (!showTooltips) {
-        return children;
-    }
+    }, [suppressed]);
 
     const calculatePosition = () => {
         if (!triggerRef.current) return;
@@ -134,6 +136,7 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
     };
 
     const showTooltip = () => {
+        if (suppressed) return;
         if (!globalActiveTooltip || globalActiveTooltip === instanceId.current) {
             calculatePosition();
             setVisible(true);
@@ -141,6 +144,7 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
     };
 
     const handleMouseEnter = () => {
+        if (suppressed) return;
         if (globalActiveTooltip && globalActiveTooltip !== instanceId.current) {
             return;
         }
@@ -156,7 +160,7 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
         setVisible(false);
     };
 
-    const tooltipContent = visible && typeof document !== 'undefined' ? (
+    const tooltipContent = !suppressed && visible && typeof document !== 'undefined' ? (
         createPortal(
             <div
                 ref={tooltipRef}

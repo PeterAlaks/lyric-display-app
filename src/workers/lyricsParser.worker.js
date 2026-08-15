@@ -1,4 +1,5 @@
-import { parseTxtContent, parseLrcContent } from '../../shared/lyricsParsing.js';
+import { parseLrcContent } from '../../shared/lyricsParsing/lrcParser.js';
+import { parseTxtContent } from '../../shared/lyricsParsing/txtParser.js';
 
 const RESULT_OK = 'success';
 const RESULT_ERROR = 'error';
@@ -30,8 +31,15 @@ self.addEventListener('message', async (event) => {
   }
 
   try {
-    const { fileType = 'txt', content, enableSplitting, splitConfig, groupingConfig } = payload || {};
-    const parseOptions = { enableSplitting, splitConfig, groupingConfig };
+    const {
+      fileType = 'txt',
+      content,
+      enableSplitting,
+      splitConfig,
+      groupingConfig,
+      groupingPlan,
+    } = payload || {};
+    const parseOptions = { enableSplitting, splitConfig, groupingConfig, groupingPlan };
     let result;
 
     if (content) {
