@@ -766,7 +766,7 @@ const TopMenuBar = () => {
                 <MenuItem ref={(el) => registerItemRef('help', 4, el)} label="GitHub Repository" onClick={menuHandlers.handleRepo} active={openMenu === 'help' && activeIndex === 4} />
                 <Separator />
                 <MenuItem ref={(el) => registerItemRef('help', 5, el)} label="Notifications" onClick={menuHandlers.handleCheckAnnouncements} active={openMenu === 'help' && activeIndex === 5} />
-                <MenuItem ref={(el) => registerItemRef('help', 6, el)} label="More About Author" onClick={() => window.open('https://linktr.ee/peteralaks', '_blank', 'noopener,noreferrer')} active={openMenu === 'help' && activeIndex === 6} />
+                <MenuItem ref={(el) => registerItemRef('help', 6, el)} label="More About Author" onClick={() => window.open('https://peteralakembi.design', '_blank', 'noopener,noreferrer')} active={openMenu === 'help' && activeIndex === 6} />
                 <MenuItem ref={(el) => registerItemRef('help', 7, el)} label="About LyricDisplay" onClick={handleAbout} active={openMenu === 'help' && activeIndex === 7} />
                 <MenuItem ref={(el) => registerItemRef('help', 8, el)} label="Support Development" onClick={menuHandlers.handleSupportDev} active={openMenu === 'help' && activeIndex === 8} />
                 <MenuItem ref={(el) => registerItemRef('help', 9, el)} label="Check for Updates" onClick={menuHandlers.handleCheckUpdates} active={openMenu === 'help' && activeIndex === 9} />

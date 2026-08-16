@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScreenShare } from 'lucide-react';
+import { ScreenShare, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -90,6 +90,7 @@ const FullscreenSettingsSection = ({
   hasFullScreenElementMedia,
   fullScreenElementMediaName,
   handleFullScreenElementToggle,
+  openVisualizerSettings,
 }) => (
   <div>
     <div className="flex w-full items-center justify-between gap-4">
@@ -125,6 +126,7 @@ const FullscreenSettingsSection = ({
           <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
             <SelectItem value="color">Colour</SelectItem>
             <SelectItem value="media">Image / Video</SelectItem>
+            <SelectItem value="visualizer">Visualizer</SelectItem>
           </SelectContent>
         </Select>
 
@@ -142,7 +144,7 @@ const FullscreenSettingsSection = ({
             darkMode={darkMode}
             className={`ml-auto ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
           />
-        ) : (
+        ) : fullScreenBackgroundTypeValue === 'media' ? (
           <div className="flex items-center gap-2 ml-auto min-w-0 max-w-full">
             <Button
               variant="outline"
@@ -152,6 +154,18 @@ const FullscreenSettingsSection = ({
               {hasBackgroundMedia ? 'Change Media' : 'Choose Media'}
             </Button>
           </div>
+        ) : (
+          <Tooltip content="Configure visualizer" side="top">
+            <Button
+              variant="outline"
+              onClick={openVisualizerSettings}
+              aria-label="Configure visualizer"
+              className={`ml-auto h-9 shrink-0 gap-2 px-4 text-xs font-semibold ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''}`}
+            >
+              <Settings2 className="h-4 w-4" />
+              Configure
+            </Button>
+          </Tooltip>
         )}
       </div>
 

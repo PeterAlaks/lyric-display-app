@@ -25,6 +25,7 @@ import FullscreenSettingsSection from './OutputSettingsPanel/FullscreenSettingsS
 import PanelHeaderActions from './OutputSettingsPanel/PanelHeaderActions';
 import TransitionSettingsSection from './OutputSettingsPanel/TransitionSettingsSection';
 import TypographySpacingSection from './OutputSettingsPanel/TypographySpacingSection';
+import ButterchurnVisualizerSettings from './ButterchurnVisualizerSettings';
 import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 import { outputTemplates } from '../utils/outputTemplates';
@@ -281,6 +282,8 @@ const OutputSettingsPanel = ({
   settings: controlledSettings,
   onSettingsChange,
   localMode = false,
+  hideFullScreenSettings = false,
+  hideBackgroundSettings = false,
   title,
 }) => {
   const { darkMode: storedDarkMode } = useDarkModeState();
@@ -553,6 +556,34 @@ const OutputSettingsPanel = ({
   const handleFullScreenHeaderToggle = React.useCallback((checked) => {
     handleFullScreenToggle(checked);
   }, [handleFullScreenToggle]);
+
+  const openVisualizerSettings = React.useCallback(() => {
+    showModal({
+      title: 'MilkDrop Visualizer',
+      headerDescription: 'Choose a specific preset or a seeded random preset for this output.',
+      variant: 'info',
+      size: 'lg',
+      modalKey: `fullscreen-visualizer-${outputKey}`,
+      body: (
+        <ButterchurnVisualizerSettings
+          value={settings.fullScreenVisualizer}
+          onChange={(fullScreenVisualizer) => applySettings({
+            fullScreenVisualizer,
+            fullScreenVisualizerInitialized: true,
+          })}
+          darkMode={darkMode}
+          layout="two-column"
+        />
+      ),
+      actions: [
+        {
+          label: 'Done',
+          value: 'done',
+          variant: 'default',
+        },
+      ],
+    });
+  }, [applySettings, darkMode, outputKey, settings.fullScreenVisualizer, showModal]);
 
   const applyDockTemplateSettings = React.useCallback((templateSettings, sourceLabel = 'Template') => {
     const sanitized = sanitizeDockTemplateSettings(templateSettings);
@@ -1168,9 +1199,10 @@ const OutputSettingsPanel = ({
           showModal={showModal}
           showToast={showToast}
         />
-        <AdvancedCollapse expanded={fullScreenModeChecked} openMarginTop={16}>
-          <div>
-            <FullscreenSettingsSection
+        {!hideFullScreenSettings && (
+          <AdvancedCollapse expanded={fullScreenModeChecked} openMarginTop={16}>
+            <div>
+              <FullscreenSettingsSection
               darkMode={darkMode}
               fullScreenAdvancedExpanded={fullScreenAdvancedExpanded}
               setFullScreenAdvancedExpanded={setFullScreenAdvancedExpanded}
@@ -1188,9 +1220,11 @@ const OutputSettingsPanel = ({
               hasFullScreenElementMedia={hasFullScreenElementMedia}
               fullScreenElementMediaName={fullScreenElementMediaName}
               handleFullScreenElementToggle={handleFullScreenElementToggle}
-            />
-          </div>
-        </AdvancedCollapse>
+              openVisualizerSettings={openVisualizerSettings}
+              />
+            </div>
+          </AdvancedCollapse>
+        )}
       </div>
       {/* Lyrics Position */}
       <LyricsPositionSection
@@ -1283,6 +1317,7 @@ const OutputSettingsPanel = ({
         settings={settings}
         update={update}
       />
+      {!hideBackgroundSettings && (
       <div>
         {/* Background */}
         <BackgroundSection
@@ -1313,6 +1348,7 @@ const OutputSettingsPanel = ({
           update={update}
         />
       </div>
+      )}
       {/* X and Y Margins */}
       <MarginsSection
         darkMode={darkMode}

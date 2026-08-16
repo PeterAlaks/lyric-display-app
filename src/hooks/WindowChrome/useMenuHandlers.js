@@ -530,11 +530,13 @@ const useMenuHandlers = (closeMenu) => {
       component: 'AboutApp',
       variant: 'info',
       size: 'md',
+      className: 'border-slate-700/70 bg-slate-950 text-white ring-slate-700/60',
+      customLayout: true,
+      scrollBehavior: 'none',
+      hideHeader: true,
+      hideFooter: true,
       version: appVersion,
-      actions: [
-        { label: 'Close', value: { action: 'close' }, variant: 'outline' },
-        { label: 'Check for Updates', value: { action: 'checkUpdates' } }
-      ]
+      actions: [],
     });
 
     if (result?.action === 'checkUpdates') {

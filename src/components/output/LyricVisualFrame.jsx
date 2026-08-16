@@ -6,10 +6,15 @@ import { calculateOptimalFontSize } from '../../utils/maxLinesCalculator';
 import { paintToCss } from '../../utils/paint';
 import { logError } from '../../utils/logger';
 import ProjectionExitHint from '../ProjectionExitHint';
+import ButterchurnBackground from '../LyricVideoStudio/ButterchurnBackground';
 import {
   getTransitionVariants,
   normalizeTransitionDuration,
 } from '../../../shared/transitionSettings.js';
+import {
+  LYRIC_VIDEO_BACKGROUND_SOURCES,
+  normalizeLyricVideoVisualizer,
+} from '../../../shared/lyricVideoVisualizer.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -292,6 +297,7 @@ export default function LyricVisualFrame({
     fullScreenBackgroundPaint,
     fullScreenBackgroundOpacity = 10,
     fullScreenBackgroundMedia,
+    fullScreenVisualizer,
     backgroundMediaTransitionAnimation = 'fade',
     backgroundMediaTransitionDuration = 300,
     fullScreenElementEnabled = false,
@@ -362,6 +368,12 @@ export default function LyricVisualFrame({
   const shouldShowFullScreenBackground = fullScreenMode
     && (alwaysShowBackground || active || retainBackgroundLayerWhenInactive);
   const shouldRenderFullScreenBackgroundLayer = renderBackgroundLayer && shouldShowFullScreenBackground;
+  const fullScreenVisualizerSettings = normalizeLyricVideoVisualizer({
+    ...fullScreenVisualizer,
+    source: LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN,
+  });
+  const shouldRenderFullScreenVisualizer = shouldRenderFullScreenBackgroundLayer
+    && fullScreenBackgroundType === 'visualizer';
   const fullScreenBackgroundColorValue = paintToCss(
     fullScreenBackgroundPaint,
     fullScreenBackgroundColor || '#000000'
@@ -394,6 +406,7 @@ export default function LyricVisualFrame({
 
   const desiredFullScreenBackground = useMemo(() => {
     if (!fullScreenMode || !renderBackgroundLayer) return null;
+    if (fullScreenBackgroundType === 'visualizer') return null;
 
     if (fullScreenBackgroundType === 'color') {
       return {
@@ -811,6 +824,25 @@ export default function LyricVisualFrame({
       }}
     >
       {renderFullScreenBackground()}
+      {shouldRenderFullScreenVisualizer && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            opacity: fullScreenBackgroundStrength,
+            transition: previewMode ? undefined : 'opacity 150ms ease-out',
+          }}
+        >
+          <ButterchurnBackground
+            enabled
+            visualizer={fullScreenVisualizerSettings}
+            realtime={Boolean(active || alwaysShowBackground || previewMode)}
+            responsive
+            preview={previewMode}
+            showStatus={previewMode}
+          />
+        </div>
+      )}
       {renderFullScreenElement()}
       <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
       <div

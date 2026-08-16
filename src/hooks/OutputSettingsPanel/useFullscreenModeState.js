@@ -1,3 +1,8 @@
+import {
+  DEFAULT_BUTTERCHURN_PRESET_ID,
+  normalizeLyricVideoVisualizer,
+} from '../../../shared/lyricVideoVisualizer.js';
+
 const useFullscreenModeState = ({ settings, applySettings }) => {
   const fullScreenModeChecked = Boolean(settings.fullScreenMode);
   const lyricsPositionValue = settings.lyricsPosition ?? 'lower';
@@ -79,6 +84,15 @@ const useFullscreenModeState = ({ settings, applySettings }) => {
       fullScreenBackgroundType: val,
       fullScreenBackgroundColor: (val === 'color' && !settings.fullScreenBackgroundColor) ? '#000000' : settings.fullScreenBackgroundColor,
     };
+
+    if (val === 'visualizer' && settings.fullScreenVisualizerInitialized !== true) {
+      updates.fullScreenVisualizer = normalizeLyricVideoVisualizer({
+        ...settings.fullScreenVisualizer,
+        presetId: DEFAULT_BUTTERCHURN_PRESET_ID,
+      });
+      updates.fullScreenVisualizerInitialized = true;
+    }
+
     applySettings(updates);
   };
 

@@ -498,7 +498,8 @@ export function ModalProvider({ children, isDark = false }) {
             aria-modal={isTopModal ? 'true' : undefined}
             aria-hidden={isTopModal ? undefined : 'true'}
             role={isTopModal ? 'dialog' : undefined}
-            aria-labelledby={isTopModal ? `modal-${modal.id}-title` : undefined}
+            aria-label={isTopModal && modal.hideHeader ? modal.title || undefined : undefined}
+            aria-labelledby={isTopModal && !modal.hideHeader ? `modal-${modal.id}-title` : undefined}
             aria-describedby={isTopModal ? `modal-${modal.id}-description` : undefined}
           >
             <div

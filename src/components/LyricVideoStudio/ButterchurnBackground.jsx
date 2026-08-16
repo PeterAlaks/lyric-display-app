@@ -11,7 +11,10 @@ import {
   BUTTERCHURN_QUALITY_LEVELS,
   normalizeLyricVideoVisualizer,
 } from '../../../shared/lyricVideoVisualizer.js';
-import { getButterchurnPreset } from '../../utils/butterchurnPresets.js';
+import {
+  getButterchurnPreset,
+  resolveButterchurnPresetId,
+} from '../../utils/butterchurnPresets.js';
 
 const AUDIO_SAMPLE_COUNT = 1024;
 const MAX_PREVIEW_WIDTH = 1280;
@@ -257,13 +260,16 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
   height = 1080,
   fps = 30,
   preview = false,
+  responsive = false,
   manual = false,
+  realtime = false,
   showStatus = false,
   statusScale = 1,
   onReady,
   onError,
   className = 'absolute inset-0',
 }, forwardedRef) {
+  const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const controllerRef = useRef(null);
   const readyPromiseRef = useRef(Promise.resolve(false));
@@ -275,15 +281,46 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
   const callbackRef = useRef({ onReady, onError });
   const [status, setStatus] = useState(enabled ? 'loading' : 'idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [responsiveDimensions, setResponsiveDimensions] = useState(() => ({
+    width: typeof window === 'undefined' ? 1920 : Math.max(320, window.innerWidth),
+    height: typeof window === 'undefined' ? 1080 : Math.max(180, window.innerHeight),
+  }));
 
   const normalized = normalizeLyricVideoVisualizer(visualizerSettings);
-  const renderDimensions = normalizeRenderDimensions({ width, height, preview });
+  const resolvedPresetId = resolveButterchurnPresetId(normalized);
+  const renderDimensions = normalizeRenderDimensions({
+    width: responsive ? responsiveDimensions.width : width,
+    height: responsive ? responsiveDimensions.height : height,
+    preview,
+  });
   const safeFps = Math.max(1, Math.min(120, Number(fps) || 30));
   const safeStatusScale = Math.max(0.05, Math.min(1, Number(statusScale) || 1));
 
   useEffect(() => {
     callbackRef.current = { onReady, onError };
   }, [onError, onReady]);
+
+  useLayoutEffect(() => {
+    if (!enabled || !responsive) return undefined;
+    const node = containerRef.current;
+    if (!node) return undefined;
+
+    const updateDimensions = () => {
+      const rect = node.getBoundingClientRect();
+      const nextWidth = Math.max(320, Math.round(rect.width || window.innerWidth || 1920));
+      const nextHeight = Math.max(180, Math.round(rect.height || window.innerHeight || 1080));
+      setResponsiveDimensions((current) => (
+        current.width === nextWidth && current.height === nextHeight
+          ? current
+          : { width: nextWidth, height: nextHeight }
+      ));
+    };
+
+    updateDimensions();
+    const observer = new ResizeObserver(updateDimensions);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [enabled, responsive]);
 
   useEffect(() => {
     if (!enabled) {
@@ -306,7 +343,7 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
 
     const initialize = async () => {
       if (!hasWebGl2()) {
-        throw new Error('MilkDrop backgrounds require WebGL2. Enable hardware acceleration or choose the style background.');
+        throw new Error('MilkDrop backgrounds require WebGL2. Enable hardware acceleration or choose Colour or Media.');
       }
 
       const audioBuffer = await decodeAudioSource(audioSource);
@@ -328,7 +365,7 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
       installFixedFrameClock(nextController.visualizer);
       await runWithRandomContext(
         nextController.randomContext,
-        () => nextController.visualizer.loadPreset(getButterchurnPreset(normalized.presetId), 0)
+        () => nextController.visualizer.loadPreset(getButterchurnPreset(resolvedPresetId), 0)
       );
 
       if (buildVersionRef.current !== buildVersion) {
@@ -371,7 +408,7 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
       initializationErrorRef.current = initializationError;
       setStatus('error');
       setErrorMessage(message);
-      console.error('[LyricVideo] MilkDrop background initialization failed:', initializationError);
+      console.error('[Visualizer] MilkDrop background initialization failed:', initializationError);
       callbackRef.current.onError?.(initializationError);
       return false;
     });
@@ -385,7 +422,7 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
   }, [
     audioSource,
     enabled,
-    normalized.presetId,
+    resolvedPresetId,
     normalized.quality,
     normalized.seed,
     renderDimensions.height,
@@ -424,7 +461,7 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
     installFixedFrameClock(nextController.visualizer);
     await runWithRandomContext(
       nextController.randomContext,
-      () => nextController.visualizer.loadPreset(getButterchurnPreset(normalized.presetId), 0)
+      () => nextController.visualizer.loadPreset(getButterchurnPreset(resolvedPresetId), 0)
     );
     controllerRef.current = {
       ...nextController,
@@ -495,7 +532,7 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
   }));
 
   useLayoutEffect(() => {
-    if (!enabled || manual) return;
+    if (!enabled || manual || realtime) return;
     const controller = controllerRef.current;
     const previousTimeMs = controller?.lastTimelineTimeMs;
     const safeCurrentTimeMs = Math.max(0, Number(currentTimeMs) || 0);
@@ -534,13 +571,67 @@ const ButterchurnBackground = forwardRef(function ButterchurnBackground({
     enabled,
     manual,
     normalized.sensitivity,
+    realtime,
     safeFps,
   ]);
+
+  useEffect(() => {
+    if (!enabled || manual || !realtime) return undefined;
+
+    let frameId = null;
+    let startedAt = null;
+    let previousFrameAt = null;
+    let stopped = false;
+
+    const tick = (now) => {
+      if (stopped) return;
+      if (startedAt === null) startedAt = now;
+      const elapsedTime = previousFrameAt === null
+        ? 1 / safeFps
+        : Math.max(1 / 240, Math.min(0.25, (now - previousFrameAt) / 1000));
+      const targetFrameDurationMs = 1000 / safeFps;
+
+      if (previousFrameAt === null || now - previousFrameAt >= targetFrameDurationMs * 0.8) {
+        previousFrameAt = now;
+        pendingAutoRenderRef.current = {
+          timelineTimeMs: now - startedAt,
+          elapsedTime,
+          resetOnDiscontinuity: false,
+        };
+
+        if (!autoRenderActiveRef.current) {
+          autoRenderActiveRef.current = true;
+          void (async () => {
+            try {
+              await readyPromiseRef.current;
+              while (pendingAutoRenderRef.current && !stopped) {
+                const pendingFrame = pendingAutoRenderRef.current;
+                pendingAutoRenderRef.current = null;
+                await enqueueOperation(() => renderFrameInternal(pendingFrame));
+              }
+            } catch { }
+            finally {
+              autoRenderActiveRef.current = false;
+            }
+          })();
+        }
+      }
+
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => {
+      stopped = true;
+      pendingAutoRenderRef.current = null;
+      if (frameId) window.cancelAnimationFrame(frameId);
+    };
+  }, [enabled, manual, normalized.sensitivity, realtime, safeFps]);
 
   if (!enabled) return null;
 
   return (
-    <div aria-hidden="true" className={`${className} overflow-hidden bg-black`}>
+    <div ref={containerRef} aria-hidden="true" className={`${className} overflow-hidden bg-black`}>
       <canvas
         ref={canvasRef}
         className="h-full w-full"

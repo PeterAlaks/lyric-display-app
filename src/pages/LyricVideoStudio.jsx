@@ -28,6 +28,7 @@ import {
 import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
 import {
   DEFAULT_LYRIC_VIDEO_VISUALIZER,
+  LYRIC_VIDEO_BACKGROUND_SOURCES,
   normalizeLyricVideoVisualizer,
 } from '../../shared/lyricVideoVisualizer.js';
 import { openFileNavigator } from '../utils/fileNavigatorEvents';
@@ -45,8 +46,8 @@ const DEFAULT_LYRIC_VIDEO_SETTINGS = createDefaultOutputSettings({
   backgroundOpacity: 0,
   fullScreenMode: true,
   fullScreenBackgroundType: 'color',
-  fullScreenBackgroundColor: '#111827',
-  fullScreenBackgroundPaint: { type: 'solid', color: '#111827' },
+  fullScreenBackgroundColor: '#000000',
+  fullScreenBackgroundPaint: { type: 'solid', color: '#000000' },
   alwaysShowBackground: true,
   transitionAnimation: 'fade',
   transitionSpeed: 220,
@@ -115,9 +116,14 @@ const getVideoDurationMs = (project = {}) => (
   + getOutroDurationMs(project)
 );
 
-const mergePersistedProject = (persistedProject) => {
+const mergePersistedProject = (persistedProject, persistedSettings) => {
   const safeProject = persistedProject && typeof persistedProject === 'object' ? persistedProject : {};
   const { openingScreen: _legacyOpeningScreen, ...safeProjectWithoutLegacyOpening } = safeProject;
+  const legacyBackgroundSource = safeProject.visualizer?.source === 'style'
+    ? (persistedSettings?.fullScreenBackgroundType === 'media'
+      ? 'media'
+      : 'color')
+    : safeProject.visualizer?.source;
   return {
     ...DEFAULT_PROJECT,
     ...safeProjectWithoutLegacyOpening,
@@ -131,11 +137,56 @@ const mergePersistedProject = (persistedProject) => {
       ...DEFAULT_PROJECT.exportSettings,
       ...(safeProject.exportSettings || {}),
     },
-    visualizer: normalizeLyricVideoVisualizer(safeProject.visualizer),
+    visualizer: normalizeLyricVideoVisualizer({
+      ...safeProject.visualizer,
+      source: legacyBackgroundSource,
+    }),
     intro: {
       ...DEFAULT_PROJECT.intro,
       ...(safeProject.intro || safeProject.openingScreen || {}),
     },
+  };
+};
+
+const normalizeLyricVideoStyleSettings = (settings = {}) => ({
+  ...DEFAULT_LYRIC_VIDEO_SETTINGS,
+  ...(settings || {}),
+  fullScreenMode: true,
+  alwaysShowBackground: true,
+});
+
+const buildLyricVideoVisualSettings = ({
+  styleSettings,
+  studioSettings,
+  visualizer,
+}) => {
+  const normalizedVisualizer = normalizeLyricVideoVisualizer(visualizer);
+  const backgroundType = normalizedVisualizer.source === LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN
+    ? 'visualizer'
+    : normalizedVisualizer.source;
+
+  return {
+    ...DEFAULT_LYRIC_VIDEO_SETTINGS,
+    ...(styleSettings || {}),
+    fullScreenMode: true,
+    alwaysShowBackground: true,
+    fullScreenBackgroundType: backgroundType,
+    fullScreenBackgroundColor: studioSettings.fullScreenBackgroundColor || '#000000',
+    fullScreenBackgroundPaint: studioSettings.fullScreenBackgroundPaint || { type: 'solid', color: '#000000' },
+    fullScreenBackgroundOpacity: studioSettings.fullScreenBackgroundOpacity ?? 10,
+    fullScreenBackgroundMedia: studioSettings.fullScreenBackgroundMedia || null,
+    fullScreenBackgroundMediaName: studioSettings.fullScreenBackgroundMediaName || '',
+    backgroundMediaTransitionAnimation: studioSettings.backgroundMediaTransitionAnimation,
+    backgroundMediaTransitionDuration: studioSettings.backgroundMediaTransitionDuration,
+    fullScreenElementEnabled: Boolean(studioSettings.fullScreenElementEnabled),
+    fullScreenElementMedia: studioSettings.fullScreenElementMedia || null,
+    fullScreenElementMediaName: studioSettings.fullScreenElementMediaName || '',
+    fullScreenElementScale: studioSettings.fullScreenElementScale,
+    fullScreenElementPosition: studioSettings.fullScreenElementPosition,
+    fullScreenElementPaddingX: studioSettings.fullScreenElementPaddingX,
+    fullScreenElementPaddingY: studioSettings.fullScreenElementPaddingY,
+    fullScreenElementOpacity: studioSettings.fullScreenElementOpacity,
+    fullScreenElementBlur: studioSettings.fullScreenElementBlur,
   };
 };
 
@@ -171,16 +222,23 @@ export default function LyricVideoStudio() {
     () => allOutputIds.filter((id) => id.startsWith('output')),
     [allOutputIds]
   );
-  const [project, setProject] = useState(() => mergePersistedProject(persistedStateRef.current?.project));
-  const [lyricVideoSettings, setLyricVideoSettings] = useState(() => ({
-    ...DEFAULT_LYRIC_VIDEO_SETTINGS,
-    ...(persistedStateRef.current?.lyricVideoSettings || {}),
-  }));
+  const [project, setProject] = useState(() => mergePersistedProject(
+    persistedStateRef.current?.project,
+    persistedStateRef.current?.lyricVideoSettings
+  ));
+  const [lyricVideoSettings, setLyricVideoSettings] = useState(() => (
+    normalizeLyricVideoStyleSettings(persistedStateRef.current?.lyricVideoSettings)
+  ));
   const outputStyleSource = project.styleSource === 'lyricVideo' ? 'output1' : project.styleSource;
   const { settings: outputVisualSettings } = useOutputSettings(outputStyleSource);
-  const visualSettings = project.styleSource === 'lyricVideo'
+  const selectedStyleSettings = project.styleSource === 'lyricVideo'
     ? lyricVideoSettings
     : outputVisualSettings;
+  const visualSettings = useMemo(() => buildLyricVideoVisualSettings({
+    styleSettings: selectedStyleSettings,
+    studioSettings: lyricVideoSettings,
+    visualizer: project.visualizer,
+  }), [lyricVideoSettings, project.visualizer, selectedStyleSettings]);
   const [studioLyrics, setStudioLyrics] = useState(() => (
     Array.isArray(persistedStateRef.current?.studioLyrics)
       ? persistedStateRef.current.studioLyrics
@@ -225,7 +283,7 @@ export default function LyricVideoStudio() {
   }, [outputIds]);
 
   const updateLyricVideoSettings = useCallback((partial) => {
-    setLyricVideoSettings((current) => ({
+    setLyricVideoSettings((current) => normalizeLyricVideoStyleSettings({
       ...current,
       ...(partial || {}),
     }));
@@ -1076,6 +1134,50 @@ export default function LyricVideoStudio() {
     setExportOpen(true);
   }, [isExporting]);
 
+  const handleChooseBackgroundMedia = useCallback(() => {
+    showModal({
+      title: 'Lyric Video Background',
+      headerDescription: 'Choose an image or video from User Media.',
+      component: 'UserMedia',
+      variant: 'info',
+      size: 'lg',
+      customLayout: true,
+      scrollBehavior: 'none',
+      modalKey: 'lyric-video-background-media',
+      actions: [],
+      allowedTypes: ['image', 'video'],
+      initialTab: 'image',
+      onSelect: (media) => {
+        if (!media?.url) {
+          showToast({
+            title: 'Media unavailable',
+            message: 'Selected media could not be used.',
+            variant: 'error',
+          });
+          return;
+        }
+
+        updateLyricVideoSettings({
+          fullScreenBackgroundType: 'media',
+          fullScreenBackgroundMedia: {
+            url: media.url,
+            mimeType: media.mimeType,
+            name: media.name,
+            size: media.size,
+            uploadedAt: media.uploadedAt ?? Date.now(),
+            bundled: media.bundled === true,
+          },
+          fullScreenBackgroundMediaName: media.name || '',
+        });
+        showToast({
+          title: 'Background ready',
+          message: `${media.name || 'Media'} selected.`,
+          variant: 'success',
+        });
+      },
+    });
+  }, [showModal, showToast, updateLyricVideoSettings]);
+
   const handleCancelExport = async () => {
     exportCancelRequestedRef.current = true;
     await window.electronAPI?.lyricVideo?.cancelExport?.();
@@ -1234,6 +1336,9 @@ export default function LyricVideoStudio() {
             project={project}
             outputIds={outputIds}
             onProjectChange={setProject}
+            backgroundSettings={lyricVideoSettings}
+            onBackgroundSettingsChange={updateLyricVideoSettings}
+            onChooseBackgroundMedia={handleChooseBackgroundMedia}
             onOpenStyleEditor={() => setStyleOpen(true)}
             onOpenExport={handleOpenExportModal}
           />

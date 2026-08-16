@@ -1,5 +1,14 @@
 import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../../shared/outputRegistry.js';
 import { DEFAULT_APPEARANCE_TRANSITIONS } from '../../../shared/transitionSettings.js';
+import {
+  DEFAULT_LYRIC_VIDEO_VISUALIZER,
+  LYRIC_VIDEO_BACKGROUND_SOURCES,
+} from '../../../shared/lyricVideoVisualizer.js';
+
+const createDefaultFullscreenVisualizer = () => ({
+  ...DEFAULT_LYRIC_VIDEO_VISUALIZER,
+  source: LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN,
+});
 
 const settingValueEqual = (current, next) => {
   if (current === next) return true;
@@ -67,6 +76,8 @@ export const defaultOutput1Settings = {
   fullScreenBackgroundOpacity: 10,
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
+  fullScreenVisualizer: createDefaultFullscreenVisualizer(),
+  fullScreenVisualizerInitialized: false,
   backgroundMediaTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.backgroundMediaTransitionAnimation,
   backgroundMediaTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.backgroundMediaTransitionDuration,
   fullScreenElementEnabled: false,
@@ -155,6 +166,8 @@ export const createDefaultOutputSettings = (overrides = {}) => ({
   fullScreenBackgroundOpacity: 10,
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
+  fullScreenVisualizer: createDefaultFullscreenVisualizer(),
+  fullScreenVisualizerInitialized: false,
   backgroundMediaTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.backgroundMediaTransitionAnimation,
   backgroundMediaTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.backgroundMediaTransitionDuration,
   fullScreenElementEnabled: false,
@@ -243,6 +256,8 @@ export const defaultOutput2Settings = {
   fullScreenBackgroundOpacity: 10,
   fullScreenBackgroundMedia: null,
   fullScreenBackgroundMediaName: '',
+  fullScreenVisualizer: createDefaultFullscreenVisualizer(),
+  fullScreenVisualizerInitialized: false,
   backgroundMediaTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.backgroundMediaTransitionAnimation,
   backgroundMediaTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.backgroundMediaTransitionDuration,
   fullScreenElementEnabled: false,

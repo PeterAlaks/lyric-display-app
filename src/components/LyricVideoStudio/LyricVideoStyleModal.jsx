@@ -4,14 +4,26 @@ import useModal from '../../hooks/useModal';
 import OutputSettingsPanel from '../OutputSettingsPanel';
 
 function LyricVideoStyleEditor({ initialSettings, onSettingsChange }) {
-  const [draftSettings, setDraftSettings] = React.useState(() => initialSettings || {});
+  const [draftSettings, setDraftSettings] = React.useState(() => ({
+    ...(initialSettings || {}),
+    fullScreenMode: true,
+    alwaysShowBackground: true,
+  }));
 
   const handleSettingsChange = React.useCallback((partial) => {
+    const styleOnlyPartial = Object.fromEntries(
+      Object.entries(partial || {}).filter(([key]) => (
+        !key.startsWith('fullScreen') && key !== 'alwaysShowBackground'
+      ))
+    );
+    if (Object.keys(styleOnlyPartial).length === 0) return;
     setDraftSettings((current) => ({
       ...current,
-      ...(partial || {}),
+      ...styleOnlyPartial,
+      fullScreenMode: true,
+      alwaysShowBackground: true,
     }));
-    onSettingsChange?.(partial);
+    onSettingsChange?.(styleOnlyPartial);
   }, [onSettingsChange]);
 
   return (
@@ -21,6 +33,8 @@ function LyricVideoStyleEditor({ initialSettings, onSettingsChange }) {
         settings={draftSettings}
         onSettingsChange={handleSettingsChange}
         localMode
+        hideFullScreenSettings
+        hideBackgroundSettings
         title="LYRIC VIDEO STYLE"
       />
     </div>

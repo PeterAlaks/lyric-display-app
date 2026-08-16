@@ -2,16 +2,16 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { PaintPicker } from '../ui/paint-picker';
 import { Palette, SlidersHorizontal } from 'lucide-react';
 import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import AlwaysInfoButton from './AlwaysInfoButton';
 import {
-  BUTTERCHURN_QUALITY_LEVELS,
   LYRIC_VIDEO_BACKGROUND_SOURCES,
   normalizeLyricVideoVisualizer,
 } from '../../../shared/lyricVideoVisualizer.js';
-import { BUTTERCHURN_PRESET_OPTIONS } from '../../utils/butterchurnPresets.js';
+import ButterchurnVisualizerSettings from '../ButterchurnVisualizerSettings';
 
 const inputClassName = 'h-9 rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
 const textareaClassName = 'min-h-[72px] rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
@@ -36,6 +36,9 @@ export default function LyricVideoSettingsPanel({
   project,
   outputIds,
   onProjectChange,
+  backgroundSettings,
+  onBackgroundSettingsChange,
+  onChooseBackgroundMedia,
   onOpenStyleEditor,
   onOpenExport,
 }) {
@@ -56,6 +59,8 @@ export default function LyricVideoSettingsPanel({
   }));
   const intro = project.intro || project.openingScreen || {};
   const visualizer = normalizeLyricVideoVisualizer(project.visualizer);
+  const safeBackgroundSettings = backgroundSettings || {};
+  const darkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
   const patchVisualizer = (updates) => onProjectChange?.((current) => ({
     ...current,
     visualizer: normalizeLyricVideoVisualizer({
@@ -63,6 +68,16 @@ export default function LyricVideoSettingsPanel({
       ...updates,
     }),
   }));
+  const handleBackgroundSourceChange = (source) => {
+    patchVisualizer({ source });
+    onBackgroundSettingsChange?.({
+      fullScreenMode: true,
+      alwaysShowBackground: true,
+      fullScreenBackgroundType: source === LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN
+        ? 'visualizer'
+        : source,
+    });
+  };
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-gray-900">
@@ -109,7 +124,7 @@ export default function LyricVideoSettingsPanel({
 
         <section className="space-y-4 border-t border-gray-100 pt-5 dark:border-gray-800">
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Visuals</h3>
-          <Field label="Style Source">
+          <Field label="Lyrics Style Source">
             <Select value={project.styleSource} onValueChange={(styleSource) => patchProject({ styleSource })}>
               <SelectTrigger className={selectTriggerClassName}>
                 <SelectValue />
@@ -127,7 +142,7 @@ export default function LyricVideoSettingsPanel({
           {project.styleSource === 'lyricVideo' && (
             <Button type="button" variant="ghost" className={`w-full justify-start ${ghostButtonClassName}`} onClick={onOpenStyleEditor}>
               <Palette className="h-4 w-4" />
-              Edit Lyric Video Style
+              Edit Lyrics Style
             </Button>
           )}
           <div className="flex items-center justify-between gap-3">
@@ -138,76 +153,53 @@ export default function LyricVideoSettingsPanel({
               content="MilkDrop reacts to the attached song. It replaces the style background while preserving lyric text and layout styling."
             />
           </div>
-          <Select value={visualizer.source} onValueChange={(source) => patchVisualizer({ source })}>
+          <Select value={visualizer.source} onValueChange={handleBackgroundSourceChange}>
             <SelectTrigger className={selectTriggerClassName}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent className={selectContentClassName}>
-              <SelectItem value={LYRIC_VIDEO_BACKGROUND_SOURCES.STYLE}>Style background</SelectItem>
-              <SelectItem value={LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN}>MilkDrop visualizer</SelectItem>
+              <SelectItem value={LYRIC_VIDEO_BACKGROUND_SOURCES.COLOR}>Colour</SelectItem>
+              <SelectItem value={LYRIC_VIDEO_BACKGROUND_SOURCES.MEDIA}>Media</SelectItem>
+              <SelectItem value={LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN}>Visualizer</SelectItem>
             </SelectContent>
           </Select>
+          {visualizer.source === LYRIC_VIDEO_BACKGROUND_SOURCES.COLOR && (
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Background colour</span>
+              <PaintPicker
+                value={safeBackgroundSettings.fullScreenBackgroundPaint}
+                fallbackColor={safeBackgroundSettings.fullScreenBackgroundColor || '#000000'}
+                onChange={(paint) => onBackgroundSettingsChange?.({
+                  fullScreenBackgroundPaint: paint,
+                  ...(paint?.type === 'solid' ? { fullScreenBackgroundColor: paint.color } : {}),
+                })}
+                darkMode={darkMode}
+                popoverAlign="end"
+              />
+            </div>
+          )}
+          {visualizer.source === LYRIC_VIDEO_BACKGROUND_SOURCES.MEDIA && (
+            <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+              <Button type="button" variant="outline" className="h-9 w-full text-xs" onClick={onChooseBackgroundMedia}>
+                {safeBackgroundSettings.fullScreenBackgroundMedia ? 'Change Media' : 'Choose Media'}
+              </Button>
+              {safeBackgroundSettings.fullScreenBackgroundMedia && (
+                <p
+                  className="truncate text-xs text-gray-500 dark:text-gray-400"
+                  title={safeBackgroundSettings.fullScreenBackgroundMediaName || safeBackgroundSettings.fullScreenBackgroundMedia?.name}
+                >
+                  {safeBackgroundSettings.fullScreenBackgroundMediaName || safeBackgroundSettings.fullScreenBackgroundMedia?.name || 'Selected media'}
+                </p>
+              )}
+            </div>
+          )}
           {visualizer.source === LYRIC_VIDEO_BACKGROUND_SOURCES.BUTTERCHURN && (
             <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
-              <Field label="Preset">
-                <Select value={visualizer.presetId} onValueChange={(presetId) => patchVisualizer({ presetId })}>
-                  <SelectTrigger className={selectTriggerClassName}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className={selectContentClassName}>
-                    {BUTTERCHURN_PRESET_OPTIONS.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Sensitivity">
-                  <Input
-                    type="number"
-                    min="0.25"
-                    max="3"
-                    step="0.05"
-                    value={visualizer.sensitivity}
-                    onChange={(event) => patchVisualizer({ sensitivity: Number(event.target.value) || 1 })}
-                    className={inputClassName}
-                  />
-                </Field>
-                <Field label="Dim (%)">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="90"
-                    step="5"
-                    value={visualizer.dimming}
-                    onChange={(event) => patchVisualizer({ dimming: Number(event.target.value) || 0 })}
-                    className={inputClassName}
-                  />
-                </Field>
-              </div>
-              <Field label="Render Quality">
-                <Select value={visualizer.quality} onValueChange={(quality) => patchVisualizer({ quality })}>
-                  <SelectTrigger className={selectTriggerClassName}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className={selectContentClassName}>
-                    <SelectItem value={BUTTERCHURN_QUALITY_LEVELS.DRAFT}>Draft</SelectItem>
-                    <SelectItem value={BUTTERCHURN_QUALITY_LEVELS.BALANCED}>Balanced</SelectItem>
-                    <SelectItem value={BUTTERCHURN_QUALITY_LEVELS.HIGH}>High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Visual Seed">
-                <Input
-                  type="number"
-                  min="1"
-                  max="2147483647"
-                  step="1"
-                  value={visualizer.seed}
-                  onChange={(event) => patchVisualizer({ seed: Number(event.target.value) || 1 })}
-                  className={inputClassName}
-                />
-              </Field>
+              <ButterchurnVisualizerSettings
+                value={visualizer}
+                onChange={(nextVisualizer) => patchVisualizer(nextVisualizer)}
+                darkMode={darkMode}
+              />
             </div>
           )}
           <Field label="No-Lyric Behavior">

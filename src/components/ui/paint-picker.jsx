@@ -118,6 +118,8 @@ const PaintPicker = React.forwardRef(({
   showValue = false,
   darkMode = false,
   presentation = "default",
+  popoverAlign = "start",
+  popoverSide = "top",
   ...props
 }, ref) => {
   const normalizedValue = React.useMemo(() => normalizePaint(value, fallbackColor), [fallbackColor, value]);
@@ -405,9 +407,10 @@ const PaintPicker = React.forwardRef(({
           ref={contentRef}
           data-popover-scroll-lock-allow="true"
           className={`w-[272px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
-          align="start"
-          side="top"
-          avoidCollisions={false}
+          align={popoverAlign}
+          side={popoverSide}
+          avoidCollisions
+          collisionPadding={12}
         >
           {paintPanel}
         </PopoverContent>
