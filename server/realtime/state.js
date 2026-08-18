@@ -43,6 +43,7 @@ export const state = {
     ['output1', new Map()],
     ['output2', new Map()],
     ['stage', new Map()],
+    ['time', new Map()],
   ]),
   currentStageTimerState: {
     version: 2,

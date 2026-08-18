@@ -17,6 +17,7 @@ const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && 
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 const isOutputId = (value) => typeof value === 'string' && value.startsWith('output');
 const isRoutableOutput = (value) => value === 'stage' || isOutputId(value);
+const isMetricsOutput = (value) => value === 'time' || isRoutableOutput(value);
 const isCustomOutputId = (value) => isOutputId(value) && value !== 'output1' && value !== 'output2';
 const isPassiveDisplayRole = (role) => role === 'stage' || isOutputId(role);
 const localizeTimerState = (timerState, serverNow = null) => (
@@ -466,17 +467,20 @@ const useSocketEvents = (role, clientPurpose = role) => {
 
     if (shouldHandleOutputMetrics) {
       socket.on('outputMetrics', (payload) => {
-        if (!isPlainObject(payload) || !isOutputId(payload.output) || !isPlainObject(payload.metrics)) {
+        if (!isPlainObject(payload) || !isMetricsOutput(payload.output) || !isPlainObject(payload.metrics)) {
           return;
         }
         const { output, metrics, allInstances, instanceCount } = payload;
         try {
+          const normalizedInstanceCount = Number.isFinite(instanceCount) ? instanceCount : 1;
+          useLyricsStore.getState().setOutputConnectionCount?.(output, normalizedInstanceCount);
+
           const updates = {
             autosizerActive: metrics?.autosizerActive ?? false,
             primaryViewportWidth: metrics?.viewportWidth ?? null,
             primaryViewportHeight: metrics?.viewportHeight ?? null,
             allInstances: allInstances || null,
-            instanceCount: Number.isFinite(instanceCount) ? instanceCount : 1,
+            instanceCount: normalizedInstanceCount,
           };
 
           if (typeof output === 'string' && output.startsWith('output')) {

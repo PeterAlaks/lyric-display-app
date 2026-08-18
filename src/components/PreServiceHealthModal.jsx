@@ -62,7 +62,7 @@ const getDashboardState = ({ failCount, warnCount, checks, loading }) => {
     return {
       status: 'warn',
       label: 'Checking readiness',
-      detail: 'Running service-critical checks before reporting status.',
+      detail: 'Running event-critical checks before reporting status.',
     };
   }
   if (failCount > 0) {
@@ -75,14 +75,14 @@ const getDashboardState = ({ failCount, warnCount, checks, loading }) => {
   if (warnCount > 0) {
     return {
       status: 'warn',
-      label: 'Review before service',
+      label: 'Review before going live',
       detail: `${warnCount} advisory check${warnCount === 1 ? '' : 's'} should be reviewed before production.`,
     };
   }
   return {
     status: 'pass',
     label: 'Production ready',
-    detail: 'Service-critical systems are reporting healthy status.',
+    detail: 'Event-critical systems are reporting healthy status.',
   };
 };
 

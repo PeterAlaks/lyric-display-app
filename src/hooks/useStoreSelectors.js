@@ -93,6 +93,34 @@ export const useAllOutputIds = () =>
         shallow
     );
 
+const connectedOutputsEqual = (previous, next) => (
+    previous.length === next.length
+    && previous.every((output, index) => (
+        output.id === next[index]?.id
+        && output.instanceCount === next[index]?.instanceCount
+        && output.enabled === next[index]?.enabled
+        && output.masterControlled === next[index]?.masterControlled
+    ))
+);
+
+export const useConnectedOutputs = () =>
+    useStoreWithEqualityFn(
+        useLyricsStore,
+        (state) => [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || []), 'stage', 'time'].reduce((connected, id) => {
+            const instanceCount = Number(state.outputConnectionCounts?.[id]) || 0;
+            if (instanceCount > 0) {
+                connected.push({
+                    id,
+                    instanceCount,
+                    enabled: id === 'stage' ? state.stageEnabled !== false : id === 'time' || state[`${id}Enabled`] !== false,
+                    masterControlled: id !== 'time',
+                });
+            }
+            return connected;
+        }, []),
+        connectedOutputsEqual
+    );
+
 export const useStageSettings = () => useOutputSettingsBase('stage');
 
 export const useDarkModeState = () =>

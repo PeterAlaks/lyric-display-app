@@ -32,8 +32,13 @@ const getChangedSettingKeys = (currentSettings = {}, nextSettings = {}) => {
   return Object.keys(nextSettings).filter((key) => !areSettingValuesEqual(currentSettings?.[key], nextSettings[key]));
 };
 
-export function registerOutputHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId, isPreview = false }) {
+export function registerOutputHandlers({ io, socket, hasPermission, clientType, clientPurpose = null, deviceId, sessionId, isPreview = false }) {
   const actor = { clientType, deviceId, sessionId };
+  const metricsOutputId = isOutputClientType(clientType)
+    ? clientType
+    : clientType === 'stage'
+      ? (clientPurpose === 'time-display' ? 'time' : 'stage')
+      : null;
 
   socket.on('outputToggle', (nextState) => {
     if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'outputToggle' })) {
@@ -243,7 +248,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       return;
     }
 
-    if (!isOutputClientType(clientType)) {
+    if (!metricsOutputId) {
       socket.emit('permissionError', 'Insufficient permissions to publish metrics');
       return;
     }
@@ -251,15 +256,15 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       return;
     }
 
-    if (Object.hasOwn(payload, 'output') && payload.output !== clientType) {
+    if (Object.hasOwn(payload, 'output') && payload.output !== metricsOutputId) {
       socket.emit('permissionError', 'Output metrics target does not match authenticated output');
       return;
     }
 
-    const output = clientType;
+    const output = metricsOutputId;
     const { metrics } = payload;
 
-    if (!state.outputSettings.has(output) && !state.outputEnabled.has(output)) {
+    if (isOutputClientType(output) && !state.outputSettings.has(output) && !state.outputEnabled.has(output)) {
       return;
     }
 

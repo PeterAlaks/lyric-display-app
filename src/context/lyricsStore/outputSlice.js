@@ -313,6 +313,7 @@ export const createOutputSlice = (set, get, normalizePaintSettingUpdates) => ({
   isOutputOn: true,
   output1Enabled: true,
   output2Enabled: true,
+  outputConnectionCounts: {},
   customOutputIds: [],
   previewCustomOutputId: null,
   output1Settings: defaultOutput1Settings,
@@ -321,6 +322,24 @@ export const createOutputSlice = (set, get, normalizePaintSettingUpdates) => ({
   setIsOutputOn: (state) => set({ isOutputOn: state }),
   setOutput1Enabled: (enabled) => set({ output1Enabled: enabled }),
   setOutput2Enabled: (enabled) => set({ output2Enabled: enabled }),
+  setOutputConnectionCount: (outputId, count) =>
+    set((state) => {
+      const isKnownDisplay = outputId === 'stage'
+        || outputId === 'time'
+        || outputId === 'output1'
+        || outputId === 'output2'
+        || state.customOutputIds.includes(outputId);
+      if (!isKnownDisplay) return {};
+
+      const instanceCount = Math.max(0, Math.floor(Number(count) || 0));
+      if (state.outputConnectionCounts[outputId] === instanceCount) return {};
+      return {
+        outputConnectionCounts: {
+          ...state.outputConnectionCounts,
+          [outputId]: instanceCount,
+        },
+      };
+    }),
   setPreviewCustomOutputId: (outputId) =>
     set((state) => {
       if (outputId === null) return { previewCustomOutputId: null };

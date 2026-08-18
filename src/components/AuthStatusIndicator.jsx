@@ -207,7 +207,7 @@ const AuthStatusIndicator = ({
     const handleOpenPreServiceHealth = () => {
       showModal({
         title: 'Production Readiness Check',
-        headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+        headerDescription: 'Review event-critical connection, output, NDI, display, media, and safety status',
         component: 'PreServiceHealth',
         variant: 'info',
         size: 'lg',
@@ -310,7 +310,7 @@ const AuthStatusIndicator = ({
                 onSelect: () => {
                   showModal({
                     title: 'Production Readiness Check',
-                    headerDescription: 'Review service-critical connection, output, NDI, display, media, and safety status',
+                    headerDescription: 'Review event-critical connection, output, NDI, display, media, and safety status',
                     component: 'PreServiceHealth',
                     variant: 'info',
                     size: 'lg',

@@ -48,6 +48,7 @@ import { VIRTUALIZATION_THRESHOLD } from '../hooks/LyricsList/useLyricsListRows'
 import ControlPanelHeaderActions from './LyricDisplayApp/ControlPanelHeaderActions';
 import ControlPanelModals from './LyricDisplayApp/ControlPanelModals';
 import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
+import ConnectedOutputsStrip from './LyricDisplayApp/ConnectedOutputsStrip';
 import useLyricsStore from '../context/LyricsStore';
 
 const LyricDisplayApp = () => {
@@ -510,7 +511,7 @@ const LyricDisplayApp = () => {
             )}
 
             {/* Output Toggle */}
-            <div className="flex items-center justify-between mb-6" data-tour="master-output">
+            <div className="flex items-center justify-between" data-tour="master-output">
               <div className="flex items-center gap-4 pl-4">
                 <Switch
                   aria-label="Toggle display output"
@@ -565,7 +566,7 @@ const LyricDisplayApp = () => {
               </div>
             </div>
 
-            <div className={`border-t my-8 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}></div>
+            <ConnectedOutputsStrip darkMode={darkMode} isOutputOn={isOutputOn} />
 
             {/* Output Tabs */}
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>

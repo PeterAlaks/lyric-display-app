@@ -184,7 +184,27 @@ const TimeDisplay = () => {
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
-  useSocket('stage', { preview: isPreviewMode, purpose: 'time-display' });
+  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
+    preview: isPreviewMode,
+    purpose: 'time-display',
+  });
+
+  const publishTimeMetrics = React.useCallback(() => {
+    if (isPreviewMode || !isConnected || !isAuthenticated) return;
+    emitOutputMetrics('time', {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      timestamp: Date.now(),
+    });
+  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
+
+  React.useEffect(() => {
+    publishTimeMetrics();
+    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
+    const interval = window.setInterval(publishTimeMetrics, 5000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, isConnected, isPreviewMode, publishTimeMetrics]);
+
   const { timerState, displayValue, intensity, now, progress } = useSharedTimer({
     controller: false,
     renderTickIntervalMs: 1000,

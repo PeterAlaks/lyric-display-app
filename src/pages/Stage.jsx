@@ -141,13 +141,33 @@ const Stage = () => {
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
 
-  useSocket('stage', { preview: isPreviewMode, purpose: 'stage-display' });
+  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
+    preview: isPreviewMode,
+    purpose: 'stage-display',
+  });
   const { lyrics, selectedLine, lyricsFileName } = useLyricsState();
   const { isOutputOn } = useOutputState();
   const { settings: stageSettings } = useStageSettings();
   const { setlistFiles } = useSetlistState();
   const { stageEnabled } = useIndividualOutputState();
   const { skipSectionTitlesOnKeyboard } = useKeyboardNavigationPreferences();
+
+  const publishStageMetrics = useCallback(() => {
+    if (isPreviewMode || !isConnected || !isAuthenticated) return;
+    emitOutputMetrics('stage', {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      timestamp: Date.now(),
+    });
+  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
+
+  useEffect(() => {
+    publishStageMetrics();
+    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
+    const interval = window.setInterval(publishStageMetrics, 5000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, isConnected, isPreviewMode, publishStageMetrics]);
+
   const sectionTagPhrases = useLyricsStore(
     (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
   );

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
+import useHorizontalWheelScroll from '../useHorizontalWheelScroll';
 
 function getNearestScrollableAncestor(element) {
   let node = element?.parentElement;
@@ -41,8 +42,10 @@ export default function useSectionNavigation({
   useVirtualized,
   onLineSelect,
 }) {
-  const sectionChipsScrollerRef = useRef(null);
-  const sectionChipsWheelCleanupRef = useRef(null);
+  const {
+    containerRef: sectionChipsContainerRef,
+    scrollerRef: sectionChipsScrollerRef,
+  } = useHorizontalWheelScroll();
 
   const scrollToVirtualizedLine = useCallback((lineIndex, behavior = 'smooth') => {
     if (!listRef.current) return;
@@ -86,48 +89,6 @@ export default function useSectionNavigation({
     onLineSelect(section.startLine);
     scrollToLineIndex(section.startLine);
   }, [onLineSelect, scrollToLineIndex]);
-
-  const handleSectionChipsWheel = useCallback((event) => {
-    const scroller = sectionChipsScrollerRef.current;
-    if (!scroller) return;
-
-    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
-    if (maxScrollLeft <= 0) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation?.();
-
-    const wheelDelta = event.deltaX + event.deltaY;
-    if (wheelDelta === 0) return;
-
-    const nextScrollLeft = Math.min(
-      maxScrollLeft,
-      Math.max(0, scroller.scrollLeft + wheelDelta)
-    );
-    scroller.scrollLeft = nextScrollLeft;
-  }, []);
-
-  // The chips are rendered conditionally after section data arrives. A callback
-  // ref ensures the native listener follows the actual DOM node instead of an
-  // effect running once while the ref is still null.
-  const sectionChipsContainerRef = useCallback((container) => {
-    sectionChipsWheelCleanupRef.current?.();
-    sectionChipsWheelCleanupRef.current = null;
-    if (!container) return;
-
-    const handleNativeWheel = (event) => handleSectionChipsWheel(event);
-    container.addEventListener('wheel', handleNativeWheel, { passive: false, capture: true });
-
-    sectionChipsWheelCleanupRef.current = () => {
-      container.removeEventListener('wheel', handleNativeWheel, { capture: true });
-    };
-  }, [handleSectionChipsWheel]);
-
-  useEffect(() => () => {
-    sectionChipsWheelCleanupRef.current?.();
-    sectionChipsWheelCleanupRef.current = null;
-  }, []);
 
   useEffect(() => {
     const handleScrollToLine = (event) => {

@@ -28,6 +28,7 @@ export default function registerSocketEvents(io, { hasPermission }) {
       socket,
       hasPermission,
       clientType,
+      clientPurpose,
       deviceId,
       sessionId,
       isPreview,
