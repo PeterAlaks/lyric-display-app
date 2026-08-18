@@ -1,4 +1,8 @@
-import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+import {
+  DEFAULT_OUTPUT_IDS,
+  isCustomOutputRouteId,
+  normalizeCustomOutputRouteIds,
+} from '../../shared/outputRegistry.js';
 import { DEFAULT_PREVIEW_SETTINGS, normalizePreviewSettings } from '../../shared/previewSettings.js';
 import { getLyricsParsingOptions } from './lyricsParsingConfig.js';
 
@@ -83,18 +87,18 @@ export const ensureOutputExists = (outputId) => {
 };
 
 const normalizeCustomOutputs = (outputs = []) => {
-  if (!Array.isArray(outputs)) return [];
-  return outputs
-    .filter((id) => typeof id === 'string' && id.startsWith('output'))
-    .filter((id) => id !== 'output1' && id !== 'output2');
+  return normalizeCustomOutputRouteIds(outputs);
 };
 
 export const registerOutputs = (customOutputs = []) => {
   const normalized = normalizeCustomOutputs(customOutputs);
   const next = new Set([...DEFAULT_OUTPUT_IDS, ...normalized]);
+  const removed = [];
+  const added = [];
 
   for (const id of Array.from(state.registeredOutputs)) {
     if (id !== 'output1' && id !== 'output2' && !next.has(id)) {
+      removed.push(id);
       state.outputSettings.delete(id);
       state.outputEnabled.delete(id);
       state.outputInstances.delete(id);
@@ -103,16 +107,18 @@ export const registerOutputs = (customOutputs = []) => {
 
   for (const id of next) {
     if (id !== 'output1' && id !== 'output2') {
+      if (!state.registeredOutputs.has(id)) added.push(id);
       ensureOutputExists(id);
     }
   }
 
   state.registeredOutputs = next;
+  return { added, removed, outputs: [...next] };
 };
 
 export const buildOutputList = () => {
   const custom = Array.from(state.registeredOutputs)
-    .filter((id) => id !== 'output1' && id !== 'output2' && typeof id === 'string' && id.startsWith('output'))
+    .filter((id) => isCustomOutputRouteId(id))
     .sort((a, b) => {
       const numA = parseInt(a.replace('output', ''), 10);
       const numB = parseInt(b.replace('output', ''), 10);

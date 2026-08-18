@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  useCustomOutputIds,
   useLyricsState,
   useOutputEnabled,
   useOutputSettings,
   useOutputState,
 } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
+import useOutputRouteAvailability from '../hooks/useOutputRouteAvailability';
 import { getLineOutputText } from '../utils/parseLyrics';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
 import {
@@ -28,17 +28,11 @@ const OutputPage = ({ outputId }) => {
   const location = useLocation();
 
   const isDefaultOutput = outputId === 'output1' || outputId === 'output2';
-  const customOutputIds = useCustomOutputIds();
-  const isOutputAvailable = isDefaultOutput || customOutputIds.includes(outputId);
-  const discoveryEnabled = !isDefaultOutput && !isOutputAvailable;
+  const { available: isOutputAvailable } = useOutputRouteAvailability(outputId);
   const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
   const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
   const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
-
-  useSocket('output-discovery', {
-    enabled: discoveryEnabled,
-  });
 
   const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket(outputId, {
     enabled: isOutputAvailable,
@@ -98,6 +92,16 @@ const OutputPage = ({ outputId }) => {
     const interval = window.setInterval(publishOutputMetrics, 5000);
     return () => window.clearInterval(interval);
   }, [isAuthenticated, isConnected, isPreviewMode, publishOutputMetrics]);
+
+  if (!isDefaultOutput && !isOutputAvailable) {
+    return (
+      <div
+        className="h-screen w-screen overflow-hidden"
+        style={{ background: isProjectionMode ? '#000000' : 'transparent' }}
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <div

@@ -1,7 +1,12 @@
 import { assertJoinCodeAllowed, recordJoinCodeAttempt } from '../auth/joinCodeGuard.js';
 import { consumeObsDockPairingToken, pruneObsDockPairingTokens } from '../auth/obsDockPairing.js';
 import { getClientPermissions } from '../auth/permissions.js';
-import { isControllerClient, isOutputClientType, VALID_CLIENT_TYPES } from '../config/clientTypes.js';
+import {
+  isControllerClient,
+  isOutputDisplayClientType,
+  OUTPUT_DISCOVERY_CLIENT_TYPE,
+  VALID_CLIENT_TYPES,
+} from '../config/clientTypes.js';
 import { localhostOnly } from '../middleware/localhostOnly.js';
 
 const isAllowedObsDockOrigin = (origin) => {
@@ -21,7 +26,12 @@ const isAllowedObsDockOrigin = (origin) => {
 
 const isLocalObsDockAuthEnabled = () => process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1';
 
-export function registerAuthRoutes(app, { secrets, tokenService, localhostOnly }) {
+export function registerAuthRoutes(app, {
+  secrets,
+  tokenService,
+  localhostOnly,
+  hasOutput = () => true,
+}) {
   app.post('/api/auth/token', (req, res) => {
     const { clientType, deviceId, sessionId, adminKey, joinCode } = req.body;
 
@@ -31,9 +41,22 @@ export function registerAuthRoutes(app, { secrets, tokenService, localhostOnly }
       });
     }
 
-    if (!VALID_CLIENT_TYPES.includes(clientType) && !isOutputClientType(clientType)) {
+    const isOutputDisplay = isOutputDisplayClientType(clientType);
+    if (
+      !VALID_CLIENT_TYPES.includes(clientType)
+      && clientType !== OUTPUT_DISCOVERY_CLIENT_TYPE
+      && !isOutputDisplay
+    ) {
       return res.status(400).json({
         error: 'Invalid client type. Must be one of: ' + VALID_CLIENT_TYPES.join(', ')
+      });
+    }
+
+    if (isOutputDisplay && !hasOutput(clientType)) {
+      return res.status(404).json({
+        error: 'Output route is not registered',
+        code: 'OUTPUT_UNAVAILABLE',
+        output: clientType,
       });
     }
 

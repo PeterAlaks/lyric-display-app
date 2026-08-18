@@ -246,6 +246,14 @@ const useSocket = (role = 'output', options = {}) => {
 
         const handleConnectError = (error) => {
           logError(`Socket connection error (${clientId}):`, error);
+          if (error?.data?.code === 'OUTPUT_UNAVAILABLE') {
+            window.dispatchEvent?.(new CustomEvent('output-route-unavailable', {
+              detail: { output: error.data.output || resolvedClientType },
+            }));
+            setConnectionStatus('disconnected');
+            disposeCurrentSocket(socket, 'output_unavailable');
+            return;
+          }
           connectionManager.recordConnectionFailure(clientId, error);
           if (error?.message?.includes('Authentication') || error?.message?.includes('token')) {
             handleAuthError(error.message, false);

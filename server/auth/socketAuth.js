@@ -1,10 +1,12 @@
+import { isOutputDisplayClientType } from '../config/clientTypes.js';
+
 const normalizeClientPurpose = (value) => {
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toLowerCase();
   return /^[a-z0-9-]{1,48}$/.test(normalized) ? normalized : null;
 };
 
-export function createSocketAuthenticator({ verifyToken }) {
+export function createSocketAuthenticator({ verifyToken, hasOutput = () => true }) {
   return (socket, next) => {
     if (socket.handshake.query?.token) {
       const error = new Error('Token in query string not allowed');
@@ -26,6 +28,15 @@ export function createSocketAuthenticator({ verifyToken }) {
       console.warn('Socket connection rejected: invalid or expired token');
       const error = new Error('Invalid or expired token');
       error.data = { code: 'AUTH_TOKEN_INVALID' };
+      return next(error);
+    }
+
+    if (isOutputDisplayClientType(decoded.clientType) && !hasOutput(decoded.clientType)) {
+      const error = new Error('Output route unavailable');
+      error.data = {
+        code: 'OUTPUT_UNAVAILABLE',
+        output: decoded.clientType,
+      };
       return next(error);
     }
 

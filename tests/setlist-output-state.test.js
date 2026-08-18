@@ -821,7 +821,7 @@ test('setCustomOutputs normalizes ids, initializes new output state, and removes
   const store = createOutputStore();
   const stateBeforeRemoval = store.getState();
 
-  stateBeforeRemoval.setCustomOutputs(['output5', 'output3', 'output3', 'output2', 'bad']);
+  stateBeforeRemoval.setCustomOutputs(['output5', 'output3', 'output3', 'output2', 'output7', 'bad']);
   assert.deepEqual(store.getState().customOutputIds, ['output3', 'output5']);
   assert.deepEqual(store.getState().getAllOutputIds(), ['output1', 'output2', 'output3', 'output5']);
   assert.equal(typeof store.getState().output3Enabled, 'boolean');
@@ -835,6 +835,74 @@ test('setCustomOutputs normalizes ids, initializes new output state, and removes
   assert.equal(store.getState().previewCustomOutputId, null);
   assert.equal(store.getState().output5Settings, undefined);
   assert.equal(store.getState().output5Enabled, undefined);
+});
+
+test('removing a custom output notifies and disconnects every active instance', () => {
+  const previousState = {
+    connectedClients: state.connectedClients,
+    outputInstances: state.outputInstances,
+    outputSettings: state.outputSettings,
+    outputEnabled: state.outputEnabled,
+    registeredOutputs: state.registeredOutputs,
+    liveSafety: state.liveSafety,
+    sessionAuthority: state.sessionAuthority,
+  };
+
+  const outputEvents = [];
+  let forcedDisconnect = false;
+  const outputSocket = {
+    id: 'socket-output3',
+    connected: true,
+    emit(eventName, payload) {
+      outputEvents.push({ eventName, payload });
+    },
+    disconnect(force) {
+      forcedDisconnect = force;
+      this.connected = false;
+    },
+  };
+
+  state.connectedClients = new Map([['socket-output3', {
+    type: 'output3',
+    purpose: 'output3',
+    socket: outputSocket,
+    permissions: ['lyrics:read'],
+  }]]);
+  state.outputInstances = new Map([
+    ['output1', new Map()],
+    ['output2', new Map()],
+    ['output3', new Map([['socket-output3', { socketId: 'socket-output3' }]])],
+  ]);
+  state.outputSettings = new Map([['output1', {}], ['output2', {}], ['output3', {}]]);
+  state.outputEnabled = new Map([['output1', true], ['output2', true], ['output3', true]]);
+  state.registeredOutputs = new Set(['output1', 'output2', 'output3']);
+  state.liveSafety = { enabled: false, updatedAt: null, updatedBy: null };
+
+  try {
+    const { handlers, io, socket } = createSocketHarness();
+    registerOutputHandlers({
+      io,
+      socket,
+      hasPermission: (_socket, permission) => permission === 'settings:write',
+      clientType: 'desktop',
+      deviceId: 'desktop-device',
+      sessionId: 'desktop-session',
+    });
+
+    handlers.get('outputRemove')?.({ output: 'output3' });
+
+    assert.equal(state.registeredOutputs.has('output3'), false);
+    assert.equal(state.outputSettings.has('output3'), false);
+    assert.equal(state.outputEnabled.has('output3'), false);
+    assert.equal(state.outputInstances.has('output3'), false);
+    assert.equal(forcedDisconnect, true);
+    assert.deepEqual(outputEvents.find((event) => event.eventName === 'outputRemoved'), {
+      eventName: 'outputRemoved',
+      payload: { output: 'output3' },
+    });
+  } finally {
+    Object.assign(state, previousState);
+  }
 });
 
 test('output persistence includes custom outputs and rehydration clears stale runtime fields', () => {

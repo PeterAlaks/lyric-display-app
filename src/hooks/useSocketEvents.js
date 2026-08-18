@@ -7,6 +7,10 @@ import { normalizeLyricFileType } from '../../shared/lyricImportRegistry.js';
 import { localizeAuthoritativeTimerState } from '../../shared/timerAuthority.js';
 import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 import {
+  isCustomOutputRouteId,
+  isRoutableOutputId,
+} from '../../shared/outputRegistry.js';
+import {
   emitDesktopSessionBootstrap,
   getDesktopBootstrapOutputIds,
   isLyricsFileNamePayload,
@@ -16,9 +20,8 @@ import {
 const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 const isOutputId = (value) => typeof value === 'string' && value.startsWith('output');
-const isRoutableOutput = (value) => value === 'stage' || isOutputId(value);
+const isRoutableOutput = (value) => value === 'stage' || isRoutableOutputId(value);
 const isMetricsOutput = (value) => value === 'time' || isRoutableOutput(value);
-const isCustomOutputId = (value) => isOutputId(value) && value !== 'output1' && value !== 'output2';
 const isPassiveDisplayRole = (role) => role === 'stage' || isOutputId(role);
 const localizeTimerState = (timerState, serverNow = null) => (
   localizeAuthoritativeTimerState(timerState, Date.now(), serverNow)
@@ -78,7 +81,7 @@ const normalizeOutputRegistry = (payload) => {
   if (!isPlainObject(payload) || !Array.isArray(payload.outputs)) return null;
   const uniqueOutputs = Array.from(
     new Set(
-      payload.outputs.filter((id) => typeof id === 'string')
+      payload.outputs.filter((outputId) => isRoutableOutputId(outputId))
     )
   );
   return { outputs: uniqueOutputs };
@@ -400,28 +403,34 @@ const useSocketEvents = (role, clientPurpose = role) => {
     });
 
     socket.on('outputRemoved', (payload) => {
-      if (!isPlainObject(payload) || !isOutputId(payload.output)) return;
+      if (!isPlainObject(payload) || !isCustomOutputRouteId(payload.output)) return;
       const { output } = payload;
       const store = useLyricsStore.getState();
       if (typeof store.removeCustomOutput === 'function') {
         store.removeCustomOutput(output);
       }
+      window.dispatchEvent?.(new CustomEvent('output-route-unavailable', {
+        detail: { output },
+      }));
     });
 
     socket.on('outputUnavailable', (payload) => {
-      if (!isPlainObject(payload) || !isOutputId(payload.output)) return;
+      if (!isPlainObject(payload) || !isCustomOutputRouteId(payload.output)) return;
       const { output } = payload;
       const store = useLyricsStore.getState();
       if (typeof store.removeCustomOutput === 'function') {
         store.removeCustomOutput(output);
       }
+      window.dispatchEvent?.(new CustomEvent('output-route-unavailable', {
+        detail: { output },
+      }));
     });
 
     socket.on('outputsRegistry', (payload) => {
       const normalized = normalizeOutputRegistry(payload);
       if (!normalized) return;
       const customOutputs = normalized.outputs
-        .filter((id) => isCustomOutputId(id));
+        .filter((id) => isCustomOutputRouteId(id));
       const store = useLyricsStore.getState();
       if (typeof store.setCustomOutputs === 'function') {
         if (isDesktopApp && desktopBootstrapSocketRef.current === socket.id) {
@@ -436,6 +445,9 @@ const useSocketEvents = (role, clientPurpose = role) => {
         }
         store.setCustomOutputs(customOutputs);
       }
+      window.dispatchEvent?.(new CustomEvent('output-registry-updated', {
+        detail: { outputs: normalized.outputs },
+      }));
     });
 
     const shouldHandleOutputMetrics =
@@ -735,6 +747,13 @@ const useSocketEvents = (role, clientPurpose = role) => {
 
     socket.on('connect_error', (error) => {
       logError('Socket connection error:', error);
+      if (error?.data?.code === 'OUTPUT_UNAVAILABLE') {
+        window.dispatchEvent?.(new CustomEvent('output-route-unavailable', {
+          detail: { output: error.data.output || clientType },
+        }));
+        setConnectionStatus('disconnected');
+        return;
+      }
       setConnectionStatus('error');
 
       if (error.message?.includes('Authentication') || error.message?.includes('token')) {

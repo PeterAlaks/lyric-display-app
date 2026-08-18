@@ -136,7 +136,7 @@ registerOutputRoutes(app, { getOutputRegistry, hasOutput });
 registerIntegrationRoutes(app, { getOutputRegistry, port: PORT });
 registerAppControlRoutes(app, { localhostOnly });
 registerTemplateRoutes(app, { localhostOnly });
-registerAuthRoutes(app, { secrets, tokenService, localhostOnly });
+registerAuthRoutes(app, { secrets, tokenService, localhostOnly, hasOutput });
 registerConnectionRoutes(app, { authenticateRequest });
 registerMediaRoutes(app, {
   authenticateRequest,
@@ -156,6 +156,7 @@ const io = new Server(server, {
 
 io.use(createSocketAuthenticator({
   verifyToken: tokenService.verifyToken,
+  hasOutput,
 }));
 
 registerSocketEvents(io, { hasPermission });
@@ -200,6 +201,11 @@ if (!isDev) {
   app.get('/{*splat}', (req, res) => {
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    const customOutputMatch = req.path.match(/^\/(output[3-6])\/?$/);
+    if (customOutputMatch && !hasOutput(customOutputMatch[1])) {
+      res.set('Cache-Control', 'no-store');
+      return res.status(404).sendFile('index.html', { root: frontendPath });
     }
     return res.sendFile('index.html', { root: frontendPath });
   });

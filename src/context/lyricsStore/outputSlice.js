@@ -1,4 +1,9 @@
-import { DEFAULT_OUTPUT_IDS, MAX_CUSTOM_OUTPUTS } from '../../../shared/outputRegistry.js';
+import {
+  DEFAULT_OUTPUT_IDS,
+  isCustomOutputRouteId,
+  MAX_CUSTOM_OUTPUTS,
+  normalizeCustomOutputRouteIds,
+} from '../../../shared/outputRegistry.js';
 import { DEFAULT_APPEARANCE_TRANSITIONS } from '../../../shared/transitionSettings.js';
 import {
   DEFAULT_LYRIC_VIDEO_VISUALIZER,
@@ -343,7 +348,7 @@ export const createOutputSlice = (set, get, normalizePaintSettingUpdates) => ({
   setPreviewCustomOutputId: (outputId) =>
     set((state) => {
       if (outputId === null) return { previewCustomOutputId: null };
-      if (typeof outputId !== 'string' || !outputId.startsWith('output')) return {};
+      if (!isCustomOutputRouteId(outputId)) return {};
       if (!state.customOutputIds.includes(outputId)) return {};
       return { previewCustomOutputId: outputId };
     }),
@@ -413,18 +418,7 @@ export const createOutputSlice = (set, get, normalizePaintSettingUpdates) => ({
 
   setCustomOutputs: (outputIds) =>
     set((state) => {
-      const normalized = Array.from(
-        new Set(
-          (Array.isArray(outputIds) ? outputIds : [])
-            .filter((id) => typeof id === 'string' && id.startsWith('output'))
-            .filter((id) => id !== 'output1' && id !== 'output2')
-        )
-      ).sort((a, b) => {
-        const numA = parseInt(a.replace('output', ''), 10);
-        const numB = parseInt(b.replace('output', ''), 10);
-        if (Number.isFinite(numA) && Number.isFinite(numB)) return numA - numB;
-        return a.localeCompare(b);
-      });
+      const normalized = normalizeCustomOutputRouteIds(outputIds);
 
       const updates = {
         customOutputIds: normalized,
@@ -454,7 +448,7 @@ export const createOutputSlice = (set, get, normalizePaintSettingUpdates) => ({
 
   setOutputEnabled: (outputId, enabled) =>
     set((state) => {
-      if (typeof outputId !== 'string' || !outputId.startsWith('output')) return {};
+      if (outputId !== 'output1' && outputId !== 'output2' && !isCustomOutputRouteId(outputId)) return {};
       if (outputId !== 'output1' && outputId !== 'output2' && !state.customOutputIds.includes(outputId)) {
         return {};
       }
@@ -482,6 +476,7 @@ export const partializeOutputState = (state) => {
 };
 
 export const rehydrateOutputState = (state) => {
+  state.customOutputIds = normalizeCustomOutputRouteIds(state.customOutputIds);
   if (state.previewCustomOutputId && !state.customOutputIds?.includes(state.previewCustomOutputId)) {
     state.previewCustomOutputId = null;
   }

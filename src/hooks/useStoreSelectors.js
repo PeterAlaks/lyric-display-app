@@ -106,14 +106,14 @@ const connectedOutputsEqual = (previous, next) => (
 export const useConnectedOutputs = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
-        (state) => [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || []), 'stage', 'time'].reduce((connected, id) => {
+        (state) => [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || []), 'stage'].reduce((connected, id) => {
             const instanceCount = Number(state.outputConnectionCounts?.[id]) || 0;
             if (instanceCount > 0) {
                 connected.push({
                     id,
                     instanceCount,
-                    enabled: id === 'stage' ? state.stageEnabled !== false : id === 'time' || state[`${id}Enabled`] !== false,
-                    masterControlled: id !== 'time',
+                    enabled: id === 'stage' ? state.stageEnabled !== false : state[`${id}Enabled`] !== false,
+                    masterControlled: true,
                 });
             }
             return connected;

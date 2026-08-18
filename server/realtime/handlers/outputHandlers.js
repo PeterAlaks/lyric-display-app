@@ -18,6 +18,7 @@ import { REALTIME_EVENTS, REALTIME_PERMISSIONS } from '../../../shared/apiContra
 import { normalizePreviewSettings } from '../../../shared/previewSettings.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { getPrimaryOutputInstance, getSocketConnectionScope, isOutputClientType, isPlainObject } from '../utils.js';
+import { isCustomOutputRouteId } from '../../../shared/outputRegistry.js';
 
 const areSettingValuesEqual = (left, right) => {
   if (Object.is(left, right)) return true;
@@ -30,6 +31,21 @@ const areSettingValuesEqual = (left, right) => {
 
 const getChangedSettingKeys = (currentSettings = {}, nextSettings = {}) => {
   return Object.keys(nextSettings).filter((key) => !areSettingValuesEqual(currentSettings?.[key], nextSettings[key]));
+};
+
+const disconnectOutputClients = (outputId) => {
+  const sockets = [];
+  state.connectedClients.forEach((client) => {
+    if (client?.type === outputId && client.socket) sockets.push(client.socket);
+  });
+
+  for (const outputSocket of sockets) {
+    try {
+      outputSocket.disconnect(true);
+    } catch (error) {
+      console.warn(`Failed to disconnect removed output ${outputId}:`, error?.message || error);
+    }
+  }
 };
 
 export function registerOutputHandlers({ io, socket, hasPermission, clientType, clientPurpose = null, deviceId, sessionId, isPreview = false }) {
@@ -184,11 +200,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     }
 
     const { output } = payload;
-    if (!isOutputClientType(output)) {
-      return;
-    }
-
-    if (output === 'output1' || output === 'output2') {
+    if (!isCustomOutputRouteId(output) || !state.registeredOutputs.has(output)) {
       return;
     }
 
@@ -210,6 +222,7 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     });
     emitIndividualOutputEvent(io, REALTIME_EVENTS.outputRemoved, { output });
     emitOutputRegistry(io, { outputs: buildOutputList() });
+    disconnectOutputClients(output);
     notifyOutputPresenceChange();
   });
 
@@ -228,18 +241,23 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       return;
     }
 
-    const outputs = payload.outputs.filter((id) => typeof id === 'string');
-    registerOutputs(outputs);
+    const { removed, outputs: registeredOutputs } = registerOutputs(payload.outputs);
     schedulePersistSessionState();
     appendActionLog(io, {
       type: 'output',
       label: 'Custom outputs registered',
-      detail: `${outputs.length} custom output${outputs.length === 1 ? '' : 's'} registered`,
+      detail: `${registeredOutputs.length - 2} custom output${registeredOutputs.length === 3 ? '' : 's'} registered`,
       actor,
       target: 'outputs',
-      metadata: { outputs },
+      metadata: { outputs: registeredOutputs.filter((output) => output !== 'output1' && output !== 'output2') },
     });
+    for (const removedOutput of removed) {
+      emitIndividualOutputEvent(io, REALTIME_EVENTS.outputRemoved, { output: removedOutput });
+    }
     emitOutputRegistry(io, { outputs: buildOutputList() });
+    for (const removedOutput of removed) {
+      disconnectOutputClients(removedOutput);
+    }
     notifyOutputPresenceChange();
   });
 

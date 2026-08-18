@@ -186,11 +186,21 @@ export const applySessionSnapshot = (snapshot, { appSessionId = sessionAppId } =
   if (Array.isArray(snapshot.registeredOutputs)) {
     registerOutputs(snapshot.registeredOutputs);
     for (const [outputId, settings] of objectToMap(snapshot.outputSettings)) {
-      state.outputSettings.set(outputId, settings || {});
+      if (state.registeredOutputs.has(outputId)) {
+        state.outputSettings.set(outputId, settings || {});
+      }
     }
     for (const [outputId, enabled] of objectToMap(snapshot.outputEnabled)) {
-      state.outputEnabled.set(outputId, enabled !== false);
+      if (state.registeredOutputs.has(outputId)) {
+        state.outputEnabled.set(outputId, enabled !== false);
+      }
     }
+  }
+  for (const outputId of Array.from(state.outputSettings.keys())) {
+    if (!state.registeredOutputs.has(outputId)) state.outputSettings.delete(outputId);
+  }
+  for (const outputId of Array.from(state.outputEnabled.keys())) {
+    if (!state.registeredOutputs.has(outputId)) state.outputEnabled.delete(outputId);
   }
   if (snapshot.liveSafety && typeof snapshot.liveSafety === 'object') {
     state.liveSafety = {

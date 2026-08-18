@@ -373,7 +373,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Output capability result
+          description: Registered output capability result
           content:
             application/json:
               schema:
@@ -386,6 +386,22 @@ paths:
                     type: string
                   exists:
                     type: boolean
+        '404':
+          description: The output route has not been registered
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, output, exists]
+                properties:
+                  success:
+                    type: boolean
+                    enum: [false]
+                  output:
+                    type: string
+                  exists:
+                    type: boolean
+                    enum: [false]
 
   /api/media/backgrounds:
     post:
