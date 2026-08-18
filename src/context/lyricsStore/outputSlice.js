@@ -45,6 +45,23 @@ const settingsChanged = (current = {}, next = {}) => {
   return Object.entries(next).some(([key, value]) => !settingValueEqual(current?.[key], value));
 };
 
+const OUTPUT_RUNTIME_DEFAULTS = Object.freeze({
+  autosizerActive: false,
+  primaryViewportWidth: null,
+  primaryViewportHeight: null,
+  allInstances: null,
+  instanceCount: 0,
+});
+
+const hasOutputRuntimeState = (settings = {}) => (
+  Object.entries(OUTPUT_RUNTIME_DEFAULTS).some(([key, value]) => !Object.is(settings[key], value))
+);
+
+const clearOutputRuntimeState = (settings) => ({
+  ...settings,
+  ...OUTPUT_RUNTIME_DEFAULTS,
+});
+
 export const defaultOutput1Settings = {
   fontStyle: 'Bebas Neue',
   bold: false,
@@ -338,12 +355,33 @@ export const createOutputSlice = (set, get, normalizePaintSettingUpdates) => ({
 
       const instanceCount = Math.max(0, Math.floor(Number(count) || 0));
       if (state.outputConnectionCounts[outputId] === instanceCount) return {};
+      if (instanceCount === 0) {
+        if (!Object.hasOwn(state.outputConnectionCounts, outputId)) return {};
+        const outputConnectionCounts = { ...state.outputConnectionCounts };
+        delete outputConnectionCounts[outputId];
+        return { outputConnectionCounts };
+      }
       return {
         outputConnectionCounts: {
           ...state.outputConnectionCounts,
           [outputId]: instanceCount,
         },
       };
+    }),
+  resetOutputConnectionState: () =>
+    set((state) => {
+      const updates = { outputConnectionCounts: {} };
+      const outputIds = [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || [])];
+      let changed = Object.keys(state.outputConnectionCounts).length > 0;
+
+      for (const outputId of outputIds) {
+        const key = `${outputId}Settings`;
+        if (!state[key] || !hasOutputRuntimeState(state[key])) continue;
+        updates[key] = clearOutputRuntimeState(state[key]);
+        changed = true;
+      }
+
+      return changed ? updates : state;
     }),
   setPreviewCustomOutputId: (outputId) =>
     set((state) => {
@@ -484,14 +522,7 @@ export const rehydrateOutputState = (state) => {
   const allOutputIds = [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || [])];
   for (const id of allOutputIds) {
     if (state[`${id}Settings`]) {
-      state[`${id}Settings`] = {
-        ...state[`${id}Settings`],
-        autosizerActive: false,
-        primaryViewportWidth: null,
-        primaryViewportHeight: null,
-        allInstances: null,
-        instanceCount: 0,
-      };
+      state[`${id}Settings`] = clearOutputRuntimeState(state[`${id}Settings`]);
     }
   }
 };

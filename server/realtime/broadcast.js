@@ -138,16 +138,20 @@ export const emitOutputRegistry = (io, payload) => (
   ))
 );
 
-export const emitOutputMetricsUpdate = (io, payload = {}) => {
+export const enrichOutputMetricsPayload = (payload = {}) => {
   const allInstances = Array.isArray(payload.allInstances) ? payload.allInstances : [];
   const remoteInstanceCount = allInstances.reduce((count, instance) => (
     count + (instance?.connectionScope === 'remote' ? 1 : 0)
   ), 0);
-  const enrichedPayload = {
+  return {
     ...payload,
     remoteInstanceCount,
     hasRemoteInstances: remoteInstanceCount > 0,
   };
+};
+
+export const emitOutputMetricsUpdate = (io, payload = {}) => {
+  const enrichedPayload = enrichOutputMetricsPayload(payload);
 
   return emitToClients(io, 'outputMetrics', enrichedPayload, (client) => (
     isControllerClient(client) ||

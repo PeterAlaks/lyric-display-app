@@ -10,6 +10,7 @@ import {
     CONTROL_COMMAND_INTENTS,
     shouldNotifyRejectedControlCommand,
 } from '../../shared/commandSafetyPolicy.js';
+import useLyricsStore from './LyricsStore';
 
 const ControlSocketContext = createContext(null);
 
@@ -27,6 +28,9 @@ const LONG_BACKOFF_WARNING_MS = 4000;
 const OBS_DOCK_RECOVERY_POLL_MS = 2500;
 const CURRENT_STATE_READY_TIMEOUT_MS = 15000;
 const getStartupClock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+const clearCachedOutputPresence = () => {
+    useLyricsStore.getState().resetOutputConnectionState?.();
+};
 
 export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const socketRef = useRef(null);
@@ -111,6 +115,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
     const cleanupSocket = useCallback(() => {
         return new Promise((resolve) => {
             clearCurrentStateTimeout();
+            clearCachedOutputPresence();
             if (!socketRef.current) {
                 resolve();
                 return;
@@ -155,6 +160,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
         readyRef.current = false;
         setReady(false);
         stopHeartbeat();
+        clearCachedOutputPresence();
 
         try {
             socket.removeAllListeners();

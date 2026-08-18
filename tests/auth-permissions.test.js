@@ -247,6 +247,36 @@ test('unregistered custom outputs are rejected before token issuance and socket 
   assert.equal(socket.userData, undefined);
 });
 
+test('socket authentication retains only bounded client instance identifiers', () => {
+  const authenticate = createSocketAuthenticator({
+    verifyToken: () => ({
+      clientType: 'output1',
+      deviceId: 'output-device',
+      sessionId: 'output-session',
+      permissions: ['lyrics:read'],
+    }),
+  });
+  const createSocket = (instanceId) => ({
+    handshake: {
+      query: {},
+      auth: { token: 'output-token', purpose: 'output1', instanceId },
+    },
+  });
+
+  const validSocket = createSocket('output1:3f0389df-a7a8-481a-9698-b79f693d73d6');
+  let validError = null;
+  authenticate(validSocket, (error) => {
+    validError = error;
+  });
+
+  assert.equal(validError, undefined);
+  assert.equal(validSocket.userData.clientInstanceId, 'output1:3f0389df-a7a8-481a-9698-b79f693d73d6');
+
+  const invalidSocket = createSocket('invalid instance id with spaces');
+  authenticate(invalidSocket, () => {});
+  assert.equal(invalidSocket.userData.clientInstanceId, null);
+});
+
 test('join-code guard locks repeated failures and clears after success', () => {
   const context = {
     ip: '203.0.113.10',

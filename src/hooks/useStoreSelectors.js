@@ -106,6 +106,7 @@ const connectedOutputsEqual = (previous, next) => (
 export const useConnectedOutputs = () =>
     useStoreWithEqualityFn(
         useLyricsStore,
+        // Time is health-tracked, but intentionally omitted because lyric output controls do not govern it.
         (state) => [...DEFAULT_OUTPUT_IDS, ...(state.customOutputIds || []), 'stage'].reduce((connected, id) => {
             const instanceCount = Number(state.outputConnectionCounts?.[id]) || 0;
             if (instanceCount > 0) {

@@ -13,7 +13,7 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
   return (
     <div
       ref={containerRef}
-      className="my-6 flex h-11 items-center gap-3"
+      className="my-6 flex h-6 items-center gap-3"
       aria-live="polite"
       aria-label={`${totalInstances} connected output ${totalInstances === 1 ? 'display' : 'displays'}`}
     >
@@ -26,17 +26,14 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
         </span>
       </Tooltip>
 
-      <div className={`relative h-full min-w-0 flex-1 overflow-hidden rounded-full border bg-transparent ${darkMode
-        ? 'border-gray-700/80'
-        : 'border-gray-200'
-        }`}>
+      <div className="relative h-full min-w-0 flex-1 overflow-hidden">
         <div
           ref={scrollerRef}
           className="scrollbar-none flex h-full min-w-0 overflow-x-auto overflow-y-hidden overscroll-contain"
           tabIndex={connectedOutputs.length > 0 ? 0 : undefined}
         >
           {connectedOutputs.length > 0 ? (
-            <div className="flex h-full shrink-0 items-center gap-1.5 px-3">
+            <div className="flex h-full shrink-0 items-center gap-1.5">
               {connectedOutputs.map((output) => {
                 const isLive = output.enabled && (!output.masterControlled || isOutputOn);
                 const label = formatOutputLabel(output.id);
@@ -61,15 +58,15 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
               })}
             </div>
           ) : (
-            <div className="flex h-full min-w-0 flex-1 items-center px-3">
+            <div className="flex h-full min-w-0 flex-1 items-center">
               <span className={`truncate text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                No output displays
+                No output displays connected
               </span>
             </div>
           )}
         </div>
         <div
-          className={`pointer-events-none absolute inset-y-px right-px z-20 w-10 rounded-r-full bg-linear-to-l to-transparent ${darkMode ? 'from-gray-800' : 'from-white'}`}
+          className={`pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-linear-to-l to-transparent ${darkMode ? 'from-gray-800' : 'from-white'}`}
           aria-hidden="true"
         />
       </div>

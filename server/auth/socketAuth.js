@@ -6,6 +6,12 @@ const normalizeClientPurpose = (value) => {
   return /^[a-z0-9-]{1,48}$/.test(normalized) ? normalized : null;
 };
 
+const normalizeClientInstanceId = (value) => {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  return /^[a-zA-Z0-9:_-]{1,96}$/.test(normalized) ? normalized : null;
+};
+
 export function createSocketAuthenticator({ verifyToken, hasOutput = () => true }) {
   return (socket, next) => {
     if (socket.handshake.query?.token) {
@@ -47,6 +53,7 @@ export function createSocketAuthenticator({ verifyToken, hasOutput = () => true 
       permissions: decoded.permissions,
       connectedAt: Date.now(),
       clientPurpose: normalizeClientPurpose(socket.handshake.auth?.purpose),
+      clientInstanceId: normalizeClientInstanceId(socket.handshake.auth?.instanceId),
       isPreview: socket.handshake.auth?.preview === true
     };
 

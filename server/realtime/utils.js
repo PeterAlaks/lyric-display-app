@@ -3,6 +3,11 @@ import { networkInterfaces } from 'node:os';
 export const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 export const isOutputClientType = (type) => typeof type === 'string' && type.startsWith('output');
 export const isOutputDiscoveryClientType = (type) => type === 'output-discovery';
+export const getOutputPresenceId = (clientType, clientPurpose = null) => {
+  if (isOutputClientType(clientType) && !isOutputDiscoveryClientType(clientType)) return clientType;
+  if (clientType === 'stage') return clientPurpose === 'time-display' ? 'time' : 'stage';
+  return null;
+};
 export const isValidLineIndex = (index, lineCount) => {
   if (index === null) return true;
   return Number.isInteger(index)

@@ -3,17 +3,21 @@ import {
   buildOutputList,
   buildPeriodicState,
   ensureOutputExists,
-  notifyOutputPresenceChange,
   state
 } from '../state.js';
-import { emitOutputMetricsUpdate } from '../broadcast.js';
+import { isControllerClient } from '../broadcast.js';
 import {
-  getPrimaryOutputInstance,
+  getOutputPresenceId,
   getSocketConnectionScope,
   isOutputClientType,
-  isOutputDiscoveryClientType,
   isPlainObject,
 } from '../utils.js';
+import {
+  emitOutputPresenceSnapshot,
+  pruneStaleOutputPresence,
+  registerOutputPresenceInstance,
+  removeOutputPresenceInstance,
+} from '../outputPresence.js';
 import { performance } from 'node:perf_hooks';
 import {
   describeStatePayload,
@@ -21,25 +25,6 @@ import {
   shouldSamplePeriodicState,
 } from '../stateDiagnostics.js';
 import { REALTIME_EVENTS } from '../../../shared/apiContractRegistry.js';
-
-const emitOutputPresenceSnapshot = (socket) => {
-  for (const output of [...buildOutputList(), 'stage', 'time']) {
-    const allInstances = Array.from(state.outputInstances.get(output)?.values() || []);
-    const primaryInstance = getPrimaryOutputInstance(allInstances);
-    const remoteInstanceCount = allInstances.reduce((count, instance) => (
-      count + (instance?.connectionScope === 'remote' ? 1 : 0)
-    ), 0);
-
-    socket.emit('outputMetrics', {
-      output,
-      metrics: primaryInstance || {},
-      allInstances,
-      instanceCount: allInstances.length,
-      remoteInstanceCount,
-      hasRemoteInstances: remoteInstanceCount > 0,
-    });
-  }
-};
 
 const normalizePurpose = (value) => (
   typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null
@@ -61,16 +46,21 @@ const emitCurrentState = (socket, clientInfo, reason, shouldLog = false) => {
   return payload;
 };
 
-export function registerConnectionHandlers({ io, socket, clientType, deviceId, sessionId, clientPurpose = null, isPreview = false }) {
+export function registerConnectionHandlers({
+  io,
+  socket,
+  clientType,
+  deviceId,
+  sessionId,
+  clientPurpose = null,
+  clientInstanceId = null,
+  isPreview = false,
+}) {
   const purpose = normalizePurpose(clientPurpose);
   console.log(`Authenticated user connected: ${clientType}${purpose ? `/${purpose}` : ''} (${deviceId}) - Socket: ${socket.id}`);
 
-  const isOutputClient = isOutputClientType(clientType) && !isOutputDiscoveryClientType(clientType);
-  const presenceOutputId = isOutputClient
-    ? clientType
-    : clientType === 'stage'
-      ? (purpose === 'time-display' ? 'time' : 'stage')
-      : null;
+  const presenceOutputId = getOutputPresenceId(clientType, purpose);
+  const isOutputClient = isOutputClientType(clientType) && presenceOutputId === clientType;
   const tracksOutputPresence = Boolean(presenceOutputId) && !isPreview;
   const connectionScope = getSocketConnectionScope(socket);
 
@@ -83,10 +73,6 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     ensureOutputExists(clientType);
   }
 
-  if (tracksOutputPresence && !state.outputInstances.has(presenceOutputId)) {
-    state.outputInstances.set(presenceOutputId, new Map());
-  }
-
   state.connectedClients.set(socket.id, {
     type: clientType,
     deviceId,
@@ -96,26 +82,26 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     permissions: socket.userData.permissions,
     connectedAt: socket.userData.connectedAt,
     connectionScope,
+    clientInstanceId,
+    presenceOutputId,
+    isPreview,
   });
 
   if (tracksOutputPresence) {
-    const connectedAt = Date.now();
-    state.outputInstances.get(presenceOutputId).set(socket.id, {
-      socketId: socket.id,
-      connectedAt,
-      lastUpdate: connectedAt,
+    const supersededSocketIds = registerOutputPresenceInstance({
+      io,
+      output: presenceOutputId,
+      socket,
+      clientInstanceId,
       connectionScope,
     });
 
-    const allInstances = Array.from(state.outputInstances.get(presenceOutputId).values());
-    const primaryInstance = getPrimaryOutputInstance(allInstances);
-    emitOutputMetricsUpdate(io, {
-      output: presenceOutputId,
-      metrics: primaryInstance || {},
-      allInstances,
-      instanceCount: allInstances.length
-    });
-    notifyOutputPresenceChange();
+    for (const supersededSocketId of supersededSocketIds) {
+      const supersededSocket = state.connectedClients.get(supersededSocketId)?.socket;
+      if (supersededSocket?.connected !== false && typeof supersededSocket?.disconnect === 'function') {
+        supersededSocket.disconnect(true);
+      }
+    }
   }
 
   socket.on('clientConnect', (payload) => {
@@ -144,7 +130,9 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     }
     emitCurrentState(socket, state.connectedClients.get(socket.id), 'clientConnect', true);
     socket.emit(REALTIME_EVENTS.outputsRegistry, { outputs: buildOutputList() });
-    if (['desktop', 'web', 'mobile', 'obsDock'].includes(clientType) && purpose !== 'timer-control') {
+    const clientInfo = state.connectedClients.get(socket.id);
+    if (isControllerClient(clientInfo)) {
+      pruneStaleOutputPresence(io);
       emitOutputPresenceSnapshot(socket);
     }
   });
@@ -157,29 +145,8 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
     console.log(`Authenticated user disconnected: ${clientType} (${deviceId}) - Reason: ${reason}`);
     state.connectedClients.delete(socket.id);
 
-    if (tracksOutputPresence && state.outputInstances.has(presenceOutputId)) {
-      state.outputInstances.get(presenceOutputId).delete(socket.id);
-
-      const remainingInstances = Array.from(state.outputInstances.get(presenceOutputId).values());
-      if (remainingInstances.length > 0) {
-        const primaryInstance = getPrimaryOutputInstance(remainingInstances);
-
-        emitOutputMetricsUpdate(io, {
-          output: presenceOutputId,
-          metrics: primaryInstance,
-          allInstances: remainingInstances,
-          instanceCount: remainingInstances.length
-        });
-      } else {
-        state.outputInstances.delete(presenceOutputId);
-        emitOutputMetricsUpdate(io, {
-          output: presenceOutputId,
-          metrics: {},
-          allInstances: [],
-          instanceCount: 0
-        });
-      }
-      notifyOutputPresenceChange();
+    if (tracksOutputPresence) {
+      removeOutputPresenceInstance({ io, output: presenceOutputId, socketId: socket.id });
     }
 
     socket.broadcast.emit('clientDisconnected', {
@@ -208,6 +175,9 @@ export function registerConnectionHandlers({ io, socket, clientType, deviceId, s
       const payload = buildPeriodicState(clientInfo);
       const buildMs = performance.now() - buildStartedAt;
       socket.emit('periodicStateSync', payload);
+      if (isControllerClient(clientInfo)) {
+        emitOutputPresenceSnapshot(socket);
+      }
 
       periodicStateCount += 1;
       if (shouldSamplePeriodicState(periodicStateCount, buildMs)) {

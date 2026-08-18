@@ -8,6 +8,11 @@ import { connectionManager, getAdvancedSettings } from '../utils/connectionManag
 import { logDebug, logError, logWarn } from '../utils/logger';
 
 const LONG_BACKOFF_WARNING_MS = 4000;
+const createClientInstanceId = (role) => {
+  const randomId = globalThis.crypto?.randomUUID?.()
+    || `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+  return `${String(role || 'client').slice(0, 24)}:${randomId}`;
+};
 
 const useSocket = (role = 'output', options = {}) => {
   const { enabled = true, preview = false, purpose = role } = options;
@@ -17,7 +22,7 @@ const useSocket = (role = 'output', options = {}) => {
   const cleanupTimeoutRef = useRef(null);
 
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  const clientId = useMemo(() => `${role}_${Date.now()}`, [role]);
+  const clientId = useMemo(() => createClientInstanceId(role), [role]);
 
   const {
     authStatus,
@@ -226,7 +231,7 @@ const useSocket = (role = 'output', options = {}) => {
         timeout: settings.connectionTimeout,
         reconnection: false,
         forceNew: true,
-        auth: { token, preview: Boolean(preview), purpose },
+        auth: { token, preview: Boolean(preview), purpose, instanceId: clientId },
       };
 
       socketRef.current = io(socketUrl, socketOptions);

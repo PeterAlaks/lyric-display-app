@@ -9,7 +9,6 @@ import {
 import { appendActionLog } from '../actionLog.js';
 import {
   emitIndividualOutputEvent,
-  emitOutputMetricsUpdate,
   emitOutputRegistry,
   emitOutputVisibilityEvent
 } from '../broadcast.js';
@@ -17,8 +16,9 @@ import { blockIfLiveSafety } from '../liveSafety.js';
 import { REALTIME_EVENTS, REALTIME_PERMISSIONS } from '../../../shared/apiContractRegistry.js';
 import { normalizePreviewSettings } from '../../../shared/previewSettings.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
-import { getPrimaryOutputInstance, getSocketConnectionScope, isOutputClientType, isPlainObject } from '../utils.js';
+import { getOutputPresenceId, isOutputClientType, isPlainObject } from '../utils.js';
 import { isCustomOutputRouteId } from '../../../shared/outputRegistry.js';
+import { refreshOutputPresenceInstance } from '../outputPresence.js';
 
 const areSettingValuesEqual = (left, right) => {
   if (Object.is(left, right)) return true;
@@ -48,13 +48,18 @@ const disconnectOutputClients = (outputId) => {
   }
 };
 
-export function registerOutputHandlers({ io, socket, hasPermission, clientType, clientPurpose = null, deviceId, sessionId, isPreview = false }) {
+export function registerOutputHandlers({
+  io,
+  socket,
+  hasPermission,
+  clientType,
+  clientPurpose = null,
+  deviceId,
+  sessionId,
+  isPreview = false,
+}) {
   const actor = { clientType, deviceId, sessionId };
-  const metricsOutputId = isOutputClientType(clientType)
-    ? clientType
-    : clientType === 'stage'
-      ? (clientPurpose === 'time-display' ? 'time' : 'stage')
-      : null;
+  const metricsOutputId = getOutputPresenceId(clientType, clientPurpose);
 
   socket.on('outputToggle', (nextState) => {
     if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'outputToggle' })) {
@@ -286,10 +291,6 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
       return;
     }
 
-    if (!state.outputInstances.has(output)) {
-      state.outputInstances.set(output, new Map());
-    }
-
     const safe = {};
     if (Number.isFinite(metrics.adjustedFontSize) || metrics.adjustedFontSize === null) safe.adjustedFontSize = metrics.adjustedFontSize;
     if (typeof metrics.autosizerActive === 'boolean') safe.autosizerActive = metrics.autosizerActive;
@@ -297,24 +298,11 @@ export function registerOutputHandlers({ io, socket, hasPermission, clientType, 
     if (Number.isFinite(metrics.viewportHeight)) safe.viewportHeight = metrics.viewportHeight;
     if (Number.isFinite(metrics.timestamp)) safe.timestamp = metrics.timestamp;
 
-    const existingInstance = state.outputInstances.get(output).get(socket.id);
-    state.outputInstances.get(output).set(socket.id, {
-      ...existingInstance,
-      ...safe,
-      socketId: socket.id,
-      lastUpdate: Date.now(),
-      connectionScope: existingInstance?.connectionScope || getSocketConnectionScope(socket),
-    });
-
-    const allInstances = Array.from(state.outputInstances.get(output).values());
-    const primaryInstance = getPrimaryOutputInstance(allInstances);
-
-    emitOutputMetricsUpdate(io, {
+    refreshOutputPresenceInstance({
+      io,
       output,
-      metrics: primaryInstance || safe,
-      allInstances: allInstances,
-      instanceCount: allInstances.length
+      socket,
+      metrics: safe,
     });
-    notifyOutputPresenceChange();
   });
 }
