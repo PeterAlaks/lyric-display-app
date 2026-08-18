@@ -26,9 +26,9 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
         </span>
       </Tooltip>
 
-      <div className={`relative h-full min-w-0 flex-1 overflow-hidden rounded-full border ${darkMode
-        ? 'border-gray-700/80 bg-gray-800/55'
-        : 'border-gray-200 bg-white/80'
+      <div className={`relative h-full min-w-0 flex-1 overflow-hidden rounded-full border bg-transparent ${darkMode
+        ? 'border-gray-700/80'
+        : 'border-gray-200'
         }`}>
         <div
           ref={scrollerRef}
@@ -46,8 +46,8 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
                     key={output.id}
                     className={`inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold ${isLive
                       ? darkMode
-                        ? 'border-emerald-400/35 bg-emerald-400/10 text-emerald-300'
-                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        ? 'border-emerald-400/35 text-emerald-300'
+                        : 'border-emerald-200 text-emerald-700'
                       : darkMode
                         ? 'border-gray-600 bg-gray-700/70 text-gray-300'
                         : 'border-gray-200 bg-gray-100 text-gray-600'
@@ -69,7 +69,7 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
           )}
         </div>
         <div
-          className={`pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-linear-to-l to-transparent ${darkMode ? 'from-gray-800' : 'from-white'}`}
+          className={`pointer-events-none absolute inset-y-px right-px z-20 w-10 rounded-r-full bg-linear-to-l to-transparent ${darkMode ? 'from-gray-800' : 'from-white'}`}
           aria-hidden="true"
         />
       </div>
