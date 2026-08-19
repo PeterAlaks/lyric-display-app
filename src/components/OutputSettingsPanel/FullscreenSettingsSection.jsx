@@ -92,8 +92,8 @@ const FullscreenSettingsSection = ({
   handleFullScreenElementToggle,
   openVisualizerSettings,
 }) => (
-  <div>
-    <div className="flex w-full items-center justify-between gap-4">
+  <div data-output-setting-group data-expanded={fullScreenAdvancedExpanded}>
+    <div className="flex w-full items-center justify-between gap-4" data-output-setting-row>
       <Tooltip content="Configure full screen background and overlay settings" side="right">
         <LabelWithIcon icon={ScreenShare} text="Full Screen Mode" darkMode={darkMode} />
       </Tooltip>
@@ -109,14 +109,15 @@ const FullscreenSettingsSection = ({
 
     <AdvancedCollapse
       expanded={fullScreenAdvancedExpanded}
+      openMarginTop={0}
     >
-      <div className="flex w-full items-center gap-2 pt-2">
+      <div className="grid grid-cols-[minmax(8.5rem,1fr)_4rem_auto] items-center gap-2" data-output-setting-subrow>
         <Select
           value={fullScreenBackgroundTypeValue}
           onValueChange={handleFullScreenBackgroundTypeChange}
         >
           <SelectTrigger
-            className={`w-[150px] ${darkMode
+            className={`w-full ${darkMode
               ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               }`}
@@ -142,10 +143,10 @@ const FullscreenSettingsSection = ({
             fallbackColor={fullScreenBackgroundColorValue}
             onChange={handleFullScreenPaintChange}
             darkMode={darkMode}
-            className={`ml-auto ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}
           />
         ) : fullScreenBackgroundTypeValue === 'media' ? (
-          <div className="flex items-center gap-2 ml-auto min-w-0 max-w-full">
+          <div className="flex min-w-0 items-center justify-end gap-2">
             <Button
               variant="outline"
               onClick={openMediaLibrary}
@@ -160,7 +161,7 @@ const FullscreenSettingsSection = ({
               variant="outline"
               onClick={openVisualizerSettings}
               aria-label="Configure visualizer"
-              className={`ml-auto h-9 shrink-0 gap-2 px-4 text-xs font-semibold ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''}`}
+              className={`h-9 shrink-0 gap-2 px-4 text-xs font-semibold ${darkMode ? 'bg-gray-700 border-gray-500 text-gray-100 hover:bg-gray-600 hover:text-white hover:border-gray-400' : ''}`}
             >
               <Settings2 className="h-4 w-4" />
               Configure
@@ -170,9 +171,9 @@ const FullscreenSettingsSection = ({
       </div>
 
       {fullScreenBackgroundTypeValue === 'media' && hasBackgroundMedia && (
-        <div className="flex justify-start pt-4">
+        <div className="flex justify-start px-3 pb-1 pt-0.5">
           <span
-            className={`max-w-full truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
+            className={`max-w-full truncate text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
             title={uploadedMediaName}
           >
             <strong className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Loaded media:</strong> {uploadedMediaName}
@@ -180,7 +181,7 @@ const FullscreenSettingsSection = ({
         </div>
       )}
 
-      <div className="flex items-center justify-between w-full pt-3">
+      <div className="flex items-center justify-between" data-output-setting-subrow>
         <Tooltip content="Show fullscreen background even when the output is toggled off" side="right">
           <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Always Show Background</label>
         </Tooltip>
@@ -196,7 +197,7 @@ const FullscreenSettingsSection = ({
         />
       </div>
 
-      <div className="flex items-center justify-between w-full pt-3">
+      <div className="flex items-center justify-between" data-output-setting-subrow>
         <Tooltip content="Add an image element over the full screen background and under the lyrics" side="right">
           <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Add Image/Element Overlay</label>
         </Tooltip>
@@ -225,11 +226,11 @@ const FullscreenSettingsSection = ({
       </div>
 
       {settings.fullScreenElementEnabled && (
-        <div className="space-y-3 pt-3">
+        <div className="space-y-2 pt-2">
           {hasFullScreenElementMedia && (
-            <div className="flex justify-start pt-1">
+            <div className="flex justify-start px-3 pb-1 pt-0.5">
               <span
-                className={`max-w-full truncate text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
+                className={`max-w-full truncate text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
                 title={fullScreenElementMediaName}
               >
                 <strong className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Loaded media:</strong> {fullScreenElementMediaName}
@@ -238,7 +239,7 @@ const FullscreenSettingsSection = ({
           )}
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4" data-output-setting-subrow>
               <label className={`min-w-[140px] shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Position</label>
               <Select
                 value={settings.fullScreenElementPosition ?? 'center'}
@@ -260,8 +261,8 @@ const FullscreenSettingsSection = ({
               </Select>
             </div>
 
-            <div className="flex w-full items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
+            <div className="grid grid-cols-3 gap-2" data-output-setting-subrow>
+              <div className="flex min-w-0 items-center justify-between gap-1.5">
                 <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Scale</label>
                 <Input
                   type="number"
@@ -277,7 +278,7 @@ const FullscreenSettingsSection = ({
                 />
               </div>
 
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 items-center justify-between gap-1.5">
                 <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Opacity</label>
                 <Input
                   type="number"
@@ -294,7 +295,7 @@ const FullscreenSettingsSection = ({
                 />
               </div>
 
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 items-center justify-between gap-1.5">
                 <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Blur</label>
                 <Input
                   type="number"
@@ -311,7 +312,7 @@ const FullscreenSettingsSection = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4" data-output-setting-subrow>
               <label className={`min-w-[140px] shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>X & Y Margins</label>
               <div className="flex items-center gap-2">
                 <Input
@@ -345,9 +346,6 @@ const FullscreenSettingsSection = ({
       )}
     </AdvancedCollapse>
 
-    <div className="pt-4">
-      <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-    </div>
   </div>
 );
 

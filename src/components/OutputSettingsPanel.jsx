@@ -31,10 +31,14 @@ import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput'
 import { outputTemplates } from '../utils/outputTemplates';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
-  <div className="flex items-center justify-between gap-4">
+  <div className="flex items-center justify-between gap-4" data-output-setting-row>
     <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-[140px]">
-        {icon ? React.createElement(icon, { className: `h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}` }) : null}
+      <div className="flex items-center gap-2 min-w-[140px]" data-output-setting-label>
+        {icon ? (
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
+            {React.createElement(icon, { className: `h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}` })}
+          </span>
+        ) : null}
         <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
       </div>
     </Tooltip>
@@ -628,13 +632,13 @@ const OutputSettingsPanel = ({
     const compactLabelClass = `text-[11px] font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`;
 
     const CompactField = ({ label, children }) => (
-      <div className="space-y-1">
+      <div className="space-y-1" data-output-compact-setting-field>
         <div className={compactLabelClass}>{label}</div>
         {children}
       </div>
     );
     const CompactSection = ({ title, children }) => (
-      <section className={`rounded-md border p-2.5 ${darkMode ? 'border-gray-800 bg-gray-950/35' : 'border-gray-200 bg-gray-50/70'}`}>
+      <section className={`output-compact-setting-section ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
         <div className={`mb-2 text-[11px] font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{title}</div>
         {children}
       </section>
@@ -790,7 +794,7 @@ const OutputSettingsPanel = ({
     ) : null;
 
     return (
-      <div className="space-y-3" onKeyDown={blurInputOnEnter}>
+      <div className="output-settings-panel output-settings-panel--compact space-y-3" data-theme={darkMode ? 'dark' : 'light'} onKeyDown={blurInputOnEnter}>
         <div className={`flex items-center justify-between rounded-md border px-3 py-2 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
           <div>
             <div className={`text-[13px] font-semibold leading-5 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{outputKey.replace('output', 'Output ')}</div>
@@ -812,7 +816,7 @@ const OutputSettingsPanel = ({
           <button
             type="button"
             onClick={() => setTemplatePopoverOpen(true)}
-            className="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-gray-800 bg-gray-900 px-3 text-xs font-semibold text-gray-100 transition-colors hover:bg-gray-800"
+            className="flex h-9 w-full items-center justify-center gap-2 rounded-full border border-gray-800 bg-gray-900 px-3 text-xs font-semibold text-gray-100 transition-colors hover:bg-gray-800"
           >
             <Sparkles className="h-3.5 w-3.5 text-blue-300" />
             Load Template
@@ -1182,27 +1186,26 @@ const OutputSettingsPanel = ({
   }
 
   return (
-    <div className="output-settings-panel space-y-4" onKeyDown={blurInputOnEnter}>
-      <div>
-        <PanelHeaderActions
-          applySettings={applySettings}
-          darkMode={darkMode}
-          hideLiveActions={localMode}
-          handleToggleOutput={handleToggleOutput}
-          handleFullScreenToggle={handleFullScreenHeaderToggle}
-          fullScreenModeChecked={fullScreenModeChecked}
-          isOutputEnabled={isOutputEnabled}
-          onDeleteOutput={onDeleteOutput}
-          outputKey={outputKey}
-          title={title}
-          settings={settings}
-          showModal={showModal}
-          showToast={showToast}
-        />
-        {!hideFullScreenSettings && (
-          <AdvancedCollapse expanded={fullScreenModeChecked} openMarginTop={16}>
-            <div>
-              <FullscreenSettingsSection
+    <div className="output-settings-panel" data-theme={darkMode ? 'dark' : 'light'} onKeyDown={blurInputOnEnter}>
+      <PanelHeaderActions
+        applySettings={applySettings}
+        darkMode={darkMode}
+        hideLiveActions={localMode}
+        handleToggleOutput={handleToggleOutput}
+        handleFullScreenToggle={handleFullScreenHeaderToggle}
+        fullScreenModeChecked={fullScreenModeChecked}
+        isOutputEnabled={isOutputEnabled}
+        onDeleteOutput={onDeleteOutput}
+        outputKey={outputKey}
+        title={title}
+        settings={settings}
+        showModal={showModal}
+        showToast={showToast}
+      />
+      {!hideFullScreenSettings && (
+        <AdvancedCollapse expanded={fullScreenModeChecked} openMarginTop={0}>
+          <div>
+            <FullscreenSettingsSection
               darkMode={darkMode}
               fullScreenAdvancedExpanded={fullScreenAdvancedExpanded}
               setFullScreenAdvancedExpanded={setFullScreenAdvancedExpanded}
@@ -1221,11 +1224,11 @@ const OutputSettingsPanel = ({
               fullScreenElementMediaName={fullScreenElementMediaName}
               handleFullScreenElementToggle={handleFullScreenElementToggle}
               openVisualizerSettings={openVisualizerSettings}
-              />
-            </div>
-          </AdvancedCollapse>
-        )}
-      </div>
+            />
+          </div>
+        </AdvancedCollapse>
+      )}
+      <div className={`space-y-2 ${fullScreenModeChecked && !hideFullScreenSettings ? 'mt-2' : ''}`}>
       {/* Lyrics Position */}
       <LyricsPositionSection
         darkMode={darkMode}
@@ -1253,7 +1256,7 @@ const OutputSettingsPanel = ({
         translationFontSizeMode={translationFontSizeMode}
         update={update}
       />
-      <div>
+      <div data-output-setting-group data-expanded={fontColorAdvancedExpanded}>
         {/* Font Color */}
         <FontColorSection
           darkMode={darkMode}
@@ -1264,8 +1267,8 @@ const OutputSettingsPanel = ({
         />
 
         {/* Font Color Advanced Settings Row */}
-        <AdvancedCollapse expanded={fontColorAdvancedExpanded}>
-          <div className="flex items-center justify-between w-full">
+        <AdvancedCollapse expanded={fontColorAdvancedExpanded} openMarginTop={0}>
+          <div className="flex items-center justify-between" data-output-setting-subrow>
             <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
               Translation Colour
             </label>
@@ -1318,7 +1321,7 @@ const OutputSettingsPanel = ({
         update={update}
       />
       {!hideBackgroundSettings && (
-      <div>
+      <div data-output-setting-group data-expanded={backgroundAdvancedExpanded && !fullScreenModeChecked}>
         {/* Background */}
         <BackgroundSection
           applySettings={applySettings}
@@ -1363,6 +1366,7 @@ const OutputSettingsPanel = ({
         transitionAdvancedExpanded={transitionAdvancedExpanded}
         update={update}
       />
+      </div>
     </div>
   );
 };

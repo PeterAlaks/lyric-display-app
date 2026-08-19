@@ -6,10 +6,14 @@ import { AdvancedCollapse, AdvancedToggle } from '../OutputSettingsShared';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
-  <div className="flex items-center justify-between gap-4">
+  <div className="flex items-center justify-between gap-4" data-output-setting-row>
     <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-[140px]">
-        {Icon ? <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /> : null}
+      <div className="flex items-center gap-2 min-w-[140px]" data-output-setting-label>
+        {Icon ? (
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
+            <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+          </span>
+        ) : null}
         <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
       </div>
     </Tooltip>
@@ -24,7 +28,7 @@ const TransitionSettingsSection = ({
   transitionAdvancedExpanded,
   update,
 }) => (
-  <div>
+  <div data-output-setting-group data-expanded={transitionAdvancedExpanded}>
     <SettingRow
       icon={ArrowRightLeft}
       label="Transition Style"
@@ -62,8 +66,8 @@ const TransitionSettingsSection = ({
       </Select>
     </SettingRow>
 
-    <AdvancedCollapse expanded={transitionAdvancedExpanded}>
-      <div className="flex items-center justify-between w-full">
+    <AdvancedCollapse expanded={transitionAdvancedExpanded} openMarginTop={0}>
+      <div className="flex items-center justify-between" data-output-setting-subrow>
         <label className={`text-[13px] leading-5 whitespace-nowrap ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50' : ''}`}>
           Transition Speed (ms)
         </label>

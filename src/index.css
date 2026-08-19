@@ -227,6 +227,181 @@
   line-height: 1rem;
 }
 
+.output-settings-panel,
+.stage-settings-panel {
+  --output-pill-surface: hsl(var(--muted));
+  --output-pill-surface-hover: hsl(0 0% 93%);
+  --output-pill-inset: rgba(255, 255, 255, 0.72);
+  --output-pill-icon: rgba(37, 99, 235, 0.1);
+  --output-pill-shadow: 0 4px 14px rgba(15, 23, 42, 0.025);
+}
+
+.output-settings-panel[data-theme="dark"],
+.stage-settings-panel[data-theme="dark"] {
+  --output-pill-surface: #374151;
+  --output-pill-surface-hover: #414d5e;
+  --output-pill-inset: #2b3544;
+  --output-pill-icon: rgba(147, 197, 253, 0.15);
+  --output-pill-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group],
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row],
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow],
+.output-settings-panel [data-output-compact-setting-field] {
+  min-width: 0;
+  border: 0;
+  background: var(--output-pill-surface);
+  box-shadow: var(--output-pill-shadow);
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] {
+  min-height: 3rem;
+  border-radius: 9999px;
+  padding: 0.32rem 0.5rem 0.32rem 0.65rem;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group] {
+  border-radius: 1.5rem;
+  overflow: hidden;
+  padding-bottom: 0;
+  transition:
+    background-color 180ms ease,
+    border-radius 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding-bottom 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms ease;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group][data-expanded="true"] {
+  border-radius: 1.1rem;
+  padding-bottom: 0.35rem;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group] > [data-output-setting-row],
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group] > [data-output-setting-row]:hover {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group]:hover,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row]:hover {
+  background: var(--output-pill-surface-hover);
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row]:hover {
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.04);
+}
+
+:is(.output-settings-panel, .stage-settings-panel)[data-theme="dark"] [data-output-setting-row]:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+:is(.output-settings-panel, .stage-settings-panel)[data-theme="dark"] [data-output-setting-group] > [data-output-setting-row]:hover {
+  box-shadow: none;
+}
+
+:is(.output-settings-panel, .stage-settings-panel)[data-theme="dark"] [data-slider-track] {
+  background: #4b5563;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] {
+  width: calc(100% - 0.8rem);
+  min-height: 2.75rem;
+  margin: 0 0.4rem 0.35rem;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  background: var(--output-pill-inset);
+  box-shadow: none;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] + [data-output-setting-subrow] {
+  margin-top: 0;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-icon] {
+  background: var(--output-pill-icon);
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-label] label,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] > label,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] > label {
+  font-size: 0.7rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] label {
+  font-size: 0.675rem;
+  line-height: 0.95rem;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] input,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] input,
+.output-settings-panel [data-output-compact-setting-field] input,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] button,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] button,
+.output-settings-panel [data-output-compact-setting-field] button {
+  border-radius: 9999px !important;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] input,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] input,
+.output-settings-panel [data-output-compact-setting-field] input,
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] button[role="combobox"],
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] button[role="combobox"],
+.output-settings-panel [data-output-compact-setting-field] button[role="combobox"] {
+  box-shadow: none;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-color-picker-preview],
+:is(.output-settings-panel, .stage-settings-panel) [data-paint-picker-preview] {
+  border-radius: 0.75rem;
+}
+
+.stage-settings-section-title {
+  margin: 0.9rem 0 0.45rem;
+  padding-left: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stage-settings-message-composer {
+  border-radius: 1rem;
+  padding: 0.65rem;
+  background: var(--output-pill-surface);
+}
+
+.output-compact-setting-section {
+  padding-top: 0.25rem;
+}
+
+.output-settings-panel [data-output-compact-setting-field] {
+  min-width: 0;
+  border-radius: 1.2rem;
+  padding: 0.45rem;
+  background: var(--output-pill-inset);
+  box-shadow: none;
+}
+
+.output-settings-panel--compact [data-output-setting-row] {
+  min-height: 3rem;
+  padding-left: 0.65rem;
+}
+
+@media (max-width: 520px) {
+  :is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] {
+    border-radius: 9999px;
+  }
+}
+
 .dock-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(96, 165, 250, 0.5) rgba(15, 23, 42, 0.55);

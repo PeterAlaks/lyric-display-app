@@ -249,7 +249,7 @@ const PaintPicker = React.forwardRef(({
         </Button>
       </div>
 
-      <div className="h-8 w-full rounded-md border border-border" style={{ background: previewBackground }} />
+      <div data-paint-picker-preview className="h-8 w-full rounded-xl border border-border" style={{ background: previewBackground }} />
 
       {localPaint.type === 'solid' && (
         <div className="space-y-2">
@@ -349,6 +349,7 @@ const PaintPicker = React.forwardRef(({
           {...props}
         >
           <div
+            data-paint-picker-preview
             className={cn(
               "rounded border border-border shrink-0",
               showValue ? "h-5 w-5" : "h-6 w-full"

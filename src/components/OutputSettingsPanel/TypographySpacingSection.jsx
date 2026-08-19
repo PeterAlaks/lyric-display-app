@@ -14,7 +14,7 @@ const clampNumber = (value, min, max) => {
 
 const TypographySpacingSection = ({ darkMode, settings, update }) => (
   <>
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4" data-output-setting-row>
       <Tooltip content="Adjust letter spacing (-5 to 20 pixels)" side="right">
         <LabelWithIcon icon={BetweenVerticalEnd} text="Letter Spacing" darkMode={darkMode} />
       </Tooltip>
@@ -43,7 +43,7 @@ const TypographySpacingSection = ({ darkMode, settings, update }) => (
       </div>
     </div>
 
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4" data-output-setting-row>
       <Tooltip content="Adjust line spacing (0.8 to 3.0)" side="right">
         <LabelWithIcon icon={ListIndentIncrease} text="Line Spacing" darkMode={darkMode} />
       </Tooltip>
@@ -72,7 +72,7 @@ const TypographySpacingSection = ({ darkMode, settings, update }) => (
       </div>
     </div>
 
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4" data-output-setting-row>
       <Tooltip content="Add an outline around text for better visibility (0-10px)" side="right">
         <LabelWithIcon icon={Frame} text="Text Border" darkMode={darkMode} />
       </Tooltip>

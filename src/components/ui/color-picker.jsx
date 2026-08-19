@@ -380,6 +380,7 @@ const ColorPicker = React.forwardRef(({
           {...props}
         >
           <div
+            data-color-picker-preview
             className={cn(
               "rounded border border-border shrink-0",
               showHex ? "h-5 w-5" : "h-6 w-full"

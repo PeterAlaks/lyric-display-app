@@ -604,7 +604,7 @@ const LyricDisplayApp = () => {
           {/* Scrollable Settings Panel */}
           <div
             ref={scrollableSettingsRef}
-            className="flex-1 overflow-y-auto px-6 relative"
+            className="relative flex-1 overflow-y-auto pl-5 pr-3"
             onScroll={(e) => {
               const scrollTop = e.currentTarget.scrollTop;
               const shadow = e.currentTarget.previousElementSibling;

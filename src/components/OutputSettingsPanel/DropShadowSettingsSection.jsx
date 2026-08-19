@@ -6,10 +6,14 @@ import { AdvancedCollapse, AdvancedToggle } from '../OutputSettingsShared';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
 
 const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
-  <div className="flex items-center justify-between gap-4">
+  <div className="flex items-center justify-between gap-4" data-output-setting-row>
     <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-[140px]">
-        {Icon ? <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /> : null}
+      <div className="flex items-center gap-2 min-w-[140px]" data-output-setting-label>
+        {Icon ? (
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
+            <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+          </span>
+        ) : null}
         <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
       </div>
     </Tooltip>
@@ -27,7 +31,7 @@ const DropShadowSettingsSection = ({
   settings,
   update,
 }) => (
-  <div>
+  <div data-output-setting-group data-expanded={dropShadowAdvancedExpanded}>
     <SettingRow
       icon={Contrast}
       label="Drop Shadow"
@@ -65,10 +69,10 @@ const DropShadowSettingsSection = ({
       />
     </SettingRow>
 
-    <AdvancedCollapse expanded={dropShadowAdvancedExpanded}>
-      <div className="flex items-center justify-between w-full">
+    <AdvancedCollapse expanded={dropShadowAdvancedExpanded} openMarginTop={0}>
+      <div className="grid grid-cols-3 justify-items-center gap-2" data-output-setting-subrow>
         <Tooltip content="Horizontal shadow offset in pixels (negative = left, positive = right)" side="top">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             <MoveHorizontal className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <Input
               type="number"
@@ -88,7 +92,7 @@ const DropShadowSettingsSection = ({
         </Tooltip>
 
         <Tooltip content="Vertical shadow offset in pixels (negative = up, positive = down)" side="top">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             <MoveVertical className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <Input
               type="number"
@@ -108,7 +112,7 @@ const DropShadowSettingsSection = ({
         </Tooltip>
 
         <Tooltip content="Shadow blur radius in pixels (0 = sharp, higher = softer)" side="top">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             <Sparkles className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <Input
               type="number"

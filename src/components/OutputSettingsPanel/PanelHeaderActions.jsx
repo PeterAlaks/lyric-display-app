@@ -25,7 +25,7 @@ const PanelHeaderActions = ({
   showToast,
 }) => (
   <div className="flex items-center justify-between mb-4">
-    <h3 className={`text-[13px] font-medium uppercase leading-5 tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+    <h3 className={`text-xs font-medium uppercase leading-5 tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
       {title || `${formatOutputLabel(outputKey, { uppercase: true })} SETTINGS`}
     </h3>
 
