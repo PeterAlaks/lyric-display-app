@@ -15,7 +15,7 @@ import useAdvancedSectionPersistence from '../hooks/OutputSettingsPanel/useAdvan
 import useTypographyAndBands from '../hooks/OutputSettingsPanel/useTypographyAndBands';
 import useFullscreenModeState from '../hooks/OutputSettingsPanel/useFullscreenModeState';
 import useFullscreenElementMedia from '../hooks/OutputSettingsPanel/useFullscreenElementMedia';
-import { Clock, Sparkles, Type, PaintBucket, Square, Move, AlignVerticalSpaceAround, TextAlignJustify, SquareMenu, User, X } from 'lucide-react';
+import { Clock, LayoutGrid, Type, PaintBucket, Square, Move, AlignVerticalSpaceAround, TextAlignJustify, SquareMenu, User, X } from 'lucide-react';
 import FontSelect from './FontSelect';
 import StageSettingsPanel from './StageSettingsPanel';
 import BackgroundBandSettingsSection from './OutputSettingsPanel/BackgroundBandSettingsSection';
@@ -683,7 +683,7 @@ const OutputSettingsPanel = ({
       const meta = saved
         ? formatTemplateDate(template.createdAt)
         : template.description;
-      const Icon = saved ? User : Sparkles;
+      const Icon = saved ? User : null;
 
       return (
         <button
@@ -692,7 +692,7 @@ const OutputSettingsPanel = ({
           className="w-full rounded-md border border-gray-800 bg-gray-950 px-3 py-2 text-left transition-colors hover:border-blue-500/60 hover:bg-gray-900"
         >
           <div className="flex min-w-0 items-start gap-2">
-            <Icon className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${saved ? 'text-purple-300' : 'text-blue-300'}`} />
+            {Icon && <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-300" />}
             <div className="min-w-0 flex-1">
               <div className="truncate text-xs font-semibold text-gray-100">{title || 'Template'}</div>
               {meta && (
@@ -747,7 +747,7 @@ const OutputSettingsPanel = ({
                 onClick={() => setTemplateTab('presets')}
                 className={`flex items-center justify-center gap-1.5 rounded px-2 py-2 text-xs font-semibold ${templateTab === 'presets' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
               >
-                <Sparkles className="h-3.5 w-3.5" />
+                <LayoutGrid className="h-3.5 w-3.5" />
                 Presets
               </button>
               <button
@@ -818,7 +818,7 @@ const OutputSettingsPanel = ({
             onClick={() => setTemplatePopoverOpen(true)}
             className="flex h-9 w-full items-center justify-center gap-2 rounded-full border border-gray-800 bg-gray-900 px-3 text-xs font-semibold text-gray-100 transition-colors hover:bg-gray-800"
           >
-            <Sparkles className="h-3.5 w-3.5 text-blue-300" />
+            <LayoutGrid className="h-3.5 w-3.5 text-blue-300" />
             Load Template
           </button>
           {templateSheet}

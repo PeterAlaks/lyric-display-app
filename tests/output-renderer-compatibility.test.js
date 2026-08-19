@@ -10,6 +10,10 @@ const outputPageSource = fs.readFileSync(
   new URL('../src/pages/OutputPage.jsx', import.meta.url),
   'utf8'
 );
+const modalProviderSource = fs.readFileSync(
+  new URL('../src/components/modal/ModalProvider.jsx', import.meta.url),
+  'utf8'
+);
 
 test('output positioning uses an explicitly anchored full-frame layer', () => {
   assert.match(rendererSource, /data-lyric-position-layer="true"/);
@@ -52,4 +56,11 @@ test('output visibility keeps the visual frame mounted so selected media remains
   assert.match(outputPageSource, /active=\{isOutputActive\}/);
   assert.match(outputPageSource, /retainBackgroundLayerWhenInactive/);
   assert.doesNotMatch(outputPageSource, /\{isOutputActive && \(/);
+});
+
+test('output template previews receive the output they are configuring', () => {
+  assert.match(
+    modalProviderSource,
+    /<OutputTemplatesModal(?:(?!\/>)[\s\S])*outputKey=\{modal\.outputKey\}/
+  );
 });

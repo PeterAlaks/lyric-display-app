@@ -168,13 +168,14 @@ const PanelHeaderActions = ({
         <button
           onClick={() => {
             showModal({
-              title: 'Output Templates',
-              headerDescription: 'Choose from professionally designed output presets',
+              title: 'Choose an output look',
+              headerDescription: `Preview a style, then apply it to ${formatOutputLabel(outputKey)}`,
               component: 'OutputTemplates',
               variant: 'info',
-              size: 'large',
-              scrollBehavior: 'scroll',
-              dismissLabel: 'Close',
+              size: 'xl',
+              icon: <Palette className="h-6 w-6" />,
+              customLayout: true,
+              actions: [],
               outputKey,
               onApplyTemplate: (template) => {
                 const templateSettings = template.getSettings

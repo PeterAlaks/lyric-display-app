@@ -461,7 +461,9 @@ export function ModalProvider({ children, isDark = false }) {
         const zIndex = 1300 + index;
         const isTopModal = index === modals.length - 1;
         const sizeClass =
-          modal.size === 'lg' || modal.size === 'large'
+          modal.size === 'xl'
+            ? 'max-w-4xl'
+            : modal.size === 'lg' || modal.size === 'large'
             ? 'max-w-3xl'
             : modal.size === 'announcement'
               ? 'max-w-xl'
@@ -487,6 +489,8 @@ export function ModalProvider({ children, isDark = false }) {
             ? { height: `min(620px, ${modalMaxHeight})` }
             : modal.component === 'AppAnnouncement'
               ? { height: `min(560px, ${modalMaxHeight})` }
+              : modal.component === 'OutputTemplates' || modal.component === 'StageTemplates'
+                ? { height: `min(700px, ${modalMaxHeight})` }
               : {}),
         };
 
@@ -675,6 +679,7 @@ export function ModalProvider({ children, isDark = false }) {
                       {modal.component === 'OutputTemplates' && (
                         <OutputTemplatesModal
                           darkMode={isDark}
+                          outputKey={modal.outputKey}
                           onApplyTemplate={(template) => {
                             if (modal.onApplyTemplate) modal.onApplyTemplate(template);
                             closeModal(modal.id, { action: 'applied', template });

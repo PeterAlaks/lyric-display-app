@@ -523,13 +523,14 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             <button
               onClick={() => {
                 showModal({
-                  title: 'Stage Display Templates',
-                  headerDescription: 'Choose from professionally designed stage display presets',
+                  title: 'Choose a stage display look',
+                  headerDescription: 'Preview a layout, then apply it to the Stage Display',
                   component: 'StageTemplates',
                   variant: 'info',
-                  size: 'large',
-                  scrollBehavior: 'scroll',
-                  dismissLabel: 'Close',
+                  size: 'xl',
+                  icon: <Palette className="h-6 w-6" />,
+                  customLayout: true,
+                  actions: [],
                   onApplyTemplate: (template) => {
                     applySettings(template.settings);
                     showToast({
