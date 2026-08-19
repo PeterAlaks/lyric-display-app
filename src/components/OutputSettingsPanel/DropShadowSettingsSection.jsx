@@ -70,7 +70,7 @@ const DropShadowSettingsSection = ({
     </SettingRow>
 
     <AdvancedCollapse expanded={dropShadowAdvancedExpanded} openMarginTop={0}>
-      <div className="grid grid-cols-3 justify-items-center gap-2" data-output-setting-subrow>
+      <div className="flex items-center justify-between gap-2" data-output-setting-subrow>
         <Tooltip content="Horizontal shadow offset in pixels (negative = left, positive = right)" side="top">
           <div className="flex min-w-0 items-center gap-1.5">
             <MoveHorizontal className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />

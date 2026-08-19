@@ -8,6 +8,10 @@ import {
   USER_DATA_DIR_ENV,
   getProfiledName,
 } from '../shared/runtimeProfile.js';
+import {
+  consumeAppDataResetRequest,
+  hasCompletedAppDataReset,
+} from './appReset.js';
 
 const { app } = typeof electron === 'object' && electron ? electron : {};
 
@@ -74,6 +78,7 @@ const NDI_INSTALL_ENTRY_NAMES = new Set([
 
 let configured = false;
 let migrationResult = null;
+let appDataResetResult = { requested: false, reset: false };
 
 export function resolveAppIdentityProfile(isPackaged) {
   const runtimeProfile = isPackaged
@@ -799,7 +804,16 @@ export function configureAppIdentity() {
     process.env[RUNTIME_PROFILE_ENV] = runtimeProfile;
     process.env[USER_DATA_DIR_ENV] = userDataPath;
 
-    if (shouldMigrateProductionData) {
+    appDataResetResult = consumeAppDataResetRequest({
+      appDataPath,
+      userDataPath,
+    });
+    const legacyMigrationSuppressed = appDataResetResult.reset || hasCompletedAppDataReset({
+      appDataPath,
+      userDataPath,
+    });
+
+    if (shouldMigrateProductionData && !legacyMigrationSuppressed) {
       const documentsPath = app.getPath('documents');
       migrationResult = migrateUserData(appDataPath, documentsPath);
     } else {
@@ -811,7 +825,9 @@ export function configureAppIdentity() {
         skippedExisting: 0,
         skippedSymlinks: 0,
         skippedOther: 0,
-        skippedReason: 'Development uses an isolated profile; production migration was not run.',
+        skippedReason: legacyMigrationSuppressed
+          ? 'Legacy migration is disabled because the app data was reset.'
+          : 'Development uses an isolated profile; production migration was not run.',
         errors: [],
       };
     }
@@ -835,6 +851,10 @@ export function configureAppIdentity() {
 
 export function getUserDataMigrationResult() {
   return migrationResult;
+}
+
+export function getAppDataResetResult() {
+  return appDataResetResult;
 }
 
 export function migrateUserDataForTests(appDataPath, documentsPath = null) {

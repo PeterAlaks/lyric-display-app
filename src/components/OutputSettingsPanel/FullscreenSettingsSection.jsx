@@ -111,13 +111,13 @@ const FullscreenSettingsSection = ({
       expanded={fullScreenAdvancedExpanded}
       openMarginTop={0}
     >
-      <div className="grid grid-cols-[minmax(8.5rem,1fr)_4rem_auto] items-center gap-2" data-output-setting-subrow>
+      <div className="flex items-center justify-between gap-2" data-output-setting-subrow>
         <Select
           value={fullScreenBackgroundTypeValue}
           onValueChange={handleFullScreenBackgroundTypeChange}
         >
           <SelectTrigger
-            className={`w-full ${darkMode
+            className={`w-[8.5rem] shrink-0 ${darkMode
               ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               }`}
@@ -171,7 +171,7 @@ const FullscreenSettingsSection = ({
       </div>
 
       {fullScreenBackgroundTypeValue === 'media' && hasBackgroundMedia && (
-        <div className="flex justify-start px-3 pb-1 pt-0.5">
+        <div className="mb-2 flex justify-start px-3 pb-2 pt-2.5">
           <span
             className={`max-w-full truncate text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
             title={uploadedMediaName}
@@ -228,7 +228,7 @@ const FullscreenSettingsSection = ({
       {settings.fullScreenElementEnabled && (
         <div className="space-y-2 pt-2">
           {hasFullScreenElementMedia && (
-            <div className="flex justify-start px-3 pb-1 pt-0.5">
+            <div className="flex justify-start px-3 pb-2 pt-0.5">
               <span
                 className={`max-w-full truncate text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
                 title={fullScreenElementMediaName}
@@ -261,8 +261,8 @@ const FullscreenSettingsSection = ({
               </Select>
             </div>
 
-            <div className="grid grid-cols-3 gap-2" data-output-setting-subrow>
-              <div className="flex min-w-0 items-center justify-between gap-1.5">
+            <div className="flex items-center justify-between gap-2" data-output-setting-subrow>
+              <div className="flex min-w-0 items-center gap-1.5">
                 <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Scale</label>
                 <Input
                   type="number"
@@ -278,7 +278,7 @@ const FullscreenSettingsSection = ({
                 />
               </div>
 
-              <div className="flex min-w-0 items-center justify-between gap-1.5">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Opacity</label>
                 <Input
                   type="number"
@@ -295,7 +295,7 @@ const FullscreenSettingsSection = ({
                 />
               </div>
 
-              <div className="flex min-w-0 items-center justify-between gap-1.5">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Blur</label>
                 <Input
                   type="number"

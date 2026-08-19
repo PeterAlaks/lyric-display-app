@@ -7,7 +7,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from "@/components/ui/color-picker";
 import { PaintPicker } from "@/components/ui/paint-picker";
 import useStageDisplayControls from '../hooks/OutputSettingsPanel/useStageDisplayControls';
-import { Type, PaintBucket, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge, Save, BetweenVerticalEnd, ListIndentIncrease, Eye } from 'lucide-react';
+import { Type, Square, ScreenShare, ListMusic, ChevronRight, Languages, Palette, Power, TextAlignJustify, SquareMenu, Timer, GalleryVerticalEnd, ArrowRightLeft, Gauge, Save, BetweenVerticalEnd, ListIndentIncrease, Eye } from 'lucide-react';
 import FontSelect from './FontSelect';
 import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, FontSettingsRow, EmphasisRow, AlignmentRow, LabelWithIcon } from './OutputSettingsShared';
 import { Slider } from '@/components/ui/slider';
@@ -235,7 +235,6 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               className={`${switchBaseClasses} ${sectionDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               thumbClassName={switchThumbClass}
             />
-            <PaintBucket className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <ColorPicker
               value={settings.nextArrowColor}
               onChange={(val) => update('nextArrowColor', val)}

@@ -34,6 +34,7 @@ const AdvancedPreferencesSection = ({
   const [obsDockStartup, setObsDockStartup] = useState(null);
   const [obsDockStartupSaving, setObsDockStartupSaving] = useState(false);
   const [clearingSystemLogs, setClearingSystemLogs] = useState(false);
+  const [resettingApp, setResettingApp] = useState(false);
 
   const loadObsDockStartup = async () => {
     if (!window.electronAPI?.obsDockStartup?.get) return;
@@ -133,16 +134,51 @@ const AdvancedPreferencesSection = ({
     }
   };
 
+  const handleResetApp = async () => {
+    const confirmation = await showModal?.({
+      title: 'Reset LyricDisplay?',
+      description: 'This permanently deletes the entire LyricDisplay user-data folder.',
+      body: 'All preferences, templates, indexes, cached data, local app content, and logs will be removed. Lyric files and other documents stored outside the user-data folder will not be deleted. LyricDisplay will restart as a fresh installation. This action cannot be undone.',
+      variant: 'warning',
+      size: 'sm',
+      dismissible: false,
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline', autoFocus: true },
+        { label: 'Reset and Restart', value: 'reset', variant: 'destructive' },
+      ],
+    });
+
+    if (confirmation !== 'reset') return;
+    if (!window.electronAPI?.resetAppData) {
+      showToast?.({
+        title: 'App Reset Unavailable',
+        message: 'This build does not expose app-data reset.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    setResettingApp(true);
+    try {
+      const result = await window.electronAPI.resetAppData();
+      if (!result?.success) {
+        throw new Error(result?.error || 'Could not prepare the app reset.');
+      }
+    } catch (error) {
+      setResettingApp(false);
+      showToast?.({
+        title: 'App Reset Failed',
+        message: error?.message || 'Could not reset LyricDisplay.',
+        variant: 'error',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2">
-          <AlertTriangle className={`w-4 h-4 ${mutedClass}`} />
-          <span className={`text-sm font-medium ${labelClass}`}>
-            Advanced Settings
-          </span>
-        </div>
-        <p className={`mt-1 text-xs ${mutedClass}`}>
+      <div className="flex items-start gap-2">
+        <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${mutedClass}`} />
+        <p className={`text-xs ${mutedClass}`}>
           These settings are for advanced users. Changing them may affect application stability.
         </p>
       </div>
@@ -489,7 +525,7 @@ const AdvancedPreferencesSection = ({
         </div>
         <Button
           type="button"
-          variant="destructiveOutline"
+          variant="outline"
           size="sm"
           onClick={handleRestoreAllDefaults}
           disabled={restoringAllDefaults}
@@ -499,6 +535,28 @@ const AdvancedPreferencesSection = ({
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : <RotateCcw className="h-4 w-4" />}
           {restoringAllDefaults ? 'Restoring...' : 'Restore Defaults'}
+        </Button>
+      </div>
+    </div>
+
+    <div className={`rounded-lg border p-4 ${darkMode ? 'border-red-900/70 bg-red-950/20' : 'border-red-200 bg-red-50/60'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <label className={`text-sm font-medium ${darkMode ? 'text-red-200' : 'text-red-800'}`}>Reset App</label>
+          <p className={`mt-1 text-xs ${mutedClass}`}>Delete the entire user-data folder and restart LyricDisplay as a fresh installation</p>
+        </div>
+        <Button
+          type="button"
+          variant="destructiveOutline"
+          size="sm"
+          onClick={handleResetApp}
+          disabled={resettingApp}
+          className="shrink-0"
+        >
+          {resettingApp
+            ? <Loader2 className="h-4 w-4 animate-spin" />
+            : <Trash2 className="h-4 w-4" />}
+          {resettingApp ? 'Resetting...' : 'Reset App'}
         </Button>
       </div>
     </div>

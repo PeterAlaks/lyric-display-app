@@ -203,8 +203,8 @@ const FontSizeSettingsSection = ({
       </div>
 
       <AdvancedCollapse expanded={fontSizeAdvancedExpanded} openMarginTop={0}>
-        <div className="grid grid-cols-2 gap-2" data-output-setting-subrow>
-          <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-3" data-output-setting-subrow>
+          <div className="flex min-w-0 items-center gap-2">
             <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
               Max Lines
             </label>
@@ -221,7 +221,7 @@ const FontSizeSettingsSection = ({
               className={`w-16 ${innerClassBase} ${!maxLinesEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
           </div>
-          <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${!maxLinesEnabled ? 'opacity-50' : ''}`}>
               Min Font Size
             </label>

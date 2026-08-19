@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron';
-import './main/appIdentity.js';
+import { getAppDataResetResult } from './main/appIdentity.js';
 import { registerLyricVideoMediaScheme } from './main/lyricVideoMediaProtocol.js';
 import { initModalBridge, requestRendererModal } from './main/modalBridge.js';
 import { appRoot, isDev } from './main/paths.js';
@@ -415,6 +415,7 @@ registerIpcHandlers({
   checkForUpdates,
   requestRendererModal,
   syncBackendParsingConfig,
+  prepareForAppDataReset: performCleanup,
 });
 registerInAppBrowserIpc();
 
@@ -507,6 +508,16 @@ setBackendStatusHandler((status) => {
 });
 
 app.whenReady().then(async () => {
+  const appDataResetResult = getAppDataResetResult();
+  if (appDataResetResult?.requested && appDataResetResult.error) {
+    await dialog.showMessageBox({
+      type: 'error',
+      title: 'LyricDisplay Reset Failed',
+      message: 'LyricDisplay could not clear its user-data folder.',
+      detail: appDataResetResult.error,
+    });
+  }
+
   try { Menu.setApplicationMenu(null); } catch { }
   if (!isHeadlessMode) {
     createLoadingWindow();

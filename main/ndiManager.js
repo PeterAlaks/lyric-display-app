@@ -1012,8 +1012,9 @@ export function registerNdiIpcHandlers() {
 }
 
 export function cleanupNdiManager() {
-  stopCompanion();
-  console.log('[NDI] Manager cleaned up');
+  return stopCompanion().finally(() => {
+    console.log('[NDI] Manager cleaned up');
+  });
 }
 
 export default {

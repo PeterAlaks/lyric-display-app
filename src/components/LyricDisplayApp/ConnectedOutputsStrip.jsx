@@ -1,5 +1,5 @@
 import React from 'react';
-import { Monitor } from 'lucide-react';
+import { MonitorCheck, MonitorX } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useConnectedOutputs } from '../../hooks/useStoreSelectors';
 import useHorizontalWheelScroll from '../../hooks/useHorizontalWheelScroll';
@@ -8,6 +8,7 @@ import { formatOutputLabel } from '../../utils/outputLabels';
 const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
   const connectedOutputs = useConnectedOutputs();
   const totalInstances = connectedOutputs.reduce((total, output) => total + output.instanceCount, 0);
+  const OutputStatusIcon = totalInstances > 0 ? MonitorCheck : MonitorX;
   const { containerRef, scrollerRef } = useHorizontalWheelScroll();
 
   return (
@@ -22,7 +23,7 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
           className={`flex shrink-0 items-center justify-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
           aria-label="Connected output displays"
         >
-          <Monitor className="h-4 w-4" aria-hidden="true" />
+          <OutputStatusIcon className="h-4 w-4" aria-hidden="true" />
         </span>
       </Tooltip>
 

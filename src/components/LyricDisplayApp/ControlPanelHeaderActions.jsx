@@ -67,26 +67,6 @@ export default function ControlPanelHeaderActions({
           </button>
         </Tooltip>
 
-        <Tooltip content="Application preferences and settings" side="bottom">
-          <button
-            className={iconButtonClass(false)}
-            onClick={() => {
-              showModal({
-                title: 'Preferences',
-                headerDescription: 'Configure application settings and preferences',
-                component: 'UserPreferences',
-                variant: 'info',
-                size: 'lg',
-                actions: [],
-                allowBackdropClose: false,
-                customLayout: true
-              });
-            }}
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-        </Tooltip>
-
         <Tooltip content="Preview all output displays" side="bottom">
           <button
             aria-label="Preview Outputs"
@@ -135,6 +115,26 @@ export default function ControlPanelHeaderActions({
             onClick={handleOpenTimerControl}
           >
             <Timer className="h-4 w-4" />
+          </button>
+        </Tooltip>
+
+        <Tooltip content="Application preferences and settings" side="bottom">
+          <button
+            className={iconButtonClass(false)}
+            onClick={() => {
+              showModal({
+                title: 'Preferences',
+                headerDescription: 'Configure application settings and preferences',
+                component: 'UserPreferences',
+                variant: 'info',
+                size: 'lg',
+                actions: [],
+                allowBackdropClose: false,
+                customLayout: true
+              });
+            }}
+          >
+            <Settings className="h-4 w-4" />
           </button>
         </Tooltip>
 

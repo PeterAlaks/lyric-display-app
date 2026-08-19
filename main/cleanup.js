@@ -32,10 +32,11 @@ export function closeOutputWindows() {
 }
 
 let isCleaningUp = false;
+let cleanupPromise = null;
 
 export function performCleanup() {
   if (isCleaningUp) {
-    return;
+    return cleanupPromise || Promise.resolve();
   }
 
   isCleaningUp = true;
@@ -69,8 +70,9 @@ export function performCleanup() {
     console.error('[Cleanup] Error destroying external control:', error);
   }
 
+  let ndiCleanupPromise = Promise.resolve();
   try {
-    cleanupNdiManager();
+    ndiCleanupPromise = Promise.resolve(cleanupNdiManager());
   } catch (error) {
     console.error('[Cleanup] Error cleaning up NDI manager:', error);
   }
@@ -89,5 +91,12 @@ export function performCleanup() {
 
   closeOutputWindows();
 
-  console.log('[Cleanup] Cleanup process completed');
+  cleanupPromise = ndiCleanupPromise
+    .catch((error) => {
+      console.error('[Cleanup] Error waiting for NDI manager cleanup:', error);
+    })
+    .finally(() => {
+      console.log('[Cleanup] Cleanup process completed');
+    });
+  return cleanupPromise;
 }
