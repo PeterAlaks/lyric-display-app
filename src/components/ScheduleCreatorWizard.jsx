@@ -42,7 +42,6 @@ import {
   resolveScheduleOccurrence,
 } from '../../shared/scheduleUtils.js';
 import { downloadScheduleFile, importScheduleFile } from '../utils/scheduleFiles.js';
-import { getTimerToggleProps } from '../utils/timerUtils';
 
 const STEPS = [
   { label: 'Details', icon: CalendarClock },
@@ -218,7 +217,6 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
   const hairlineDivide = darkMode ? 'divide-slate-800' : 'divide-slate-200';
   const rowHoverClass = darkMode ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50';
   const numberBadgeClass = darkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500';
-  const scheduleSwitchProps = getTimerToggleProps(darkMode);
   const itemTitleClass = darkMode
     ? 'h-8 min-w-0 flex-1 border border-transparent bg-transparent px-2 text-xs font-medium text-slate-100 shadow-none focus-visible:border-slate-700 focus-visible:bg-slate-950/50 focus-visible:ring-1 focus-visible:ring-blue-500/30 md:text-xs'
     : 'h-8 min-w-0 flex-1 border border-transparent bg-transparent px-2 text-xs font-medium text-slate-900 shadow-none focus-visible:border-slate-200 focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-blue-500/30 md:text-xs';
@@ -934,7 +932,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                       <p className="text-xs font-semibold">Auto-start the next timed item</p>
                       <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Manual items always wait for the operator.</p>
                     </div>
-                    <Switch checked={draft.autoStartNext} onCheckedChange={(checked) => updateDraft({ autoStartNext: checked })} {...scheduleSwitchProps} />
+                    <Switch checked={draft.autoStartNext} onCheckedChange={(checked) => updateDraft({ autoStartNext: checked })} size="small" variant="control" />
                   </div>
 
                   <div className="flex items-start gap-3 p-4">
@@ -943,7 +941,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                       <p className="text-xs font-semibold">Show global time during manual items</p>
                       <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Displays the global time during schedule items without set duration.</p>
                     </div>
-                    <Switch checked={draft.showGlobalTimeDuringManualItems} onCheckedChange={(checked) => updateDraft({ showGlobalTimeDuringManualItems: checked })} {...scheduleSwitchProps} />
+                    <Switch checked={draft.showGlobalTimeDuringManualItems} onCheckedChange={(checked) => updateDraft({ showGlobalTimeDuringManualItems: checked })} size="small" variant="control" />
                   </div>
 
                   <div className="flex items-start gap-3 p-4">
@@ -952,7 +950,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                       <p className="text-xs font-semibold">Show global clock during schedule pause</p>
                       <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Replace the paused timer with the current time until the schedule resumes.</p>
                     </div>
-                    <Switch checked={Boolean(draft.showGlobalClockDuringPause)} onCheckedChange={(checked) => updateDraft({ showGlobalClockDuringPause: checked })} {...scheduleSwitchProps} />
+                    <Switch checked={Boolean(draft.showGlobalClockDuringPause)} onCheckedChange={(checked) => updateDraft({ showGlobalClockDuringPause: checked })} size="small" variant="control" />
                   </div>
 
                   <div className="p-4">
@@ -962,7 +960,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                         <p className="text-xs font-semibold">Transition indicator</p>
                         <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Show a short up-next countdown between schedule items.</p>
                       </div>
-                      <Switch checked={draft.indicator.enabled} onCheckedChange={(checked) => updateDraft({ indicator: { ...draft.indicator, enabled: checked } })} {...scheduleSwitchProps} />
+                      <Switch checked={draft.indicator.enabled} onCheckedChange={(checked) => updateDraft({ indicator: { ...draft.indicator, enabled: checked } })} size="small" variant="control" />
                     </div>
                     <div className={`grid transition-all duration-200 ease-out ${draft.indicator.enabled ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                       <div className="overflow-hidden">
@@ -980,7 +978,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                       <p className="text-xs font-semibold">Timing alerts</p>
                       <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>Notify the operator when a manual item begins or the projected finish runs late.</p>
                     </div>
-                    <Switch checked={draft.notificationsEnabled} onCheckedChange={handleNotificationsChange} {...scheduleSwitchProps} />
+                    <Switch checked={draft.notificationsEnabled} onCheckedChange={handleNotificationsChange} size="small" variant="control" />
                   </div>
                 </div>
               </div>

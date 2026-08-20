@@ -131,7 +131,7 @@ export default function useLyricsListRows({
   const getLineClassName = useCallback(
     (index, isVirtualized = false, isMultiSelected = false) => {
       const padding = compact ? 'px-2.5 py-2' : 'p-3';
-      let base = `${padding} ${compact ? 'rounded-md border text-[13px] leading-snug' : 'rounded'} cursor-pointer transition-colors duration-150 select-none `;
+      let base = `${padding} lyric-line-item-squircle ${compact ? 'border text-[13px] leading-snug' : ''} cursor-pointer transition-colors duration-150 select-none `;
 
       if (compact && darkMode) {
         if (index === previewLine) {

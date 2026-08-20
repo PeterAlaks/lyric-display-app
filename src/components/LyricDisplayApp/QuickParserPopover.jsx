@@ -14,8 +14,6 @@ export default function QuickParserPopover({
   quickParserLoading,
   quickParserOpen,
   quickParserSettings,
-  quickSwitchClassName,
-  quickSwitchThumbClassName,
   reloadingWithParser,
   setQuickParserOpen,
   updateQuickParserSetting,
@@ -45,8 +43,8 @@ export default function QuickParserPopover({
         <Switch
           checked={quickParserSettings.enableAutoLineGrouping}
           onCheckedChange={(checked) => updateQuickParserSetting('enableAutoLineGrouping', checked)}
-          className={quickSwitchClassName}
-          thumbClassName={quickSwitchThumbClassName}
+          size="medium"
+          variant="control"
         />
       </div>
 
@@ -72,8 +70,8 @@ export default function QuickParserPopover({
         <Switch
           checked={quickParserSettings.enableTranslationGrouping}
           onCheckedChange={(checked) => updateQuickParserSetting('enableTranslationGrouping', checked)}
-          className={quickSwitchClassName}
-          thumbClassName={quickSwitchThumbClassName}
+          size="medium"
+          variant="control"
         />
       </div>
     </div>

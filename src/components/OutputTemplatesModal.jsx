@@ -371,7 +371,7 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
         }`}
       >
         <div
-          className={`grid grid-cols-2 gap-1 rounded-xl p-1 ${darkMode ? 'bg-slate-950/70' : 'bg-slate-100'}`}
+          className={`grid grid-cols-2 gap-1 rounded-2xl p-1 ${darkMode ? 'bg-slate-950/70' : 'bg-slate-100'}`}
           role="tablist"
           aria-label="Template sources"
         >
@@ -383,7 +383,7 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
               closeExpandedCard();
               setActiveTab('presets');
             }}
-            className={`flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold transition-all ${activeTab === 'presets'
+            className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold transition-all ${activeTab === 'presets'
               ? darkMode
                 ? 'bg-slate-800 text-white shadow-sm'
                 : 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
@@ -410,7 +410,7 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
               closeExpandedCard();
               setActiveTab('saved');
             }}
-            className={`flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold transition-all ${activeTab === 'saved'
+            className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold transition-all ${activeTab === 'saved'
               ? darkMode
                 ? 'bg-slate-800 text-white shadow-sm'
                 : 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'

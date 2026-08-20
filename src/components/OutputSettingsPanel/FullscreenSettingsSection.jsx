@@ -189,11 +189,8 @@ const FullscreenSettingsSection = ({
           checked={Boolean(settings.alwaysShowBackground)}
           onCheckedChange={(checked) => update('alwaysShowBackground', checked)}
           aria-label="Toggle always show background"
-          className={`!h-6 !w-12 !border-0 shadow-sm transition-colors disabled:opacity-100 ${darkMode
-            ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-            : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-            }`}
-          thumbClassName="!h-4 !w-5 data-[state=checked]:!translate-x-6 data-[state=unchecked]:!translate-x-1"
+          size="small"
+          variant="control"
         />
       </div>
 
@@ -216,11 +213,8 @@ const FullscreenSettingsSection = ({
             checked={Boolean(settings.fullScreenElementEnabled)}
             onCheckedChange={handleFullScreenElementToggle}
             aria-label="Toggle full screen image element"
-            className={`!h-6 !w-12 !border-0 shadow-sm transition-colors disabled:opacity-100 ${darkMode
-              ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-              : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-              }`}
-            thumbClassName="!h-4 !w-5 data-[state=checked]:!translate-x-6 data-[state=unchecked]:!translate-x-1"
+            size="small"
+            variant="control"
           />
         </div>
       </div>

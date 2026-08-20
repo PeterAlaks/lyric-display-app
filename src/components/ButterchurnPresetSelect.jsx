@@ -254,7 +254,7 @@ export default function ButterchurnPresetSelect({
         onKeyDown={(event) => handlePresetKeyDown(event, index)}
         onFocus={() => { activePresetIndexRef.current = index; }}
         className={cn(
-          'flex h-12 w-full items-center gap-3 px-3 text-left text-xs outline-none',
+          'mx-1 flex h-11 w-[calc(100%-0.5rem)] items-center gap-3 rounded-xl px-3 text-left text-xs outline-none',
           darkMode
             ? 'text-gray-100 hover:bg-gray-600 focus:bg-gray-600'
             : 'text-gray-900 hover:bg-gray-100 focus:bg-gray-100',
@@ -383,7 +383,7 @@ export default function ButterchurnPresetSelect({
         <div
           ref={menuRef}
           className={cn(
-            'fixed z-[2100] overflow-hidden rounded-md border shadow-xl',
+            'fixed z-[2100] overflow-hidden rounded-2xl border shadow-xl',
             darkMode
               ? 'border-gray-600 bg-gray-700 text-gray-100'
               : 'border-gray-300 bg-white text-gray-900'

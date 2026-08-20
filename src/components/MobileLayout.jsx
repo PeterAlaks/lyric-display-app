@@ -253,13 +253,11 @@ const MobileLayout = () => {
                 <Switch
                   checked={isOutputOn}
                   onCheckedChange={handleToggle}
-                  className={`scale-[1.45] ${darkMode
-                    ? 'data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600'
-                    : 'data-[state=checked]:bg-black'
-                    }`}
+                  size="medium"
+                  variant="control"
                 />
                 <span
-                  className={`text-xs whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                  className={`text-[10px] whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'
                     }`}
                 >
                   {isOutputOn ? 'Output ON' : 'Output OFF'}

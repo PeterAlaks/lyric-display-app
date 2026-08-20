@@ -12,7 +12,6 @@ import {
   getTimerDisplay,
   getTimerIntensity,
   getTimerProgress,
-  getTimerToggleProps,
   minutesToMs,
   normalizeTimerControlSettings,
   secondsToMs,
@@ -1167,7 +1166,6 @@ const TimerControlModule = () => {
     surfaceClass: darkMode
       ? 'border-gray-800 bg-gray-800/35'
       : 'border-gray-200 bg-white',
-    getSwitchProps: (disabled = false) => getTimerToggleProps(darkMode, disabled),
   };
 
   return (

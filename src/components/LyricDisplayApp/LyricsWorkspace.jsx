@@ -110,8 +110,6 @@ const LyricsWorkspace = ({
   quickParserLoading,
   quickParserOpen,
   quickParserSettings,
-  quickSwitchClassName,
-  quickSwitchThumbClassName,
   reloadingWithParser,
   remoteAutoplayActive,
   searchQuery,
@@ -293,8 +291,6 @@ const LyricsWorkspace = ({
               quickParserLoading={quickParserLoading}
               quickParserOpen={quickParserOpen}
               quickParserSettings={quickParserSettings}
-              quickSwitchClassName={quickSwitchClassName}
-              quickSwitchThumbClassName={quickSwitchThumbClassName}
               reloadingWithParser={reloadingWithParser}
               setQuickParserOpen={setQuickParserOpen}
               updateQuickParserSetting={updateQuickParserSetting}
@@ -304,7 +300,7 @@ const LyricsWorkspace = ({
       )}
     </div>
 
-    <div className={`rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+    <div className={`lyrics-list-container-squircle shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
       {hasLyrics ? (
         <div
           ref={lyricsContainerRef}

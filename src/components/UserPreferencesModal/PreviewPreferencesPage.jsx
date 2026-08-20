@@ -184,11 +184,6 @@ const PreviewPreferencesPage = ({
     </DragOverlay>
   ) : null;
 
-  const switchClassName = `!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-    ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-    : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-  }`;
-
   return (
     <div>
       <div className="mb-5 flex min-w-0 items-center gap-2">
@@ -304,8 +299,8 @@ const PreviewPreferencesPage = ({
             <Switch
               checked={settings.showHeader}
               onCheckedChange={(checked) => saveSettings({ showHeader: checked })}
-              className={switchClassName}
-              thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              size="medium"
+              variant="control"
             />
           </div>
 
@@ -317,8 +312,8 @@ const PreviewPreferencesPage = ({
             <Switch
               checked={settings.showLabels}
               onCheckedChange={(checked) => saveSettings({ showLabels: checked })}
-              className={switchClassName}
-              thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              size="medium"
+              variant="control"
             />
           </div>
 
@@ -331,8 +326,8 @@ const PreviewPreferencesPage = ({
               checked={settings.showRoutePaths}
               disabled={!settings.showLabels}
               onCheckedChange={(checked) => saveSettings({ showRoutePaths: checked })}
-              className={switchClassName}
-              thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+              size="medium"
+              variant="control"
             />
           </div>
         </section>

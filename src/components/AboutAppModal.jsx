@@ -28,14 +28,14 @@ export function AboutAppModal({ version = '1.0.0', onClose }) {
       className="relative flex min-h-0 flex-col overflow-hidden text-white"
       style={{
         height: 'min(590px, calc(100dvh - 112px))',
-        background: 'linear-gradient(135deg, #000000 0%, #1f2937 50%, #111827 100%)',
+        background: 'linear-gradient(135deg, #020408 0%, #101722 52%, #070b12 100%)',
       }}
     >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'radial-gradient(circle at 12% 8%, rgba(71, 85, 105, 0.22), transparent 34%)',
+          background: 'radial-gradient(circle at 12% 8%, rgba(71, 85, 105, 0.18), transparent 34%)',
         }}
       />
 
@@ -66,7 +66,9 @@ export function AboutAppModal({ version = '1.0.0', onClose }) {
               </p>
               <p className="text-xs leading-relaxed text-slate-400">
                 <Link href="https://lyricdisplay.app">Our Website</Link>
-                <span className="mx-3" aria-hidden="true">·</span>
+                <span className="mx-3" aria-hidden="true">&middot;</span>
+                <Link href="https://lyricdisplay.app/donate">Donate</Link>
+                <span className="mx-3" aria-hidden="true">&middot;</span>
                 <Link href="https://peteralakembi.design">About the Author</Link>
               </p>
             </div>

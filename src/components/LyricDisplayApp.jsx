@@ -143,11 +143,6 @@ const LyricDisplayApp = () => {
   }, [baseHandleSearch, trackAction]);
 
   const hasLyrics = lyrics && lyrics.length > 0;
-  const quickSwitchClassName = `!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-    ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-    : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-    }`;
-  const quickSwitchThumbClassName = "!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1";
 
   const lineCounterText = useLineCounterText({ hasLyrics, lyrics, selectedLine });
 
@@ -475,7 +470,7 @@ const LyricDisplayApp = () => {
             <div data-tour="load-lyrics" className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
               <Tooltip content={<span>Search indexed lyric folders - <strong>Ctrl+O</strong></span>} side="right">
                 <button
-                  className="flex-1 py-3 px-4 bg-linear-to-r from-blue-400 to-purple-600 text-white rounded-2xl text-sm font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="control-squircle flex-1 py-3 px-4 bg-linear-to-r from-blue-400 to-purple-600 text-white rounded-2xl text-sm font-medium hover:from-blue-500 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
                   onClick={openFileDialog}
                 >
                   <FolderOpen className="w-4 h-4" />
@@ -484,7 +479,7 @@ const LyricDisplayApp = () => {
               </Tooltip>
               <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="right">
                 <button
-                  className={`h-[52px] w-[52px] rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
+                  className={`control-squircle h-[52px] w-[52px] rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
                     ? 'bg-gray-700 hover:bg-blue-500/10 hover:text-blue-300 text-gray-200'
                     : 'bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700'
                     }`}
@@ -512,24 +507,23 @@ const LyricDisplayApp = () => {
 
             {/* Output Toggle */}
             <div className="flex items-center justify-between" data-tour="master-output">
-              <div className="flex items-center gap-4 pl-4">
+              <div className="flex items-center gap-4">
                 <Switch
                   aria-label="Toggle display output"
                   checked={isOutputOn}
                   onCheckedChange={handleToggle}
-                  className={`
-            scale-[1.8]
-            ${darkMode
-                      ? "data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600"
-                      : "data-[state=checked]:bg-black"}
-          `}
+                  size="large"
+                  variant="control"
                 />
-                <span className={`ml-5 inline-flex items-center gap-3 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  <span className="inline-block w-[152px] shrink-0">{isOutputOn ? 'Display Output is ON' : 'Display Output is OFF'}</span>
+                <span className={`inline-flex items-center gap-2 text-[13px] font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <span className="inline-block w-[152px] shrink-0">{isOutputOn ? 'Output Display is ON' : 'Output Display is OFF'}</span>
                   <span className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
-                    <span className={`absolute h-2 w-2 origin-center rounded-full bg-emerald-500 opacity-20 transition-transform duration-500 ease-out motion-reduce:transition-none ${isOutputOn ? 'scale-[2.6]' : 'scale-100'}`} />
+                    <span className={`absolute h-2 w-2 origin-center rounded-full opacity-20 transition-all duration-500 ease-out motion-reduce:transition-none ${isOutputOn
+                      ? 'scale-[2.6] bg-green-500 dark:bg-green-400'
+                      : `scale-100 ${darkMode ? 'bg-gray-500' : 'bg-gray-400'}`
+                      }`} />
                     <span className={`relative h-2 w-2 rounded-full ${isOutputOn
-                      ? 'bg-emerald-500'
+                      ? 'bg-green-500 dark:bg-green-400'
                       : darkMode ? 'bg-gray-500' : 'bg-gray-400'
                       }`}
                     />
@@ -570,7 +564,7 @@ const LyricDisplayApp = () => {
 
             {/* Output Tabs */}
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
-              <TabsList data-tour="output-settings" className={`w-full p-1.5 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
+              <TabsList data-tour="output-settings" className={`w-full p-1 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
                 {allOutputIds.map((id) => {
                   const num = id.replace('output', '');
                   return (
@@ -587,7 +581,7 @@ const LyricDisplayApp = () => {
                   <Tooltip content="Add a new output" side="bottom">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAddOutput(); }}
-                      className={`flex-1 flex items-center justify-center h-full min-w-0 rounded-md transition-colors ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
+                      className={`tab-switcher-item-squircle flex-1 flex items-center justify-center h-full min-w-0 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
                       aria-label="Add output"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -673,8 +667,6 @@ const LyricDisplayApp = () => {
           quickParserLoading={quickParserLoading}
           quickParserOpen={quickParserOpen}
           quickParserSettings={quickParserSettings}
-          quickSwitchClassName={quickSwitchClassName}
-          quickSwitchThumbClassName={quickSwitchThumbClassName}
           reloadingWithParser={reloadingWithParser}
           remoteAutoplayActive={remoteAutoplayActive}
           searchQuery={searchQuery}

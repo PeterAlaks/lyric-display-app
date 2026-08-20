@@ -103,8 +103,8 @@ const SelectContent = React.forwardRef(({
         ref={ref}
         className={cn(
           presentation === "sheet"
-            ? "!fixed !inset-2 !left-2 !top-2 !right-2 !bottom-2 z-[2200] !w-auto !min-w-0 max-h-[calc(100vh-1rem)] overflow-y-auto overflow-x-hidden rounded-lg border bg-popover text-popover-foreground shadow-2xl"
-            : "relative z-[2000] max-h-[min(var(--radix-select-content-available-height),20rem)] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
+            ? "!fixed !inset-2 !left-2 !top-2 !right-2 !bottom-2 z-[2200] !w-auto !min-w-0 max-h-[calc(100vh-1rem)] overflow-y-auto overflow-x-hidden rounded-2xl border bg-popover text-popover-foreground shadow-2xl"
+            : "relative z-[2000] max-h-[min(var(--radix-select-content-available-height),20rem)] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-xl border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
           presentation !== "sheet" && position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
@@ -141,7 +141,7 @@ const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => 
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs leading-5 text-popover-foreground outline-none focus:bg-accent focus:text-accent-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[state=checked]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-gray-600 dark:focus:text-white dark:data-[highlighted]:bg-gray-600 dark:data-[highlighted]:text-white dark:data-[state=checked]:text-white",
+      "relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pl-2 pr-8 text-xs leading-5 text-popover-foreground outline-none focus:bg-accent focus:text-accent-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[state=checked]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-gray-600 dark:focus:text-white dark:data-[highlighted]:bg-gray-600 dark:data-[highlighted]:text-white dark:data-[state=checked]:text-white",
       className
     )}
     {...props}>

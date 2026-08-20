@@ -142,7 +142,7 @@ const IconAction = ({
         disabled={disabled}
         variant="ghost"
         size="sm"
-        className={`h-8 w-8 shrink-0 p-0 ${toolbarGhostClass} ${selected
+        className={`control-group-item-squircle h-8 w-8 shrink-0 p-0 ${toolbarGhostClass} ${selected
           ? (darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-100 text-blue-700')
           : ''}`}
         title={title}
@@ -184,7 +184,7 @@ const ToolbarDropdown = ({
           disabled={disabled}
           variant="ghost"
           size="sm"
-          className={`h-8 min-w-8 shrink-0 gap-0.5 px-1.5 ${toolbarGhostClass} ${open
+          className={`control-group-item-squircle h-8 min-w-8 shrink-0 gap-0.5 px-1.5 ${toolbarGhostClass} ${open
             ? (darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-100 text-blue-700')
             : ''}`}
           aria-label={label}
@@ -230,7 +230,7 @@ const ToolbarDropdown = ({
 };
 
 const ActionGroup = ({ children, darkMode }) => (
-  <div className={`flex items-center gap-2 rounded-xl border p-1 ${darkMode
+  <div className={`control-group-squircle flex items-center gap-2 border p-1 ${darkMode
     ? 'border-gray-700/70 bg-gray-950/30'
     : 'border-slate-200/90 bg-white/80 shadow-sm'
     }`}>

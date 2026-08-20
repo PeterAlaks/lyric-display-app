@@ -1391,11 +1391,11 @@ export default function FileNavigatorModal() {
                 {opening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
                 Open File&hellip;
               </button>
-              <div className="flex items-center gap-1 rounded-xl p-1 ring-1 ring-inset ring-gray-300/40">
+              <div className="tab-switcher-squircle flex items-center gap-1 rounded-2xl p-1 ring-1 ring-inset ring-gray-300/40">
                 <button
                   type="button"
                   onClick={() => { setDestination('control'); inputRef.current?.focus(); }}
-                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'control'
+                  className={`tab-switcher-item-squircle rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'control'
                     ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
                     : darkMode ? 'text-gray-500' : 'text-gray-500'
                     }`}
@@ -1405,7 +1405,7 @@ export default function FileNavigatorModal() {
                 <button
                   type="button"
                   onClick={() => { setDestination('canvas'); inputRef.current?.focus(); }}
-                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'canvas'
+                  className={`tab-switcher-item-squircle rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'canvas'
                     ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
                     : darkMode ? 'text-gray-500' : 'text-gray-500'
                     }`}

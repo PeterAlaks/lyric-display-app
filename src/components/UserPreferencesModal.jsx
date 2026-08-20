@@ -474,11 +474,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('general', 'liveSafetyMode', checked);
                   setLiveSafetyEnabled(checked, { persistPreference: false });
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -500,11 +497,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('general', 'previewLines', checked);
                   useLyricsStore.getState().setPreviewLinesEnabled(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -516,11 +510,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.general?.confirmOnClose ?? true}
                 onCheckedChange={(checked) => updatePreference('general', 'confirmOnClose', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -532,11 +523,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.general?.autoCheckForUpdates ?? true}
                 onCheckedChange={(checked) => updatePreference('general', 'autoCheckForUpdates', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -553,11 +541,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
                   useLyricsStore.getState().setToastSoundsMuted(muted);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -572,11 +557,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('general', 'skipSectionTitlesOnKeyboard', checked);
                   useLyricsStore.getState().setSkipSectionTitlesOnKeyboard(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
           </div>
@@ -681,11 +663,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   // Update the store immediately for runtime sync
                   useLyricsStore.getState().setShowTooltips(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -703,11 +682,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                     detail: { showTutorialPopovers: checked }
                   }));
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -722,11 +698,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('appearance', 'showCanvasFloatingToolbar', checked);
                   useLyricsStore.getState().setShowCanvasFloatingToolbar(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
           </div>
@@ -744,11 +717,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.parsing?.enableAutoLineGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableAutoLineGrouping', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -779,11 +749,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.parsing?.enableTranslationGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableTranslationGrouping', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -815,11 +782,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 checked={preferences.parsing?.enableCrossBlankLineGrouping ?? true}
                 onCheckedChange={(checked) => updatePreference('parsing', 'enableCrossBlankLineGrouping', checked)}
                 disabled={!(preferences.parsing?.enableAutoLineGrouping ?? true)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -873,11 +837,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('formatting', 'enableCleanupOnPaste', checked);
                   useLyricsStore.getState().setCanvasCleanupOnPaste(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -892,11 +853,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('formatting', 'capitalizeFirstLetter', checked);
                   useLyricsStore.getState().setFormattingCapitalizeFirstLetter(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -911,11 +869,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('formatting', 'capitalizeReligiousTerms', checked);
                   useLyricsStore.getState().setFormattingCapitalizeReligiousTerms(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -944,11 +899,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                   updatePreference('formatting', 'normalizeTypographicChars', checked);
                   useLyricsStore.getState().setFormattingNormalizeTypographicChars(checked);
                 }}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
           </div>
@@ -972,11 +924,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.lineSplitting?.enabled ?? true}
                 onCheckedChange={(checked) => updatePreference('lineSplitting', 'enabled', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -1249,11 +1198,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.autoplay?.defaultLoop ?? true}
                 onCheckedChange={(checked) => updateAutoplaySetting('defaultLoop', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -1265,11 +1211,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.autoplay?.defaultStartFromFirst ?? true}
                 onCheckedChange={(checked) => updateAutoplaySetting('defaultStartFromFirst', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -1281,11 +1224,8 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
               <Switch
                 checked={preferences.autoplay?.defaultSkipBlankLines ?? true}
                 onCheckedChange={(checked) => updateAutoplaySetting('defaultSkipBlankLines', checked)}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
           </div>

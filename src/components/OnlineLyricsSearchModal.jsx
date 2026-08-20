@@ -471,7 +471,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
   const isLibrariesMode = activeTab === 'libraries';
   const sourceModeClasses = (mode) => [
-    'inline-flex h-9 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+    'tab-switcher-item-squircle inline-flex h-9 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors',
     activeTab === mode
       ? (darkMode ? 'bg-gray-100 text-gray-900 shadow-sm' : 'bg-gray-900 text-white shadow-sm')
       : (darkMode ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-100'),
@@ -566,7 +566,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
           <section className={`flex min-h-0 flex-col ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
             <div className={`border-b p-4 ${darkMode ? 'border-slate-800/60 bg-gray-900' : 'border-slate-200/70 bg-white'}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <div className={`inline-flex w-fit rounded-lg p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                <div className={`tab-switcher-squircle inline-flex w-fit rounded-2xl p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                   <button type="button" onClick={() => setSearchMode('libraries')} className={sourceModeClasses('libraries')}>
                     <Library className="h-4 w-4" />
                     Libraries

@@ -741,11 +741,11 @@ const OutputSettingsPanel = ({
           </div>
 
           <div className="border-b border-gray-800 p-3">
-            <div className="grid grid-cols-2 gap-1 rounded-md bg-gray-900 p-1">
+            <div className="tab-switcher-squircle grid grid-cols-2 gap-1 rounded-2xl bg-gray-900 p-1">
               <button
                 type="button"
                 onClick={() => setTemplateTab('presets')}
-                className={`flex items-center justify-center gap-1.5 rounded px-2 py-2 text-xs font-semibold ${templateTab === 'presets' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`tab-switcher-item-squircle flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold ${templateTab === 'presets' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
                 Presets
@@ -753,7 +753,7 @@ const OutputSettingsPanel = ({
               <button
                 type="button"
                 onClick={() => setTemplateTab('saved')}
-                className={`flex items-center justify-center gap-1.5 rounded px-2 py-2 text-xs font-semibold ${templateTab === 'saved' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`tab-switcher-item-squircle flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold ${templateTab === 'saved' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
               >
                 <User className="h-3.5 w-3.5" />
                 My Templates

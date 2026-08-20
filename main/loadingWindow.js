@@ -140,7 +140,7 @@ export function createLoadingWindow() {
           display: flex;
           flex-direction: column;
           padding: 42px 40px 28px;
-          background: linear-gradient(135deg, #000000 0%, #1F2937 50%, #111827 100%);
+          background: linear-gradient(135deg, #020408 0%, #101722 52%, #070B12 100%);
         }
         
         .center-content {

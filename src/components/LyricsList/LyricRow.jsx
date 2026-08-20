@@ -123,7 +123,7 @@ export default function LyricRow({
               onClick={(e) => handleSplitGroup(e, index)}
               onMouseEnter={() => setHoveredButtonIndex(index)}
               onMouseLeave={() => setHoveredButtonIndex(null)}
-              className={`absolute top-1.5 right-1.5 rounded-md shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'p-1.5 gap-1.5' : 'p-1.5'
+              className={`absolute top-1.5 right-1.5 control-squircle shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'p-1.5 gap-1.5' : 'p-1.5'
                 } ${index === selectedLine
                   ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400'
                   : darkMode

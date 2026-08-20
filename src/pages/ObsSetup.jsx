@@ -201,16 +201,6 @@ export default function ObsSetup() {
   const [isObsConnected, setIsObsConnected] = React.useState(false);
   const clientRef = React.useRef(null);
 
-  const switchBaseClasses = `!h-8 !w-16 !border-0 shadow-sm transition-colors ${darkMode
-    ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-    : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-    }`;
-  const switchThumbClass = '!h-6 !w-7 data-[state=checked]:!translate-x-8 data-[state=unchecked]:!translate-x-1';
-  const getSwitchProps = (disabled = false) => ({
-    className: `${switchBaseClasses} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
-    thumbClassName: switchThumbClass,
-  });
-
   const selectedSource = React.useMemo(
     () => sources.find((source) => source.id === selectedOutput),
     [sources, selectedOutput]
@@ -611,7 +601,7 @@ export default function ObsSetup() {
                       : 'Connect to OBS to read the base canvas size.'}
                   </div>
                 </div>
-                <Switch checked={useObsBaseResolution} onCheckedChange={setUseObsBaseResolution} {...getSwitchProps(false)} />
+                <Switch checked={useObsBaseResolution} onCheckedChange={setUseObsBaseResolution} size="large" variant="control" />
               </div>
 
               <Field label="Width" disabled={useObsBaseResolution}>
@@ -664,7 +654,7 @@ export default function ObsSetup() {
 
               <div className={obsToggleSurfaceClass}>
                 <span className="text-sm font-medium">Lock new source</span>
-                <Switch checked={lockSource} onCheckedChange={setLockSource} {...getSwitchProps(false)} />
+                <Switch checked={lockSource} onCheckedChange={setLockSource} size="large" variant="control" />
               </div>
 
               <div className={`${obsSurfaceClass} text-xs text-gray-600 dark:text-gray-400 sm:col-span-2`}>

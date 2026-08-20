@@ -3,7 +3,6 @@ import { Clock3, LayoutPanelTop, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { getTimerToggleProps } from '../utils/timerUtils';
 import {
   MAX_TRANSITION_DURATION_MS,
   MIN_TRANSITION_DURATION_MS,
@@ -32,8 +31,6 @@ const TimerDisplaySettingsModal = ({ displaySettings, onDraftChange, darkMode = 
   const selectContentClass = darkMode
     ? 'bg-gray-800 border-gray-700 text-gray-100'
     : 'bg-white border-gray-300';
-  const switchProps = getTimerToggleProps(darkMode);
-
   const update = React.useCallback((partial) => {
     const nextSettings = { ...settingsRef.current, ...partial };
     settingsRef.current = nextSettings;
@@ -68,10 +65,10 @@ const TimerDisplaySettingsModal = ({ displaySettings, onDraftChange, darkMode = 
             </Select>
           </div>
           <SettingRow title="Progress bar" description="Show elapsed progress beneath the timer." mutedText={mutedText}>
-            <Switch checked={Boolean(settings.showProgress)} onCheckedChange={(checked) => update({ showProgress: checked })} {...switchProps} />
+            <Switch checked={Boolean(settings.showProgress)} onCheckedChange={(checked) => update({ showProgress: checked })} size="small" variant="control" />
           </SettingRow>
           <SettingRow title="Secondary text" description="Show the timer label and schedule position." mutedText={mutedText}>
-            <Switch checked={showSecondaryText} onCheckedChange={(checked) => update({ showSecondaryText: checked })} {...switchProps} />
+            <Switch checked={showSecondaryText} onCheckedChange={(checked) => update({ showSecondaryText: checked })} size="small" variant="control" />
           </SettingRow>
         </div>
       </section>
@@ -86,16 +83,16 @@ const TimerDisplaySettingsModal = ({ displaySettings, onDraftChange, darkMode = 
         </div>
         <div className={`divide-y ${dividerClass}`}>
           <SettingRow title="Show global time" disabled={!showSecondaryText} mutedText={mutedText}>
-            <Switch checked={Boolean(settings.showGlobalClock)} onCheckedChange={(checked) => update({ showGlobalClock: checked })} disabled={!showSecondaryText} {...getTimerToggleProps(darkMode, !showSecondaryText)} />
+            <Switch checked={Boolean(settings.showGlobalClock)} onCheckedChange={(checked) => update({ showGlobalClock: checked })} disabled={!showSecondaryText} size="small" variant="control" />
           </SettingRow>
           <SettingRow title="12-hour clock" disabled={!showSecondaryText || !settings.showGlobalClock} mutedText={mutedText}>
-            <Switch checked={Boolean(settings.clockHour12)} onCheckedChange={(checked) => update({ clockHour12: checked })} disabled={!showSecondaryText || !settings.showGlobalClock} {...getTimerToggleProps(darkMode, !showSecondaryText || !settings.showGlobalClock)} />
+            <Switch checked={Boolean(settings.clockHour12)} onCheckedChange={(checked) => update({ clockHour12: checked })} disabled={!showSecondaryText || !settings.showGlobalClock} size="small" variant="control" />
           </SettingRow>
           <SettingRow title="Show seconds" disabled={!showSecondaryText || !settings.showGlobalClock} mutedText={mutedText}>
-            <Switch checked={Boolean(settings.clockShowSeconds)} onCheckedChange={(checked) => update({ clockShowSeconds: checked })} disabled={!showSecondaryText || !settings.showGlobalClock} {...getTimerToggleProps(darkMode, !showSecondaryText || !settings.showGlobalClock)} />
+            <Switch checked={Boolean(settings.clockShowSeconds)} onCheckedChange={(checked) => update({ clockShowSeconds: checked })} disabled={!showSecondaryText || !settings.showGlobalClock} size="small" variant="control" />
           </SettingRow>
           <SettingRow title="Show AM/PM" disabled={!showSecondaryText || !settings.showGlobalClock || !settings.clockHour12} mutedText={mutedText}>
-            <Switch checked={Boolean(settings.clockShowPeriod)} onCheckedChange={(checked) => update({ clockShowPeriod: checked })} disabled={!showSecondaryText || !settings.showGlobalClock || !settings.clockHour12} {...getTimerToggleProps(darkMode, !showSecondaryText || !settings.showGlobalClock || !settings.clockHour12)} />
+            <Switch checked={Boolean(settings.clockShowPeriod)} onCheckedChange={(checked) => update({ clockShowPeriod: checked })} disabled={!showSecondaryText || !settings.showGlobalClock || !settings.clockHour12} size="small" variant="control" />
           </SettingRow>
         </div>
       </section>

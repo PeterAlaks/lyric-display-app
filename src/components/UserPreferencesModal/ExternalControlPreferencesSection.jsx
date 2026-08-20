@@ -55,11 +55,8 @@ const ExternalControlPreferencesSection = ({
                 checked={midiStatus?.enabled || false}
                 onCheckedChange={handleMidiToggle}
                 disabled={midiStatus?.selectedPortIndex < 0}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -134,11 +131,8 @@ const ExternalControlPreferencesSection = ({
               <Switch
                 checked={oscStatus?.enabled || false}
                 onCheckedChange={handleOscToggle}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 
@@ -168,11 +162,8 @@ const ExternalControlPreferencesSection = ({
               <Switch
                 checked={oscStatus?.remoteAccessEnabled || false}
                 onCheckedChange={handleOscRemoteAccessToggle}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-amber-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-amber-600 data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="warning"
               />
             </div>
 
@@ -217,11 +208,8 @@ const ExternalControlPreferencesSection = ({
               <Switch
                 checked={oscStatus?.feedbackEnabled || false}
                 onCheckedChange={handleOscFeedbackToggle}
-                className={`!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-                  ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-                  : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-                  }`}
-                thumbClassName="!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1"
+                size="medium"
+                variant="control"
               />
             </div>
 

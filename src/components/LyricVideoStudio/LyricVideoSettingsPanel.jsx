@@ -16,7 +16,7 @@ import ButterchurnVisualizerSettings from '../ButterchurnVisualizerSettings';
 const inputClassName = 'h-9 rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
 const textareaClassName = 'min-h-[72px] rounded-md border-gray-300 bg-white !text-xs text-gray-900 md:!text-xs focus-visible:border-blue-500/40 focus-visible:ring-blue-500/15 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus-visible:border-blue-500/50 dark:focus-visible:ring-blue-500/20';
 const selectTriggerClassName = 'h-9 rounded-md border-gray-300 bg-white px-3 !text-xs text-gray-900 md:!text-xs focus:ring-1 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
-const selectContentClassName = 'rounded-md border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
+const selectContentClassName = 'rounded-xl border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200';
 const ghostButtonClassName = 'rounded-full text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300';
 
 const clampInteger = (value, fallback, min, max) => {
@@ -238,7 +238,8 @@ export default function LyricVideoSettingsPanel({
               checked={Boolean(intro.enabled)}
               onCheckedChange={(enabled) => patchIntro({ enabled })}
               aria-label="Enable intro"
-              className="data-[state=checked]:bg-blue-600"
+              size="compact"
+              variant="blue"
             />
           </div>
           {intro.enabled && (

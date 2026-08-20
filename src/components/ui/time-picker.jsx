@@ -199,14 +199,14 @@ const TimePicker = React.forwardRef(({
       >
         <div className={cn('flex items-center justify-between border-b px-4 py-3', darkMode ? 'border-slate-800' : 'border-slate-200')}>
           <p className="text-xs font-semibold">Select time</p>
-          <div className={cn('flex rounded-lg p-1', darkMode ? 'bg-slate-800' : 'bg-slate-100')}>
+          <div className={cn('tab-switcher-squircle flex rounded-2xl p-1', darkMode ? 'bg-slate-800' : 'bg-slate-100')}>
             {['12', '24'].map((format) => (
               <button
                 key={format}
                 type="button"
                 onClick={() => changeHourFormat(format)}
                 className={cn(
-                  'rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-colors',
+                  'tab-switcher-item-squircle rounded-xl px-2.5 py-1.5 text-[10px] font-semibold transition-colors',
                   hourFormat === format
                     ? (darkMode ? 'bg-slate-950 text-white shadow-sm' : 'bg-white text-slate-900 shadow-sm')
                     : mutedClass

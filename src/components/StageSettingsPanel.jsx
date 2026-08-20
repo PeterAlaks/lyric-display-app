@@ -131,11 +131,6 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
     }
   };
 
-  const switchBaseClasses = `!h-7 !w-14 !border-0 shadow-sm transition-colors ${darkMode
-    ? 'data-[state=checked]:bg-green-400 data-[state=unchecked]:bg-gray-600'
-    : 'data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300'
-    }`;
-  const switchThumbClass = "!h-5 !w-6 data-[state=checked]:!translate-x-7 data-[state=unchecked]:!translate-x-1";
   const customMessagePrimaryButtonClass = darkMode
     ? 'h-9 border border-blue-500/35 bg-blue-500/15 px-3 text-xs font-semibold text-blue-100 shadow-none hover:border-blue-400/60 hover:bg-blue-500/25'
     : 'h-9 border border-gray-900 bg-gray-900 px-3 text-xs font-semibold text-white shadow-none hover:bg-gray-800';
@@ -161,7 +156,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
         {label}
       </label>
       <div className="flex items-center gap-3">
-        <span className={`text-[11px] leading-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${disabled ? 'opacity-50' : ''}`}>
+        <span className={`text-[10px] leading-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${disabled ? 'opacity-50' : ''}`}>
           {checked ? 'Enabled' : 'Disabled'}
         </span>
         <Switch
@@ -169,8 +164,8 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
           onCheckedChange={onChange}
           disabled={disabled}
           aria-label={ariaLabel}
-          className={`${switchBaseClasses} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-          thumbClassName={switchThumbClass}
+          size="medium"
+          variant="control"
         />
       </div>
     </div>
@@ -224,7 +219,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             <LabelWithIcon icon={ChevronRight} text="Arrow" darkMode={darkMode} />
           </Tooltip>
           <div className="flex items-center gap-2 justify-end w-full">
-            <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${sectionDisabled ? 'opacity-50' : ''}`}>
+            <span className={`text-[10px] leading-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${sectionDisabled ? 'opacity-50' : ''}`}>
               {settings.showNextArrow ? 'Enabled' : 'Disabled'}
             </span>
             <Switch
@@ -232,8 +227,8 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               onCheckedChange={(checked) => update('showNextArrow', checked)}
               disabled={sectionDisabled}
               aria-label="Toggle show arrow"
-              className={`${switchBaseClasses} ${sectionDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              thumbClassName={switchThumbClass}
+              size="medium"
+              variant="control"
             />
             <ColorPicker
               value={settings.nextArrowColor}
@@ -287,15 +282,15 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               />
             </Tooltip>
             <div className="flex items-center gap-3 justify-end w-full">
-              <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <span className={`text-[10px] leading-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {sectionEnabled ? 'Enabled' : 'Disabled'}
               </span>
               <Switch
                 checked={sectionEnabled}
                 onCheckedChange={(checked) => update(section.settingsToggleKey, checked)}
                 aria-label={`Toggle ${section.settingsToggleKey === 'showNextLine' ? 'next line' : 'previous line'} visibility`}
-                className={switchBaseClasses}
-                thumbClassName={switchThumbClass}
+                size="medium"
+                variant="control"
               />
             </div>
           </div>
@@ -747,15 +742,15 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
           <LabelWithIcon icon={ScreenShare} text="Show Time" darkMode={darkMode} />
         </Tooltip>
         <div className="flex items-center gap-3 justify-end w-full">
-          <span className={`text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <span className={`text-[10px] leading-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {settings.showTime ? 'Enabled' : 'Disabled'}
           </span>
           <Switch
             checked={settings.showTime}
             onCheckedChange={(checked) => update('showTime', checked)}
             aria-label="Toggle show time"
-            className={switchBaseClasses}
-            thumbClassName={switchThumbClass}
+            size="medium"
+            variant="control"
           />
         </div>
       </div>

@@ -526,7 +526,7 @@ const FontSelect = ({
       onFocus={() => { activeFontIndexRef.current = index; }}
       style={{ contain: 'layout paint style' }}
       className={cn(
-        'w-full text-left flex items-center justify-between gap-2 px-3 py-1.5 text-xs leading-5 rounded-r-md rounded-l-none truncate focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
+        'mx-1 flex w-[calc(100%-0.5rem)] items-center justify-between gap-2 rounded-xl px-3 py-1.5 text-left text-xs leading-5 truncate focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
         darkMode
           ? 'text-gray-200 hover:bg-gray-600 hover:text-white focus:bg-gray-600 focus:text-white'
           : 'text-gray-800 hover:bg-gray-100 focus:bg-gray-200',
@@ -668,6 +668,8 @@ const FontSelect = ({
     <div className={cn(containerClasses)} ref={containerRef}>
       <button
         type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isMenuVisible}
         onClick={handleToggleMenu}
         className={cn(
           'flex h-9 min-w-0 items-center justify-between whitespace-nowrap rounded-md border px-3 py-2 text-xs leading-5 shadow-sm',
@@ -689,7 +691,7 @@ const FontSelect = ({
           ref={menuRef}
           onKeyDown={handleMenuKeyDown}
           className={cn(
-            'fixed z-[2100] rounded-md border shadow-lg transition-all duration-200 ease-out transform',
+            'fixed z-[2100] rounded-2xl border shadow-lg transition-all duration-200 ease-out transform',
             panelStateClass,
             darkMode
               ? 'bg-gray-700 border-gray-600 text-gray-200'
@@ -702,7 +704,7 @@ const FontSelect = ({
           }}
         >
           <div className={cn(
-            'p-3 pb-3 border-b rounded-t-md',
+            'p-3 pb-3 border-b rounded-t-2xl',
             darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'
           )}>
             <div className="relative">

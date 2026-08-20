@@ -95,7 +95,6 @@ const TimerControlLayout = ({
     headerIconButtonClass,
     subtleButtonClass,
     surfaceClass,
-    getSwitchProps,
   } = theme;
 
   return (
@@ -116,13 +115,13 @@ const TimerControlLayout = ({
           </div>
 
           <div
-            className={`relative grid grid-cols-2 items-center rounded-full border p-1 ${darkMode ? 'border-gray-700 bg-gray-950/60' : 'border-gray-200 bg-gray-100/80'}`}
+            className={`timer-control-mode-tabs relative grid grid-cols-2 items-center rounded-full border p-1 ${darkMode ? 'border-gray-700 bg-gray-950/60' : 'border-gray-200 bg-gray-100/80'}`}
             role="tablist"
             aria-label="Timer control mode"
           >
             <span
               aria-hidden="true"
-              className={`absolute bottom-1 left-1 top-1 w-[calc(50%_-_0.25rem)] rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${darkMode ? 'bg-gray-700' : 'bg-white'}`}
+              className={`timer-control-mode-indicator absolute bottom-1 left-1 top-1 w-[calc(50%_-_0.25rem)] rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${darkMode ? 'bg-gray-700' : 'bg-white'}`}
               style={{ transform: useSets ? 'translateX(100%)' : 'translateX(0)' }}
             />
             {[
@@ -262,7 +261,7 @@ const ManualControls = ({
   applyTimerControlSettings,
   applyTimerLabel,
 }) => {
-  const { mutedText, inputClass, selectTriggerClass, selectContentClass, subtleButtonClass, surfaceClass, getSwitchProps } = theme;
+  const { mutedText, inputClass, selectTriggerClass, selectContentClass, subtleButtonClass, surfaceClass } = theme;
   return (
     <>
       <div>
@@ -325,14 +324,14 @@ const ManualControls = ({
             <p className="text-xs font-medium">Continue as overrun</p>
             <p className={`mt-0.5 text-[10px] ${mutedText}`}>Count beyond zero instead of ending.</p>
           </div>
-          <Switch checked={overrunMode} onCheckedChange={(checked) => applyTimerControlSettings({ overrunMode: checked })} {...getSwitchProps(false)} />
+          <Switch checked={overrunMode} onCheckedChange={(checked) => applyTimerControlSettings({ overrunMode: checked })} size="small" variant="control" />
         </div>
         <div className={`flex items-center justify-between border-t pt-3 ${theme.dividerClass}`}>
           <div className="pr-3">
             <p className="text-xs font-medium">Show global clock during timer pause</p>
             <p className={`mt-0.5 text-[10px] ${mutedText}`}>Replace the paused timer with the current time.</p>
           </div>
-          <Switch checked={showGlobalClockDuringPause} onCheckedChange={(checked) => applyTimerControlSettings({ showGlobalClockDuringPause: checked })} {...getSwitchProps(false)} />
+          <Switch checked={showGlobalClockDuringPause} onCheckedChange={(checked) => applyTimerControlSettings({ showGlobalClockDuringPause: checked })} size="small" variant="control" />
         </div>
       </div>
     </>
@@ -363,7 +362,7 @@ const ScheduleControls = ({
   setTimerControlSettings,
   applyTimerControlSettings,
 }) => {
-  const { mutedText, inputClass, outlineButtonClass, surfaceClass, getSwitchProps } = theme;
+  const { mutedText, inputClass, outlineButtonClass, surfaceClass } = theme;
   const timedCount = scheduleItems.filter(isTimedScheduleItem).length;
   const scheduleControlsDisabled = scheduleItems.length === 0 || (activeTimerUsesSets && !liveControlReady);
   return (
@@ -444,12 +443,12 @@ const ScheduleControls = ({
           <div className={`divide-y ${darkMode ? 'divide-gray-800' : 'divide-gray-200/80'}`}>
             <div className="flex min-h-11 items-center justify-between gap-3 py-3">
               <span className="text-[11px]">Auto-start timed items</span>
-              <Switch disabled={scheduleControlsDisabled} checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} {...getSwitchProps(scheduleControlsDisabled)} />
+              <Switch disabled={scheduleControlsDisabled} checked={autoStartNext} onCheckedChange={(checked) => applyTimerControlSettings({ autoStartNext: checked })} size="small" variant="control" />
             </div>
             <div className="py-3">
               <div className="flex min-h-6 items-center justify-between gap-3">
                 <span className="text-[11px]">Transition indicator</span>
-                <Switch disabled={scheduleControlsDisabled} checked={indicatorEnabled} onCheckedChange={(checked) => applyTimerControlSettings({ indicatorEnabled: checked })} {...getSwitchProps(scheduleControlsDisabled)} />
+                <Switch disabled={scheduleControlsDisabled} checked={indicatorEnabled} onCheckedChange={(checked) => applyTimerControlSettings({ indicatorEnabled: checked })} size="small" variant="control" />
               </div>
               {indicatorEnabled && (
                 <div className="mt-3 grid grid-cols-[minmax(0,1fr)_72px] gap-2">
@@ -460,7 +459,7 @@ const ScheduleControls = ({
             </div>
             <div className="flex min-h-11 items-center justify-between gap-3 py-3">
               <span className="text-[11px]">Timing alerts</span>
-              <Switch disabled={scheduleControlsDisabled} checked={scheduleNotificationsEnabled} onCheckedChange={handleTimingAlertsChange} {...getSwitchProps(scheduleControlsDisabled)} />
+              <Switch disabled={scheduleControlsDisabled} checked={scheduleNotificationsEnabled} onCheckedChange={handleTimingAlertsChange} size="small" variant="control" />
             </div>
             <div className="grid grid-cols-2 gap-2 py-3">
               <label className="space-y-1"><span className={`text-[9px] font-medium ${mutedText}`}>Warn at</span><Input disabled={scheduleControlsDisabled} type="number" min="0" value={warningSeconds} onChange={(event) => applyTimerControlSettings({ warningSeconds: event.target.value })} className={inputClass} /></label>
