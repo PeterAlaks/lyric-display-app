@@ -32,28 +32,29 @@ import { METADATA_OPTIONS } from '../../constants/songCanvas';
 import { TEXT_CASING } from '../../utils/textCasing';
 
 const HelpButton = ({ darkMode, showModal }) => (
-  <button
-    onClick={() => {
-      showModal({
-        title: 'Song Canvas Help',
-        headerDescription: 'Professional lyrics editor with powerful formatting tools',
-        component: 'SongCanvasHelp',
-        variant: 'info',
-        size: 'large',
-        dismissLabel: 'Got it'
-      });
-    }}
-    className={`rounded-lg p-1.5 transition-all ${darkMode
-      ? 'bg-transparent text-gray-400 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
-      : 'bg-transparent text-gray-500 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'
-      }`}
-    title="Song Canvas Help"
-    aria-label="Open lyrics canvas help"
-  >
-    <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  </button>
+  <Tooltip content="Song Canvas Help" side="bottom">
+    <button
+      onClick={() => {
+        showModal({
+          title: 'Song Canvas Help',
+          headerDescription: 'Professional lyrics editor with powerful formatting tools',
+          component: 'SongCanvasHelp',
+          variant: 'info',
+          size: 'large',
+          dismissLabel: 'Got it'
+        });
+      }}
+      className={`rounded-lg p-1.5 transition-all ${darkMode
+        ? 'bg-transparent text-gray-400 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300'
+        : 'bg-transparent text-gray-500 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'
+        }`}
+      aria-label="Open lyrics canvas help"
+    >
+      <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </button>
+  </Tooltip>
 );
 
 const SaveActions = ({
@@ -398,8 +399,8 @@ const SongCanvasHeader = ({
           </Tooltip>
         </div>
 
-        <div className="flex w-full max-w-lg min-w-0 items-center justify-self-center gap-2.5 px-1">
-          <FileText className={`hidden h-6 w-6 shrink-0 sm:block ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
+        <div className="flex w-full max-w-lg min-w-0 items-center justify-self-start gap-2.5 px-1">
+          <FileText className={`hidden h-5 w-5 shrink-0 sm:block ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
           <div className="min-w-0 flex-1">
             <label htmlFor="lyrics-file-name" className="sr-only">Lyrics file name</label>
             <Input
@@ -416,17 +417,17 @@ const SongCanvasHeader = ({
               placeholder="Untitled Lyrics"
               aria-label="Lyrics file name"
               title={title}
-              className={`h-9 min-w-0 truncate rounded-none px-0 py-0 text-left text-sm font-semibold sm:text-base md:text-lg ${titleInputClass}`}
+              className={`h-9 min-w-0 truncate rounded-none px-0 py-0 text-left text-[17px] font-semibold ${titleInputClass}`}
             />
           </div>
           {isTitlePrefilled && (
             <span className={`hidden shrink-0 text-[10px] italic sm:inline ${darkMode ? 'text-blue-300/70' : 'text-blue-600/70'}`}>Auto-filled</span>
           )}
-          <HelpButton darkMode={darkMode} showModal={showModal} />
         </div>
 
-        <div className="justify-self-end">
-          {editMode ? (
+        <div className="flex items-center justify-self-end gap-1.5">
+          <HelpButton darkMode={darkMode} showModal={showModal} />
+          {editMode && (
             <Tooltip content="Start a new lyrics file" side="left">
               <button
                 onClick={handleStartNewSong}
@@ -436,8 +437,6 @@ const SongCanvasHeader = ({
                 <span className="hidden sm:inline">New</span>
               </button>
             </Tooltip>
-          ) : (
-            <div className="w-8 sm:w-[72px] md:w-[120px]" />
           )}
         </div>
       </div>

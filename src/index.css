@@ -236,15 +236,13 @@
   corner-shape: squircle;
 }
 
-/* Keep the lyric surface and its rows on nested, concentric squircle curves. */
-.lyrics-list-container-squircle {
-  border-radius: 1.5rem;
-  corner-shape: squircle;
+/* Keep the lyric surface and its rows generously rounded without corner smoothing. */
+.lyrics-list-container-rounded {
+  border-radius: 0.75rem;
 }
 
-.lyric-line-item-squircle {
-  border-radius: 1.25rem;
-  corner-shape: squircle;
+.lyric-line-item-rounded {
+  border-radius: 0.5rem;
 }
 
 /* Timer mode is intentionally a classic pill rather than a squircle. */
@@ -337,18 +335,18 @@
 
 .output-settings-panel,
 .stage-settings-panel {
-  --output-pill-surface: hsl(var(--muted));
-  --output-pill-surface-hover: hsl(0 0% 93%);
-  --output-pill-inset: rgba(255, 255, 255, 0.72);
+  --output-pill-surface: #f8fafc;
+  --output-pill-surface-hover: #f1f5f9;
+  --output-pill-inset: #f8fafc;
   --output-pill-icon: rgba(37, 99, 235, 0.1);
   --output-pill-shadow: 0 4px 14px rgba(15, 23, 42, 0.025);
 }
 
 .output-settings-panel[data-theme="dark"],
 .stage-settings-panel[data-theme="dark"] {
-  --output-pill-surface: #374151;
-  --output-pill-surface-hover: #414d5e;
-  --output-pill-inset: #2b3544;
+  --output-pill-surface: #2b3544;
+  --output-pill-surface-hover: #344153;
+  --output-pill-inset: #26303d;
   --output-pill-icon: rgba(147, 197, 253, 0.15);
   --output-pill-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);
 }
@@ -363,10 +361,13 @@
   box-shadow: var(--output-pill-shadow);
 }
 
-:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] {
+:is(.output-settings-panel, .stage-settings-panel) :is([data-output-setting-row], [data-output-setting-subrow]) {
   min-height: 3rem;
-  border-radius: 9999px;
   padding: 0.32rem 0.5rem 0.32rem 0.65rem;
+}
+
+:is(.output-settings-panel, .stage-settings-panel) [data-output-setting-row] {
+  border-radius: 9999px;
   transition: background-color 160ms ease, box-shadow 160ms ease;
 }
 
@@ -383,7 +384,7 @@
 
 :is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group][data-expanded="true"] {
   border-radius: 1.1rem;
-  padding-bottom: 0.35rem;
+  padding-bottom: 0;
 }
 
 :is(.output-settings-panel, .stage-settings-panel) [data-output-setting-group] > [data-output-setting-row],
@@ -415,13 +416,11 @@
 }
 
 :is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] {
-  width: calc(100% - 0.8rem);
-  min-height: 2.75rem;
-  margin: 0 0.4rem 0.35rem;
+  width: 100%;
+  margin: 0;
   border: 0;
-  border-radius: 9999px;
-  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
-  background: var(--output-pill-inset);
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
@@ -466,7 +465,7 @@
   box-shadow: none;
 }
 
-:is(.output-settings-panel, .stage-settings-panel)[data-theme="light"]
+:is(.output-settings-panel, .stage-settings-panel)
   :is([data-output-setting-row], [data-output-setting-subrow], [data-output-compact-setting-field])
   :is(input, button[role="combobox"], button[aria-haspopup]) {
   background-color: transparent;
@@ -497,9 +496,9 @@
   padding-top: 0.25rem;
 }
 
-.output-settings-panel [data-output-compact-setting-field] {
+.output-settings-panel--compact [data-output-compact-setting-field] {
   min-width: 0;
-  border-radius: 1.2rem;
+  border-radius: 0.625rem;
   padding: 0.45rem;
   background: var(--output-pill-inset);
   box-shadow: none;
@@ -512,7 +511,7 @@
 
 @media (max-width: 520px) {
   :is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] {
-    border-radius: 9999px;
+    border-radius: 0;
   }
 }
 

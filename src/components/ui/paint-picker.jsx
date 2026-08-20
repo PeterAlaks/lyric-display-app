@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   createLinearGradientPaint,
@@ -96,12 +97,6 @@ const GradientAngleDial = ({ value, onChange, darkMode }) => {
     </div>
   );
 };
-
-const activeButtonClass = (darkMode) => (
-  darkMode
-    ? "!bg-white !text-gray-900 hover:!bg-white !border-gray-300 !transition-none"
-    : "!bg-black !text-white hover:!bg-black !border-gray-300 !transition-none"
-);
 
 const inactiveButtonClass = (darkMode) => (
   darkMode
@@ -228,26 +223,27 @@ const PaintPicker = React.forwardRef(({
 
   const paintPanel = (
     <div className={`${presentation === 'sheet' ? 'mx-auto max-w-sm' : ''} space-y-3`}>
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setMode('solid')}
-          className={cn(localPaint.type === 'solid' ? activeButtonClass(darkMode) : inactiveButtonClass(darkMode))}
+      <Tabs value={localPaint.type} onValueChange={setMode}>
+        <TabsList
+          aria-label="Fill type"
+          className={`grid h-10 w-full grid-cols-2 gap-1 p-1 ${darkMode ? 'bg-[#2b3544] text-gray-300' : 'bg-[#f8fafc] text-gray-500'}`}
         >
-          <Droplet className="mr-1.5 h-4 w-4" />
-          Solid
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setMode('linear')}
-          className={cn(localPaint.type === 'linear' ? activeButtonClass(darkMode) : inactiveButtonClass(darkMode))}
-        >
-          <SquareDashed className="mr-1.5 h-4 w-4" />
-          Gradient
-        </Button>
-      </div>
+          <TabsTrigger
+            value="solid"
+            className={`h-full min-w-0 gap-1.5 px-2 text-xs ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}
+          >
+            <Droplet className="h-4 w-4" />
+            Solid
+          </TabsTrigger>
+          <TabsTrigger
+            value="linear"
+            className={`h-full min-w-0 gap-1.5 px-2 text-xs ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}
+          >
+            <SquareDashed className="h-4 w-4" />
+            Gradient
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div data-paint-picker-preview className="h-8 w-full rounded-xl border border-border" style={{ background: previewBackground }} />
 
@@ -376,7 +372,7 @@ const PaintPicker = React.forwardRef(({
           <div
             ref={contentRef}
             data-popover-scroll-lock-allow="true"
-            className={`flex h-full flex-col overflow-hidden rounded-lg border shadow-2xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+            className={`flex h-full flex-col overflow-hidden rounded-2xl border shadow-2xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
           >
             <div className={`flex items-center justify-between border-b px-4 py-3 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <div className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Choose Fill</div>
@@ -407,7 +403,7 @@ const PaintPicker = React.forwardRef(({
         <PopoverContent
           ref={contentRef}
           data-popover-scroll-lock-allow="true"
-          className={`w-[272px] p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          className={`w-[272px] rounded-2xl p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
           align={popoverAlign}
           side={popoverSide}
           avoidCollisions

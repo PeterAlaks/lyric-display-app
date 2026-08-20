@@ -33,6 +33,9 @@ export default function LyricLineContent({
   isActiveSearchMatch = false,
 }) {
   const compact = density === 'dock' || density === 'compact';
+  const dock = density === 'dock';
+  const primaryTextSizeClass = dock ? 'text-[13px]' : 'text-[15px]';
+  const secondaryTextSizeClass = dock ? 'text-[11px]' : compact ? 'text-[12px]' : 'text-[15px]';
   const secondaryTextClass = isActiveSearchMatch
     ? ''
     : darkMode ? 'text-gray-300' : 'text-gray-600';
@@ -46,12 +49,12 @@ export default function LyricLineContent({
   if (line.type === 'group') {
     return (
       <div className={compact ? 'space-y-0.5' : 'space-y-1'}>
-        <div className="font-medium text-[15px]">
+        <div className={`font-medium ${primaryTextSizeClass}`}>
           {highlightSearchTerm(line.mainLine, searchQuery, darkMode, compact)}
         </div>
         {line.translation && (
           <div
-            className={`${compact ? 'text-[12px]' : 'text-[15px]'} italic ${secondaryTextClass}`}
+            className={`${secondaryTextSizeClass} italic ${secondaryTextClass}`}
           >
             {highlightSearchTerm(line.translation, searchQuery, darkMode, compact)}
           </div>
@@ -67,7 +70,7 @@ export default function LyricLineContent({
         {normalLines.map((groupLine, groupIndex) => (
           <div
             key={`${line.id || index}_${groupIndex}`}
-            className={`${groupIndex === 0 ? 'font-medium text-[15px]' : compact ? 'text-[12px]' : 'text-[15px]'} ${groupIndex === 0 ? '' : secondaryTextClass}`}
+            className={`${groupIndex === 0 ? `font-medium ${primaryTextSizeClass}` : secondaryTextSizeClass} ${groupIndex === 0 ? '' : secondaryTextClass}`}
           >
             {highlightSearchTerm(groupLine, searchQuery, darkMode, compact)}
           </div>
@@ -76,5 +79,5 @@ export default function LyricLineContent({
     );
   }
 
-  return <div className="text-[15px]">{highlightSearchTerm(line, searchQuery, darkMode, compact)}</div>;
+  return <div className={primaryTextSizeClass}>{highlightSearchTerm(line, searchQuery, darkMode, compact)}</div>;
 }

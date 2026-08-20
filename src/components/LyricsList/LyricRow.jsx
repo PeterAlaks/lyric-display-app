@@ -56,7 +56,7 @@ export default function LyricRow({
 
   if (typeof currentLine === 'string' && isStructureTagLine(currentLine)) {
     if (!virtualized) {
-      return <div data-line-index={index} className={`${compact ? 'px-2 h-1' : 'px-4 h-2'} pointer-events-none`} />;
+      return <div data-line-index={index} className={`${compact ? 'px-2 h-1' : 'px-3 h-2'} pointer-events-none`} />;
     }
 
     return (
@@ -72,7 +72,7 @@ export default function LyricRow({
     <div
       data-line-index={virtualized ? index : undefined}
       style={virtualized ? getVirtualizedStyle(style) : undefined}
-      className={virtualized ? undefined : compact ? 'px-2' : 'px-4'}
+      className={virtualized ? undefined : compact ? 'px-2' : 'px-3'}
     >
       {sectionLabel && (
         <div className={`${compact ? 'text-[10px]' : 'text-xs'} font-semibold ${compact ? 'mb-1' : virtualized ? 'mb-3' : 'mb-2'} flex items-center gap-2 ${getSectionClassName(isActiveSection, darkMode, virtualized, compact)}`}>
@@ -123,7 +123,7 @@ export default function LyricRow({
               onClick={(e) => handleSplitGroup(e, index)}
               onMouseEnter={() => setHoveredButtonIndex(index)}
               onMouseLeave={() => setHoveredButtonIndex(null)}
-              className={`absolute top-1.5 right-1.5 control-squircle shadow-sm flex items-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'p-1.5 gap-1.5' : 'p-1.5'
+              className={`absolute top-1.5 right-1.5 h-7 min-w-7 rounded-full px-[7.5px] shadow-sm flex items-center justify-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'gap-1.5' : 'gap-0'
                 } ${index === selectedLine
                   ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400'
                   : darkMode
@@ -131,9 +131,9 @@ export default function LyricRow({
                     : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
                 }`}
             >
-              <Ungroup className="w-3.5 h-3.5 shrink-0" />
+              <Ungroup className="h-[13px] w-[13px] shrink-0" />
               <span
-                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === index
+                className={`text-[11px] font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === index
                   ? 'max-w-[60px] opacity-100 ml-0'
                   : 'max-w-0 opacity-0'
                   }`}

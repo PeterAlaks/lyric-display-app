@@ -564,7 +564,10 @@ const LyricDisplayApp = () => {
 
             {/* Output Tabs */}
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
-              <TabsList data-tour="output-settings" className={`w-full p-1 h-11 mb-8 gap-1 ${darkMode ? 'bg-gray-700 text-gray-300' : ''}`}>
+              <TabsList
+                data-tour="output-settings"
+                className={`w-full p-1 h-11 mb-8 gap-1 ${darkMode ? 'bg-[#2b3544] text-gray-300' : 'bg-[#f8fafc]'}`}
+              >
                 {allOutputIds.map((id) => {
                   const num = id.replace('output', '');
                   return (

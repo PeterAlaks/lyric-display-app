@@ -39,8 +39,8 @@ export const AdvancedToggle = ({ expanded, onToggle, darkMode, ariaLabel, disabl
     onClick={onToggle}
     disabled={disabled}
     className={`p-1 rounded transition-colors ${darkMode
-      ? 'hover:bg-gray-700 text-gray-400'
-      : 'hover:bg-gray-100 text-gray-500'
+      ? 'hover:bg-gray-600 text-gray-400'
+      : 'hover:bg-slate-200 text-gray-500'
       } ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
     aria-label={ariaLabel}
   >

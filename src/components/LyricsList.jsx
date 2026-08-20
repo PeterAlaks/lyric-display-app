@@ -385,7 +385,7 @@ export default function LyricsList({
   ) : null;
 
   const listContent = !useVirtualized ? (
-    <div className={`${compact ? 'space-y-1 pb-2' : 'space-y-2 pb-4'} relative ${hasSections ? '' : compact ? 'pt-2' : 'pt-4'}`}>
+    <div className={`${compact ? 'space-y-1 pb-2' : 'space-y-2 pb-3'} relative ${hasSections ? '' : compact ? 'pt-2' : 'pt-3'}`}>
       {sectionChips}
       {lyrics.map((line, i) => (
         <LyricRow

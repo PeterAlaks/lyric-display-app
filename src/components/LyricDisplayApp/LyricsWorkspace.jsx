@@ -300,7 +300,7 @@ const LyricsWorkspace = ({
       )}
     </div>
 
-    <div className={`lyrics-list-container-squircle shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+    <div className={`lyrics-list-container-rounded shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
       {hasLyrics ? (
         <div
           ref={lyricsContainerRef}

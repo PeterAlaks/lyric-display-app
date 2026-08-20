@@ -249,7 +249,7 @@ const MobileLayout = () => {
               </button>
 
               {/* Toggle Display Switch */}
-              <div className="flex shrink-0 items-center gap-4">
+              <div className="grid w-[132px] shrink-0 grid-cols-[3.75rem_minmax(0,1fr)] items-center gap-4">
                 <Switch
                   checked={isOutputOn}
                   onCheckedChange={handleToggle}

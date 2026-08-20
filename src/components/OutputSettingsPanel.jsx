@@ -48,6 +48,46 @@ const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex ite
   </div>
 );
 
+// These wrappers intentionally live at module scope. Dock settings receive live
+// updates while their portal-based pickers are open, so changing a wrapper's
+// component identity during a render would remount the picker and close it.
+const CompactSettingField = ({ label, children }) => (
+  <div className="space-y-1" data-output-compact-setting-field>
+    <div className="text-[11px] font-medium uppercase tracking-wide text-gray-400">{label}</div>
+    {children}
+  </div>
+);
+
+const CompactSettingSection = ({ title, children }) => (
+  <section className="output-compact-setting-section text-gray-100">
+    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300">{title}</div>
+    {children}
+  </section>
+);
+
+const CompactSettingsGrid = ({ children }) => (
+  <div
+    className="grid gap-2"
+    style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))' }}
+  >
+    {children}
+  </div>
+);
+
+const CompactToggleButton = ({ active, disabled = false, onClick, children, className = '' }) => (
+  <button
+    type="button"
+    disabled={disabled}
+    onClick={onClick}
+    className={`h-8 rounded-md border px-2 text-xs font-semibold transition-colors ${active
+      ? 'border-blue-500 bg-blue-500/15 text-blue-100'
+      : 'border-gray-800 bg-gray-900 text-gray-300 hover:bg-gray-800'
+      } ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${className}`}
+  >
+    {children}
+  </button>
+);
+
 const LyricsPositionSection = ({
   darkMode,
   lyricsPositionValue,
@@ -385,13 +425,7 @@ const OutputSettingsPanel = ({
         ? 'bg-gray-800 border-gray-700 text-gray-100'
         : 'bg-white border-gray-300 text-gray-900'
         }`;
-      const compactLabelClass = `text-[11px] font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`;
-      const CompactField = ({ label, children }) => (
-        <div className="space-y-1">
-          <div className={compactLabelClass}>{label}</div>
-          {children}
-        </div>
-      );
+      const CompactField = CompactSettingField;
 
       return (
         <div className="space-y-3" onKeyDown={blurInputOnEnter}>
@@ -629,41 +663,10 @@ const OutputSettingsPanel = ({
       ? 'bg-gray-800 border-gray-700 text-gray-100'
       : 'bg-white border-gray-300 text-gray-900'
       }`;
-    const compactLabelClass = `text-[11px] font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`;
-
-    const CompactField = ({ label, children }) => (
-      <div className="space-y-1" data-output-compact-setting-field>
-        <div className={compactLabelClass}>{label}</div>
-        {children}
-      </div>
-    );
-    const CompactSection = ({ title, children }) => (
-      <section className={`output-compact-setting-section ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-        <div className={`mb-2 text-[11px] font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{title}</div>
-        {children}
-      </section>
-    );
-    const CompactGrid = ({ children }) => (
-      <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))' }}
-      >
-        {children}
-      </div>
-    );
-    const ToggleButton = ({ active, disabled = false, onClick, children, className = '' }) => (
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onClick}
-        className={`h-8 rounded-md border px-2 text-xs font-semibold transition-colors ${active
-          ? darkMode ? 'border-blue-500 bg-blue-500/15 text-blue-100' : 'border-blue-500 bg-blue-50 text-blue-900'
-          : darkMode ? 'border-gray-800 bg-gray-900 text-gray-300 hover:bg-gray-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-100'
-          } ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${className}`}
-      >
-        {children}
-      </button>
-    );
+    const CompactField = CompactSettingField;
+    const CompactSection = CompactSettingSection;
+    const CompactGrid = CompactSettingsGrid;
+    const ToggleButton = CompactToggleButton;
     const compactContentClass = darkMode ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900';
     const compactItemClass = 'py-1.5 text-[11px] leading-4';
     const compactSelectContentProps = {

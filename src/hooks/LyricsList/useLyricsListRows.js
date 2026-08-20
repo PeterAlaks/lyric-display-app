@@ -6,7 +6,7 @@ import { sanitizeMaxLinesPerGroup } from '../../../shared/lyricsParsing/runtimeC
 export const DEFAULT_ROW_HEIGHT = 48;
 export const ROW_GAP = 8;
 export const VIRTUALIZATION_THRESHOLD = 200;
-export const HORIZONTAL_PADDING_PX = 16;
+export const HORIZONTAL_PADDING_PX = 12;
 
 export default function useLyricsListRows({
   lyrics,
@@ -131,7 +131,7 @@ export default function useLyricsListRows({
   const getLineClassName = useCallback(
     (index, isVirtualized = false, isMultiSelected = false) => {
       const padding = compact ? 'px-2.5 py-2' : 'p-3';
-      let base = `${padding} lyric-line-item-squircle ${compact ? 'border text-[13px] leading-snug' : ''} cursor-pointer transition-colors duration-150 select-none `;
+      let base = `${padding} lyric-line-item-rounded ${compact ? 'border text-[13px] leading-snug' : ''} cursor-pointer transition-colors duration-150 select-none `;
 
       if (compact && darkMode) {
         if (index === previewLine) {
