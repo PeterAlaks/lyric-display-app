@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle2, LayoutGrid, Monitor, MonitorUp, Network, Power, Tv2, Radio, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, LayoutGrid, Monitor, MonitorUp, Network, Power, Tv2, PictureInPicture2, Loader2, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useToast from '@/hooks/useToast';
 import useLyricsStore from '@/context/LyricsStore';
@@ -51,8 +51,8 @@ const outputHint = (value, option = {}) => {
 };
 
 const outputIcon = (value) => {
-  if (value === 'stage') return Radio;
-  if (value === 'time') return Monitor;
+  if (value === 'stage') return PictureInPicture2;
+  if (value === 'time') return Timer;
   if (value === 'lyric-video-studio') return MonitorUp;
   if (value === 'preview') return LayoutGrid;
   return Tv2;
