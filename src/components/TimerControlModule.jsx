@@ -30,6 +30,7 @@ import {
   saveTimerScheduleSnapshot,
 } from '../utils/timerScheduleStorage.js';
 import { useDarkModeState, useTimerControlSettings, useTimerDisplaySettings } from '../hooks/useStoreSelectors';
+import useAutoFitText, { getTextFitShape } from '../hooks/useAutoFitText';
 import TimerControlLayout from './TimerControlLayout';
 import { isCommandFocusProtected } from '../../shared/commandSafetyPolicy.js';
 import {
@@ -144,43 +145,81 @@ const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = f
     ? timerState.activeSetIndex + 1
     : 0;
   const nextScheduleItem = scheduleItems[nextScheduleIndex] || null;
+  const previewValue = showPausedGlobalClock ? globalClockParts.time : displayValue;
+  const autoFitEnabled = displaySettings.timerFontSizeMode !== 'manual';
+  const previewFitKey = React.useMemo(() => [
+    'timer-control-preview',
+    getTextFitShape(previewValue),
+    showPausedGlobalClock && globalClockParts.period ? 'with-period' : 'without-period',
+    displaySettings.timerFontFamily,
+    displaySettings.timerBold ? '700' : '400',
+    displaySettings.timerItalic ? 'italic' : 'normal',
+    displaySettings.timerUnderline ? 'underline' : 'none',
+  ].join('|'), [
+    displaySettings.timerBold,
+    displaySettings.timerFontFamily,
+    displaySettings.timerItalic,
+    displaySettings.timerUnderline,
+    globalClockParts.period,
+    previewValue,
+    showPausedGlobalClock,
+  ]);
+  const { containerRef, textRef, fontSize: autoFontSize } = useAutoFitText({
+    enabled: autoFitEnabled,
+    fitKey: previewFitKey,
+  });
+  const previewFontSize = autoFitEnabled
+    ? (autoFontSize || 64)
+    : (Number(displaySettings.timerFontSize) || 180);
+  const previewJustifyContent = displaySettings.timerAlign === 'left'
+    ? 'flex-start'
+    : displaySettings.timerAlign === 'right'
+      ? 'flex-end'
+      : 'center';
 
   return (
     <div className="space-y-3">
       <div
-        className="flex min-h-[285px] flex-col items-center justify-center rounded-lg px-6"
+        className="flex h-[285px] min-h-0 flex-col items-center rounded-lg px-6"
         style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
       >
         {showSecondaryText && (
-          <div className="text-xs font-semibold mb-4" style={{ color: accent }}>
+          <div className="mb-4 mt-6 shrink-0 text-xs font-semibold" style={{ color: accent }}>
             {showPausedGlobalClock ? 'Current Time' : (timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || displaySettings.label))}
           </div>
         )}
         <div
-          className="leading-none max-w-full"
-          style={{
-            color: intensity === 'critical' ? '#EF4444' : displaySettings.textColor,
-            fontFamily: displaySettings.timerFontFamily,
-            fontSize: displaySettings.timerFontSizeMode === 'manual' ? `${displaySettings.timerFontSize}px` : 'clamp(4rem, 12vw, 10rem)',
-            fontWeight: displaySettings.timerBold ? 700 : 400,
-            fontStyle: displaySettings.timerItalic ? 'italic' : 'normal',
-            textDecoration: displaySettings.timerUnderline ? 'underline' : 'none',
-            textAlign: displaySettings.timerAlign,
-            fontVariantNumeric: 'tabular-nums',
-            fontFeatureSettings: '"tnum" 1, "lnum" 1',
-            whiteSpace: 'nowrap',
-          }}
+          ref={containerRef}
+          className="flex min-h-0 w-full flex-1 items-center overflow-hidden"
+          style={{ justifyContent: previewJustifyContent }}
         >
-          {showPausedGlobalClock ? globalClockParts.time : displayValue}
-          {showPausedGlobalClock && globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
+          <span
+            ref={textRef}
+            className="inline-block shrink-0 leading-none"
+            style={{
+              color: intensity === 'critical' ? '#EF4444' : displaySettings.textColor,
+              fontFamily: displaySettings.timerFontFamily,
+              fontSize: `${previewFontSize}px`,
+              fontWeight: displaySettings.timerBold ? 700 : 400,
+              fontStyle: displaySettings.timerItalic ? 'italic' : 'normal',
+              textDecoration: displaySettings.timerUnderline ? 'underline' : 'none',
+              textAlign: displaySettings.timerAlign,
+              fontVariantNumeric: 'tabular-nums',
+              fontFeatureSettings: '"tnum" 1, "lnum" 1',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {previewValue}
+            {showPausedGlobalClock && globalClockParts.period && <span style={PERIOD_STYLE}>{globalClockParts.period}</span>}
+          </span>
         </div>
         {showSecondaryText && !showPausedGlobalClock && timerState.sets?.length > 1 && (
-          <div className="mt-4 text-xs text-white/70">
+          <div className="mt-4 shrink-0 text-xs text-white/70">
             {timerState.activeSetIndex + 1} of {timerState.sets.length}
           </div>
         )}
         {displaySettings.showProgress && !showPausedGlobalClock && (
-          <div className="mt-8 w-full h-2 rounded-full bg-white/15 overflow-hidden">
+          <div className="mb-6 mt-8 h-2 w-full shrink-0 overflow-hidden rounded-full bg-white/15">
             <div className="h-full rounded-full" style={{ width: `${progress * 100}%`, backgroundColor: accent }} />
           </div>
         )}

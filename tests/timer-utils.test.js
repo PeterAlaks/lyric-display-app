@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createTimerSlice } from '../src/context/lyricsStore/timerSlice.js';
+import { getTextFitShape } from '../src/hooks/useAutoFitText.js';
 import {
   MAX_TIMER_SETS,
   getTimerDisplay,
@@ -31,6 +33,21 @@ function createTimerStoreHarness() {
     getUpdateCount: () => updateCount,
   };
 }
+
+test('timer-control preview auto-fits hour-long timer values to its own bounds', async () => {
+  const timerControlSource = await readFile(
+    new URL('../src/components/TimerControlModule.jsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(timerControlSource, /useAutoFitText/);
+  assert.match(timerControlSource, /getTextFitShape\(previewValue\)/);
+  assert.match(timerControlSource, /ref=\{containerRef\}/);
+  assert.match(timerControlSource, /ref=\{textRef\}/);
+  assert.doesNotMatch(timerControlSource, /clamp\(4rem, 12vw, 10rem\)/);
+  assert.notEqual(getTextFitShape('59:59'), getTextFitShape('1:00:00'));
+  assert.equal(getTextFitShape('1:00:00'), getTextFitShape('9:59:59'));
+});
 
 test('timer progress advances for normalized stage panel countdown state', () => {
   const startTime = 1_000_000;
