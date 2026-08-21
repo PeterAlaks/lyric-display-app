@@ -1,61 +1,58 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
+import { getTooltipPosition } from '@/utils/tooltipPosition';
 
 export default function AlwaysInfoButton({
   content,
   ariaLabel = 'Information',
   side = 'left',
+  sideOffset = 8,
 }) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState(null);
   const triggerRef = useRef(null);
   const contentRef = useRef(null);
   const closeTimerRef = useRef(null);
 
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     const trigger = triggerRef.current;
-    if (!trigger) return;
+    const tooltip = contentRef.current;
+    if (!trigger || !tooltip) return;
 
     const rect = trigger.getBoundingClientRect();
-    const width = contentRef.current?.offsetWidth || 280;
-    const height = contentRef.current?.offsetHeight || 72;
-    const gap = 8;
-    const padding = 8;
-
-    let x = rect.left + rect.width / 2 - width / 2;
-    let y = rect.bottom + gap;
-
-    if (side === 'left') {
-      x = rect.left - width - gap;
-      y = rect.top + rect.height / 2 - height / 2;
-    } else if (side === 'right') {
-      x = rect.right + gap;
-      y = rect.top + rect.height / 2 - height / 2;
-    } else if (side === 'top') {
-      x = rect.left + rect.width / 2 - width / 2;
-      y = rect.top - height - gap;
-    }
+    const nextPosition = getTooltipPosition({
+      anchorRect: rect,
+      tooltipWidth: tooltip.offsetWidth,
+      tooltipHeight: tooltip.offsetHeight,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      preferred: side,
+      gap: sideOffset,
+    });
 
     setPosition({
-      x: Math.max(padding, Math.min(x, window.innerWidth - width - padding)),
-      y: Math.max(padding, Math.min(y, window.innerHeight - height - padding)),
+      x: nextPosition.left,
+      y: nextPosition.top,
+      placement: nextPosition.placement,
     });
-  };
+  }, [side, sideOffset]);
 
   const show = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
-    updatePosition();
-    setOpen(true);
-    requestAnimationFrame(updatePosition);
+    if (!open) {
+      setPosition(null);
+      setOpen(true);
+    }
   };
 
   const scheduleClose = () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => {
+      setPosition(null);
       setOpen(false);
       closeTimerRef.current = null;
     }, 120);
@@ -69,6 +66,7 @@ export default function AlwaysInfoButton({
       setOpen(false);
     };
     const handleScroll = () => {
+      setPosition(null);
       setOpen(false);
     };
 
@@ -84,14 +82,33 @@ export default function AlwaysInfoButton({
       window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', updatePosition);
     };
-  }, [open]);
+  }, [open, updatePosition]);
+
+  useLayoutEffect(() => {
+    if (!open || !contentRef.current) return undefined;
+
+    updatePosition();
+
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(updatePosition);
+    observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [content, open, updatePosition]);
 
   const popover = open && typeof document !== 'undefined' ? createPortal(
     <div
       ref={contentRef}
       role="tooltip"
-      className="fixed z-[9999] max-w-[280px] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs leading-relaxed text-gray-100 shadow-lg dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-      style={{ left: position.x, top: position.y }}
+      data-side={position?.placement || side}
+      className={`fixed z-[9999] max-w-[280px] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs leading-relaxed text-gray-100 shadow-lg dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 ${position ? 'tooltip-opacity-fade' : ''}`}
+      style={{
+        left: position?.x || 0,
+        top: position?.y || 0,
+        maxWidth: 'min(280px, calc(100vw - 16px))',
+        maxHeight: 'calc(100vh - 16px)',
+        overflowY: 'auto',
+        visibility: position ? 'visible' : 'hidden',
+      }}
       onMouseEnter={show}
       onMouseLeave={scheduleClose}
     >
@@ -114,6 +131,7 @@ export default function AlwaysInfoButton({
         onBlur={scheduleClose}
         onClick={() => {
           if (open) {
+            setPosition(null);
             setOpen(false);
           } else {
             show();

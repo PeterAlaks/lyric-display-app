@@ -75,6 +75,26 @@
   }
 }
 
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.tooltip-opacity-fade {
+  animation: tooltip-fade-in 140ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-opacity-fade {
+    animation: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

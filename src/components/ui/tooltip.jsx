@@ -1,19 +1,65 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useLyricsStore from '@/context/LyricsStore';
+import { getTooltipPosition } from '@/utils/tooltipPosition';
 
 let globalActiveTooltip = null;
 
-export function Tooltip({ children, content, delay = 1000, side = 'top', className, disabled = false }) {
+export function Tooltip({
+    children,
+    content,
+    delay = 1000,
+    side = 'top',
+    sideOffset = 8,
+    className,
+    disabled = false,
+}) {
     const showTooltips = useLyricsStore((state) => state.showTooltips);
     const [visible, setVisible] = useState(false);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [position, setPosition] = useState(null);
     const timeoutRef = useRef(null);
     const triggerRef = useRef(null);
     const tooltipRef = useRef(null);
+    const pointerRef = useRef(null);
+    const animationFrameRef = useRef(null);
     const instanceId = useRef(Math.random().toString(36));
+
+    const calculatePosition = useCallback(() => {
+        const wrapper = triggerRef.current;
+        const tooltip = tooltipRef.current;
+        if (!wrapper || !tooltip) return;
+
+        const element = wrapper.firstElementChild || wrapper;
+        const rect = element.getBoundingClientRect();
+        const nextPosition = getTooltipPosition({
+            anchor: pointerRef.current || undefined,
+            anchorRect: pointerRef.current ? undefined : rect,
+            tooltipWidth: tooltip.offsetWidth,
+            tooltipHeight: tooltip.offsetHeight,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            preferred: side,
+            gap: sideOffset,
+        });
+
+        setPosition((current) => {
+            if (
+                current
+                && current.x === nextPosition.left
+                && current.y === nextPosition.top
+                && current.placement === nextPosition.placement
+            ) {
+                return current;
+            }
+            return {
+                x: nextPosition.left,
+                y: nextPosition.top,
+                placement: nextPosition.placement,
+            };
+        });
+    }, [side, sideOffset]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -25,7 +71,7 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
             }
         };
 
-        const handleScroll = () => {
+        const hideTooltip = () => {
             if (visible) {
                 setVisible(false);
                 if (globalActiveTooltip === instanceId.current) {
@@ -35,17 +81,20 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
         };
 
         document.addEventListener('click', handleClickOutside);
-        window.addEventListener('scroll', handleScroll, true);
+        window.addEventListener('scroll', hideTooltip, true);
+        window.addEventListener('resize', calculatePosition);
 
         return () => {
             document.removeEventListener('click', handleClickOutside);
-            window.removeEventListener('scroll', handleScroll, true);
+            window.removeEventListener('scroll', hideTooltip, true);
+            window.removeEventListener('resize', calculatePosition);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             if (globalActiveTooltip === instanceId.current) {
                 globalActiveTooltip = null;
             }
         };
-    }, [visible]);
+    }, [calculatePosition, visible]);
 
     useEffect(() => {
         if (visible) {
@@ -89,67 +138,53 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
             if (globalActiveTooltip === instanceId.current) {
                 globalActiveTooltip = null;
             }
+            setPosition(null);
         }
     }, [suppressed]);
 
-    const calculatePosition = () => {
-        if (!triggerRef.current) return;
+    useLayoutEffect(() => {
+        if (!visible || !tooltipRef.current) return undefined;
 
-        const element = triggerRef.current.firstElementChild || triggerRef.current;
-        if (!element) return;
+        calculatePosition();
 
-        const rect = element.getBoundingClientRect();
-
-        const tooltipWidth = tooltipRef.current?.offsetWidth || 280;
-        const tooltipHeight = tooltipRef.current?.offsetHeight || 60;
-        const gap = 8;
-
-        let x, y;
-
-        switch (side) {
-            case 'top':
-                x = rect.left + rect.width / 2 - tooltipWidth / 2;
-                y = rect.top - tooltipHeight - gap;
-                break;
-            case 'bottom':
-                x = rect.left + rect.width / 2 - tooltipWidth / 2;
-                y = rect.bottom + gap;
-                break;
-            case 'left':
-                x = rect.left - tooltipWidth - gap;
-                y = rect.top + rect.height / 2 - tooltipHeight / 2;
-                break;
-            case 'right':
-                x = rect.right + gap;
-                y = rect.top + rect.height / 2 - tooltipHeight / 2;
-                break;
-            default:
-                x = rect.left + rect.width / 2 - tooltipWidth / 2;
-                y = rect.top - tooltipHeight - gap;
-        }
-
-        const padding = 8;
-        x = Math.max(padding, Math.min(x, window.innerWidth - tooltipWidth - padding));
-        y = Math.max(padding, Math.min(y, window.innerHeight - tooltipHeight - padding));
-
-        setPosition({ x, y });
-    };
+        if (typeof ResizeObserver === 'undefined') return undefined;
+        const observer = new ResizeObserver(calculatePosition);
+        observer.observe(tooltipRef.current);
+        return () => observer.disconnect();
+    }, [calculatePosition, content, visible]);
 
     const showTooltip = () => {
         if (suppressed) return;
         if (!globalActiveTooltip || globalActiveTooltip === instanceId.current) {
-            calculatePosition();
+            setPosition(null);
             setVisible(true);
         }
     };
 
-    const handleMouseEnter = () => {
+    const updatePointer = (event) => {
+        if (Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+            pointerRef.current = { x: event.clientX, y: event.clientY };
+        }
+    };
+
+    const handleMouseEnter = (event) => {
         if (suppressed) return;
         if (globalActiveTooltip && globalActiveTooltip !== instanceId.current) {
             return;
         }
 
+        updatePointer(event);
         timeoutRef.current = setTimeout(showTooltip, delay);
+    };
+
+    const handleMouseMove = (event) => {
+        updatePointer(event);
+        if (!visible || animationFrameRef.current) return;
+
+        animationFrameRef.current = requestAnimationFrame(() => {
+            animationFrameRef.current = null;
+            calculatePosition();
+        });
     };
 
     const handleMouseLeave = () => {
@@ -157,6 +192,12 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+        pointerRef.current = null;
+        setPosition(null);
         setVisible(false);
     };
 
@@ -164,17 +205,23 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
         createPortal(
             <div
                 ref={tooltipRef}
+                role="tooltip"
+                data-side={position?.placement || side}
                 className={cn(
-                    'fixed z-[9999] flex items-start gap-2 rounded-lg border px-3 py-2 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-200',
+                    'fixed z-[9999] flex items-start gap-2 rounded-lg border px-3 py-2 text-xs shadow-lg',
                     'bg-gray-900 border-gray-700 text-gray-100',
                     'dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200',
+                    position && 'tooltip-opacity-fade',
                     className
                 )}
                 style={{
-                    left: `${position.x}px`,
-                    top: `${position.y}px`,
-                    maxWidth: '280px',
+                    left: `${position?.x || 0}px`,
+                    top: `${position?.y || 0}px`,
+                    maxWidth: 'min(280px, calc(100vw - 16px))',
+                    maxHeight: 'calc(100vh - 16px)',
+                    overflowY: 'auto',
                     pointerEvents: 'none',
+                    visibility: position ? 'visible' : 'hidden',
                 }}
             >
                 <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
@@ -189,6 +236,7 @@ export function Tooltip({ children, content, delay = 1000, side = 'top', classNa
             <div
                 ref={triggerRef}
                 onMouseEnter={handleMouseEnter}
+                onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 className="contents"
             >
