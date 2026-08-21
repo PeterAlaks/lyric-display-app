@@ -54,14 +54,10 @@ const IMPORT_OPTIONS = {
   ldsch: {
     accept: '.ldsch',
     buttonLabel: 'Choose .ldsch file',
-    heading: 'LyricDisplay Schedule',
-    description: 'Open a schedule previously saved by LyricDisplay.',
   },
   document: {
     accept: '.txt,.md,.markdown,.rtf,.docx',
     buttonLabel: 'Choose document',
-    heading: 'Schedule document',
-    description: 'Choose a plain text, Markdown, rich text, or Word document.',
   },
 };
 
@@ -740,19 +736,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                 </div>
               </div>
 
-              <div className={`space-y-4 border-t pt-6 ${hairlineBorder}`}>
-                <div className="flex items-center gap-2.5">
-                  <FileText className="h-4 w-4 text-blue-500" />
-                  <div>
-                    <h4 className="text-xs font-semibold">{isEditing ? 'Change Schedule' : 'Add schedule items'}</h4>
-                    <p className={`mt-0.5 text-[11px] ${mutedText}`}>
-                      {isEditing
-                        ? 'Optional: documents and pasted text replace the items; a .ldsch file replaces the full schedule.'
-                        : 'Choose one source for this schedule.'}
-                    </p>
-                  </div>
-                </div>
-
+              <div className="flex flex-col gap-4">
                 <div role="radiogroup" aria-label="Schedule source" className="grid gap-2.5 sm:grid-cols-4">
                   {IMPORT_METHODS.map((method) => {
                     const MethodIcon = method.icon;
@@ -842,10 +826,6 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
                       >
                         <div className={`flex h-11 w-11 items-center justify-center rounded-full ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-500 shadow-sm'}`}>
                           <FileUp className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <h5 className="text-xs font-semibold">{IMPORT_OPTIONS[importMethod].heading}</h5>
-                          <p className={`mt-1 text-[11px] leading-relaxed ${mutedText}`}>{IMPORT_OPTIONS[importMethod].description}</p>
                         </div>
                         <span className={`inline-flex h-8 items-center justify-center gap-2 rounded-md border px-3 text-xs font-medium shadow-sm ${outlineButtonClass}`}>
                           <FileUp className="h-4 w-4" /> {IMPORT_OPTIONS[importMethod].buttonLabel}

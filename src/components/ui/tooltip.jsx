@@ -23,7 +23,6 @@ export function Tooltip({
     const triggerRef = useRef(null);
     const tooltipRef = useRef(null);
     const pointerRef = useRef(null);
-    const animationFrameRef = useRef(null);
     const instanceId = useRef(Math.random().toString(36));
 
     const calculatePosition = useCallback(() => {
@@ -31,11 +30,13 @@ export function Tooltip({
         const tooltip = tooltipRef.current;
         if (!wrapper || !tooltip) return;
 
-        const element = wrapper.firstElementChild || wrapper;
-        const rect = element.getBoundingClientRect();
+        const anchor = pointerRef.current;
+        const anchorRect = anchor
+            ? undefined
+            : (wrapper.firstElementChild || wrapper).getBoundingClientRect();
         const nextPosition = getTooltipPosition({
-            anchor: pointerRef.current || undefined,
-            anchorRect: pointerRef.current ? undefined : rect,
+            anchor: anchor || undefined,
+            anchorRect,
             tooltipWidth: tooltip.offsetWidth,
             tooltipHeight: tooltip.offsetHeight,
             viewportWidth: window.innerWidth,
@@ -89,7 +90,6 @@ export function Tooltip({
             window.removeEventListener('scroll', hideTooltip, true);
             window.removeEventListener('resize', calculatePosition);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             if (globalActiveTooltip === instanceId.current) {
                 globalActiveTooltip = null;
             }
@@ -154,6 +154,7 @@ export function Tooltip({
     }, [calculatePosition, content, visible]);
 
     const showTooltip = () => {
+        timeoutRef.current = null;
         if (suppressed) return;
         if (!globalActiveTooltip || globalActiveTooltip === instanceId.current) {
             setPosition(null);
@@ -178,23 +179,13 @@ export function Tooltip({
     };
 
     const handleMouseMove = (event) => {
-        updatePointer(event);
-        if (!visible || animationFrameRef.current) return;
-
-        animationFrameRef.current = requestAnimationFrame(() => {
-            animationFrameRef.current = null;
-            calculatePosition();
-        });
+        if (!visible) updatePointer(event);
     };
 
     const handleMouseLeave = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
-        }
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
         }
         pointerRef.current = null;
         setPosition(null);

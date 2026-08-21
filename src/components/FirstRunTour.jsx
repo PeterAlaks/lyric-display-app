@@ -14,7 +14,6 @@ import {
   MousePointer2,
   Power,
   SlidersHorizontal,
-  Sparkles,
   X,
 } from 'lucide-react';
 import { FIRST_RUN_TOUR_STEP_EVENT, getTourCardPosition } from '../utils/firstRunTour';
@@ -23,7 +22,7 @@ const TOUR_STEPS = [
   {
     id: 'welcome',
     kind: 'welcome',
-    icon: Sparkles,
+    logoSrc: '/LyricDisplay-icon.png',
     eyebrow: 'Welcome to LyricDisplay',
     title: 'Your lyrics, live in minutes',
     description: 'Let’s walk through the essentials for preparing lyrics, styling an output, and presenting with confidence.',
@@ -428,13 +427,22 @@ export default function FirstRunTour({ darkMode = false, onFinish, onSkip }) {
             ) : (
               <>
                 <div className="flex items-start justify-between gap-4">
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-                    currentStep.kind === 'complete'
-                      ? darkMode ? 'bg-emerald-400/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
-                      : darkMode ? 'bg-blue-400/10 text-blue-300' : 'bg-blue-50 text-blue-700'
-                  }`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
+                  {currentStep.logoSrc ? (
+                    <img
+                      src={currentStep.logoSrc}
+                      alt=""
+                      className="h-10 w-10 shrink-0"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                      currentStep.kind === 'complete'
+                        ? darkMode ? 'bg-emerald-400/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
+                        : darkMode ? 'bg-blue-400/10 text-blue-300' : 'bg-blue-50 text-blue-700'
+                    }`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  )}
                   {!isLast && (
                     <button
                       type="button"

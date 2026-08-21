@@ -29,6 +29,7 @@ import {
 } from '../utils/fileNavigatorEvents';
 import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Tooltip } from './ui/tooltip';
 import { FILE_NAVIGATOR_LIMITS } from '../../shared/fileNavigatorLimits.js';
 
 const MODAL_ANIMATION_DURATION = 220;
@@ -1107,15 +1108,20 @@ export default function FileNavigatorModal() {
             </div>
 
             <div className={`shrink-0 px-3 pb-3 ${darkMode ? 'bg-slate-900/45' : 'bg-gray-50/65'}`}>
-              <button
-                type="button"
-                onClick={handleAddRoot}
-                disabled={indexing || rootLimitReached}
-                className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-2 py-2 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${darkMode ? 'border-gray-700 text-gray-400 hover:border-blue-500/60 hover:text-blue-300' : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-700'}`}
+              <Tooltip
+                content={indexing ? 'Wait for indexing to finish' : rootLimitReached ? 'Indexed folder limit reached' : 'Add lyrics folders for indexed search'}
+                side="top"
               >
-                <FolderPlus className="h-3.5 w-3.5" />
-                {rootLimitReached ? 'Folder limit reached' : 'Add folders'}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleAddRoot}
+                  disabled={indexing || rootLimitReached}
+                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-2 py-2 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${darkMode ? 'border-gray-700 text-gray-400 hover:border-blue-500/60 hover:text-blue-300' : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-700'}`}
+                >
+                  <FolderPlus className="h-3.5 w-3.5" />
+                  {rootLimitReached ? 'Folder limit reached' : 'Add folders'}
+                </button>
+              </Tooltip>
             </div>
           </aside>
 
@@ -1378,19 +1384,20 @@ export default function FileNavigatorModal() {
             <span className={`text-[10px] font-semibold ${darkMode ? 'text-violet-300' : 'text-violet-700'}`}>LRC files only</span>
           ) : (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void handleOpenStandaloneFile()}
-                disabled={opening}
-                title="Open a single file without indexing its folder"
-                className={`flex h-8 items-center justify-center gap-2 rounded-lg px-3 text-[11px] font-semibold transition-colors disabled:opacity-45 ${darkMode
-                  ? 'text-gray-300 hover:bg-white/7'
-                  : 'text-gray-600 hover:bg-white'
-                  }`}
-              >
-                {opening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-                Open File&hellip;
-              </button>
+              <Tooltip content="Open a single file without indexing its folder" side="top">
+                <button
+                  type="button"
+                  onClick={() => void handleOpenStandaloneFile()}
+                  disabled={opening}
+                  className={`flex h-8 items-center justify-center gap-2 rounded-lg px-3 text-[11px] font-semibold transition-colors disabled:opacity-45 ${darkMode
+                    ? 'text-gray-300 hover:bg-white/7'
+                    : 'text-gray-600 hover:bg-white'
+                    }`}
+                >
+                  {opening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                  Open File&hellip;
+                </button>
+              </Tooltip>
               <div className="tab-switcher-squircle flex items-center gap-1 rounded-2xl p-1 ring-1 ring-inset ring-gray-300/40">
                 <button
                   type="button"

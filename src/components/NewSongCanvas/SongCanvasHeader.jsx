@@ -199,7 +199,7 @@ const ToolbarDropdown = ({
 
       {open && (
         <div
-          className={`absolute top-full z-50 mt-2 max-h-80 w-max min-w-52 max-w-72 overflow-y-auto rounded-xl border py-1.5 text-[13px] shadow-xl backdrop-blur-xl ${align === 'right' ? 'right-0' : 'left-0'} ${menuClass}`}
+          className={`absolute top-full z-50 mt-2 max-h-80 w-max min-w-52 max-w-72 overflow-y-auto rounded-xl border py-1 text-[13px] shadow-xl backdrop-blur-xl ${align === 'right' ? 'right-0' : 'left-0'} ${menuClass}`}
           role="menu"
         >
           {items.map((item, index) => item.separator ? (
@@ -217,7 +217,7 @@ const ToolbarDropdown = ({
                 item.onSelect();
                 setOpenMenu(null);
               }}
-              className={`flex w-full items-center gap-2.5 px-3 py-2 text-left outline-none transition-colors ${item.emphasis ? 'font-semibold' : ''} ${item.disabled ? 'cursor-not-allowed opacity-45' : itemClass}`}
+              className={`mx-1 flex w-[calc(100%-0.5rem)] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left outline-none transition-colors ${item.emphasis ? 'font-semibold' : ''} ${item.disabled ? 'cursor-not-allowed opacity-45' : itemClass}`}
               role="menuitem"
             >
               {item.icon ? <item.icon className="h-4 w-4 shrink-0 opacity-75" /> : null}
