@@ -417,7 +417,7 @@ const SongCanvasHeader = ({
               placeholder="Untitled Lyrics"
               aria-label="Lyrics file name"
               title={title}
-              className={`h-9 min-w-0 truncate rounded-none px-0 py-0 text-left text-[17px] font-semibold ${titleInputClass}`}
+              className={`h-9 min-w-0 truncate rounded-none px-0 py-0 text-left text-base font-semibold md:text-base ${titleInputClass}`}
             />
           </div>
           {isTitlePrefilled && (
