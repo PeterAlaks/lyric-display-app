@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, nativeTheme } from 'electron';
 import { resolveProductionPath } from './paths.js';
 
 let progressWindow = null;
@@ -12,39 +12,51 @@ const getProgressHTML = ({ initialState = null } = {}) => `
   <head>
     <title>LyricDisplay Update</title>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       :root {
         color-scheme: light dark;
-        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-muted: #f8fafc;
         --text: #111827;
-        --muted: #475569;
-        --border: #d1d5db;
+        --muted: #64748b;
+        --subtle: #94a3b8;
+        --border: rgba(15, 23, 42, 0.08);
         --track: #e5e7eb;
-        --accent: #2563eb;
-        --accent-ring: rgba(37, 99, 235, 0.14);
-        --success: #059669;
-        --error: #dc2626;
+        --accent: #3b82f6;
+        --accent-end: #9333ea;
+        --accent-soft: rgba(59, 130, 246, 0.10);
+        --success: #10b981;
+        --success-soft: rgba(16, 185, 129, 0.11);
+        --error: #f43f5e;
+        --error-soft: rgba(244, 63, 94, 0.10);
       }
 
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #111827;
+          --surface: #1f2937;
+          --surface-muted: #26303d;
           --text: #f9fafb;
           --muted: #cbd5e1;
-          --border: #374151;
+          --subtle: #94a3b8;
+          --border: rgba(255, 255, 255, 0.07);
           --track: #374151;
           --accent: #60a5fa;
-          --accent-ring: rgba(96, 165, 250, 0.18);
+          --accent-end: #a855f7;
+          --accent-soft: rgba(96, 165, 250, 0.13);
           --success: #34d399;
-          --error: #f87171;
+          --success-soft: rgba(52, 211, 153, 0.12);
+          --error: #fb7185;
+          --error-soft: rgba(251, 113, 133, 0.12);
         }
       }
 
       * { box-sizing: border-box; }
+
       body {
         margin: 0;
         height: 100vh;
-        background: var(--bg);
+        background: var(--surface);
         color: var(--text);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
         overflow: hidden;
@@ -52,108 +64,211 @@ const getProgressHTML = ({ initialState = null } = {}) => `
 
       .shell {
         height: 100vh;
-        padding: 34px 38px 30px;
+      }
+
+      .panel {
+        position: relative;
+        height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        overflow: hidden;
+        background: var(--surface);
       }
 
       .header {
         display: flex;
-        align-items: flex-start;
-        gap: 14px;
+        align-items: center;
+        gap: 16px;
         min-width: 0;
       }
 
-      .status-dot {
-        width: 14px;
-        height: 14px;
-        border-radius: 999px;
-        background: var(--accent);
-        margin-top: 8px;
+      .state-icon {
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
         flex: 0 0 auto;
-        box-shadow: 0 0 0 5px var(--accent-ring);
+        border-radius: 15px;
+        corner-shape: squircle;
+        background: var(--accent-soft);
+        color: var(--accent);
       }
 
-      .status-dot.error { background: var(--error); }
-      .status-dot.success { background: var(--success); }
+      .state-icon[data-tone="success"] {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .state-icon[data-tone="error"] {
+        background: var(--error-soft);
+        color: var(--error);
+      }
+
+      .state-icon svg {
+        display: none;
+        width: 22px;
+        height: 22px;
+        stroke: currentColor;
+      }
+
+      .state-icon[data-tone="active"] .icon-download,
+      .state-icon[data-tone="success"] .icon-success,
+      .state-icon[data-tone="error"] .icon-error {
+        display: block;
+      }
 
       h1 {
-        font-size: 24px;
-        line-height: 1.3;
         margin: 0;
-        font-weight: 700;
-        letter-spacing: 0;
+        font-size: 21px;
+        font-weight: 720;
+        line-height: 1.25;
+        letter-spacing: -0.02em;
       }
 
       .subtitle {
+        margin-top: 4px;
         color: var(--muted);
-        font-size: 14px;
+        font-size: 12px;
         line-height: 1.45;
-        margin-top: 6px;
         overflow-wrap: anywhere;
       }
 
-      .progress-block {
-        margin-top: 34px;
+      .content {
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 20px 22px 16px;
+      }
+
+      .progress-block { margin-top: 18px; }
+
+      .progress-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .progress-label {
+        color: var(--subtle);
+        font-size: 9px;
+        font-weight: 750;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .progress-percent {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+        font-variant-numeric: tabular-nums;
       }
 
       .progress-container {
-        background: var(--track);
-        border-radius: 999px;
-        height: 24px;
-        overflow: hidden;
         position: relative;
         width: 100%;
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--track);
       }
 
       .progress-bar {
-        background: var(--accent);
-        height: 100%;
+        position: relative;
         width: 0%;
-        transition: width 0.25s ease, background-color 0.2s ease;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #60a5fa, var(--accent-end));
+        transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
+      }
+
+      .progress-bar.active::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+        transform: translateX(-100%);
+        animation: progress-sheen 1.8s ease-in-out infinite;
       }
 
       .progress-bar.success { background: var(--success); }
       .progress-bar.error { background: var(--error); }
 
       .details {
-        min-height: 46px;
+        display: flex;
+        align-items: center;
+        min-height: 40px;
+        margin-top: 13px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 13px;
+        background: var(--surface-muted);
         color: var(--muted);
-        font-size: 13px;
-        line-height: 1.5;
-        margin-top: 14px;
+        font-size: 11px;
+        line-height: 1.45;
         overflow-wrap: anywhere;
+      }
+
+      .footer {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-height: 60px;
+        padding: 11px 22px;
+        border-top: 1px solid var(--border);
+        background: var(--surface-muted);
+      }
+
+      .footer-hint {
+        min-width: 0;
+        margin: 0;
+        color: var(--subtle);
+        font-size: 10px;
+        line-height: 1.4;
       }
 
       .actions {
         display: flex;
+        align-items: center;
         justify-content: flex-end;
-        gap: 10px;
-        margin-top: 28px;
+        gap: 8px;
+        margin-left: auto;
+        flex: 0 0 auto;
       }
 
       button {
+        min-width: 78px;
+        padding: 8px 14px;
         border: 1px solid var(--border);
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 650;
-        min-width: 104px;
-        padding: 10px 14px;
-        background: transparent;
+        border-radius: 999px;
+        background: var(--surface);
         color: var(--text);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+      }
+
+      button:hover:not(:disabled) {
+        border-color: color-mix(in srgb, var(--muted) 40%, transparent);
+        transform: translateY(-1px);
+      }
+
+      button:focus-visible {
+        outline: 3px solid var(--accent-soft);
+        outline-offset: 2px;
       }
 
       button.primary {
-        background: var(--accent);
-        border-color: var(--accent);
+        border-color: transparent;
+        background: linear-gradient(90deg, #60a5fa, var(--accent-end));
         color: #ffffff;
       }
 
       button.success {
-        background: var(--success);
         border-color: var(--success);
+        background: var(--success);
         color: #ffffff;
       }
 
@@ -161,42 +276,75 @@ const getProgressHTML = ({ initialState = null } = {}) => `
         cursor: default;
         opacity: 0.55;
       }
+
+      @keyframes progress-sheen {
+        55%, 100% { transform: translateX(100%); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
     </style>
   </head>
   <body>
     <div class="shell">
-      <main role="status" aria-live="polite">
-        <div class="header">
-          <div class="status-dot" id="statusDot"></div>
-          <div>
-            <h1 id="title">Preparing update</h1>
-            <div class="subtitle" id="subtitle">LyricDisplay is preparing the download.</div>
+      <main class="panel">
+        <section class="content" role="status" aria-live="polite">
+          <div class="header">
+            <div class="state-icon" id="stateIcon" data-tone="active" aria-hidden="true">
+              <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path>
+              </svg>
+              <svg class="icon-success" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m5 12 4 4L19 6"></path>
+              </svg>
+              <svg class="icon-error" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 8v5"></path><path d="M12 17h.01"></path><path d="M10.3 3.7 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 id="title">Preparing update</h1>
+              <div class="subtitle" id="subtitle">LyricDisplay is preparing the download.</div>
+            </div>
           </div>
-        </div>
 
-        <div class="progress-block">
-          <div class="progress-container">
-            <div class="progress-bar" id="progressBar"></div>
+          <div class="progress-block">
+            <div class="progress-meta">
+              <span class="progress-label">Download progress</span>
+              <span class="progress-percent" id="progressPercent">0%</span>
+            </div>
+            <div class="progress-container" id="progressTrack" role="progressbar" aria-label="Update download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="details" id="details">Waiting for download progress…</div>
           </div>
-          <div class="details" id="details">Waiting for download progress...</div>
-        </div>
+        </section>
 
-        <div class="actions">
-          <button type="button" id="hideBtn">Hide</button>
-          <button type="button" id="retryBtn" class="primary" hidden>Retry</button>
-          <button type="button" id="installBtn" class="success" hidden>Install</button>
-        </div>
+        <footer class="footer">
+          <p class="footer-hint" id="footerHint">You can keep using LyricDisplay while the update downloads.</p>
+          <div class="actions">
+            <button type="button" id="hideBtn">Hide</button>
+            <button type="button" id="retryBtn" class="primary" hidden>Try again</button>
+            <button type="button" id="installBtn" class="success" hidden>Install &amp; restart</button>
+          </div>
+        </footer>
       </main>
     </div>
 
     <script>
       const INITIAL_STATE = ${safeJSONStringify(initialState)};
       const els = {
-        statusDot: document.getElementById('statusDot'),
+        stateIcon: document.getElementById('stateIcon'),
         title: document.getElementById('title'),
         subtitle: document.getElementById('subtitle'),
+        progressTrack: document.getElementById('progressTrack'),
         progressBar: document.getElementById('progressBar'),
+        progressPercent: document.getElementById('progressPercent'),
         details: document.getElementById('details'),
+        footerHint: document.getElementById('footerHint'),
         hideBtn: document.getElementById('hideBtn'),
         retryBtn: document.getElementById('retryBtn'),
         installBtn: document.getElementById('installBtn')
@@ -221,12 +369,15 @@ const getProgressHTML = ({ initialState = null } = {}) => `
 
       const setProgress = (percent, tone) => {
         const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+        const roundedPercent = Math.round(safePercent);
         els.progressBar.style.width = safePercent + '%';
         els.progressBar.className = 'progress-bar' + (tone ? ' ' + tone : '');
+        els.progressPercent.textContent = roundedPercent + '%';
+        els.progressTrack.setAttribute('aria-valuenow', String(roundedPercent));
       };
 
-      const setTone = (tone) => {
-        els.statusDot.className = 'status-dot' + (tone ? ' ' + tone : '');
+      const setTone = (tone = 'active') => {
+        els.stateIcon.dataset.tone = tone;
       };
 
       const renderState = (state = {}) => {
@@ -238,18 +389,19 @@ const getProgressHTML = ({ initialState = null } = {}) => `
         els.retryBtn.hidden = true;
         els.installBtn.hidden = true;
         els.hideBtn.disabled = false;
-        setTone('');
+        setTone('active');
 
         if (status === 'downloading') {
           els.title.textContent = 'Downloading update';
           els.subtitle.textContent = updateName;
-          setProgress(percent);
+          els.footerHint.textContent = 'You can keep using LyricDisplay while the update downloads.';
+          setProgress(percent, 'active');
           const total = Number(progress.total) || 0;
           const transferred = Number(progress.transferred) || 0;
           const sizeText = total > 0
             ? formatBytes(transferred) + ' of ' + formatBytes(total)
             : formatBytes(transferred) + ' downloaded';
-          els.details.textContent = percent + '% complete - ' + formatSpeed(progress.bytesPerSecond) + ' - ' + sizeText;
+          els.details.textContent = formatSpeed(progress.bytesPerSecond) + '  ·  ' + sizeText;
           return;
         }
 
@@ -259,6 +411,7 @@ const getProgressHTML = ({ initialState = null } = {}) => `
           setTone('success');
           setProgress(100, 'success');
           els.details.textContent = 'Install when you are ready to restart LyricDisplay.';
+          els.footerHint.textContent = 'Save any open work before restarting the app.';
           els.installBtn.hidden = false;
           return;
         }
@@ -269,6 +422,7 @@ const getProgressHTML = ({ initialState = null } = {}) => `
           setTone('success');
           setProgress(100, 'success');
           els.details.textContent = 'LyricDisplay is closing and installing the update.';
+          els.footerHint.textContent = 'Keep LyricDisplay open while installation begins.';
           els.hideBtn.disabled = true;
           return;
         }
@@ -280,20 +434,22 @@ const getProgressHTML = ({ initialState = null } = {}) => `
           setTone('error');
           setProgress(percent, 'error');
           els.details.textContent = message;
+          els.footerHint.textContent = 'Check your connection, then try the download again.';
           els.retryBtn.hidden = false;
           return;
         }
 
         els.title.textContent = 'Preparing update';
         els.subtitle.textContent = updateName;
-        setProgress(percent);
-        els.details.textContent = 'Waiting for download progress...';
+        setProgress(percent, 'active');
+        els.details.textContent = 'Waiting for download progress…';
+        els.footerHint.textContent = 'You can keep using LyricDisplay while the update downloads.';
       };
 
       window.addEventListener('DOMContentLoaded', () => {
-        if (!window.electronAPI) return;
-
         renderState(INITIAL_STATE);
+
+        if (!window.electronAPI) return;
 
         window.electronAPI.onUpdaterState?.(renderState);
 
@@ -351,6 +507,36 @@ const getProgressWindowState = (state) => {
   };
 };
 
+const createUpdaterBrowserWindow = ({ parent, initialState }) => {
+  const win = new BrowserWindow({
+    title: 'LyricDisplay Update',
+    width: 560,
+    height: 260,
+    useContentSize: true,
+    resizable: false,
+    minimizable: true,
+    maximizable: false,
+    skipTaskbar: true,
+    parent: parent ?? undefined,
+    modal: false,
+    center: true,
+    show: false,
+    frame: true,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#111827' : '#f1f5f9',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: resolveProductionPath('preloads', 'updater.cjs')
+    }
+  });
+
+  win.setMenuBarVisibility(false);
+  void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getProgressHTML({
+    initialState
+  })));
+  return win;
+};
+
 export function createProgressWindow({ parent, initialState } = {}) {
   lastState = getProgressWindowState(initialState || lastState);
 
@@ -362,30 +548,10 @@ export function createProgressWindow({ parent, initialState } = {}) {
     return progressWindow;
   }
 
-  progressWindow = new BrowserWindow({
-    width: 640,
-    height: 360,
-    resizable: false,
-    minimizable: true,
-    maximizable: false,
-    skipTaskbar: true,
-    parent: parent ?? undefined,
-    modal: false,
-    center: true,
-    show: false,
-    frame: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: resolveProductionPath('preloads', 'updater.cjs')
-    }
-  });
-
-  progressWindow.setMenuBarVisibility(false);
-
-  progressWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getProgressHTML({
+  progressWindow = createUpdaterBrowserWindow({
+    parent,
     initialState: lastState
-  })));
+  });
 
   progressWindow.webContents.once('did-finish-load', () => {
     updateProgressWindowState(lastState);
