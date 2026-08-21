@@ -87,7 +87,7 @@ const TemplatePreview = ({ settings, expanded = false }) => {
       }}
       aria-hidden="true"
     >
-      <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/5" />
+      <div className="absolute inset-0 bg-linear-to-t from-black/15 via-transparent to-white/5" />
       <div
         className={`relative z-10 w-full ${expanded ? 'px-10 py-5' : 'px-4 py-2'}`}
         style={{
@@ -462,7 +462,7 @@ const OutputTemplatesModal = ({ darkMode, onApplyTemplate, onClose, outputKey = 
           </div>
         ) : activeTab === 'saved' && userTemplates.length === 0 ? (
           <div className={`flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center ${darkMode
-            ? 'border-white/10 bg-white/[0.025]'
+            ? 'border-white/10 bg-white/2.5'
             : 'border-slate-300 bg-white'
             }`}
           >

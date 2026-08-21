@@ -30,7 +30,7 @@ export const getModalActionButtonVariant = (tone) => {
 };
 
 export const getModalActionButtonClassName = (tone, isDark = false) => {
-  const shared = 'min-w-[96px] rounded-md px-4 font-semibold shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/35';
+  const shared = 'min-w-24 rounded-md px-4 font-semibold shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/35';
 
   switch (tone) {
     case 'destructive':

@@ -59,7 +59,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
         ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
         : '0px';
 
-    const overlayClasses = `fixed inset-x-0 bottom-0 z-[2000] flex items-center justify-center p-4 transition-all duration-300 ${entering || exiting ? 'opacity-0' : 'opacity-100'
+    const overlayClasses = `fixed inset-x-0 bottom-0 z-2000 flex items-center justify-center p-4 transition-all duration-300 ${entering || exiting ? 'opacity-0' : 'opacity-100'
         }`;
 
     const contentClasses = `relative w-full max-w-4xl h-[85vh] overflow-hidden rounded-2xl shadow-2xl transform transition-all duration-300 ${darkMode ? 'bg-gray-900 border border-slate-800/80' : 'bg-white border border-slate-200/80'
@@ -124,7 +124,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                 >
                     <div className="flex items-center gap-3">
                         <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-500 ${darkMode ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20' : 'bg-gradient-to-br from-blue-100 to-purple-100'
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-500 ${darkMode ? 'bg-linear-to-br from-blue-500/20 to-purple-500/20' : 'bg-linear-to-br from-blue-100 to-purple-100'
                                 }`}
                         >
                             <Search className={`w-4 h-4 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -153,7 +153,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                     <div className={`border-b px-8 pt-8 pb-6 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
                         <div className="flex items-center justify-center mb-4">
                             <div
-                                className={`w-16 h-16 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20' : 'bg-gradient-to-br from-blue-100 to-purple-100'
+                                className={`w-16 h-16 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-linear-to-br from-blue-500/20 to-purple-500/20' : 'bg-linear-to-br from-blue-100 to-purple-100'
                                     }`}
                             >
                                 <Search className={`w-8 h-8 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />

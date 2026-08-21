@@ -938,7 +938,7 @@ export default function FileNavigatorModal() {
 
   const content = open ? (
     <div
-      className={`fixed inset-x-0 bottom-0 top-9 ${removalConfirmationOpen ? 'z-[1200]' : 'z-[1800]'}`}
+      className={`fixed inset-x-0 bottom-0 top-9 ${removalConfirmationOpen ? 'z-1200' : 'z-1800'}`}
       role="dialog"
       aria-modal={removalConfirmationOpen ? undefined : 'true'}
       aria-hidden={removalConfirmationOpen ? 'true' : undefined}
@@ -953,7 +953,7 @@ export default function FileNavigatorModal() {
       <div className="pointer-events-none relative flex h-full items-center justify-center p-3 sm:p-4">
         <div
           data-modal-root="true"
-          className={`pointer-events-auto flex h-[min(680px,calc(100vh-72px))] w-[min(1040px,calc(100vw-32px))] min-h-[460px] flex-col overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all duration-200 ${transitioning
+          className={`pointer-events-auto flex h-[min(680px,calc(100vh-72px))] w-[min(1040px,calc(100vw-32px))] min-h-115 flex-col overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all duration-200 ${transitioning
             ? 'translate-y-8 scale-95 opacity-0'
             : 'opacity-100'
             } ${darkMode
@@ -1065,7 +1065,7 @@ export default function FileNavigatorModal() {
               </div>
             </div>
 
-            <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 [scrollbar-gutter:stable] ${darkMode ? 'bg-slate-900/45' : 'bg-gray-50/65'}`}>
+            <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 scrollbar-gutter-stable ${darkMode ? 'bg-slate-900/45' : 'bg-gray-50/65'}`}>
               <div className="space-y-1">
                 {navigatorState.roots.map((root) => {
                   const active = currentDirectory && normalizePath(currentDirectory).startsWith(normalizePath(root.path));
@@ -1190,7 +1190,7 @@ export default function FileNavigatorModal() {
                     sideOffset={6}
                     role="menu"
                     aria-label="Sort folder files"
-                    className={`z-[1900] w-56 rounded-xl p-1.5 shadow-xl ${darkMode
+                    className={`z-1900 w-56 rounded-xl p-1.5 shadow-xl ${darkMode
                       ? 'border-gray-700 bg-gray-800 text-gray-100'
                       : 'border-gray-200 bg-white text-gray-800'
                       }`}
@@ -1297,7 +1297,7 @@ export default function FileNavigatorModal() {
                       <FileTypeIcon entry={selectedEntry} className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-[13px] font-semibold leading-5">{selectedEntry.fileName}</h3>
+                      <h3 className="wrap-break-word text-[13px] font-semibold leading-5">{selectedEntry.fileName}</h3>
                       <p className={`mt-0.5 break-all text-[10px] leading-4 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{selectedEntry.parentPath || selectedEntry.filePath}</p>
                     </div>
                   </div>
@@ -1328,7 +1328,7 @@ export default function FileNavigatorModal() {
                   ) : preview.available && preview.content ? (
                     <>
                       <p className={`mb-2 text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Preview</p>
-                      <pre className={`select-text whitespace-pre-wrap break-words font-sans text-[11px] leading-[1.55] ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{preview.content}</pre>
+                      <pre className={`select-text whitespace-pre-wrap wrap-break-word font-sans text-[11px] leading-[1.55] ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{preview.content}</pre>
                       {preview.truncated && <p className={`mt-3 text-[10px] ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Preview truncated</p>}
                     </>
                   ) : (

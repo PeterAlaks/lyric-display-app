@@ -363,7 +363,7 @@ const TopMenuBar = () => {
     return (
       <div
         ref={barRef}
-        className={`relative z-[1500] h-9 flex items-center justify-center border-b text-[12px] ${darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-100' : 'bg-slate-50/95 border-slate-200 text-slate-900'}`}
+        className={`relative z-1500 h-9 flex items-center justify-center border-b text-[12px] ${darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-100' : 'bg-slate-50/95 border-slate-200 text-slate-900'}`}
         style={dragRegion}
       >
         <button
@@ -387,13 +387,13 @@ const TopMenuBar = () => {
   return (
     <div
       ref={barRef}
-      className={`relative z-[1500] h-9 flex items-center justify-between ${isMac ? 'pl-[78px]' : 'pl-2.5'} pr-0 border-b text-[12px] ${darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-100' : 'bg-slate-50/95 border-slate-200 text-slate-900'}`}
+      className={`relative z-1500 h-9 flex items-center justify-between ${isMac ? 'pl-19.5' : 'pl-2.5'} pr-0 border-b text-[12px] ${darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-100' : 'bg-slate-50/95 border-slate-200 text-slate-900'}`}
       onDoubleClickCapture={handleBarDoubleClick}
       style={dragRegion}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className="flex items-center gap-2 pr-2" style={noDrag}>
-          {showFallbackIcon && <div className="h-3.5 w-3.5 rounded-sm bg-gradient-to-br from-blue-500 to-indigo-600" aria-hidden />}
+          {showFallbackIcon && <div className="h-3.5 w-3.5 rounded-sm bg-linear-to-br from-blue-500 to-indigo-600" aria-hidden />}
           <img
             src="/LyricDisplay-icon.png"
             alt="LyricDisplay"

@@ -420,7 +420,7 @@ const StageTemplatesModal = ({ darkMode, onApplyTemplate, onClose }) => {
           </div>
         ) : activeTab === 'saved' && userTemplates.length === 0 ? (
           <div className={`flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center ${darkMode
-            ? 'border-white/10 bg-white/[0.025]'
+            ? 'border-white/10 bg-white/2.5'
             : 'border-slate-300 bg-white'
             }`}
           >

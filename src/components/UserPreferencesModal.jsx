@@ -173,7 +173,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[500px]">
+      <div className="flex items-center justify-center h-125">
         <Loader2 className={`w-8 h-8 animate-spin ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
       </div>
     );

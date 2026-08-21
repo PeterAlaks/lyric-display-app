@@ -196,7 +196,7 @@ const TimePicker = React.forwardRef(({
       <PopoverContent
         align="start"
         sideOffset={6}
-        className={cn('z-[1600] w-[290px] rounded-xl p-0 shadow-xl', surfaceClass, contentClassName)}
+        className={cn('z-1600 w-72.5 rounded-xl p-0 shadow-xl', surfaceClass, contentClassName)}
       >
         <div className={cn('flex items-center justify-between border-b px-4 py-3', darkMode ? 'border-slate-800' : 'border-slate-200')}>
           <p className="text-xs font-semibold">Select time</p>

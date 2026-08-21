@@ -76,7 +76,7 @@ const GradientAngleDial = ({ value, onChange, darkMode }) => {
       onPointerUp={(event) => event.currentTarget.releasePointerCapture?.(event.pointerId)}
       onPointerCancel={(event) => event.currentTarget.releasePointerCapture?.(event.pointerId)}
       className={cn(
-        "relative h-[30px] w-[30px] shrink-0 touch-none cursor-pointer rounded-full border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "relative h-7.5 w-7.5 shrink-0 touch-none cursor-pointer rounded-full border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         darkMode ? "border-gray-500 bg-gray-700" : "border-gray-400 bg-white"
       )}
     >
@@ -91,7 +91,7 @@ const GradientAngleDial = ({ value, onChange, darkMode }) => {
       />
       <span
         aria-hidden="true"
-        className={cn("pointer-events-none absolute h-[4px] w-[4px] -translate-x-1/2 -translate-y-1/2 rounded-full border", darkMode ? "border-blue-200 bg-gray-800" : "border-blue-700 bg-white")}
+        className={cn("pointer-events-none absolute h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full border", darkMode ? "border-blue-200 bg-gray-800" : "border-blue-700 bg-white")}
         style={handlePosition}
       />
     </div>
@@ -100,8 +100,8 @@ const GradientAngleDial = ({ value, onChange, darkMode }) => {
 
 const inactiveButtonClass = (darkMode) => (
   darkMode
-    ? "!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700 !transition-none"
-    : "!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100 !transition-none"
+    ? "bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700! transition-none!"
+    : "bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100! transition-none!"
 );
 
 const PaintPicker = React.forwardRef(({
@@ -365,7 +365,7 @@ const PaintPicker = React.forwardRef(({
 
       {sheetMode && open && typeof document !== 'undefined' ? createPortal(
         <div
-          className="fixed inset-0 z-[2350] bg-black/35 p-2"
+          className="fixed inset-0 z-2350 bg-black/35 p-2"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) handleOpenChange(false);
           }}
@@ -404,7 +404,7 @@ const PaintPicker = React.forwardRef(({
         <PopoverContent
           ref={contentRef}
           data-popover-scroll-lock-allow="true"
-          className={`w-[272px] rounded-2xl p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          className={`w-68 rounded-2xl p-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
           align={popoverAlign}
           side={popoverSide}
           avoidCollisions

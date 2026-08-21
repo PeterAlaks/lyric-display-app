@@ -246,7 +246,7 @@ const CanvasContextMenu = ({
               {songSections.map((section) => (
                 <ContextMenuItem
                   key={section.key}
-                  className="whitespace-normal break-words"
+                  className="whitespace-normal wrap-break-word"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();

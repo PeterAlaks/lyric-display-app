@@ -512,7 +512,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
   const modalClasses = [
     'rounded-xl border shadow-2xl ring-1 w-[94vw] max-w-5xl mx-4',
-    'flex max-h-[calc(100vh-2rem)] h-[min(86vh,760px)] flex-col overflow-hidden sm:min-h-[620px]',
+    'flex max-h-[calc(100vh-2rem)] h-[min(86vh,760px)] flex-col overflow-hidden sm:min-h-155',
     darkMode ? 'bg-gray-900 text-gray-50 border-slate-800/80 ring-blue-500/35' : 'bg-white text-gray-900 border-slate-200/80 ring-blue-500/20',
     'transition-all duration-200 ease-out',
     (exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100',

@@ -50,7 +50,7 @@ const HelpButton = ({ darkMode, showModal }) => (
         }`}
       aria-label="Open lyrics canvas help"
     >
-      <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     </button>
@@ -221,7 +221,7 @@ const ToolbarDropdown = ({
               role="menuitem"
             >
               {item.icon ? <item.icon className="h-4 w-4 shrink-0 opacity-75" /> : null}
-              <span className="min-w-0 whitespace-normal break-words">{item.label}</span>
+              <span className="min-w-0 whitespace-normal wrap-break-word">{item.label}</span>
             </button>
           ))}
         </div>
@@ -391,7 +391,7 @@ const SongCanvasHeader = ({
           <Tooltip content="Return to control panel" side="right">
             <button
               onClick={handleBack}
-              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 font-medium transition-all md:w-[120px] md:px-4 ${navButtonClass}`}
+              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 font-medium transition-all md:w-30 md:px-4 ${navButtonClass}`}
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back</span>
@@ -431,7 +431,7 @@ const SongCanvasHeader = ({
             <Tooltip content="Start a new lyrics file" side="left">
               <button
                 onClick={handleStartNewSong}
-                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 font-medium transition-all md:w-[120px] md:px-4 ${navButtonClass}`}
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 font-medium transition-all md:w-30 md:px-4 ${navButtonClass}`}
               >
                 <FilePlusCorner className="h-4 w-4" />
                 <span className="hidden sm:inline">New</span>

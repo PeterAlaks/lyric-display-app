@@ -285,7 +285,7 @@ export default function ButterchurnPresetSelect({
   }, []);
 
   const labelClassName = cn(
-    'flex h-[30px] items-center px-3 text-[10px] font-semibold uppercase tracking-wide',
+    'flex h-7.5 items-center px-3 text-[10px] font-semibold uppercase tracking-wide',
     darkMode ? 'bg-gray-700 text-gray-400' : 'bg-white text-gray-500'
   );
 
@@ -383,7 +383,7 @@ export default function ButterchurnPresetSelect({
         <div
           ref={menuRef}
           className={cn(
-            'fixed z-[2100] overflow-hidden rounded-2xl border shadow-xl',
+            'fixed z-2100 overflow-hidden rounded-2xl border shadow-xl',
             darkMode
               ? 'border-gray-600 bg-gray-700 text-gray-100'
               : 'border-gray-300 bg-white text-gray-900'
@@ -439,7 +439,7 @@ export default function ButterchurnPresetSelect({
             role="listbox"
             aria-label="Butterchurn presets"
             className={cn(
-              'max-h-[340px] overflow-y-auto pr-1 pb-1 scrollbar-thin',
+              'max-h-85 overflow-y-auto pr-1 pb-1 scrollbar-thin',
               darkMode
                 ? 'scrollbar-thumb-gray-500 scrollbar-track-gray-700'
                 : 'scrollbar-thumb-gray-500 scrollbar-track-gray-200'

@@ -370,7 +370,7 @@ const ScheduleStartReconciliationWizard = ({
                       {value === getSuggestedChoice(position) && <span className="rounded-full bg-blue-600/10 px-2 py-1 text-[9px] font-semibold text-blue-600 dark:text-blue-300">Suggested</span>}
                     </button>
                     {index < schedule.items.length - 1 && transitionMs > 0 && position.timeline.segments.some((segment) => segment.type === 'transition' && segment.fromItemIndex === index) && (
-                      <button type="button" role="radio" aria-checked={selectedChoice === transitionChoiceValue(index)} onClick={() => choosePosition(transitionChoiceValue(index))} className={`ml-8 flex w-[calc(100%_-_2rem)] items-center gap-2 rounded-lg border px-3 py-2 text-left text-[10px] transition-colors ${selectedChoice === transitionChoiceValue(index) ? selectedClass : optionClass}`}>
+                      <button type="button" role="radio" aria-checked={selectedChoice === transitionChoiceValue(index)} onClick={() => choosePosition(transitionChoiceValue(index))} className={`ml-8 flex w-[calc(100%-2rem)] items-center gap-2 rounded-lg border px-3 py-2 text-left text-[10px] transition-colors ${selectedChoice === transitionChoiceValue(index) ? selectedClass : optionClass}`}>
                         <ArrowRight className="h-3 w-3" /> Transition to {schedule.items[index + 1].label}
                       </button>
                     )}

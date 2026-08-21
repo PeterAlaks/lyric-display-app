@@ -95,7 +95,7 @@ export default function LyricRow({
         <div className={hasTimestamp ? 'flex items-stretch gap-3 pr-9' : 'pr-9'}>
           {hasTimestamp && (
             <div
-              className={`shrink-0 self-stretch rounded-md border px-2 py-1 font-mono ${compact ? 'w-[4.5rem] text-[10px]' : 'w-[5.25rem] text-[11px]'} flex items-center justify-center ${darkMode
+              className={`shrink-0 self-stretch rounded-md border px-2 py-1 font-mono ${compact ? 'w-18 text-[10px]' : 'w-21 text-[11px]'} flex items-center justify-center ${darkMode
                 ? 'border-gray-600 bg-gray-900/35 text-gray-300'
                 : 'border-gray-200 bg-white/80 text-gray-500'
                 }`}
@@ -131,10 +131,10 @@ export default function LyricRow({
                     : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
                 }`}
             >
-              <Ungroup className="h-[13px] w-[13px] shrink-0" />
+              <Ungroup className="h-3.25 w-3.25 shrink-0" />
               <span
                 className={`text-[11px] font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out ${hoveredButtonIndex === index
-                  ? 'max-w-[60px] opacity-100 ml-0'
+                  ? 'max-w-15 opacity-100 ml-0'
                   : 'max-w-0 opacity-0'
                   }`}
               >

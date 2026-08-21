@@ -49,8 +49,8 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
     ? 'bg-gray-700 border-gray-600 text-gray-200'
     : 'bg-white border-gray-300';
   const selectContentClass = darkMode
-    ? 'z-[1450] bg-gray-700 border-gray-600 text-gray-200'
-    : 'z-[1450] bg-white border-gray-300';
+    ? 'z-1450 bg-gray-700 border-gray-600 text-gray-200'
+    : 'z-1450 bg-white border-gray-300';
 
   const getStoredFolderPath = useCallback(() => {
     try {
@@ -340,7 +340,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-[1400] flex items-center justify-center p-4"
+      className="fixed inset-x-0 bottom-0 z-1400 flex items-center justify-center p-4"
       style={{ top: topMenuHeight }}
     >
       <div
@@ -354,7 +354,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
       <div
         className={cn(
           'relative w-full max-w-3xl overflow-hidden rounded-2xl border shadow-2xl flex flex-col',
-          'h-[650px]',
+          'h-162.5',
           'transform transition-all duration-200',
           isMounted ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-95',
           darkMode ? 'bg-gray-900 text-gray-50 border-slate-800/80' : 'bg-white text-gray-900 border-slate-200/80'

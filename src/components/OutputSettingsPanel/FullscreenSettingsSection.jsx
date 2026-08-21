@@ -21,7 +21,7 @@ const FULLSCREEN_ELEMENT_POSITIONS = [
   ['bottom-right', 'Bottom Right'],
 ];
 
-const FULLSCREEN_ELEMENT_NUMBER_CLASS = 'w-[68px] shrink-0';
+const FULLSCREEN_ELEMENT_NUMBER_CLASS = 'w-17 shrink-0';
 
 const FullscreenBackgroundOpacityInput = ({ darkMode, settings, update }) => {
   const currentOpacity = settings.fullScreenBackgroundOpacity ?? 10;
@@ -117,7 +117,7 @@ const FullscreenSettingsSection = ({
           onValueChange={handleFullScreenBackgroundTypeChange}
         >
           <SelectTrigger
-            className={`w-[8.5rem] shrink-0 ${darkMode
+            className={`w-34 shrink-0 ${darkMode
               ? 'bg-gray-700 border-gray-600 text-gray-200'
               : 'bg-white border-gray-300'
               }`}
@@ -234,7 +234,7 @@ const FullscreenSettingsSection = ({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-4" data-output-setting-subrow>
-              <label className={`min-w-[140px] shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Position</label>
+              <label className={`min-w-35 shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Position</label>
               <Select
                 value={settings.fullScreenElementPosition ?? 'center'}
                 onValueChange={(val) => update('fullScreenElementPosition', val)}
@@ -307,7 +307,7 @@ const FullscreenSettingsSection = ({
             </div>
 
             <div className="flex items-center justify-between gap-4" data-output-setting-subrow>
-              <label className={`min-w-[140px] shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>X & Y Margins</label>
+              <label className={`min-w-35 shrink-0 text-[13px] leading-5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>X & Y Margins</label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"

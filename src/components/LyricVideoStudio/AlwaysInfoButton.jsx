@@ -100,7 +100,7 @@ export default function AlwaysInfoButton({
       ref={contentRef}
       role="tooltip"
       data-side={position?.placement || side}
-      className={`fixed z-[9999] max-w-[280px] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs leading-relaxed text-gray-100 shadow-lg dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 ${position ? 'tooltip-opacity-fade' : ''}`}
+      className={`fixed z-9999 max-w-70 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs leading-relaxed text-gray-100 shadow-lg dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 ${position ? 'tooltip-opacity-fade' : ''}`}
       style={{
         left: position?.x || 0,
         top: position?.y || 0,

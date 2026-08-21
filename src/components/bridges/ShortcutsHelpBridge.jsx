@@ -17,7 +17,7 @@ export default function ShortcutsHelpBridge() {
       icon: <Keyboard className="h-6 w-6" aria-hidden />,
       dismissLabel: 'Got it',
       allowBackdropClose: true,
-      className: 'sm:min-w-[700px] max-w-4xl',
+      className: 'sm:min-w-175 max-w-4xl',
       body: <ShortcutsList darkMode={darkMode} />,
     });
   }, [showModal, darkMode]);

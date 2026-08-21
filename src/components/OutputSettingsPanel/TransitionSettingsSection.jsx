@@ -8,7 +8,7 @@ import { sanitizeIntegerInput } from '../../utils/numberInput';
 const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
   <div className="flex items-center justify-between gap-4" data-output-setting-row>
     <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-[140px]" data-output-setting-label>
+      <div className="flex items-center gap-2 min-w-35" data-output-setting-label>
         {Icon ? (
           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
             <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
@@ -49,7 +49,7 @@ const TransitionSettingsSection = ({
         onValueChange={(val) => update('transitionAnimation', val)}
       >
         <SelectTrigger
-          className={`w-[140px] ${darkMode
+          className={`w-35 ${darkMode
             ? 'bg-gray-700 border-gray-600 text-gray-200'
             : 'bg-white border-gray-300'
             }`}

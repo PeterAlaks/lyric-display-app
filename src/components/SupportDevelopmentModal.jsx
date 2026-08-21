@@ -74,7 +74,7 @@ export function SupportDevelopmentModal({ isOpen, onClose, isDark = false }) {
 
   const content = (
     <div
-      className="fixed inset-0 z-[1300] flex items-center justify-center px-4 py-10"
+      className="fixed inset-0 z-1300 flex items-center justify-center px-4 py-10"
       style={{ top: topMenuHeight }}
       aria-modal="true"
       role="dialog"

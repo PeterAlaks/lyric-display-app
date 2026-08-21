@@ -82,7 +82,7 @@ const Switch = React.forwardRef(({
   return (
     <SwitchPrimitives.Root
       className={cn(
-        "switch-track peer inline-flex shrink-0 cursor-pointer items-center overflow-hidden border-0 shadow-sm transition-colors [contain:paint] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        "switch-track peer inline-flex shrink-0 cursor-pointer items-center overflow-hidden border-0 shadow-sm transition-colors contain-[paint] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
         variantClassName,
         className
       )}

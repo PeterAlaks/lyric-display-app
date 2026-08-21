@@ -138,7 +138,7 @@ const NdiPreferencesSection = ({
       {ndiLastError && (
         <div className={`relative rounded-lg border p-3 pr-11 text-xs ${darkMode ? 'border-red-600/30 bg-red-900/20 text-red-200' : 'border-red-200 bg-red-50 text-red-800'}`}>
           <p className="font-medium">The last NDI Companion operation failed.</p>
-          <p className="mt-1 break-words">{ndiLastErrorMessage}</p>
+          <p className="mt-1 wrap-break-word">{ndiLastErrorMessage}</p>
           {ndiLastErrorMetadata && (
             <p className={`mt-1.5 ${darkMode ? 'text-red-300/75' : 'text-red-700/75'}`}>
               {ndiLastErrorMetadata}

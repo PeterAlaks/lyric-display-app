@@ -691,7 +691,7 @@ const FontSelect = ({
           ref={menuRef}
           onKeyDown={handleMenuKeyDown}
           className={cn(
-            'fixed z-[2100] rounded-2xl border shadow-lg transition-all duration-200 ease-out transform',
+            'fixed z-2100 rounded-2xl border shadow-lg transition-all duration-200 ease-out transform',
             panelStateClass,
             darkMode
               ? 'bg-gray-700 border-gray-600 text-gray-200'

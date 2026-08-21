@@ -645,7 +645,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
               value={settings.upcomingSongMode || 'automatic'}
               onValueChange={(val) => update('upcomingSongMode', val)}
             >
-              <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
+              <SelectTrigger className={`w-35 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>
@@ -800,7 +800,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
       {/* Timer Control Buttons Row */}
       <div className="flex items-center justify-between gap-4" data-output-setting-row>
         {/* Left: Timer Display */}
-        <div className={`flex items-center justify-center px-4 py-2 rounded-lg min-w-[120px] ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+        <div className={`flex items-center justify-center px-4 py-2 rounded-lg min-w-30 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
           <div className={`text-xl font-mono font-bold ${timerRunning && !timerPaused ? (darkMode ? 'text-green-400' : 'text-green-600') : (darkMode ? 'text-gray-400' : 'text-gray-500')}`}>
             <StageTimerValue
               timerRunning={timerRunning}
@@ -925,7 +925,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
             onKeyDown={(e) => e.key === 'Enter' && handleAddMessage()}
             placeholder="Enter custom message..."
             maxLength={MAX_STAGE_MESSAGE_LENGTH}
-            className={`flex-1 !rounded-full text-xs placeholder:text-[11px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
+            className={`flex-1 rounded-full! text-xs placeholder:text-[11px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}
           />
           <Button onClick={handleAddMessage} className={customMessagePrimaryButtonClass}>
             Add
@@ -1017,7 +1017,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
           <LabelWithIcon icon={ArrowRightLeft} text="Animation" darkMode={darkMode} />
         </Tooltip>
         <Select value={settings.transitionAnimation} onValueChange={(val) => update('transitionAnimation', val)}>
-          <SelectTrigger className={`w-[140px] ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
+          <SelectTrigger className={`w-35 ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>

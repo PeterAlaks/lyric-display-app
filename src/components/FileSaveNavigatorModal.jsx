@@ -309,7 +309,7 @@ export default function FileSaveNavigatorModal() {
 
   return createPortal((
     <div
-      className="fixed inset-x-0 bottom-0 top-9 z-[1810]"
+      className="fixed inset-x-0 bottom-0 top-9 z-1810"
       role="dialog"
       aria-modal="true"
       aria-labelledby="file-save-navigator-title"
@@ -323,7 +323,7 @@ export default function FileSaveNavigatorModal() {
       <div className="pointer-events-none relative flex h-full items-center justify-center p-4">
         <div
           data-modal-root="true"
-          className={`pointer-events-auto flex h-[min(460px,calc(100vh-72px))] min-h-[320px] w-[min(640px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all duration-200 ${transitioning
+          className={`pointer-events-auto flex h-[min(460px,calc(100vh-72px))] min-h-80 w-[min(640px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all duration-200 ${transitioning
             ? 'translate-y-8 scale-95 opacity-0'
             : 'opacity-100'
             } ${darkMode
@@ -387,7 +387,7 @@ export default function FileSaveNavigatorModal() {
           </div>
 
           <div
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable]"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 scrollbar-gutter-stable"
             role="listbox"
             aria-label="Indexed save folders"
             aria-busy={loading || creatingLyricsFolder}

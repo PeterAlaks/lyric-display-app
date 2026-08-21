@@ -3,7 +3,7 @@ import { BellRing, X } from 'lucide-react';
 export default function AppAnnouncementModal({ announcement, darkMode = false, modalId, onClose }) {
   return (
     <article className={`flex h-full min-h-0 flex-col ${darkMode ? 'bg-[#10131b] text-slate-50' : 'bg-white text-slate-950'}`}>
-      <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden bg-slate-200 dark:bg-slate-800">
+      <div className="relative aspect-3/1 w-full shrink-0 overflow-hidden bg-slate-200 dark:bg-slate-800">
         <img
           src={announcement.imageUrl}
           alt=""
@@ -31,7 +31,7 @@ export default function AppAnnouncementModal({ announcement, darkMode = false, m
           </div>
           <h2
             id={`modal-${modalId}-title`}
-            className="overflow-hidden text-xl font-semibold leading-[1.25] tracking-tight sm:text-2xl"
+            className="overflow-hidden text-xl font-semibold leading-tight tracking-tight sm:text-2xl"
             style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2 }}
           >
             {announcement.title}

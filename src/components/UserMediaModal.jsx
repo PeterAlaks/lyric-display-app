@@ -389,7 +389,7 @@ const UserMediaModal = ({
                       key={tab.value}
                       value={tab.value}
                       className={cn(
-                        'min-w-[120px] gap-2 px-4',
+                        'min-w-30 gap-2 px-4',
                         'data-[state=active]:text-gray-950'
                       )}
                     >
@@ -439,13 +439,13 @@ const UserMediaModal = ({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 [scrollbar-gutter:stable]">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 scrollbar-gutter-stable">
         {loading ? (
           <div className={cn('flex h-full items-center justify-center text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
             Loading media...
           </div>
         ) : visibleMedia.length === 0 ? (
-          <div className={cn('flex h-full min-h-[260px] flex-col items-center justify-center gap-3 rounded border border-dashed text-center',
+          <div className={cn('flex h-full min-h-65 flex-col items-center justify-center gap-3 rounded border border-dashed text-center',
             darkMode ? 'border-gray-800 text-gray-400' : 'border-gray-300 text-gray-500'
           )}>
             {activeTab === 'image' ? <Image className="h-10 w-10" /> : <Video className="h-10 w-10" />}

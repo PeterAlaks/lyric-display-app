@@ -446,7 +446,7 @@ const LyricDisplayApp = () => {
       {isDesktopApp && <DraftApprovalModal darkMode={darkMode} />}
       <div className={`flex h-full font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Control Panel */}
-        <div className="control-panel-sidebar-texture w-[420px] shrink-0 shadow-lg flex flex-col h-full">
+        <div className="control-panel-sidebar-texture w-105 shrink-0 shadow-lg flex flex-col h-full">
           {/* Fixed Header Section */}
           <div className="shrink-0 pt-4 px-5 pb-0 bg-transparent">
             <ControlPanelHeaderActions
@@ -479,9 +479,9 @@ const LyricDisplayApp = () => {
               </Tooltip>
               <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="right">
                 <button
-                  className={`control-squircle h-[52px] w-[52px] rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
+                  className={`control-squircle h-13 w-13 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
                     ? 'bg-gray-700 hover:bg-blue-500/10 hover:text-blue-300 text-gray-200'
-                    : 'bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700'
+                    : 'bg-[#f8fafc] hover:bg-blue-50 hover:text-blue-600 text-gray-700'
                     }`}
                   onClick={handleCreateNewSong}
                 >

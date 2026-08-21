@@ -121,7 +121,7 @@ const NdiOutputSettingsModal = ({ darkMode, outputKey, onClose }) => {
 
   if (loading || !settings) {
     return (
-      <div className="flex items-center justify-center h-[200px]">
+      <div className="flex items-center justify-center h-50">
         <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${darkMode ? 'border-gray-400' : 'border-gray-500'}`} />
       </div>
     );

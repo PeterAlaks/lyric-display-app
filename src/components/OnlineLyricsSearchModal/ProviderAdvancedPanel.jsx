@@ -35,7 +35,7 @@ const FeaturedLibraries = ({ compact = false, darkMode, providerDefinitions }) =
             <img
               src={providerLogoMap[provider.id]}
               alt={provider.displayName}
-              className={compact ? 'max-h-7 max-w-[6.5rem] object-contain' : 'h-9 w-auto object-contain'}
+              className={compact ? 'max-h-7 max-w-26 object-contain' : 'h-9 w-auto object-contain'}
             />
           </a>
         ))}

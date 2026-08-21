@@ -134,7 +134,7 @@ const DatePicker = React.forwardRef(({
           <ChevronDown className={cn('h-3.5 w-3.5 shrink-0', mutedClass)} />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className={cn('z-[1600] w-[310px] rounded-xl p-0 shadow-xl', surfaceClass, contentClassName)}>
+      <PopoverContent align="start" sideOffset={6} className={cn('z-1600 w-77.5 rounded-xl p-0 shadow-xl', surfaceClass, contentClassName)}>
         <div className={cn('flex items-center justify-between border-b px-3 py-3', darkMode ? 'border-slate-800' : 'border-slate-200')}>
           <button type="button" onClick={() => changeMonth(-1)} className={cn('rounded-lg p-2 transition-colors', iconButtonClass)} aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />

@@ -78,7 +78,7 @@ const NdiTelemetryPreferencesPage = ({
             ].map(([label, value]) => (
               <div key={label} className={`min-w-0 px-3 py-2.5 ${darkMode ? 'bg-gray-800/80' : 'bg-white'}`}>
                 <p className={`font-medium ${labelClass}`}>{label}</p>
-                <p className={`mt-0.5 break-words ${mutedClass}`}>{value}</p>
+                <p className={`mt-0.5 wrap-break-word ${mutedClass}`}>{value}</p>
               </div>
             ))}
           </div>

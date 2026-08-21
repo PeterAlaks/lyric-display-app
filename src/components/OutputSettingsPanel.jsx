@@ -34,7 +34,7 @@ import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
   <div className="flex items-center justify-between gap-4" data-output-setting-row>
     <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-[140px]" data-output-setting-label>
+      <div className="flex items-center gap-2 min-w-35" data-output-setting-label>
         {icon ? (
           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
             {React.createElement(icon, { className: `h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}` })}
@@ -723,7 +723,7 @@ const OutputSettingsPanel = ({
     };
     const templateSheet = templatePopoverOpen && typeof document !== 'undefined' ? createPortal(
       <div
-        className="fixed inset-0 z-[2350] bg-black/45 p-2"
+        className="fixed inset-0 z-2350 bg-black/45 p-2"
         onMouseDown={(event) => {
           if (event.target === event.currentTarget) setTemplatePopoverOpen(false);
         }}

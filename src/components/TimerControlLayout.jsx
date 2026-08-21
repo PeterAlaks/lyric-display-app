@@ -102,7 +102,7 @@ const TimerControlLayout = ({
       className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#f8fafc] text-gray-900'}`}
       style={{ scrollbarGutter: 'stable' }}
     >
-      <div className="mx-auto min-h-full max-w-[1240px] space-y-5 p-5">
+      <div className="mx-auto min-h-full max-w-310 space-y-5 p-5">
         <header className={`grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b pb-4 ${dividerClass}`}>
           <div className="flex items-center gap-2">
             <Timer className="h-5 w-5" />
@@ -121,7 +121,7 @@ const TimerControlLayout = ({
           >
             <span
               aria-hidden="true"
-              className={`timer-control-mode-indicator absolute bottom-1 left-1 top-1 w-[calc(50%_-_0.25rem)] rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${darkMode ? 'bg-gray-700' : 'bg-white'}`}
+              className={`timer-control-mode-indicator absolute bottom-1 left-1 top-1 w-[calc(50%-0.25rem)] rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${darkMode ? 'bg-gray-700' : 'bg-white'}`}
               style={{ transform: useSets ? 'translateX(100%)' : 'translateX(0)' }}
             />
             {[

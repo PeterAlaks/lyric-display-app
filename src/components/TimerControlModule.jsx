@@ -180,7 +180,7 @@ const TimerPreview = React.memo(({ timerState, displaySettings, scheduleMode = f
   return (
     <div className="space-y-3">
       <div
-        className="flex h-[285px] min-h-0 flex-col items-center rounded-lg px-6"
+        className="flex h-71.25 min-h-0 flex-col items-center rounded-lg px-6"
         style={{ background: paintToCss(displaySettings.backgroundPaint, displaySettings.backgroundColor || '#000000') }}
       >
         {showSecondaryText && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock3, LayoutPanelTop, Sparkles } from 'lucide-react';
+import { Clock3, LayoutPanelTop, ArrowRightLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -99,7 +99,7 @@ const TimerDisplaySettingsModal = ({ displaySettings, onDraftChange, darkMode = 
 
       <section className={`rounded-xl border px-4 py-2 md:col-span-2 ${cardClass}`}>
         <div className="flex items-center gap-2 border-b border-inherit py-2.5">
-          <Sparkles className="h-4 w-4 text-violet-500" />
+          <ArrowRightLeft className="h-4 w-4 text-blue-500" />
           <div>
             <h3 className="text-xs font-semibold">Timer and clock transition</h3>
             <p className={`mt-0.5 text-[10px] ${mutedText}`}>Animate the switch between the global clock and an active timer. Select None for an instant change.</p>

@@ -73,7 +73,7 @@ const ConnectionBackoffBanner = ({ darkMode = false }) => {
     : null;
 
   return (
-    <div className={`pointer-events-none fixed top-4 left-1/2 z-[1100] flex -translate-x-1/2 rounded-xl px-4 py-3 transition-opacity duration-300 ${variantClasses}`}>
+    <div className={`pointer-events-none fixed top-4 left-1/2 z-1100 flex -translate-x-1/2 rounded-xl px-4 py-3 transition-opacity duration-300 ${variantClasses}`}>
       <div className="flex items-start gap-3">
         <AlertTriangle className="h-5 w-5 shrink-0" />
         <div className="flex flex-col text-sm">

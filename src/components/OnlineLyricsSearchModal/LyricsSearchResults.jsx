@@ -55,7 +55,7 @@ const ResultBadges = ({ darkMode, item }) => {
       {badges.map((badge) => (
         <span
           key={badge.key}
-          className={`max-w-[13rem] truncate text-[10px] font-medium ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}
+          className={`max-w-52 truncate text-[10px] font-medium ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}
           title={badge.label}
         >
           {badge.label}

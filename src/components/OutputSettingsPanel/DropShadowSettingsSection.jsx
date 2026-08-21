@@ -1,4 +1,4 @@
-import { Contrast, MoveHorizontal, MoveVertical, Sparkles } from 'lucide-react';
+import { Contrast, MoveHorizontal, MoveVertical, SquareDashed } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from '@/components/ui/color-picker';
@@ -8,7 +8,7 @@ import { sanitizeIntegerInput } from '../../utils/numberInput';
 const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
   <div className="flex items-center justify-between gap-4" data-output-setting-row>
     <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-[140px]" data-output-setting-label>
+      <div className="flex items-center gap-2 min-w-35" data-output-setting-label>
         {Icon ? (
           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
             <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
@@ -113,7 +113,7 @@ const DropShadowSettingsSection = ({
 
         <Tooltip content="Shadow blur radius in pixels (0 = sharp, higher = softer)" side="top">
           <div className="flex min-w-0 items-center gap-1.5">
-            <Sparkles className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <SquareDashed className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <Input
               type="number"
               value={dropShadowBlur}

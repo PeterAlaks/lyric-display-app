@@ -355,7 +355,7 @@ export default function FirstRunTour({ darkMode = false, onFinish, onSkip }) {
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[10000] font-sans transition-opacity duration-200 ease-out ${isExiting ? 'opacity-0' : 'opacity-100'}`}
+      className={`fixed inset-0 z-10000 font-sans transition-opacity duration-200 ease-out ${isExiting ? 'opacity-0' : 'opacity-100'}`}
       data-first-run-tour="true"
     >
       {!targetRect && (
@@ -387,7 +387,7 @@ export default function FirstRunTour({ darkMode = false, onFinish, onSkip }) {
           aria-describedby="first-run-tour-description"
           tabIndex={-1}
           style={cardStyle}
-          className={`${isCentered ? 'relative w-full max-w-[540px]' : 'fixed w-[min(400px,calc(100vw-32px))]'} overflow-hidden rounded-3xl border shadow-2xl outline-none transition-[transform,opacity] duration-200 ease-out ${isExiting ? 'translate-y-2 scale-[0.97] opacity-0' : 'translate-y-0 scale-100 opacity-100 animate-in fade-in-0 zoom-in-95'} ${
+          className={`${isCentered ? 'relative w-full max-w-135' : 'fixed w-[min(400px,calc(100vw-32px))]'} overflow-hidden rounded-3xl border shadow-2xl outline-none transition-[transform,opacity] duration-200 ease-out ${isExiting ? 'translate-y-2 scale-[0.97] opacity-0' : 'translate-y-0 scale-100 opacity-100 animate-in fade-in-0 zoom-in-95'} ${
             darkMode
               ? 'border-slate-700/80 bg-slate-900 text-white shadow-black/50'
               : 'border-white/80 bg-white text-slate-950 shadow-slate-950/25'

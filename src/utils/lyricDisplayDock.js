@@ -1,4 +1,4 @@
-export const launchHeadlessActionClass = '!border-transparent !bg-blue-600 !text-white hover:!bg-blue-700';
+export const launchHeadlessActionClass = 'border-transparent! bg-blue-600! text-white! hover:bg-blue-700!';
 
 export async function confirmAndLaunchHeadlessMode({ showModal, showToast } = {}) {
   const confirmation = await showModal?.({

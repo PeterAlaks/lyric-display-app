@@ -199,7 +199,7 @@ export function Tooltip({
                 role="tooltip"
                 data-side={position?.placement || side}
                 className={cn(
-                    'fixed z-[9999] flex items-start gap-2 rounded-lg border px-3 py-2 text-xs shadow-lg',
+                    'fixed z-9999 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs shadow-lg',
                     'bg-gray-900 border-gray-700 text-gray-100',
                     'dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200',
                     position && 'tooltip-opacity-fade',

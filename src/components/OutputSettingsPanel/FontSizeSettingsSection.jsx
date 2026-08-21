@@ -189,11 +189,11 @@ const FontSizeSettingsSection = ({
               className={
                 settings.maxLinesEnabled
                   ? darkMode
-                    ? '!bg-white !text-gray-900 hover:!bg-white !border-gray-300'
-                    : '!bg-black !text-white hover:!bg-black !border-gray-300'
+                    ? 'bg-white! text-gray-900! hover:bg-white! border-gray-300!'
+                    : 'bg-black! text-white! hover:bg-black! border-gray-300!'
                   : darkMode
-                    ? '!bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700'
-                    : '!bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100'
+                    ? 'bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700!'
+                    : 'bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100!'
               }
             >
               <ListStart className="h-3.5 w-3.5" />
@@ -254,7 +254,7 @@ const FontSizeSettingsSection = ({
               value={translationFontSizeMode}
               onValueChange={handleTranslationFontSizeModeChange}
             >
-              <SelectTrigger className={`w-[120px] ${innerClassBase}`}>
+              <SelectTrigger className={`w-30 ${innerClassBase}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className={darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300'}>

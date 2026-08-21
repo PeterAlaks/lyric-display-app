@@ -10,7 +10,7 @@ import { sanitizeIntegerInput } from '../utils/numberInput';
 import { getEmphasisToggleStateClassName } from '../utils/emphasisToggleStyles.js';
 
 export const LabelWithIcon = ({ icon: Icon, text, darkMode }) => (
-  <div className="flex items-center gap-2 min-w-[140px]" data-output-setting-label>
+  <div className="flex items-center gap-2 min-w-35" data-output-setting-label>
     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
       <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
     </span>
@@ -31,7 +31,7 @@ export const blurInputOnEnter = (event) => {
   });
 };
 
-const compactOptionButtonClass = '!h-9 !w-9 rounded-md [&_svg]:!size-3.5';
+const compactOptionButtonClass = 'h-9! w-9! rounded-md [&_svg]:size-3.5!';
 
 export const AdvancedToggle = ({ expanded, onToggle, darkMode, ariaLabel, disabled = false, className = '' }) => (
   <button
@@ -236,11 +236,11 @@ export const AlignmentRow = ({
             className={
               currentValue === 'left'
                 ? darkMode
-                  ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                  : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
+                  ? `${compactOptionButtonClass} bg-white! text-gray-900! hover:bg-white! border-gray-300!`
+                  : `${compactOptionButtonClass} bg-black! text-white! hover:bg-black! border-gray-300!`
                 : darkMode
-                  ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                  : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
+                  ? `${compactOptionButtonClass} bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700!`
+                  : `${compactOptionButtonClass} bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100!`
             }
           >
             <AlignLeft className="h-3.5 w-3.5" />
@@ -255,11 +255,11 @@ export const AlignmentRow = ({
             className={
               currentValue === 'center'
                 ? darkMode
-                  ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                  : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
+                  ? `${compactOptionButtonClass} bg-white! text-gray-900! hover:bg-white! border-gray-300!`
+                  : `${compactOptionButtonClass} bg-black! text-white! hover:bg-black! border-gray-300!`
                 : darkMode
-                  ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                  : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
+                  ? `${compactOptionButtonClass} bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700!`
+                  : `${compactOptionButtonClass} bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100!`
             }
           >
             <AlignCenter className="h-3.5 w-3.5" />
@@ -274,11 +274,11 @@ export const AlignmentRow = ({
             className={
               currentValue === 'right'
                 ? darkMode
-                  ? `${compactOptionButtonClass} !bg-white !text-gray-900 hover:!bg-white !border-gray-300`
-                  : `${compactOptionButtonClass} !bg-black !text-white hover:!bg-black !border-gray-300`
+                  ? `${compactOptionButtonClass} bg-white! text-gray-900! hover:bg-white! border-gray-300!`
+                  : `${compactOptionButtonClass} bg-black! text-white! hover:bg-black! border-gray-300!`
                 : darkMode
-                  ? `${compactOptionButtonClass} !bg-transparent !border-gray-600 !text-gray-200 hover:!bg-gray-700`
-                  : `${compactOptionButtonClass} !bg-transparent !border-gray-300 !text-gray-700 hover:!bg-gray-100`
+                  ? `${compactOptionButtonClass} bg-transparent! border-gray-600! text-gray-200! hover:bg-gray-700!`
+                  : `${compactOptionButtonClass} bg-transparent! border-gray-300! text-gray-700! hover:bg-gray-100!`
             }
           >
             <AlignRight className="h-3.5 w-3.5" />
