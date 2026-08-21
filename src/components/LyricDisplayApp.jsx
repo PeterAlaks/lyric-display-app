@@ -481,7 +481,7 @@ const LyricDisplayApp = () => {
                 <button
                   className={`control-squircle h-13 w-13 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
                     ? 'bg-gray-700 hover:bg-blue-500/10 hover:text-blue-300 text-gray-200'
-                    : 'bg-[#f8fafc] hover:bg-blue-50 hover:text-blue-600 text-gray-700'
+                    : 'bg-muted hover:bg-blue-50 hover:text-blue-600 text-gray-700'
                     }`}
                   onClick={handleCreateNewSong}
                 >
@@ -567,7 +567,7 @@ const LyricDisplayApp = () => {
               <TabsList
                 data-tour="output-settings"
                 indicatorClassName={darkMode ? 'bg-white shadow' : 'bg-black shadow'}
-                className={`w-full p-1 h-11 mb-8 gap-1 ${darkMode ? 'bg-[#2b3544] text-gray-300' : 'bg-[#f8fafc]'}`}
+                className={`w-full p-1 h-11 mb-8 gap-1 ${darkMode ? 'bg-[#2b3544] text-gray-300' : 'bg-muted'}`}
               >
                 {allOutputIds.map((id) => {
                   const num = id.replace('output', '');

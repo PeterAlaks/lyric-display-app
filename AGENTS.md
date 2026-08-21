@@ -43,3 +43,14 @@ A regression test should make the bug difficult to reintroduce silently. If a re
 - Use `npm run test:unit` for the full unit suite.
 - For focused verification, use Node's test runner against the relevant existing file, for example `node --test tests/<name>.test.js`.
 - Run additional checks such as `npm run check:static`, `npm run check:contracts`, or `npm run build` when they are relevant to the changed area.
+
+## Release Notes Workflow
+
+Use this workflow when the user asks to draft or generate release notes for a new LyricDisplay version.
+
+1. Refresh the remote branch and tags before calculating the release range. Unless the user provides a different baseline, use the latest published GitHub release whose tagged commit is the most recent `chore: release v<version>` commit.
+2. Inspect several recent published GitHub release bodies, with extra weight on the latest releases, to learn the current structure, tone, category names, download section, installation text, and platform notes. Do not rely on a generic changelog template when the repository's established style is available.
+3. Compare the baseline tag with the requested target, normally `origin/master`. Examine the actual diffs, relevant implementation, and tests in addition to commit subjects so the notes describe verified user-visible behavior accurately.
+4. Include only noteworthy additions, major workflow or UX improvements, and important bug, stability, security, packaging, or developer changes. Consolidate related commits into outcome-focused bullets. Omit dependency-only updates, refactors, formatting, copy, icon, minor styling, and other routine maintenance unless they have a meaningful release-level impact.
+5. Match the most recent applicable release-note style and terminology. Preserve recurring download and platform boilerplate, update every version and artifact name to the requested version, and avoid inventing unsupported claims or sections.
+6. Return copy-ready Markdown and briefly state the baseline and comparison range used. Do not change the package version, create a tag or release, publish anything, or edit repository files unless the user separately requests those actions.
