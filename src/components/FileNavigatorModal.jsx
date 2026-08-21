@@ -30,6 +30,7 @@ import {
 import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tooltip } from './ui/tooltip';
+import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
 import { FILE_NAVIGATOR_LIMITS } from '../../shared/fileNavigatorLimits.js';
 
 const MODAL_ANIMATION_DURATION = 220;
@@ -1398,12 +1399,19 @@ export default function FileNavigatorModal() {
                   Open File&hellip;
                 </button>
               </Tooltip>
-              <div className="tab-switcher-squircle flex items-center gap-1 rounded-2xl p-1 ring-1 ring-inset ring-gray-300/40">
+              <div
+                className="tab-switcher-squircle relative isolate flex items-center gap-1 rounded-2xl p-1 ring-1 ring-inset ring-gray-300/40"
+                role="tablist"
+                aria-label="Open files in"
+              >
+                <SlidingTabIndicator className={darkMode ? 'bg-gray-700' : 'bg-white shadow-sm'} />
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={destination === 'control'}
                   onClick={() => { setDestination('control'); inputRef.current?.focus(); }}
-                  className={`tab-switcher-item-squircle rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'control'
-                    ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
+                  className={`tab-switcher-item-squircle relative z-10 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'control'
+                    ? darkMode ? 'text-white' : 'text-gray-900'
                     : darkMode ? 'text-gray-500' : 'text-gray-500'
                     }`}
                 >
@@ -1411,9 +1419,11 @@ export default function FileNavigatorModal() {
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={destination === 'canvas'}
                   onClick={() => { setDestination('canvas'); inputRef.current?.focus(); }}
-                  className={`tab-switcher-item-squircle rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'canvas'
-                    ? darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900 shadow-sm'
+                  className={`tab-switcher-item-squircle relative z-10 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors ${destination === 'canvas'
+                    ? darkMode ? 'text-white' : 'text-gray-900'
                     : darkMode ? 'text-gray-500' : 'text-gray-500'
                     }`}
                 >

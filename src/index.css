@@ -251,6 +251,20 @@
   corner-shape: squircle;
 }
 
+.tab-switcher-indicator[data-animated="true"] {
+  transition-duration: 300ms;
+  transition-property: width, height, opacity, transform, background-color, box-shadow;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width, height, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-switcher-indicator,
+  .timer-control-mode-indicator {
+    transition: none !important;
+  }
+}
+
 .control-squircle {
   border-radius: 3rem;
   corner-shape: squircle;

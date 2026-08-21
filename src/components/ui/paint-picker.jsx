@@ -226,18 +226,19 @@ const PaintPicker = React.forwardRef(({
       <Tabs value={localPaint.type} onValueChange={setMode}>
         <TabsList
           aria-label="Fill type"
+          indicatorClassName={darkMode ? 'bg-white shadow' : 'bg-black shadow'}
           className={`grid h-10 w-full grid-cols-2 gap-1 p-1 ${darkMode ? 'bg-[#2b3544] text-gray-300' : 'bg-[#f8fafc] text-gray-500'}`}
         >
           <TabsTrigger
             value="solid"
-            className={`h-full min-w-0 gap-1.5 px-2 text-xs ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}
+            className={`h-full min-w-0 gap-1.5 px-2 text-xs ${darkMode ? 'data-[state=active]:text-gray-900' : 'data-[state=active]:text-white'}`}
           >
             <Droplet className="h-4 w-4" />
             Solid
           </TabsTrigger>
           <TabsTrigger
             value="linear"
-            className={`h-full min-w-0 gap-1.5 px-2 text-xs ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}
+            className={`h-full min-w-0 gap-1.5 px-2 text-xs ${darkMode ? 'data-[state=active]:text-gray-900' : 'data-[state=active]:text-white'}`}
           >
             <SquareDashed className="h-4 w-4" />
             Gradient

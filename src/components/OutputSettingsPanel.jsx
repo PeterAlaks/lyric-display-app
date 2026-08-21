@@ -29,6 +29,7 @@ import ButterchurnVisualizerSettings from './ButterchurnVisualizerSettings';
 import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 import { outputTemplates } from '../utils/outputTemplates';
+import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
   <div className="flex items-center justify-between gap-4" data-output-setting-row>
@@ -744,19 +745,28 @@ const OutputSettingsPanel = ({
           </div>
 
           <div className="border-b border-gray-800 p-3">
-            <div className="tab-switcher-squircle grid grid-cols-2 gap-1 rounded-2xl bg-gray-900 p-1">
+            <div
+              className="tab-switcher-squircle relative isolate grid grid-cols-2 gap-1 rounded-2xl bg-gray-900 p-1"
+              role="tablist"
+              aria-label="Template sources"
+            >
+              <SlidingTabIndicator className="bg-gray-800" />
               <button
                 type="button"
+                role="tab"
+                aria-selected={templateTab === 'presets'}
                 onClick={() => setTemplateTab('presets')}
-                className={`tab-switcher-item-squircle flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold ${templateTab === 'presets' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`tab-switcher-item-squircle relative z-10 flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition-colors ${templateTab === 'presets' ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
                 Presets
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={templateTab === 'saved'}
                 onClick={() => setTemplateTab('saved')}
-                className={`tab-switcher-item-squircle flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold ${templateTab === 'saved' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`tab-switcher-item-squircle relative z-10 flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition-colors ${templateTab === 'saved' ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
               >
                 <User className="h-3.5 w-3.5" />
                 My Templates

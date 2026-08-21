@@ -53,17 +53,20 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
             {/* Fixed Header with Tabs */}
             <div className={`shrink-0 border-b px-6 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
-                    <TabsList className={`w-full h-12 p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                    <TabsList
+                        indicatorClassName={darkMode ? 'bg-gray-100 shadow' : 'bg-white shadow'}
+                        className={`w-full h-12 p-1 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}
+                    >
                         <TabsTrigger
                             value="obs"
-                            className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                            className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:text-gray-900' : ''}`}
                         >
                             <span className="font-medium">OBS Studio</span>
                         </TabsTrigger>
                         {showVmix && (
                             <TabsTrigger
                                 value="vmix"
-                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:text-gray-900' : ''}`}
                             >
                                 <span className="font-medium">vMix</span>
                             </TabsTrigger>
@@ -71,7 +74,7 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
                         {showWirecast && (
                             <TabsTrigger
                                 value="wirecast"
-                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900' : 'data-[state=active]:bg-white'}`}
+                                className={`flex-1 h-10 ${darkMode ? 'text-gray-300 data-[state=active]:text-gray-900' : ''}`}
                             >
                                 <span className="font-medium">Wirecast</span>
                             </TabsTrigger>

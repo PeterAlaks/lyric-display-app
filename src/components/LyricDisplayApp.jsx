@@ -566,6 +566,7 @@ const LyricDisplayApp = () => {
             <Tabs value={activeTab} onValueChange={handleOutputTabSwitch}>
               <TabsList
                 data-tour="output-settings"
+                indicatorClassName={darkMode ? 'bg-white shadow' : 'bg-black shadow'}
                 className={`w-full p-1 h-11 mb-8 gap-1 ${darkMode ? 'bg-[#2b3544] text-gray-300' : 'bg-[#f8fafc]'}`}
               >
                 {allOutputIds.map((id) => {
@@ -574,7 +575,7 @@ const LyricDisplayApp = () => {
                     <TabsTrigger
                       key={id}
                       value={id}
-                      className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}
+                      className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:text-gray-900' : 'data-[state=active]:text-white'}`}
                     >
                       {num}
                     </TabsTrigger>
@@ -584,14 +585,14 @@ const LyricDisplayApp = () => {
                   <Tooltip content="Add a new output" side="bottom">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAddOutput(); }}
-                      className={`tab-switcher-item-squircle flex-1 flex items-center justify-center h-full min-w-0 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
+                      className={`tab-switcher-item-squircle relative z-10 flex-1 flex items-center justify-center h-full min-w-0 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
                       aria-label="Add output"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </Tooltip>
                 )}
-                <TabsTrigger value="stage" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:bg-white data-[state=active]:text-gray-900' : 'data-[state=active]:bg-black data-[state=active]:text-white'}`}>
+                <TabsTrigger value="stage" className={`flex-1 h-full text-sm min-w-0 ${darkMode ? 'data-[state=active]:text-gray-900' : 'data-[state=active]:text-white'}`}>
                   {allOutputIds.length >= 5 ? 'S' : 'Stage'}
                 </TabsTrigger>
               </TabsList>

@@ -14,6 +14,7 @@ import { stageTemplates } from '../utils/outputTemplates';
 import { paintToCss } from '../utils/paint';
 import useDelayedCardPreview from '../hooks/useDelayedCardPreview';
 import useModal from '../hooks/useModal';
+import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
 
@@ -329,10 +330,11 @@ const StageTemplatesModal = ({ darkMode, onApplyTemplate, onClose }) => {
         }`}
       >
         <div
-          className={`grid grid-cols-2 gap-1 rounded-2xl p-1 ${darkMode ? 'bg-slate-950/70' : 'bg-slate-100'}`}
+          className={`relative isolate grid grid-cols-2 gap-1 rounded-2xl p-1 ${darkMode ? 'bg-slate-950/70' : 'bg-slate-100'}`}
           role="tablist"
           aria-label="Template sources"
         >
+          <SlidingTabIndicator className={darkMode ? 'bg-slate-800 shadow-sm' : 'bg-white shadow-sm ring-1 ring-black/5'} />
           <button
             type="button"
             role="tab"
@@ -341,10 +343,10 @@ const StageTemplatesModal = ({ darkMode, onApplyTemplate, onClose }) => {
               closeExpandedCard();
               setActiveTab('presets');
             }}
-            className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold transition-all ${activeTab === 'presets'
+            className={`relative z-10 flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold transition-colors ${activeTab === 'presets'
               ? darkMode
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
+                ? 'text-white'
+                : 'text-slate-900'
               : darkMode
                 ? 'text-slate-400 hover:text-slate-200'
                 : 'text-slate-500 hover:text-slate-800'
@@ -368,10 +370,10 @@ const StageTemplatesModal = ({ darkMode, onApplyTemplate, onClose }) => {
               closeExpandedCard();
               setActiveTab('saved');
             }}
-            className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold transition-all ${activeTab === 'saved'
+            className={`relative z-10 flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold transition-colors ${activeTab === 'saved'
               ? darkMode
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
+                ? 'text-white'
+                : 'text-slate-900'
               : darkMode
                 ? 'text-slate-400 hover:text-slate-200'
                 : 'text-slate-500 hover:text-slate-800'

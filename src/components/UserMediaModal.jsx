@@ -376,7 +376,10 @@ const UserMediaModal = ({
       <div className={cn('flex shrink-0 flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={cn('h-10 p-1', darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600')}>
+            <TabsList
+              indicatorClassName="bg-white shadow"
+              className={cn('h-10 p-1', darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600')}
+            >
               {mediaTabs
                 .filter((tab) => normalizedAllowedTypes.includes(tab.value))
                 .map((tab) => {
@@ -387,9 +390,7 @@ const UserMediaModal = ({
                       value={tab.value}
                       className={cn(
                         'min-w-[120px] gap-2 px-4',
-                        darkMode
-                          ? 'data-[state=active]:bg-white data-[state=active]:text-gray-950'
-                          : 'data-[state=active]:bg-white data-[state=active]:text-gray-950'
+                        'data-[state=active]:text-gray-950'
                       )}
                     >
                       <Icon className="h-4 w-4" />
