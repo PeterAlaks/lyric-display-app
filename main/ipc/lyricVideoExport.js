@@ -102,9 +102,10 @@ const writeToStream = async (stream, chunk) => {
   });
 };
 
-const runProbeProcess = async (command, args, timeoutMs, label) => new Promise((resolve) => {
+const runProbeProcess = async (executablePath, args, timeoutMs, label) => new Promise((resolve) => {
   const startedAt = Date.now();
-  const child = spawn(command, args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+  const safePath = path.resolve(executablePath);
+  const child = spawn(safePath, args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'], shell: false });
   let stderr = '';
   let settled = false;
   const finish = (result) => {
