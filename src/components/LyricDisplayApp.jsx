@@ -516,7 +516,7 @@ const LyricDisplayApp = () => {
                   variant="control"
                 />
                 <span className={`inline-flex items-center gap-2 text-[13px] font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  <span className="inline-block w-[152px] shrink-0">{isOutputOn ? 'Output Display is ON' : 'Output Display is OFF'}</span>
+                  <span className="inline-block w-37 shrink-0">{isOutputOn ? 'Output Display is ON' : 'Output Display is OFF'}</span>
                   <span className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
                     <span className={`absolute h-2 w-2 origin-center rounded-full opacity-20 transition-all duration-500 ease-out motion-reduce:transition-none ${isOutputOn
                       ? 'scale-[2.6] bg-green-500 dark:bg-green-400'

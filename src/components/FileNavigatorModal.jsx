@@ -232,6 +232,7 @@ export default function FileNavigatorModal() {
   const videoMode = destination === 'video';
   const remoteIndexing = Boolean(navigatorState.status?.scanning);
   const indexing = indexingPending || creatingLyricsFolder || remoteIndexing || stateHydrating;
+  const directoryLoading = loading && !query.trim();
   const navigatorBlocked = indexing;
 
   const resetResultsToTop = useCallback(() => {
@@ -893,7 +894,7 @@ export default function FileNavigatorModal() {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       event.stopPropagation();
-      if (indexing) return;
+      if (indexing || directoryLoading) return;
       setSelectedIndex((previous) => {
         if (displayedEntries.length === 0) return 0;
         return event.key === 'ArrowDown'
@@ -906,7 +907,7 @@ export default function FileNavigatorModal() {
       if (event.target instanceof HTMLElement && event.target.closest('button')) return;
       event.preventDefault();
       event.stopPropagation();
-      if (indexing) return;
+      if (indexing || directoryLoading) return;
       void openEntry(displayedEntries[selectedIndex]);
       return;
     }
@@ -914,6 +915,7 @@ export default function FileNavigatorModal() {
       event.key === 'Backspace'
       && event.target === inputRef.current
       && !indexing
+      && !directoryLoading
       && !query
       && currentDirectory
       && browseParent
@@ -921,7 +923,7 @@ export default function FileNavigatorModal() {
       event.preventDefault();
       void loadDirectory(browseParent);
     }
-  }, [browseParent, close, currentDirectory, displayedEntries, indexing, loadDirectory, openEntry, query, selectedIndex, sortPopoverOpen]);
+  }, [browseParent, close, currentDirectory, directoryLoading, displayedEntries, indexing, loadDirectory, openEntry, query, selectedIndex, sortPopoverOpen]);
 
   const title = query.trim()
     ? `${entries.length} search ${entries.length === 1 ? 'result' : 'results'}`
@@ -971,9 +973,9 @@ export default function FileNavigatorModal() {
                 disabled={indexing}
                 placeholder="Search titles, folders, or lyrics..."
                 aria-label="Search indexed lyrics files"
-                aria-controls={indexing ? undefined : 'file-navigator-results'}
-                aria-activedescendant={!indexing && selectedEntry ? `file-navigator-result-${selectedIndex}` : undefined}
-                aria-busy={indexing ? 'true' : undefined}
+                aria-controls={indexing || directoryLoading ? undefined : 'file-navigator-results'}
+                aria-activedescendant={!indexing && !directoryLoading && selectedEntry ? `file-navigator-result-${selectedIndex}` : undefined}
+                aria-busy={indexing || directoryLoading ? 'true' : undefined}
                 className={searchInputClass}
               />
               {!indexing && loading ? (
@@ -1126,7 +1128,7 @@ export default function FileNavigatorModal() {
             </div>
           </aside>
 
-          {indexing ? (
+          {indexing || directoryLoading ? (
             <section
               className={`col-span-2 flex min-h-0 items-center justify-center ${darkMode ? 'bg-slate-950 text-gray-500' : 'bg-white text-gray-500'}`}
               aria-live="polite"
@@ -1136,7 +1138,9 @@ export default function FileNavigatorModal() {
               <div className="flex items-center gap-2 text-xs font-medium">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" aria-hidden />
                 <h2 id="file-navigator-title">
-                  {creatingLyricsFolder
+                  {directoryLoading
+                    ? 'Opening folder…'
+                    : creatingLyricsFolder
                     ? 'Creating lyrics folder…'
                     : stateHydrating && !indexingPending && !remoteIndexing
                     ? 'Preparing file navigator…'
@@ -1163,19 +1167,24 @@ export default function FileNavigatorModal() {
               </div>
               <div className="flex items-center gap-2">
                 <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      disabled={!canSortFolder}
-                      className={`rounded-md p-1.5 ${darkMode ? 'text-gray-500 hover:bg-white/8 hover:text-gray-200' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'} disabled:cursor-not-allowed disabled:opacity-40`}
-                      aria-label={`Sort folder by ${activeSort.label}`}
-                      aria-haspopup="menu"
-                      aria-expanded={sortPopoverOpen}
-                      title={canSortFolder ? `Sort: ${activeSort.label}` : 'Open a folder to sort its files'}
-                    >
-                      <ArrowUpDown className="h-3.5 w-3.5" />
-                    </button>
-                  </PopoverTrigger>
+                  <Tooltip
+                    content={canSortFolder ? `Sort: ${activeSort.label}` : 'Open a folder to sort its files'}
+                    side="bottom"
+                    disabled={sortPopoverOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={!canSortFolder}
+                        className={`rounded-md p-1.5 ${darkMode ? 'text-gray-500 hover:bg-white/8 hover:text-gray-200' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'} disabled:cursor-not-allowed disabled:opacity-40`}
+                        aria-label={`Sort folder by ${activeSort.label}`}
+                        aria-haspopup="menu"
+                        aria-expanded={sortPopoverOpen}
+                      >
+                        <ArrowUpDown className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                  </Tooltip>
                   <PopoverContent
                     align="end"
                     sideOffset={6}
@@ -1210,16 +1219,20 @@ export default function FileNavigatorModal() {
                     })}
                   </PopoverContent>
                 </Popover>
-                <button
-                  type="button"
-                  onClick={handleReindex}
-                  disabled={navigatorState.status?.scanning}
-                  className={`rounded-md p-1.5 ${darkMode ? 'text-gray-500 hover:bg-white/8 hover:text-gray-200' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'} disabled:opacity-40`}
-                  aria-label="Refresh file index"
-                  title="Refresh file index"
+                <Tooltip
+                  content={navigatorState.status?.scanning ? 'Refreshing file index' : 'Refresh file index'}
+                  side="bottom"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleReindex}
+                    disabled={navigatorState.status?.scanning}
+                    className={`rounded-md p-1.5 ${darkMode ? 'text-gray-500 hover:bg-white/8 hover:text-gray-200' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'} disabled:opacity-40`}
+                    aria-label="Refresh file index"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </button>
+                </Tooltip>
               </div>
             </div>
             <div
@@ -1362,14 +1375,14 @@ export default function FileNavigatorModal() {
 
         <footer className={`flex h-14 shrink-0 items-center justify-between border-t px-4 ${darkMode ? 'border-white/7 bg-slate-900/75' : 'border-gray-200 bg-gray-50'}`}>
           <div className={`flex items-center gap-4 text-[10px] ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
-            {!indexing && (
+            {!indexing && !directoryLoading && (
               <>
                 <span><kbd className="font-sans font-semibold">↑↓</kbd> Navigate</span>
                 <span><kbd className="font-sans font-semibold">Enter</kbd> {setlistMode ? 'Select' : 'Open'}</span>
               </>
             )}
             <span><kbd className="font-sans font-semibold">Esc</kbd> Close</span>
-            {!indexing && currentDirectory && !query && browseParent && <span><kbd className="font-sans font-semibold">Backspace</kbd> Up</span>}
+            {!indexing && !directoryLoading && currentDirectory && !query && browseParent && <span><kbd className="font-sans font-semibold">Backspace</kbd> Up</span>}
           </div>
           {setlistMode ? (
             <button

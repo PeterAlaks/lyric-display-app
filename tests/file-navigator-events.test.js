@@ -79,6 +79,14 @@ test('file navigator ignores intermediate index progress renders', () => {
   });
 });
 
+test('cold folder browsing replaces stale navigator panes with loading feedback', async () => {
+  const source = await readFile(new URL('../src/components/FileNavigatorModal.jsx', import.meta.url), 'utf8');
+
+  assert.match(source, /const directoryLoading = loading && !query\.trim\(\);/);
+  assert.match(source, /\{indexing \|\| directoryLoading \? \(/);
+  assert.match(source, /directoryLoading\s*\? 'Opening folder…'/);
+});
+
 test('file navigator requests preserve destination and setlist selection limits', () => {
   const previousWindow = globalThis.window;
   let receivedEvent = null;
