@@ -294,6 +294,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
     const topMenuHeight = typeof document !== 'undefined'
         ? (getComputedStyle(document.body).getPropertyValue('--top-menu-height')?.trim() || '0px')
         : '0px';
+    const availableImportCount = importResults.successful + importResults.skipped;
 
     return (
         <div
@@ -425,14 +426,14 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                     </div>
 
                                     {isValid === true && (
-                                        <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
+                                        <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
                                             <CheckCircle2 className="w-4 h-4" />
                                             Found {discoveredSongs.length} song{discoveredSongs.length !== 1 ? 's' : ''} in database
                                         </p>
                                     )}
 
                                     {isValid === false && validationError && (
-                                        <p className="text-sm text-red-600 dark:text-red-400 mt-2 flex items-center gap-1">
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-2 flex items-center gap-1">
                                             <AlertCircle className="w-4 h-4" />
                                             {validationError}
                                         </p>
@@ -444,7 +445,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                         'p-4 rounded-lg',
                                         darkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-100'
                                     )}>
-                                        <p className={cn('text-sm', darkMode ? 'text-blue-300' : 'text-blue-700')}>
+                                        <p className={cn('text-xs', darkMode ? 'text-blue-300' : 'text-blue-700')}>
                                             ✓ Database validated successfully! Click "Next" to select songs to import.
                                         </p>
                                     </div>
@@ -458,7 +459,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-lg font-semibold mb-2">Select Songs to Import</h3>
-                                <p className={cn('text-sm', darkMode ? 'text-gray-400' : 'text-gray-600')}>
+                                <p className={cn('text-xs', darkMode ? 'text-gray-400' : 'text-gray-600')}>
                                     Choose which songs you'd like to import. You can search and filter the list below.
                                 </p>
                             </div>
@@ -507,7 +508,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                 darkMode ? 'border-gray-700' : 'border-gray-200'
                             )}>
                                 {filteredSongs.length === 0 ? (
-                                    <div className="p-8 text-center text-gray-500">
+                                    <div className="p-8 text-center text-sm text-gray-500">
                                         {searchQuery ? 'No songs match your search' : 'No songs found'}
                                     </div>
                                 ) : (
@@ -525,9 +526,9 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                                     onCheckedChange={() => toggleSong(song.id)}
                                                 />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-medium truncate">{song.title || 'Untitled'}</p>
+                                                    <p className="text-sm font-medium truncate">{song.title || 'Untitled'}</p>
                                                     {song.author && (
-                                                        <p className={cn('text-sm truncate', darkMode ? 'text-gray-400' : 'text-gray-600')}>
+                                                        <p className={cn('text-xs truncate', darkMode ? 'text-gray-400' : 'text-gray-600')}>
                                                             {song.author}
                                                         </p>
                                                     )}
@@ -644,7 +645,9 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                     'w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center',
                                     importResults.failed === 0
                                         ? 'bg-green-500/10 text-green-500'
-                                        : 'bg-yellow-500/10 text-yellow-500'
+                                        : availableImportCount > 0
+                                            ? 'bg-yellow-500/10 text-yellow-500'
+                                            : 'bg-red-500/10 text-red-500'
                                 )}>
                                     {importResults.failed === 0 ? (
                                         <CheckCircle2 className="w-8 h-8" />
@@ -652,9 +655,19 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                         <AlertCircle className="w-8 h-8" />
                                     )}
                                 </div>
-                                <h3 className="text-lg font-semibold mb-2">Import Complete!</h3>
+                                <h3 className="text-lg font-semibold mb-2">
+                                    {importResults.failed === 0
+                                        ? 'Import Complete!'
+                                        : availableImportCount > 0
+                                            ? 'Import Finished with Issues'
+                                            : 'Import Failed'}
+                                </h3>
                                 <p className={cn('text-sm', darkMode ? 'text-gray-400' : 'text-gray-600')}>
-                                    Your songs have been imported and are ready to use.
+                                    {importResults.failed === 0
+                                        ? 'Your selected songs are ready to use in LyricDisplay.'
+                                        : availableImportCount > 0
+                                            ? 'Some songs are ready, but one or more imports failed. Review the errors below.'
+                                            : 'No songs were imported. Review the errors below and try again.'}
                                 </p>
                             </div>
 
@@ -707,13 +720,23 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                 darkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-100'
                             )}>
                                 <h4 className={cn('text-sm font-medium mb-2', darkMode ? 'text-blue-300' : 'text-blue-700')}>
-                                    What's Next?
+                                    {availableImportCount > 0 ? 'Next Steps' : 'Try Again'}
                                 </h4>
-                                <ul className={cn('text-sm space-y-1', darkMode ? 'text-blue-300/80' : 'text-blue-600')}>
-                                    <li>• Click "Load Imported Songs" to open the first imported song</li>
-                                    <li>• Or add the import folder in File → Load Lyrics for instant search</li>
-                                    <li>• All files are saved as .txt files compatible with LyricDisplay</li>
-                                </ul>
+                                {availableImportCount > 0 ? (
+                                    <ul className={cn('text-xs space-y-1', darkMode ? 'text-blue-300/80' : 'text-blue-600')}>
+                                        <li>• Open File → Load Lyrics and search by song title; the destination is indexed automatically</li>
+                                        <li>• If the folder is not listed there, use Add folders to index it manually</li>
+                                        <li>• Use "Open Folder" below to view or manage the generated .txt files</li>
+                                        {importResults.failed > 0 && (
+                                            <li>• Retry failed songs after resolving the errors shown above</li>
+                                        )}
+                                    </ul>
+                                ) : (
+                                    <ul className={cn('text-xs space-y-1', darkMode ? 'text-blue-300/80' : 'text-blue-600')}>
+                                        <li>• Review each failed import above for the specific conversion error</li>
+                                        <li>• Resolve the lyric-content or file-access issue, then run the import again</li>
+                                    </ul>
+                                )}
                             </div>
                         </div>
                     )}
