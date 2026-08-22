@@ -411,6 +411,20 @@ export function getUpdaterState() {
   return getStateSnapshot();
 }
 
+const revealProgressWindow = ({ parent } = {}) => {
+  const progress = createProgressWindow({ parent, initialState: getStateSnapshot() });
+  if (!progress || progress.isDestroyed()) return progress;
+
+  try {
+    if (progress.isMinimized()) progress.restore();
+    progress.show();
+    progress.focus();
+  } catch {
+  }
+
+  return progress;
+};
+
 export function checkForUpdates(showNoUpdateDialogForResult = false) {
   if (isWindowsStoreUpdater()) {
     const snapshot = setState({
@@ -435,7 +449,12 @@ export function checkForUpdates(showNoUpdateDialogForResult = false) {
     return Promise.resolve(getStateSnapshot());
   }
 
-  if (state.status === 'downloading' || state.status === 'installing') {
+  if (state.status === 'downloading') {
+    revealProgressWindow();
+    return Promise.resolve(getStateSnapshot());
+  }
+
+  if (state.status === 'installing') {
     return Promise.resolve(getStateSnapshot());
   }
 
@@ -509,14 +528,7 @@ export async function downloadAvailableUpdate({ parent } = {}) {
   }
 
   if (downloadPromise) {
-    const progress = createProgressWindow({ parent, initialState: getStateSnapshot() });
-    if (progress && !progress.isDestroyed()) {
-      try {
-        progress.show();
-        progress.focus();
-      } catch {
-      }
-    }
+    revealProgressWindow({ parent });
     return { success: true, inProgress: true, state: getStateSnapshot() };
   }
 

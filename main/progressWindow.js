@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme } from 'electron';
+import { app, BrowserWindow, nativeTheme } from 'electron';
 import { resolveProductionPath } from './paths.js';
 
 let progressWindow = null;
@@ -558,10 +558,9 @@ export function createProgressWindow({ parent, initialState } = {}) {
   });
 
   progressWindow.on('close', (event) => {
-    if (lastState?.status === 'downloading') {
-      event.preventDefault();
-      progressWindow.hide();
-    }
+    if (app.isQuitting) return;
+    event.preventDefault();
+    progressWindow.hide();
   });
 
   progressWindow.on('closed', () => {
@@ -579,7 +578,7 @@ export function hideProgressWindow() {
 
 export function closeProgressWindow() {
   if (progressWindow && !progressWindow.isDestroyed()) {
-    progressWindow.close();
+    progressWindow.destroy();
   }
   progressWindow = null;
 }

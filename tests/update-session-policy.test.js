@@ -57,6 +57,25 @@ test('downloaded updates require explicit installation instead of installing on 
   assert.match(updaterSource, /updateMode:\s*isWindowsStoreUpdater\(\)\s*\?\s*'store'/);
 });
 
+test('updater window hides on close and repeat checks reveal an active download', () => {
+  const updaterSource = fs.readFileSync(path.join(root, 'main/updater.js'), 'utf8');
+  const progressWindowSource = fs.readFileSync(path.join(root, 'main/progressWindow.js'), 'utf8');
+  const closeHandler = progressWindowSource.match(
+    /progressWindow\.on\('close', \(event\) => \{([\s\S]*?)\n  \}\);/
+  );
+
+  assert.ok(closeHandler, 'updater close handler is present');
+  assert.match(closeHandler[1], /event\.preventDefault\(\)/);
+  assert.match(closeHandler[1], /progressWindow\.hide\(\)/);
+  assert.doesNotMatch(closeHandler[1], /lastState|status/);
+  assert.match(
+    updaterSource,
+    /if \(state\.status === 'downloading'\) \{\s*revealProgressWindow\(\);\s*return Promise\.resolve\(getStateSnapshot\(\)\);\s*\}/
+  );
+  assert.match(updaterSource, /progress\.isMinimized\(\)[\s\S]*?progress\.restore\(\)/);
+  assert.match(updaterSource, /progress\.show\(\);\s*progress\.focus\(\)/);
+});
+
 test('only the highest-priority bounded update notification is released', () => {
   const policy = createUpdateSessionPolicy();
   policy.setSessionActive(true);
