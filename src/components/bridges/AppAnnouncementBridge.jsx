@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef } from 'react';
 import useModal from '@/hooks/useModal';
 import useIsPackagedApp from '@/hooks/useIsPackagedApp';
 import useToast from '@/hooks/useToast';
-import { CHECK_APP_ANNOUNCEMENTS_EVENT } from '@/constants/modalEvents';
+import {
+  CHECK_APP_ANNOUNCEMENTS_EVENT,
+  isAnnouncementSurfaceCalm,
+} from '@/constants/modalEvents';
 
 const ANNOUNCEMENT_URL = 'https://lyricdisplay.app/.netlify/functions/app-announcement';
 const SEEN_ANNOUNCEMENTS_KEY = 'lyricdisplay.seen-announcement-ids';
@@ -83,8 +86,7 @@ export default function AppAnnouncementBridge() {
 
     pendingAnnouncements.current.add(announcement.id);
     const attempt = () => {
-      const anotherModalIsOpen = Boolean(document.querySelector('[data-modal-root="true"]'));
-      if (document.visibilityState === 'hidden' || anotherModalIsOpen) {
+      if (!isAnnouncementSurfaceCalm(document)) {
         surfaceTimer.current = window.setTimeout(attempt, CALM_RETRY_MS);
         return;
       }

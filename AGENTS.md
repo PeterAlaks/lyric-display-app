@@ -8,6 +8,13 @@ These instructions apply to the entire LyricDisplay repository.
 - This includes `npm run dev`, `npm run preview`, `npm run server`, `npm run electron-dev`, and any equivalent long-running process.
 - Do not start a server implicitly for verification. Use static checks, builds, and non-interactive tests when they are sufficient.
 
+## File and Helper Organization
+
+- Avoid creating overly small standalone source files for a trivial constant, selector, predicate, or single-purpose helper.
+- Before adding a new source file, look for an existing related module where the code can live without weakening that module's cohesion. Keep small helpers local to their primary consumer when they are not genuinely shared.
+- When a small helper is shared, prefer placing it in an existing domain-specific module rather than creating multiple tiny helper or constants files for the same feature area.
+- Create a separate small module only when it represents a meaningful shared boundary, avoids dependency cycles, has multiple independent consumers, or is expected to grow into a cohesive unit. Do not duplicate constants or helper logic merely to avoid a shared file.
+
 ## Testing and Development Workflow
 
 Prefer test-driven development for behavioral changes, bug fixes, and new application logic when the behavior is practical and valuable to test.
@@ -22,6 +29,8 @@ When practical:
 6. Refactor only after the behavior is passing.
 
 Prefer extending an existing relevant test file. Do not create a new test file unless it is explicitly necessary, provides durable and meaningful project-level coverage, and no existing test file is an appropriate home for the case.
+
+Remove temporary, exploratory, or narrowly task-specific test files before completing the work. A newly created test file may remain only when it is intentionally designed as durable core coverage for reusable behavior, shared events, or a stable contributor-facing contract that future contributors should extend. Otherwise, move valuable cases into an existing appropriate test file and remove the newly created file.
 
 Do not create low-value, artificial, redundant, or implementation-detail tests merely to satisfy this workflow. Pure visual changes, documentation, configuration, trivial copy changes, and code that is impractical to test may be implemented directly. Run existing relevant tests where applicable.
 

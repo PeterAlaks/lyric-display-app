@@ -1,6 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getTourCardPosition, shouldShowTelemetryConsent } from '../src/utils/firstRunTour.js';
+import { isAnnouncementSurfaceCalm } from '../src/constants/modalEvents.js';
+
+test('announcements wait until the welcome tour is no longer active', () => {
+  const activeTourDocument = {
+    visibilityState: 'visible',
+    querySelector: (selector) => selector === '[aria-modal="true"]' ? {} : null,
+  };
+  const calmDocument = {
+    visibilityState: 'visible',
+    querySelector: () => null,
+  };
+
+  assert.equal(isAnnouncementSurfaceCalm(activeTourDocument), false);
+  assert.equal(isAnnouncementSurfaceCalm(calmDocument), true);
+});
+
+test('announcements wait while the app is hidden', () => {
+  const hiddenDocument = {
+    visibilityState: 'hidden',
+    querySelector: () => null,
+  };
+
+  assert.equal(isAnnouncementSurfaceCalm(hiddenDocument), false);
+});
 
 test('centers tour cards without a target', () => {
   const position = getTourCardPosition({
