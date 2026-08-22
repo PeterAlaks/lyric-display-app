@@ -15,6 +15,7 @@ import {
   normalizeLyricVideoVisualizer,
 } from '../../shared/lyricVideoVisualizer.js';
 import { extractZipArchive } from '../archiveExtraction.js';
+import { runProbeProcess } from './ffmpegProbe.js';
 
 let activeExport = null;
 let captureRawFormatCache = null;
@@ -102,44 +103,6 @@ const writeToStream = async (stream, chunk) => {
   });
 };
 
-const runProbeProcess = async (executablePath, args, timeoutMs, label) => new Promise((resolve) => {
-  const startedAt = Date.now();
-  const safePath = path.resolve(executablePath);
-  const child = spawn(safePath, args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'], shell: false });
-  let stderr = '';
-  let settled = false;
-  const finish = (result) => {
-    if (settled) return;
-    settled = true;
-    clearTimeout(timeout);
-    resolve({
-      ...result,
-      durationMs: Date.now() - startedAt,
-      stderr: stderr.trim().slice(-1200),
-    });
-  };
-  const timeout = setTimeout(() => {
-    try {
-      child.kill('SIGTERM');
-    } catch { }
-    finish({ ok: false, reason: `${label} timed out` });
-  }, timeoutMs);
-
-  child.stderr.on('data', (chunk) => {
-    stderr += chunk.toString();
-    if (stderr.length > 3000) stderr = stderr.slice(-3000);
-  });
-  child.once('error', (error) => {
-    finish({ ok: false, reason: error?.message || `${label} failed to start` });
-  });
-  child.once('exit', (code) => {
-    finish({
-      ok: code === 0,
-      reason: code === 0 ? 'ok' : `${label} exited with code ${code}`,
-    });
-  });
-});
-
 const getFfmpegExecutableNames = () => (
   process.platform === 'win32' ? ['ffmpeg.exe', 'ffmpeg'] : ['ffmpeg']
 );
@@ -183,6 +146,12 @@ const getBundledFfmpegCandidates = () => {
   return roots.flatMap((root) => names.map((name) => path.join(root, name)));
 };
 
+// Single trust boundary for choosing the FFmpeg executable. Configured paths
+// (advanced.ffmpegPath) are validated by name (isFfmpegExecutableName) and existence before
+// use; FFMPEG_PATH is an operator-supplied escape hatch; bundled candidates are validated by
+// construction. The final `return 'ffmpeg'` is the intentional bare-command fallback that must
+// stay unmodified so FFmpeg is discovered via the OS PATH — never wrap it in path.resolve() at
+// a spawn site, which would turn it into <cwd>/ffmpeg and defeat PATH lookup.
 const resolveFfmpegPath = async () => {
   const savedPath = userPreferences.getPreference('advanced.ffmpegPath');
   if (typeof savedPath === 'string' && savedPath.trim()) {
