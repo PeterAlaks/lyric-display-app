@@ -8,6 +8,7 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import unzipper from 'unzipper';
 
 const FILE_TYPE_MASK = 0o170000;
 const DIRECTORY_TYPE = 0o040000;
@@ -105,7 +106,6 @@ export async function extractZipArchive(zipPath, options = {}) {
 
   await mkdir(options.dir, { recursive: true });
   const rootPath = await realpath(options.dir);
-  const { default: unzipper } = await import('unzipper');
   const directory = await unzipper.Open.file(zipPath);
   const entries = directory.files
     .map((entry) => {

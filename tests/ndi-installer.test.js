@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { registerHooks } from 'node:module';
 import test from 'node:test';
 import JSZip from 'jszip';
 import { extractZipArchive } from '../main/archiveExtraction.js';
@@ -10,6 +11,18 @@ import { createNdiInstaller, parseSha256Checksum, replaceDirectoryAtomically } f
 
 const HASH = 'a'.repeat(64);
 const ASSET_NAME = 'lyricdisplay-ndi-win.zip';
+let asarLookupDisabled = false;
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (asarLookupDisabled && specifier === 'unzipper') {
+      const error = new Error(`Cannot find package '${specifier}' while ASAR lookup is disabled`);
+      error.code = 'ERR_MODULE_NOT_FOUND';
+      throw error;
+    }
+    return nextResolve(specifier, context);
+  },
+});
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 
@@ -105,7 +118,7 @@ test('ZIP extraction rejects entries that escape the destination', async () => {
   }
 });
 
-test('ZIP extraction preserves normal nested files and entry progress', async () => {
+test('ZIP extraction resolves its runtime dependency before ASAR access is disabled', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lyricdisplay-zip-extract-'));
   const archivePath = path.join(root, 'archive.zip');
   const destinationPath = path.join(root, 'destination');
@@ -115,12 +128,20 @@ test('ZIP extraction preserves normal nested files and entry progress', async ()
   const progress = [];
 
   try {
-    await extractZipArchive(archivePath, {
-      dir: destinationPath,
-      onEntry(entry, archive) {
-        progress.push([entry.path, archive.entryCount]);
-      },
-    });
+    const previousNoAsar = process.noAsar;
+    asarLookupDisabled = true;
+    process.noAsar = true;
+    try {
+      await extractZipArchive(archivePath, {
+        dir: destinationPath,
+        onEntry(entry, archive) {
+          progress.push([entry.path, archive.entryCount]);
+        },
+      });
+    } finally {
+      process.noAsar = previousNoAsar;
+      asarLookupDisabled = false;
+    }
     assert.equal(fs.readFileSync(path.join(destinationPath, 'nested', 'companion.txt'), 'utf8'), 'ready');
     assert.deepEqual(progress, [['nested/', 2], ['nested/companion.txt', 2]]);
   } finally {
