@@ -14,6 +14,10 @@ import {
 } from '../shared/lyricsParsing/txtParser.js';
 import { DEFAULT_SECTION_TAG_PHRASES } from '../shared/sectionTagPhrases.js';
 import { buildSongSectionOptions } from '../src/constants/songCanvas.js';
+import {
+  buildEnhancedTimestampPlaceholder,
+  buildStandardTimestampInsertion,
+} from '../src/hooks/NewSongCanvas/useTimestampOperations.js';
 import { formatLyrics, formatLyricsWithStats, reconstructEditableText } from '../src/utils/lyricsFormat.js';
 import {
   getLineOutputText,
@@ -22,6 +26,7 @@ import {
   toggleStageOnlyPrefix,
 } from '../src/utils/parseLyrics.js';
 import { applyTextCasing, TEXT_CASING } from '../src/utils/textCasing.js';
+import { hasValidTimestamps } from '../src/utils/timestampHelpers.js';
 import {
   extractFirstValidLine,
   isUsableLyricsTitle,
@@ -299,6 +304,43 @@ test('LRC parsing preserves blank timestamped lines without visible placeholders
   ]);
   assert.deepEqual(parsed.timestamps, [100, 200, 300, 400]);
   assert.equal(parsed.rawText, '\nFirst line\n\nSecond line');
+});
+
+test('LRC parsing accepts millisecond timestamps for intelligent autoplay eligibility', () => {
+  const parsed = parseLrcContent([
+    '[01:01.846] One thing is finding wisdom',
+    '[01:06.849] One thing to spread it around',
+    '[01:44.000]',
+    '[01:52.342] One thing is running hours',
+  ].join('\n'), { enableSplitting: false });
+
+  assert.deepEqual(parsed.processedLines, [
+    'One thing is finding wisdom',
+    'One thing to spread it around',
+    '',
+    'One thing is running hours',
+  ]);
+  assert.deepEqual(parsed.timestamps, [6185, 6685, 10400, 11234]);
+  assert.equal(hasValidTimestamps(parsed.timestamps), true);
+});
+
+test('new-song timestamp insertion uses millisecond precision placeholders', () => {
+  assert.equal(
+    buildStandardTimestampInsertion('One thing is finding wisdom').lineText,
+    '[00:00.000] One thing is finding wisdom',
+  );
+  assert.equal(
+    buildStandardTimestampInsertion('  [01:01.846] One thing').lineText,
+    '  [01:01.846][00:00.000] One thing',
+  );
+  assert.equal(
+    buildEnhancedTimestampPlaceholder('[01:01.846] One thing'),
+    '<01:01.846>',
+  );
+  assert.equal(
+    buildEnhancedTimestampPlaceholder('[01:01.84] One thing'),
+    '<01:01.840>',
+  );
 });
 
 test('plain text parsing keeps section metadata aligned with processed lines', () => {

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
+const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,3})?\])+/;
 const LRC_METADATA_REGEX = /^\s*\[(ti|ar|al|by|length|offset|au|lr|re|tool|ve|id|#):.*\]\s*$/i;
 
 /**

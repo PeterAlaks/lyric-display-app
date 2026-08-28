@@ -76,7 +76,10 @@ function applyIntelligentSplittingWithTimestamps(entries = [], options = {}) {
 function parseTimeMatch(match) {
   const mm = parseInt(match?.[1], 10) || 0;
   const ss = parseInt(match?.[2], 10) || 0;
-  const cs = match?.[3] ? parseInt(match[3].slice(0, 2).padEnd(2, '0'), 10) : 0;
+  const milliseconds = match?.[3]
+    ? parseInt(match[3].padEnd(3, '0'), 10)
+    : 0;
+  const cs = Math.round(milliseconds / 10);
   return mm * 60 * 100 + ss * 100 + cs;
 }
 

@@ -1,7 +1,33 @@
 import { useCallback } from 'react';
 
-const STANDARD_LRC_PLACEHOLDER = '[00:00.00]';
-const STANDARD_LRC_CAPTURE_REGEX = /^\s*\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/;
+const STANDARD_LRC_PLACEHOLDER = '[00:00.000]';
+const STANDARD_LRC_CAPTURE_REGEX = /^\s*\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/;
+
+export const buildStandardTimestampInsertion = (lineText = '') => {
+  const leadingMatch = lineText.match(/^\s*/);
+  const leadingWhitespace = leadingMatch ? leadingMatch[0] : '';
+  const afterLeading = lineText.slice(leadingWhitespace.length);
+  const timestampMatch = afterLeading.match(/^((\[\d{1,2}:\d{2}(?:\.\d{1,3})?\])+)(\s*)/);
+  const existingBlock = timestampMatch ? timestampMatch[1] : '';
+  const remainder = timestampMatch ? afterLeading.slice(timestampMatch[0].length) : afterLeading;
+  const cleanedRemainder = remainder.replace(/^\s*/, '');
+
+  return {
+    lineText: `${leadingWhitespace}${existingBlock}${STANDARD_LRC_PLACEHOLDER}${cleanedRemainder ? ` ${cleanedRemainder}` : ' '}`,
+    leadingWhitespaceLength: leadingWhitespace.length,
+    existingTimestampLength: existingBlock.length,
+  };
+};
+
+export const buildEnhancedTimestampPlaceholder = (lineText = '') => {
+  const baseMatch = lineText.match(STANDARD_LRC_CAPTURE_REGEX);
+  if (!baseMatch) return null;
+
+  const minutes = String(baseMatch[1] ?? '0').padStart(2, '0');
+  const seconds = String(baseMatch[2] ?? '0').padStart(2, '0');
+  const milliseconds = (baseMatch[3] ?? '0').padEnd(3, '0');
+  return `<${minutes}:${seconds}.${milliseconds}>`;
+};
 
 /**
  * Hook for timestamp insertion operations
@@ -32,20 +58,12 @@ const useTimestampOperations = ({
     const segments = textarea.value.split('\n');
     const safeIndex = Math.max(0, Math.min(lineIndex, segments.length - 1));
     const lineText = segments[safeIndex] ?? '';
-    const leadingMatch = lineText.match(/^\s*/);
-    const leadingWhitespace = leadingMatch ? leadingMatch[0] : '';
-    const afterLeading = lineText.slice(leadingWhitespace.length);
-    const timestampMatch = afterLeading.match(/^((\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+)(\s*)/);
-    const existingBlock = timestampMatch ? timestampMatch[1] : '';
-    const remainder = timestampMatch ? afterLeading.slice(timestampMatch[0].length) : afterLeading;
-    const cleanedRemainder = remainder.replace(/^\s*/, '');
-
-    const newLine = `${leadingWhitespace}${existingBlock}${STANDARD_LRC_PLACEHOLDER}${cleanedRemainder ? ` ${cleanedRemainder}` : ' '}`;
-    segments[safeIndex] = newLine;
+    const insertion = buildStandardTimestampInsertion(lineText);
+    segments[safeIndex] = insertion.lineText;
     const newContent = segments.join('\n');
 
     const lineStart = getLineStartOffset(segments, safeIndex);
-    const caretStart = lineStart + leadingWhitespace.length + existingBlock.length + 1;
+    const caretStart = lineStart + insertion.leadingWhitespaceLength + insertion.existingTimestampLength + 1;
     const caretEnd = caretStart + 2;
     const currentScroll = textarea.scrollTop;
 
@@ -74,13 +92,8 @@ const useTimestampOperations = ({
     const segments = textarea.value.split('\n');
     const safeIndex = Math.max(0, Math.min(lineIndex, segments.length - 1));
     const lineText = segments[safeIndex] ?? '';
-    const baseMatch = lineText.match(STANDARD_LRC_CAPTURE_REGEX);
-    if (!baseMatch) return;
-
-    const minutes = String(baseMatch[1] ?? '0').padStart(2, '0');
-    const seconds = String(baseMatch[2] ?? '0').padStart(2, '0');
-    const hundredths = (baseMatch[3] ?? '0').slice(0, 2).padEnd(2, '0');
-    const tag = `<${minutes}:${seconds}.${hundredths}>`;
+    const tag = buildEnhancedTimestampPlaceholder(lineText);
+    if (!tag) return;
 
     const fallbackOffset = getLineStartOffset(segments, safeIndex) + (lineText?.length ?? 0);
     const currentOffset = typeof contextMenuState.cursorOffset === 'number'
@@ -96,7 +109,7 @@ const useTimestampOperations = ({
     const newContent = segments.join('\n');
 
     const caretStart = lineStart + before.length + 7;
-    const caretEnd = caretStart + 2;
+    const caretEnd = caretStart + 3;
     const currentScroll = textarea.scrollTop;
 
     textarea.value = newContent;

@@ -1,6 +1,6 @@
 import { normalizeSectionTagPhrases } from '../../shared/sectionTagPhrases.js';
 
-export const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
+export const STANDARD_LRC_START_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,3})?\])+/;
 
 export const METADATA_OPTIONS = [
   { key: 'ti', label: 'Title [ti:]' },

@@ -1,6 +1,6 @@
 import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
 
-const TIMESTAMP_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+/;
+const TIMESTAMP_REGEX = /^\s*(\[\d{1,2}:\d{2}(?:\.\d{1,3})?\])+/;
 const METADATA_TAG_REGEX = /^\s*\[[a-z]+:/i;
 const CHORUS_TAG_REGEX = /^\s*\[chorus\s*:\s*/i;
 const CHORUS_END_TAG_REGEX = /^\s*\[\/chorus\]/i;

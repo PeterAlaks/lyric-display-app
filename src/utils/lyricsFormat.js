@@ -184,8 +184,8 @@ const collapseExcessiveBlankLines = (lines) => {
 const normalizePunctuation = (line) => {
   if (!line) return '';
 
-  const standardTimestampRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
-  const enhancedTimestampRegex = /<(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?>/g;
+  const standardTimestampRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+  const enhancedTimestampRegex = /<(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?>/g;
   const timestamps = [];
   let match;
   let workingLine = line;
@@ -251,7 +251,7 @@ const capitalizeFirstCharacter = (line, sectionTagPhrases) => {
     return `${leadingWhitespace}${trimmed.charAt(0)}${capitalizedInner}${trimmed.slice(-1)}${trailingWhitespace}`;
   };
 
-  const timestampPrefixMatch = corrected.match(/^((?:\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+)(\s*)/);
+  const timestampPrefixMatch = corrected.match(/^((?:\[\d{1,2}:\d{2}(?:\.\d{1,3})?\])+)(\s*)/);
   if (timestampPrefixMatch) {
     const prefix = `${timestampPrefixMatch[1]}${timestampPrefixMatch[2] || ''}`;
     const rest = corrected.slice(timestampPrefixMatch[0].length);
@@ -349,7 +349,7 @@ const couldFormNormalGroup = (line1, line2, groupingConfig) => {
 const moveTimestampsToStart = (line) => {
   if (!line || typeof line !== 'string') return line;
 
-  const standardTimestampRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?\]/g;
+  const standardTimestampRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
 
   const standardTimestamps = [];
   let match;
