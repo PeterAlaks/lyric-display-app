@@ -12,6 +12,7 @@ import {
   CURRENT_SESSION_SCHEMA_VERSION,
   migrateSessionSnapshot,
 } from '../server/realtime/sessionPersistence.js';
+import { selectOlderReleases } from '../shared/updateReleaseHistory.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -74,6 +75,49 @@ test('updater window hides on close and repeat checks reveal an active download'
   );
   assert.match(updaterSource, /progress\.isMinimized\(\)[\s\S]*?progress\.restore\(\)/);
   assert.match(updaterSource, /progress\.show\(\);\s*progress\.focus\(\)/);
+});
+
+test('update history keeps at most the three preceding published stable releases', () => {
+  const releases = [
+    { tag_name: 'v7.1.0', body: 'Current update' },
+    { tag_name: 'v7.0.0', name: 'Version 7', body: 'First older release', published_at: '2026-08-01T00:00:00Z' },
+    { tag_name: 'v6.9.1', body: 'A prerelease', prerelease: true },
+    { tag_name: 'v6.9.0', body: 'Second older release', published_at: '2026-07-01T00:00:00Z' },
+    { tag_name: 'v6.8.5', body: 'A draft', draft: true },
+    { tag_name: 'v6.8.0', body: 'Third older release', published_at: '2026-06-01T00:00:00Z' },
+    { tag_name: 'v6.7.0', body: 'Must be capped out' },
+  ];
+
+  assert.deepEqual(selectOlderReleases(releases, '7.1.0'), [
+    {
+      version: '7.0.0',
+      releaseName: 'Version 7',
+      releaseNotes: 'First older release',
+      releaseDate: '2026-08-01T00:00:00Z',
+    },
+    {
+      version: '6.9.0',
+      releaseName: '',
+      releaseNotes: 'Second older release',
+      releaseDate: '2026-07-01T00:00:00Z',
+    },
+    {
+      version: '6.8.0',
+      releaseName: '',
+      releaseNotes: 'Third older release',
+      releaseDate: '2026-06-01T00:00:00Z',
+    },
+  ]);
+});
+
+test('update modal exposes older releases as collapsed accessible accordion rows', () => {
+  const updaterBridgeSource = fs.readFileSync(path.join(root, 'src/components/bridges/UpdaterBridge.jsx'), 'utf8');
+  const modalProviderSource = fs.readFileSync(path.join(root, 'src/components/modal/ModalProvider.jsx'), 'utf8');
+
+  assert.match(updaterBridgeSource, /olderReleases/);
+  assert.match(updaterBridgeSource, /aria-expanded=/);
+  assert.match(updaterBridgeSource, /ChevronDown/);
+  assert.match(modalProviderSource, /overflow-y-auto/);
 });
 
 test('only the highest-priority bounded update notification is released', () => {

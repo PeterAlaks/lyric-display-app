@@ -49,6 +49,22 @@ test('timer-control preview auto-fits hour-long timer values to its own bounds',
   assert.equal(getTextFitShape('1:00:00'), getTextFitShape('9:59:59'));
 });
 
+test('timer autofit invalidates cached measurements after projection routing and visibility flicker', async () => {
+  const [autoFitSource, outputRegistrySource, projectOutputSource] = await Promise.all([
+    readFile(new URL('../src/hooks/useAutoFitText.js', import.meta.url), 'utf8'),
+    readFile(new URL('../shared/outputRegistry.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/ProjectOutputModal.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(outputRegistrySource, /PROJECTION_SYNC_CHANNEL/);
+  assert.match(projectOutputSource, /new BroadcastChannel\(PROJECTION_SYNC_CHANNEL\)/);
+  assert.match(autoFitSource, /new BroadcastChannel\(PROJECTION_SYNC_CHANNEL\)/);
+  assert.match(autoFitSource, /addEventListener\('resize', scheduleRecoveryFit\)/);
+  assert.match(autoFitSource, /addEventListener\('pageshow', scheduleRecoveryFit\)/);
+  assert.match(autoFitSource, /addEventListener\('visibilitychange', recoverWhenVisible\)/);
+  assert.match(autoFitSource, /scheduleFit\(\{ ignoreCache: true \}\)/);
+});
+
 test('timer progress advances for normalized stage panel countdown state', () => {
   const startTime = 1_000_000;
   const durationMs = 5 * 60_000;

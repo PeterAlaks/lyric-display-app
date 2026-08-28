@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import useToast from '@/hooks/useToast';
 import useModal from '@/hooks/useModal';
 import { convertMarkdownToHTML, trimReleaseNotes, formatReleaseNotes } from '../../utils/markdownParser';
 import { useLiveSafetyBridge } from '../../hooks/useLiveSafetyBridge';
+import { MAX_OLDER_RELEASES } from '../../../shared/updateReleaseHistory.js';
 
 const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const normalizeVersionText = (value = '') => String(value).trim().toLowerCase().replace(/^v/, '');
@@ -22,6 +24,181 @@ const isDuplicateVersionLabel = (label, version) => {
 
   return remaining.length === 0;
 };
+
+const formatReleaseDate = (value) => {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+const formatReleaseNotesHtml = (releaseNotes) => convertMarkdownToHTML(
+  trimReleaseNotes(formatReleaseNotes(releaseNotes)),
+);
+
+function OlderReleaseNotes({ releases, isDark }) {
+  const [expandedVersion, setExpandedVersion] = useState(null);
+
+  if (releases.length === 0) return null;
+
+  return (
+    <section aria-labelledby="previous-release-notes-title">
+      <h4
+        id="previous-release-notes-title"
+        className={`mb-2 text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+      >
+        Previous release notes
+      </h4>
+      <div className={`overflow-hidden rounded-lg border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        {releases.map((release, index) => {
+          const isExpanded = expandedVersion === release.version;
+          const panelId = `older-release-${String(release.version).replace(/[^a-z0-9_-]/gi, '-')}`;
+          const releaseDate = formatReleaseDate(release.releaseDate);
+          const displayName = isDuplicateVersionLabel(release.releaseName, release.version)
+            ? ''
+            : release.releaseName;
+
+          return (
+            <article
+              key={release.version}
+              className={index > 0 ? (isDark ? 'border-t border-gray-700' : 'border-t border-gray-200') : ''}
+            >
+              <button
+                type="button"
+                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${isDark
+                  ? 'bg-gray-800/50 hover:bg-gray-800'
+                  : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+                aria-expanded={isExpanded}
+                aria-controls={panelId}
+                onClick={() => setExpandedVersion(isExpanded ? null : release.version)}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    LyricDisplay v{normalizeVersionText(release.version)}
+                  </span>
+                  {(displayName || releaseDate) && (
+                    <span className={`mt-0.5 block truncate text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {[displayName, releaseDate].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                  aria-hidden
+                />
+              </button>
+              {isExpanded && (
+                <div
+                  id={panelId}
+                  className={`border-t px-4 py-3 ${isDark
+                    ? 'border-gray-700 bg-gray-900/40 text-gray-300'
+                    : 'border-gray-200 bg-white text-gray-700'
+                  }`}
+                >
+                  <div
+                    className="text-sm"
+                    style={{ lineHeight: '1.6' }}
+                    dangerouslySetInnerHTML={{ __html: release.formattedNotes }}
+                  />
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function UpdateAvailableBody({ info, formattedNotes, isDark }) {
+  const version = info?.version || '';
+  const isManualMacUpdate = Boolean(info?.manualDownload);
+  const assetName = info?.assetName || '';
+  const hasMacDmgAsset = Boolean(assetName);
+  const [olderReleases, setOlderReleases] = useState(
+    Array.isArray(info?.olderReleases) ? info.olderReleases : [],
+  );
+
+  useEffect(() => {
+    if (Array.isArray(info?.olderReleases)) {
+      setOlderReleases(info.olderReleases);
+    }
+  }, [info?.olderReleases]);
+
+  useEffect(() => {
+    const acceptUpdaterState = (payload) => {
+      const updateInfo = payload?.state?.updateInfo ?? payload?.updateInfo;
+      if (
+        normalizeVersionText(updateInfo?.version) === normalizeVersionText(version)
+        && Array.isArray(updateInfo?.olderReleases)
+      ) {
+        setOlderReleases(updateInfo.olderReleases);
+      }
+    };
+
+    const offState = window.electronAPI?.onUpdaterState?.(acceptUpdaterState);
+    window.electronAPI?.getUpdaterState?.().then(acceptUpdaterState).catch(() => { });
+    return () => offState?.();
+  }, [version]);
+
+  const formattedOlderReleases = useMemo(() => olderReleases
+    .slice(0, MAX_OLDER_RELEASES)
+    .map((release) => ({
+      ...release,
+      formattedNotes: formatReleaseNotesHtml(release?.releaseNotes),
+    }))
+    .filter((release) => release.version && release.formattedNotes), [olderReleases]);
+
+  return (
+    <div className="space-y-4">
+      {formattedNotes && (
+        <div className={`rounded-lg overflow-hidden border ${isDark
+          ? 'bg-gray-800/50 border-gray-700'
+          : 'bg-gray-50 border-gray-200'
+        }`}>
+          <div className={`px-4 py-2.5 border-b ${isDark
+            ? 'bg-gray-800 border-gray-700'
+            : 'bg-gray-100 border-gray-200'
+          }`}>
+            <h4 className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              Release Notes
+            </h4>
+          </div>
+          <div className="px-4 py-3 max-h-64 overflow-y-auto">
+            <div
+              className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+              style={{
+                lineHeight: '1.6',
+                color: isDark ? '#d1d5db' : '#374151',
+              }}
+              dangerouslySetInnerHTML={{ __html: formattedNotes }}
+            />
+          </div>
+        </div>
+      )}
+
+      <OlderReleaseNotes releases={formattedOlderReleases} isDark={isDark} />
+
+      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        {isManualMacUpdate
+          ? 'macOS updates currently need to be installed manually because this build is unsigned. Download the DMG, quit LyricDisplay, open the DMG, and replace the app in Applications.'
+          : 'Would you like to download and install this update now?'}
+      </p>
+      {isManualMacUpdate && hasMacDmgAsset && (
+        <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          Download: {assetName}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function UpdaterBridge() {
   const { showToast, removeToast } = useToast();
@@ -130,9 +307,7 @@ export default function UpdaterBridge() {
       const isManualMacUpdate = Boolean(info?.manualDownload);
       const assetName = info?.assetName || '';
       const hasMacDmgAsset = Boolean(assetName);
-      let formattedNotes = formatReleaseNotes(releaseNotes);
-      formattedNotes = trimReleaseNotes(formattedNotes);
-      formattedNotes = convertMarkdownToHTML(formattedNotes);
+      const formattedNotes = formatReleaseNotesHtml(releaseNotes);
 
       const descriptionParts = [];
 
@@ -147,15 +322,9 @@ export default function UpdaterBridge() {
       }
 
       if (releaseDate) {
-        try {
-          const date = new Date(releaseDate);
-          const formattedDate = date.toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
+        const formattedDate = formatReleaseDate(releaseDate);
+        if (formattedDate) {
           descriptionParts.push(`Released: ${formattedDate}`);
-        } catch (e) {
         }
       }
 
@@ -166,44 +335,7 @@ export default function UpdaterBridge() {
         title: 'Update Available',
         description: description,
         body: ({ isDark }) => (
-          <div className="space-y-4">
-            {formattedNotes && (
-              <div className={`rounded-lg overflow-hidden border ${isDark
-                ? 'bg-gray-800/50 border-gray-700'
-                : 'bg-gray-50 border-gray-200'
-                }`}>
-                <div className={`px-4 py-2.5 border-b ${isDark
-                  ? 'bg-gray-800 border-gray-700'
-                  : 'bg-gray-100 border-gray-200'
-                  }`}>
-                  <h4 className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'
-                    }`}>Release Notes</h4>
-                </div>
-                <div className="px-4 py-3 max-h-64 overflow-y-auto">
-                  <div
-                    className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                    style={{
-                      lineHeight: '1.6',
-                      color: isDark ? '#d1d5db' : '#374151'
-                    }}
-                    dangerouslySetInnerHTML={{ __html: formattedNotes }}
-                  />
-                </div>
-              </div>
-            )}
-            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-              {isManualMacUpdate
-                ? 'macOS updates currently need to be installed manually because this build is unsigned. Download the DMG, quit LyricDisplay, open the DMG, and replace the app in Applications.'
-                : 'Would you like to download and install this update now?'}
-            </p>
-            {isManualMacUpdate && hasMacDmgAsset && (
-              <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'
-                }`}>
-                Download: {assetName}
-              </p>
-            )}
-          </div>
+          <UpdateAvailableBody info={info} formattedNotes={formattedNotes} isDark={isDark} />
         ),
         variant: 'info',
         dismissible: true,

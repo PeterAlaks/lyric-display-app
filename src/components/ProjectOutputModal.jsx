@@ -6,10 +6,13 @@ import useLyricsStore from '@/context/LyricsStore';
 import { formatOutputLabel } from '@/utils/outputLabels';
 import { cn } from '@/lib/utils';
 import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
-import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
+import {
+  DEFAULT_OUTPUT_IDS,
+  PROJECTION_STATE_CHANGED_MESSAGE,
+  PROJECTION_SYNC_CHANNEL,
+} from '../../shared/outputRegistry.js';
 
 const DESKTOP_TARGET = 'desktop';
-const PROJECTION_SYNC_CHANNEL = 'lyricdisplay-projection-state';
 
 const toDisplayId = (value) => {
   if (value === null || typeof value === 'undefined') return null;
@@ -157,7 +160,7 @@ const ProjectOutputModal = ({
     try {
       const channel = new BroadcastChannel(PROJECTION_SYNC_CHANNEL);
       channel.postMessage({
-        type: 'projection-state-changed',
+        type: PROJECTION_STATE_CHANGED_MESSAGE,
         senderId: syncSenderIdRef.current,
         sentAt: Date.now(),
       });
@@ -170,7 +173,7 @@ const ProjectOutputModal = ({
     const channel = new BroadcastChannel(PROJECTION_SYNC_CHANNEL);
     channel.onmessage = (event) => {
       if (
-        event?.data?.type === 'projection-state-changed'
+        event?.data?.type === PROJECTION_STATE_CHANGED_MESSAGE
         && event.data.senderId !== syncSenderIdRef.current
       ) {
         loadProjectionState();

@@ -1,5 +1,7 @@
 export const DEFAULT_OUTPUT_IDS = ['output1', 'output2'];
 export const MAX_CUSTOM_OUTPUTS = 4;
+export const PROJECTION_SYNC_CHANNEL = 'lyricdisplay-projection-state';
+export const PROJECTION_STATE_CHANGED_MESSAGE = 'projection-state-changed';
 
 const DEFAULT_OUTPUT_ID_SET = new Set(DEFAULT_OUTPUT_IDS);
 

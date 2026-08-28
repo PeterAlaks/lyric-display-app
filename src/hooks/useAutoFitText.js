@@ -1,4 +1,8 @@
 import React from 'react';
+import {
+  PROJECTION_STATE_CHANGED_MESSAGE,
+  PROJECTION_SYNC_CHANNEL,
+} from '../../shared/outputRegistry.js';
 
 const AUTO_FIT_CACHE_LIMIT = 80;
 const autoFitCache = new Map();
@@ -22,49 +26,13 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
   const [containerEl, setContainerEl] = React.useState(null);
   const [textEl, setTextEl] = React.useState(null);
   const [fontSize, setFontSize] = React.useState(null);
-  const [containerSize, setContainerSize] = React.useState({ width: 0, height: 0 });
-
-  React.useLayoutEffect(() => {
-    if (!enabled || !containerEl) return undefined;
-
-    const updateSize = () => {
-      const width = Math.round(containerEl.clientWidth);
-      const height = Math.round(containerEl.clientHeight);
-      setContainerSize((current) => (
-        current.width === width && current.height === height
-          ? current
-          : { width, height }
-      ));
-    };
-
-    let frame = null;
-    const scheduleSize = () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        frame = null;
-        updateSize();
-      });
-    };
-
-    updateSize();
-    const observer = new ResizeObserver(scheduleSize);
-    observer.observe(containerEl);
-    window.addEventListener('resize', scheduleSize);
-
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener('resize', scheduleSize);
-    };
-  }, [containerEl, enabled]);
 
   React.useLayoutEffect(() => {
     if (!enabled || !containerEl || !textEl) return undefined;
-    if (containerSize.width <= 0 || containerSize.height <= 0) return undefined;
 
     const fit = ({ ignoreCache = false } = {}) => {
-      const availableWidth = containerSize.width * 0.995;
-      const availableHeight = containerSize.height * 0.98;
+      const availableWidth = Math.round(containerEl.clientWidth) * 0.995;
+      const availableHeight = Math.round(containerEl.clientHeight) * 0.98;
       if (availableWidth <= 0 || availableHeight <= 0) return;
 
       const cacheKey = `${fitKey}|${Math.round(availableWidth)}x${Math.round(availableHeight)}`;
@@ -95,29 +63,68 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
     };
 
     let frame = null;
+    let recoveryTimer = null;
     let cancelled = false;
-    const scheduleFit = (options) => {
+    let ignoreCacheOnNextFit = false;
+    const scheduleFit = ({ ignoreCache = false } = {}) => {
       if (cancelled) return;
+      ignoreCacheOnNextFit = ignoreCacheOnNextFit || ignoreCache;
       if (frame) window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         frame = null;
-        if (!cancelled) fit(options);
+        const shouldIgnoreCache = ignoreCacheOnNextFit;
+        ignoreCacheOnNextFit = false;
+        if (!cancelled) fit({ ignoreCache: shouldIgnoreCache });
       });
     };
 
-    frame = window.requestAnimationFrame(() => {
-      frame = null;
-      fit();
-    });
+    const scheduleRecoveryFit = () => {
+      scheduleFit({ ignoreCache: true });
+      if (recoveryTimer) window.clearTimeout(recoveryTimer);
+      recoveryTimer = window.setTimeout(() => {
+        recoveryTimer = null;
+        scheduleFit({ ignoreCache: true });
+      }, 200);
+    };
+
+    const recoverWhenVisible = () => {
+      if (document.visibilityState === 'visible') scheduleRecoveryFit();
+    };
+
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(scheduleRecoveryFit);
+    resizeObserver?.observe(containerEl);
+    window.addEventListener('resize', scheduleRecoveryFit);
+    window.addEventListener('pageshow', scheduleRecoveryFit);
+    document.addEventListener('visibilitychange', recoverWhenVisible);
+
+    let projectionChannel = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      projectionChannel = new BroadcastChannel(PROJECTION_SYNC_CHANNEL);
+      projectionChannel.onmessage = (event) => {
+        if (event?.data?.type === PROJECTION_STATE_CHANGED_MESSAGE) {
+          scheduleRecoveryFit();
+        }
+      };
+    }
+
+    scheduleFit();
 
     const fontsReady = document.fonts?.ready;
-    fontsReady?.then?.(() => scheduleFit({ ignoreCache: true })).catch?.(() => {});
+    fontsReady?.then?.(scheduleRecoveryFit).catch?.(() => {});
 
     return () => {
       cancelled = true;
       if (frame) window.cancelAnimationFrame(frame);
+      if (recoveryTimer) window.clearTimeout(recoveryTimer);
+      resizeObserver?.disconnect();
+      projectionChannel?.close();
+      window.removeEventListener('resize', scheduleRecoveryFit);
+      window.removeEventListener('pageshow', scheduleRecoveryFit);
+      document.removeEventListener('visibilitychange', recoverWhenVisible);
     };
-  }, [containerEl, containerSize.height, containerSize.width, enabled, fitKey, textEl]);
+  }, [containerEl, enabled, fitKey, textEl]);
 
   return {
     containerRef: setContainerEl,
