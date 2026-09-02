@@ -14,8 +14,9 @@ import {
   DEFAULT_PREVIEW_SETTINGS,
   normalizePreviewSettings,
 } from '../shared/previewSettings.js';
+import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../shared/backendPort.js';
 
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 10;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 11;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -186,6 +187,18 @@ export function migratePreferences(input) {
         ),
       },
       _schemaVersion: 10,
+    };
+  }
+
+  if (sourceVersion < 11) {
+    const advanced = isPlainObject(migrated.advanced) ? migrated.advanced : {};
+    migrated = {
+      ...migrated,
+      advanced: {
+        ...advanced,
+        serverPort: normalizeBackendPort(advanced.serverPort, DEFAULT_BACKEND_PORT),
+      },
+      _schemaVersion: 11,
     };
   }
 

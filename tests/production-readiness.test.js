@@ -13,6 +13,12 @@ import {
   NDI_TELEMETRY_FRESH_MS,
   OUTPUT_METRICS_FRESH_MS,
 } from '../shared/productionReadiness.js';
+import {
+  DEFAULT_BACKEND_PORT,
+  isValidBackendPort,
+  normalizeBackendPort,
+  resolveRuntimeBackendPort,
+} from '../shared/backendPort.js';
 
 const NOW = 1_800_000_000_000;
 const serverSource = fs.readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
@@ -20,6 +26,21 @@ const packagedRuntimeProbeSource = fs.readFileSync(
   new URL('../scripts/verify-packaged-runtime.js', import.meta.url),
   'utf8',
 );
+
+test('production backend ports are validated and resolved without changing the development port', () => {
+  assert.equal(DEFAULT_BACKEND_PORT, 4000);
+  assert.equal(isValidBackendPort(1024), true);
+  assert.equal(isValidBackendPort(65535), true);
+  assert.equal(isValidBackendPort(1023), false);
+  assert.equal(isValidBackendPort(65536), false);
+  assert.equal(isValidBackendPort('4001'), true);
+  assert.equal(isValidBackendPort('4001.5'), false);
+  assert.equal(normalizeBackendPort('4700'), 4700);
+  assert.equal(normalizeBackendPort('invalid'), DEFAULT_BACKEND_PORT);
+  assert.equal(resolveRuntimeBackendPort({ isPackaged: true, configuredPort: 4700, environmentPort: 4800 }), 4700);
+  assert.equal(resolveRuntimeBackendPort({ isPackaged: false, configuredPort: 4700, environmentPort: 4800 }), 4800);
+  assert.equal(resolveRuntimeBackendPort({ isPackaged: false, configuredPort: 4700 }), DEFAULT_BACKEND_PORT);
+});
 
 test('production SPA fallback safely serves clean projection routes from packaged paths', async () => {
   assert.match(

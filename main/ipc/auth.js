@@ -8,6 +8,7 @@ import {
   normalizeAuthIdentity,
   normalizeTokenStorePayload,
 } from './senderValidation.js';
+import { getBackendPort } from '../backend.js';
 
 let cachedJoinCode = null;
 const DESKTOP_JWT_REQUEST_TIMEOUT_MS = 5000;
@@ -35,7 +36,7 @@ const logSlowAuthOperation = (operation, startedAt) => {
  * Handles admin key, JWT tokens, join codes, and secure token storage
  */
 export function registerAuthHandlers({ getMainWindow }) {
-  const backendPort = Number(process.env.PORT) || 4000;
+  const backendPort = getBackendPort();
   const senderOptions = {
     development: isDev,
     backendPort,

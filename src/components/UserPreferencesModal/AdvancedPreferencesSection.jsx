@@ -20,6 +20,7 @@ const AdvancedPreferencesSection = ({
   mutedClass,
   preferenceFieldLabelClass,
   preferences,
+  runtimeInfo,
   restoringAllDefaults,
   securityLoading,
   securityRotating,
@@ -35,6 +36,22 @@ const AdvancedPreferencesSection = ({
   const [obsDockStartupSaving, setObsDockStartupSaving] = useState(false);
   const [clearingSystemLogs, setClearingSystemLogs] = useState(false);
   const [resettingApp, setResettingApp] = useState(false);
+  const configuredServerPort = preferences.advanced?.serverPort ?? 4000;
+  const runningServerPort = runtimeInfo?.backendPort ?? 4000;
+  const serverPortPendingRestart = isPackagedApp
+    && runtimeInfo?.pendingRestart === true
+    && Number(runtimeInfo?.configuredPort) === Number(configuredServerPort);
+
+  const restartApp = async () => {
+    const result = await window.electronAPI?.restartApp?.();
+    if (result?.success === false) {
+      showToast?.({
+        title: 'Restart Failed',
+        message: result.error || 'LyricDisplay could not restart. Your port change is still saved.',
+        variant: 'error',
+      });
+    }
+  };
 
   const loadObsDockStartup = async () => {
     if (!window.electronAPI?.obsDockStartup?.get) return;
@@ -202,6 +219,42 @@ const AdvancedPreferencesSection = ({
         />
       </div>
     )}
+
+    <div className={`space-y-2 ${!isPackagedApp ? 'opacity-60' : ''}`}>
+      <label className={preferenceFieldLabelClass}>Production Server Port</label>
+      <Input
+        type="number"
+        min="1024"
+        max="65535"
+        {...getNumberPreferenceInputProps('advanced', 'serverPort', {
+          min: 1024,
+          max: 65535,
+          fallbackValue: 4000,
+          parse: 'int',
+          persistOnBlurOnly: true,
+        })}
+        className={inputClass}
+        disabled={!isPackagedApp}
+      />
+      {serverPortPendingRestart ? (
+        <p className={`text-xs ${darkMode ? 'text-amber-300' : 'text-amber-700'}`}>
+          Port {configuredServerPort} is saved, but LyricDisplay is still using port {runningServerPort}.{' '}
+          <button
+            type="button"
+            className="font-medium underline underline-offset-2 hover:no-underline"
+            onClick={restartApp}
+          >
+            Restart now
+          </button>
+        </p>
+      ) : (
+        <p className={`text-xs ${mutedClass}`}>
+          {isPackagedApp
+            ? 'Port 4000 is the default. Changes apply to every LyricDisplay URL after restart.'
+            : 'Production port changes are disabled in Electron development.'}
+        </p>
+      )}
+    </div>
 
     <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-800/60' : 'border-gray-200 bg-gray-50'}`}>
       <div className="mb-4 flex items-start gap-3">

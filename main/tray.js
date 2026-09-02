@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { appRoot } from './paths.js';
+import { getBackendPort } from './backend.js';
 
 let appTray = null;
 let appTrayMenu = null;
@@ -119,7 +120,7 @@ function startWindowsTrayHost({ isHeadlessMode = false } = {}) {
     '-File', scriptPath,
     '-ParentPid', String(process.pid),
     '-ExePath', process.execPath,
-    '-BaseUrl', 'http://127.0.0.1:4000',
+    '-BaseUrl', `http://127.0.0.1:${getBackendPort()}`,
     '-Tooltip', isHeadlessMode ? 'LyricDisplay Dock Mode' : 'LyricDisplay',
     '-Mode', isHeadlessMode ? 'dock' : 'desktop',
   ];

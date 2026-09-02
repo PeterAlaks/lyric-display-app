@@ -14,7 +14,7 @@ servers:
   realtime:
     host: localhost:4000
     protocol: socket.io
-    description: Development server
+    description: Default local server; packaged builds can configure another production port
 
 channels:
   socketChannel:

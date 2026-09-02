@@ -16,6 +16,7 @@ import {
 } from '../../shared/lyricVideoVisualizer.js';
 import { extractZipArchive } from '../archiveExtraction.js';
 import { runProbeProcess } from './ffmpegProbe.js';
+import { getBackendPort } from '../backend.js';
 
 let activeExport = null;
 let captureRawFormatCache = null;
@@ -340,7 +341,7 @@ const getFfmpegReadiness = async () => {
 const getExportFrameUrl = () => (
   isDev
     ? 'http://localhost:5173/lyric-video-export-frame'
-    : 'http://127.0.0.1:4000/lyric-video-export-frame'
+    : `http://127.0.0.1:${getBackendPort()}/lyric-video-export-frame`
 );
 
 const getHardwareEncoderCandidates = async () => {

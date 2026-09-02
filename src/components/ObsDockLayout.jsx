@@ -30,6 +30,7 @@ import SearchBar from './SearchBar';
 import OutputSettingsPanel from './OutputSettingsPanel';
 import QuickParserPopover from './LyricDisplayApp/QuickParserPopover';
 import { Tooltip } from '@/components/ui/tooltip';
+import { resolveBackendUrl } from '../utils/network';
 import {
   getLyricFormatLabel,
   getLyricImportFormatForType,
@@ -375,7 +376,7 @@ export default function ObsDockLayout() {
   React.useEffect(() => {
     let cancelled = false;
 
-    fetch('http://127.0.0.1:4000/api/app/capabilities', {
+    fetch(resolveBackendUrl('/api/app/capabilities'), {
       cache: 'no-store',
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -395,7 +396,7 @@ export default function ObsDockLayout() {
 
   const openDesktopApp = React.useCallback(async () => {
     try {
-      const response = await fetch('http://127.0.0.1:4000/api/app/switch-to-desktop-mode', {
+      const response = await fetch(resolveBackendUrl('/api/app/switch-to-desktop-mode'), {
         method: 'POST',
         cache: 'no-store',
       });

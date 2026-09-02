@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { X, Smartphone, Wifi, Copy, Check } from 'lucide-react';
 import useToast from '../hooks/useToast';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
+import { resolveBackendPort } from '../utils/network';
 
 const animationDuration = 220;
 
@@ -18,7 +19,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
   const [copiedCode, setCopiedCode] = useState(false);
   const { showToast } = useToast();
 
-  const port = import.meta.env.DEV ? '5173' : '4000';
+  const port = import.meta.env.DEV ? '5173' : String(resolveBackendPort());
   const urlBase = `http://${localIP}:${port}/`;
   const connectionURL = `${urlBase}?client=mobile`;
 

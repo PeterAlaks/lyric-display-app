@@ -1,9 +1,14 @@
+import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../../shared/backendPort.js';
+
 const parsePort = (value) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const defaultPort = parsePort(import.meta.env.VITE_SERVER_PORT) ?? 4000;
+const defaultPort = normalizeBackendPort(
+  parsePort(import.meta.env.VITE_SERVER_PORT),
+  DEFAULT_BACKEND_PORT
+);
 
 const isLocalHostname = (hostname = '') => {
   const normalized = hostname.toLowerCase();
@@ -161,4 +166,16 @@ export const resolveBackendUrl = (path = '/', port = defaultPort) => {
   const normalizedOrigin = normalizeOrigin(origin);
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${normalizedOrigin}${normalizedPath}`;
+};
+
+export const resolveBackendPort = () => {
+  try {
+    const url = new URL(resolveBackendOrigin());
+    if (url.port) return normalizeBackendPort(url.port, defaultPort);
+    if (url.protocol === 'https:') return 443;
+    if (url.protocol === 'http:') return 80;
+  } catch {
+    // Fall through to the configured default.
+  }
+  return defaultPort;
 };

@@ -40,7 +40,7 @@ test('NDI launch config uses clean app routes and managed user data by default',
     host: '127.0.0.1',
     port: 9137,
     authToken: 'test-token',
-    appUrl: 'http://127.0.0.1:4000',
+    appUrl: 'http://127.0.0.1:4567',
   });
 
   assert.equal(config.args[0], `--user-data-dir=${userDataPath}`);
@@ -49,7 +49,7 @@ test('NDI launch config uses clean app routes and managed user data by default',
     '--host', '127.0.0.1',
     '--port', '9137',
     '--auth-token', 'test-token',
-    '--app-url', 'http://127.0.0.1:4000',
+    '--app-url', 'http://127.0.0.1:4567',
     '--no-hash',
   ]);
 });

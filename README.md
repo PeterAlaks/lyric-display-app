@@ -54,6 +54,8 @@ http://localhost:4000/output1
 
 LyricDisplay must remain running while browser sources or remote controllers are in use. See the [integration guide](INSTALLATION.md#browser-output-urls) for all output routes.
 
+Packaged builds use port `4000` by default. The production port can be changed under **Preferences > Advanced**; restart the app before using the updated URLs.
+
 ## Development
 
 ### Prerequisites
@@ -72,7 +74,7 @@ npm --prefix server install
 npm run electron-dev
 ```
 
-The full development command starts Vite and Electron; Electron starts and monitors the backend. The backend uses port `4000`, and Vite uses port `5173`.
+The full development command starts Vite and Electron; Electron starts and monitors the backend. Development keeps the backend on port `4000`, and Vite uses port `5173`. The packaged app's configurable production-port preference does not alter the development topology.
 
 ### Common Commands
 

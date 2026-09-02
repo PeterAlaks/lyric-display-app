@@ -304,6 +304,20 @@ test('schema 9 Preview settings migrate to the featured grid style', () => {
   });
 });
 
+test('legacy preferences gain the default production backend port without overwriting advanced settings', () => {
+  const result = migratePreferences({
+    _schemaVersion: 10,
+    advanced: {
+      enableDebugLogging: true,
+    },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
+  assert.equal(result.preferences.advanced.serverPort, 4000);
+  assert.equal(result.preferences.advanced.enableDebugLogging, true);
+});
+
 test('future preference and session schemas are rejected without mutation', () => {
   const futurePreferences = { _schemaVersion: 99, general: { liveSafetyMode: true } };
   const preferencesResult = migratePreferences(futurePreferences);

@@ -1,7 +1,6 @@
 import { ipcMain, app } from 'electron';
 import * as secureTokenStore from '../secureTokenStore.js';
-
-const BACKEND_BASE_URL = 'http://127.0.0.1:4000';
+import { getBackendPort } from '../backend.js';
 
 const sanitizeSecretsStatus = (status) => {
   if (!status || typeof status !== 'object') {
@@ -27,7 +26,7 @@ const fetchBackendJson = async (path, options = {}) => {
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}${path}`, {
+    const response = await fetch(`http://127.0.0.1:${getBackendPort()}${path}`, {
       ...options,
       signal: controller.signal,
     });

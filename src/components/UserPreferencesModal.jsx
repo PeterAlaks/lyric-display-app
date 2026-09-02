@@ -101,6 +101,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     midiStatus,
     oscStatus,
     preferences,
+    runtimeInfo,
     saveError,
     saving,
     setMidiStatus,
@@ -108,7 +109,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
     updateNestedPreference,
     updatePreference,
     updatePreferenceGroup,
-  } = usePreferencesPersistence({ showToast });
+  } = usePreferencesPersistence({ showModal, showToast });
 
   const {
     getNumberPreferenceInputProps,
@@ -1246,6 +1247,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             mutedClass={mutedClass}
             preferenceFieldLabelClass={preferenceFieldLabelClass}
             preferences={preferences}
+            runtimeInfo={runtimeInfo}
             restoringAllDefaults={restoringAllDefaults}
             securityLoading={securityLoading}
             securityRotating={securityRotating}

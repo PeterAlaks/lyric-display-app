@@ -3,6 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Monitor, Check, Network, Copy, ExternalLink } from 'lucide-react';
 import { createRoutePath, createRouteUrl } from '@/integrations/sourceUrls';
 import { getAllRoutableOutputIds } from '../../shared/outputRegistry.js';
+import { resolveBackendPort } from '../utils/network';
 
 /**
  * Detect the current platform.
@@ -22,6 +23,7 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
     const [activeTab, setActiveTab] = useState('obs');
     const scrollContainerRef = React.useRef(null);
     const platform = usePlatform();
+    const serverPort = resolveBackendPort();
 
     useEffect(() => {
         if (window.electronAPI?.getLocalIP) {
@@ -91,16 +93,16 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
             >
                 <Tabs value={activeTab}>
                     <TabsContent value="obs" className="mt-0">
-                        <OBSInstructions darkMode={darkMode} localIP={localIP} platform={platform} onRequestClose={onRequestClose} />
+                        <OBSInstructions darkMode={darkMode} localIP={localIP} platform={platform} serverPort={serverPort} onRequestClose={onRequestClose} />
                     </TabsContent>
                     {showVmix && (
                         <TabsContent value="vmix" className="mt-0">
-                            <VMixInstructions darkMode={darkMode} localIP={localIP} platform={platform} />
+                            <VMixInstructions darkMode={darkMode} localIP={localIP} platform={platform} serverPort={serverPort} />
                         </TabsContent>
                     )}
                     {showWirecast && (
                         <TabsContent value="wirecast" className="mt-0">
-                            <WirecastInstructions darkMode={darkMode} localIP={localIP} platform={platform} />
+                            <WirecastInstructions darkMode={darkMode} localIP={localIP} platform={platform} serverPort={serverPort} />
                         </TabsContent>
                     )}
                 </Tabs>
@@ -159,7 +161,7 @@ function StaticIPSteps({ darkMode, localIP, platform }) {
     );
 }
 
-function FirewallSteps({ darkMode, platform }) {
+function FirewallSteps({ darkMode, platform, serverPort }) {
     if (platform === 'darwin') {
         return (
             <>
@@ -182,8 +184,8 @@ function FirewallSteps({ darkMode, platform }) {
                 <Step number={3} darkMode={darkMode}>
                     Allow LyricDisplay through your firewall:
                     <SubSteps darkMode={darkMode}>
-                        <SubStep darkMode={darkMode}>If using <Strong>ufw</Strong> (Ubuntu/Debian): run <InlineCode darkMode={darkMode}>sudo ufw allow 4000/tcp</InlineCode></SubStep>
-                        <SubStep darkMode={darkMode}>If using <Strong>firewalld</Strong> (Fedora/RHEL): run <InlineCode darkMode={darkMode}>sudo firewall-cmd --add-port=4000/tcp --permanent && sudo firewall-cmd --reload</InlineCode></SubStep>
+                        <SubStep darkMode={darkMode}>If using <Strong>ufw</Strong> (Ubuntu/Debian): run <InlineCode darkMode={darkMode}>sudo ufw allow {serverPort}/tcp</InlineCode></SubStep>
+                        <SubStep darkMode={darkMode}>If using <Strong>firewalld</Strong> (Fedora/RHEL): run <InlineCode darkMode={darkMode}>sudo firewall-cmd --add-port={serverPort}/tcp --permanent && sudo firewall-cmd --reload</InlineCode></SubStep>
                         <SubStep darkMode={darkMode}>If you have no firewall configured, you can skip this step</SubStep>
                     </SubSteps>
                     <Hint darkMode={darkMode}>This lets other computers on your network talk to LyricDisplay</Hint>
@@ -249,7 +251,7 @@ function CompactStaticIPSteps({ darkMode, localIP, platform }) {
     );
 }
 
-function CompactFirewallSteps({ darkMode, platform }) {
+function CompactFirewallSteps({ darkMode, platform, serverPort }) {
     if (platform === 'darwin') {
         return (
             <SubSteps darkMode={darkMode}>
@@ -262,8 +264,8 @@ function CompactFirewallSteps({ darkMode, platform }) {
     if (platform === 'linux') {
         return (
             <SubSteps darkMode={darkMode}>
-                <SubStep darkMode={darkMode}>ufw: <InlineCode darkMode={darkMode}>sudo ufw allow 4000/tcp</InlineCode></SubStep>
-                <SubStep darkMode={darkMode}>firewalld: <InlineCode darkMode={darkMode}>sudo firewall-cmd --add-port=4000/tcp --permanent && sudo firewall-cmd --reload</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>ufw: <InlineCode darkMode={darkMode}>sudo ufw allow {serverPort}/tcp</InlineCode></SubStep>
+                <SubStep darkMode={darkMode}>firewalld: <InlineCode darkMode={darkMode}>sudo firewall-cmd --add-port={serverPort}/tcp --permanent && sudo firewall-cmd --reload</InlineCode></SubStep>
                 <SubStep darkMode={darkMode}>(Skip if no firewall is configured)</SubStep>
             </SubSteps>
         );
@@ -281,7 +283,7 @@ function CompactFirewallSteps({ darkMode, platform }) {
 
 // ─── OBS Instructions ────────────────────────────────────────────────────────
 
-function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
+function OBSInstructions({ darkMode, localIP, platform, serverPort, onRequestClose }) {
     const routableOutputs = getAllRoutableOutputIds();
     const lastOutputId = routableOutputs[routableOutputs.length - 1];
     const modKey = platform === 'darwin' ? '⌘' : 'Ctrl';
@@ -292,7 +294,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
                 LyricDisplay works with OBS Studio through a browser source. Think of it as a transparent window that displays your lyrics over your video feed.
             </IntroSection>
 
-            <SourceCreatorCallout darkMode={darkMode} localIP={localIP} onRequestClose={onRequestClose} />
+            <SourceCreatorCallout darkMode={darkMode} localIP={localIP} serverPort={serverPort} onRequestClose={onRequestClose} />
 
             <SetupOption
                 icon={<Monitor className="w-5 h-5" />}
@@ -317,7 +319,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Copy and paste this URL:
-                        <URLBox darkMode={darkMode}>http://localhost:4000/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://localhost:{serverPort}/output1</URLBox>
                     </Step>
                     <Step number={5} darkMode={darkMode}>
                         Set these values:
@@ -371,14 +373,14 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
                         Make this address permanent (so it doesn't change):
                         <StaticIPSteps darkMode={darkMode} localIP={localIP} platform={platform} />
                     </Step>
-                    <FirewallSteps darkMode={darkMode} platform={platform} />
+                    <FirewallSteps darkMode={darkMode} platform={platform} serverPort={serverPort} />
                 </StepsList>
 
                 <SectionHeader darkMode={darkMode}>On the OBS Computer:</SectionHeader>
                 <StepsList>
                     <Step number={1} darkMode={darkMode}>
                         First, test the connection. Open any web browser and type:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:{serverPort}</URLBox>
                         <Hint darkMode={darkMode}>If you see a page, it's working! Close the browser and continue.</Hint>
                     </Step>
                     <Step number={2} darkMode={darkMode}>
@@ -386,7 +388,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Use this network URL instead:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:{serverPort}/output1</URLBox>
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Set Width: <InlineCode darkMode={darkMode}>1920</InlineCode>, Height: <InlineCode darkMode={darkMode}>1080</InlineCode>, FPS: <InlineCode darkMode={darkMode}>30</InlineCode>
@@ -414,7 +416,7 @@ function OBSInstructions({ darkMode, localIP, platform, onRequestClose }) {
 
 // ─── vMix Instructions (Windows only) ───────────────────────────────────────
 
-function VMixInstructions({ darkMode, localIP, platform }) {
+function VMixInstructions({ darkMode, localIP, platform, serverPort }) {
     return (
         <div className="space-y-6 pb-4">
             <IntroSection darkMode={darkMode}>
@@ -444,7 +446,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Enter this URL:
-                        <URLBox darkMode={darkMode}>http://localhost:4000/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://localhost:{serverPort}/output1</URLBox>
                     </Step>
                     <Step number={5} darkMode={darkMode}>
                         Set these values:
@@ -491,7 +493,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Allow through firewall:
-                        <CompactFirewallSteps darkMode={darkMode} platform={platform} />
+                        <CompactFirewallSteps darkMode={darkMode} platform={platform} serverPort={serverPort} />
                     </Step>
                 </StepsList>
 
@@ -499,7 +501,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
                 <StepsList>
                     <Step number={1} darkMode={darkMode}>
                         Test connection in a web browser first:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:{serverPort}</URLBox>
                         <Hint darkMode={darkMode}>See a page? Great! Continue to next step.</Hint>
                     </Step>
                     <Step number={2} darkMode={darkMode}>
@@ -507,7 +509,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Use this network URL:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:{serverPort}/output1</URLBox>
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Set Width/Height/Frame Rate (same as above)
@@ -523,7 +525,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
             </TipBox>
 
             <TipBox darkMode={darkMode} type="pro">
-                <Strong>Quick Test:</Strong> Open a browser on the vMix computer and visit <InlineCode darkMode={darkMode}>http://{localIP}:4000</InlineCode>. If you see a page, your connection is ready!
+                <Strong>Quick Test:</Strong> Open a browser on the vMix computer and visit <InlineCode darkMode={darkMode}>http://{localIP}:{serverPort}</InlineCode>. If you see a page, your connection is ready!
             </TipBox>
 
             <TipBox darkMode={darkMode} type="info">
@@ -535,7 +537,7 @@ function VMixInstructions({ darkMode, localIP, platform }) {
 
 // ─── Wirecast Instructions (Windows + macOS) ────────────────────────────────
 
-function WirecastInstructions({ darkMode, localIP, platform }) {
+function WirecastInstructions({ darkMode, localIP, platform, serverPort }) {
     return (
         <div className="space-y-6 pb-4">
             <IntroSection darkMode={darkMode}>
@@ -565,7 +567,7 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Enter this URL:
-                        <URLBox darkMode={darkMode}>http://localhost:4000/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://localhost:{serverPort}/output1</URLBox>
                     </Step>
                     <Step number={5} darkMode={darkMode}>
                         Configure these settings:
@@ -624,7 +626,7 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Configure firewall:
-                        <CompactFirewallSteps darkMode={darkMode} platform={platform} />
+                        <CompactFirewallSteps darkMode={darkMode} platform={platform} serverPort={serverPort} />
                     </Step>
                 </StepsList>
 
@@ -632,7 +634,7 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
                 <StepsList>
                     <Step number={1} darkMode={darkMode}>
                         Test in browser:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:{serverPort}</URLBox>
                         <Hint darkMode={darkMode}>Page loads? Perfect! Move to next step.</Hint>
                     </Step>
                     <Step number={2} darkMode={darkMode}>
@@ -640,7 +642,7 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
                     </Step>
                     <Step number={3} darkMode={darkMode}>
                         Use network URL:
-                        <URLBox darkMode={darkMode}>http://{localIP}:4000/output1</URLBox>
+                        <URLBox darkMode={darkMode}>http://{localIP}:{serverPort}/output1</URLBox>
                     </Step>
                     <Step number={4} darkMode={darkMode}>
                         Enable <Strong>Transparent Background</Strong> checkbox
@@ -668,10 +670,10 @@ function WirecastInstructions({ darkMode, localIP, platform }) {
 
 // ─── Shared UI Components ────────────────────────────────────────────────────
 
-function SourceCreatorCallout({ darkMode, localIP, onRequestClose }) {
+function SourceCreatorCallout({ darkMode, localIP, serverPort, onRequestClose }) {
     const setupBaseUrl = import.meta.env.MODE === 'development'
         ? `http://${localIP}:5173`
-        : `http://${localIP}:4000`;
+        : `http://${localIP}:${serverPort}`;
     const setupUrl = createRouteUrl({ baseUrl: setupBaseUrl, route: '/obs-setup' });
     const openCreator = async () => {
         if (window.electronAPI?.display?.openObsSourceCreatorWindow) {

@@ -14,6 +14,12 @@ import {
   BACKEND_INSTANCE_HEADER,
   BACKEND_INSTANCE_TOKEN_ENV,
 } from '../shared/backendInstance.js';
+import {
+  DEFAULT_BACKEND_PORT,
+  normalizeBackendPort,
+  resolveRuntimeBackendPort,
+} from '../shared/backendPort.js';
+import * as userPreferences from './userPreferences.js';
 
 let backendProcess = null;
 let backendStopRequested = false;
@@ -21,6 +27,7 @@ let backendRestartTimer = null;
 let lastStartOptions = {};
 let backendMessageHandler = null;
 let backendStatusHandler = null;
+let runtimeBackendPort = null;
 export const backendAppSessionId = randomUUID();
 
 const BACKEND_TAIL_LIMIT = 64 * 1024;
@@ -29,6 +36,34 @@ const BACKEND_SOFT_STARTUP_TIMEOUT_MS = 30_000;
 const BACKEND_HARD_STARTUP_TIMEOUT_MS = 120_000;
 const MAX_BACKEND_RESTARTS = 3;
 let backendRestartAttempts = [];
+
+export function getBackendPort() {
+  if (runtimeBackendPort === null) {
+    runtimeBackendPort = resolveRuntimeBackendPort({
+      isPackaged: app.isPackaged,
+      configuredPort: userPreferences.getPreference('advanced.serverPort'),
+      environmentPort: process.env.PORT,
+    });
+    process.env.PORT = String(runtimeBackendPort);
+  }
+
+  return runtimeBackendPort;
+}
+
+export function getBackendPortStatus() {
+  const configuredPort = normalizeBackendPort(
+    userPreferences.getPreference('advanced.serverPort'),
+    DEFAULT_BACKEND_PORT
+  );
+  const backendPort = getBackendPort();
+
+  return {
+    backendPort,
+    configuredPort,
+    configurable: app.isPackaged,
+    pendingRestart: app.isPackaged && configuredPort !== backendPort,
+  };
+}
 
 function notifyBackendStatus(payload) {
   if (typeof backendStatusHandler !== 'function') return;
@@ -120,7 +155,7 @@ async function waitForBackendHealth(instanceToken, maxAttempts = 60, intervalMs 
       timeout.unref?.();
       let response;
       try {
-        response = await fetch('http://127.0.0.1:4000/api/health/ready', {
+        response = await fetch(`http://127.0.0.1:${getBackendPort()}/api/health/ready`, {
           method: 'GET',
           headers: {
             [BACKEND_INSTANCE_HEADER]: instanceToken,
@@ -186,6 +221,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
     const userDataDir = app.getPath('userData');
     const backendDataDir = path.join(userDataDir, 'backend');
     const backendInstanceToken = randomUUID();
+    const backendPort = getBackendPort();
 
     const child = fork(serverPath, [], {
       // ASAR paths are readable by Electron's Node runtime but cannot be used
@@ -194,6 +230,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       cwd: app.isPackaged ? userDataDir : path.dirname(serverPath),
       env: {
         ...process.env,
+        PORT: String(backendPort),
         NODE_ENV: app.isPackaged ? 'production' : 'development',
         [RUNTIME_PROFILE_ENV]: app.isPackaged
           ? PRODUCTION_RUNTIME_PROFILE

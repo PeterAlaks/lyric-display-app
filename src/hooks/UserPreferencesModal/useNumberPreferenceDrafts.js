@@ -41,6 +41,7 @@ export const useNumberPreferenceDrafts = ({ preferences, updatePreference }) => 
 
   const handleNumberInputChange = useCallback((category, key, value, options = {}, customCommit) => {
     setNumberInputDraft(category, key, value);
+    if (options.persistOnBlurOnly) return;
     persistNumberPreferenceValue(category, key, value, options, customCommit);
   }, [persistNumberPreferenceValue, setNumberInputDraft]);
 

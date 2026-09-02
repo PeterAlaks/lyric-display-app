@@ -4,6 +4,7 @@ import { isDev, resolveProductionPath, appRoot } from './paths.js';
 import { getLogPaths, writeLog } from './logging.js';
 import { requestRendererModal } from './modalBridge.js';
 import { isTrustedAppRendererUrl, normalizeBrowserUrl } from './ipc/senderValidation.js';
+import { getBackendPort } from './backend.js';
 import {
   getWindowPreloadRole,
   isTimeDisplayRoute,
@@ -509,7 +510,7 @@ export function createWindow(route = '/', options = {}) {
 
   const senderValidationOptions = {
     development: isDev,
-    backendPort: Number(process.env.PORT) || 4000,
+    backendPort: getBackendPort(),
   };
 
   win.webContents.on('will-navigate', (event, url) => {
@@ -534,7 +535,7 @@ export function createWindow(route = '/', options = {}) {
   if (isDev) {
     win.loadURL(`http://localhost:5173${route}`);
   } else {
-    const baseUrl = 'http://127.0.0.1:4000';
+    const baseUrl = `http://127.0.0.1:${getBackendPort()}`;
     win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
       console.error('Failed to load:', errorCode, errorDescription, validatedURL);
       setTimeout(() => {

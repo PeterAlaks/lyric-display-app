@@ -1,9 +1,9 @@
 import Store from 'electron-store';
 import './appIdentity.js';
 import { getLocalIPAddress } from './utils.js';
+import { getBackendPort } from './backend.js';
 
 const CHECK_INTERVAL_MS = 15_000;
-const DEFAULT_SERVER_PORT = 4000;
 const IPV4_PATTERN = /^(?:\d{1,3}\.){3}\d{1,3}$/;
 
 const networkStateStore = new Store({
@@ -59,7 +59,7 @@ async function checkNetworkAddress(requestRendererModal) {
 
     warningInProgress = true;
     try {
-      const serverPort = Number(process.env.PORT) || DEFAULT_SERVER_PORT;
+      const serverPort = getBackendPort();
       await requestRendererModal({
         title: 'Network address changed',
         headerDescription: 'Review the new address and reconnect remote outputs.',

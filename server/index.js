@@ -33,6 +33,7 @@ import { setLyricsParsingConfig } from './realtime/lyricsParsingConfig.js';
 import { emitControllerEvent } from './realtime/broadcast.js';
 import { notifyOutputPresenceChange } from './realtime/state.js';
 import { REALTIME_EVENTS } from '../shared/apiContractRegistry.js';
+import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../shared/backendPort.js';
 import { isStorageCapacityError, toStorageWriteFailure } from '../shared/storageErrors.js';
 
 dotenv.config();
@@ -92,7 +93,7 @@ if (process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN) {
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 4000;
+const PORT = normalizeBackendPort(process.env.PORT, DEFAULT_BACKEND_PORT);
 const isDev = process.env.NODE_ENV === 'development';
 
 const tokenService = createTokenService({

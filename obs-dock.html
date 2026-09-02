@@ -201,12 +201,14 @@
 
       const isHttpVitePage = window.location.protocol.startsWith('http') && window.location.port === '5173';
       const devOrigin = 'http://127.0.0.1:5173';
-      const productionDockUrl = 'http://127.0.0.1:4000/obs-dock';
+      const configuredPort = /^\d+$/.test(params.get('port') || '') ? params.get('port') : '4000';
+      const productionOrigin = `http://127.0.0.1:${configuredPort}`;
+      const productionDockUrl = `${productionOrigin}/obs-dock`;
       const devDockUrl = `${devOrigin}/?dock=obs&clientType=obsDock`;
-      const readyUrl = 'http://127.0.0.1:4000/api/health/ready';
-      const capabilitiesUrl = 'http://127.0.0.1:4000/api/app/capabilities';
-      const switchToDockModeUrl = 'http://127.0.0.1:4000/api/app/switch-to-dock-mode';
-      const switchToDesktopModeUrl = 'http://127.0.0.1:4000/api/app/switch-to-desktop-mode';
+      const readyUrl = `${productionOrigin}/api/health/ready`;
+      const capabilitiesUrl = `${productionOrigin}/api/app/capabilities`;
+      const switchToDockModeUrl = `${productionOrigin}/api/app/switch-to-dock-mode`;
+      const switchToDesktopModeUrl = `${productionOrigin}/api/app/switch-to-desktop-mode`;
       const devReadyUrl = devDockUrl;
       const isWindowsPlatform = /win/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
 

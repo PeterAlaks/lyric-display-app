@@ -15,6 +15,7 @@ import {
   migratePreferences,
 } from './preferenceMigrations.js';
 import { toStorageWriteFailure } from '../shared/storageErrors.js';
+import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../shared/backendPort.js';
 
 const preferenceWriteFailure = (error) => toStorageWriteFailure(error, {
   subject: 'preferences',
@@ -110,6 +111,7 @@ const preferencesStore = new Store({
 
     // Advanced Settings
     advanced: {
+      serverPort: DEFAULT_BACKEND_PORT,
       enableDebugLogging: false,
       disableHardwareAcceleration: false,
       connectionTimeout: 10000,
@@ -188,8 +190,11 @@ export function getPreference(path) {
  */
 export function setPreference(path, value) {
   try {
-    preferencesStore.set(path, value);
-    console.log(`[UserPreferences] Set ${path}:`, value);
+    const nextValue = path === 'advanced.serverPort'
+      ? normalizeBackendPort(value)
+      : value;
+    preferencesStore.set(path, nextValue);
+    console.log(`[UserPreferences] Set ${path}:`, nextValue);
     return { success: true };
   } catch (error) {
     console.error(`[UserPreferences] Failed to set preference ${path}:`, error);
@@ -205,7 +210,10 @@ export function setPreference(path, value) {
 export function updatePreferenceCategory(category, values) {
   try {
     const current = preferencesStore.get(category) || {};
-    preferencesStore.set(category, { ...current, ...values });
+    const nextValues = category === 'advanced' && Object.hasOwn(values || {}, 'serverPort')
+      ? { ...values, serverPort: normalizeBackendPort(values.serverPort) }
+      : values;
+    preferencesStore.set(category, { ...current, ...nextValues });
     console.log(`[UserPreferences] Updated category ${category}`);
     return { success: true };
   } catch (error) {
@@ -223,7 +231,9 @@ export function saveAllPreferences(preferences) {
     const nextPreferences = { ...preferencesStore.store };
     Object.entries(preferences).forEach(([category, values]) => {
       if (values && typeof values === 'object') {
-        nextPreferences[category] = values;
+        nextPreferences[category] = category === 'advanced'
+          ? { ...values, serverPort: normalizeBackendPort(values.serverPort) }
+          : values;
       }
     });
     preferencesStore.store = nextPreferences;

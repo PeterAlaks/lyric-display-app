@@ -1,7 +1,7 @@
 import { networkInterfaces } from 'os';
 import dgram from 'dgram';
+import { DEFAULT_BACKEND_PORT } from '../../shared/backendPort.js';
 
-const DEFAULT_PORT = 4000;
 
 function getLanAddress() {
   const nets = networkInterfaces();
@@ -70,7 +70,7 @@ function buildSource(outputId, port) {
   };
 }
 
-export function registerIntegrationRoutes(app, { getOutputRegistry, port = DEFAULT_PORT }) {
+export function registerIntegrationRoutes(app, { getOutputRegistry, port = DEFAULT_BACKEND_PORT }) {
   app.get('/api/integrations/sources', async (req, res) => {
     const registry = getOutputRegistry();
     const outputs = Array.isArray(registry.outputs) ? registry.outputs : [];

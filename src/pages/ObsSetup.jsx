@@ -420,7 +420,7 @@ export default function ObsSetup() {
   const useLocalBaseUrl = () => setSourceBaseUrl(
     import.meta.env.MODE === 'development'
       ? getDevFrontendBaseUrl(metadata, 'local')
-      : metadata?.baseUrls?.local || 'http://127.0.0.1:4000'
+      : metadata?.baseUrls?.local || resolveBackendOrigin()
   );
   const useNetworkBaseUrl = () => {
     const networkBaseUrl = import.meta.env.MODE === 'development'

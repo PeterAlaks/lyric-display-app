@@ -118,3 +118,19 @@ test('parser guidance is available from the preferences category header', async 
   assert.match(layoutSource, /<AlwaysInfoButton/);
   assert.match(layoutSource, /content=\{categories\.find\(c => c\.id === activeCategory\)\?\.info\}/);
 });
+
+test('the production server port is an autosaved advanced preference with pending-restart guidance', async () => {
+  const [advancedSource, persistenceSource, appIpcSource] = await Promise.all([
+    readFile(new URL('../src/components/UserPreferencesModal/AdvancedPreferencesSection.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/hooks/UserPreferencesModal/usePreferencesPersistence.js', import.meta.url), 'utf8'),
+    readFile(new URL('../main/ipc/app.js', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(advancedSource, /Production Server Port/);
+  assert.match(advancedSource, /getNumberPreferenceInputProps\('advanced', 'serverPort'/);
+  assert.match(advancedSource, /Restart now/);
+  assert.match(advancedSource, /disabled=\{!isPackagedApp\}/);
+  assert.match(persistenceSource, /Server Port Saved/);
+  assert.match(persistenceSource, /restartApp/);
+  assert.match(appIpcSource, /backendPort/);
+});

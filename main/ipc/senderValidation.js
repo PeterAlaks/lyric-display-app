@@ -1,10 +1,12 @@
+import { DEFAULT_BACKEND_PORT } from '../../shared/backendPort.js';
+
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
 export function getIpcSenderUrl(event) {
   return event?.senderFrame?.url || event?.sender?.getURL?.() || '';
 }
 
-export function isTrustedAppRendererUrl(value, { development = false, backendPort = 4000 } = {}) {
+export function isTrustedAppRendererUrl(value, { development = false, backendPort = DEFAULT_BACKEND_PORT } = {}) {
   try {
     const url = new URL(String(value || ''));
     if (url.protocol !== 'http:') return false;

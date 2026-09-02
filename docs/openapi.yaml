@@ -16,7 +16,7 @@ info:
 
 servers:
   - url: http://localhost:4000
-    description: Local Development Server
+    description: Default local server; packaged builds can configure another production port
 
 security:
   - BearerAuth: []

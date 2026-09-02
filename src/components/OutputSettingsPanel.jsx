@@ -30,6 +30,7 @@ import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, EmphasisRow, Alignm
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 import { outputTemplates } from '../utils/outputTemplates';
 import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
+import { resolveBackendUrl } from '../utils/network';
 
 const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
   <div className="flex items-center justify-between gap-4" data-output-setting-row>
@@ -391,7 +392,7 @@ const OutputSettingsPanel = ({
         }
       }
 
-      const response = await fetch('http://127.0.0.1:4000/api/templates/output', {
+      const response = await fetch(resolveBackendUrl('/api/templates/output'), {
         cache: 'no-store',
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

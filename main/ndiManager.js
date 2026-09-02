@@ -29,6 +29,7 @@ import {
   resolveAuthoritativeCompanionLocation,
 } from './ndi/launchConfig.js';
 import { DEFAULT_OUTPUT_IDS } from '../shared/outputRegistry.js';
+import { getBackendPort } from './backend.js';
 
 const isDev = !app.isPackaged;
 
@@ -92,7 +93,7 @@ let companionStopRequested = false;
 let companionRestartTimer = null;
 let companionRestartAttempts = [];
 
-const DEFAULT_BACKEND_PORT = Number(process.env.PORT) || 4000;
+const DEFAULT_BACKEND_PORT = getBackendPort();
 const DEFAULT_BACKEND_HOST = '127.0.0.1';
 const COMPANION_BOOTSTRAP_MAX_ATTEMPTS = 20;
 const COMPANION_BOOTSTRAP_BASE_DELAY_MS = 250;
@@ -630,7 +631,7 @@ async function launchCompanion() {
       host: ipcConfig.host,
       port: ipcConfig.port,
       authToken: companionAuthToken,
-      appUrl: isDev ? 'http://localhost:5173' : 'http://127.0.0.1:4000',
+      appUrl: isDev ? 'http://localhost:5173' : `http://127.0.0.1:${DEFAULT_BACKEND_PORT}`,
       hashRouting: false,
     });
     const args = launchConfig.args;

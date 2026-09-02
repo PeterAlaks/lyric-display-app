@@ -3,6 +3,7 @@ import { loadSystemFonts } from '../systemFonts.js';
 import { getLocalIPAddress } from '../utils.js';
 import { isDev } from '../paths.js';
 import { assertTrustedAppRenderer, normalizeBrowserUrl } from './senderValidation.js';
+import { getBackendPort } from '../backend.js';
 
 /**
  * Register miscellaneous IPC handlers
@@ -11,7 +12,7 @@ import { assertTrustedAppRenderer, normalizeBrowserUrl } from './senderValidatio
 export function registerMiscHandlers({ openInAppBrowser }) {
   const senderOptions = {
     development: isDev,
-    backendPort: Number(process.env.PORT) || 4000,
+    backendPort: getBackendPort(),
   };
   
   ipcMain.handle('fonts:list', async () => {

@@ -5,8 +5,9 @@ import { loadDebugLoggingPreference } from '../../utils/logger';
 import { LIVE_SAFETY_PREFERENCE_EVENT } from '../useLiveSafetyBridge';
 import { normalizeLyricsParsingOptions } from '../../../shared/lyricsParsing/preferenceOptions.js';
 import { requestLyricsReloadWithCurrentParser } from '../../utils/lyricsReloadEvents.js';
+import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../../../shared/backendPort.js';
 
-export const usePreferencesPersistence = ({ showToast }) => {
+export const usePreferencesPersistence = ({ showModal, showToast }) => {
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -14,17 +15,53 @@ export const usePreferencesPersistence = ({ showToast }) => {
   const [saveError, setSaveError] = useState(false);
   const [midiStatus, setMidiStatus] = useState(null);
   const [oscStatus, setOscStatus] = useState(null);
+  const [runtimeInfo, setRuntimeInfo] = useState({
+    backendPort: DEFAULT_BACKEND_PORT,
+    configuredPort: DEFAULT_BACKEND_PORT,
+    configurable: false,
+    isPackaged: false,
+    pendingRestart: false,
+  });
   const saveTimeoutRef = useRef(null);
   const confirmationTimeoutRef = useRef(null);
   const isMountedRef = useRef(true);
   const pendingPreferencesRef = useRef(null);
   const savePreferencesRef = useRef(null);
   const lyricsLayoutChangedRef = useRef(false);
+  const lastPromptedServerPortRef = useRef(null);
+  const lastSavedServerPortRef = useRef(null);
+  const runtimeInfoRef = useRef(runtimeInfo);
+  const showModalRef = useRef(showModal);
   const showToastRef = useRef(showToast);
 
   useEffect(() => {
+    showModalRef.current = showModal;
     showToastRef.current = showToast;
-  }, [showToast]);
+  }, [showModal, showToast]);
+
+  const applyRuntimeInfo = useCallback((result) => {
+    if (!result?.success) return runtimeInfoRef.current;
+    const nextRuntimeInfo = {
+      backendPort: normalizeBackendPort(result.backendPort),
+      configuredPort: normalizeBackendPort(result.configuredPort),
+      configurable: result.configurable === true,
+      isPackaged: result.isPackaged === true,
+      pendingRestart: result.pendingRestart === true,
+    };
+    runtimeInfoRef.current = nextRuntimeInfo;
+    if (isMountedRef.current) setRuntimeInfo(nextRuntimeInfo);
+    return nextRuntimeInfo;
+  }, []);
+
+  const refreshRuntimeInfo = useCallback(async () => {
+    if (!window.electronAPI?.getRuntimeInfo) return runtimeInfoRef.current;
+    try {
+      return applyRuntimeInfo(await window.electronAPI.getRuntimeInfo());
+    } catch (error) {
+      console.warn('Failed to load backend runtime information:', error);
+      return runtimeInfoRef.current;
+    }
+  }, [applyRuntimeInfo]);
 
   useEffect(() => {
     if (!preferences) return;
@@ -45,8 +82,13 @@ export const usePreferencesPersistence = ({ showToast }) => {
           const result = await window.electronAPI.preferences.getAll();
           if (result.success && isMountedRef.current) {
             setPreferences(result.preferences);
+            lastSavedServerPortRef.current = normalizeBackendPort(
+              result.preferences?.advanced?.serverPort
+            );
           }
         }
+
+        await refreshRuntimeInfo();
 
         if (window.electronAPI?.externalControl?.getStatus) {
           const statusResult = await window.electronAPI.externalControl.getStatus();
@@ -102,7 +144,52 @@ export const usePreferencesPersistence = ({ showToast }) => {
         });
       }
     };
-  }, []);
+  }, [refreshRuntimeInfo]);
+
+  const promptForServerPortRestart = useCallback(async (newPreferences) => {
+    const configuredPort = normalizeBackendPort(newPreferences?.advanced?.serverPort);
+    const previousSavedPort = lastSavedServerPortRef.current;
+    lastSavedServerPortRef.current = configuredPort;
+
+    if (previousSavedPort === null || previousSavedPort === configuredPort) return;
+
+    const currentRuntimeInfo = await refreshRuntimeInfo();
+    const backendPort = normalizeBackendPort(currentRuntimeInfo?.backendPort);
+    if (!currentRuntimeInfo?.isPackaged || configuredPort === backendPort) {
+      lastPromptedServerPortRef.current = null;
+      return;
+    }
+    if (lastPromptedServerPortRef.current === configuredPort) return;
+    lastPromptedServerPortRef.current = configuredPort;
+
+    let choice;
+    try {
+      choice = await showModalRef.current?.({
+        title: 'Server Port Saved',
+        description: `LyricDisplay will use port ${configuredPort} after it restarts.`,
+        body: `The app is still running on port ${backendPort}. You can restart now or keep using the current port until your next restart.`,
+        variant: 'info',
+        size: 'sm',
+        actions: [
+          { label: 'Later', value: 'later', variant: 'outline', autoFocus: true },
+          { label: 'Restart Now', value: 'restart', variant: 'default' },
+        ],
+      });
+    } catch (error) {
+      console.warn('Failed to show the server port restart prompt:', error);
+      return;
+    }
+
+    if (choice !== 'restart') return;
+    const result = await window.electronAPI?.restartApp?.();
+    if (result?.success === false) {
+      showToastRef.current?.({
+        title: 'Restart Failed',
+        message: result.error || 'LyricDisplay could not restart. Your port change is still saved.',
+        variant: 'error',
+      });
+    }
+  }, [refreshRuntimeInfo]);
 
   const savePreferences = useCallback(async (newPreferences) => {
     if (isMountedRef.current) {
@@ -129,6 +216,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
       await loadPreferencesIntoStore(useLyricsStore);
       await loadAdvancedSettings();
       await loadDebugLoggingPreference();
+      await promptForServerPortRestart(newPreferences);
 
       if (isMountedRef.current) {
         if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
@@ -151,7 +239,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
     } finally {
       if (isMountedRef.current) setSaving(false);
     }
-  }, []);
+  }, [promptForServerPortRestart]);
 
   useEffect(() => {
     savePreferencesRef.current = savePreferences;
@@ -282,6 +370,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
           await loadPreferencesIntoStore(useLyricsStore);
           await loadAdvancedSettings();
           await loadDebugLoggingPreference();
+          await promptForServerPortRestart(result.preferences);
           if (isMountedRef.current) {
             setLastSaved(new Date());
             if (confirmationTimeoutRef.current) clearTimeout(confirmationTimeoutRef.current);
@@ -294,7 +383,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
     } catch (error) {
       console.error('Failed to reset category:', error);
     }
-  }, [savePreferences]);
+  }, [promptForServerPortRestart, savePreferences]);
 
   const handleResetAll = useCallback(async () => {
     try {
@@ -335,6 +424,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
       await loadPreferencesIntoStore(useLyricsStore);
       await loadAdvancedSettings();
       await loadDebugLoggingPreference();
+      await promptForServerPortRestart(result.preferences);
 
       if (isMountedRef.current) {
         setLastSaved(new Date());
@@ -361,7 +451,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
     } finally {
       if (isMountedRef.current) setSaving(false);
     }
-  }, [savePreferences]);
+  }, [promptForServerPortRestart, savePreferences]);
 
   useEffect(() => {
     const handleLiveSafetyPreferenceUpdated = (event) => {
@@ -433,6 +523,7 @@ export const usePreferencesPersistence = ({ showToast }) => {
     midiStatus,
     oscStatus,
     preferences,
+    runtimeInfo,
     saveError,
     saving,
     setMidiStatus,
