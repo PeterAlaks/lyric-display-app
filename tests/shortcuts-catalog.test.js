@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { SHORTCUTS } from '../src/constants/shortcuts.js';
+import { isAutoplayKeyboardShortcut, SHORTCUTS } from '../src/constants/shortcuts.js';
 
 const entries = SHORTCUTS.flatMap(({ category, items }) => (
   items.map(({ label, combo }) => ({ category, label, combo }))
@@ -30,6 +30,9 @@ test('keyboard shortcut catalog covers every app workspace', () => {
 
 test('keyboard shortcut catalog includes non-native commands missing from the old help modal', () => {
   for (const [label, combo] of [
+    ['Open native file dialog', 'Ctrl/Cmd + Alt + O'],
+    ['Open Timer Control', 'Ctrl/Cmd + Shift + T'],
+    ['Open Project Output', 'Ctrl/Cmd + Alt + P'],
     ['Open Online Lyrics Search', 'Ctrl/Cmd + Shift + O'],
     ['Previous / next setlist song', 'Ctrl/Cmd + Shift + ← / →'],
     ['Toggle intelligent autoplay (timestamped lyrics)', 'Ctrl/Cmd + Shift + P'],
@@ -63,4 +66,10 @@ test('keyboard shortcut catalog has complete, non-duplicate entries', () => {
     assert.equal(identities.has(identity), false, identity);
     identities.add(identity);
   }
+});
+
+test('project output shortcut does not also trigger autoplay', () => {
+  assert.equal(isAutoplayKeyboardShortcut({ ctrlKey: true, altKey: true, key: 'p' }), false);
+  assert.equal(isAutoplayKeyboardShortcut({ ctrlKey: true, key: 'p' }), true);
+  assert.equal(isAutoplayKeyboardShortcut({ metaKey: true, shiftKey: true, key: 'P' }), true);
 });

@@ -904,7 +904,10 @@ export default function FileNavigatorModal() {
       return;
     }
     if (event.key === 'Enter' && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) {
-      if (event.target instanceof HTMLElement && event.target.closest('button')) return;
+      const resultButton = event.target instanceof HTMLElement
+        ? event.target.closest('[data-file-navigator-index]')
+        : null;
+      if (event.target instanceof HTMLElement && event.target.closest('button') && !resultButton) return;
       event.preventDefault();
       event.stopPropagation();
       if (indexing || directoryLoading) return;

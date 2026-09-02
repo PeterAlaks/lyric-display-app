@@ -26,6 +26,7 @@ import {
 } from '../../shared/transitionSettings.js';
 import {
   TIMER_SCHEDULE_STORAGE_KEY,
+  clearTimerScheduleSettings,
   readTimerScheduleSnapshot,
   saveTimerScheduleSnapshot,
 } from '../utils/timerScheduleStorage.js';
@@ -379,24 +380,10 @@ const TimerControlModule = () => {
         scheduleClearedDuringRunRef.current = Boolean(
           (currentTimer?.running || currentTimer?.paused) && currentTimer?.sets?.length > 0
         );
-        const clearedSettings = {
-          ...latestControlSettingsRef.current,
-          useSets: true,
-          sets: [],
-          scheduleTitle: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
-          scheduleEventStartTime: '',
-          scheduleEventDate: '',
-          scheduleScheduledStartAt: null,
-          scheduleIdealEndTime: '',
-          scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
-          showGlobalClockDuringPause: DEFAULT_TIMER_CONTROL_SETTINGS.showGlobalClockDuringPause,
-          scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
-          autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
-          indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
-          indicatorSeconds: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds,
-          indicatorLabel: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
-          settingsUpdatedAt: Date.now(),
-        };
+        const clearedSettings = clearTimerScheduleSettings(
+          latestControlSettingsRef.current,
+          Date.now(),
+        );
         latestControlSettingsRef.current = clearedSettings;
         updateTimerControlSettings(clearedSettings, { touch: false });
         return;
@@ -1024,22 +1011,7 @@ const TimerControlModule = () => {
     if (result !== 'clear') return;
 
     scheduleClearedDuringRunRef.current = activeTimerUsesSets;
-    setTimerControlSettings({
-      useSets: true,
-      sets: [],
-      scheduleTitle: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
-      scheduleEventStartTime: '',
-      scheduleEventDate: '',
-      scheduleScheduledStartAt: null,
-      scheduleIdealEndTime: '',
-      scheduleShowGlobalTimeDuringManualItems: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleShowGlobalTimeDuringManualItems,
-      showGlobalClockDuringPause: DEFAULT_TIMER_CONTROL_SETTINGS.showGlobalClockDuringPause,
-      scheduleNotificationsEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleNotificationsEnabled,
-      autoStartNext: DEFAULT_TIMER_CONTROL_SETTINGS.autoStartNext,
-      indicatorEnabled: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorEnabled,
-      indicatorSeconds: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorSeconds,
-      indicatorLabel: DEFAULT_TIMER_CONTROL_SETTINGS.indicatorLabel,
-    });
+    setTimerControlSettings(clearTimerScheduleSettings(latestControlSettingsRef.current));
     showToast({
       title: 'Schedule cleared',
       message: activeTimerUsesSets

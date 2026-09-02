@@ -11,6 +11,7 @@ export default function ControlPanelHeaderActions({
   handleOpenOnlineLyricsSearch,
   handleOpenSetlist,
   handleOpenTimerControl,
+  handleOpenProjectOutput,
   iconButtonClass,
   maxSetlistFiles,
   refreshAuthToken,
@@ -92,18 +93,7 @@ export default function ControlPanelHeaderActions({
             data-tour="project-output"
             aria-label="Project to display"
             className={iconButtonClass(false)}
-            onClick={() => {
-              showModal({
-                title: 'Project to Display',
-                headerDescription: 'Choose what to show and where it should appear.',
-                component: 'ProjectOutput',
-                variant: 'info',
-                size: 'lg',
-                className: 'max-w-4xl',
-                actions: [],
-                customLayout: true,
-              });
-            }}
+            onClick={handleOpenProjectOutput}
           >
             <MonitorUp className="h-4 w-4" />
           </button>

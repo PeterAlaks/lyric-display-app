@@ -87,6 +87,14 @@ test('cold folder browsing replaces stale navigator panes with loading feedback'
   assert.match(source, /directoryLoading\s*\? 'Opening folder…'/);
 });
 
+test('file navigator Enter handling keeps working after a result row receives mouse focus', async () => {
+  const source = await readFile(new URL('../src/components/FileNavigatorModal.jsx', import.meta.url), 'utf8');
+
+  assert.match(source, /closest\('\[data-file-navigator-index\]'\)/);
+  assert.match(source, /closest\('button'\)\s*&&\s*!resultButton/);
+  assert.match(source, /openEntry\(displayedEntries\[selectedIndex\]\)/);
+});
+
 test('file navigator requests preserve destination and setlist selection limits', () => {
   const previousWindow = globalThis.window;
   let receivedEvent = null;

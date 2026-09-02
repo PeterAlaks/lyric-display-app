@@ -13,7 +13,7 @@ export const useControlPanelFileActions = ({
   showToast,
   trackAction,
 }) => {
-  const openFileDialog = useCallback(async () => {
+  const openNativeFileDialog = useCallback(async () => {
     if (!isAuthenticated) {
       showToast({
         title: 'Authentication Required',
@@ -22,8 +22,6 @@ export const useControlPanelFileActions = ({
       });
       return;
     }
-
-    if (openFileNavigator({ destination: 'control' })) return;
 
     try {
       if (window?.electronAPI?.loadLyricsFile) {
@@ -39,6 +37,15 @@ export const useControlPanelFileActions = ({
     } catch { }
     fileInputRef.current?.click();
   }, [fileInputRef, isAuthenticated, showToast, trackAction]);
+
+  const openFileDialog = useCallback(() => {
+    if (!isAuthenticated) {
+      void openNativeFileDialog();
+      return;
+    }
+    if (openFileNavigator({ destination: 'control' })) return;
+    void openNativeFileDialog();
+  }, [isAuthenticated, openNativeFileDialog]);
 
   const handleCreateNewSong = useCallback(() => {
     navigate('/new-song?mode=new');
@@ -101,6 +108,7 @@ export const useControlPanelFileActions = ({
     handleOpenOnlineLyricsSearch,
     handleOpenSetlist,
     handleOpenTimerControl,
+    openNativeFileDialog,
     openFileDialog,
   };
 };

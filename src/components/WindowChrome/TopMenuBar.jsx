@@ -662,7 +662,7 @@ const TopMenuBar = () => {
                 onMouseLeave={() => scheduleCloseMenu('output')}
                 onKeyDown={getMenuKeyDown('output')}
               >
-                <MenuItem ref={(el) => registerItemRef('output', 0, el)} label="Project to Display" onClick={menuHandlers.handleDisplaySettings} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 0} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
+                <MenuItem ref={(el) => registerItemRef('output', 0, el)} label="Project to Display" shortcut="Ctrl/Cmd + Alt + P" onClick={menuHandlers.handleDisplaySettings} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 0} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <MenuItem ref={(el) => registerItemRef('output', 1, el)} label="Preview Outputs" onClick={menuHandlers.handlePreviewOutputs} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 1} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <MenuItem ref={(el) => registerItemRef('output', 2, el)} label="Sync Outputs" onClick={menuHandlers.handleSyncOutputs} disabled={!isControlPanelRoute} active={openMenu === 'output' && activeIndex === 2} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <Separator />
@@ -696,7 +696,7 @@ const TopMenuBar = () => {
                 onKeyDown={getMenuKeyDown('tools')}
               >
                 <MenuItem ref={(el) => registerItemRef('tools', 0, el)} label="Setlist Manager" shortcut="Ctrl/Cmd + Shift + S" onClick={menuHandlers.handleOpenSetlist} disabled={!isControlPanelRoute} active={openMenu === 'tools' && activeIndex === 0} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
-                <MenuItem ref={(el) => registerItemRef('tools', 1, el)} label="Timer Control" onClick={menuHandlers.handleOpenTimerControl} active={openMenu === 'tools' && activeIndex === 1} />
+                <MenuItem ref={(el) => registerItemRef('tools', 1, el)} label="Timer Control" shortcut="Ctrl/Cmd + Shift + T" onClick={menuHandlers.handleOpenTimerControl} active={openMenu === 'tools' && activeIndex === 1} />
                 <MenuItem ref={(el) => registerItemRef('tools', 2, el)} label="Connect Mobile Controller" onClick={menuHandlers.handleConnectMobile} disabled={!isControlPanelRoute} active={openMenu === 'tools' && activeIndex === 2} title={!isControlPanelRoute ? controlPanelOnlyTitle : undefined} />
                 <MenuItem ref={(el) => registerItemRef('tools', 3, el)} label="LyricDisplay Dock Setup" onClick={menuHandlers.handleObsDockSetup} active={openMenu === 'tools' && activeIndex === 3} />
                 <MenuItem ref={(el) => registerItemRef('tools', 4, el)} label="Lyric Video Studio" onClick={menuHandlers.handleOpenLyricVideoStudio} active={openMenu === 'tools' && activeIndex === 4} />

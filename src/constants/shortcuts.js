@@ -1,3 +1,9 @@
+export const isAutoplayKeyboardShortcut = (event) => (
+  Boolean(event?.ctrlKey || event?.metaKey)
+  && !event?.altKey
+  && String(event?.key || '').toLowerCase() === 'p'
+);
+
 export const SHORTCUTS = [
   {
     category: 'General & Window',
@@ -17,10 +23,13 @@ export const SHORTCUTS = [
     category: 'Control Panel — Files & Setlist',
     items: [
       { label: 'Open file navigator', combo: 'Ctrl/Cmd + O' },
+      { label: 'Open native file dialog', combo: 'Ctrl/Cmd + Alt + O' },
       { label: 'Create new lyrics', combo: 'Ctrl/Cmd + N' },
       { label: 'Edit loaded lyrics', combo: 'Ctrl/Cmd + E' },
       { label: 'Open Setlist Manager', combo: 'Ctrl/Cmd + Shift + S' },
       { label: 'Open Online Lyrics Search', combo: 'Ctrl/Cmd + Shift + O' },
+      { label: 'Open Timer Control', combo: 'Ctrl/Cmd + Shift + T' },
+      { label: 'Open Project Output', combo: 'Ctrl/Cmd + Alt + P' },
       { label: 'Add current song to setlist', combo: 'Ctrl/Cmd + Alt + S' },
       { label: 'Previous / next setlist song', combo: 'Ctrl/Cmd + Shift + ← / →' },
     ],

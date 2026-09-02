@@ -1,6 +1,23 @@
-import { normalizeTimerControlSettings } from './timerUtils.js';
+import {
+  DEFAULT_TIMER_CONTROL_SETTINGS,
+  normalizeTimerControlSettings,
+} from './timerUtils.js';
 
 export const TIMER_SCHEDULE_STORAGE_KEY = 'lyricdisplay_saved_timer_schedule_v1';
+
+export const clearTimerScheduleSettings = (settings, settingsUpdatedAt = Date.now()) => (
+  normalizeTimerControlSettings({
+    ...settings,
+    useSets: true,
+    sets: [],
+    scheduleTitle: DEFAULT_TIMER_CONTROL_SETTINGS.scheduleTitle,
+    scheduleEventStartTime: '',
+    scheduleEventDate: '',
+    scheduleScheduledStartAt: null,
+    scheduleIdealEndTime: '',
+    settingsUpdatedAt,
+  })
+);
 
 const selectTimerScheduleSettings = (settings) => ({
   useSets: settings.useSets,

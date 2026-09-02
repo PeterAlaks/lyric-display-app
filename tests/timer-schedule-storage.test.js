@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   TIMER_SCHEDULE_STORAGE_KEY,
+  clearTimerScheduleSettings,
   readTimerScheduleSnapshot,
   saveTimerScheduleSnapshot,
 } from '../src/utils/timerScheduleStorage.js';
@@ -144,6 +145,45 @@ test('clearing a timer schedule removes its saved snapshot', () => {
 
   assert.equal(storage.getItem(TIMER_SCHEDULE_STORAGE_KEY), null);
   assert.equal(readTimerScheduleSnapshot(storage), null);
+});
+
+test('clearing a schedule preserves the last-used automation options for the next schedule', () => {
+  const cleared = clearTimerScheduleSettings({
+    useSets: true,
+    sets: [{ id: 'welcome', label: 'Welcome', durationMs: 60_000, timed: true }],
+    scheduleTitle: 'Sunday Service',
+    scheduleEventStartTime: '09:00',
+    scheduleEventDate: '2026-09-06',
+    scheduleScheduledStartAt: 2_000_000,
+    scheduleIdealEndTime: '11:00',
+    autoStartNext: false,
+    scheduleShowGlobalTimeDuringManualItems: false,
+    showGlobalClockDuringPause: true,
+    scheduleNotificationsEnabled: false,
+    indicatorEnabled: false,
+    indicatorSeconds: 23,
+    indicatorLabel: 'Please wait',
+    warningSeconds: 90,
+    criticalSeconds: 15,
+  }, 3_000_000);
+
+  assert.equal(cleared.useSets, true);
+  assert.deepEqual(cleared.sets, []);
+  assert.equal(cleared.scheduleTitle, 'Service Schedule');
+  assert.equal(cleared.scheduleEventStartTime, '');
+  assert.equal(cleared.scheduleEventDate, '');
+  assert.equal(cleared.scheduleScheduledStartAt, null);
+  assert.equal(cleared.scheduleIdealEndTime, '');
+  assert.equal(cleared.autoStartNext, false);
+  assert.equal(cleared.scheduleShowGlobalTimeDuringManualItems, false);
+  assert.equal(cleared.showGlobalClockDuringPause, true);
+  assert.equal(cleared.scheduleNotificationsEnabled, false);
+  assert.equal(cleared.indicatorEnabled, false);
+  assert.equal(cleared.indicatorSeconds, 23);
+  assert.equal(cleared.indicatorLabel, 'Please wait');
+  assert.equal(cleared.warningSeconds, 90);
+  assert.equal(cleared.criticalSeconds, 15);
+  assert.equal(cleared.settingsUpdatedAt, 3_000_000);
 });
 
 test('saved timer schedules reject snapshots from unsupported future versions', () => {

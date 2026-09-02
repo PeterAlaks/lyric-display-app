@@ -8,6 +8,7 @@ import {
   Play,
   Plus,
   Settings2,
+  SkipBack,
   SkipForward,
   Square,
   Timer,
@@ -487,15 +488,28 @@ const TimerTransport = ({ useSets, active, activeTimerUsesSets, liveControlReady
       <Button variant="destructive" onClick={handleStop} disabled={!active || !liveControlReady} className="w-full text-xs"><Square className="h-4 w-4" />Stop</Button>
     </div>
     <div className={`grid gap-2 ${(useSets || activeTimerUsesSets) ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      {(useSets || activeTimerUsesSets) && (
+        <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(-300000)} disabled={!liveControlReady || !active || timerState.mode === 'countup'}>-5m</Button>
+      )}
       <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(-60000)} disabled={!liveControlReady || !active || timerState.mode === 'countup'}>-1m</Button>
       <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(60000)} disabled={!liveControlReady || !active || timerState.mode === 'countup'}>+1m</Button>
       <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={() => actions.addTime(300000)} disabled={!liveControlReady || !active || timerState.mode === 'countup'}>+5m</Button>
-      {(useSets || activeTimerUsesSets) && (
+    </div>
+    {(useSets || activeTimerUsesSets) && (
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          className={`text-[11px] ${outlineButtonClass}`}
+          onClick={() => actions.jumpToSet(timerState.activeSetIndex - 1)}
+          disabled={!liveControlReady || !activeTimerUsesSets || timerState.activeSetIndex <= 0}
+        >
+          <SkipBack className="h-4 w-4" />Previous
+        </Button>
         <Button variant="outline" className={`text-[11px] ${outlineButtonClass}`} onClick={actions.advanceSchedule} disabled={!liveControlReady || !activeTimerUsesSets}>
           <SkipForward className="h-4 w-4" />{timerState.sets?.[timerState.activeSetIndex + 1] ? 'Next' : 'Finish'}
         </Button>
-      )}
-    </div>
+      </div>
+    )}
   </div>
 );
 

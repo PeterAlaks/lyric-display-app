@@ -288,6 +288,7 @@ const LyricDisplayApp = () => {
     handleOpenOnlineLyricsSearch,
     handleOpenSetlist,
     handleOpenTimerControl,
+    openNativeFileDialog,
     openFileDialog,
   } = useControlPanelFileActions({
     clearSearch,
@@ -301,6 +302,19 @@ const LyricDisplayApp = () => {
     showToast,
     trackAction,
   });
+
+  const handleOpenProjectOutput = React.useCallback(() => {
+    showModal({
+      title: 'Project to Display',
+      headerDescription: 'Choose what to show and where it should appear.',
+      component: 'ProjectOutput',
+      variant: 'info',
+      size: 'lg',
+      className: 'max-w-4xl',
+      actions: [],
+      customLayout: true,
+    });
+  }, [showModal]);
 
   const handleLineSelect = (index) => {
     selectLine(index);
@@ -390,6 +404,9 @@ const LyricDisplayApp = () => {
     handleOpenSetlist,
     handleOpenOnlineLyricsSearch,
     handleOpenFileDialog: openFileDialog,
+    handleOpenNativeFileDialog: openNativeFileDialog,
+    handleOpenTimerControl,
+    handleOpenProjectOutput,
     handleCreateNewSong,
     handleEditLyrics,
     handleAddToSetlist,
@@ -457,6 +474,7 @@ const LyricDisplayApp = () => {
               handleOpenOnlineLyricsSearch={handleOpenOnlineLyricsSearch}
               handleOpenSetlist={handleOpenSetlist}
               handleOpenTimerControl={handleOpenTimerControl}
+              handleOpenProjectOutput={handleOpenProjectOutput}
               iconButtonClass={iconButtonClass}
               maxSetlistFiles={maxSetlistFiles}
               refreshAuthToken={refreshAuthToken}

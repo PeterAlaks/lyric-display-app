@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createTimerSlice } from '../src/context/lyricsStore/timerSlice.js';
-import { getTextFitShape } from '../src/hooks/useAutoFitText.js';
+import { doesTextElementFit, getTextFitShape } from '../src/hooks/useAutoFitText.js';
 import {
   MAX_TIMER_SETS,
   getTimerDisplay,
@@ -34,6 +34,22 @@ function createTimerStoreHarness() {
   };
 }
 
+test('timer autofit measures intrinsic overflow instead of a clipped or transformed box', () => {
+  assert.equal(doesTextElementFit({
+    scrollWidth: 720,
+    scrollHeight: 180,
+    offsetWidth: 480,
+    offsetHeight: 180,
+  }, 500, 240), false);
+
+  assert.equal(doesTextElementFit({
+    scrollWidth: 480,
+    scrollHeight: 180,
+    offsetWidth: 480,
+    offsetHeight: 180,
+  }, 500, 240), true);
+});
+
 test('timer-control preview auto-fits hour-long timer values to its own bounds', async () => {
   const timerControlSource = await readFile(
     new URL('../src/components/TimerControlModule.jsx', import.meta.url),
@@ -63,6 +79,18 @@ test('timer autofit invalidates cached measurements after projection routing and
   assert.match(autoFitSource, /addEventListener\('pageshow', scheduleRecoveryFit\)/);
   assert.match(autoFitSource, /addEventListener\('visibilitychange', recoverWhenVisible\)/);
   assert.match(autoFitSource, /scheduleFit\(\{ ignoreCache: true \}\)/);
+});
+
+test('schedule timer transport keeps time adjustments separate from previous and next navigation', async () => {
+  const timerLayoutSource = await readFile(
+    new URL('../src/components/TimerControlLayout.jsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(timerLayoutSource, /actions\.addTime\(-300000\)[\s\S]*?>-5m</);
+  assert.match(timerLayoutSource, /actions\.jumpToSet\(timerState\.activeSetIndex - 1\)/);
+  assert.match(timerLayoutSource, /<SkipBack[^>]*\s\/>Previous/);
+  assert.match(timerLayoutSource, /grid grid-cols-2 gap-2[\s\S]*?<SkipForward[^>]*\s\/>\{[^\n]*'Next'[^\n]*'Finish'/);
 });
 
 test('timer progress advances for normalized stage panel countdown state', () => {

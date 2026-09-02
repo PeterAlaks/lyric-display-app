@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
 import { findNavigableLyricLineIndex } from '../../utils/parseLyrics';
 import useLyricsStore from '../../context/LyricsStore';
+import { isAutoplayKeyboardShortcut } from '../../constants/shortcuts';
 import {
   dispatchCommand,
   isCommandFocusProtected,
@@ -36,6 +37,9 @@ export const useKeyboardShortcuts = ({
   handleOpenSetlist,
   handleOpenOnlineLyricsSearch,
   handleOpenFileDialog,
+  handleOpenNativeFileDialog,
+  handleOpenTimerControl,
+  handleOpenProjectOutput,
   handleCreateNewSong,
   handleEditLyrics,
   handleAddToSetlist,
@@ -54,9 +58,27 @@ export const useKeyboardShortcuts = ({
       const activeElement = document.activeElement;
       if (isModalFocusProtected(event.target, activeElement)) return;
 
-      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'o' || event.key === 'O')) {
+      if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && (event.key === 'o' || event.key === 'O')) {
+        event.preventDefault();
+        handleOpenNativeFileDialog?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.key === 'o' || event.key === 'O')) {
         event.preventDefault();
         handleOpenFileDialog?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && (event.key === 't' || event.key === 'T')) {
+        event.preventDefault();
+        handleOpenTimerControl?.();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && (event.key === 'p' || event.key === 'P')) {
+        event.preventDefault();
+        handleOpenProjectOutput?.();
         return;
       }
 
@@ -112,7 +134,7 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleOpenSetlist, handleOpenOnlineLyricsSearch, handleOpenFileDialog, handleCreateNewSong, handleEditLyrics, hasLyrics, handleAddToSetlist, handleNavigateSetlistPrevious, handleNavigateSetlistNext, handleOpenPreferences]);
+  }, [handleOpenSetlist, handleOpenOnlineLyricsSearch, handleOpenFileDialog, handleOpenNativeFileDialog, handleOpenTimerControl, handleOpenProjectOutput, handleCreateNewSong, handleEditLyrics, hasLyrics, handleAddToSetlist, handleNavigateSetlistPrevious, handleNavigateSetlistNext, handleOpenPreferences]);
 
   useEffect(() => {
     if (!hasLyrics) return;
@@ -162,7 +184,7 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'P')) {
+      if (isAutoplayKeyboardShortcut(event)) {
         if (isModalFocused) return;
         const useIntelligentAutoplay = event.shiftKey && hasValidTimestamps(lyricsTimestamps);
         const action = useIntelligentAutoplay ? 'toggle-intelligent-autoplay' : 'toggle-autoplay';
