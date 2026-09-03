@@ -25,6 +25,15 @@ export const doesTextElementFit = (textEl, availableWidth, availableHeight) => {
   return measuredWidth <= availableWidth && measuredHeight <= availableHeight;
 };
 
+export const createLatestElementRef = (setElement) => (element) => {
+  if (!element) return undefined;
+  setElement(element);
+  return () => {
+    // AnimatePresence can release an exiting node after its replacement is already attached.
+    setElement((current) => (current === element ? null : current));
+  };
+};
+
 const rememberAutoFit = (key, value) => {
   if (autoFitCache.has(key)) {
     autoFitCache.delete(key);
@@ -39,6 +48,8 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
   const [containerEl, setContainerEl] = React.useState(null);
   const [textEl, setTextEl] = React.useState(null);
   const [fontSize, setFontSize] = React.useState(null);
+  const containerRef = React.useMemo(() => createLatestElementRef(setContainerEl), []);
+  const textRef = React.useMemo(() => createLatestElementRef(setTextEl), []);
 
   React.useLayoutEffect(() => {
     if (!enabled || !containerEl || !textEl) return undefined;
@@ -139,8 +150,8 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
   }, [containerEl, enabled, fitKey, textEl]);
 
   return {
-    containerRef: setContainerEl,
-    textRef: setTextEl,
+    containerRef,
+    textRef,
     fontSize,
   };
 };

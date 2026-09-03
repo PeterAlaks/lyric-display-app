@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createTimerSlice } from '../src/context/lyricsStore/timerSlice.js';
-import { doesTextElementFit, getTextFitShape } from '../src/hooks/useAutoFitText.js';
+import {
+  createLatestElementRef,
+  doesTextElementFit,
+  getTextFitShape,
+} from '../src/hooks/useAutoFitText.js';
 import {
   MAX_TIMER_SETS,
   getTimerDisplay,
@@ -48,6 +52,25 @@ test('timer autofit measures intrinsic overflow instead of a clipped or transfor
     offsetWidth: 480,
     offsetHeight: 180,
   }, 500, 240), true);
+});
+
+test('timer autofit keeps the entering display refs when the previous display exits', () => {
+  let currentElement = null;
+  const setElement = (next) => {
+    currentElement = typeof next === 'function' ? next(currentElement) : next;
+  };
+  const attachElement = createLatestElementRef(setElement);
+  const exitingElement = { id: 'global-clock' };
+  const enteringElement = { id: 'timer' };
+
+  const releaseExitingElement = attachElement(exitingElement);
+  const releaseEnteringElement = attachElement(enteringElement);
+  releaseExitingElement();
+
+  assert.equal(currentElement, enteringElement);
+
+  releaseEnteringElement();
+  assert.equal(currentElement, null);
 });
 
 test('timer-control preview auto-fits hour-long timer values to its own bounds', async () => {
