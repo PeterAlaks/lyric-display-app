@@ -41,7 +41,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     exitTimer.current.set(id, ex);
   }, []);
 
-  const show = useCallback(({ title, message, variant = 'info', duration = 4000, actions = [], playTone, dedupeKey }) => {
+  const show = useCallback(({ title, message, variant = 'info', duration = 4000, actions = [], playSound, dedupeKey }) => {
     const id = idSeq++;
     const toast = { id, title, message, variant, actions, createdAt: Date.now(), entering: true, exiting: false, dedupeKey: dedupeKey || null };
     setToasts((prev) => {
@@ -64,8 +64,8 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     });
 
     const now = Date.now();
-    if (typeof playTone === 'function' && !muted && (now - lastToneAt.current > TONE_GAP_MS)) {
-      try { playTone(variant); } catch { }
+    if (typeof playSound === 'function' && !muted && (now - lastToneAt.current > TONE_GAP_MS)) {
+      try { playSound(variant); } catch { }
       lastToneAt.current = now;
     }
 

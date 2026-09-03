@@ -1,6 +1,6 @@
 import { useContext, useCallback } from 'react';
 import { ToastContext, globalToastRef } from '@/components/toast/ToastProvider';
-import { playTone } from '@/utils/toastSounds';
+import { playToastSound } from '@/utils/toastSounds';
 
 export default function useToast() {
   const ctx = useContext(ToastContext);
@@ -8,7 +8,7 @@ export default function useToast() {
   const showToast = useCallback((opts) => {
     const target = ctx || globalToastRef.current;
     if (target) {
-      return target.show({ playTone, ...opts });
+      return target.show({ playSound: playToastSound, ...opts });
     }
     return null;
   }, [ctx]);
