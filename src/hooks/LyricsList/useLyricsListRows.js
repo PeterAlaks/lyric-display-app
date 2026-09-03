@@ -118,6 +118,10 @@ export default function useLyricsListRows({
       return averageContentHeight + rowGap;
     },
     getRowHeight: (index) => {
+      if (isStructureTagLine(lyrics[index])) {
+        return getInitialRowHeight(index) + rowGap;
+      }
+
       const measured = dynamicRowHeight.getRowHeight?.(index);
       const contentHeight = measured ?? getInitialRowHeight(index);
       return contentHeight + rowGap;
@@ -126,7 +130,7 @@ export default function useLyricsListRows({
       const cleanup = dynamicRowHeight.observeRowElements?.(elements);
       return typeof cleanup === 'function' ? cleanup : () => { };
     },
-  }), [baseRowHeight, dynamicRowHeight, getInitialRowHeight, rowGap]);
+  }), [baseRowHeight, dynamicRowHeight, getInitialRowHeight, isStructureTagLine, lyrics, rowGap]);
 
   const getLineClassName = useCallback(
     (index, isVirtualized = false, isMultiSelected = false) => {
