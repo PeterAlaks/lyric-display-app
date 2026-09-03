@@ -105,6 +105,15 @@ export function AboutAppModal({ version = '1.0.0', onClose }) {
               </p>
             </CreditBlock>
 
+            <CreditBlock title="Toast Sounds">
+              <p>
+                Bundled toast sounds from Pixabay: success by{' '}
+                <Link href="https://pixabay.com/users/universfield-28281460/">Universfield</Link>;
+                {' '}info, warning, and error by{' '}
+                <Link href="https://pixabay.com/users/freesoundeffects-48326557/">freesoundeffects</Link>.
+              </p>
+            </CreditBlock>
+
             <CreditBlock title="Loading Screen Photography">
               <p>
                 Photo by{' '}

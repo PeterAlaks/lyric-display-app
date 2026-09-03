@@ -117,6 +117,8 @@ Developed by Peter Alakembi with contributions from David Okaliwe and the LyricD
 
 Lyric provider content and metadata remain the property of their respective rights holders. NDI is a trademark of Vizrt NDI AB; LyricDisplay is not affiliated with or endorsed by Vizrt NDI AB. See [TRADEMARK](TRADEMARK) for project trademark terms.
 
+Third-party software and media credits are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ## Support
 
 - [Report a bug or request a feature](https://github.com/PeterAlaks/lyric-display-app/issues)

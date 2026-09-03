@@ -1,0 +1,15 @@
+LyricDisplay Toast Sounds
+=========================
+
+These toast sounds were downloaded from Pixabay and are credited to the
+following creators:
+
+success.mp3
+  Universfield
+  https://pixabay.com/users/universfield-28281460/
+
+error.mp3, info.mp3, and warn.mp3
+  freesoundeffects
+  https://pixabay.com/users/freesoundeffects-48326557/
+
+Thank you to these creators for making their work available.

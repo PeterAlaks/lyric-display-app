@@ -28,3 +28,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 The bundled visualization preset names retain their original creator attribution.
+
+## Toast Sounds
+
+The bundled toast sounds were downloaded from Pixabay:
+
+- `success.mp3` by [Universfield](https://pixabay.com/users/universfield-28281460/)
+- `error.mp3`, `info.mp3`, and `warn.mp3` by [freesoundeffects](https://pixabay.com/users/freesoundeffects-48326557/)
+
+Thank you to these creators for making their work available.
