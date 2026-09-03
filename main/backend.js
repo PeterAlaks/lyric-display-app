@@ -412,7 +412,10 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
 
       if (msg?.status === 'error' && msg?.error === 'EADDRINUSE' && !isResolved) {
         console.error(`Backend failed: Port ${msg.port} is already in use`);
-        rejectStartup(new Error('PORT_IN_USE'));
+        const portConflict = new Error('PORT_IN_USE');
+        portConflict.code = 'PORT_IN_USE';
+        portConflict.port = normalizeBackendPort(msg.port, backendPort);
+        rejectStartup(portConflict);
         return;
       }
 

@@ -2,12 +2,43 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import * as userPreferences from '../userPreferences.js';
 import { recordSuccessfulAppLaunch } from '../telemetry.js';
 import { setUpdateSessionActive } from '../updater.js';
+import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../../shared/backendPort.js';
+import { prepareRendererPersistentStorageForPortChange } from '../rendererPersistentStorage.js';
+import { probeBackendPort } from '../portAvailability.js';
 
 /**
  * Register user preferences IPC handlers
  * Handles getting, setting, and resetting user preferences
  */
 export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
+  const validatePortChange = async (nextPort) => {
+    if (!app.isPackaged) return { success: true };
+    const targetPort = normalizeBackendPort(nextPort, DEFAULT_BACKEND_PORT);
+    const savedPort = normalizeBackendPort(
+      userPreferences.getPreference('advanced.serverPort'),
+      DEFAULT_BACKEND_PORT,
+    );
+    if (targetPort === savedPort) return { success: true };
+
+    const runningPort = normalizeBackendPort(process.env.PORT, DEFAULT_BACKEND_PORT);
+    if (targetPort === runningPort) return { success: true };
+
+    const availability = await probeBackendPort(targetPort);
+    if (!availability.available) {
+      const reason = availability.code === 'EADDRINUSE'
+        ? 'is already in use by another application or service'
+        : 'could not be opened on this computer';
+      return {
+        success: false,
+        code: 'PORT_UNAVAILABLE',
+        port: targetPort,
+        error: `Port ${targetPort} ${reason}. Choose a different production port.`,
+      };
+    }
+
+    return prepareRendererPersistentStorageForPortChange();
+  };
+
   const broadcastPreferencesUpdated = (category) => {
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win || win.isDestroyed()) continue;
@@ -52,6 +83,10 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
 
   ipcMain.handle('preferences:set', async (_event, { path, value }) => {
     try {
+      if (path === 'advanced.serverPort') {
+        const storageResult = await validatePortChange(value);
+        if (!storageResult.success) return storageResult;
+      }
       const usageSharingWasEnabled = path === 'advanced.shareAnonymousUsageData'
         ? userPreferences.getPreference(path) === true
         : false;
@@ -78,6 +113,8 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
 
   ipcMain.handle('preferences:save-all', async (_event, { preferences }) => {
     try {
+      const storageResult = await validatePortChange(preferences?.advanced?.serverPort);
+      if (!storageResult.success) return storageResult;
       const usageSharingWasEnabled = userPreferences.getPreference('advanced.shareAnonymousUsageData') === true;
       const result = userPreferences.saveAllPreferences(preferences);
       if (result.success && typeof preferences?.general?.liveSafetyMode === 'boolean') {
@@ -99,6 +136,10 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
 
   ipcMain.handle('preferences:reset-category', async (_event, { category }) => {
     try {
+      if (category === 'advanced') {
+        const storageResult = await validatePortChange(DEFAULT_BACKEND_PORT);
+        if (!storageResult.success) return storageResult;
+      }
       const result = userPreferences.resetCategoryToDefaults(category);
       if (!result.success) return result;
       if (category === 'advanced') {
@@ -121,6 +162,8 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
 
   ipcMain.handle('preferences:reset-all', async () => {
     try {
+      const storageResult = await validatePortChange(DEFAULT_BACKEND_PORT);
+      if (!storageResult.success) return storageResult;
       const result = userPreferences.resetAllToDefaults();
       if (result.success) {
         const decisionResult = userPreferences.setPreference('advanced.telemetryConsentDecided', true);

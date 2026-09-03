@@ -1,6 +1,7 @@
 import { ChevronRight, Globe2, Key, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { writePersistentStorageItem } from '@/utils/persistentStorage';
 
 const providerLogoMap = {
   lyricsOvh: '/logos/lyricsovh-logo.png',
@@ -226,7 +227,7 @@ const ProviderAdvancedPanel = ({
               const newExpanded = !advancedExpanded;
               setAdvancedExpanded(newExpanded);
               try {
-                localStorage.setItem('lyricdisplay_advancedExpanded', newExpanded.toString());
+                writePersistentStorageItem('lyricdisplay_advancedExpanded', newExpanded.toString());
               } catch (err) {
                 console.warn('Failed to save advanced section state:', err);
               }

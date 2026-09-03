@@ -1,6 +1,7 @@
 import { ipcMain, app } from 'electron';
 import * as secureTokenStore from '../secureTokenStore.js';
 import { getBackendPort } from '../backend.js';
+import { flushRendererPersistentStorage } from '../rendererPersistentStorage.js';
 
 const sanitizeSecretsStatus = (status) => {
   if (!status || typeof status !== 'object') {
@@ -61,6 +62,11 @@ export function registerSecurityHandlers() {
     try {
       const payload = await fetchBackendJson('/api/admin/secrets/rotate', { method: 'POST' });
       await secureTokenStore.clearAllTokens();
+
+      const storageResult = flushRendererPersistentStorage();
+      if (!storageResult.success) {
+        throw new Error(storageResult.error || 'Renderer state could not be saved before restart.');
+      }
 
       setTimeout(() => {
         app.relaunch();

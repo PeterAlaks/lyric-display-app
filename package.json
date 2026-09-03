@@ -29,6 +29,7 @@
     "check:static": "node scripts/check-static.js",
     "check:contracts": "node scripts/validate-api-contracts.js",
     "test:unit": "node --test tests/*.test.js",
+    "test:renderer-storage": "node scripts/run-renderer-storage-smoke.js",
     "test:lyrics-canary": "node --test tests/*.canary.js",
     "test:security": "node --test tests/security-hardening.test.js",
     "test:platform-builds": "gh workflow run test-platform-builds.yml",

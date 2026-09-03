@@ -98,6 +98,7 @@ function runReleasePreflight() {
         { label: 'Server dependency audit', command: 'npm run audit:server' },
         { label: 'Static checks', command: 'npm run check:static' },
         { label: 'Unit tests', command: 'npm run test:unit' },
+        { label: 'Renderer port portability', command: 'npm run test:renderer-storage' },
     ];
 
     console.log(chalk.blue('\nRunning release preflight checks...'));

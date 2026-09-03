@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Activity, Clock, Users, AlertCircle, CheckCircle, RefreshCw, RefreshCcw, Monitor, Smartphone, Globe } from 'lucide-react';
 import { resolveBackendUrl } from '../utils/network';
 import { useSyncTimer } from '../hooks/useSyncTimer';
+import { readPersistentStorageItem } from '../utils/persistentStorage';
 
 const CLIENT_TYPE_LABELS = {
     desktop: 'Desktop Control Panel',
@@ -41,7 +42,7 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
     useEffect(() => {
         const updateSyncTime = () => {
             try {
-                const stored = localStorage.getItem('lastSyncTime');
+                const stored = readPersistentStorageItem('lastSyncTime');
                 if (stored) {
                     setLastSyncTime(parseInt(stored, 10));
                 }
@@ -66,7 +67,7 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
                 try {
                     const stored = await window.electronAPI.tokenStore.get({
                         clientType: 'desktop',
-                        deviceId: localStorage.getItem('lyric_display_device_id')
+                        deviceId: readPersistentStorageItem('lyric_display_device_id')
                     });
                     if (stored?.token) {
                         return stored.token;
@@ -76,7 +77,7 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
                 }
 
                 try {
-                    const deviceId = localStorage.getItem('lyric_display_device_id') ||
+                    const deviceId = readPersistentStorageItem('lyric_display_device_id') ||
                         `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -93,10 +94,10 @@ const ConnectionDiagnosticsModal = ({ darkMode }) => {
                 }
             }
 
-            const deviceId = localStorage.getItem('lyric_display_device_id');
+            const deviceId = readPersistentStorageItem('lyric_display_device_id');
             const clientType = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'web';
             const key = `lyric_display_token_${clientType}_${deviceId}`;
-            const stored = localStorage.getItem(key);
+            const stored = readPersistentStorageItem(key);
             if (stored) {
                 const parsed = JSON.parse(stored);
                 return parsed.token;

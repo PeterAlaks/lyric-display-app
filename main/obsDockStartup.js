@@ -3,6 +3,7 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { appRoot, isDev } from './paths.js';
 import { getBackendPort } from './backend.js';
+import { flushRendererPersistentStorage } from './rendererPersistentStorage.js';
 
 const OBS_DOCK_LOGIN_ARGS = ['--headless', '--obs-dock'];
 
@@ -108,6 +109,8 @@ export function getObsDockSetupInfo() {
 
 export function relaunchInObsDockHeadlessMode() {
   try {
+    const storageResult = flushRendererPersistentStorage();
+    if (!storageResult.success) return storageResult;
     app.relaunch({ args: getRelaunchArgs() });
     app.exit(0);
     return { success: true };
@@ -119,6 +122,8 @@ export function relaunchInObsDockHeadlessMode() {
 
 export function relaunchInDesktopMode() {
   try {
+    const storageResult = flushRendererPersistentStorage();
+    if (!storageResult.success) return storageResult;
     clearHeadlessEnvironment();
     app.isQuitting = true;
     app.relaunch({ args: getDesktopRelaunchArgs() });

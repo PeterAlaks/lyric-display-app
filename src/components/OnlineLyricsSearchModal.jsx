@@ -13,6 +13,7 @@ import { classifyError } from '../utils/errorClassification';
 import { useKeyboardShortcuts } from '../hooks/OnlineLyricsSearchModal/useKeyboardShortcuts';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { SlidingTabIndicator } from '@/components/ui/sliding-tab-indicator';
+import { readPersistentStorageItem, writePersistentStorageItem } from '../utils/persistentStorage';
 
 const DEFAULT_TAB = 'libraries';
 const INITIAL_STATE = {
@@ -93,10 +94,10 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
 
     const timer = setTimeout(() => {
       try {
-        const hasSeenWelcome = localStorage.getItem('lyricdisplay_hideWelcomeSplash');
+        const hasSeenWelcome = readPersistentStorageItem('lyricdisplay_hideWelcomeSplash');
         if (!hasSeenWelcome) {
           setShowWelcomeSplash(true);
-          localStorage.setItem('lyricdisplay_hideWelcomeSplash', 'true');
+          writePersistentStorageItem('lyricdisplay_hideWelcomeSplash', 'true');
         }
         hasCheckedWelcome.current = true;
       } catch (error) {
@@ -127,7 +128,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
   useEffect(() => {
     if (!isOpen || !visible) return;
     try {
-      const saved = localStorage.getItem('lyricdisplay_advancedExpanded');
+      const saved = readPersistentStorageItem('lyricdisplay_advancedExpanded');
       if (saved !== null) {
         setAdvancedExpanded(saved === 'true');
       }

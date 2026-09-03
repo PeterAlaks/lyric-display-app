@@ -1,5 +1,6 @@
 import React from 'react';
 import useLyricsStore from '../../context/LyricsStore';
+import { readPersistentStorageItem, writePersistentStorageItem } from '../../utils/persistentStorage';
 
 const useOutputSettings = ({
   availableTabs = ['output1', 'output2', 'stage'],
@@ -47,7 +48,7 @@ const useOutputSettings = ({
     const fallbackTab = availableTabs.includes('output1') ? 'output1' : (availableTabs[0] || 'output1');
 
     try {
-      const saved = localStorage.getItem('lyricdisplay_activeOutputTab');
+      const saved = readPersistentStorageItem('lyricdisplay_activeOutputTab');
       if (isPotentialTab(saved)) return saved;
       return fallbackTab;
     } catch {
@@ -72,7 +73,7 @@ const useOutputSettings = ({
     if (!hasHydrated) return;
     if (!isValidTab(resolvedActiveTab)) return;
     try {
-      localStorage.setItem('lyricdisplay_activeOutputTab', resolvedActiveTab);
+      writePersistentStorageItem('lyricdisplay_activeOutputTab', resolvedActiveTab);
     } catch (error) {
       console.warn('Failed to persist active tab:', error);
     }

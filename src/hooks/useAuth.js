@@ -3,6 +3,11 @@ import { logDebug, logError, logWarn } from '../utils/logger';
 import { readSecureToken, writeSecureToken, clearSecureToken } from '../utils/secureTokenStore';
 import { resolveBackendOrigin } from '../utils/network';
 import { getUrlParam, requiresJoinCode } from '../utils/clientType';
+import {
+  readPersistentStorageItem,
+  removePersistentStorageItem,
+  writePersistentStorageItem,
+} from '../utils/persistentStorage';
 
 const LOCKOUT_STORAGE_KEY = 'lyric_display_join_code_lock_until';
 const SECURE_TOKEN_READ_TIMEOUT_MS = 3000;
@@ -55,11 +60,11 @@ class AuthService {
   }
 
   generateDeviceId() {
-    const stored = localStorage.getItem('lyric_display_device_id');
+    const stored = readPersistentStorageItem('lyric_display_device_id');
     if (stored) return stored;
 
     const deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('lyric_display_device_id', deviceId);
+    writePersistentStorageItem('lyric_display_device_id', deviceId);
     return deviceId;
   }
 
@@ -103,7 +108,7 @@ class AuthService {
   }
 
   getStoredJoinCode() {
-    const stored = localStorage.getItem('lyric_display_join_code');
+    const stored = readPersistentStorageItem('lyric_display_join_code');
     if (!stored) return null;
 
     const trimmed = stored.trim();
@@ -118,7 +123,7 @@ class AuthService {
   storeJoinCode(code) {
     if (typeof code === 'string' && code.trim()) {
       const normalized = code.trim();
-      localStorage.setItem('lyric_display_join_code', normalized);
+      writePersistentStorageItem('lyric_display_join_code', normalized);
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('join-code-updated', { detail: { joinCode: normalized } }));
       }
@@ -126,7 +131,7 @@ class AuthService {
   }
 
   clearStoredJoinCode() {
-    localStorage.removeItem('lyric_display_join_code');
+    removePersistentStorageItem('lyric_display_join_code');
     if (typeof window !== 'undefined' && window.dispatchEvent) {
       window.dispatchEvent(new CustomEvent('join-code-updated', { detail: { joinCode: null } }));
     }
@@ -220,8 +225,8 @@ class AuthService {
   }
 
   getActiveLockout() {
-    if (typeof window === 'undefined' || !window.localStorage) return null;
-    const raw = localStorage.getItem(LOCKOUT_STORAGE_KEY);
+    if (typeof window === 'undefined') return null;
+    const raw = readPersistentStorageItem(LOCKOUT_STORAGE_KEY);
     if (!raw) {
       this.lockoutUntil = null;
       return null;
@@ -241,21 +246,21 @@ class AuthService {
   }
 
   setLockout(retryAfterMs) {
-    if (typeof window === 'undefined' || !window.localStorage) return null;
+    if (typeof window === 'undefined') return null;
     const duration = Math.max(0, Number(retryAfterMs) || 0);
     if (duration <= 0) {
       this.clearLockout();
       return null;
     }
     const unlockAt = Date.now() + duration;
-    localStorage.setItem(LOCKOUT_STORAGE_KEY, String(unlockAt));
+    writePersistentStorageItem(LOCKOUT_STORAGE_KEY, String(unlockAt));
     this.lockoutUntil = unlockAt;
     return unlockAt;
   }
 
   clearLockout() {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+    if (typeof window === 'undefined') return;
+    removePersistentStorageItem(LOCKOUT_STORAGE_KEY);
     this.lockoutUntil = null;
     this.waitingForAdminKey = false;
     this.adminKeyAvailablePromise = null;

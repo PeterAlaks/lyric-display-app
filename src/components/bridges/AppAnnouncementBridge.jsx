@@ -6,6 +6,7 @@ import {
   CHECK_APP_ANNOUNCEMENTS_EVENT,
   isAnnouncementSurfaceCalm,
 } from '@/constants/modalEvents';
+import { readPersistentStorageItem, writePersistentStorageItem } from '@/utils/persistentStorage';
 
 const ANNOUNCEMENT_URL = 'https://lyricdisplay.app/.netlify/functions/app-announcement';
 const SEEN_ANNOUNCEMENTS_KEY = 'lyricdisplay.seen-announcement-ids';
@@ -16,7 +17,7 @@ const REQUEST_TIMEOUT_MS = 12_000;
 
 const readSeenAnnouncementIds = () => {
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(SEEN_ANNOUNCEMENTS_KEY) || '[]');
+    const parsed = JSON.parse(readPersistentStorageItem(SEEN_ANNOUNCEMENTS_KEY) || '[]');
     return Array.isArray(parsed) ? [...new Set(parsed.filter((id) => typeof id === 'string'))] : [];
   } catch {
     return [];
@@ -26,7 +27,7 @@ const readSeenAnnouncementIds = () => {
 const rememberAnnouncement = (id) => {
   try {
     const ids = readSeenAnnouncementIds().filter((seenId) => seenId !== id);
-    window.localStorage.setItem(
+    writePersistentStorageItem(
       SEEN_ANNOUNCEMENTS_KEY,
       JSON.stringify([...ids, id]),
     );

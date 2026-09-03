@@ -79,6 +79,10 @@ const requiredArchiveEntries = [
   'server/index.js',
   'dist/index.html',
   'preload.js',
+  'main/portAvailability.js',
+  'main/rendererPersistentStorage.js',
+  'shared/backendPort.js',
+  'shared/rendererPersistentStorage.js',
   'shared/data/openhymnal-bundle.json',
 ];
 

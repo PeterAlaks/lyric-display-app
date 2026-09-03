@@ -15,6 +15,7 @@ import {
   normalizeTimerState,
   resetActiveTimerRuntime,
 } from '../../utils/timerUtils';
+import { readPersistentStorageItem, writePersistentStorageItem } from '../../utils/persistentStorage';
 
 const STORAGE_KEYS = {
   customUpcomingSongName: 'stage_custom_upcoming_song_name',
@@ -104,7 +105,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
 
   const getStoredTimerState = useCallback(() => {
     try {
-      const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
+      const raw = readPersistentStorageItem(TIMER_STORAGE_KEY);
       return raw ? normalizeTimerState(JSON.parse(raw)) : normalizeTimerState({});
     } catch {
       return normalizeTimerState({});
@@ -122,7 +123,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
     });
 
     try {
-      window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(normalized));
+      writePersistentStorageItem(TIMER_STORAGE_KEY, JSON.stringify(normalized));
       window.dispatchEvent(new CustomEvent('shared-timer-state', { detail: normalized }));
       window.dispatchEvent(new CustomEvent('stage-timer-update', { detail: normalized }));
     } catch {
@@ -223,7 +224,7 @@ const useStageDisplayControls = ({ settings, applySettings, update, showModal })
 
   const applyStoredSharedTimerState = useCallback(() => {
     try {
-      const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
+      const raw = readPersistentStorageItem(TIMER_STORAGE_KEY);
       if (!raw) return false;
       applyTimerState(resetActiveTimerRuntime(JSON.parse(raw)));
       return true;

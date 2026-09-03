@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
+import { readPersistentStorageItem, writePersistentStorageItem } from '@/utils/persistentStorage';
 
 const STEPS = {
   INTRO: 0,
@@ -54,10 +55,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
 
   const getStoredFolderPath = useCallback(() => {
     try {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return '';
-      }
-      return window.localStorage.getItem(LAST_PRESENTATION_FOLDER_STORAGE_KEY) || '';
+      return readPersistentStorageItem(LAST_PRESENTATION_FOLDER_STORAGE_KEY) || '';
     } catch {
       return '';
     }
@@ -69,10 +67,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
       return;
     }
     try {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return;
-      }
-      window.localStorage.setItem(LAST_PRESENTATION_FOLDER_STORAGE_KEY, normalized);
+      writePersistentStorageItem(LAST_PRESENTATION_FOLDER_STORAGE_KEY, normalized);
     } catch { }
   }, []);
 

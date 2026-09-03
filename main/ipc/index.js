@@ -36,6 +36,7 @@ import { registerPreferencesHandlers } from './preferences.js';
 import { registerMiscHandlers } from './misc.js';
 import { registerSecurityHandlers } from './security.js';
 import { registerLyricVideoExportHandlers } from './lyricVideoExport.js';
+import { registerRendererPersistentStorageHandlers } from '../rendererPersistentStorage.js';
 
 /**
  * Register all IPC handlers
@@ -48,6 +49,7 @@ import { registerLyricVideoExportHandlers } from './lyricVideoExport.js';
  * @param {Function} context.requestRendererModal - Function to request renderer modal
  */
 export function registerIpcHandlers(context) {
+  registerRendererPersistentStorageHandlers();
   // Register all handler groups
   registerAppHandlers(context);
   registerWindowHandlers(context);

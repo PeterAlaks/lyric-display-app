@@ -230,7 +230,9 @@ export const usePreferencesPersistence = ({ showModal, showToast }) => {
         setLastSaved(null);
         setSaveError(true);
         showToastRef.current?.({
-          title: error?.code === 'STORAGE_FULL' ? 'Storage is full' : 'Preferences not saved',
+          title: error?.code === 'STORAGE_FULL'
+            ? 'Storage is full'
+            : (error?.code === 'PORT_UNAVAILABLE' ? 'Port unavailable' : 'Preferences not saved'),
           message: error?.message || 'LyricDisplay could not save your preferences.',
           variant: 'error',
           dedupeKey: 'preferences-storage-write-failed',
@@ -363,7 +365,12 @@ export const usePreferencesPersistence = ({ showModal, showToast }) => {
           await savePreferences(pendingPreferences);
         }
 
-        await window.electronAPI.preferences.resetCategory(category);
+        const resetResult = await window.electronAPI.preferences.resetCategory(category);
+        if (!resetResult?.success) {
+          const error = new Error(resetResult?.error || 'Preference reset was rejected');
+          error.code = resetResult?.code;
+          throw error;
+        }
         const result = await window.electronAPI.preferences.getAll();
         if (result.success) {
           if (isMountedRef.current) setPreferences(result.preferences);
@@ -382,6 +389,16 @@ export const usePreferencesPersistence = ({ showModal, showToast }) => {
       }
     } catch (error) {
       console.error('Failed to reset category:', error);
+      if (isMountedRef.current) {
+        setLastSaved(null);
+        setSaveError(true);
+        showToastRef.current?.({
+          title: error?.code === 'PORT_UNAVAILABLE' ? 'Port unavailable' : 'Preferences not restored',
+          message: error?.message || 'LyricDisplay could not restore these preferences.',
+          variant: 'error',
+          dedupeKey: 'preferences-reset-category-failed',
+        });
+      }
     }
   }, [promptForServerPortRestart, savePreferences]);
 

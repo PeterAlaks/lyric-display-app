@@ -1,5 +1,5 @@
 ﻿import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { DEFAULT_SETLIST_ITEMS } from '../../shared/setlistLimits.js';
 import { DEFAULT_OUTPUT_IDS } from '../../shared/outputRegistry.js';
 import { buildLyricsParsingOptions } from '../../shared/lyricsParsing/preferenceOptions.js';
@@ -19,6 +19,7 @@ import { createPreferencesSlice } from './lyricsStore/preferencesSlice.js';
 import { createSetlistSlice } from './lyricsStore/setlistSlice.js';
 import { createStageSlice } from './lyricsStore/stageSlice.js';
 import { createTimerSlice } from './lyricsStore/timerSlice.js';
+import { getPersistentStorage } from '../utils/persistentStorage.js';
 
 const normalizePaintSettingUpdates = (settings = {}) => {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return {};
@@ -208,6 +209,11 @@ const useLyricsStore = create(
     }),
     {
       name: 'lyrics-store',
+      storage: createJSONStorage(() => {
+        const storage = getPersistentStorage();
+        if (!storage) throw new Error('Persistent browser storage is unavailable.');
+        return storage;
+      }),
       partialize: (state) => {
         const persisted = {
           lyrics: state.lyrics,

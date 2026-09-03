@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
@@ -19,6 +20,10 @@ import {
   normalizeBackendPort,
   resolveRuntimeBackendPort,
 } from '../shared/backendPort.js';
+import {
+  findAvailableBackendPort,
+  probeBackendPort,
+} from '../main/portAvailability.js';
 
 const NOW = 1_800_000_000_000;
 const serverSource = fs.readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
@@ -26,6 +31,21 @@ const packagedRuntimeProbeSource = fs.readFileSync(
   new URL('../scripts/verify-packaged-runtime.js', import.meta.url),
   'utf8',
 );
+const startupSource = fs.readFileSync(new URL('../main/startup.js', import.meta.url), 'utf8');
+const backendSource = fs.readFileSync(new URL('../main/backend.js', import.meta.url), 'utf8');
+const preferencesIpcSource = fs.readFileSync(
+  new URL('../main/ipc/preferences.js', import.meta.url),
+  'utf8',
+);
+const releaseWorkflowSource = fs.readFileSync(
+  new URL('../.github/workflows/build-release.yml', import.meta.url),
+  'utf8',
+);
+const platformWorkflowSource = fs.readFileSync(
+  new URL('../.github/workflows/test-platform-builds.yml', import.meta.url),
+  'utf8',
+);
+const releaseScriptSource = fs.readFileSync(new URL('../scripts/release.js', import.meta.url), 'utf8');
 
 test('production backend ports are validated and resolved without changing the development port', () => {
   assert.equal(DEFAULT_BACKEND_PORT, 4000);
@@ -40,6 +60,50 @@ test('production backend ports are validated and resolved without changing the d
   assert.equal(resolveRuntimeBackendPort({ isPackaged: true, configuredPort: 4700, environmentPort: 4800 }), 4700);
   assert.equal(resolveRuntimeBackendPort({ isPackaged: false, configuredPort: 4700, environmentPort: 4800 }), 4800);
   assert.equal(resolveRuntimeBackendPort({ isPackaged: false, configuredPort: 4700 }), DEFAULT_BACKEND_PORT);
+});
+
+test('backend port probing rejects an occupied port and finds a usable recovery port', async () => {
+  const occupiedServer = net.createServer();
+  occupiedServer.listen(0);
+  await once(occupiedServer, 'listening');
+  const occupiedPort = occupiedServer.address().port;
+
+  try {
+    const occupied = await probeBackendPort(occupiedPort);
+    assert.equal(occupied.available, false);
+    assert.equal(occupied.code, 'EADDRINUSE');
+
+    const recovery = await findAvailableBackendPort({
+      preferredPort: occupiedPort,
+      excludedPorts: [occupiedPort],
+    });
+    assert.equal(recovery.success, true);
+    assert.equal(isValidBackendPort(recovery.port), true);
+    assert.notEqual(recovery.port, occupiedPort);
+    assert.equal((await probeBackendPort(recovery.port)).available, true);
+  } finally {
+    occupiedServer.closeAllConnections?.();
+    await new Promise((resolve, reject) => {
+      occupiedServer.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+});
+
+test('port changes are availability-checked and startup conflicts have a recovery path', () => {
+  assert.match(preferencesIpcSource, /probeBackendPort\(targetPort\)/);
+  assert.match(preferencesIpcSource, /code:\s*'PORT_UNAVAILABLE'/);
+  assert.match(backendSource, /portConflict\.code\s*=\s*'PORT_IN_USE'/);
+  assert.match(backendSource, /portConflict\.port\s*=\s*normalizeBackendPort\(msg\.port/);
+  assert.match(startupSource, /findAvailableBackendPort/);
+  assert.match(startupSource, /Switch to Port/);
+  assert.match(startupSource, /setPreference\('advanced\.serverPort',\s*recoveryPort\)/);
+  assert.doesNotMatch(startupSource, /Application Already Running/);
+});
+
+test('renderer port portability is enforced by local and hosted release gates', () => {
+  assert.match(releaseScriptSource, /npm run test:renderer-storage/);
+  assert.match(releaseWorkflowSource, /npm run test:renderer-storage/);
+  assert.match(platformWorkflowSource, /npm run test:renderer-storage/);
 });
 
 test('production SPA fallback safely serves clean projection routes from packaged paths', async () => {

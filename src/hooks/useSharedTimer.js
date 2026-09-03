@@ -18,6 +18,7 @@ import {
   normalizeScheduleItems,
 } from '../../shared/scheduleUtils.js';
 import { createTimerRenderClock } from '../utils/timerRenderClock.js';
+import { readPersistentStorageItem, writePersistentStorageItem } from '../utils/persistentStorage';
 
 const getDisplayUpdatedAt = (display) => {
   const updatedAt = Number(display?.displayUpdatedAt);
@@ -39,7 +40,7 @@ const applyIncomingDisplaySettings = (display) => {
 const readStoredTimerState = () => {
   if (typeof window === 'undefined') return createIdleTimerState();
   try {
-    const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
+    const raw = readPersistentStorageItem(TIMER_STORAGE_KEY);
     return raw ? resetActiveTimerRuntime(JSON.parse(raw)) : createIdleTimerState();
   } catch {
     return createIdleTimerState();
@@ -49,7 +50,7 @@ const readStoredTimerState = () => {
 const writeStoredTimerState = (timerState) => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerState));
+    writePersistentStorageItem(TIMER_STORAGE_KEY, JSON.stringify(timerState));
     window.dispatchEvent(new CustomEvent('shared-timer-state', { detail: timerState }));
   } catch {
     // Storage can fail in locked-down browser sources; socket sync still works.

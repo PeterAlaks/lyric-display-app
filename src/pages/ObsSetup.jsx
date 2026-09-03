@@ -9,6 +9,7 @@ import { ObsWebSocketClient } from '@/integrations/obs/obsWebSocketClient';
 import { createOrUpdateObsBrowserSource } from '@/integrations/obs/createObsBrowserSource';
 import { useDarkModeState } from '@/hooks/useStoreSelectors';
 import useModal from '@/hooks/useModal';
+import { readPersistentStorageItem, writePersistentStorageItem } from '@/utils/persistentStorage';
 
 const PROFILE_KEY = 'lyricdisplay_obs_source_creator_v1';
 const TRANSFORM_MODE_OPTIONS = [
@@ -28,7 +29,7 @@ const obsToggleSurfaceClass = 'flex items-center justify-between rounded-md bord
 
 const readProfile = () => {
   try {
-    return JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+    return JSON.parse(readPersistentStorageItem(PROFILE_KEY) || '{}');
   } catch {
     return {};
   }
@@ -36,7 +37,7 @@ const readProfile = () => {
 
 const writeProfile = (profile) => {
   try {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    writePersistentStorageItem(PROFILE_KEY, JSON.stringify(profile));
   } catch {
     // Ignore storage failures.
   }

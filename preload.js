@@ -1,6 +1,114 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+const getBrowserStorage = () => {
+  try {
+    return window.localStorage || null;
+  } catch {
+    return null;
+  }
+};
+
+const readBrowserStorageEntries = () => {
+  const storage = getBrowserStorage();
+  if (!storage) return [];
+
+  const entries = [];
+  try {
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (typeof key !== 'string' || !key) continue;
+      const value = storage.getItem(key);
+      if (typeof value === 'string') entries.push([key, value]);
+    }
+  } catch {
+    return [];
+  }
+  return entries;
+};
+
+const currentRendererPort = Number(window.location.port || process.env.PORT);
+const nativeStorageEntries = new Map();
+let nativeStorageAvailable = false;
+let browserStorageMirrorReady = false;
+
+try {
+  const result = ipcRenderer.sendSync('renderer-storage:initialize', {
+    currentPort: currentRendererPort,
+    legacyEntries: readBrowserStorageEntries(),
+  });
+  if (result?.success && Array.isArray(result.entries)) {
+    for (const [key, value] of result.entries) {
+      if (typeof key === 'string' && typeof value === 'string') {
+        nativeStorageEntries.set(key, value);
+      }
+    }
+    nativeStorageAvailable = true;
+
+    const storage = getBrowserStorage();
+    if (storage) {
+      if (result.source === 'native') storage.clear();
+      for (const [key, value] of nativeStorageEntries) storage.setItem(key, value);
+      browserStorageMirrorReady = true;
+    }
+  }
+} catch (error) {
+  console.error('[RendererStorage] Native persistence initialization failed:', error);
+}
+
+const sendStorageMutation = (mutation) => {
+  if (!nativeStorageAvailable) return;
+  ipcRenderer.send('renderer-storage:mutate', {
+    currentPort: currentRendererPort,
+    ...mutation,
+  });
+};
+
+const persistentStorage = {
+  getItem: (rawKey) => {
+    const key = String(rawKey);
+    const storage = getBrowserStorage();
+    if (!nativeStorageAvailable) return storage?.getItem(key) ?? null;
+
+    if (browserStorageMirrorReady && storage) {
+      const browserValue = storage.getItem(key);
+      const nativeValue = nativeStorageEntries.get(key) ?? null;
+      if (browserValue !== nativeValue) {
+        if (browserValue === null) {
+          nativeStorageEntries.delete(key);
+          sendStorageMutation({ type: 'remove', key });
+        } else {
+          nativeStorageEntries.set(key, browserValue);
+          sendStorageMutation({ type: 'set', key, value: browserValue });
+        }
+      }
+      return browserValue;
+    }
+
+    return nativeStorageEntries.get(key) ?? null;
+  },
+  setItem: (rawKey, rawValue) => {
+    const key = String(rawKey);
+    const value = String(rawValue);
+    try { getBrowserStorage()?.setItem(key, value); } catch { }
+    if (!nativeStorageAvailable) return;
+    nativeStorageEntries.set(key, value);
+    sendStorageMutation({ type: 'set', key, value });
+  },
+  removeItem: (rawKey) => {
+    const key = String(rawKey);
+    try { getBrowserStorage()?.removeItem(key); } catch { }
+    if (!nativeStorageAvailable) return;
+    nativeStorageEntries.delete(key);
+    sendStorageMutation({ type: 'remove', key });
+  },
+};
+
 contextBridge.exposeInMainWorld('electronAPI', {
+  persistentStorage: {
+    getItem: (key) => persistentStorage.getItem(key),
+    setItem: (key, value) => persistentStorage.setItem(key, value),
+    removeItem: (key) => persistentStorage.removeItem(key),
+  },
   tokenStore: {
     get: (payload) => ipcRenderer.invoke('token-store:get', payload),
     set: (payload) => ipcRenderer.invoke('token-store:set', payload),
@@ -443,7 +551,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 contextBridge.exposeInMainWorld('electronStore', {
   getDarkMode: () => {
     try {
-      const store = JSON.parse(localStorage.getItem('lyrics-store'));
+      const store = JSON.parse(persistentStorage.getItem('lyrics-store'));
       return store?.state?.darkMode || false;
     } catch {
       return false;

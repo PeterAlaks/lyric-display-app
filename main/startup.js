@@ -16,6 +16,8 @@ import { initializeExternalControl, registerExternalControlIPC } from './externa
 import { initializeNdiManager, registerNdiIpcHandlers } from './ndiManager.js';
 import * as userPreferences from './userPreferences.js';
 import { waitForRendererStartup } from './startupReadiness.js';
+import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../shared/backendPort.js';
+import { findAvailableBackendPort } from './portAvailability.js';
 
 const isOutputRoute = (url) => /(?:#\/|\/)(stage|time|output\d+)(?:\?|$)/i.test(String(url || ''));
 
@@ -108,11 +110,58 @@ export function setupNativeTheme(mainWindow, menuAPI) {
 export async function handleBackendStartupError(error, requestRendererModal, { headless = false } = {}) {
   console.error('[Startup] Failed to start backend:', error);
 
-  if (error.message === 'PORT_IN_USE') {
-    dialog.showErrorBox(
-      'Application Already Running',
-      'LyricDisplay is already running. Only one instance can run at a time.\n\nPlease close the other instance or check your system tray.'
+  if (error?.code === 'PORT_IN_USE' || error?.message === 'PORT_IN_USE') {
+    const occupiedPort = normalizeBackendPort(
+      error?.port ?? userPreferences.getPreference('advanced.serverPort'),
+      DEFAULT_BACKEND_PORT,
     );
+
+    if (!app.isPackaged) {
+      dialog.showErrorBox(
+        'Server Port Unavailable',
+        `LyricDisplay could not start because port ${occupiedPort} is already in use. Close the application or service using that port, then restart LyricDisplay.`,
+      );
+      app.quit();
+      return null;
+    }
+
+    const recovery = await findAvailableBackendPort({
+      preferredPort: DEFAULT_BACKEND_PORT,
+      excludedPorts: [occupiedPort],
+    });
+    if (!recovery.success) {
+      dialog.showErrorBox(
+        'Server Port Unavailable',
+        `LyricDisplay could not start because port ${occupiedPort} is already in use, and an available recovery port could not be found. Close the conflicting application or service, then restart LyricDisplay.`,
+      );
+      app.quit();
+      return null;
+    }
+
+    const recoveryPort = recovery.port;
+    const choice = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Configured Port Unavailable',
+      message: `Port ${occupiedPort} is already in use.`,
+      detail: `LyricDisplay has not removed any of your data. Close the other application or service and try again, or switch LyricDisplay to the available port ${recoveryPort}.`,
+      buttons: ['Quit', `Switch to Port ${recoveryPort} and Restart`],
+      defaultId: 1,
+      cancelId: 0,
+      noLink: true,
+    });
+
+    if (choice.response === 1) {
+      const saveResult = userPreferences.setPreference('advanced.serverPort', recoveryPort);
+      if (!saveResult.success) {
+        dialog.showErrorBox(
+          'Port Recovery Failed',
+          saveResult.error || `LyricDisplay could not save recovery port ${recoveryPort}.`,
+        );
+        app.quit();
+        return null;
+      }
+      app.relaunch();
+    }
     app.quit();
     return null;
   }

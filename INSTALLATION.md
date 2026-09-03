@@ -279,7 +279,7 @@ For live operation:
 
 ### LyricDisplay reports that its server port is in use
 
-Only one process can use a server port at a time. Close other desktop/headless LyricDisplay processes, then start the intended mode. In packaged builds, change **Preferences > Advanced > Production Server Port** and restart if another application needs the current port. Electron development keeps using port `4000`.
+Only one process can use a server port at a time. Packaged builds reject an occupied port before saving it. If another application claims a previously saved port before the next launch, LyricDisplay offers to switch to an available recovery port and restart without removing application data. You can instead quit, close the conflicting application or service, and reopen LyricDisplay. Electron development keeps using port `4000`.
 
 ### Browser source is black, blank, or unavailable
 

@@ -11,6 +11,7 @@ import {
     shouldNotifyRejectedControlCommand,
 } from '../../shared/commandSafetyPolicy.js';
 import useLyricsStore from './LyricsStore';
+import { writePersistentStorageItem } from '../utils/persistentStorage';
 
 const ControlSocketContext = createContext(null);
 
@@ -251,7 +252,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                     const syncTime = Date.now();
                     setLastSyncTime(syncTime);
                     try {
-                        localStorage.setItem('lastSyncTime', syncTime.toString());
+                        writePersistentStorageItem('lastSyncTime', syncTime.toString());
                     } catch (err) {
                         console.warn('Failed to store lastSyncTime:', err);
                     }
@@ -329,7 +330,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
                         setLiveSafety(state.liveSafety);
                     }
                     try {
-                        localStorage.setItem('lastSyncTime', syncTime.toString());
+                        writePersistentStorageItem('lastSyncTime', syncTime.toString());
                     } catch (err) {
                         console.warn('Failed to store lastSyncTime:', err);
                     }
@@ -747,7 +748,7 @@ export const ControlSocketProvider = ({ children, role = 'control' }) => {
             const syncTime = Date.now();
             setLastSyncTime(syncTime);
             try {
-                localStorage.setItem('lastSyncTime', syncTime.toString());
+                writePersistentStorageItem('lastSyncTime', syncTime.toString());
             } catch (err) {
                 console.warn('Failed to store lastSyncTime:', err);
             }

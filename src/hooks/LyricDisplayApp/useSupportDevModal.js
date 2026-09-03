@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { readPersistentStorageItem, writePersistentStorageItem } from '../../utils/persistentStorage';
 
 const STORAGE_KEY = 'lyricdisplay_support_dev_modal';
 const MIN_ACTIONS_BEFORE_SHOW = 50;
@@ -19,7 +20,7 @@ const TRACKED_ACTIONS = [
 
 function getStoredData() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = readPersistentStorageItem(STORAGE_KEY);
     if (!stored) return null;
     return JSON.parse(stored);
   } catch (error) {
@@ -30,7 +31,7 @@ function getStoredData() {
 
 function saveData(data) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    writePersistentStorageItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
     console.error('Failed to save support dev modal data:', error);
   }

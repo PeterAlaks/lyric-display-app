@@ -1,3 +1,5 @@
+import { readPersistentStorageItem, writePersistentStorageItem } from './persistentStorage.js';
+
 export const LYRIC_VIDEO_STUDIO_STATE_KEY = 'lyric-video-studio-state-v1';
 export const LYRIC_VIDEO_STUDIO_CHANNEL = 'lyric-video-studio-live';
 
@@ -21,7 +23,7 @@ export function readLyricVideoStudioState() {
   if (typeof window === 'undefined') return null;
 
   try {
-    const raw = window.localStorage.getItem(LYRIC_VIDEO_STUDIO_STATE_KEY);
+    const raw = readPersistentStorageItem(LYRIC_VIDEO_STUDIO_STATE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : null;
@@ -34,8 +36,7 @@ export function writeLyricVideoStudioState(state) {
   if (typeof window === 'undefined') return false;
 
   try {
-    window.localStorage.setItem(LYRIC_VIDEO_STUDIO_STATE_KEY, JSON.stringify(state));
-    return true;
+    return writePersistentStorageItem(LYRIC_VIDEO_STUDIO_STATE_KEY, JSON.stringify(state));
   } catch {
     return false;
   }
