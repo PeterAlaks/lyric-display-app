@@ -514,7 +514,7 @@ const createUpdaterBrowserWindow = ({ parent, initialState }) => {
     height: 260,
     useContentSize: true,
     resizable: false,
-    minimizable: true,
+    minimizable: false,
     maximizable: false,
     skipTaskbar: true,
     parent: parent ?? undefined,
@@ -560,6 +560,10 @@ export function createProgressWindow({ parent, initialState } = {}) {
   progressWindow.on('close', (event) => {
     if (app.isQuitting) return;
     event.preventDefault();
+    progressWindow.hide();
+  });
+
+  progressWindow.on('minimize', () => {
     progressWindow.hide();
   });
 

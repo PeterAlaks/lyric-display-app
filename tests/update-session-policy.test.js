@@ -58,17 +58,24 @@ test('downloaded updates require explicit installation instead of installing on 
   assert.match(updaterSource, /updateMode:\s*isWindowsStoreUpdater\(\)\s*\?\s*'store'/);
 });
 
-test('updater window hides on close and repeat checks reveal an active download', () => {
+test('updater window hides on close or minimize, disables native minimize/maximize controls, and repeat checks reveal an active download', () => {
   const updaterSource = fs.readFileSync(path.join(root, 'main/updater.js'), 'utf8');
   const progressWindowSource = fs.readFileSync(path.join(root, 'main/progressWindow.js'), 'utf8');
   const closeHandler = progressWindowSource.match(
     /progressWindow\.on\('close', \(event\) => \{([\s\S]*?)\n  \}\);/
+  );
+  const minimizeHandler = progressWindowSource.match(
+    /progressWindow\.on\('minimize', \(\) => \{([\s\S]*?)\n  \}\);/
   );
 
   assert.ok(closeHandler, 'updater close handler is present');
   assert.match(closeHandler[1], /event\.preventDefault\(\)/);
   assert.match(closeHandler[1], /progressWindow\.hide\(\)/);
   assert.doesNotMatch(closeHandler[1], /lastState|status/);
+  assert.ok(minimizeHandler, 'updater minimize handler is present');
+  assert.match(minimizeHandler[1], /progressWindow\.hide\(\)/);
+  assert.match(progressWindowSource, /minimizable:\s*false/);
+  assert.match(progressWindowSource, /maximizable:\s*false/);
   assert.match(
     updaterSource,
     /if \(state\.status === 'downloading'\) \{\s*revealProgressWindow\(\);\s*return Promise\.resolve\(getStateSnapshot\(\)\);\s*\}/
@@ -118,6 +125,21 @@ test('update modal exposes older releases as collapsed accessible accordion rows
   assert.match(updaterBridgeSource, /aria-expanded=/);
   assert.match(updaterBridgeSource, /ChevronDown/);
   assert.match(modalProviderSource, /overflow-y-auto/);
+});
+
+test('update availability waits for release history before opening the modal', () => {
+  const updaterSource = fs.readFileSync(path.join(root, 'main/updater.js'), 'utf8');
+
+  assert.match(updaterSource, /const hydrateOlderReleaseHistory = async \(updateInfo\) =>/);
+  assert.match(updaterSource, /const notifyUpdateAvailable = async \(updateInfo\) =>/);
+  assert.match(
+    updaterSource,
+    /const hydratedUpdateInfo = await hydrateOlderReleaseHistory\(updateInfo\);[\s\S]*?notifyAllWindows\('updater:update-available', hydratedUpdateInfo\);/
+  );
+  assert.doesNotMatch(
+    updaterSource,
+    /notifyAllWindows\('updater:update-available', updateInfo\);\s*}\s*void notifyUpdateAvailable\(updateInfo\)/
+  );
 });
 
 test('only the highest-priority bounded update notification is released', () => {

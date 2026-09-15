@@ -24,6 +24,7 @@ const GITHUB_REPO = 'lyric-display-app';
 const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
 const GITHUB_LATEST_RELEASE_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 const RELEASE_HISTORY_FETCH_LIMIT = 10;
+const RELEASE_HISTORY_TIMEOUT_MS = 3000;
 const isWindowsStoreUpdater = () => process.windowsStore === true;
 
 const INITIAL_STATE = {
@@ -130,7 +131,7 @@ const showNoUpdateDialog = () => {
   });
 };
 
-const githubApiRequest = (urlPath) => new Promise((resolve, reject) => {
+const githubApiRequest = (urlPath, timeout = 10000) => new Promise((resolve, reject) => {
   const url = urlPath.startsWith('http') ? urlPath : `${GITHUB_API_BASE}${urlPath}`;
 
   https.get(url, {
@@ -138,7 +139,7 @@ const githubApiRequest = (urlPath) => new Promise((resolve, reject) => {
       'User-Agent': 'LyricDisplay-App',
       Accept: 'application/vnd.github.v3+json',
     },
-    timeout: 10000,
+    timeout,
   }, (res) => {
     let data = '';
     res.on('data', (chunk) => { data += chunk; });
@@ -167,22 +168,41 @@ const githubApiRequest = (urlPath) => new Promise((resolve, reject) => {
 });
 
 const hydrateOlderReleaseHistory = async (updateInfo) => {
-  if (!updateInfo?.version) return;
+  if (!updateInfo?.version) return updateInfo;
 
   try {
-    const releases = await githubApiRequest(`/releases?per_page=${RELEASE_HISTORY_FETCH_LIMIT}`);
+    const releases = await githubApiRequest(
+      `/releases?per_page=${RELEASE_HISTORY_FETCH_LIMIT}`,
+      RELEASE_HISTORY_TIMEOUT_MS,
+    );
     const olderReleases = selectOlderReleases(releases, updateInfo.version);
 
-    if (state.updateInfo?.version !== updateInfo.version) return;
-    setState({
-      updateInfo: toUpdateInfo({
-        ...state.updateInfo,
-        olderReleases,
-      }),
+    return toUpdateInfo({
+      ...updateInfo,
+      olderReleases,
     });
   } catch (error) {
     console.warn('Unable to load older release notes:', error?.message || error);
+    return toUpdateInfo({
+      ...updateInfo,
+      olderReleases: [],
+    });
   }
+};
+
+const notifyUpdateAvailable = async (updateInfo) => {
+  const hydratedUpdateInfo = await hydrateOlderReleaseHistory(updateInfo);
+
+  if (state.updateInfo?.version !== updateInfo.version) return null;
+
+  setState({ updateInfo: hydratedUpdateInfo });
+
+  if (sessionPolicy.deferNotification('available')) {
+    return hydratedUpdateInfo;
+  }
+
+  notifyAllWindows('updater:update-available', hydratedUpdateInfo);
+  return hydratedUpdateInfo;
 };
 
 const findMacDmgAsset = (release, version) => {
@@ -265,7 +285,6 @@ const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
       arch: process.arch
     });
 
-    const notificationDeferred = sessionPolicy.deferNotification('available');
     setState({
       status: 'available',
       updateInfo,
@@ -274,10 +293,7 @@ const checkForManualMacUpdate = async (showNoUpdateDialogForResult = false) => {
       downloadedAt: null
     });
 
-    if (!notificationDeferred) {
-      notifyAllWindows('updater:update-available', updateInfo);
-    }
-    void hydrateOlderReleaseHistory(updateInfo);
+    void notifyUpdateAvailable(updateInfo);
     return getStateSnapshot();
   } catch (err) {
     if (sessionPolicy.deferCheck({ interactive })) {
@@ -336,7 +352,6 @@ const ensureUpdaterConfigured = () => {
 
   autoUpdater.on('update-available', (info) => {
     const updateInfo = toUpdateInfo(info);
-    const notificationDeferred = sessionPolicy.deferNotification('available');
     setState({
       status: 'available',
       updateInfo,
@@ -345,10 +360,7 @@ const ensureUpdaterConfigured = () => {
       downloadedAt: null
     });
 
-    if (!notificationDeferred) {
-      notifyAllWindows('updater:update-available', updateInfo);
-    }
-    void hydrateOlderReleaseHistory(updateInfo);
+    void notifyUpdateAvailable(updateInfo);
     currentCheckIsInteractive = false;
   });
 
