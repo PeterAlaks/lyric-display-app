@@ -58,9 +58,12 @@ Only bypass a platform warning after confirming that the file came from `lyricdi
 1. Download the Windows setup executable.
 2. Open it.
 3. If SmartScreen appears, select **More info**, verify the filename, then select **Run anyway**.
-4. Complete the installer wizard and launch LyricDisplay from the Start menu or desktop shortcut.
+4. Leave **Allow LyricDisplay through Windows Firewall (recommended)** checked on the **Network access** step to let remote controls and displays connect. Approve the Windows administrator prompt if one appears.
+5. Complete the installer wizard and launch LyricDisplay from the Start menu or desktop shortcut.
 
-The package requests normal user-level execution. Windows may still request approval when writing to the selected installation directory.
+The package requests normal user-level execution. Windows may still request approval when writing to the selected installation directory or configuring the firewall. The firewall option adds inbound TCP and UDP rules for the installed LyricDisplay executable on private, public, and domain networks. If you uncheck it or decline administrator approval, installation continues, but you may need to allow network access manually.
+
+Silent installs and automatic updates do not add firewall rules or request firewall approval; updates retain existing rules. Uninstall removes the rules created for that installation when administrator access is available. Existing block rules or organization policies may still prevent connections.
 
 ## Install on macOS
 
