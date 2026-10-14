@@ -50,6 +50,14 @@ const FLAT_GLYPH = '\u266D';
 const PITCH_RE = /^([A-Ga-g])\s*([#b]*)\s*(.*)$/;
 const BASS_RE = /^[A-Ga-g][#b]*$/;
 
+// Base pitch class of each natural (unaccented) note letter.
+const LETTER_PITCH = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
+// Scale intervals (semitones) from the tonic for natural major and natural
+// minor. Number charts treat a minor-key song in its natural minor.
+const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
+const MINOR_INTERVALS = [0, 2, 3, 5, 7, 8, 10];
+
 /** Split "F#m7" into its letter, its alteration count, and its quality tail. */
 function splitPitch(token) {
   const match = String(token ?? '').trim().match(PITCH_RE);
@@ -79,17 +87,36 @@ const accidentalPrefix = (delta) => (
   delta > 0 ? SHARP_GLYPH.repeat(delta) : FLAT_GLYPH.repeat(-delta)
 );
 
+/** Semitone intervals for the song's tonality. */
+function scaleIntervals(tonic) {
+  return tonic && tonic.minor ? MINOR_INTERVALS : MAJOR_INTERVALS;
+}
+
+/** Expected accidental (sharps positive, flats negative) for `letter` inside key. */
+function expectedAccidental(letter, tonic) {
+  const intervals = scaleIntervals(tonic);
+  const degreeIndex = (((LETTER_INDEX[letter] - LETTER_INDEX[tonic.letter]) + 7) % 7);
+  const tonicPitch = (LETTER_PITCH[tonic.letter] ?? 0) + (tonic.alter || 0);
+  const degreePitch = tonicPitch + intervals[degreeIndex];
+  const base = LETTER_PITCH[letter] ?? 0;
+  let delta = degreePitch - base;
+  delta = ((delta % 12) + 12) % 12;
+  if (delta > 6) delta -= 12;
+  return delta;
+}
+
 /** Render one pitch as a degree number plus its quality tail: "1", "♭2", "3m7". */
 function degreeLabel(pitch, tonic) {
   if (!pitch) return '';
   const number = (((LETTER_INDEX[pitch.letter] - LETTER_INDEX[tonic.letter]) + 7) % 7) + 1;
-  const accidental = accidentalPrefix(pitch.alter - tonic.alter);
+  const accidentalDelta = (pitch.alter || 0) - expectedAccidental(pitch.letter, tonic);
+  const accidental = accidentalPrefix(accidentalDelta);
   // In a minor key the tonic triad is chord 1, so the "m" is implied and number
   // charts print a bare "1". Only the plain triad is elided, so "Am7" keeps its
   // extension and stays unambiguous.
   const isTonicMinor = tonic.minor
     && number === 1
-    && !accidental
+    && accidentalDelta === 0
     && pitch.letter === tonic.letter
     && /^(m|min)$/i.test(pitch.rest.trim());
   return `${accidental}${number}${isTonicMinor ? '' : qualitySuffix(pitch.rest)}`;
