@@ -52,111 +52,33 @@ const getFontFitKey = (display) => [
   display.timerAlign || 'center',
 ].join('|');
 
-const TimeDisplay = () => {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isPreviewMode = searchParams.get('preview') === 'true';
-  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
-  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
-
-  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
-    preview: isPreviewMode,
-    purpose: 'time-display',
-  });
-
-  const publishTimeMetrics = React.useCallback(() => {
-    if (isPreviewMode || !isConnected || !isAuthenticated) return;
-    emitOutputMetrics('time', {
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      timestamp: Date.now(),
-    });
-  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
-
-  React.useEffect(() => {
-    publishTimeMetrics();
-    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
-    const interval = window.setInterval(publishTimeMetrics, 5000);
-    return () => window.clearInterval(interval);
-  }, [isAuthenticated, isConnected, isPreviewMode, publishTimeMetrics]);
-
-  const { timerState, displayValue, intensity, now, progress } = useSharedTimer({
-    controller: false,
-    renderTickIntervalMs: 1000,
-  });
-  const { settings: timerDisplaySettings } = useTimerDisplaySettings();
-
-  const display = React.useMemo(() => {
-    const localDisplay = timerDisplaySettings || {};
-    const stateDisplay = timerState.display || {};
-    return getDisplayUpdatedAt(stateDisplay) >= getDisplayUpdatedAt(localDisplay)
-      ? { ...localDisplay, ...stateDisplay }
-      : { ...stateDisplay, ...localDisplay };
-  }, [timerDisplaySettings, timerState.display]);
-  const hasActiveTimer = isTimerVisiblyActive(timerState, now);
-  const showPausedGlobalClock = shouldShowGlobalClockDuringPause(timerState);
-  const showManualItemGlobalTime = shouldShowGlobalTimeForManualScheduleItem(timerState);
-  const shouldShowClock = showPausedGlobalClock
-    || showManualItemGlobalTime
-    || (!hasActiveTimer && display.showClockWhenIdle !== false);
-  const clockValue = React.useMemo(() => formatGlobalClock(now, display), [display, now]);
-  const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);
-  const showGlobalClock = display.showGlobalClock !== false;
-  const showSecondaryText = display.showSecondaryText !== false;
-  const hasRunningSchedule = timerState.running && Array.isArray(timerState.sets) && timerState.sets.length > 0;
-  const scheduleRemainingMs = hasRunningSchedule && timerState.mode !== 'countup'
-    ? getRemainingMs(timerState, now)
-    : null;
-  const scheduleProjection = React.useMemo(() => calculateScheduleProjection({
-    items: timerState.sets,
-    active: hasRunningSchedule,
-    activeIndex: timerState.activeSetIndex,
-    now,
-    currentRemainingMs: scheduleRemainingMs,
-    currentIsTransition: timerState.phase === 'indicator',
-    currentIsUnbounded: Boolean(timerState.scheduleReconciliationHold),
-    transitionMs: timerState.indicatorEnabled ? timerState.indicatorDurationMs : 0,
-    idealEndAt: timerState.scheduleIdealEndAt,
-  }), [
-    hasRunningSchedule,
-    now,
-    scheduleRemainingMs,
-    timerState.activeSetIndex,
-    timerState.indicatorDurationMs,
-    timerState.indicatorEnabled,
-    timerState.phase,
-    timerState.scheduleReconciliationHold,
-    timerState.scheduleIdealEndAt,
-    timerState.sets,
-  ]);
-  const isBehindSchedule = hasRunningSchedule && scheduleProjection.status === 'behind';
-  const isWaitingForTime = !hasActiveTimer && !showGlobalClock;
-  const isFullScreenClock = shouldShowClock && !isWaitingForTime;
-  const showActiveSecondaryGlobalClock = showSecondaryText
-    && showGlobalClock
-    && hasActiveTimer
-    && !showPausedGlobalClock
-    && !showManualItemGlobalTime;
-
-  const value = isWaitingForTime ? 'Waiting for time...' : (isFullScreenClock ? clockParts.time : displayValue);
-  const displayModeKey = isWaitingForTime ? 'waiting' : (isFullScreenClock ? 'global-clock' : 'timer');
-  const stateTransitionVariants = getTransitionVariants(display.stateTransitionAnimation);
-  const stateTransitionDuration = normalizeTransitionDuration(display.stateTransitionDuration, 300) / 1000;
-  const label = !showSecondaryText || isWaitingForTime
-    ? ''
-    : shouldShowClock
-    ? 'Current Time'
-    : (timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || display.label || 'Time Left:'));
-
-  const accentColor = intensity === 'critical'
-    ? (display.criticalColor || '#EF4444')
-    : intensity === 'warning'
-      ? (display.warningColor || '#F59E0B')
-      : (display.accentColor || '#FFA500');
-
-  const textColor = intensity === 'critical'
-    ? (display.criticalColor || '#EF4444')
-    : (display.textColor || '#FFFFFF');
+// Each keyed display state measures its own elements. AnimatePresence can re-enter an
+// exiting state without re-running refs, so one shared measurement could size a display
+// that is no longer on screen and leave the visible digits clipped with an ellipsis.
+const TimeDisplayFrame = ({
+  display,
+  value,
+  label,
+  accentColor,
+  textColor,
+  intensity,
+  timerState,
+  progress,
+  clockParts,
+  clockValue,
+  isWaitingForTime,
+  isFullScreenClock,
+  isBehindSchedule,
+  hasActiveTimer,
+  showSecondaryText,
+  showPausedGlobalClock,
+  showManualItemGlobalTime,
+  showActiveSecondaryGlobalClock,
+  stateTransitionVariants,
+  stateTransitionDuration,
+  otherItemsFontFamily,
+  alignItems,
+}) => {
   const timerFontSizeMode = display.timerFontSizeMode || 'auto';
   const autoFitEnabled = timerFontSizeMode !== 'manual';
   const autoFitKey = React.useMemo(() => [
@@ -172,34 +94,16 @@ const TimeDisplay = () => {
   const mainFontSize = autoFitEnabled ? (autoFontSize || 220) : (Number(display.timerFontSize) || 180);
   const otherItemsScale = Math.min(2, Math.max(0.08, Number(display.otherItemsScale ?? display.globalClockScale) || 0.1));
   const otherItemsFontSize = Math.max(16, mainFontSize * otherItemsScale);
-  const otherItemsFontFamily = display.fontFamily || 'Bebas Neue';
-  const alignItems = display.timerAlign === 'left'
-    ? 'flex-start'
-    : display.timerAlign === 'right'
-      ? 'flex-end'
-      : 'center';
 
   return (
-    <div
-      className="relative w-screen h-screen overflow-hidden flex items-center justify-center"
-      style={{
-        background: paintToCss(display.backgroundPaint, display.backgroundColor || '#000000'),
-        fontFamily: otherItemsFontFamily,
-        contain: 'layout paint style',
-        isolation: 'isolate',
-      }}
+    <motion.div
+      className="absolute inset-0 flex items-center justify-center"
+      variants={stateTransitionVariants || undefined}
+      initial={stateTransitionVariants ? 'hidden' : false}
+      animate={stateTransitionVariants ? 'visible' : undefined}
+      exit={stateTransitionVariants ? 'exit' : undefined}
+      transition={{ duration: stateTransitionVariants ? stateTransitionDuration : 0, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
-      <AnimatePresence initial={false} mode="sync">
-        <motion.div
-          key={displayModeKey}
-          className="absolute inset-0 flex items-center justify-center"
-          variants={stateTransitionVariants || undefined}
-          initial={stateTransitionVariants ? 'hidden' : false}
-          animate={stateTransitionVariants ? 'visible' : undefined}
-          exit={stateTransitionVariants ? 'exit' : undefined}
-          transition={{ duration: stateTransitionVariants ? stateTransitionDuration : 0, ease: [0.25, 0.46, 0.45, 0.94] }}
-        >
       {label && (
       <div className="absolute inset-x-0 top-[7vh] flex justify-center px-[1vw]">
         <div
@@ -328,7 +232,159 @@ const TimeDisplay = () => {
           </div>
         )}
       </div>
-        </motion.div>
+    </motion.div>
+  );
+};
+
+const TimeDisplay = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
+  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
+
+  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
+    preview: isPreviewMode,
+    purpose: 'time-display',
+  });
+
+  const publishTimeMetrics = React.useCallback(() => {
+    if (isPreviewMode || !isConnected || !isAuthenticated) return;
+    emitOutputMetrics('time', {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      timestamp: Date.now(),
+    });
+  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
+
+  React.useEffect(() => {
+    publishTimeMetrics();
+    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
+    const interval = window.setInterval(publishTimeMetrics, 5000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, isConnected, isPreviewMode, publishTimeMetrics]);
+
+  const { timerState, displayValue, intensity, now, progress } = useSharedTimer({
+    controller: false,
+    renderTickIntervalMs: 1000,
+  });
+  const { settings: timerDisplaySettings } = useTimerDisplaySettings();
+
+  const display = React.useMemo(() => {
+    const localDisplay = timerDisplaySettings || {};
+    const stateDisplay = timerState.display || {};
+    return getDisplayUpdatedAt(stateDisplay) >= getDisplayUpdatedAt(localDisplay)
+      ? { ...localDisplay, ...stateDisplay }
+      : { ...stateDisplay, ...localDisplay };
+  }, [timerDisplaySettings, timerState.display]);
+  const hasActiveTimer = isTimerVisiblyActive(timerState, now);
+  const showPausedGlobalClock = shouldShowGlobalClockDuringPause(timerState);
+  const showManualItemGlobalTime = shouldShowGlobalTimeForManualScheduleItem(timerState);
+  const shouldShowClock = showPausedGlobalClock
+    || showManualItemGlobalTime
+    || (!hasActiveTimer && display.showClockWhenIdle !== false);
+  const clockValue = React.useMemo(() => formatGlobalClock(now, display), [display, now]);
+  const clockParts = React.useMemo(() => splitClockPeriod(clockValue), [clockValue]);
+  const showGlobalClock = display.showGlobalClock !== false;
+  const showSecondaryText = display.showSecondaryText !== false;
+  const hasRunningSchedule = timerState.running && Array.isArray(timerState.sets) && timerState.sets.length > 0;
+  const scheduleRemainingMs = hasRunningSchedule && timerState.mode !== 'countup'
+    ? getRemainingMs(timerState, now)
+    : null;
+  const scheduleProjection = React.useMemo(() => calculateScheduleProjection({
+    items: timerState.sets,
+    active: hasRunningSchedule,
+    activeIndex: timerState.activeSetIndex,
+    now,
+    currentRemainingMs: scheduleRemainingMs,
+    currentIsTransition: timerState.phase === 'indicator',
+    currentIsUnbounded: Boolean(timerState.scheduleReconciliationHold),
+    transitionMs: timerState.indicatorEnabled ? timerState.indicatorDurationMs : 0,
+    idealEndAt: timerState.scheduleIdealEndAt,
+  }), [
+    hasRunningSchedule,
+    now,
+    scheduleRemainingMs,
+    timerState.activeSetIndex,
+    timerState.indicatorDurationMs,
+    timerState.indicatorEnabled,
+    timerState.phase,
+    timerState.scheduleReconciliationHold,
+    timerState.scheduleIdealEndAt,
+    timerState.sets,
+  ]);
+  const isBehindSchedule = hasRunningSchedule && scheduleProjection.status === 'behind';
+  const isWaitingForTime = !hasActiveTimer && !showGlobalClock;
+  const isFullScreenClock = shouldShowClock && !isWaitingForTime;
+  const showActiveSecondaryGlobalClock = showSecondaryText
+    && showGlobalClock
+    && hasActiveTimer
+    && !showPausedGlobalClock
+    && !showManualItemGlobalTime;
+
+  const value = isWaitingForTime ? 'Waiting for time...' : (isFullScreenClock ? clockParts.time : displayValue);
+  const displayModeKey = isWaitingForTime ? 'waiting' : (isFullScreenClock ? 'global-clock' : 'timer');
+  const stateTransitionVariants = getTransitionVariants(display.stateTransitionAnimation);
+  const stateTransitionDuration = normalizeTransitionDuration(display.stateTransitionDuration, 300) / 1000;
+  const label = !showSecondaryText || isWaitingForTime
+    ? ''
+    : shouldShowClock
+    ? 'Current Time'
+    : (timerState.phase === 'indicator' ? timerState.indicatorLabel : (timerState.label || display.label || 'Time Left:'));
+
+  const accentColor = intensity === 'critical'
+    ? (display.criticalColor || '#EF4444')
+    : intensity === 'warning'
+      ? (display.warningColor || '#F59E0B')
+      : (display.accentColor || '#FFA500');
+
+  const textColor = intensity === 'critical'
+    ? (display.criticalColor || '#EF4444')
+    : (display.textColor || '#FFFFFF');
+  const otherItemsFontFamily = display.fontFamily || 'Bebas Neue';
+  const alignItems = display.timerAlign === 'left'
+    ? 'flex-start'
+    : display.timerAlign === 'right'
+      ? 'flex-end'
+      : 'center';
+
+  return (
+    <div
+      className="relative w-screen h-screen overflow-hidden flex items-center justify-center"
+      style={{
+        background: paintToCss(display.backgroundPaint, display.backgroundColor || '#000000'),
+        fontFamily: otherItemsFontFamily,
+        contain: 'layout paint style',
+        isolation: 'isolate',
+      }}
+    >
+      <ProjectionExitHint visible={isProjectionMode && showProjectionExitHint} />
+      <AnimatePresence initial={false} mode="sync">
+        <TimeDisplayFrame
+          key={displayModeKey}
+          display={display}
+          value={value}
+          label={label}
+          accentColor={accentColor}
+          textColor={textColor}
+          intensity={intensity}
+          timerState={timerState}
+          progress={progress}
+          clockParts={clockParts}
+          clockValue={clockValue}
+          isWaitingForTime={isWaitingForTime}
+          isFullScreenClock={isFullScreenClock}
+          isBehindSchedule={isBehindSchedule}
+          hasActiveTimer={hasActiveTimer}
+          showSecondaryText={showSecondaryText}
+          showPausedGlobalClock={showPausedGlobalClock}
+          showManualItemGlobalTime={showManualItemGlobalTime}
+          showActiveSecondaryGlobalClock={showActiveSecondaryGlobalClock}
+          stateTransitionVariants={stateTransitionVariants}
+          stateTransitionDuration={stateTransitionDuration}
+          otherItemsFontFamily={otherItemsFontFamily}
+          alignItems={alignItems}
+        />
       </AnimatePresence>
 
       <style>{`

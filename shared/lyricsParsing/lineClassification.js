@@ -2,6 +2,18 @@ import { BRACKET_PAIRS, NORMAL_GROUP_CONFIG } from './constants.js';
 import { getEffectiveGroupingConfig } from './runtimeConfig.js';
 import { isStructureTag } from './structureTags.js';
 
+// Whitespace plus invisible format/filler characters that lyric sites and editors use as
+// blank-line placeholders (braille blank, Hangul fillers, bidi marks, zero-width chars).
+const VISUALLY_BLANK_LINE_REGEX = /^[\s­͏ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁤⁪-⁯⠀ㅤ﻿ﾠ]*$/u;
+
+/**
+ * True when a line has no visible content, including lines made only of invisible characters.
+ */
+export function isVisuallyBlankLine(line) {
+  if (line == null) return true;
+  return VISUALLY_BLANK_LINE_REGEX.test(String(line));
+}
+
 function isPlaceholderLine(line) {
   if (!line || typeof line !== 'string') return false;
   const trimmed = line.trim();
@@ -34,7 +46,7 @@ export function isNormalGroupCandidate(line, config = null) {
   if (!effectiveConfig.enableAutoLineGrouping) return false;
 
   const trimmed = line.trim();
-  if (trimmed.length === 0 || isTranslationLine(trimmed)) return false;
+  if (isVisuallyBlankLine(trimmed) || isTranslationLine(trimmed)) return false;
 
   const maxLength = effectiveConfig.maxLineLength ?? NORMAL_GROUP_CONFIG.MAX_LINE_LENGTH;
   return trimmed.length <= maxLength;

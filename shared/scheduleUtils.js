@@ -31,6 +31,22 @@ export const isTimedScheduleItem = (item) => (
   item?.timed !== false && Number.isFinite(Number(item?.durationMs)) && Number(item.durationMs) > 0
 );
 
+/**
+ * Compact duration label for schedule chips and totals. Keeps seconds so fractional
+ * minute entries (e.g. 3.5) are not rounded into a different whole minute.
+ */
+export const formatScheduleDurationSummary = (durationMs) => {
+  const totalSeconds = Math.round(Math.max(0, Number(durationMs) || 0) / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0) parts.push(`${seconds}s`);
+  return parts.length > 0 ? parts.join(' ') : '0m';
+};
+
 export function normalizeScheduleItem(raw, index = 0) {
   const item = isPlainObject(raw) ? raw : {};
   const rawDuration = item.durationMs ?? (

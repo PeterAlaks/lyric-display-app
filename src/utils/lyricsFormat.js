@@ -3,7 +3,11 @@ import {
   BRACKET_PAIRS,
   STRUCTURE_TAGS_CONFIG,
 } from '../../shared/lyricsParsing/constants.js';
-import { isManualNormalGroupCandidate } from '../../shared/lyricsParsing/lineClassification.js';
+import {
+  isManualNormalGroupCandidate,
+  isVisuallyBlankLine,
+} from '../../shared/lyricsParsing/lineClassification.js';
+import { parseRepeatableSectionMarker } from '../../shared/lyricsParsing/repeatableSections.js';
 import {
   extractStructureTags,
   isStructureTag,
@@ -23,6 +27,8 @@ const ENGLISH_HINT_REGEXES = ENGLISH_HINT_WORDS.map((word) => new RegExp(`\\b${w
  * @param {string} line
  * @returns {string}
  */
+const TYPOGRAPHIC_CHARACTER_REGEX = /[‘-‟–—…      ！-～]/g;
+
 const normalizeTypographicCharacters = (line) => {
   if (!line) return '';
   return line
@@ -116,7 +122,19 @@ const repairOrphanedBrackets = (line, sectionTagPhrases) => {
 };
 
 /**
+ * Section lines that point at other content ("Repeat Chorus", "Chorus x2") rather than
+ * heading a body of lyrics.
+ * @param {string} line
+ * @returns {boolean}
+ */
+const isSectionInstructionTag = (line) => {
+  const trimmed = (line || '').trim();
+  return /\brepeat\b/i.test(trimmed) || /(?:^|\s)[x×]\s*\d+\s*[\]\)\}>]?\s*:?\s*$/i.test(trimmed);
+};
+
+/**
  * Remove empty section tags (section tags followed by no lyrics content before the next section or end).
+ * Keeps repeat instructions and Chorus/Refrain calls that reuse an earlier definition.
  * @param {string[]} lines
  * @returns {{ lines: string[], emptySectionsRemoved: number }}
  */
@@ -124,6 +142,7 @@ const removeEmptySectionTags = (lines, sectionTagPhrases) => {
   if (!Array.isArray(lines) || lines.length === 0) return { lines, emptySectionsRemoved: 0 };
 
   const result = [];
+  const definedRepeatableSections = new Set();
   let emptySectionsRemoved = 0;
 
   for (let i = 0; i < lines.length; i++) {
@@ -134,15 +153,22 @@ const removeEmptySectionTags = (lines, sectionTagPhrases) => {
       let hasContent = false;
       for (let j = i + 1; j < lines.length; j++) {
         const ahead = (lines[j] || '').trim();
-        if (ahead.length === 0) continue;
+        if (isVisuallyBlankLine(ahead)) continue;
         if (isStructureTag(ahead, sectionTagPhrases)) break;
         hasContent = true;
         break;
       }
 
-      if (!hasContent) {
-        emptySectionsRemoved++;
-        continue;
+      const repeatableMarker = parseRepeatableSectionMarker(current);
+      if (hasContent) {
+        if (repeatableMarker) definedRepeatableSections.add(repeatableMarker.key);
+      } else {
+        const isReference = isSectionInstructionTag(current)
+          || Boolean(repeatableMarker && definedRepeatableSections.has(repeatableMarker.key));
+        if (!isReference) {
+          emptySectionsRemoved++;
+          continue;
+        }
       }
     }
 
@@ -153,7 +179,7 @@ const removeEmptySectionTags = (lines, sectionTagPhrases) => {
 };
 
 /**
- * Collapse runs of 3+ consecutive blank lines down to 2 (one visual separator).
+ * Collapse every run of blank lines to a single separator and drop leading blanks.
  * @param {string[]} lines
  * @returns {{ lines: string[], excessBlanksRemoved: number }}
  */
@@ -161,24 +187,45 @@ const collapseExcessiveBlankLines = (lines) => {
   if (!Array.isArray(lines) || lines.length === 0) return { lines, excessBlanksRemoved: 0 };
 
   const result = [];
-  let consecutiveBlanks = 0;
+  let previousWasBlank = true;
   let excessBlanksRemoved = 0;
 
   for (const line of lines) {
-    if ((line || '').trim().length === 0) {
-      consecutiveBlanks++;
-      if (consecutiveBlanks <= 2) {
-        result.push(line);
-      } else {
+    if (isVisuallyBlankLine(line)) {
+      if (previousWasBlank) {
         excessBlanksRemoved++;
+      } else {
+        result.push('');
       }
+      previousWasBlank = true;
     } else {
-      consecutiveBlanks = 0;
+      previousWasBlank = false;
       result.push(line);
     }
   }
 
   return { lines: result, excessBlanksRemoved };
+};
+
+/**
+ * Count blank lines beyond the first in each run between content lines.
+ * @param {string[]} lines
+ * @returns {number}
+ */
+const countExcessInteriorBlankLines = (lines) => {
+  let excess = 0;
+  let run = 0;
+  let seenContent = false;
+  for (const line of lines) {
+    if (isVisuallyBlankLine(line)) {
+      run++;
+      continue;
+    }
+    if (seenContent && run > 1) excess += run - 1;
+    seenContent = true;
+    run = 0;
+  }
+  return excess;
 };
 
 const normalizePunctuation = (line) => {
@@ -230,12 +277,12 @@ const capitalizeFirstCharacter = (line, sectionTagPhrases) => {
 
   const capitalizeVisibleContent = (value) => {
     const trimmed = value.trim();
-    if (
-      !isBracketedTranslationLine(trimmed)
-      || isMetadataTag(trimmed)
-      || isStructureTag(trimmed, sectionTagPhrases)
-    ) {
+    if (isMetadataTag(trimmed) || isStructureTag(trimmed, sectionTagPhrases)) {
       return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+    if (!isBracketedTranslationLine(trimmed)) {
+      // Skip leading quotes and punctuation, e.g. "hello" -> "Hello"; digits stop the search.
+      return value.replace(/^([^\p{L}\p{N}]*)(\p{L})/u, (_match, prefix, letter) => `${prefix}${letter.toLocaleUpperCase()}`);
     }
 
     const leadingWhitespaceLength = value.indexOf(trimmed);
@@ -343,6 +390,28 @@ const couldFormNormalGroup = (line1, line2, groupingConfig) => {
 };
 
 /**
+ * Decide whether a blank line separates two consecutive formatted blocks.
+ * Section headings start a stanza and stay attached to the lyrics they introduce.
+ */
+const needsStanzaBreak = (previous, current, next, groupingConfig) => {
+  if (current.isTag) return true;
+  if (previous.isTag && !previous.isInstruction) return false;
+  if (current.breakBefore) return true;
+
+  const previousLine = previous.lines[previous.lines.length - 1];
+  const currentLine = current.lines[0];
+  if (isBracketedTranslationLine(currentLine)) return false;
+  if (couldFormNormalGroup(previousLine, currentLine, groupingConfig)) return false;
+
+  // Keep a line attached when the next line is its bracketed translation pair.
+  const currentStartsTranslationPair = current.lines.length === 1
+    && next
+    && !next.breakBefore
+    && isBracketedTranslationLine(next.lines[0]);
+  return !currentStartsTranslationPair;
+};
+
+/**
  * @param {string} line - Line to process
  * @returns {string} - Line with timestamps at the beginning with proper spacing
  */
@@ -408,65 +477,71 @@ export const formatLyrics = (text, options = {}) => {
     workingText = extractStructureTags(workingText, groupingConfig);
   }
 
-  const lines = String(workingText).split(/\r?\n/);
-  const formattedLines = [];
+  const sectionTagPhrases = groupingConfig?.sectionTagPhrases;
 
-  for (let i = 0; i < lines.length; i += 1) {
-    const rawLine = lines[i];
-    if (!rawLine || typeof rawLine !== 'string') continue;
-
-    const trimmedInput = rawLine.trim();
-    if (!trimmedInput) continue;
-
-    const timestampNormalized = moveTimestampsToStart(trimmedInput);
-    const punctuationNormalized = normalizePunctuation(timestampNormalized);
-
-    const nextLine = lines[i + 1];
-    const nextIsBracketed = nextLine && isBracketedTranslationLine(nextLine.trim());
-    const nextNextLine = lines[i + 2];
-
-    const shouldNotAddBlankLine = nextIsBracketed ||
-      isBracketedTranslationLine(nextLine || '') ||
-      couldFormNormalGroup(punctuationNormalized, nextLine, groupingConfig);
-
-    const nextAndNextNextFormTranslation = nextLine && nextNextLine &&
-      !isBracketedTranslationLine(nextLine.trim()) &&
-      isBracketedTranslationLine(nextNextLine.trim());
-
-    let linesToProcess = [punctuationNormalized];
-    if (enableSplitting && !nextIsBracketed && !isBracketedTranslationLine(punctuationNormalized)) {
-      linesToProcess = splitLongLine(punctuationNormalized, splitConfig);
+  // Pass 1: normalize source lines and remember where the source separated stanzas.
+  const sourceLines = [];
+  let breakPending = false;
+  String(workingText).split(/\r\n?|\n/).forEach((rawLine) => {
+    if (isVisuallyBlankLine(rawLine)) {
+      breakPending = sourceLines.length > 0;
+      return;
     }
 
-    linesToProcess.forEach((processLine, processLineIndex) => {
-      const segments = splitInlineTranslation(processLine)
-        .map((segment) => segment.trim())
-        .filter(Boolean)
-        .map((segment) => {
-          let result = segment;
-          if (capitalizeFirst) result = capitalizeFirstCharacter(result, groupingConfig?.sectionTagPhrases);
-          if (capitalizeReligious) result = capitalizeReligiousTerms(result, normalizedCapitalizedWords);
-          return result;
-        });
+    const normalized = normalizePunctuation(moveTimestampsToStart(rawLine.trim())).trim();
+    // Punctuation-only lines disappear without swallowing a surrounding stanza break.
+    if (!normalized) return;
 
-      if (segments.length === 0) return;
+    sourceLines.push({ text: normalized, breakBefore: breakPending });
+    breakPending = false;
+  });
 
-      segments.forEach((segment) => {
-        formattedLines.push(segment);
+  // Pass 2: split and capitalize each source line into its display lines.
+  const blocks = [];
+  let carriedBreak = false;
+  sourceLines.forEach((source, index) => {
+    const next = sourceLines[index + 1];
+    const nextIsTranslation = Boolean(next && !next.breakBefore && isBracketedTranslationLine(next.text));
+    const pieces = enableSplitting && !nextIsTranslation && !isBracketedTranslationLine(source.text)
+      ? splitLongLine(source.text, splitConfig)
+      : [source.text];
+
+    const lines = pieces
+      .flatMap((piece) => splitInlineTranslation(piece))
+      .map((segment) => segment.trim())
+      .filter(Boolean)
+      .map((segment) => {
+        let result = segment;
+        if (capitalizeFirst) result = capitalizeFirstCharacter(result, sectionTagPhrases);
+        if (capitalizeReligious) result = capitalizeReligiousTerms(result, normalizedCapitalizedWords);
+        return result;
       });
 
-      const isLastSplitSegment = processLineIndex === linesToProcess.length - 1;
-      if (isLastSplitSegment && !shouldNotAddBlankLine && !nextAndNextNextFormTranslation) {
-        formattedLines.push('');
-      }
+    if (lines.length === 0) {
+      carriedBreak = carriedBreak || source.breakBefore;
+      return;
+    }
+
+    const isTag = isStructureTag(source.text, sectionTagPhrases);
+    blocks.push({
+      lines,
+      breakBefore: source.breakBefore || carriedBreak,
+      isTag,
+      isInstruction: isTag && isSectionInstructionTag(source.text),
     });
-  }
+    carriedBreak = false;
+  });
 
-  while (formattedLines[formattedLines.length - 1] === '') {
-    formattedLines.pop();
-  }
+  // Pass 3: lay blocks out with exactly one blank line between stanzas.
+  const output = [];
+  blocks.forEach((block, index) => {
+    if (index > 0 && needsStanzaBreak(blocks[index - 1], block, blocks[index + 1], groupingConfig)) {
+      output.push('');
+    }
+    output.push(...block.lines);
+  });
 
-  return formattedLines.join('\n');
+  return output.join('\n');
 };
 
 /**
@@ -497,15 +572,9 @@ export const formatLyricsWithStats = (text, options = {}) => {
   // --- Pass 1: Typographic character normalization (before main format) ---
   let workingText = text;
   if (normalizeTypographic) {
-    const typographicBefore = workingText;
+    // Count source characters; replacements such as ellipsis -> "..." change string length.
+    stats.typographicCharsNormalized = (workingText.match(TYPOGRAPHIC_CHARACTER_REGEX) || []).length;
     workingText = normalizeTypographicCharacters(workingText);
-    if (workingText !== typographicBefore) {
-      let charDiffs = 0;
-      for (let i = 0; i < Math.max(typographicBefore.length, workingText.length); i++) {
-        if (typographicBefore[i] !== workingText[i]) charDiffs++;
-      }
-      stats.typographicCharsNormalized = Math.max(1, charDiffs);
-    }
   }
 
   // --- Pass 2: Metadata tag normalization (per-line, before main format) ---
@@ -521,6 +590,7 @@ export const formatLyricsWithStats = (text, options = {}) => {
   });
   stats.metadataTagsNormalized = metaNormCount;
   workingText = metaNormalizedLines.join('\n');
+  const sourceExcessBlanks = countExcessInteriorBlankLines(metaNormalizedLines);
 
   // --- Pass 3: Core formatLyrics pipeline ---
   const formatted = formatLyrics(workingText, { ...options, normalizeTypographic: false });
@@ -553,7 +623,7 @@ export const formatLyricsWithStats = (text, options = {}) => {
   // 4c: Collapse excessive blank lines
   const blanks = collapseExcessiveBlankLines(resultLines);
   resultLines = blanks.lines;
-  stats.excessBlanksRemoved = blanks.excessBlanksRemoved;
+  stats.excessBlanksRemoved = sourceExcessBlanks + blanks.excessBlanksRemoved;
 
   // Strip trailing blank lines
   while (resultLines.length > 0 && (resultLines[resultLines.length - 1] || '').trim() === '') {

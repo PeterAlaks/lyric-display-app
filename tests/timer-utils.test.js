@@ -6,6 +6,7 @@ import {
   createLatestElementRef,
   doesTextElementFit,
   getTextFitShape,
+  getWorstCaseFitText,
 } from '../src/hooks/useAutoFitText.js';
 import {
   MAX_TIMER_SETS,
@@ -71,6 +72,32 @@ test('timer autofit keeps the entering display refs when the previous display ex
 
   releaseEnteringElement();
   assert.equal(currentElement, null);
+});
+
+test('timer autofit sizes digits against the widest glyph so later same-shape values cannot overflow', () => {
+  const digitWidths = { 0: 10, 1: 4, 2: 9, 3: 9, 4: 10, 5: 9, 6: 10, 7: 8, 8: 11, 9: 10 };
+  const measureDigit = (digit) => digitWidths[digit];
+
+  assert.equal(getWorstCaseFitText('1:11', measureDigit), '8:88');
+  assert.equal(getWorstCaseFitText('10:42 PM', measureDigit), '88:88 PM');
+  assert.equal(getWorstCaseFitText('Waiting for time...', measureDigit), 'Waiting for time...');
+  assert.equal(getWorstCaseFitText('', measureDigit), '');
+});
+
+test('time display fits each keyed display state separately during state transitions', async () => {
+  const timeDisplaySource = await readFile(
+    new URL('../src/pages/TimeDisplay.jsx', import.meta.url),
+    'utf8',
+  );
+  const frameStart = timeDisplaySource.indexOf('const TimeDisplayFrame');
+  const pageStart = timeDisplaySource.indexOf('const TimeDisplay = ');
+
+  // AnimatePresence can re-enter an exiting display without re-running refs, so a single
+  // page-level measurement can end up sizing a display that is no longer on screen.
+  assert.notEqual(frameStart, -1);
+  assert.match(timeDisplaySource.slice(frameStart, pageStart), /useAutoFitText\(/);
+  assert.doesNotMatch(timeDisplaySource.slice(pageStart), /useAutoFitText\(/);
+  assert.match(timeDisplaySource.slice(pageStart), /<AnimatePresence[\s\S]*<TimeDisplayFrame[\s\S]*key=\{displayModeKey\}/);
 });
 
 test('timer-control preview auto-fits hour-long timer values to its own bounds', async () => {

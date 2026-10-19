@@ -36,6 +36,7 @@ import {
   MAX_SCHEDULE_ITEMS,
   calculateScheduleItemStartTimes,
   calculateScheduleProjection,
+  formatScheduleDurationSummary,
   isTimedScheduleItem,
   normalizeScheduleDocument,
   parseScheduleText,
@@ -88,15 +89,6 @@ const durationParts = (durationMs) => {
   const totalMinutes = Math.max(0, Number(durationMs) || 0) / 60_000;
   const hours = Math.floor(totalMinutes / 60);
   return { hours, minutes: Math.round((totalMinutes - (hours * 60)) * 100) / 100 };
-};
-
-const formatDurationSummary = (durationMs) => {
-  const totalMinutes = Math.round(Math.max(0, Number(durationMs) || 0) / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
-  if (hours > 0) return `${hours}h`;
-  return `${minutes}m`;
 };
 
 const formatClock = (timestamp) => new Intl.DateTimeFormat(undefined, {
@@ -579,7 +571,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
               : (darkMode ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25' : 'bg-amber-50 text-amber-700 hover:bg-amber-100')}`}
           >
             {timed ? <Clock3 className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
-            {timed ? formatDurationSummary(item.durationMs) : 'Manual'}
+            {timed ? formatScheduleDurationSummary(item.durationMs) : 'Manual'}
           </button>
 
           {!isDragOverlay && (
@@ -981,7 +973,7 @@ const ScheduleCreatorWizard = ({ initialSchedule, isEditing = false, darkMode = 
 
                   <dl className={`grid grid-cols-2 divide-x divide-y sm:grid-cols-4 sm:divide-y-0 ${hairlineDivide}`}>
                     {[
-                      ['Program time', formatDurationSummary(projection.knownRemainingMs + projection.transitionRemainingMs), Clock3],
+                      ['Program time', formatScheduleDurationSummary(projection.knownRemainingMs + projection.transitionRemainingMs), Clock3],
                       ['Projected end', `${formatClock(projection.projectedEndAt)}${projection.isEstimate ? ' +' : ''}`, CalendarClock],
                       ['Ideal end', formatTimeLabel(draft.idealEndTime), CheckCircle2],
                       ['Transition', draft.indicator.enabled ? `${draft.indicator.durationSeconds}s` : 'Off', TimerReset],

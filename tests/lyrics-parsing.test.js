@@ -470,6 +470,149 @@ test('legacy TXT files retain cross-blank auto-grouping without the explicit dir
   assert.deepEqual(parsed.processedLines[0].lines, ['First line', 'Second line']);
 });
 
+test('invisible blank-placeholder lines separate stanzas instead of grouping with lyric lines', () => {
+  const placeholders = ['⠀', 'ㅤ', '‎', ' ​  '];
+
+  placeholders.forEach((placeholder) => {
+    const parsed = parseTxtContent(
+      `First line\nSecond line\n${placeholder}\nThird line\nFourth line`,
+      { enableSplitting: false },
+    );
+
+    assert.deepEqual(
+      parsed.processedLines.map((line) => line.lines || line),
+      [['First line', 'Second line'], ['Third line', 'Fourth line']],
+      `placeholder U+${placeholder.trim().codePointAt(0)?.toString(16) || '0020'} should act as a blank line`,
+    );
+  });
+
+  const lrc = parseLrcContent('[00:01.00]First line\n[00:01.00]⠀\n[00:01.00]Second line', {
+    enableSplitting: false,
+  });
+  assert.deepEqual(lrc.processedLines, ['First line', '', 'Second line']);
+
+  assert.equal(isManualNormalGroupCandidate('⠀'), false);
+  assert.equal(isManualNormalGroupCandidate('ㅤ‎'), false);
+});
+
+test('cross-blank grouping never pulls a stanza line into the next stanza', () => {
+  const leftover = parseTxtContent('First line\nSecond line\nThird line\n\nFourth line', {
+    enableSplitting: false,
+  });
+  assert.deepEqual(
+    leftover.processedLines.map((line) => line.lines || line),
+    [['First line', 'Second line'], 'Third line', 'Fourth line'],
+  );
+
+  const between = parseTxtContent('A one\nB two\n\nC three\nD four\nE five\n\nF six', {
+    enableSplitting: false,
+  });
+  assert.deepEqual(
+    between.processedLines.map((line) => line.lines || line),
+    [['A one', 'B two'], ['C three', 'D four'], 'E five', 'F six'],
+  );
+
+  const singleLineStanzas = parseTxtContent('[Verse]\nFirst line\n\nSecond line\n\nThird line\n\nFourth line', {
+    enableSplitting: false,
+  });
+  assert.deepEqual(
+    singleLineStanzas.processedLines.map((line) => line.lines || line),
+    ['[Verse]', ['First line', 'Second line'], ['Third line', 'Fourth line']],
+  );
+});
+
+test('cleanup leaves at most one blank line after pruning empty sections', () => {
+  const { text } = formatLyricsWithStats([
+    '[Verse 1]',
+    'amazing grace how sweet the sound',
+    'that saved a wretch like me',
+    '',
+    '[Chorus]',
+    '',
+    '[Verse 2]',
+    'twas grace that taught my heart',
+    '',
+    '[Bridge]',
+    '',
+  ].join('\n'), { enableSplitting: true });
+
+  assert.equal(text, [
+    '[Verse 1]',
+    'Amazing grace how sweet the sound',
+    'That saved a wretch like me',
+    '',
+    '[Verse 2]',
+    'Twas grace that taught my heart',
+  ].join('\n'));
+
+  assert.equal(formatLyricsWithStats('[Verse]\n\n[Chorus]\nhello there').text, '[Chorus]\nHello there');
+});
+
+test('cleanup keeps chorus repeat calls and repeat instructions', () => {
+  const source = [
+    '[Chorus]',
+    'Sing it loud',
+    '',
+    '[Verse]',
+    'Hello there',
+    '',
+    '[Chorus]',
+    '',
+    'Repeat Chorus',
+    '',
+    'Chorus x2',
+  ].join('\n');
+  const { text, stats } = formatLyricsWithStats(source, { enableSplitting: true });
+
+  assert.equal(text, [
+    '[Chorus]',
+    'Sing it loud',
+    '',
+    '[Verse]',
+    'Hello there',
+    '',
+    '[Chorus]',
+    '',
+    'Repeat Chorus',
+    '',
+    'Chorus x2',
+  ].join('\n'));
+  assert.equal(stats.emptySectionsRemoved, 0);
+});
+
+test('cleanup starts a stanza at each section tag and attaches the tag to its lyrics', () => {
+  const options = { enableSplitting: false, capitalizeReligious: false };
+
+  assert.equal(
+    formatLyrics('Verse 1:\nline one here\nline two here\nChorus\nsing it now', options),
+    'Verse 1:\nLine one here\nLine two here\n\nChorus\nSing it now',
+  );
+  assert.equal(
+    formatLyrics('[Verse 1]\n\n\namazing grace\nhow sweet the sound', options),
+    '[Verse 1]\nAmazing grace\nHow sweet the sound',
+  );
+});
+
+test('cleanup treats invisible placeholder lines as blank and never emits consecutive blanks', () => {
+  [true, false].forEach((enableSplitting) => {
+    const options = { enableSplitting, capitalizeReligious: false };
+
+    assert.equal(formatLyrics('Hello there\n⠀\nWorld here', options), 'Hello there\n\nWorld here');
+    assert.equal(formatLyrics('Hello there\n​\nㅤ\nWorld here', options), 'Hello there\n\nWorld here');
+    assert.equal(formatLyrics('Hello there\n...\n\nWorld here', options), 'Hello there\n\nWorld here');
+    assert.equal(formatLyrics('Hello there\r\n\r\n \t\r\n\r\nWorld here', options), 'Hello there\n\nWorld here');
+    assert.equal(formatLyrics('\n\n⠀\nHello there\n\n\n', options), 'Hello there');
+  });
+});
+
+test('cleanup reports collapsed blank lines and counts typographic characters individually', () => {
+  const { text, stats } = formatLyricsWithStats('“hello” there… friend\n\n\n\nnext line here');
+
+  assert.equal(text, '"Hello" there... friend\n\nNext line here');
+  assert.equal(stats.typographicCharsNormalized, 3);
+  assert.equal(stats.excessBlanksRemoved, 2);
+});
+
 test('formatter splits long lines without inserting blank separators between split segments', () => {
   const formatted = formatLyrics(
     'this is a very long lyric line that should split into multiple display lines without becoming separate lyric blocks',

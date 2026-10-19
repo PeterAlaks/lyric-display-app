@@ -25,6 +25,72 @@ export const doesTextElementFit = (textEl, availableWidth, availableHeight) => {
   return measuredWidth <= availableWidth && measuredHeight <= availableHeight;
 };
 
+const DIGITS = '0123456789';
+
+/**
+ * Fits are cached per text shape, so measure the shape with the font's widest digit.
+ * Fonts without tabular figures would otherwise let a later "10:08" overflow a size
+ * fitted for "11:11".
+ */
+export const getWorstCaseFitText = (text, measureDigitWidth) => {
+  const value = String(text ?? '');
+  if (!/[0-9]/.test(value)) return value;
+
+  let widestDigit = '0';
+  let widestWidth = -Infinity;
+  for (const digit of DIGITS) {
+    const width = Number(measureDigitWidth(digit)) || 0;
+    if (width > widestWidth) {
+      widestDigit = digit;
+      widestWidth = width;
+    }
+  }
+  return value.replace(/[0-9]/g, widestDigit);
+};
+
+const PROBE_STYLE = {
+  position: 'absolute',
+  left: '0',
+  top: '0',
+  visibility: 'hidden',
+  pointerEvents: 'none',
+  maxWidth: 'none',
+  overflow: 'visible',
+  animation: 'none',
+};
+
+const createProbe = (textEl, deep) => {
+  const probe = textEl.cloneNode(deep);
+  probe.removeAttribute('id');
+  probe.setAttribute('aria-hidden', 'true');
+  Object.assign(probe.style, PROBE_STYLE);
+  textEl.parentNode.appendChild(probe);
+  return probe;
+};
+
+const createWorstCaseFitProbe = (textEl) => {
+  const digitProbe = createProbe(textEl, false);
+  digitProbe.style.fontSize = '100px';
+  const measureDigitWidth = (digit) => {
+    digitProbe.textContent = digit.repeat(8);
+    return digitProbe.scrollWidth;
+  };
+
+  const probe = createProbe(textEl, true);
+  try {
+    const walker = document.createTreeWalker(probe, NodeFilter.SHOW_TEXT);
+    let widestDigitText = null;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!/[0-9]/.test(node.nodeValue)) continue;
+      widestDigitText ??= getWorstCaseFitText('0', measureDigitWidth);
+      node.nodeValue = node.nodeValue.replace(/[0-9]/g, widestDigitText);
+    }
+  } finally {
+    digitProbe.remove();
+  }
+  return probe;
+};
+
 export const createLatestElementRef = (setElement) => (element) => {
   if (!element) return undefined;
   setElement(element);
@@ -55,6 +121,7 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
     if (!enabled || !containerEl || !textEl) return undefined;
 
     const fit = ({ ignoreCache = false } = {}) => {
+      if (!containerEl.isConnected || !textEl.isConnected || !textEl.parentNode) return;
       const availableWidth = Math.round(containerEl.clientWidth) * 0.995;
       const availableHeight = Math.round(containerEl.clientHeight) * 0.98;
       if (availableWidth <= 0 || availableHeight <= 0) return;
@@ -66,21 +133,24 @@ const useAutoFitText = ({ enabled = true, fitKey }) => {
         return;
       }
 
-      const previousFontSize = textEl.style.fontSize;
+      const probe = createWorstCaseFitProbe(textEl);
       let low = 24;
       let high = 1000;
       let best = low;
-      while (low <= high) {
-        const mid = Math.floor((low + high) / 2);
-        textEl.style.fontSize = `${mid}px`;
-        if (doesTextElementFit(textEl, availableWidth, availableHeight)) {
-          best = mid;
-          low = mid + 1;
-        } else {
-          high = mid - 1;
+      try {
+        while (low <= high) {
+          const mid = Math.floor((low + high) / 2);
+          probe.style.fontSize = `${mid}px`;
+          if (doesTextElementFit(probe, availableWidth, availableHeight)) {
+            best = mid;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
         }
+      } finally {
+        probe.remove();
       }
-      textEl.style.fontSize = previousFontSize;
       rememberAutoFit(cacheKey, best);
       setFontSize(best);
     };

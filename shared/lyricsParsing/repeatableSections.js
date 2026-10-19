@@ -13,7 +13,7 @@ export function isSongSeparator(line) {
  * @param {string} line
  * @returns {{ key: 'chorus' | 'refrain', label: string } | null}
  */
-function parseRepeatableSectionMarker(line = '') {
+export function parseRepeatableSectionMarker(line = '') {
   const trimmed = String(line).trim();
   if (!trimmed || !isStructureTag(trimmed)) return null;
 

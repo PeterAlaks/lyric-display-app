@@ -33,10 +33,13 @@ async function checkNetworkAddress(requestRendererModal) {
   checkInProgress = true;
 
   try {
-    const currentAddress = await getLocalIPAddress();
+    const previousAddress = networkStateStore.get('lastKnownLocalIPAddress');
+    // Only a previous address that is no longer assigned counts as a change.
+    const currentAddress = await getLocalIPAddress({
+      preferredAddress: isUsableNetworkAddress(previousAddress) ? previousAddress : undefined,
+    });
     if (!isUsableNetworkAddress(currentAddress)) return;
 
-    const previousAddress = networkStateStore.get('lastKnownLocalIPAddress');
     if (!isUsableNetworkAddress(previousAddress)) {
       networkStateStore.set('lastKnownLocalIPAddress', currentAddress);
       return;

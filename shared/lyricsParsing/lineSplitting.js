@@ -1,5 +1,6 @@
 // Enhanced utilities for intelligently breaking long lyric lines into displayable segments
 import { normalizeLineSplittingConfig } from './preferenceOptions.js';
+import { isVisuallyBlankLine } from './lineClassification.js';
 
 /**
  * Configuration for line splitting behavior
@@ -45,11 +46,12 @@ const PRESERVE_PATTERNS = [
 export function preprocessText(text) {
     if (!text || typeof text !== 'string') return '';
 
-    let cleaned = text;
+    let cleaned = text.replace(/\r\n?/g, '\n');
     cleaned = cleaned.replace(PROBLEMATIC_CHARS_REGEX, '');
     cleaned = cleaned.replace(EXCESSIVE_WHITESPACE_REGEX, ' ');
+    // Blank out invisible-only lines before collapsing so they count as stanza breaks.
+    cleaned = cleaned.split('\n').map(line => (isVisuallyBlankLine(line) ? '' : line.trim())).join('\n');
     cleaned = cleaned.replace(EXCESSIVE_NEWLINES_REGEX, '\n\n');
-    cleaned = cleaned.split('\n').map(line => line.trim()).join('\n');
 
     return cleaned;
 }

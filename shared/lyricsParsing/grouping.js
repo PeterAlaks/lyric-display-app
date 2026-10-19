@@ -1,16 +1,18 @@
 import { getEffectiveGroupingConfig, sanitizeMaxLinesPerGroup } from './runtimeConfig.js';
 import { isStructureTag } from './structureTags.js';
-import { isNormalGroupCandidate, isTranslationLine } from './lineClassification.js';
+import { isNormalGroupCandidate, isTranslationLine, isVisuallyBlankLine } from './lineClassification.js';
 import { isSongSeparator } from './repeatableSections.js';
 
-const PROTECTED_SPLIT_LINE_TYPE = 'parser-protected-split-line';
-const protectSplitLine = (line) => ({ type: PROTECTED_SPLIT_LINE_TYPE, line });
-const isProtectedSplitLine = (item) => item?.type === PROTECTED_SPLIT_LINE_TYPE;
-const unwrapProtectedSplitLine = (item) => isProtectedSplitLine(item) ? item.line : item;
+// Protected lines stay standalone through cross-blank merging: split segments, and lines
+// that belong to a multi-line stanza (a blank line after them is a real stanza boundary).
+const PROTECTED_LINE_TYPE = 'parser-protected-line';
+const protectLine = (line) => ({ type: PROTECTED_LINE_TYPE, line });
+const isProtectedLine = (item) => item?.type === PROTECTED_LINE_TYPE;
+const unwrapProtectedLine = (item) => isProtectedLine(item) ? item.line : item;
 
 export function createNormalGroup(lines = [], idPrefix = 'normal_group', originalIndex = 0) {
   const normalizedLines = Array.isArray(lines)
-    ? lines.filter((line) => typeof line === 'string' && line.trim().length > 0)
+    ? lines.filter((line) => typeof line === 'string' && !isVisuallyBlankLine(line))
     : [];
 
   return {
@@ -62,6 +64,7 @@ export function flattenClusters(clusters) {
 
     // Process clusters with 2+ lines - handle both translation and normal grouping
     if (cluster.length >= 2 && (enableAutoLineGrouping || enableTranslationGrouping)) {
+      const isMultiLineStanza = cluster.filter((item) => !isStructureTag(item.line)).length > 1;
       let i = 0;
       while (i < cluster.length) {
         const currentItem = cluster[i];
@@ -94,11 +97,11 @@ export function flattenClusters(clusters) {
                   chunk[0].originalIndex
                 ));
               } else {
-                result.push(protectSplitLine(chunk[0].line));
+                result.push(protectLine(chunk[0].line));
               }
             }
           } else {
-            splitItems.forEach((item) => result.push(protectSplitLine(item.line)));
+            splitItems.forEach((item) => result.push(protectLine(item.line)));
           }
 
           i = splitIndex;
@@ -172,12 +175,12 @@ export function flattenClusters(clusters) {
           }
         }
 
-        result.push(currentItem.line);
+        result.push(isMultiLineStanza ? protectLine(currentItem.line) : currentItem.line);
         i += 1;
       }
     } else {
       cluster.forEach((item) => {
-        result.push(item.splitSourceId ? protectSplitLine(item.line) : item.line);
+        result.push(item.splitSourceId ? protectLine(item.line) : item.line);
       });
     }
   });
@@ -198,7 +201,7 @@ export function mergeAcrossBlankLines(processedLines) {
   const maxLinesPerGroup = sanitizeMaxLinesPerGroup(config.maxLinesPerGroup);
 
   if (!config.enableAutoLineGrouping || !config.enableCrossBlankLineGrouping) {
-    return processedLines.map(unwrapProtectedSplitLine);
+    return processedLines.map(unwrapProtectedLine);
   }
 
   const result = [];
@@ -206,7 +209,7 @@ export function mergeAcrossBlankLines(processedLines) {
 
   while (i < processedLines.length) {
     const current = processedLines[i];
-    if (isProtectedSplitLine(current)) {
+    if (isProtectedLine(current)) {
       result.push(current.line);
       i += 1;
       continue;
@@ -243,5 +246,5 @@ export function mergeAcrossBlankLines(processedLines) {
     i += 1;
   }
 
-  return result.map(unwrapProtectedSplitLine);
+  return result.map(unwrapProtectedLine);
 }

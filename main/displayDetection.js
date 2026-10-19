@@ -1,3 +1,6 @@
+const DISPLAY_REMOVED_TOAST_DURATION_MS = 10_000;
+let recentDisplayRemovals = [];
+
 /**
  * Show display detection modal for one or more displays
  * @param {Object|Array} displayOrDisplays - Single display object or array of display objects
@@ -74,8 +77,9 @@ export async function showDisplayDetectionModal(displayOrDisplays, isStartupChec
  * @param {string} changeType - Type of change ('added' or 'removed')
  * @param {Object} display - Display object
  * @param {Function} requestRendererModal - Modal request function
+ * @param {{ now?: number }} [options]
  */
-export async function handleDisplayChange(changeType, display, requestRendererModal) {
+export async function handleDisplayChange(changeType, display, requestRendererModal, options = {}) {
   if (changeType === 'added') {
     console.log('[DisplayDetection] New display detected via listener:', display.id);
 
@@ -94,22 +98,35 @@ export async function handleDisplayChange(changeType, display, requestRendererMo
   }
 
   if (changeType === 'removed') {
+    const now = Number.isFinite(options.now) ? options.now : Date.now();
     const outputKey = display?.removedAssignment?.outputKey || null;
     const displayName = display?.label || `Display ${display?.id ?? ''}`.trim();
-    const assignmentText = outputKey
-      ? ` It was assigned to ${outputKey.replace(/^output/i, 'Output ')}.`
-      : '';
+    const summary = outputKey
+      ? `${displayName} (${outputKey.replace(/^output/i, 'Output ')})`
+      : displayName;
+
+    // Removals that land while the previous toast is still visible update that one toast.
+    recentDisplayRemovals = recentDisplayRemovals.filter((entry) => (
+      now - entry.at < DISPLAY_REMOVED_TOAST_DURATION_MS && entry.id !== display?.id
+    ));
+    recentDisplayRemovals.push({ id: display?.id, summary, at: now });
+
+    const summaries = recentDisplayRemovals.map((entry) => entry.summary);
+    const hiddenCount = summaries.length - 2;
+    const message = hiddenCount > 0
+      ? `${summaries.slice(0, 2).join(', ')} and ${hiddenCount} more`
+      : summaries.join(', ');
 
     await requestRendererModal({
       presentation: 'toast',
-      title: 'Display disconnected',
-      message: `${displayName} is no longer available.${assignmentText} Review the remaining output routing when convenient.`,
+      title: summaries.length > 1 ? `${summaries.length} displays disconnected` : 'Display disconnected',
+      message,
       variant: 'warning',
-      duration: 0,
-      dedupeKey: `display-removed:${display?.id ?? 'unknown'}`,
+      duration: DISPLAY_REMOVED_TOAST_DURATION_MS,
+      dedupeKey: 'display-removed',
       actions: [
         {
-          label: 'Review Output Routing',
+          label: 'Review routing',
           modal: {
             title: 'Project Output',
             component: 'ProjectOutput',

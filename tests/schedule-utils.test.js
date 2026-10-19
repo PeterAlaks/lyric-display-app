@@ -4,6 +4,7 @@ import {
   buildScheduleTimeline,
   calculateScheduleItemStartTimes,
   calculateScheduleProjection,
+  formatScheduleDurationSummary,
   inferSchedulePosition,
   normalizeScheduleDocument,
   parseScheduleDocument,
@@ -338,4 +339,17 @@ test('schedule projections normalize fractional active indexes to an existing it
 
   assert.equal(projection.remainingItemCount, 2);
   assert.equal(projection.knownRemainingMs, 90_000);
+});
+
+test('schedule duration summaries keep fractional minutes instead of rounding them up', () => {
+  assert.equal(formatScheduleDurationSummary(4 * 60_000), '4m');
+  assert.equal(formatScheduleDurationSummary(3.5 * 60_000), '3m 30s');
+  assert.equal(formatScheduleDurationSummary(3.75 * 60_000), '3m 45s');
+  assert.equal(formatScheduleDurationSummary(3.99 * 60_000), '3m 59s');
+  assert.equal(formatScheduleDurationSummary(0.5 * 60_000), '30s');
+  assert.equal(formatScheduleDurationSummary(90 * 60_000), '1h 30m');
+  assert.equal(formatScheduleDurationSummary(60.5 * 60_000), '1h 30s');
+  assert.equal(formatScheduleDurationSummary(120 * 60_000), '2h');
+  assert.equal(formatScheduleDurationSummary(0), '0m');
+  assert.equal(formatScheduleDurationSummary(null), '0m');
 });
