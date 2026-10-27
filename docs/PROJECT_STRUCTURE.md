@@ -59,7 +59,7 @@ Windows upgrades intentionally retain electron-builder's default atomic NSIS rep
 
 ```text
 lyric-display-app/
-|-- .github/                 # Funding metadata and release/platform-build workflows
+|-- .github/                 # Funding metadata and CI, release, and platform-build workflows
 |-- build/                   # Tracked electron-builder/installer resources (not build output)
 |-- docs/                    # Architecture, API contracts, build, and recovery docs
 |-- main/                    # Electron main-process implementation
@@ -269,13 +269,13 @@ Supporting realtime modules:
 | --- | --- |
 | `state.js` | In-memory authoritative lyrics, selection, outputs, stage, timer, setlist, clients, drafts, registry, and safety state |
 | `broadcast.js` | Permission/client-aware broadcast helpers |
-| `sessionPersistence.js` | Debounced schema-versioned state snapshot and restore |
+| `sessionPersistence.js` | Debounced schema-versioned state snapshot and restore; a running stage timer is kept across a backend restart within the same app session and reset on a new launch |
 | `setlistValidation.js` | Size, shape, and count validation for socket setlist payloads |
 | `timerScheduler.js` | Server-side timer boundary scheduling |
 | `liveSafety.js` | Safety policy enforcement for mutating live actions |
 | `actionLog.js` | Bounded audit history |
 | `stateDiagnostics.js` | Health/diagnostic summaries without exposing sensitive state |
-| `utils.js` | Plain-object, size, permission, and normalization helpers |
+| `utils.js` | Plain-object, size, permission, and normalization helpers, plus `guardSocketHandlers`, which contains handler exceptions so one bad payload cannot terminate the backend |
 
 The backend accepts authenticated client types defined in `server/config/clientTypes.js`: desktop, web, OBS Dock, output clients, stage, and mobile. Permissions are assigned in `server/auth/permissions.js`; all mutating handlers must enforce the relevant permission and live-safety rule before changing state.
 
@@ -307,7 +307,7 @@ src/
 
 ### Components
 
-- [`components/LyricDisplayApp.jsx`](../src/components/LyricDisplayApp.jsx) is the control-panel feature coordinator. Its extracted view pieces are in `components/LyricDisplayApp/`; orchestration behavior belongs in `hooks/LyricDisplayApp/`.
+- [`components/LyricDisplayApp.jsx`](../src/components/LyricDisplayApp.jsx) is the control-panel feature coordinator. Its extracted view pieces are in `components/LyricDisplayApp/` (including `LiveStatusBar.jsx`, the live/next/clock readout under the lyric list); orchestration behavior belongs in `hooks/LyricDisplayApp/`.
 - [`components/LyricsList.jsx`](../src/components/LyricsList.jsx), `components/LyricsList/`, and `hooks/LyricsList/` own virtualized lyric rows, selection, grouping, history, context menus, and section navigation.
 - [`components/NewSongCanvas.jsx`](../src/components/NewSongCanvas.jsx), `components/NewSongCanvas/`, and `hooks/NewSongCanvas/` own authoring, clipboard/history, search, measurements, timestamps, drafts, and saving.
 - [`components/OutputSettingsPanel.jsx`](../src/components/OutputSettingsPanel.jsx), its directory, and `hooks/OutputSettingsPanel/` own output styling controls. Shared output rendering belongs in [`components/output/LyricVisualFrame.jsx`](../src/components/output/LyricVisualFrame.jsx).
@@ -352,16 +352,19 @@ This store is both UI state and a local persistence cache. The backend remains a
 
 | File or directory | Responsibility |
 | --- | --- |
-| `lyricsParsing/` | Text/LRC parsing, cleanup, grouping, translation, structure tags, sections, line splitting, runtime config |
+| `lyricsParsing/` | Text/LRC parsing, cleanup, grouping, translation, structure tags, sections and section hotkeys, reusable section markers, line splitting, runtime config |
+| `lyricsParsing/songMetadata.js` | `# Key: value` header and LRC tag metadata, loader metadata merging, display-safe song credits, CCLI number normalization, credit footer text |
 | `documentTextExtraction.js` | Markdown/RTF/DOCX extraction and unified import parsing |
 | `lyricImportRegistry.js` | Supported extensions, parser types, labels, accept strings, dialog filters |
 | `lyricImportLimits.js` | Import and extracted-document size limits |
 | `fileNavigatorSearch.js` | Normalization, query filters, typo-tolerant relevance scoring, LRC previews, and match snippets |
 | `outputRegistry.js` | Default output IDs, custom-output count, routable IDs |
 | `setlistLimits.js` | Setlist count, payload, item, and string limits |
+| `setlistNavigation.js` | Locating the loaded setlist entry by item ID (name fallback) and non-wrapping next/previous resolution |
+| `stageMessages.js` | Stage message count/length limits and normalization used by the server, stage display, and stage settings |
 | `timerAuthority.js` | Revisioned timer validation, clock localization, boundary advancement |
 | `sessionReconciliation.js` | Desktop persisted-state vs backend-session bootstrap policy |
-| `commandSafetyPolicy.js` | Focus/live-safety policy for operator commands |
+| `commandSafetyPolicy.js` | Focus/live-safety policy for operator commands, including the Ctrl/Cmd+C copy-versus-clear rule |
 | `apiContractRegistry.js` | Audited REST/realtime names and permissions |
 | `productionReadiness.js` | Output, projection, and NDI pre-service health evaluation |
 | `data/knownArtists.json` | Artist detection data |
@@ -493,7 +496,7 @@ The project uses Node's built-in test runner. Test filenames generally mirror th
 | NDI/external control | NDI installer/client/settings/CLI, external-control, OSC security tests |
 | Renderer/package integration | `npm run build`; package workflows under `.github/workflows/` |
 
-[`scripts/check-static.js`](../scripts/check-static.js) checks syntax/import hygiene and invokes API contract validation. Other scripts write build metadata, update versions/docs, verify update blockmaps, register the development protocol, and drive releases. Tag-based multi-platform release behavior is defined in [`.github/workflows/build-release.yml`](../.github/workflows/build-release.yml); manual packaging verification is in `test-platform-builds.yml`.
+[`scripts/check-static.js`](../scripts/check-static.js) checks syntax/import hygiene and invokes API contract validation. Other scripts write build metadata, update versions/docs, verify update blockmaps, register the development protocol, and drive releases. Every push to `master` and every pull request runs static checks, unit tests, a renderer build, and the renderer-storage smoke test in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Tag-based multi-platform release behavior is defined in [`.github/workflows/build-release.yml`](../.github/workflows/build-release.yml); manual packaging verification is in `test-platform-builds.yml`.
 
 Documentation-only changes do not require starting a dev server. For behavior changes, use the narrowest relevant checks first, then the root static/unit suite and production renderer build before handoff.
 

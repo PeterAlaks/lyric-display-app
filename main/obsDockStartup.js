@@ -72,7 +72,6 @@ export function setObsDockStartupEnabled(enabled) {
   try {
     app.setLoginItemSettings({
       openAtLogin: Boolean(enabled),
-      openAsHidden: true,
       args: OBS_DOCK_LOGIN_ARGS,
     });
 

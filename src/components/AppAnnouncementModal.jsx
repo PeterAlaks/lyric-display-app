@@ -2,7 +2,7 @@ import { BellRing, X } from 'lucide-react';
 
 export default function AppAnnouncementModal({ announcement, darkMode = false, modalId, onClose }) {
   return (
-    <article className={`flex h-full min-h-0 flex-col ${darkMode ? 'bg-[#10131b] text-slate-50' : 'bg-white text-slate-950'}`}>
+    <article className={`flex h-full min-h-0 flex-col ${darkMode ? 'bg-[#111113] text-slate-50' : 'bg-white text-slate-950'}`}>
       <div className="relative aspect-3/1 w-full shrink-0 overflow-hidden bg-slate-200 dark:bg-slate-800">
         <img
           src={announcement.imageUrl}
@@ -44,7 +44,7 @@ export default function AppAnnouncementModal({ announcement, darkMode = false, m
           <button
             type="button"
             onClick={() => onClose?.({ dismissed: true, reason: 'acknowledged' })}
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#10131b]"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#111113]"
           >
             Got it
           </button>

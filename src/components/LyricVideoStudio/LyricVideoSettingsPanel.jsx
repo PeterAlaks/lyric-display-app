@@ -329,7 +329,7 @@ export default function LyricVideoSettingsPanel({
           </div>
           <button
             type="button"
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-4 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-500"
             onClick={onOpenExport}
           >
             <SlidersHorizontal className="h-4 w-4" />

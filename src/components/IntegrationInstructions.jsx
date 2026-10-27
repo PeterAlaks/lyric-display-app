@@ -53,7 +53,7 @@ export function IntegrationInstructions({ darkMode, onRequestClose }) {
     return (
         <div className="flex min-h-0 flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 190px)' }}>
             {/* Fixed Header with Tabs */}
-            <div className={`shrink-0 border-b px-6 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
+            <div className={`shrink-0 border-b px-6 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'}`}>
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
                     <TabsList
                         indicatorClassName={darkMode ? 'bg-gray-100 shadow' : 'bg-white shadow'}

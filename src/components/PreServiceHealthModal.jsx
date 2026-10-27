@@ -282,7 +282,7 @@ export default function PreServiceHealthModal({ darkMode }) {
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 190px)' }}>
-      <div className={`flex items-center justify-between gap-4 border-b px-5 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
+      <div className={`flex items-center justify-between gap-4 border-b px-5 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'}`}>
         <div className="min-w-0">
           <p className={`text-sm font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
             Production readiness dashboard

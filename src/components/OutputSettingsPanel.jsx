@@ -26,29 +26,12 @@ import PanelHeaderActions from './OutputSettingsPanel/PanelHeaderActions';
 import TransitionSettingsSection from './OutputSettingsPanel/TransitionSettingsSection';
 import TypographySpacingSection from './OutputSettingsPanel/TypographySpacingSection';
 import ButterchurnVisualizerSettings from './ButterchurnVisualizerSettings';
-import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, EmphasisRow, AlignmentRow } from './OutputSettingsShared';
+import { blurInputOnEnter, AdvancedCollapse, AdvancedToggle, EmphasisRow, AlignmentRow, SettingRow } from './OutputSettingsShared';
+import SongCreditsSettingsSection from './OutputSettingsPanel/SongCreditsSettingsSection';
 import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput';
 import { outputTemplates } from '../utils/outputTemplates';
 import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
 import { resolveBackendUrl } from '../utils/network';
-
-const SettingRow = ({ icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
-  <div className="flex items-center justify-between gap-4" data-output-setting-row>
-    <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-35" data-output-setting-label>
-        {icon ? (
-          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
-            {React.createElement(icon, { className: `h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}` })}
-          </span>
-        ) : null}
-        <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
-      </div>
-    </Tooltip>
-    <div className={rightClassName}>
-      {children}
-    </div>
-  </div>
-);
 
 // These wrappers intentionally live at module scope. Dock settings receive live
 // updates while their portal-based pickers are open, so changing a wrapper's
@@ -1378,6 +1361,12 @@ const OutputSettingsPanel = ({
         setTransitionAdvancedExpanded={setTransitionAdvancedExpanded}
         settings={settings}
         transitionAdvancedExpanded={transitionAdvancedExpanded}
+        update={update}
+      />
+
+      <SongCreditsSettingsSection
+        darkMode={darkMode}
+        settings={settings}
         update={update}
       />
       </div>

@@ -1,8 +1,50 @@
+import { useEffect, useState } from 'react';
 import { Check, ChevronRight, Music, Radio, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// The OSC address reference comes from the controller itself, so it always matches
+// the configured address prefix.
+const OscAddressReference = ({ darkMode, labelClass, mutedClass }) => {
+  const [addresses, setAddresses] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI?.osc?.getSupportedAddresses?.()
+      .then((result) => {
+        if (!cancelled && result?.success && Array.isArray(result.addresses)) setAddresses(result.addresses);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  if (addresses.length === 0) return null;
+
+  return (
+    <details className={`rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      <summary className={`cursor-pointer select-none px-3 py-2 text-sm font-medium ${labelClass}`}>
+        Supported OSC addresses
+      </summary>
+      <div className="max-h-64 overflow-y-auto px-3 pb-3">
+        <table className="w-full text-left text-xs">
+          <tbody>
+            {addresses.map((entry) => (
+              <tr key={entry.address} className={`border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                <td className={`py-1.5 pr-3 align-top font-mono ${labelClass}`}>
+                  {entry.address}
+                  {entry.args ? <span className={`ml-1 ${mutedClass}`}>{entry.args}</span> : null}
+                </td>
+                <td className={`py-1.5 align-top ${mutedClass}`}>{entry.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+};
 
 const ExternalControlPreferencesSection = ({
   darkMode,
@@ -238,6 +280,8 @@ const ExternalControlPreferencesSection = ({
                 {oscStatus.connectedClients} client{oscStatus.connectedClients !== 1 ? 's' : ''} connected
               </div>
             )}
+
+            <OscAddressReference darkMode={darkMode} labelClass={labelClass} mutedClass={mutedClass} />
           </div>
         )}
       </div>

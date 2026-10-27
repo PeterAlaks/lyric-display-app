@@ -25,6 +25,8 @@ export const DEFAULT_SECTION_TAG_PHRASES = Object.freeze([
   'Outro Chorus',
   'Final Chorus',
   'Ending Chorus',
+  'Tag',
+  'Ending',
 ]);
 
 export const MAX_SECTION_TAG_PHRASE_LENGTH = 80;

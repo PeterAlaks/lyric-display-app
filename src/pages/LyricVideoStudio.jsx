@@ -1275,7 +1275,7 @@ export default function LyricVideoStudio() {
             </Button>
           </Tooltip>
           <Tooltip content="Export MP4 lyric video" side="bottom">
-            <Button type="button" size="sm" onClick={handleOpenExportModal} className="rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-4 text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700">
+            <Button type="button" size="sm" onClick={handleOpenExportModal} className="rounded-full bg-blue-600 px-4 text-white transition-all duration-200 hover:bg-blue-500">
               <Download className="h-4 w-4" />
               Export
             </Button>

@@ -5,11 +5,15 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { dispatchCommand, evaluateCommandSafety } from '../../shared/commandSafetyPolicy.js';
+import { findSectionJumpTarget } from '../../shared/lyricsParsing/sections.js';
+import { findNavigableLyricLineIndex } from '../utils/parseLyrics.js';
 
 /**
  * Hook to handle external control (MIDI/OSC) actions
  * @param {Object} options - Hook options
  * @param {Array} options.lyrics - Current lyrics array
+ * @param {Array} options.lyricsSections - Song sections used by OSC section jumps
+ * @param {boolean} options.skipSectionTitles - Skip section-title lines like the keyboard does
  * @param {number|null} options.selectedLine - Currently selected line index
  * @param {boolean} options.isOutputOn - Whether output is enabled
  * @param {boolean} options.autoplayActive - Whether autoplay is active
@@ -54,6 +58,9 @@ export function shouldBlockExternalActionForLiveSafety(action, liveSafetyEnabled
 
 export function useExternalControl({
   lyrics = [],
+  lyricsSections = [],
+  skipSectionTitles = true,
+  sectionTagPhrases,
   selectedLine,
   isOutputOn,
   autoplayActive,
@@ -80,6 +87,8 @@ export function useExternalControl({
   liveSafetyEnabled = false,
 }) {
   const lyricsRef = useRef(lyrics);
+  const lyricsSectionsRef = useRef(lyricsSections);
+  const navigationOptionsRef = useRef({ skipSectionTitles, sectionTagPhrases });
   const selectedLineRef = useRef(selectedLine);
   const isOutputOnRef = useRef(isOutputOn);
   const autoplayActiveRef = useRef(autoplayActive);
@@ -90,6 +99,10 @@ export function useExternalControl({
 
   // Keep refs updated
   useEffect(() => { lyricsRef.current = lyrics; }, [lyrics]);
+  useEffect(() => { lyricsSectionsRef.current = lyricsSections; }, [lyricsSections]);
+  useEffect(() => {
+    navigationOptionsRef.current = { skipSectionTitles, sectionTagPhrases };
+  }, [skipSectionTitles, sectionTagPhrases]);
   useEffect(() => { selectedLineRef.current = selectedLine; }, [selectedLine]);
   useEffect(() => { isOutputOnRef.current = isOutputOn; }, [isOutputOn]);
   useEffect(() => { autoplayActiveRef.current = autoplayActive; }, [autoplayActive]);
@@ -123,8 +136,9 @@ export function useExternalControl({
 
     if (!currentLyrics || currentLyrics.length === 0) return;
 
-    const nextIndex = currentLine === null ? 0 : Math.min(currentLine + 1, currentLyrics.length - 1);
-    handleSelectLine(nextIndex);
+    const startIndex = currentLine === null ? 0 : Math.min(currentLine + 1, currentLyrics.length - 1);
+    const nextIndex = findNavigableLyricLineIndex(currentLyrics, startIndex, 1, navigationOptionsRef.current);
+    if (nextIndex !== null) handleSelectLine(nextIndex);
   }, [handleSelectLine]);
 
   /**
@@ -136,8 +150,9 @@ export function useExternalControl({
 
     if (!currentLyrics || currentLyrics.length === 0) return;
 
-    const prevIndex = currentLine === null ? 0 : Math.max(currentLine - 1, 0);
-    handleSelectLine(prevIndex);
+    const startIndex = currentLine === null ? 0 : Math.max(currentLine - 1, 0);
+    const prevIndex = findNavigableLyricLineIndex(currentLyrics, startIndex, -1, navigationOptionsRef.current);
+    if (prevIndex !== null) handleSelectLine(prevIndex);
   }, [handleSelectLine]);
 
   /**
@@ -220,6 +235,12 @@ export function useExternalControl({
           case 'next-line':
             handleNextLine();
             break;
+
+          case 'jump-section': {
+            const target = findSectionJumpTarget(lyricsSectionsRef.current, selectedLineRef.current, action.hotkey);
+            if (target) handleSelectLine(target.startLine);
+            break;
+          }
 
           case 'prev-line':
             handlePrevLine();

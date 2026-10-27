@@ -7,7 +7,11 @@ import {
   isManualNormalGroupCandidate,
   isVisuallyBlankLine,
 } from '../../shared/lyricsParsing/lineClassification.js';
-import { parseRepeatableSectionMarker } from '../../shared/lyricsParsing/repeatableSections.js';
+import {
+  lookupRepeatableSection,
+  parseRepeatableSectionMarker,
+  registerRepeatableSection,
+} from '../../shared/lyricsParsing/repeatableSections.js';
 import {
   extractStructureTags,
   isStructureTag,
@@ -142,7 +146,7 @@ const removeEmptySectionTags = (lines, sectionTagPhrases) => {
   if (!Array.isArray(lines) || lines.length === 0) return { lines, emptySectionsRemoved: 0 };
 
   const result = [];
-  const definedRepeatableSections = new Set();
+  const definedRepeatableSections = new Map();
   let emptySectionsRemoved = 0;
 
   for (let i = 0; i < lines.length; i++) {
@@ -161,10 +165,10 @@ const removeEmptySectionTags = (lines, sectionTagPhrases) => {
 
       const repeatableMarker = parseRepeatableSectionMarker(current);
       if (hasContent) {
-        if (repeatableMarker) definedRepeatableSections.add(repeatableMarker.key);
+        if (repeatableMarker) registerRepeatableSection(definedRepeatableSections, repeatableMarker, true);
       } else {
         const isReference = isSectionInstructionTag(current)
-          || Boolean(repeatableMarker && definedRepeatableSections.has(repeatableMarker.key));
+          || Boolean(repeatableMarker && lookupRepeatableSection(definedRepeatableSections, repeatableMarker));
         if (!isReference) {
           emptySectionsRemoved++;
           continue;

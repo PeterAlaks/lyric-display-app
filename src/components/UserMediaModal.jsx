@@ -373,7 +373,7 @@ const UserMediaModal = ({
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col overflow-hidden', darkMode ? 'text-gray-100' : 'text-gray-900')}>
-      <div className={cn('flex shrink-0 flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]')}>
+      <div className={cn('flex shrink-0 flex-col gap-3 border-b px-6 py-4', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList

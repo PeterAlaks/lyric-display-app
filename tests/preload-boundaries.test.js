@@ -97,5 +97,8 @@ test('native output preview windows use a black backing surface', () => {
   assert.equal(resolveWindowBackgroundColor('/output1', { projection: true }), '#000000');
   assert.equal(resolveWindowBackgroundColor('/output1', { backgroundColor: '#123456' }), '#123456');
   assert.equal(resolveWindowBackgroundColor('/', { development: true }), '#ffffff');
-  assert.equal(resolveWindowBackgroundColor('/'), '#f9fafb');
+  assert.equal(resolveWindowBackgroundColor('/'), '#fafafa');
+  assert.equal(resolveWindowBackgroundColor('/', { darkMode: true }), '#18181b');
+  assert.equal(resolveWindowBackgroundColor('/', { darkMode: true, development: true }), '#18181b');
+  assert.equal(resolveWindowBackgroundColor('/output1', { darkMode: false }), '#000000');
 });

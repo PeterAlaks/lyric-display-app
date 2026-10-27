@@ -22,15 +22,15 @@ const useSetlistActions = (emitSetlistAdd) => {
   }, [setlistFiles, lyricsFileName]);
 
   const disabled = useMemo(() => (
-    !isDesktopApp || !hasLyrics || !rawLyricsContent || !lyricsFileName || isSetlistFull() || isFileAlreadyInSetlist()
-  ), [isDesktopApp, hasLyrics, rawLyricsContent, lyricsFileName, isSetlistFull, isFileAlreadyInSetlist]);
+    !isDesktopApp || !hasLyrics || !rawLyricsContent || !lyricsFileName || isSetlistFull()
+  ), [isDesktopApp, hasLyrics, rawLyricsContent, lyricsFileName, isSetlistFull]);
 
   const maxSetlistFiles = useLyricsStore((state) => state.getMaxSetlistFiles());
 
   const title = useMemo(() => {
     if (!isDesktopApp) return 'Only available on desktop app';
     if (isSetlistFull()) return `Setlist is full (${maxSetlistFiles} files maximum)`;
-    if (isFileAlreadyInSetlist()) return 'File already in setlist';
+    if (isFileAlreadyInSetlist()) return 'Add current song to setlist again (for a reprise)';
     return 'Add current file to setlist';
   }, [isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, maxSetlistFiles]);
 
@@ -42,10 +42,6 @@ const useSetlistActions = (emitSetlistAdd) => {
       }
       if (isSetlistFull()) {
         showToast({ title: 'Setlist full', message: `${maxSetlistFiles} files maximum reached`, variant: 'warn' });
-        return;
-      }
-      if (isFileAlreadyInSetlist()) {
-        showToast({ title: 'Already in setlist', message: lyricsFileName, variant: 'info' });
         return;
       }
       if (!hasLyrics || !rawLyricsContent || !lyricsFileName) {
@@ -67,8 +63,13 @@ const useSetlistActions = (emitSetlistAdd) => {
         groupingPlan: hasLrcTimestamps ? null : createGroupingPlan(lyrics),
       },
     }];
+    const isRepeat = isFileAlreadyInSetlist();
     emitSetlistAdd(fileData);
-    showToast({ title: 'Added to setlist', message: `${lyricsFileName}`, variant: 'success' });
+    showToast({
+      title: isRepeat ? 'Added to setlist again' : 'Added to setlist',
+      message: `${lyricsFileName}`,
+      variant: 'success',
+    });
   }, [disabled, emitSetlistAdd, lyrics, lyricsFileName, rawLyricsContent, lyricsTimestamps, songMetadata, isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, hasLyrics, showToast]);
 
   return { isFileAlreadyInSetlist, handleAddToSetlist, disabled, title };

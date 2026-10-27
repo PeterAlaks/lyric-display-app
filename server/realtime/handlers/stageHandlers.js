@@ -4,6 +4,7 @@ import { blockIfLiveSafety } from '../liveSafety.js';
 import { schedulePersistSessionState } from '../sessionPersistence.js';
 import { state } from '../state.js';
 import { applyAuthoritativeTimerUpdate } from '../../../shared/timerAuthority.js';
+import { normalizeStageMessages } from '../../../shared/stageMessages.js';
 import { scheduleStageTimerBoundary } from '../timerScheduler.js';
 
 export function registerStageHandlers({ io, socket, hasPermission, clientType, deviceId, sessionId }) {
@@ -71,9 +72,9 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
       return;
     }
 
-    state.currentStageMessages = Array.isArray(messages) ? [...messages] : [];
+    state.currentStageMessages = normalizeStageMessages(messages);
     schedulePersistSessionState();
-    console.log(`Stage messages updated by ${clientType} client: ${messages?.length || 0} messages`);
+    console.log(`Stage messages updated by ${clientType} client: ${state.currentStageMessages.length} messages`);
     appendActionLog(io, {
       type: 'stage',
       label: 'Stage messages updated',
@@ -82,6 +83,6 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
       target: 'stage messages',
       metadata: { count: state.currentStageMessages.length },
     });
-    emitStageMessagesUpdate(io, messages);
+    emitStageMessagesUpdate(io, state.currentStageMessages);
   });
 }

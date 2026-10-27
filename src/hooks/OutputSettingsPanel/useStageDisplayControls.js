@@ -7,7 +7,7 @@ import {
   normalizeStageMessages,
   normalizeStageMessageText,
   MAX_STAGE_MESSAGES
-} from '../../utils/stageMessages';
+} from '../../../shared/stageMessages.js';
 import {
   TIMER_STORAGE_KEY,
   formatDuration,

@@ -83,7 +83,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
           width: 240,
           margin: 2,
           color: {
-            dark: darkMode ? '#FFFFFF' : '#0F172A',
+            dark: darkMode ? '#FFFFFF' : '#141416',
             light: darkMode ? '#1E293B' : '#FFFFFF',
           },
           errorCorrectionLevel: 'M',
@@ -173,7 +173,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
       `}>
 
         {/* Header */}
-        <div className={`flex items-center justify-between border-b px-5 py-4 ${d ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
+        <div className={`flex items-center justify-between border-b px-5 py-4 ${d ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'}`}>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl ${d ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
               <Smartphone className="h-4.5 w-4.5" />
@@ -253,7 +253,7 @@ const QRCodeDialog = ({ isOpen, onClose, darkMode }) => {
         </div>
 
         {/* Footer note */}
-        <div className={`flex items-center gap-2 border-t px-5 py-3.5 ${d ? 'border-white/5 bg-slate-950/45 text-gray-500' : 'border-slate-900/5 bg-[#f8fafc] text-gray-400'}`}>
+        <div className={`flex items-center gap-2 border-t px-5 py-3.5 ${d ? 'border-white/5 bg-slate-950/45 text-gray-500' : 'border-slate-900/5 bg-[#fafafa] text-gray-400'}`}>
           <Wifi className="h-3.5 w-3.5 shrink-0" />
           <span className="text-xs">Device must be on the same network</span>
         </div>

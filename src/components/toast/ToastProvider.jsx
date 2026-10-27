@@ -134,8 +134,8 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
             };
             const tone = palette[normalizedVariant] || palette.info;
             const bg = isDark ? 'rgba(31, 41, 55, 0.96)' : 'rgba(248, 250, 252, 0.97)';
-            const textColor = isDark ? '#e5e7eb' : '#111827';
-            const mutedTextColor = isDark ? '#9ca3af' : '#4b5563';
+            const textColor = isDark ? '#e4e4e7' : '#18181b';
+            const mutedTextColor = isDark ? '#a1a1aa' : '#52525b';
             const borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(15,23,42,0.12)';
             const shadow = isDark ? '0 18px 42px rgba(0,0,0,0.36)' : '0 18px 42px rgba(15,23,42,0.16)';
             const Icon = normalizedVariant === 'success' ? CheckCircle2 : normalizedVariant === 'error' ? XCircle : normalizedVariant === 'warn' ? AlertTriangle : Info;

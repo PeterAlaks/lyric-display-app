@@ -40,6 +40,7 @@ export default function LyricRow({
   highlightedLineIndex,
   isStructureTagLine,
   getNormalGroupLines,
+  isOutputOn = true,
   density = 'default',
 }) {
   const compact = density === 'dock' || density === 'compact';
@@ -52,6 +53,10 @@ export default function LyricRow({
   const isBatchSelected = selectedIndices?.has(index);
   const isActiveSearchMatch = index === highlightedLineIndex && Boolean(searchQuery);
   const timestamp = Array.isArray(lyricsTimestamps) ? lyricsTimestamps[index] : null;
+  const isLive = index === selectedLine;
+  const isPreview = index === previewLine && !isLive;
+  const tallyLabel = isPreview ? 'Preview' : isLive ? (isOutputOn ? 'Live' : 'Cued') : null;
+  const showTally = Boolean(tallyLabel) && !(isDesktopApp && currentLine?.type === 'normal-group' && hoveredLineIndex === index);
   const hasTimestamp = typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp >= 0;
 
   if (typeof currentLine === 'string' && isStructureTagLine(currentLine)) {
@@ -83,6 +88,7 @@ export default function LyricRow({
       <div
         data-line-index={virtualized ? undefined : index}
         data-preview-line={index === previewLine ? 'true' : undefined}
+        aria-current={isLive ? 'true' : undefined}
         className={`${getLineClassName(index, virtualized, isBatchSelected)} relative`}
         onClick={(event) => handleRowClick(event, index)}
         onContextMenu={(event) => handleContextMenuOpen(event, index)}
@@ -92,7 +98,7 @@ export default function LyricRow({
         onMouseEnter={() => setHoveredLineIndex(index)}
         onMouseLeave={() => setHoveredLineIndex(null)}
       >
-        <div className={hasTimestamp ? 'flex items-stretch gap-3 pr-9' : 'pr-9'}>
+        <div className={`${hasTimestamp ? 'flex items-stretch gap-3 ' : ''}${showTally ? (compact ? 'pr-14' : 'pr-18') : 'pr-9'}`}>
           {hasTimestamp && (
             <div
               className={`shrink-0 self-stretch rounded-md border px-2 py-1 font-mono ${compact ? 'w-18 text-[10px]' : 'w-21 text-[11px]'} flex items-center justify-center ${darkMode
@@ -113,9 +119,23 @@ export default function LyricRow({
               getNormalGroupLines={getNormalGroupLines}
               density={density}
               isActiveSearchMatch={isActiveSearchMatch}
+              tone={isPreview ? 'preview' : isLive && isOutputOn ? 'live' : 'default'}
             />
           </div>
         </div>
+
+        {showTally && (
+          <span
+            className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 ${compact ? 'text-[8px]' : 'text-[9px]'} font-bold uppercase tracking-[0.12em] ${isPreview
+              ? darkMode ? 'bg-amber-400/20 text-amber-200' : 'bg-amber-500/15 text-amber-800'
+              : isOutputOn
+                ? 'bg-white/20 text-white'
+                : 'bg-red-500/15 text-red-500'
+              }`}
+          >
+            {tallyLabel}
+          </span>
+        )}
 
         {isDesktopApp && currentLine?.type === 'normal-group' && hoveredLineIndex === index && (
           <Tooltip content="Split this group into two separate lines" side="top" sideOffset={5}>
@@ -125,7 +145,7 @@ export default function LyricRow({
               onMouseLeave={() => setHoveredButtonIndex(null)}
               className={`absolute top-1.5 right-1.5 h-7 min-w-7 rounded-full px-[7.5px] shadow-sm flex items-center justify-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'gap-1.5' : 'gap-0'
                 } ${index === selectedLine
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400'
+                  ? 'bg-red-700 hover:bg-red-800 text-white border border-red-400'
                   : darkMode
                     ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border border-gray-600'
                     : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'

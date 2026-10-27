@@ -201,6 +201,21 @@ const useSocketEvents = (role, clientPurpose = role) => {
       }
     };
 
+    // Passive displays receive credits and the active setlist item instead of the
+    // controller-only song metadata and lyric source.
+    const applyDisplaySongContext = (payload) => {
+      if (!isPassiveDisplayRole(role) || !isPlainObject(payload)) return;
+      if (isPlainObject(payload.songCredits)) {
+        setSongMetadata(payload.songCredits);
+      }
+      if (hasOwn(payload, 'setlistItemId')) {
+        const setlistItemId = typeof payload.setlistItemId === 'string' ? payload.setlistItemId : null;
+        if (useLyricsStore.getState().lyricsSource?.setlistItemId !== setlistItemId) {
+          setLyricsSource({ setlistItemId });
+        }
+      }
+    };
+
     const applySnapshot = (rawState, source) => {
       if (!isPlainObject(rawState)) {
         logWarn(`Ignoring invalid ${source} payload`);
@@ -251,6 +266,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       if (hasOwn(state, 'songMetadata') && isPlainObject(state.songMetadata) && !preserveLocalDesktopState) {
         setSongMetadata(state.songMetadata);
       }
+      if (!preserveLocalDesktopState) applyDisplaySongContext(state);
       if (hasOwn(state, 'lyricsParsingOptions') && isPlainObject(state.lyricsParsingOptions)) {
         setLyricsParsingOptions(state.lyricsParsingOptions);
       }
@@ -323,6 +339,10 @@ const useSocketEvents = (role, clientPurpose = role) => {
       if (isPlainObject(options)) setLyricsParsingOptions(options);
     });
 
+    socket.on(REALTIME_EVENTS.songCreditsUpdate, (songCredits) => {
+      applyDisplaySongContext({ songCredits });
+    });
+
     socket.on('lineUpdate', (payload) => {
       if (!isPlainObject(payload)) return;
       const { index } = payload;
@@ -366,6 +386,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       if (isPlainObject(payloadObject?.songMetadata)) {
         setSongMetadata(payloadObject.songMetadata);
       }
+      applyDisplaySongContext(payloadObject);
       if (!isSameLyrics) {
         selectLine(null);
       }

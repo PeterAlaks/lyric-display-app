@@ -34,6 +34,9 @@ const SongInfoModal = ({ darkMode }) => {
       />
       <InfoRow label="Album" value={songMetadata.album} />
       <InfoRow label="Year" value={songMetadata.year} />
+      <InfoRow label="Copyright" value={songMetadata.copyright} />
+      {songMetadata.administrator && <InfoRow label="Administrator" value={songMetadata.administrator} />}
+      <InfoRow label="CCLI Song #" value={songMetadata.ccliSongNumber} />
       <InfoRow label="Lyric Lines" value={lyrics.length || null} />
       <InfoRow label="Source Format" value={sourceFormatLabel} />
       <InfoRow label="Origin" value={songMetadata.origin} isLast={true} />

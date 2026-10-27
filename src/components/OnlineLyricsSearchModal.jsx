@@ -532,7 +532,7 @@ const OnlineLyricsSearchModal = ({ isOpen, onClose, darkMode, onImportLyrics }) 
         onClick={handleCloseModal}
       />
       <div className={modalClasses}>
-        <div className={`flex items-center justify-between border-b px-5 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
+        <div className={`flex items-center justify-between border-b px-5 py-4 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'}`}>
           <div className="min-w-0">
             <h2 className={`truncate text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Online Lyrics Search</h2>
             <div className={`mt-1 flex items-center gap-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>

@@ -80,7 +80,7 @@ const DesktopShell = ({ children }) => {
     const previousBg = body.style.backgroundColor;
     const previousMargin = body.style.margin;
     const previousVar = body.style.getPropertyValue('--top-menu-height');
-    body.style.backgroundColor = darkMode ? '#0f172a' : '#f8fafc';
+    body.style.backgroundColor = darkMode ? '#141416' : '#fafafa';
     body.style.margin = '0';
     body.style.setProperty('--top-menu-height', '2.25rem');
 
@@ -96,7 +96,7 @@ const DesktopShell = ({ children }) => {
   }, [isDesktopApp, darkMode]);
 
   const shellStyle = {
-    backgroundColor: darkMode ? '#0f172a' : '#f8fafc',
+    backgroundColor: darkMode ? '#141416' : '#fafafa',
     transition: 'background-color 140ms ease'
   };
 

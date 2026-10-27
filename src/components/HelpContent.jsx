@@ -353,7 +353,7 @@ export const MobileControllerHelp = ({ darkMode }) => (
         <HelpSection
             icon={List}
             title="Control Desktop Lyrics"
-            description="Select any lyric line to display it on all connected outputs. The selected line is automatically synced to the desktop control panel and all display screens. Scroll through lyrics and tap to advance during live presentations."
+            description="Select any lyric line to display it on all connected outputs, or use the large Previous and Next buttons at the bottom of the screen. A Bluetooth presentation clicker paired with your phone or tablet also works (Page Up/Down or arrow keys; B or . blanks the output). LyricDisplay keeps the screen awake where the browser allows it; on a local network address, set your device's auto-lock to Never during the service."
             darkMode={darkMode}
         />
 

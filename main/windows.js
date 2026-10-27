@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, shell } from 'electron';
 import path from 'path';
 import { isDev, resolveProductionPath, appRoot } from './paths.js';
 import { getLogPaths, writeLog } from './logging.js';
@@ -222,7 +222,7 @@ function showRendererRecoveryFallback(parent, route, details, attemptCount) {
     parent: parent && !parent.isDestroyed() ? parent : undefined,
     modal: false,
     autoHideMenuBar: true,
-    backgroundColor: '#111827',
+    backgroundColor: '#18181b',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -441,6 +441,7 @@ export function createWindow(route = '/', options = {}) {
     projection,
     backgroundColor,
     development: isDev,
+    darkMode: nativeTheme.shouldUseDarkColors,
   });
 
   const win = new BrowserWindow({

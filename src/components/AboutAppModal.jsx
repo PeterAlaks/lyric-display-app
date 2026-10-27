@@ -52,6 +52,9 @@ export function AboutAppModal({ version = '1.0.0', onClose }) {
                 className="mb-2 h-8 w-auto max-w-full object-contain"
               />
               <p className="text-xs text-slate-400">Version {version}</p>
+              <p className="mt-3 inline-flex items-center rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-amber-200">
+                One year of LyricDisplay
+              </p>
             </div>
 
             <div aria-hidden="true" className="w-px self-stretch bg-white/15" />
@@ -63,6 +66,9 @@ export function AboutAppModal({ version = '1.0.0', onClose }) {
               <p className="text-[10px] leading-relaxed text-slate-400">
                 Designed and developed by <span className="font-medium text-slate-300">Peter Alakembi</span> and{' '}
                 <span className="font-medium text-slate-300">David Okaliwe</span>, among other contributors.
+              </p>
+              <p className="text-[10px] leading-relaxed text-slate-400">
+                Thank you to every church, studio, and volunteer who has run LyricDisplay through its first year.
               </p>
               <p className="text-xs leading-relaxed text-slate-400">
                 <Link href="https://lyricdisplay.app">Our Website</Link>

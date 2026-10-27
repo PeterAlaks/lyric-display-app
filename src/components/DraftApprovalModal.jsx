@@ -257,7 +257,7 @@ const DraftApprovalModal = ({ darkMode }) => {
                 {/* Header */}
                 <div className={`
           px-6 py-4 border-b flex items-center justify-between
-          ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}
+          ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'}
         `}>
                     <div className="flex items-center gap-3">
                         <FileText className="w-6 h-6 text-blue-500" />

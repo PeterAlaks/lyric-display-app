@@ -30,8 +30,8 @@ Current packages:
 | Platform | Package |
 | --- | --- |
 | Windows 10/11, x64 | NSIS setup executable |
-| macOS, Apple Silicon | ARM64 DMG |
-| macOS, Intel | x64 DMG |
+| macOS 13 Ventura or later, Apple Silicon | ARM64 DMG |
+| macOS 13 Ventura or later, Intel | x64 DMG |
 | Linux, x64 | AppImage |
 
 Direct assets for this version:
@@ -268,15 +268,34 @@ Saving a song opens a smaller in-app destination picker. It lists the current in
 
 Lines wrapped in `[ ]`, `( )`, `< >`, or `{ }` can be recognized as translation/alternate lines and grouped with the preceding lyric line. Parsing, cleanup, capitalization, splitting, and grouping behavior can be adjusted in Preferences.
 
+A song part written once can be repeated with a bare marker. After `[Chorus]`, `[Bridge]`, `[Pre-Chorus]`, `[Tag]`, `[Hook]`, or a numbered verse such as `[Verse 1]` has been written out, a later line containing only that marker repeats its words. `[Chorus 2]` and `[Chorus]` are kept separate when both are written out; a bare `[Chorus 2]` with no words of its own repeats the chorus.
+
+Files imported from EasyWorship or PowerPoint begin with `# Title:`, `# Author:`, and `# Copyright:` lines. LyricDisplay reads a header block like this at the top of any TXT file as song information rather than lyrics. Recognized keys are Title, Author/Artist/Writer, Copyright, Administrator, CCLI Song Number, Album, and Year. LRC `[ti:]`, `[ar:]`, `[au:]`, and `[al:]` tags are read the same way.
+
 For live operation:
 
-- Select a line to send it to connected outputs.
-- Use Up/Down for lyric navigation and `Ctrl/Cmd + F` for search.
-- Use **Display Output** or Spacebar to show/hide the master lyric output.
+- Select a line to send it to connected outputs. While the output is showing lyrics, the live line is marked in red with a **Live** label; when the output is off it is outlined and labelled **Cued**.
+- Use Up/Down, Left/Right, or Page Up/Page Down for lyric navigation. Presentation clickers work without setup, and their blank-screen button (B or `.`) toggles the output like Spacebar.
+- Press `Shift` with C, V, B, P, T, I, O, or E to jump to the next Chorus, Verse, Bridge, Pre-Chorus, Tag, Intro, Outro, or Ending. The section chips above the lyrics show each hotkey.
+- The bar under the lyric list shows what is live, the next line, and the time of day.
+- Use `Ctrl/Cmd + F` for search, and **Display Output** or Spacebar to show/hide the master lyric output.
 - Use **Output > Sync Outputs** when a connected display needs the full current state resent.
 - Open **Help > Keyboard Shortcuts** for the current complete shortcut list.
-- Save a `.ldset` when the running order and song collection should be reused.
+- Save a `.ldset` when the running order and song collection should be reused. A song can appear in a setlist more than once, for example as a reprise; the setlist manager numbers each entry and marks the one that is loaded. Next/previous song stops at the ends of the setlist instead of wrapping around.
 - In the Timer module, open **Schedule** to paste or import an agenda, build timed or manual items, configure transitions and an ideal end time, then save it as `.ldsch` for reuse.
+
+### Song credits and CCLI
+
+Each output can show a small song-credits footer with the title, writers, copyright, CCLI song number, and your CCLI licence number.
+
+1. Enter your licence number once in **Preferences > General > CCLI License Number**.
+2. In an output's settings, set **Song Credits** to **First line**, **Last line**, **First & last**, or **Every line**. Expand it to change the position, size, colour, and opacity.
+
+Credits come from the song's information: a header block at the top of the file, LRC tags, EasyWorship imports, or online providers. Check what a song carries with **Song Information** in the lyrics toolbar. Credits are off for every output until you turn them on.
+
+### External control (OSC)
+
+In addition to line, output, autoplay, setlist, clear, and sync addresses, `/lyricdisplay/section` with a string argument (`chorus`, `verse`, `bridge`, `pre-chorus`, `tag`, `intro`, `outro`, `ending`, or the letters C/V/B/P/T/I/O/E) jumps to the next section of that type. OSC and MIDI next/previous line now skip section-title lines when **Skip Section Titles with Arrow Keys** is on, matching the keyboard. The full address list is shown in **Preferences > External Control**.
 
 ## Troubleshooting
 

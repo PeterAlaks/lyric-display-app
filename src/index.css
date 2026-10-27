@@ -5,6 +5,39 @@
 @source "../index.html";
 @source "./**/*.{js,jsx}";
 
+/* ==== Graphite neutrals ====
+   Gray and slate share one neutral graphite scale so every surface reads like a
+   production console instead of a blue-tinted web page. Accents stay in colour. */
+@theme {
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #71717a;
+  --color-gray-600: #52525b;
+  --color-gray-700: #3f3f46;
+  --color-gray-800: #27272a;
+  --color-gray-900: #18181b;
+  --color-gray-950: #09090b;
+
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #71717a;
+  --color-slate-600: #52525b;
+  --color-slate-700: #3f3f46;
+  --color-slate-800: #27272a;
+  --color-slate-900: #18181b;
+  --color-slate-950: #09090b;
+
+  /* Broadcast tally colours: on air and preview/cue. */
+  --color-tally-live: #e5484d;
+  --color-tally-cue: #f5a524;
+}
+
 /* ==== Colour & Theme Variables ==== */
 @layer base {
   :root {
@@ -61,10 +94,10 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
-    --outline-button-background: #1f2937;
-    --outline-button-border: #4b5563;
-    --outline-button-foreground: #e5e7eb;
-    --outline-button-hover-background: #374151;
+    --outline-button-background: #27272a;
+    --outline-button-border: #52525b;
+    --outline-button-foreground: #e4e4e7;
+    --outline-button-hover-background: #3f3f46;
     --outline-button-hover-border: #6b7280;
     --outline-button-hover-foreground: #ffffff;
     --chart-1: 220 70% 50%;
@@ -110,6 +143,27 @@
 
   :focus-visible {
     outline: none;
+  }
+
+  /* Keyboard operators need to see focus. Zero specificity, so components with
+     their own focus-visible styling keep it. */
+  :where(
+    button,
+    [role="button"],
+    [role="tab"],
+    [role="switch"],
+    [role="menuitem"],
+    [role="option"],
+    [role="combobox"],
+    a[href],
+    summary,
+    select,
+    input[type="checkbox"],
+    input[type="radio"],
+    input[type="range"]
+  ):focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
   }
 
   body {
@@ -167,43 +221,18 @@
   }
 }
 
-@keyframes switch-thumb-to-checked {
-  0% {
-    width: var(--switch-thumb-width);
-    transform: translateX(var(--switch-thumb-inset));
-  }
-  22% {
-    width: calc(var(--switch-thumb-width) + var(--switch-thumb-stretch-distance));
-    transform: translateX(var(--switch-thumb-inset));
-  }
-  100% {
-    width: var(--switch-thumb-width);
-    transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-width) - var(--switch-thumb-inset)));
-  }
-}
-
-@keyframes switch-thumb-to-unchecked {
-  0% {
-    width: var(--switch-thumb-width);
-    transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-width) - var(--switch-thumb-inset)));
-  }
-  22% {
-    width: calc(var(--switch-thumb-width) + var(--switch-thumb-stretch-distance));
-    transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-width) - var(--switch-thumb-inset) - var(--switch-thumb-stretch-distance)));
-  }
-  100% {
-    width: var(--switch-thumb-width);
-    transform: translateX(var(--switch-thumb-inset));
-  }
-}
-
+/* ==== iOS-style switch ====
+   Pressing stretches the thumb toward the side it will travel to; releasing springs it
+   across while the track colour fades in step. Everything is a transition on state, so
+   clicks, keyboard, remote controllers, and programmatic changes animate identically. */
 .switch-track {
   --switch-thumb-inset: 0.125rem;
-  --switch-thumb-stretch-distance: 0.1875rem;
+  --switch-thumb-stretch-distance: calc(var(--switch-thumb-width) * 0.2);
   width: var(--switch-track-width);
   height: var(--switch-track-height);
   border-radius: 9999px;
   corner-shape: round;
+  transition: background-color 320ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms ease;
 }
 
 .switch-thumb {
@@ -211,27 +240,42 @@
   height: calc(var(--switch-track-height) - var(--switch-thumb-inset) - var(--switch-thumb-inset));
   border-radius: 9999px;
   corner-shape: round;
+  background: #ffffff;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 1px 1px rgba(0, 0, 0, 0.16),
+    0 3px 1px rgba(0, 0, 0, 0.03);
   transform: translateX(var(--switch-thumb-inset));
-  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), width 90ms ease-out;
+  transition:
+    transform 420ms cubic-bezier(0.25, 1.1, 0.4, 1),
+    width 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Damped spring (about 2% overshoot). Browsers without linear() keep the curve above. */
+  transition-timing-function:
+    linear(0, 0.0423 3.6%, 0.143 7.1%, 0.2715 10.7%, 0.4069 14.3%, 0.536 17.9%, 0.6511 21.4%, 0.7487 25%, 0.8279 28.6%, 0.8898 32.1%, 0.9362 35.7%, 0.9695 39.3%, 0.9923 42.9%, 1.0068 46.4%, 1.0151 50%, 1.019 53.6%, 1.0199 57.1%, 1.0189 60.7%, 1.0168 64.3%, 1.0142 67.9%, 1.0115 71.4%, 1.009 75%, 1.0067 78.6%, 1.0048 82.1%, 1.0033 85.7%, 1.0021 89.3%, 1.0012 92.9%, 1.0005 96.4%, 1),
+    cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 
 .switch-thumb[data-state="checked"] {
   transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-width) - var(--switch-thumb-inset)));
 }
 
-.switch-thumb[data-motion="to-checked"] {
-  animation: switch-thumb-to-checked 240ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, width;
+/* While pressed, width and position move together so the far edge stays put. */
+.switch-track:active:not(:disabled) .switch-thumb {
+  width: calc(var(--switch-thumb-width) + var(--switch-thumb-stretch-distance));
+  transition:
+    transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+    width 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.switch-thumb[data-motion="to-unchecked"] {
-  animation: switch-thumb-to-unchecked 240ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, width;
+.switch-track[data-state="checked"]:active:not(:disabled) .switch-thumb {
+  transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-width) - var(--switch-thumb-inset) - var(--switch-thumb-stretch-distance)));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .switch-thumb {
-    animation: none !important;
+  .switch-track,
+  .switch-thumb,
+  .switch-track:active:not(:disabled) .switch-thumb {
     transition: none;
   }
 }
@@ -358,7 +402,7 @@
 }
 
 .dark .control-panel-sidebar-texture {
-  background-color: #1f2937;
+  background-color: #27272a;
 }
 
 .output-settings-panel input[type="number"],
@@ -378,9 +422,9 @@
 
 .output-settings-panel[data-theme="dark"],
 .stage-settings-panel[data-theme="dark"] {
-  --output-pill-surface: #2b3544;
-  --output-pill-surface-hover: #344153;
-  --output-pill-inset: #26303d;
+  --output-pill-surface: #2e2e33;
+  --output-pill-surface-hover: #38383e;
+  --output-pill-inset: #232327;
   --output-pill-icon: rgba(147, 197, 253, 0.15);
   --output-pill-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);
 }
@@ -446,7 +490,7 @@
 }
 
 :is(.output-settings-panel, .stage-settings-panel)[data-theme="dark"] [data-slider-track] {
-  background: #4b5563;
+  background: #52525b;
 }
 
 :is(.output-settings-panel, .stage-settings-panel) [data-output-setting-subrow] {
@@ -579,7 +623,7 @@
   --range-progress: 0%;
   --range-fill: #2563eb;
   --range-fill-end: #7c3aed;
-  --range-track: #e5e7eb;
+  --range-track: #e4e4e7;
   appearance: none;
   -webkit-appearance: none;
   height: 18px;
@@ -589,7 +633,7 @@
 .dark .lyric-video-range {
   --range-fill: #60a5fa;
   --range-fill-end: #a78bfa;
-  --range-track: #374151;
+  --range-track: #3f3f46;
 }
 
 .lyric-video-range:disabled {
@@ -620,7 +664,7 @@
 }
 
 .dark .lyric-video-range::-webkit-slider-thumb {
-  background: #f8fafc;
+  background: #fafafa;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 

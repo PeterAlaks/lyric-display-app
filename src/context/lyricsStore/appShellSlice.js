@@ -1,6 +1,7 @@
 export const createAppShellSlice = (set) => ({
-  darkMode: false,
-  themeMode: 'light',
+  // Production consoles default to dark; a saved choice always wins on rehydration.
+  darkMode: true,
+  themeMode: 'dark',
   hasSeenWelcome: false,
   isDesktopApp: false,
 

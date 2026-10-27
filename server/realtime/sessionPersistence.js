@@ -103,7 +103,11 @@ export const createSessionSnapshot = ({ appSessionId = sessionAppId } = {}) => (
   currentStageSettings: state.currentStageSettings || {},
   currentIsOutputOn: Boolean(state.currentIsOutputOn),
   currentStageEnabled: state.currentStageEnabled !== false,
-  currentStageTimerState: sanitizePersistedStageTimerState(state.currentStageTimerState || null),
+  // A running timer is wall-clock anchored, so it can resume after a backend restart in
+  // the same app session; a snapshot without a session can only be restored as idle.
+  currentStageTimerState: appSessionId
+    ? state.currentStageTimerState || null
+    : sanitizePersistedStageTimerState(state.currentStageTimerState || null),
   currentStageMessages: Array.isArray(state.currentStageMessages) ? state.currentStageMessages : [],
   setlistFiles: appSessionId && Array.isArray(state.setlistFiles) ? state.setlistFiles : [],
   registeredOutputs: Array.from(state.registeredOutputs || []),
@@ -173,13 +177,12 @@ export const applySessionSnapshot = (snapshot, { appSessionId = sessionAppId } =
     : {};
   state.currentIsOutputOn = typeof snapshot.currentIsOutputOn === 'boolean' ? snapshot.currentIsOutputOn : false;
   state.currentStageEnabled = typeof snapshot.currentStageEnabled === 'boolean' ? snapshot.currentStageEnabled : true;
+  const isSameAppSession = Boolean(snapshot.appSessionId && appSessionId && snapshot.appSessionId === appSessionId);
   state.currentStageTimerState = snapshot.currentStageTimerState && typeof snapshot.currentStageTimerState === 'object'
-    ? sanitizePersistedStageTimerState(snapshot.currentStageTimerState)
+    ? (isSameAppSession ? snapshot.currentStageTimerState : sanitizePersistedStageTimerState(snapshot.currentStageTimerState))
     : state.currentStageTimerState;
   state.currentStageMessages = Array.isArray(snapshot.currentStageMessages) ? snapshot.currentStageMessages : [];
-  const persistedSetlist = snapshot.appSessionId
-    && appSessionId
-    && snapshot.appSessionId === appSessionId
+  const persistedSetlist = isSameAppSession
     ? validatePersistedSetlistFiles(snapshot.setlistFiles)
     : { valid: true, files: [] };
   state.setlistFiles = persistedSetlist.valid ? persistedSetlist.files : [];

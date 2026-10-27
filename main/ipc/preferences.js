@@ -10,7 +10,7 @@ import { probeBackendPort } from '../portAvailability.js';
  * Register user preferences IPC handlers
  * Handles getting, setting, and resetting user preferences
  */
-export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
+export function registerPreferencesHandlers({ syncBackendParsingConfig, syncBackendSongCreditsConfig }) {
   const validatePortChange = async (nextPort) => {
     if (!app.isPackaged) return { success: true };
     const targetPort = normalizeBackendPort(nextPort, DEFAULT_BACKEND_PORT);
@@ -49,6 +49,11 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
   const syncParsingConfig = () => {
     if (typeof syncBackendParsingConfig !== 'function') return;
     syncBackendParsingConfig(userPreferences.getParsingConfig());
+  };
+
+  const syncSongCreditsConfig = () => {
+    if (typeof syncBackendSongCreditsConfig !== 'function') return;
+    syncBackendSongCreditsConfig(userPreferences.getSongCreditsConfig());
   };
   
   ipcMain.handle('preferences:get-all', async () => {
@@ -98,6 +103,9 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       if (typeof path === 'string' && (path.startsWith('parsing.') || path.startsWith('lineSplitting.'))) {
         syncParsingConfig();
       }
+      if (path === 'general.ccliLicenseNumber') {
+        syncSongCreditsConfig();
+      }
       if (typeof path === 'string') {
         broadcastPreferencesUpdated(path.split('.')[0] || null);
       }
@@ -122,6 +130,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       }
       if (result.success) {
         syncParsingConfig();
+        syncSongCreditsConfig();
         broadcastPreferencesUpdated(null);
       }
       if (app.isPackaged && result.success && preferences?.advanced?.shareAnonymousUsageData === true && !usageSharingWasEnabled) {
@@ -148,6 +157,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
       }
       if (category === 'general') {
         setUpdateSessionActive(false);
+        syncSongCreditsConfig();
       }
       if (category === 'parsing' || category === 'lineSplitting') {
         syncParsingConfig();
@@ -170,6 +180,7 @@ export function registerPreferencesHandlers({ syncBackendParsingConfig }) {
         if (!decisionResult.success) return decisionResult;
         setUpdateSessionActive(false);
         syncParsingConfig();
+        syncSongCreditsConfig();
         broadcastPreferencesUpdated(null);
       }
       return result;

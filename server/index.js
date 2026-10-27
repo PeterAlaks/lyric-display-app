@@ -29,8 +29,9 @@ import { registerIntegrationRoutes } from './routes/integrations.js';
 import { registerAppControlRoutes } from './routes/appControl.js';
 import { registerTemplateRoutes } from './routes/templates.js';
 import { loadPersistedSessionState } from './realtime/sessionPersistence.js';
+import { scheduleStageTimerBoundary } from './realtime/timerScheduler.js';
 import { setLyricsParsingConfig } from './realtime/lyricsParsingConfig.js';
-import { emitControllerEvent } from './realtime/broadcast.js';
+import { emitControllerEvent, setCcliLicenseNumber } from './realtime/broadcast.js';
 import { notifyOutputPresenceChange } from './realtime/state.js';
 import { REALTIME_EVENTS } from '../shared/apiContractRegistry.js';
 import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../shared/backendPort.js';
@@ -161,6 +162,7 @@ io.use(createSocketAuthenticator({
 }));
 
 registerSocketEvents(io, { hasPermission });
+scheduleStageTimerBoundary(io);
 
 registerHealthRoutes(app, {
   io,
@@ -182,6 +184,11 @@ process.on('message', (message) => {
 
   if (message?.type === 'obs-dock-local-auth') {
     process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH = message.enabled ? '1' : '';
+    return;
+  }
+
+  if (message?.type === 'song-credits-config') {
+    setCcliLicenseNumber(io, message.config?.ccliLicenseNumber);
     return;
   }
 

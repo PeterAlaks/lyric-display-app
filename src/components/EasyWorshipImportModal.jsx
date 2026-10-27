@@ -322,7 +322,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                 {/* Header with Progress */}
                 <div className={cn(
                     'border-b px-6 py-5 shrink-0',
-                    darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'
+                    darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'
                 )}>
                     <div className="flex items-center gap-3 mb-3">
                         <div className={cn(

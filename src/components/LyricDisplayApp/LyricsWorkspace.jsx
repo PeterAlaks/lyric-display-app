@@ -6,6 +6,7 @@ import SearchBar from '../SearchBar';
 import LyricsList from '../LyricsList';
 import LyricsDragOverlay from './LyricsDragOverlay';
 import QuickParserPopover from './QuickParserPopover';
+import LiveStatusBar from './LiveStatusBar';
 import { FIRST_RUN_TOUR_STEP_EVENT } from '../../utils/firstRunTour';
 
 const TOUR_PREVIEW_LINES = [
@@ -137,7 +138,7 @@ const LyricsWorkspace = ({
   const actionPadding = useIconOnlyButtons ? 'px-2 py-2' : 'px-4 py-2';
 
   return (
-    <div data-tour="lyrics-workspace" className={`flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full ${darkMode ? '' : 'bg-[#f8fafc]'}`}>
+    <div data-tour="lyrics-workspace" className={`flex-1 min-w-0 pt-4 px-5 pb-5 flex flex-col h-full ${darkMode ? '' : 'bg-[#fafafa]'}`}>
     <div className="mb-6 shrink-0 min-w-0" ref={headerContainerRef}>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -300,22 +301,25 @@ const LyricsWorkspace = ({
       )}
     </div>
 
-    <div className={`lyrics-list-container-rounded shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+    <div className={`lyrics-list-container-rounded shadow-sm border flex-1 flex flex-col overflow-hidden relative ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
       {hasLyrics ? (
-        <div
-          ref={lyricsContainerRef}
-          className="flex-1 overflow-y-auto"
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-        >
-          <LyricsList
-            searchQuery={searchQuery}
-            highlightedLineIndex={highlightedLineIndex}
-            onSelectLine={handleLineSelect}
-          />
-        </div>
+        <>
+          <div
+            ref={lyricsContainerRef}
+            className="flex-1 overflow-y-auto"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+          >
+            <LyricsList
+              searchQuery={searchQuery}
+              highlightedLineIndex={highlightedLineIndex}
+              onSelectLine={handleLineSelect}
+            />
+          </div>
+          <LiveStatusBar darkMode={darkMode} />
+        </>
       ) : showTourLyricsPreview ? (
         <TourLyricsPreview darkMode={darkMode} />
       ) : (

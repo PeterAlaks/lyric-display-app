@@ -71,7 +71,7 @@ const SaveActions = ({
   toolbarGhostClass,
 }) => {
   const disabled = isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges);
-  const gradientActionClass = 'flex h-10 items-center gap-1.5 rounded-full bg-linear-to-r from-blue-400 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:from-blue-500 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:text-white disabled:opacity-55';
+  const gradientActionClass = 'flex h-10 items-center gap-1.5 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-500 disabled:bg-gray-400 disabled:text-white disabled:opacity-55';
 
   if (composeMode) {
     return (

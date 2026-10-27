@@ -31,14 +31,21 @@ export default function LyricLineContent({
   getNormalGroupLines,
   density = 'default',
   isActiveSearchMatch = false,
+  tone = 'default',
 }) {
   const compact = density === 'dock' || density === 'compact';
   const dock = density === 'dock';
   const primaryTextSizeClass = dock ? 'text-[13px]' : 'text-[15px]';
   const secondaryTextSizeClass = dock ? 'text-[11px]' : compact ? 'text-[12px]' : 'text-[15px]';
-  const secondaryTextClass = isActiveSearchMatch
-    ? ''
-    : darkMode ? 'text-gray-300' : 'text-gray-600';
+  // Secondary lines are softened versions of the row's own text colour, so they stay
+  // legible on the solid live tally and the amber preview row as well as plain rows.
+  const secondaryTextClass = tone === 'live'
+    ? 'text-white/80'
+    : isActiveSearchMatch
+      ? ''
+      : tone === 'preview'
+        ? darkMode ? 'text-amber-100/80' : 'text-amber-900/75'
+        : darkMode ? 'text-gray-300' : 'text-gray-600';
 
   if (line == null) return null;
 

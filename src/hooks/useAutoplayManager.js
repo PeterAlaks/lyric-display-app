@@ -199,7 +199,7 @@ export const useAutoplayManager = ({
 
   useEffect(() => {
     if (isConnected && isAuthenticated && ready) {
-      const isAnyAutoplayActive = autoplayActive || intelligentAutoplayActive;
+      const isAnyAutoplayActive = Boolean(autoplayActive || intelligentAutoplayActive);
       emitAutoplayStateUpdate({ isActive: isAnyAutoplayActive, clientType });
     }
   }, [autoplayActive, intelligentAutoplayActive, isConnected, isAuthenticated, ready, clientType, emitAutoplayStateUpdate]);

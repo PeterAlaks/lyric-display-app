@@ -7,6 +7,8 @@ import {
   buildLyricsParsingOptions,
   normalizeLyricsParsingOptions,
 } from '../shared/lyricsParsing/preferenceOptions.js';
+import { expandRepeatableSectionReferences } from '../shared/lyricsParsing/repeatableSections.js';
+import { applySongMetadataHeader, formatSongCreditLines } from '../shared/lyricsParsing/songMetadata.js';
 import { isStructureTag } from '../shared/lyricsParsing/structureTags.js';
 import {
   extractExplicitGroupingDirective,
@@ -22,6 +24,7 @@ import { formatLyrics, formatLyricsWithStats, reconstructEditableText } from '..
 import {
   getLineOutputText,
   isStageOnlyLine,
+  shouldShowSongCredits,
   stripStageOnlyPrefix,
   toggleStageOnlyPrefix,
 } from '../src/utils/parseLyrics.js';
@@ -286,6 +289,143 @@ test('LRC parsing sorts timestamps, strips metadata, and deduplicates repeated t
   ]);
   assert.deepEqual(parsed.timestamps, [1050, 2000, null]);
   assert.equal(parsed.rawText, 'First line\nSecond line\nUntimed refrain');
+});
+
+test('imported metadata headers become song metadata instead of lyric lines', () => {
+  const easyWorshipExport = [
+    '# Title: Amazing Grace',
+    '# Author: John Newton, Edwin Excell',
+    '# Copyright: Public Domain',
+    '# Administrator: Example Music',
+    '# CCLI Song Number: 22025',
+    '# Imported from EasyWorship: 2026-10-01',
+    '',
+    'Amazing grace how sweet the sound',
+    'That saved a wretch like me',
+  ].join('\n');
+
+  const parsed = parseTxtContent(easyWorshipExport);
+  const visibleText = parsed.processedLines
+    .map((line) => (typeof line === 'string' ? line : (line.lines || [line.mainLine]).join('\n')))
+    .join('\n');
+
+  assert.equal(visibleText.includes('#'), false);
+  assert.match(visibleText, /^Amazing grace how sweet the sound/);
+  assert.deepEqual(parsed.songMetadata, {
+    title: 'Amazing Grace',
+    artists: ['John Newton', 'Edwin Excell'],
+    copyright: 'Public Domain',
+    administrator: 'Example Music',
+    ccliSongNumber: '22025',
+  });
+  assert.match(parsed.rawText, /^# Title: Amazing Grace\n/);
+
+  const powerPointExport = parseTxtContent([
+    '# Title: Opening Slides',
+    '# Source File: service.pptx',
+    '# Imported from PowerPoint (.pptx): 2026-10-01',
+    '',
+    'Welcome everyone',
+  ].join('\n'));
+  assert.deepEqual(powerPointExport.processedLines, ['Welcome everyone']);
+  assert.deepEqual(powerPointExport.songMetadata, { title: 'Opening Slides' });
+});
+
+test('hash lines inside lyrics are not treated as metadata headers', () => {
+  const parsed = parseTxtContent([
+    'First lyric line',
+    '# Title: not a header here',
+  ].join('\n'));
+
+  assert.equal(parsed.songMetadata, null);
+  assert.equal(JSON.stringify(parsed.processedLines).includes('# Title: not a header here'), true);
+
+  const unknownKey = parseTxtContent('# Mood: joyful\nLyric line');
+  assert.equal(unknownKey.songMetadata, null);
+  assert.equal(JSON.stringify(unknownKey.processedLines).includes('# Mood: joyful'), true);
+});
+
+test('LRC metadata tags populate song metadata', () => {
+  const parsed = parseLrcContent([
+    '[ti:Example Title]',
+    '[ar:First Artist & Second Artist]',
+    '[al:Example Album]',
+    '[00:01.00]Line',
+  ].join('\n'), { enableSplitting: false });
+
+  assert.deepEqual(parsed.songMetadata, {
+    title: 'Example Title',
+    artists: ['First Artist', 'Second Artist'],
+    album: 'Example Album',
+  });
+});
+
+test('song metadata headers fill in base metadata without discarding provided values', () => {
+  const header = { title: 'Header Title', artists: ['Header Writer'], copyright: '© 2020 Example' };
+
+  assert.deepEqual(
+    applySongMetadataHeader({ title: 'file-name', artists: [], album: null }, header, { override: true }),
+    { title: 'Header Title', artists: ['Header Writer'], album: null, copyright: '© 2020 Example' }
+  );
+  assert.deepEqual(
+    applySongMetadataHeader({ title: 'Provider Title', artists: ['Provider Artist'] }, header),
+    { title: 'Provider Title', artists: ['Provider Artist'], copyright: '© 2020 Example' }
+  );
+  assert.deepEqual(applySongMetadataHeader({ title: 'Same' }, null), { title: 'Same' });
+});
+
+test('bare section markers repeat earlier bridges, tags, and verses', () => {
+  const expanded = expandRepeatableSectionReferences([
+    '[Verse 1]',
+    'Verse one line',
+    '',
+    '[Bridge]',
+    'Bridge line',
+    '',
+    '[Verse 2]',
+    'Verse two line',
+    '',
+    '[Bridge]',
+    '',
+    '[Tag]',
+    'Tag line',
+    '',
+    '[Tag]',
+    '',
+    '[Verse 1]',
+  ].join('\n'));
+
+  assert.equal(expanded.match(/Bridge line/g).length, 2);
+  assert.equal(expanded.match(/Tag line/g).length, 2);
+  assert.equal(expanded.match(/Verse one line/g).length, 2);
+  assert.equal(expanded.match(/Verse two line/g).length, 1);
+});
+
+test('numbered section definitions do not overwrite the unnumbered section', () => {
+  const expanded = expandRepeatableSectionReferences([
+    '[Chorus]',
+    'First chorus',
+    '',
+    '[Chorus 2]',
+    'Second chorus',
+    '',
+    '[Chorus]',
+    '',
+    '[Chorus 2]',
+  ].join('\n')).split('\n');
+
+  const thirdMarker = expanded.lastIndexOf('[Chorus]');
+  assert.equal(expanded[thirdMarker + 1], 'First chorus');
+  const lastMarker = expanded.lastIndexOf('[Chorus 2]');
+  assert.equal(expanded[lastMarker + 1], 'Second chorus');
+});
+
+test('undefined numbered verses are not filled from another verse, but choruses still are', () => {
+  const verses = expandRepeatableSectionReferences('[Verse 1]\nOnly verse\n\n[Verse 3]');
+  assert.equal(verses.match(/Only verse/g).length, 1);
+
+  const choruses = expandRepeatableSectionReferences('[Chorus]\nThe chorus\n\n[Chorus 2]');
+  assert.equal(choruses.match(/The chorus/g).length, 2);
 });
 
 test('LRC parsing preserves blank timestamped lines without visible placeholders', () => {
@@ -726,4 +866,42 @@ test('plain text parser recognizes section descriptors separated by en dash', ()
   assert.equal(parsed.processedLines[0], '[Chorus \u2013 Leader]');
   assert.equal(parsed.sections.length, 1);
   assert.equal(parsed.sections[0].label, 'Chorus \u2013 Leader');
+});
+
+test('song credits format into a compact two-line CCLI footer', () => {
+  assert.deepEqual(formatSongCreditLines({
+    title: 'Amazing Grace',
+    artists: ['John Newton', 'Edwin Excell'],
+    copyright: '2004 Example Music',
+    ccliSongNumber: '22025',
+    ccliLicenseNumber: '7654321',
+  }), [
+    'Amazing Grace · John Newton, Edwin Excell',
+    '© 2004 Example Music · CCLI Song # 22025 · CCLI License # 7654321',
+  ]);
+
+  assert.deepEqual(formatSongCreditLines({ title: 'Hymn', artists: [], copyright: 'Public Domain' }), [
+    'Hymn',
+    'Public Domain',
+  ]);
+  assert.deepEqual(formatSongCreditLines({ title: 'Song', copyright: '© 2010 Label' })[1], '© 2010 Label');
+  assert.deepEqual(formatSongCreditLines({ title: 'Song', copyright: 'Copyright 2010 Label' })[1], 'Copyright 2010 Label');
+  assert.deepEqual(formatSongCreditLines({ title: '', artists: [] }), []);
+  assert.deepEqual(formatSongCreditLines(null), []);
+});
+
+test('song credits show on the first and last lyric lines according to the output mode', () => {
+  const lyrics = ['[Verse 1]', 'First line', 'Middle line', '[Chorus]', 'Last line', ''];
+
+  assert.equal(shouldShowSongCredits({ mode: 'off', lyrics, selectedLine: 1 }), false);
+  assert.equal(shouldShowSongCredits({ mode: 'always', lyrics, selectedLine: 2 }), true);
+  assert.equal(shouldShowSongCredits({ mode: 'first', lyrics, selectedLine: 1 }), true);
+  assert.equal(shouldShowSongCredits({ mode: 'first', lyrics, selectedLine: 2 }), false);
+  assert.equal(shouldShowSongCredits({ mode: 'last', lyrics, selectedLine: 4 }), true);
+  assert.equal(shouldShowSongCredits({ mode: 'last', lyrics, selectedLine: 1 }), false);
+  assert.equal(shouldShowSongCredits({ mode: 'first-last', lyrics, selectedLine: 1 }), true);
+  assert.equal(shouldShowSongCredits({ mode: 'first-last', lyrics, selectedLine: 4 }), true);
+  assert.equal(shouldShowSongCredits({ mode: 'first-last', lyrics, selectedLine: 2 }), false);
+  assert.equal(shouldShowSongCredits({ mode: 'always', lyrics, selectedLine: null }), false);
+  assert.equal(shouldShowSongCredits({ mode: 'always', lyrics, selectedLine: 5 }), false);
 });

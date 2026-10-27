@@ -169,6 +169,8 @@ channels:
         $ref: '#/components/messages/actionLogUpdate'
       lyricsParsingOptionsUpdate:
         $ref: '#/components/messages/lyricsParsingOptionsUpdate'
+      songCreditsUpdate:
+        $ref: '#/components/messages/songCreditsUpdate'
 
 operations:
   clientEvents:
@@ -255,9 +257,38 @@ operations:
       - $ref: '#/channels/socketChannel/messages/actionLogSnapshot'
       - $ref: '#/channels/socketChannel/messages/actionLogUpdate'
       - $ref: '#/channels/socketChannel/messages/lyricsParsingOptionsUpdate'
+      - $ref: '#/channels/socketChannel/messages/songCreditsUpdate'
 
 components:
   schemas:
+    SongCredits:
+      type: object
+      description: >
+        Display-safe song credits. Output and stage displays receive this subset
+        instead of controller song metadata, which can contain local file paths.
+      properties:
+        title:
+          type: string
+          maxLength: 240
+        artists:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            maxLength: 240
+        copyright:
+          type: string
+          maxLength: 240
+        administrator:
+          type: string
+          maxLength: 240
+        ccliSongNumber:
+          type: string
+          pattern: '^[0-9]{0,12}$'
+        ccliLicenseNumber:
+          type: string
+          pattern: '^[0-9]{0,12}$'
+          description: Church-wide licence number from desktop Preferences > General.
     LyricsGroupingConfig:
       type: object
       properties:
@@ -476,7 +507,10 @@ components:
         maxItems: 100
         items:
           $ref: '#/components/schemas/SetlistItemInput'
-      description: Adds up to 100 items total; rejects duplicates by normalized name.
+      description: >
+        Adds up to 100 items total. The same song may be added more than once (for
+        example a reprise); every entry receives its own ID, and navigation follows
+        the loaded item ID.
       x-permissions: ['setlist:write']
     setlistReplace:
       name: setlistReplace
@@ -660,6 +694,10 @@ components:
         type: array
         items:
           type: object
+      description: >
+        The server normalizes messages before storing and broadcasting them: at most
+        50 messages, whitespace collapsed, each text trimmed to 220 characters, and
+        entries without text discarded.
       x-permissions: ['output:control']
     outputMetrics:
       name: outputMetrics
@@ -755,14 +793,17 @@ components:
       name: autoplayStateUpdate
       payload:
         type: object
+        required: [isActive]
         properties:
           isActive:
             type: boolean
           clientType:
             type: string
+            maxLength: 32
       description: >
         Updates autoplay state. The server broadcasts this to all clients
-        except the sender (socket.broadcast.emit).
+        except the sender (socket.broadcast.emit). A payload without a boolean
+        isActive is rejected with permissionError.
       x-permissions: ['output:control']
     liveSafetySet:
       name: liveSafetySet
@@ -870,6 +911,13 @@ components:
       name: lyricsParsingOptionsUpdate
       payload:
         $ref: '#/components/schemas/LyricsParsingOptions'
+    songCreditsUpdate:
+      name: songCreditsUpdate
+      payload:
+        $ref: '#/components/schemas/SongCredits'
+      description: >
+        Sent to output and stage displays when the CCLI licence number changes so
+        visible song credits update without reloading lyrics.
     authError:
       name: authError
       payload:
@@ -961,7 +1009,9 @@ components:
       description: >
         Full application state sent on connection, on requestCurrentState,
         and as an initial push ~100ms after connection. Stage clients receive
-        additional stageTimerState and stageMessages fields.
+        additional stageTimerState and stageMessages fields. Output and stage
+        clients receive songCredits (SongCredits) instead of songMetadata, and
+        stage clients also receive setlistItemId, the loaded setlist entry.
     permissionError:
       name: permissionError
       payload:
@@ -1067,6 +1117,10 @@ components:
         type: array
         items:
           $ref: '#/components/schemas/LyricLine'
+      description: >
+        Controllers receive the full lyrics load. Output and stage displays receive
+        only lyrics, fileName, songCredits (SongCredits), and setlistItemId (the
+        loaded setlist entry, or null).
     serverLyricsTimestampsUpdate:
       name: lyricsTimestampsUpdate
       payload:

@@ -227,7 +227,7 @@ const PaintPicker = React.forwardRef(({
         <TabsList
           aria-label="Fill type"
           indicatorClassName={darkMode ? 'bg-white shadow' : 'bg-black shadow'}
-          className={`grid h-10 w-full grid-cols-2 gap-1 p-1 ${darkMode ? 'bg-[#2b3544] text-gray-300' : 'bg-[#f8fafc] text-gray-500'}`}
+          className={`grid h-10 w-full grid-cols-2 gap-1 p-1 ${darkMode ? 'bg-[#2e2e33] text-gray-300' : 'bg-[#fafafa] text-gray-500'}`}
         >
           <TabsTrigger
             value="solid"

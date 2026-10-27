@@ -20,6 +20,7 @@ import {
   setBackendMessageHandler,
   setBackendStatusHandler,
   syncBackendParsingConfig,
+  syncBackendSongCreditsConfig,
 } from './main/backend.js';
 import { setAdminKeyFromBackend } from './main/adminKey.js';
 import { relaunchInDesktopMode, relaunchInObsDockHeadlessMode } from './main/obsDockStartup.js';
@@ -415,6 +416,7 @@ registerIpcHandlers({
   checkForUpdates,
   requestRendererModal,
   syncBackendParsingConfig,
+  syncBackendSongCreditsConfig,
   prepareForAppDataReset: performCleanup,
 });
 registerInAppBrowserIpc();

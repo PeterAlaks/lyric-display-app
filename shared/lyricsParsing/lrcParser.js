@@ -8,6 +8,7 @@ import {
 } from './runtimeConfig.js';
 import { isStructureTag } from './structureTags.js';
 import { isNormalGroupCandidate, isTranslationLine } from './lineClassification.js';
+import { extractLrcSongMetadata } from './songMetadata.js';
 import { createNormalGroup } from './grouping.js';
 import { deriveSectionsFromProcessedLines } from './sections.js';
 
@@ -287,7 +288,8 @@ export function parseLrcContent(rawText = '', options = {}) {
       timestamps: groupedTimestamps,
       enhancedTimestamps: groupedEnhancedTimestamps,
       sections,
-      lineToSection
+      lineToSection,
+      songMetadata: extractLrcSongMetadata(rawText),
     };
   } finally {
     clearRuntimeGroupingConfig();

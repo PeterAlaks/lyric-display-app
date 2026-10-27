@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { parseLyricsFileAsync } from '../../utils/asyncLyricsParser';
 import useLyricsStore from '../../context/LyricsStore.js';
 import { mergeLyricsParsingOptions } from '../../../shared/lyricsParsing/preferenceOptions.js';
+import { applySongMetadataHeader } from '../../../shared/lyricsParsing/songMetadata.js';
 import { detectArtistFromFilename } from '../../utils/artistDetection';
 import {
   getLyricFormatLabel,
@@ -110,14 +111,14 @@ export const useLyricsLoader = ({
 
       let metadata = context.songMetadata || null;
       if (metadata) {
-        metadata = {
+        metadata = applySongMetadataHeader({
           ...metadata,
           ...(finalType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
-        };
+        }, parsed.songMetadata);
         setSongMetadata(metadata);
       } else if (!context.providerId) {
         const detected = detectArtistFromFilename(finalBaseName);
-        metadata = {
+        metadata = applySongMetadataHeader({
           title: detected.title || finalBaseName,
           artists: detected.artist ? [detected.artist] : [],
           album: null,
@@ -126,7 +127,7 @@ export const useLyricsLoader = ({
           origin: getLyricOriginLabel(finalType),
           filePath: filePath || null,
           ...(finalType === 'txt' ? { groupingPlan: parsed.groupingPlan || null } : {}),
-        };
+        }, parsed.songMetadata, { override: true });
         setSongMetadata(metadata);
       }
 

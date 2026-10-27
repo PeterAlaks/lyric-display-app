@@ -7,7 +7,10 @@ import { registerDraftHandlers } from '../server/realtime/handlers/draftHandlers
 import { registerLiveSafetyHandlers } from '../server/realtime/handlers/liveSafetyHandlers.js';
 import { registerLyricsHandlers } from '../server/realtime/handlers/lyricsHandlers.js';
 import { registerSetlistHandlers } from '../server/realtime/handlers/setlistHandlers.js';
+import { registerStageHandlers } from '../server/realtime/handlers/stageHandlers.js';
+import { MAX_STAGE_MESSAGE_LENGTH, MAX_STAGE_MESSAGES } from '../shared/stageMessages.js';
 import { state } from '../server/realtime/state.js';
+import { guardSocketHandlers } from '../server/realtime/utils.js';
 import {
   sanitizeSetlistDefaultName,
   validateSetlistData,
@@ -466,6 +469,82 @@ test('line navigation rejects indices outside the active lyrics', () => {
   }
 });
 
+test('autoplay state updates reject missing payloads instead of throwing', () => {
+  const previousLiveSafety = state.liveSafety;
+  state.liveSafety = { enabled: false };
+
+  try {
+    const handlers = new Map();
+    const emitted = [];
+    const broadcasts = [];
+    const socket = {
+      on(eventName, handler) {
+        handlers.set(eventName, handler);
+      },
+      emit(eventName, payload) {
+        emitted.push({ eventName, payload });
+      },
+      broadcast: { emit: (eventName, payload) => broadcasts.push({ eventName, payload }) },
+    };
+
+    registerLyricsHandlers({
+      io: { emit() {} },
+      socket,
+      hasPermission: () => true,
+      clientType: 'mobile',
+      deviceId: 'mobile-device',
+      sessionId: 'mobile-session',
+    });
+
+    for (const payload of [undefined, null, 'active', { isActive: 'yes' }]) {
+      assert.doesNotThrow(() => handlers.get('autoplayStateUpdate')?.(payload));
+      assert.deepEqual(emitted.at(-1), {
+        eventName: 'permissionError',
+        payload: 'Invalid autoplay state payload',
+      });
+    }
+    assert.equal(broadcasts.length, 0);
+
+    handlers.get('autoplayStateUpdate')?.({ isActive: true, clientType: 'mobile' });
+    assert.deepEqual(broadcasts.at(-1), {
+      eventName: 'autoplayStateUpdate',
+      payload: { isActive: true, clientType: 'mobile' },
+    });
+  } finally {
+    state.liveSafety = previousLiveSafety;
+  }
+});
+
+test('guarded socket handlers contain synchronous and asynchronous failures', async () => {
+  const handlers = new Map();
+  const failures = [];
+  const socket = {
+    on(eventName, handler) {
+      handlers.set(eventName, handler);
+      return this;
+    },
+  };
+
+  guardSocketHandlers(socket, {
+    onError: (eventName, error) => failures.push({ eventName, message: error.message }),
+  });
+  socket.on('throws', () => {
+    throw new Error('sync failure');
+  });
+  socket.on('rejects', async () => {
+    throw new Error('async failure');
+  });
+  socket.on('works', (value) => value * 2);
+
+  assert.doesNotThrow(() => handlers.get('throws')());
+  await handlers.get('rejects')();
+  assert.equal(handlers.get('works')(21), 42);
+  assert.deepEqual(failures, [
+    { eventName: 'throws', message: 'sync failure' },
+    { eventName: 'rejects', message: 'async failure' },
+  ]);
+});
+
 test('filename updates reject malformed payloads while allowing an authoritative clear', () => {
   const previousFileName = state.currentLyricsFileName;
   const previousLiveSafety = state.liveSafety;
@@ -587,5 +666,50 @@ test('live safety mode can be changed by desktop admin clients', () => {
     assert.equal(ioEvents.at(-1).payload.enabled, true);
   } finally {
     state.liveSafety = previousLiveSafety;
+  }
+});
+
+test('stage message updates are bounded and normalized before they are stored or broadcast', () => {
+  const previousMessages = state.currentStageMessages;
+  const previousLiveSafety = state.liveSafety;
+  const previousConnectedClients = state.connectedClients;
+  state.liveSafety = { enabled: false };
+  state.connectedClients = new Map();
+
+  try {
+    const handlers = new Map();
+    const broadcasts = [];
+    registerStageHandlers({
+      io: { emit: (eventName, payload) => broadcasts.push({ eventName, payload }) },
+      socket: {
+        on(eventName, handler) {
+          handlers.set(eventName, handler);
+        },
+        emit() {},
+      },
+      hasPermission: () => true,
+      clientType: 'mobile',
+      deviceId: 'mobile-device',
+      sessionId: 'mobile-session',
+    });
+
+    handlers.get('stageMessagesUpdate')?.([
+      { id: 'keep', text: '  Welcome   everyone  ' },
+      { text: 'x'.repeat(1000) },
+      { nested: { unexpected: true } },
+      42,
+      ...Array.from({ length: 200 }, (_, index) => `Message ${index}`),
+    ]);
+
+    assert.equal(state.currentStageMessages.length, MAX_STAGE_MESSAGES);
+    assert.deepEqual(state.currentStageMessages[0], { id: 'keep', text: 'Welcome everyone' });
+    assert.equal(state.currentStageMessages[1].text.length, MAX_STAGE_MESSAGE_LENGTH);
+    assert.equal(state.currentStageMessages.every((message) => typeof message.text === 'string'), true);
+    const broadcast = broadcasts.find((event) => event.eventName === 'stageMessagesUpdate');
+    assert.deepEqual(broadcast?.payload, state.currentStageMessages);
+  } finally {
+    state.currentStageMessages = previousMessages;
+    state.liveSafety = previousLiveSafety;
+    state.connectedClients = previousConnectedClients;
   }
 });

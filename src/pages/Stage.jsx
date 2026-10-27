@@ -10,7 +10,8 @@ import {
 } from '../utils/parseLyrics';
 import { logDebug } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
-import { normalizeStageMessages } from '../utils/stageMessages';
+import { normalizeStageMessages } from '../../shared/stageMessages.js';
+import { getAdjacentSetlistItem } from '../../shared/setlistNavigation.js';
 import { getTimerDisplay, isTimerVisiblyActive } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
 import { hasSelectedStageLyricLine, shouldClearStageIdleScreen } from '../context/lyricsStore/stageSlice';
@@ -145,7 +146,8 @@ const Stage = () => {
     preview: isPreviewMode,
     purpose: 'stage-display',
   });
-  const { lyrics, selectedLine, lyricsFileName } = useLyricsState();
+  const { lyrics, selectedLine, lyricsFileName, lyricsSource } = useLyricsState();
+  const activeSetlistItemId = lyricsSource?.setlistItemId || null;
   const { isOutputOn } = useOutputState();
   const { settings: stageSettings } = useStageSettings();
   const { setlistFiles } = useSetlistState();
@@ -498,23 +500,23 @@ const Stage = () => {
       return 'Not Available';
     }
 
-    if (!lyricsFileName) {
+    if (!lyricsFileName && !activeSetlistItemId) {
       return 'Not Available';
     }
 
-    const currentIndex = setlistFiles.findIndex(
-      (file) => file.displayName === lyricsFileName || file.originalName === lyricsFileName
+    const { currentIndex, item: nextSong, atBoundary } = getAdjacentSetlistItem(
+      setlistFiles,
+      { setlistItemId: activeSetlistItemId, lyricsFileName },
+      1,
     );
 
-    if (currentIndex === -1) {
+    if (atBoundary) return 'End of setlist';
+    if (currentIndex === -1 || !nextSong) {
       return 'Not Available';
     }
 
-    const nextIndex = (currentIndex + 1) % setlistFiles.length;
-    const nextSong = setlistFiles[nextIndex];
-
     return nextSong.displayName || nextSong.originalName || 'Not Available';
-  }, [setlistFiles, lyricsFileName, upcomingSongMode, upcomingSongUpdateTrigger]);
+  }, [setlistFiles, lyricsFileName, activeSetlistItemId, upcomingSongMode, upcomingSongUpdateTrigger]);
 
   const upcomingSongName = getUpcomingSongName();
   const upcomingSong = `Upcoming Song: ${upcomingSongName}`;

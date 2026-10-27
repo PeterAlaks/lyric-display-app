@@ -356,7 +356,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
           darkMode ? 'bg-gray-900 text-gray-50 border-slate-800/80' : 'bg-white text-gray-900 border-slate-200/80'
         )}
       >
-        <div className={cn('border-b px-6 py-5 shrink-0', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]')}>
+        <div className={cn('border-b px-6 py-5 shrink-0', darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]')}>
           <div className="flex items-center gap-3 mb-3">
             <div className={cn(
               'flex h-11 w-11 items-center justify-center rounded-xl',

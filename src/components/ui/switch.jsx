@@ -5,8 +5,6 @@ import * as SwitchPrimitives from "@radix-ui/react-switch"
 
 import { cn } from "@/lib/utils"
 
-const MOTION_DURATION_MS = 240
-
 const switchSizes = {
   compact: {
     properties: {
@@ -46,57 +44,32 @@ const switchVariants = {
   blue: "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-input dark:data-[state=checked]:bg-green-400",
 }
 
+// Motion (press stretch, spring slide, track fade) lives in the .switch-track and
+// .switch-thumb styles in index.css and follows data-state, so every state change animates.
 const Switch = React.forwardRef(({
   className,
-  onCheckedChange,
   size = "compact",
   style,
   variant = "default",
   ...props
 }, ref) => {
-  const [motion, setMotion] = React.useState(null)
-  const motionTimeoutRef = React.useRef(null)
   const sizeConfig = switchSizes[size] ?? switchSizes.compact
   const variantClassName = switchVariants[variant] ?? switchVariants.default
-
-  React.useEffect(() => () => {
-    if (motionTimeoutRef.current !== null) {
-      clearTimeout(motionTimeoutRef.current)
-    }
-  }, [])
-
-  const handleCheckedChange = React.useCallback((nextChecked) => {
-    if (motionTimeoutRef.current !== null) {
-      clearTimeout(motionTimeoutRef.current)
-    }
-
-    setMotion(nextChecked ? "to-checked" : "to-unchecked")
-    motionTimeoutRef.current = setTimeout(() => {
-      setMotion(null)
-      motionTimeoutRef.current = null
-    }, MOTION_DURATION_MS)
-
-    onCheckedChange?.(nextChecked)
-  }, [onCheckedChange])
 
   return (
     <SwitchPrimitives.Root
       className={cn(
-        "switch-track peer inline-flex shrink-0 cursor-pointer items-center overflow-hidden border-0 shadow-sm transition-colors contain-[paint] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        "switch-track peer inline-flex shrink-0 cursor-pointer items-center overflow-hidden border-0 shadow-sm contain-[paint] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
         variantClassName,
         className
       )}
       data-size={size}
       data-variant={variant}
-      onCheckedChange={handleCheckedChange}
       style={{ ...sizeConfig.properties, ...style }}
       {...props}
       ref={ref}
     >
-      <SwitchPrimitives.Thumb
-        className="switch-thumb pointer-events-none block bg-background shadow-lg ring-0"
-        data-motion={motion ?? undefined}
-      />
+      <SwitchPrimitives.Thumb className="switch-thumb pointer-events-none block ring-0" />
     </SwitchPrimitives.Root>
   )
 })

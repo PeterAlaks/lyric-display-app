@@ -265,7 +265,7 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
     emitLyricsRenderEvent(io, 'fileNameUpdate', fileName);
   });
 
-  socket.on('autoplayStateUpdate', ({ isActive, clientType: autoplayClientType }) => {
+  socket.on('autoplayStateUpdate', (payload) => {
     if (blockIfLiveSafety({ io, socket, clientType, deviceId, sessionId, action: 'autoplayStateUpdate' })) {
       return;
     }
@@ -274,6 +274,14 @@ export function registerLyricsHandlers({ io, socket, hasPermission, clientType, 
       socket.emit('permissionError', 'Insufficient permissions to update autoplay state');
       return;
     }
+
+    if (!isPlainObject(payload) || typeof payload.isActive !== 'boolean') {
+      socket.emit('permissionError', 'Invalid autoplay state payload');
+      return;
+    }
+
+    const { isActive } = payload;
+    const autoplayClientType = typeof payload.clientType === 'string' ? payload.clientType.slice(0, 32) : undefined;
 
     console.log(`Autoplay state updated by ${clientType} client: ${isActive ? 'active' : 'inactive'}`);
     appendActionLog(io, {

@@ -2,6 +2,7 @@ import { clearRuntimeGroupingConfig, setRuntimeGroupingConfig } from './runtimeC
 import { processRawTextToLines } from './txtProcessor.js';
 import { deriveSectionsFromProcessedLines } from './sections.js';
 import { applyGroupingPlan, createGroupingPlan } from './groupingPlan.js';
+import { extractSongMetadataHeader } from './songMetadata.js';
 
 export const EXPLICIT_GROUPING_DIRECTIVE = '[#:LyricDisplay grouping=explicit]';
 
@@ -37,7 +38,8 @@ export function parseTxtContent(rawText = '', options = {}) {
   }
 
   try {
-    const initiallyProcessedLines = processRawTextToLines(directive.content, options);
+    const header = extractSongMetadataHeader(directive.content);
+    const initiallyProcessedLines = processRawTextToLines(header.content, options);
     const groupingResult = applyGroupingPlan(initiallyProcessedLines, options.groupingPlan);
     const processedLines = groupingResult.processedLines;
     const { sections, lineToSection } = deriveSectionsFromProcessedLines(processedLines);
@@ -57,8 +59,9 @@ export function parseTxtContent(rawText = '', options = {}) {
     }).join('\n\n');
 
     return {
-      rawText: reconstructed,
+      rawText: header.headerText ? `${header.headerText}\n\n${reconstructed}` : reconstructed,
       processedLines,
+      songMetadata: header.songMetadata,
       sections,
       lineToSection,
       groupingPlan: createGroupingPlan(processedLines),

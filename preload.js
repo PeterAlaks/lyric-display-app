@@ -552,9 +552,10 @@ contextBridge.exposeInMainWorld('electronStore', {
   getDarkMode: () => {
     try {
       const store = JSON.parse(persistentStorage.getItem('lyrics-store'));
-      return store?.state?.darkMode || false;
+      const darkMode = store?.state?.darkMode;
+      return typeof darkMode === 'boolean' ? darkMode : true;
     } catch {
-      return false;
+      return true;
     }
   }
 });

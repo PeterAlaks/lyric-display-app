@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import Store from 'electron-store';
 import dgram from 'dgram';
 import './appIdentity.js';
+import { getSectionHotkey } from '../shared/lyricsParsing/sections.js';
 import {
   DEFAULT_OSC_DUPLICATE_WINDOW_MS,
   DEFAULT_OSC_RATE_LIMIT,
@@ -228,6 +229,7 @@ class OSCController extends EventEmitter {
       [`${prefix}/line`]: this.handleLineSelect.bind(this),
       [`${prefix}/line/next`]: this.handleNextLine.bind(this),
       [`${prefix}/line/prev`]: this.handlePrevLine.bind(this),
+      [`${prefix}/section`]: this.handleSectionJump.bind(this),
       [`${prefix}/output`]: this.handleOutputToggle.bind(this),
       [`${prefix}/output/1`]: this.handleOutput1Toggle.bind(this),
       [`${prefix}/output/2`]: this.handleOutput2Toggle.bind(this),
@@ -402,6 +404,16 @@ class OSCController extends EventEmitter {
 
   handlePrevLine() {
     this.emitAction('prev-line');
+  }
+
+  handleSectionJump(args) {
+    const value = args[0]?.value;
+    if (typeof value !== 'string') return;
+    const trimmed = value.trim();
+    const hotkey = /^[a-z]$/i.test(trimmed) ? trimmed.toUpperCase() : getSectionHotkey(trimmed);
+    if (hotkey) {
+      this.emitAction('jump-section', { hotkey });
+    }
   }
 
   handleOutputToggle(args) {
@@ -715,6 +727,7 @@ class OSCController extends EventEmitter {
       { address: `${prefix}/line`, args: '[int]', description: 'Select specific line (0-indexed)' },
       { address: `${prefix}/line/next`, args: '', description: 'Go to next line' },
       { address: `${prefix}/line/prev`, args: '', description: 'Go to previous line' },
+      { address: `${prefix}/section`, args: '[string]', description: 'Jump to the next section of a type: chorus, verse, bridge, pre-chorus, tag, intro, outro, ending (or C/V/B/P/T/I/O/E)' },
       { address: `${prefix}/output`, args: '[0|1]', description: 'Toggle or set main output' },
       { address: `${prefix}/output/1`, args: '[0|1]', description: 'Toggle or set Output 1' },
       { address: `${prefix}/output/2`, args: '[0|1]', description: 'Toggle or set Output 2' },

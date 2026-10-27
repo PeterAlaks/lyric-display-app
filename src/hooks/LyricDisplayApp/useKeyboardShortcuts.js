@@ -2,12 +2,18 @@ import { useEffect } from 'react';
 import { hasValidTimestamps } from '../../utils/timestampHelpers';
 import { findNavigableLyricLineIndex } from '../../utils/parseLyrics';
 import useLyricsStore from '../../context/LyricsStore';
-import { isAutoplayKeyboardShortcut } from '../../constants/shortcuts';
+import {
+  getLiveNavigationKeyAction,
+  getSectionJumpHotkey,
+  isAutoplayKeyboardShortcut,
+} from '../../constants/shortcuts';
+import { findSectionJumpTarget } from '../../../shared/lyricsParsing/sections.js';
 import {
   dispatchCommand,
   isCommandFocusProtected,
   isModalFocusProtected,
   isTextEditingFocusProtected,
+  resolveCopyShortcutAction,
 } from '../../../shared/commandSafetyPolicy.js';
 
 const dispatchKeyboardCommand = (event, action, execute, enforceFocus = true) => dispatchCommand({
@@ -52,6 +58,7 @@ export const useKeyboardShortcuts = ({
   const sectionTagPhrases = useLyricsStore(
     (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
   );
+  const lyricsSections = useLyricsStore((state) => state.lyricsSections);
 
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
@@ -179,6 +186,10 @@ export const useKeyboardShortcuts = ({
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'c' || event.key === 'C')) {
         if (isEditingText || isModalFocused) return;
+        const copyAction = resolveCopyShortcutAction({
+          hasTextSelection: Boolean(window.getSelection?.()?.toString().trim()),
+        });
+        if (copyAction === 'native-copy') return;
         const dispatched = dispatchKeyboardCommand(event, 'clear-output', handleClearOutput, false);
         if (dispatched.executed) event.preventDefault();
         return;
@@ -214,43 +225,54 @@ export const useKeyboardShortcuts = ({
         }
       }
 
-      if (event.key === ' ' || event.code === 'Space') {
+      const cueLine = (lineIndex) => {
+        dispatchKeyboardCommand(event, 'select-line', () => {
+          handleLineSelect(lineIndex);
+          window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
+            detail: { lineIndex }
+          }));
+        });
+      };
+
+      const sectionHotkey = getSectionJumpHotkey(event);
+      if (sectionHotkey) {
+        const target = findSectionJumpTarget(lyricsSections, selectedLine, sectionHotkey);
+        if (target) {
+          event.preventDefault();
+          cueLine(target.startLine);
+        }
+        return;
+      }
+
+      const action = getLiveNavigationKeyAction(event);
+      if (!action) return;
+
+      if (action === 'toggle-output') {
         const dispatched = dispatchKeyboardCommand(event, 'toggle-output', handleToggle);
         if (dispatched.executed) event.preventDefault();
         return;
       }
 
-      const isUpArrow = event.key === 'ArrowUp' || event.keyCode === 38;
-      const isDownArrow = event.key === 'ArrowDown' || event.keyCode === 40;
-      const isHome = event.key === 'Home';
-      const isEnd = event.key === 'End';
+      event.preventDefault();
 
-      if (isUpArrow || isDownArrow || isHome || isEnd) {
-        event.preventDefault();
+      const currentIndex = selectedLine ?? -1;
+      const navigationOptions = { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases };
+      let newIndex;
 
-        const currentIndex = selectedLine ?? -1;
-        let newIndex;
+      if (action === 'first') {
+        newIndex = findNavigableLyricLineIndex(lyrics, 0, 1, navigationOptions);
+      } else if (action === 'last') {
+        newIndex = findNavigableLyricLineIndex(lyrics, lyrics.length - 1, -1, navigationOptions);
+      } else if (action === 'previous') {
+        const startIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+        newIndex = findNavigableLyricLineIndex(lyrics, startIndex, -1, navigationOptions);
+      } else {
+        const startIndex = currentIndex < lyrics.length - 1 ? currentIndex + 1 : lyrics.length - 1;
+        newIndex = findNavigableLyricLineIndex(lyrics, startIndex, 1, navigationOptions);
+      }
 
-        if (isHome) {
-          newIndex = findNavigableLyricLineIndex(lyrics, 0, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
-        } else if (isEnd) {
-          newIndex = findNavigableLyricLineIndex(lyrics, lyrics.length - 1, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
-        } else if (isUpArrow) {
-          const startIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, -1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
-        } else {
-          const startIndex = currentIndex < lyrics.length - 1 ? currentIndex + 1 : lyrics.length - 1;
-          newIndex = findNavigableLyricLineIndex(lyrics, startIndex, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases });
-        }
-
-        if (newIndex !== null && newIndex !== currentIndex) {
-          dispatchKeyboardCommand(event, 'select-line', () => {
-            handleLineSelect(newIndex);
-            window.dispatchEvent(new CustomEvent('scroll-to-lyric-line', {
-              detail: { lineIndex: newIndex }
-            }));
-          });
-        }
+      if (newIndex !== null && newIndex !== currentIndex) {
+        cueLine(newIndex);
       }
     };
 
@@ -274,6 +296,7 @@ export const useKeyboardShortcuts = ({
     handleOpenSetlist,
     handleOpenOnlineLyricsSearch,
     availableOutputIds,
+    lyricsSections,
     sectionTagPhrases,
     skipSectionTitlesOnKeyboard
   ]);

@@ -9,6 +9,7 @@ import { X, Plus, Search, Trash2, Clock, GripVertical, Save, FolderOpen, Trash, 
 import { useSetlistState, useDarkModeState, useIsDesktopApp } from '../hooks/useStoreSelectors';
 import { useControlSocket } from '../context/ControlSocketProvider';
 import useModal from '../hooks/useModal';
+import useLyricsStore from '../context/LyricsStore';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -43,6 +44,8 @@ const SetlistModal = () => {
   const { showToast } = useToast();
   const { showModal } = useModal();
   const [activeId, setActiveId] = useState(null);
+  const loadedSetlistItemId = useLyricsStore((state) => state.lyricsSource?.setlistItemId || null);
+  const isOutputOn = useLyricsStore((state) => state.isOutputOn);
   const [activeOverlayWidth, setActiveOverlayWidth] = useState(null);
 
   const sensors = useSensors(
@@ -598,7 +601,7 @@ const SetlistModal = () => {
         {/* Fixed Header */}
         <div className={`
           shrink-0 px-6 py-4 flex items-center justify-between gap-4
-          ${darkMode ? 'bg-slate-950/45' : 'bg-[#f8fafc]'}
+          ${darkMode ? 'bg-slate-950/45' : 'bg-[#fafafa]'}
         `}>
           <div className="min-w-0">
             <h2 className="truncate text-xl font-semibold">Setlist Manager</h2>
@@ -777,7 +780,7 @@ const SetlistModal = () => {
         {/* Fixed Search Bar */}
         <div className={`
           shrink-0 border-b px-6 py-4
-          ${darkMode ? 'border-white/5 bg-gray-950/35' : 'border-slate-900/5 bg-[#f8fafc]'}
+          ${darkMode ? 'border-white/5 bg-gray-950/35' : 'border-slate-900/5 bg-[#fafafa]'}
         `}>
           <div className="relative">
             <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${searchIconClass}`} />
@@ -870,6 +873,9 @@ const SetlistModal = () => {
                       isDesktopApp={isDesktopApp}
                       canReorder={canReorder}
                       isActive={activeId === file.id}
+                      isLoaded={loadedSetlistItemId === file.id}
+                      isOutputOn={isOutputOn}
+                      position={setlistFiles.indexOf(file) + 1}
                       onLoad={handleLoadFile}
                       onRemove={handleRemoveFile}
                       formatDate={formatDate}
@@ -906,6 +912,9 @@ const SortableSetlistItem = ({
   isDesktopApp,
   canReorder,
   isActive,
+  isLoaded,
+  isOutputOn,
+  position,
   onLoad,
   onRemove,
   formatDate,
@@ -934,6 +943,9 @@ const SortableSetlistItem = ({
       isDesktopApp={isDesktopApp}
       canReorder={canReorder}
       isActive={isActive}
+      isLoaded={isLoaded}
+      isOutputOn={isOutputOn}
+      position={position}
       isDragging={isDragging}
       onLoad={onLoad}
       onRemove={onRemove}
@@ -953,6 +965,9 @@ const SetlistItemCard = ({
   isDesktopApp,
   canReorder,
   isActive = false,
+  isLoaded = false,
+  isOutputOn = false,
+  position = null,
   isDragging = false,
   isDragOverlay = false,
   onLoad,
@@ -984,7 +999,9 @@ const SetlistItemCard = ({
 
   const activeClasses = isActive && !isDragging
     ? 'ring-2 ring-blue-400/70 ring-offset-1 ring-offset-transparent'
-    : '';
+    : isLoaded
+      ? `ring-2 ring-inset ${isOutputOn ? 'ring-red-500/80' : 'ring-red-500/40'}`
+      : '';
 
   const removeButtonClasses = darkMode
     ? 'text-gray-500 hover:bg-red-500/10 hover:text-red-300'
@@ -1028,9 +1045,24 @@ const SetlistItemCard = ({
             isDragOverlay ? dragHandle : <Tooltip content={reorderTitle}>{dragHandle}</Tooltip>
           )}
           <div className="flex-1 min-w-0">
-            <h3 className="truncate text-sm font-semibold">
-              {file.displayName}
-            </h3>
+            <div className="flex min-w-0 items-center gap-2">
+              {Number.isInteger(position) && position > 0 && (
+                <span className={`shrink-0 font-mono text-[11px] font-semibold tabular-nums ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {String(position).padStart(2, '0')}
+                </span>
+              )}
+              <h3 className="truncate text-sm font-semibold">
+                {file.displayName}
+              </h3>
+              {isLoaded && (
+                <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] ${isOutputOn
+                  ? 'bg-red-600 text-white'
+                  : darkMode ? 'bg-red-500/15 text-red-300' : 'bg-red-50 text-red-600'
+                  }`}>
+                  {isOutputOn ? 'Live' : 'Loaded'}
+                </span>
+              )}
+            </div>
             <div className={`mt-1 flex items-center gap-1.5 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
               <Clock className="h-3 w-3" />
               <span>{formatDate(file.lastModified)}</span>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { getCleanSectionLabel } from '../../../shared/lyricsParsing/structureTags.js';
+import { getSectionHotkey } from '../../../shared/lyricsParsing/sections.js';
 
 export default function SectionChips({
   darkMode,
@@ -22,10 +23,13 @@ export default function SectionChips({
         >
           {sections.map((section) => {
             const isActive = section.id && section.id === activeSectionId;
+            const label = getCleanSectionLabel(section.label);
+            const hotkey = getSectionHotkey(section.label);
             return (
               <button
                 key={section.id}
                 onClick={() => onSectionJump(section)}
+                title={hotkey ? `Jump to ${label} (Shift+${hotkey})` : `Jump to ${label}`}
                 className={`${compact ? 'text-[10px] px-2.5 py-0.5' : 'text-xs px-4 py-1'} rounded-full border transition-colors shrink-0 ${isActive
                   ? 'bg-blue-500 text-white border-blue-500'
                   : darkMode
@@ -33,7 +37,12 @@ export default function SectionChips({
                     : 'bg-gray-100 text-gray-700 border-gray-300 hover:border-gray-400'
                   }`}
               >
-                {getCleanSectionLabel(section.label).toUpperCase()}
+                {label.toUpperCase()}
+                {hotkey && !compact && (
+                  <kbd className={`ml-1.5 font-mono text-[9px] font-semibold ${isActive ? 'text-white/70' : 'opacity-50'}`}>
+                    ⇧{hotkey}
+                  </kbd>
+                )}
               </button>
             );
           })}

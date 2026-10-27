@@ -9,12 +9,50 @@ import {
 } from '../hooks/useStoreSelectors';
 import useSocket from '../hooks/useSocket';
 import useOutputRouteAvailability from '../hooks/useOutputRouteAvailability';
-import { getLineOutputText } from '../utils/parseLyrics';
+import { getLineOutputText, shouldShowSongCredits } from '../utils/parseLyrics';
+import { formatSongCreditLines } from '../../shared/lyricsParsing/songMetadata.js';
+import { sanitizeNumberInput } from '../utils/numberInput';
 import LyricVisualFrame from '../components/output/LyricVisualFrame';
 import {
   getTransitionVariants,
   normalizeTransitionDuration,
 } from '../../shared/transitionSettings.js';
+
+const SONG_CREDITS_POSITION_CLASSES = {
+  'bottom-left': 'bottom-0 left-0 text-left',
+  'bottom-center': 'bottom-0 inset-x-0 text-center',
+  'bottom-right': 'bottom-0 right-0 text-right',
+  'top-left': 'top-0 left-0 text-left',
+  'top-center': 'top-0 inset-x-0 text-center',
+  'top-right': 'top-0 right-0 text-right',
+};
+
+function SongCreditsOverlay({ lines, settings }) {
+  const position = SONG_CREDITS_POSITION_CLASSES[settings?.songCreditsPosition]
+    ? settings.songCreditsPosition
+    : 'bottom-left';
+  const fontSize = sanitizeNumberInput(settings?.songCreditsFontSize, 22, { min: 10, max: 72 });
+
+  return (
+    <div
+      className={`pointer-events-none absolute z-30 max-w-[90%] ${SONG_CREDITS_POSITION_CLASSES[position]}`}
+      style={{
+        margin: `${sanitizeNumberInput(settings?.yMargin, 2, { min: 0, max: 20 })}rem ${sanitizeNumberInput(settings?.xMargin, 3.5, { min: 0, max: 20 })}rem`,
+        color: settings?.songCreditsColor || '#FFFFFF',
+        opacity: sanitizeNumberInput(settings?.songCreditsOpacity, 85, { min: 0, max: 100 }) / 100,
+        fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
+        fontSize: `${fontSize}px`,
+        lineHeight: 1.35,
+        textShadow: '0 1px 3px rgba(0, 0, 0, 0.85)',
+      }}
+      data-song-credits
+    >
+      {lines.map((creditLine, index) => (
+        <div key={index} className={index === 0 ? 'font-semibold' : 'font-normal'}>{creditLine}</div>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Generic output page component. Renders lyrics with full styling support.
@@ -40,12 +78,17 @@ const OutputPage = ({ outputId }) => {
   });
   const { settings: outputSettings, updateSettings: updateOutputSettings } = useOutputSettings(outputId);
   const outputEnabled = useOutputEnabled(outputId);
-  const { lyrics, selectedLine } = useLyricsState();
+  const { lyrics, selectedLine, songMetadata } = useLyricsState();
   const { isOutputOn } = useOutputState();
   const adjustedFontSizeRef = useRef(null);
 
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
+  const songCreditLines = shouldShowSongCredits({
+    mode: outputSettings?.songCreditsMode,
+    lyrics,
+    selectedLine,
+  }) ? formatSongCreditLines(songMetadata) : [];
 
   const isOutputActive = Boolean(outputSettings)
     && (isPreviewMode || Boolean(isOutputOn && (outputEnabled !== false)));
@@ -151,6 +194,9 @@ const OutputPage = ({ outputId }) => {
           retainBackgroundLayerWhenInactive
           retainContentWhenInactive
         />
+        {songCreditLines.length > 0 && (
+          <SongCreditsOverlay lines={songCreditLines} settings={outputSettings} />
+        )}
       </motion.div>
     </div>
   );

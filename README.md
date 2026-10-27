@@ -23,6 +23,9 @@ Key capabilities include:
 - A compact indexed-folder save picker with keyboard navigation, safe overwrite confirmation, and an optional native Save As escape hatch.
 - Bounded indexing safeguards: up to 10 focused source folders, 512 MB of supported files per folder, and capped searchable TXT/LRC content memory.
 - Built-in song editing, translation grouping, timestamps, search, autoplay, and lyric video export.
+- Presentation-clicker and keyboard-first live control, Shift + letter section jumps, a broadcast-style live tally, and a live/next status bar.
+- Reusable song parts (write a chorus, bridge, tag, or verse once and repeat it with a bare marker), and setlists that can repeat a song.
+- Per-output song credits with title, writers, copyright, CCLI song number, and your CCLI licence number.
 - Online lyric providers and EasyWorship/presentation import workflows.
 - OBS Browser Source creation, a compact OBS Dock mode, and generic browser URLs for other production software.
 - A schedule-driven timer with intelligent agenda import, manual items, transitions, and ideal-end tracking.

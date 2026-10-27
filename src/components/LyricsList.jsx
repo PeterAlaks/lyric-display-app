@@ -56,6 +56,7 @@ export default function LyricsList({
   const { darkMode: storedDarkMode } = useDarkModeState();
   const darkMode = forceDarkMode ? true : storedDarkMode;
   const isDesktopApp = useIsDesktopApp();
+  const isOutputOn = useLyricsStore((state) => state.isOutputOn);
   const { emitLineUpdate, emitLyricsLoad, emitSplitNormalGroup, liveSafety } = useControlSocket();
   const { showToast } = useToast();
   const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
@@ -104,6 +105,7 @@ export default function LyricsList({
     highlightedLineIndex,
     searchQuery,
     darkMode,
+    isOutputOn,
     density,
   });
 
@@ -314,9 +316,10 @@ export default function LyricsList({
       highlightedLineIndex,
       isStructureTagLine,
       getNormalGroupLines,
+      isOutputOn,
       density,
     }),
-    [lyrics, lyricsTimestamps, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, previewLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, highlightedLineIndex, isStructureTagLine, getNormalGroupLines, density]
+    [isOutputOn, lyrics, lyricsTimestamps, getLineClassName, handleRowClick, handleSplitGroup, handleContextMenuOpen, handleRowTouchStart, handleRowTouchMove, handleRowTouchEnd, selectedLine, previewLine, darkMode, hoveredLineIndex, hoveredButtonIndex, sectionStartLookup, sectionById, activeSectionId, selectedIndices, isDesktopApp, stageOnlyTutorial, handleStageOnlyTutorialVisible, handleStageOnlyTutorialOpenChange, handleNeverShowTutorialPopovers, searchQuery, highlightedLineIndex, isStructureTagLine, getNormalGroupLines, density]
   );
 
   const itemCount = useMemo(() => lyrics.length, [lyrics]);
@@ -421,6 +424,7 @@ export default function LyricsList({
           highlightedLineIndex={highlightedLineIndex}
           isStructureTagLine={isStructureTagLine}
           getNormalGroupLines={getNormalGroupLines}
+          isOutputOn={isOutputOn}
           density={density}
         />
       ))}

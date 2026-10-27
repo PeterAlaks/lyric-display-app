@@ -15,8 +15,9 @@ import {
   normalizePreviewSettings,
 } from '../shared/previewSettings.js';
 import { DEFAULT_BACKEND_PORT, normalizeBackendPort } from '../shared/backendPort.js';
+import { normalizeCcliNumber } from '../shared/lyricsParsing/songMetadata.js';
 
-export const CURRENT_PREFERENCES_SCHEMA_VERSION = 11;
+export const CURRENT_PREFERENCES_SCHEMA_VERSION = 12;
 
 const isPlainObject = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -199,6 +200,31 @@ export function migratePreferences(input) {
         serverPort: normalizeBackendPort(advanced.serverPort, DEFAULT_BACKEND_PORT),
       },
       _schemaVersion: 11,
+    };
+  }
+
+  if (sourceVersion < 12) {
+    const general = isPlainObject(migrated.general) ? migrated.general : {};
+    const parsing = isPlainObject(migrated.parsing) ? migrated.parsing : {};
+    const phrases = Array.isArray(parsing.sectionTagPhrases)
+      ? normalizeSectionTagPhrases(parsing.sectionTagPhrases)
+      : [...DEFAULT_SECTION_TAG_PHRASES];
+    const knownPhrases = new Set(phrases.map((phrase) => phrase.toLowerCase()));
+    migrated = {
+      ...migrated,
+      general: {
+        ...general,
+        ccliLicenseNumber: normalizeCcliNumber(general.ccliLicenseNumber),
+      },
+      parsing: {
+        ...parsing,
+        // Tag and Ending became default section titles (and section jump hotkeys).
+        sectionTagPhrases: [
+          ...phrases,
+          ...['Tag', 'Ending'].filter((phrase) => !knownPhrases.has(phrase.toLowerCase())),
+        ],
+      },
+      _schemaVersion: 12,
     };
   }
 

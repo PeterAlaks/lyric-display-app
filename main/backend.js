@@ -189,11 +189,19 @@ async function waitForBackendHealth(instanceToken, maxAttempts = 60, intervalMs 
   return false;
 }
 
-export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth = false, parsingConfig = null } = {}) {
+export function startBackend({
+  obsDockPairingToken = null,
+  allowLocalObsDockAuth = false,
+  parsingConfig = null,
+  songCreditsConfig = null,
+} = {}) {
   return new Promise((resolve, reject) => {
     if (backendProcess && !backendProcess.killed) {
       if (parsingConfig) {
         syncBackendParsingConfig(parsingConfig);
+      }
+      if (songCreditsConfig) {
+        syncBackendSongCreditsConfig(songCreditsConfig);
       }
       if (obsDockPairingToken) {
         registerObsDockPairingToken(obsDockPairingToken);
@@ -210,7 +218,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
       return;
     }
 
-    lastStartOptions = { allowLocalObsDockAuth, parsingConfig };
+    lastStartOptions = { allowLocalObsDockAuth, parsingConfig, songCreditsConfig };
     backendStopRequested = false;
     if (backendRestartTimer) {
       clearTimeout(backendRestartTimer);
@@ -240,6 +248,7 @@ export function startBackend({ obsDockPairingToken = null, allowLocalObsDockAuth
         [BACKEND_INSTANCE_TOKEN_ENV]: backendInstanceToken,
         LYRICDISPLAY_APP_SESSION_ID: backendAppSessionId,
         LYRICDISPLAY_PARSING_CONFIG: serializeParsingConfig(parsingConfig),
+        LYRICDISPLAY_CCLI_LICENSE_NUMBER: String(songCreditsConfig?.ccliLicenseNumber || ''),
         LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN: obsDockPairingToken || process.env.LYRICDISPLAY_OBS_DOCK_PAIRING_TOKEN || '',
         LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH: allowLocalObsDockAuth || process.env.LYRICDISPLAY_OBS_DOCK_LOCAL_AUTH === '1' ? '1' : ''
       },
@@ -468,6 +477,19 @@ export function syncBackendParsingConfig(config) {
     return true;
   } catch (error) {
     console.warn('[Backend] Failed to synchronize lyrics parsing configuration:', error);
+    return false;
+  }
+}
+
+export function syncBackendSongCreditsConfig(config) {
+  lastStartOptions = { ...lastStartOptions, songCreditsConfig: config };
+  if (!backendProcess || backendProcess.killed) return false;
+
+  try {
+    backendProcess.send({ type: 'song-credits-config', config });
+    return true;
+  } catch (error) {
+    console.warn('[Backend] Failed to synchronize song credits configuration:', error);
     return false;
   }
 }

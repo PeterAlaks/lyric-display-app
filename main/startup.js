@@ -217,6 +217,7 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
       obsDockPairingToken,
       allowLocalObsDockAuth: headless,
       parsingConfig: userPreferences.getParsingConfig(),
+      songCreditsConfig: userPreferences.getSongCreditsConfig(),
     });
     console.log('[Startup] Backend started successfully');
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -237,9 +238,8 @@ export async function performStartupSequence({ menuAPI, requestRendererModal, ha
     updateLoadingStatus('Preparing control panel');
 
     const savedDarkMode = getSavedDarkMode();
-    if (typeof savedDarkMode === 'boolean') {
-      nativeTheme.themeSource = savedDarkMode ? 'dark' : 'light';
-    }
+    // Fresh installs start in dark mode; a saved choice is always respected.
+    nativeTheme.themeSource = savedDarkMode === false ? 'light' : 'dark';
 
     updateLoadingStatus('Initializing NDI manager');
     registerNdiIpcHandlers();

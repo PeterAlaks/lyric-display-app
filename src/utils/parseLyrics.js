@@ -164,3 +164,24 @@ export const findNavigableLyricLineIndex = (
 
   return null;
 };
+
+const isCreditBearingLine = (line, sectionTagPhrases) => (
+  !isStructureTagLyricLine(line, sectionTagPhrases) && Boolean(getLineOutputText(line).trim())
+);
+
+/**
+ * Whether an output's song-credit footer should accompany the selected line.
+ * @param {{ mode: 'off'|'first'|'last'|'first-last'|'always', lyrics: Array, selectedLine: number|null }} options
+ */
+export const shouldShowSongCredits = ({ mode = 'off', lyrics, selectedLine, sectionTagPhrases } = {}) => {
+  if (!mode || mode === 'off' || !Array.isArray(lyrics) || !Number.isInteger(selectedLine)) return false;
+  if (!isCreditBearingLine(lyrics[selectedLine], sectionTagPhrases)) return false;
+  if (mode === 'always') return true;
+
+  const firstLine = lyrics.findIndex((line) => isCreditBearingLine(line, sectionTagPhrases));
+  const lastLine = lyrics.findLastIndex((line) => isCreditBearingLine(line, sectionTagPhrases));
+  if (mode === 'first') return selectedLine === firstLine;
+  if (mode === 'last') return selectedLine === lastLine;
+  if (mode === 'first-last') return selectedLine === firstLine || selectedLine === lastLine;
+  return false;
+};

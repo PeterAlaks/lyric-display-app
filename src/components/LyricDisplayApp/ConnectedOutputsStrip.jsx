@@ -42,16 +42,17 @@ const ConnectedOutputsStrip = ({ darkMode, isOutputOn }) => {
                 return (
                   <span
                     key={output.id}
+                    title={`${label}: ${isLive ? 'on air' : 'connected, not showing lyrics'}`}
                     className={`inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold ${isLive
                       ? darkMode
-                        ? 'border-emerald-400/35 text-emerald-300'
-                        : 'border-emerald-200 text-emerald-700'
+                        ? 'border-red-500/45 bg-red-500/10 text-red-200'
+                        : 'border-red-200 bg-red-50 text-red-700'
                       : darkMode
                         ? 'border-gray-600 bg-gray-700/70 text-gray-300'
                         : 'border-gray-200 bg-gray-100 text-gray-600'
                       }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-emerald-500' : darkMode ? 'bg-gray-500' : 'bg-gray-400'}`} aria-hidden="true" />
+                    <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-red-500' : darkMode ? 'bg-gray-500' : 'bg-gray-400'}`} aria-hidden="true" />
                     <span>{label}</span>
                     {output.instanceCount > 1 && <span className="opacity-70">×{output.instanceCount}</span>}
                   </span>

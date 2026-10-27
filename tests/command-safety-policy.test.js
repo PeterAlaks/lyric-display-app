@@ -7,6 +7,7 @@ import {
   isCommandFocusProtected,
   isModalFocusProtected,
   isTextEditingFocusProtected,
+  resolveCopyShortcutAction,
   shouldNotifyRejectedControlCommand,
 } from '../shared/commandSafetyPolicy.js';
 
@@ -140,4 +141,13 @@ test('the dispatcher refuses keyboard commands while an interactive control has 
   });
   assert.equal(result.executed, false);
   assert.equal(result.reason, 'protected-focus');
+});
+
+test('Ctrl+C copies an operator selection instead of clearing live output', () => {
+  assert.equal(resolveCopyShortcutAction({ selectedLineCount: 0, hasTextSelection: false }), 'clear-output');
+  assert.equal(resolveCopyShortcutAction({ selectedLineCount: 1, hasTextSelection: false }), 'clear-output');
+  assert.equal(resolveCopyShortcutAction({ selectedLineCount: 3, hasTextSelection: false }), 'copy-lines');
+  assert.equal(resolveCopyShortcutAction({ selectedLineCount: 0, hasTextSelection: true }), 'native-copy');
+  assert.equal(resolveCopyShortcutAction({ selectedLineCount: 4, hasTextSelection: true }), 'native-copy');
+  assert.equal(resolveCopyShortcutAction(), 'clear-output');
 });

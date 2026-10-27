@@ -100,7 +100,7 @@ const TimerControlLayout = ({
 
   return (
     <div
-      className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#f8fafc] text-gray-900'}`}
+      className={`h-full overflow-y-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#fafafa] text-gray-900'}`}
       style={{ scrollbarGutter: 'stable' }}
     >
       <div className="mx-auto min-h-full max-w-310 space-y-5 p-5">

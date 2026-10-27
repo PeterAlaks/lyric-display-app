@@ -101,7 +101,7 @@ export default function LyricVideoTransport({
             disabled={!canPlay}
             onClick={onPlayPause}
             aria-label={isPlaying ? 'Pause' : 'Play'}
-            className="h-11 w-11 rounded-full bg-linear-to-r from-blue-400 to-purple-600 text-white shadow-sm transition-all duration-200 hover:from-blue-500 hover:to-purple-700"
+            className="h-11 w-11 rounded-full bg-blue-600 text-white shadow-sm transition-all duration-200 hover:bg-blue-500"
           >
             {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
           </Button>

@@ -16,6 +16,36 @@ export const isValidLineIndex = (index, lineCount) => {
     && index < lineCount;
 };
 
+// Socket.IO dispatches handlers from process.nextTick, so an exception escapes to
+// the process-level handler and terminates the backend. Contain each handler.
+export const guardSocketHandlers = (socket, { onError } = {}) => {
+  const register = socket.on.bind(socket);
+  const report = (eventName, error) => {
+    try {
+      onError?.(eventName, error);
+    } catch {
+    }
+  };
+
+  socket.on = (eventName, handler) => {
+    if (typeof handler !== 'function') return register(eventName, handler);
+    return register(eventName, (...args) => {
+      try {
+        const result = handler(...args);
+        if (result && typeof result.then === 'function') {
+          return result.catch((error) => report(eventName, error));
+        }
+        return result;
+      } catch (error) {
+        report(eventName, error);
+        return undefined;
+      }
+    });
+  };
+
+  return socket;
+};
+
 export const getPrimaryOutputInstance = (instances = []) => {
   return instances.reduce((largest, current) => {
     if (!largest) return current;

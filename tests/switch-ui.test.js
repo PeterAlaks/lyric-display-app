@@ -30,9 +30,18 @@ test('shared switch owns its reusable geometry, appearance, and directional moti
   assert.equal((switchSource.match(/data-\[state=checked\]:bg-green-500/g) ?? []).length, 5);
   assert.equal((switchSource.match(/dark:data-\[state=checked\]:bg-green-400/g) ?? []).length, 5);
 
-  assert.match(switchSource, /data-motion=\{motion \?\? undefined\}/);
-  assert.match(globalStyles, /@keyframes switch-thumb-to-checked/);
-  assert.match(globalStyles, /@keyframes switch-thumb-to-unchecked/);
+  // Motion is pure CSS driven by state, so clicks, keyboard, remote controllers, and
+  // programmatic changes all animate the same way.
+  assert.doesNotMatch(switchSource, /setTimeout|data-motion/);
+  assert.match(globalStyles, /\.switch-track:active:not\(:disabled\) \.switch-thumb/, 'press stretches the thumb');
+  assert.match(
+    globalStyles,
+    /\.switch-track\[data-state="checked"\]:active:not\(:disabled\) \.switch-thumb[\s\S]*?- var\(--switch-thumb-stretch-distance\)/,
+    'a checked thumb stretches back toward the side it will travel to',
+  );
+  assert.match(globalStyles, /\.switch-thumb \{[\s\S]*?transition-timing-function:\s*linear\(/, 'thumb slides on a spring curve');
+  assert.match(globalStyles, /\.switch-track \{[\s\S]*?transition:[\s\S]*?background-color/, 'track colour fades with the thumb');
+  assert.match(globalStyles, /\.switch-thumb \{[\s\S]*?background:\s*#ffffff/, 'thumb stays white in both themes');
   assert.match(globalStyles, /--switch-thumb-inset:\s*0\.125rem/);
   assert.match(globalStyles, /var\(--switch-track-width\) - var\(--switch-thumb-width\) - var\(--switch-thumb-inset\)/);
   assert.match(globalStyles, /\.switch-track[\s\S]*?corner-shape:\s*round/);

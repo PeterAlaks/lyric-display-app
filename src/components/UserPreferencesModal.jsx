@@ -42,6 +42,7 @@ import NdiTelemetryPreferencesPage from './UserPreferencesModal/NdiTelemetryPref
 import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagPhrasesPreferencesPage';
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
 import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing/preferenceOptions.js';
+import { normalizeCcliNumber } from '../../shared/lyricsParsing/songMetadata.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,
@@ -189,7 +190,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
 
   const labelClass = darkMode ? 'text-gray-300' : 'text-gray-700';
   const mutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
-  const panelBg = darkMode ? 'bg-gray-800' : 'bg-[#f8fafc]';
+  const panelBg = darkMode ? 'bg-gray-800' : 'bg-[#fafafa]';
   const activeCategoryBg = darkMode ? 'bg-gray-700' : 'bg-white';
   const preferenceFieldLabelClass = `block mb-1.5 text-sm font-medium ${labelClass}`;
   const preferenceToggleRowClass = "flex items-center justify-between gap-6 [&>button]:shrink-0";
@@ -561,6 +562,23 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 size="medium"
                 variant="control"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className={preferenceFieldLabelClass} htmlFor="ccli-license-number">CCLI License Number</label>
+              <Input
+                id="ccli-license-number"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="e.g. 1234567"
+                value={preferences.general?.ccliLicenseNumber ?? ''}
+                onChange={(event) => updatePreference('general', 'ccliLicenseNumber', normalizeCcliNumber(event.target.value))}
+                className={inputClass}
+              />
+              <p className={`text-xs ${mutedClass}`}>
+                Added to song credits on outputs where Song Credits is turned on (Output settings → Song Credits).
+              </p>
             </div>
           </div>
         );

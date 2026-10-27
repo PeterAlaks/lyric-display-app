@@ -12,12 +12,18 @@ import { registerDraftHandlers } from './realtime/handlers/draftHandlers.js';
 import { registerLiveSafetyHandlers } from './realtime/handlers/liveSafetyHandlers.js';
 import { registerActionLogHandlers } from './realtime/handlers/actionLogHandlers.js';
 import { startOutputPresenceMonitor } from './realtime/outputPresence.js';
+import { guardSocketHandlers } from './realtime/utils.js';
 
 export { getOutputRegistry, hasOutput };
 
 export default function registerSocketEvents(io, { hasPermission }) {
   io.on('connection', (socket) => {
     const { clientType, deviceId, sessionId, clientPurpose, clientInstanceId, isPreview } = socket.userData;
+    guardSocketHandlers(socket, {
+      onError: (eventName, error) => {
+        console.error(`[Realtime] "${eventName}" handler failed for ${clientType} client:`, error);
+      },
+    });
     const connected = registerConnectionHandlers({
       io,
       socket,

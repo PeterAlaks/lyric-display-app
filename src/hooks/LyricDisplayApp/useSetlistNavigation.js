@@ -1,67 +1,54 @@
 import { useCallback } from 'react';
+import { getAdjacentSetlistItem } from '../../../shared/setlistNavigation.js';
 
 export const useSetlistNavigation = ({
   emitSetlistLoad,
   hasLyrics,
   lyricsFileName,
+  setlistItemId = null,
   setlistFiles,
   showToast,
 }) => {
-  const handleNavigateSetlistPrevious = useCallback(() => {
+  const navigate = useCallback((direction) => {
     if (!hasLyrics || setlistFiles.length === 0) {
       showToast({
         title: 'No files in setlist',
         message: 'Add songs to your setlist to use navigation',
         variant: 'info'
       });
-      return;
+      return false;
     }
 
-    const currentIndex = setlistFiles.findIndex(file => file.displayName === lyricsFileName);
+    const { currentIndex, item, atBoundary } = getAdjacentSetlistItem(
+      setlistFiles,
+      { setlistItemId, lyricsFileName },
+      direction,
+    );
+
     if (currentIndex === -1) {
       showToast({
         title: 'Not in setlist',
         message: 'Current song is not in the setlist',
         variant: 'info'
       });
-      return;
+      return false;
     }
 
-    const previousIndex = currentIndex > 0 ? currentIndex - 1 : setlistFiles.length - 1;
-    const previousFile = setlistFiles[previousIndex];
-
-    if (previousFile) {
-      emitSetlistLoad(previousFile.id);
-    }
-  }, [emitSetlistLoad, hasLyrics, lyricsFileName, setlistFiles, showToast]);
-
-  const handleNavigateSetlistNext = useCallback(() => {
-    if (!hasLyrics || setlistFiles.length === 0) {
+    if (atBoundary) {
       showToast({
-        title: 'No files in setlist',
-        message: 'Add songs to your setlist to use navigation',
+        title: direction > 0 ? 'End of setlist' : 'Start of setlist',
+        message: direction > 0 ? 'This is the last song in the setlist.' : 'This is the first song in the setlist.',
         variant: 'info'
       });
-      return;
+      return false;
     }
 
-    const currentIndex = setlistFiles.findIndex(file => file.displayName === lyricsFileName);
-    if (currentIndex === -1) {
-      showToast({
-        title: 'Not in setlist',
-        message: 'Current song is not in the setlist',
-        variant: 'info'
-      });
-      return;
-    }
+    emitSetlistLoad(item.id);
+    return true;
+  }, [emitSetlistLoad, hasLyrics, lyricsFileName, setlistFiles, setlistItemId, showToast]);
 
-    const nextIndex = currentIndex < setlistFiles.length - 1 ? currentIndex + 1 : 0;
-    const nextFile = setlistFiles[nextIndex];
-
-    if (nextFile) {
-      emitSetlistLoad(nextFile.id);
-    }
-  }, [emitSetlistLoad, hasLyrics, lyricsFileName, setlistFiles, showToast]);
+  const handleNavigateSetlistPrevious = useCallback(() => navigate(-1), [navigate]);
+  const handleNavigateSetlistNext = useCallback(() => navigate(1), [navigate]);
 
   return { handleNavigateSetlistPrevious, handleNavigateSetlistNext };
 };

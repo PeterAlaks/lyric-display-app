@@ -628,8 +628,8 @@ const NewSongCanvas = () => {
 
   return (
     <div className={`flex h-full flex-col font-sans ${darkMode
-      ? 'dark bg-[radial-gradient(circle_at_top,#172033_0%,#111827_46%,#0b1120_100%)]'
-      : 'bg-[radial-gradient(circle_at_top,#ffffff_0%,#f8fafc_55%,#eef2ff_100%)]'
+      ? 'dark bg-[radial-gradient(circle_at_top,#1c1c20_0%,#18181b_46%,#0c0c0e_100%)]'
+      : 'bg-[radial-gradient(circle_at_top,#ffffff_0%,#fafafa_55%,#eef2ff_100%)]'
       }`}>
       <SongCanvasHeader
         activeLineHasContent={activeLineHasContent}

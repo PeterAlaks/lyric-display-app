@@ -89,7 +89,7 @@ export default function NdiUpdaterBridge() {
                 <div className="px-4 py-3 max-h-64 overflow-y-auto">
                   <div
                     className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                    style={{ lineHeight: '1.6', color: isDark ? '#d1d5db' : '#374151' }}
+                    style={{ lineHeight: '1.6', color: isDark ? '#d4d4d8' : '#3f3f46' }}
                     dangerouslySetInnerHTML={{ __html: formattedNotes }}
                   />
                 </div>

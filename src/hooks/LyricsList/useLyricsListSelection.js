@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import useContextMenuPosition from '../useContextMenuPosition';
+import {
+  isModalFocusProtected,
+  isTextEditingFocusProtected,
+  resolveCopyShortcutAction,
+} from '../../../shared/commandSafetyPolicy.js';
 
 export default function useLyricsListSelection({
   lyrics,
@@ -289,6 +294,31 @@ export default function useLyricsListSelection({
 
     closeContextMenu();
   }, [closeContextMenu, getCopyTextForLine, hasSelection, lyrics, selectedIndicesArray, showToast]);
+
+  useEffect(() => {
+    if (selectedIndices.size < 2) return undefined;
+
+    const handleCopyShortcut = (event) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+      if (String(event.key || '').toLowerCase() !== 'c') return;
+      const activeElement = document.activeElement;
+      if (isTextEditingFocusProtected(event.target, activeElement) || isModalFocusProtected(event.target, activeElement)) return;
+
+      const action = resolveCopyShortcutAction({
+        selectedLineCount: selectedIndices.size,
+        hasTextSelection: Boolean(window.getSelection?.()?.toString().trim()),
+      });
+      if (action !== 'copy-lines') return;
+
+      // Runs in the capture phase so the global "clear output" shortcut never sees it.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      handleCopySelection();
+    };
+
+    window.addEventListener('keydown', handleCopyShortcut, true);
+    return () => window.removeEventListener('keydown', handleCopyShortcut, true);
+  }, [handleCopySelection, selectedIndices]);
 
   const handleSendSelectionToOutput = useCallback(() => {
     if (selectedIndicesArray.length !== 1) {

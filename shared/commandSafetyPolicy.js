@@ -3,6 +3,7 @@ const CUE_ACTIONS = new Set([
   'select-line',
   'next-line',
   'prev-line',
+  'jump-section',
   'clear-output',
   'scroll-lines',
 ]);
@@ -121,6 +122,14 @@ export function isTextEditingFocusProtected(...candidates) {
 
 export function isModalFocusProtected(...candidates) {
   return hasMatchingNode(candidates, isModalNode);
+}
+
+// Ctrl/Cmd+C doubles as "clear output". When the operator has highlighted text or
+// multi-selected lyric rows, the keystroke is a copy and must never blank the screen.
+export function resolveCopyShortcutAction({ selectedLineCount = 0, hasTextSelection = false } = {}) {
+  if (hasTextSelection) return 'native-copy';
+  if (selectedLineCount > 1) return 'copy-lines';
+  return 'clear-output';
 }
 
 export function evaluateCommandSafety({

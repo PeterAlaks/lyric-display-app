@@ -118,7 +118,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
 
                 {/* Collapsed Header (shown when scrolled) */}
                 <div
-                    className={`absolute top-0 left-0 right-0 z-20 px-6 py-3 flex items-center justify-between border-b transition-opacity duration-500 ease-out ${darkMode ? 'border-white/5 bg-slate-950/95 backdrop-blur-md' : 'border-slate-900/5 bg-[#f8fafc]/95 backdrop-blur-md'
+                    className={`absolute top-0 left-0 right-0 z-20 px-6 py-3 flex items-center justify-between border-b transition-opacity duration-500 ease-out ${darkMode ? 'border-white/5 bg-slate-950/95 backdrop-blur-md' : 'border-slate-900/5 bg-[#fafafa]/95 backdrop-blur-md'
                         } ${scrolled ? 'opacity-100 shadow-lg' : 'opacity-0 pointer-events-none'}`}
                     style={{ borderTopLeftRadius: '1rem', borderTopRightRadius: '1rem' }}
                 >
@@ -150,7 +150,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto custom-scrollbar h-full pb-24" onScroll={handleScroll}>
                     {/* Header Section */}
-                    <div className={`border-b px-8 pt-8 pb-6 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
+                    <div className={`border-b px-8 pt-8 pb-6 ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'}`}>
                         <div className="flex items-center justify-center mb-4">
                             <div
                                 className={`w-16 h-16 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-linear-to-br from-blue-500/20 to-purple-500/20' : 'bg-linear-to-br from-blue-100 to-purple-100'
@@ -303,7 +303,7 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
                 </div>
 
                 {/* Fixed Footer */}
-                <div className={`absolute bottom-0 left-0 right-0 border-t px-8 py-6 ${darkMode ? 'border-white/5 bg-slate-950/95' : 'border-slate-900/5 bg-[#f8fafc]/95'} backdrop-blur-md shadow-2xl`}
+                <div className={`absolute bottom-0 left-0 right-0 border-t px-8 py-6 ${darkMode ? 'border-white/5 bg-slate-950/95' : 'border-slate-900/5 bg-[#fafafa]/95'} backdrop-blur-md shadow-2xl`}
                     style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}
                 >
                     <div className="flex justify-end">
@@ -319,15 +319,15 @@ const OnlineLyricsWelcomeSplash = ({ isOpen, onClose, darkMode }) => {
     width: 8px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: ${darkMode ? '#1f2937' : '#f3f4f6'};
+    background: ${darkMode ? '#27272a' : '#f4f4f5'};
     border-radius: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: ${darkMode ? '#4b5563' : '#d1d5db'};
+    background: ${darkMode ? '#52525b' : '#d4d4d8'};
     border-radius: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: ${darkMode ? '#6b7280' : '#9ca3af'};
+    background: ${darkMode ? '#6b7280' : '#a1a1aa'};
   }
 `}</style>
         </div>

@@ -7,11 +7,24 @@ export function isSongSeparator(line) {
   return /^[\*\-_]{2,}/.test(line.trim());
 }
 
+// Song parts that can be written once and repeated with a bare marker. A numbered call
+// ("Chorus 2") falls back to the unnumbered part only where numbering usually means
+// "sing it again" rather than different words.
+const REPEATABLE_SECTION_TYPES = [
+  { pattern: /^pre[\s-]?chorus$/, key: 'pre-chorus', label: 'Pre-Chorus' },
+  { pattern: /^post[\s-]?chorus$/, key: 'post-chorus', label: 'Post-Chorus' },
+  { pattern: /^chorus$/, key: 'chorus', label: 'Chorus', numberFallback: true },
+  { pattern: /^refrain$/, key: 'refrain', label: 'Refrain', numberFallback: true },
+  { pattern: /^verse$/, key: 'verse', label: 'Verse' },
+  { pattern: /^bridge$/, key: 'bridge', label: 'Bridge' },
+  { pattern: /^tag$/, key: 'tag', label: 'Tag' },
+  { pattern: /^hook$/, key: 'hook', label: 'Hook' },
+];
+
 /**
  * Parse a marker that can be used as a reusable section definition/call.
- * Supported reusable sections: Chorus, Refrain
  * @param {string} line
- * @returns {{ key: 'chorus' | 'refrain', label: string } | null}
+ * @returns {{ key: string, baseKey: string, number: number|null, numberFallback: boolean, label: string } | null}
  */
 export function parseRepeatableSectionMarker(line = '') {
   const trimmed = String(line).trim();
@@ -26,16 +39,41 @@ export function parseRepeatableSectionMarker(line = '') {
     .replace(/\s+/g, ' ')
     .toLowerCase();
 
-  const match = normalized.match(/^(chorus|refrain)(?:\s+\d+)?$/i);
+  const match = normalized.match(/^(.+?)(?:\s+(\d+))?$/);
   if (!match) return null;
+  const type = REPEATABLE_SECTION_TYPES.find(({ pattern }) => pattern.test(match[1]));
+  if (!type) return null;
 
-  const key = match[1].toLowerCase();
-  if (key !== 'chorus' && key !== 'refrain') return null;
-
+  const number = match[2] ? Number(match[2]) : null;
   return {
-    key,
-    label: key === 'chorus' ? 'Chorus' : 'Refrain',
+    key: number ? `${type.key} ${number}` : type.key,
+    baseKey: type.key,
+    number,
+    numberFallback: Boolean(type.numberFallback),
+    label: number ? `${type.label} ${number}` : type.label,
   };
+}
+
+/**
+ * Record a section body. The first numbered definition also serves unnumbered calls
+ * until an unnumbered definition replaces it.
+ * @param {Map<string, any>} registry
+ */
+export function registerRepeatableSection(registry, marker, body) {
+  registry.set(marker.key, body);
+  if (marker.number && !registry.has(marker.baseKey)) {
+    registry.set(marker.baseKey, body);
+  }
+}
+
+/**
+ * @param {Map<string, any>} registry
+ * @returns {any} The registered body for a bare marker call, if any.
+ */
+export function lookupRepeatableSection(registry, marker) {
+  if (registry.has(marker.key)) return registry.get(marker.key);
+  if (marker.number && marker.numberFallback) return registry.get(marker.baseKey);
+  return undefined;
 }
 
 /**
@@ -111,7 +149,7 @@ function collectRepeatableSectionBody(lines = [], startIndex = 0) {
 }
 
 /**
- * Expand Chorus/Refrain marker calls using earlier explicit section text.
+ * Expand bare section marker calls (Chorus, Bridge, Verse 1, ...) using earlier explicit section text.
  * Marker-only calls are expanded only when a prior definition exists.
  * @param {string} text
  * @returns {string}
@@ -160,12 +198,12 @@ export function expandRepeatableSectionReferences(text) {
     if (hasContentAfterMarker) {
       const bodyLines = collectRepeatableSectionBody(normalizedLines, i + 1);
       if (bodyLines.length > 0) {
-        sectionCache.set(marker.key, [...bodyLines]);
+        registerRepeatableSection(sectionCache, marker, [...bodyLines]);
       }
       continue;
     }
 
-    const cachedBody = sectionCache.get(marker.key);
+    const cachedBody = lookupRepeatableSection(sectionCache, marker);
     if (Array.isArray(cachedBody) && cachedBody.length > 0) {
       expandedLines.push(...cachedBody);
     }

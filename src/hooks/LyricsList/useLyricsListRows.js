@@ -19,6 +19,7 @@ export default function useLyricsListRows({
   highlightedLineIndex,
   searchQuery,
   darkMode,
+  isOutputOn = true,
   density = 'default',
 }) {
   const compact = density === 'dock' || density === 'compact';
@@ -142,7 +143,9 @@ export default function useLyricsListRows({
           return `${base}border-amber-300 bg-amber-500/20 text-amber-100 ring-2 ring-amber-300/80 shadow-sm`;
         }
         if (index === selectedLine) {
-          return `${base}border-blue-400 bg-blue-400 text-white shadow-sm`;
+          return isOutputOn
+            ? `${base}border-red-500 bg-red-600 text-white shadow-sm`
+            : `${base}border-red-500/70 bg-gray-900/80 text-gray-100 ring-1 ring-inset ring-red-500/50`;
         }
         if (index === highlightedLineIndex && searchQuery) {
           return `${base}border-amber-400/70 bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/25`;
@@ -158,7 +161,14 @@ export default function useLyricsListRows({
           ? 'bg-amber-500/20 text-amber-100 ring-2 ring-amber-300/90'
           : 'bg-amber-100 text-amber-950 ring-2 ring-amber-500';
       }
-      else if (index === selectedLine) base += 'bg-blue-400 text-white';
+      // Broadcast tally: solid red while the line is on air, outlined while output is off.
+      else if (index === selectedLine) {
+        base += isOutputOn
+          ? 'bg-red-600 text-white shadow-sm shadow-red-950/20'
+          : darkMode
+            ? 'bg-gray-800 text-gray-100 ring-2 ring-inset ring-red-500/70'
+            : 'bg-white text-gray-900 ring-2 ring-inset ring-red-500/70';
+      }
       else if (index === highlightedLineIndex && searchQuery)
         base += 'bg-orange-200 text-orange-900 border-2 border-orange-400';
       else if (isMultiSelected)
@@ -171,7 +181,7 @@ export default function useLyricsListRows({
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200';
       return base;
     },
-    [compact, selectedLine, previewLine, highlightedLineIndex, searchQuery, darkMode]
+    [compact, selectedLine, previewLine, highlightedLineIndex, searchQuery, darkMode, isOutputOn]
   );
 
   return {

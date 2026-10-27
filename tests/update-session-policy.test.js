@@ -253,7 +253,7 @@ test('schema 5 preferences gain a normalized editable section-tag phrase list', 
   assert.equal(result.success, true);
   assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
   assert.equal(result.preferences.parsing.structureTagMode, 'keep');
-  assert.deepEqual(result.preferences.parsing.sectionTagPhrases, ['Call And Response']);
+  assert.deepEqual(result.preferences.parsing.sectionTagPhrases, ['Call And Response', 'Tag', 'Ending']);
 });
 
 test('schema 6 preferences discard the removed default lyrics folder setting', () => {
@@ -365,4 +365,25 @@ test('legacy realtime session snapshots migrate to the current schema', () => {
   assert.equal(result.snapshot.version, CURRENT_SESSION_SCHEMA_VERSION);
   assert.deepEqual(result.snapshot.currentLyrics, ['Legacy line']);
   assert.equal(legacy.version, undefined);
+});
+
+test('preferences migration adds Tag/Ending section titles and a blank CCLI licence', () => {
+  const result = migratePreferences({
+    _schemaVersion: 11,
+    general: { liveSafetyMode: true },
+    parsing: { sectionTagPhrases: ['Verse', 'Chorus', 'Tag'] },
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.preferences._schemaVersion, CURRENT_PREFERENCES_SCHEMA_VERSION);
+  assert.deepEqual(result.preferences.parsing.sectionTagPhrases, ['Verse', 'Chorus', 'Tag', 'Ending']);
+  assert.equal(result.preferences.general.ccliLicenseNumber, '');
+  assert.equal(result.preferences.general.liveSafetyMode, true);
+
+  const licensed = migratePreferences({
+    _schemaVersion: 11,
+    general: { ccliLicenseNumber: '7654321' },
+  });
+  assert.equal(licensed.preferences.general.ccliLicenseNumber, '7654321');
+  assert.equal(licensed.preferences.parsing.sectionTagPhrases.includes('Tag'), true);
 });

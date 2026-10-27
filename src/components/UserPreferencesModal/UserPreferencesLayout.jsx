@@ -133,7 +133,7 @@ const UserPreferencesLayout = ({
       </div>
     </div>
 
-    <div className={`flex items-center justify-center border-t px-6 py-3 shrink-0 rounded-b-2xl ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]'}`}>
+    <div className={`flex items-center justify-center border-t px-6 py-3 shrink-0 rounded-b-2xl ${darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]'}`}>
       <div className={`text-xs ${mutedClass} flex items-center gap-2`}>
         {saving ? (
           <>

@@ -1,4 +1,5 @@
-import { state, summarizeSetlistForDisplay } from './state.js';
+import { getActiveSetlistItemId, getDisplaySongCredits, state, summarizeSetlistForDisplay } from './state.js';
+import { normalizeCcliNumber } from '../../shared/lyricsParsing/songMetadata.js';
 import { isOutputClientType, isOutputDiscoveryClientType } from './utils.js';
 import { REALTIME_EVENTS } from '../../shared/apiContractRegistry.js';
 
@@ -49,6 +50,8 @@ export const emitToClients = (io, eventName, payloadOrFactory, predicate = () =>
 export const renderLyricsPayload = (payload = {}) => ({
   lyrics: Array.isArray(payload.lyrics) ? payload.lyrics : [],
   fileName: payload.fileName || '',
+  songCredits: getDisplaySongCredits(payload.songMetadata),
+  setlistItemId: getActiveSetlistItemId(payload.lyricsSource),
 });
 
 export const emitLyricsLoad = (io, payload = {}) => {
@@ -77,6 +80,13 @@ export const emitLyricsRenderEvent = (io, eventName, payload) => (
     )
   ))
 );
+
+export const setCcliLicenseNumber = (io, value) => {
+  state.ccliLicenseNumber = normalizeCcliNumber(value);
+  return emitToClients(io, REALTIME_EVENTS.songCreditsUpdate, getDisplaySongCredits(), (client) => (
+    isOutputDisplayClient(client) || isStageDisplayClient(client)
+  ));
+};
 
 export const emitControllerEvent = (io, eventName, payload) => (
   emitToClients(io, eventName, payload, isControllerClient)

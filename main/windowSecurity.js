@@ -24,6 +24,7 @@ export function resolveWindowBackgroundColor(route = '/', {
   projection = false,
   backgroundColor,
   development = false,
+  darkMode = false,
 } = {}) {
   if (projection) return '#000000';
   if (typeof backgroundColor === 'string' && backgroundColor.trim()) return backgroundColor;
@@ -33,7 +34,9 @@ export function resolveWindowBackgroundColor(route = '/', {
   // cannot expose Electron's light default before or behind the output page.
   if (getWindowPreloadRole(route) === 'passive') return '#000000';
 
-  return development ? '#ffffff' : '#f9fafb';
+  // Match the control UI so a dark window never flashes light before it paints.
+  if (darkMode) return '#18181b';
+  return development ? '#ffffff' : '#fafafa';
 }
 
 export function shouldDisableBackgroundThrottling(route = '/', { projection = false } = {}) {

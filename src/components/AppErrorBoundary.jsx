@@ -30,9 +30,9 @@ export default class AppErrorBoundary extends React.Component {
         : String(this.state.error?.message || this.state.error || 'Unknown error');
 
       return (
-        <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif', color: '#111827' }}>
+        <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif', color: '#18181b' }}>
           <h3 style={{ margin: 0, marginBottom: 8, color: '#b91c1c' }}>{title}</h3>
-          <div style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: '#374151' }}>
+          <div style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: '#3f3f46' }}>
             {message}
           </div>
           {isChunkError && !this.state.recovering && (

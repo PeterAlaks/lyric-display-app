@@ -101,7 +101,7 @@ export function ModalFooter({
       className={cn(
         'flex shrink-0 flex-wrap items-center gap-3 border-t px-6 py-4',
         alignClass,
-        darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#f8fafc]',
+        darkMode ? 'border-white/5 bg-slate-950/45' : 'border-slate-900/5 bg-[#fafafa]',
         className
       )}
     >

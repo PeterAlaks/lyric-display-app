@@ -14,9 +14,6 @@ import { isPlainObject } from './utils.js';
 
 const byteLength = (value) => Buffer.byteLength(value, 'utf8');
 
-const normalizeComparableName = (value = '') => (
-  stripLyricImportExtension(String(value).trim()).toLowerCase()
-);
 
 const validateSerializedSize = (value) => {
   try {
@@ -83,24 +80,13 @@ export function normalizeIncomingSetlistFiles(files, { existingFiles = [], actor
     return { valid: false, error: 'Setlist payload is too large', entries: [] };
   }
 
-  const knownNames = new Set(existingFiles.map((existing) => (
-    normalizeComparableName(existing?.displayName ?? existing?.originalName ?? '')
-  )).filter(Boolean));
+  // Songs may repeat (a reprise, or the same opener and closer): every entry gets
+  // its own ID, and navigation follows the loaded item ID rather than the song name.
   const entries = [];
 
   for (const [index, file] of files.entries()) {
     const validation = validateInputFile(file, index);
     if (!validation.valid) return { ...validation, entries: [] };
-
-    const normalizedName = normalizeComparableName(validation.file.name);
-    if (knownNames.has(normalizedName)) {
-      return {
-        valid: false,
-        error: `File "${stripLyricImportExtension(validation.file.name)}" already exists in setlist`,
-        entries: [],
-      };
-    }
-    knownNames.add(normalizedName);
 
     entries.push({
       id: `setlist_${now}_${randomUUID()}`,

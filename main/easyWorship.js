@@ -446,6 +446,7 @@ function readSongsFromSqliteDatabase(resolvedPath) {
         const authorColumn = resolveColumnName(songTableColumns, ['author', 'writer', 'artist']);
         const copyrightColumn = resolveColumnName(songTableColumns, ['copyright']);
         const administratorColumn = resolveColumnName(songTableColumns, ['administrator']);
+        const ccliColumn = resolveColumnName(songTableColumns, ['ccli_number', 'ccli_song_number', 'ccli_no', 'ccli']);
         const inlineLyricsColumn = resolveColumnName(songTableColumns, ['words', 'lyrics', 'text', 'content']);
 
         const selectableColumns = ['rowid'];
@@ -455,6 +456,7 @@ function readSongsFromSqliteDatabase(resolvedPath) {
         if (authorColumn) selectableColumns.push(`${quoteIdentifier(authorColumn)} AS author`);
         if (copyrightColumn) selectableColumns.push(`${quoteIdentifier(copyrightColumn)} AS copyright`);
         if (administratorColumn) selectableColumns.push(`${quoteIdentifier(administratorColumn)} AS administrator`);
+        if (ccliColumn) selectableColumns.push(`${quoteIdentifier(ccliColumn)} AS ccli_number`);
         if (inlineLyricsColumn) selectableColumns.push(`${quoteIdentifier(inlineLyricsColumn)} AS inline_lyrics`);
 
         const songRows = songsDb.prepare(`
@@ -524,6 +526,7 @@ function readSongsFromSqliteDatabase(resolvedPath) {
                 author: row.author || '',
                 copyright: row.copyright || '',
                 administrator: row.administrator || '',
+                ccliNumber: row.ccli_number ? String(row.ccli_number) : '',
                 rtfContent
             });
         }
@@ -998,6 +1001,10 @@ export async function importSong({ song, destinationPath, duplicateHandling }) {
         }
         if (song.administrator) {
             fileContent += `# Administrator: ${song.administrator}\n`;
+        }
+        const ccliNumber = String(song.ccliNumber || '').match(/\d{1,12}/)?.[0];
+        if (ccliNumber) {
+            fileContent += `# CCLI Song Number: ${ccliNumber}\n`;
         }
 
         fileContent += `# Imported from EasyWorship: ${new Date().toISOString().split('T')[0]}\n\n`;

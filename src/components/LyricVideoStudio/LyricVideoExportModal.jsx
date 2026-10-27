@@ -195,7 +195,7 @@ function LyricVideoExportBody({
             <span>{percent}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-blue-200 dark:bg-blue-950">
-            <div className="h-full bg-linear-to-r from-blue-400 to-purple-600 transition-all" style={{ width: `${percent}%` }} />
+            <div className="h-full bg-blue-600 transition-all" style={{ width: `${percent}%` }} />
           </div>
           <div className="text-xs text-blue-900 dark:text-blue-100">
             Frame {progress?.frame || 0} of {progress?.frameCount || 0}

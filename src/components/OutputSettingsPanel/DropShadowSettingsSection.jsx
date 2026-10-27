@@ -2,24 +2,8 @@ import { Contrast, MoveHorizontal, MoveVertical, SquareDashed } from 'lucide-rea
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ColorPicker } from '@/components/ui/color-picker';
-import { AdvancedCollapse, AdvancedToggle } from '../OutputSettingsShared';
+import { AdvancedCollapse, AdvancedToggle, SettingRow } from '../OutputSettingsShared';
 import { sanitizeIntegerInput } from '../../utils/numberInput';
-
-const SettingRow = ({ icon: Icon, label, tooltip, children, rightClassName = 'flex items-center gap-2 justify-end', darkMode }) => (
-  <div className="flex items-center justify-between gap-4" data-output-setting-row>
-    <Tooltip content={tooltip} side="right">
-      <div className="flex items-center gap-2 min-w-35" data-output-setting-label>
-        {Icon ? (
-          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" data-output-setting-icon>
-            <Icon className={`h-3.5 w-3.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
-          </span>
-        ) : null}
-        <label className={`text-[13px] leading-5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
-      </div>
-    </Tooltip>
-    <div className={rightClassName}>{children}</div>
-  </div>
-);
 
 const DropShadowSettingsSection = ({
   darkMode,

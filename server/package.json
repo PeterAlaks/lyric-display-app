@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^18.0.8",
+    "dotenv": "^18.0.9",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "keytar": "^7.9.0",
-    "multer": "^2.1.1",
+    "multer": "^2.5.0",
     "socket.io": "^4.8.3"
   }
 }

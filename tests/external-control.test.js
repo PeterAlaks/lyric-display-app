@@ -29,7 +29,7 @@ test('external control ignores invalid setlist item indexes', () => {
 });
 
 test('Live Safety permits OSC lyric-line navigation', () => {
-  for (const type of ['select-line', 'next-line', 'prev-line', 'clear-output', 'scroll-lines']) {
+  for (const type of ['select-line', 'next-line', 'prev-line', 'jump-section', 'clear-output', 'scroll-lines']) {
     assert.equal(shouldBlockExternalActionForLiveSafety({ source: 'osc', type }, true), false, type);
   }
 });

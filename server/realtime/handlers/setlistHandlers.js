@@ -1,5 +1,6 @@
 import { parseLrcContent } from '../../../shared/lyricsParsing/lrcParser.js';
 import { parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
+import { applySongMetadataHeader } from '../../../shared/lyricsParsing/songMetadata.js';
 import {
   normalizeLyricFileType,
   stripLyricImportExtension,
@@ -223,6 +224,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
       let editableRawContent = file.content;
       let sections = [];
       let lineToSection = {};
+      let headerMetadata = null;
       const finalFileType = normalizeLyricFileType({
         fileType: file.fileType,
         fileName: file.originalName,
@@ -239,6 +241,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         editableRawContent = file.content;
         sections = parsed.sections || [];
         lineToSection = parsed.lineToSection || {};
+        headerMetadata = parsed.songMetadata || null;
       } else {
         const parsed = parseTxtContent(file.content, {
           ...parsingOptions,
@@ -248,6 +251,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         timestamps = [];
         sections = parsed.sections || [];
         lineToSection = parsed.lineToSection || {};
+        headerMetadata = parsed.songMetadata || null;
       }
 
       const cleanDisplayName = stripLyricImportExtension(file.displayName || file.originalName || '') || file.displayName;
@@ -266,12 +270,12 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         setlistItemId: file.id,
         ...(isLrc ? {} : { groupingPlan: file.metadata?.groupingPlan || null }),
       };
-      state.currentSongMetadata = {
+      state.currentSongMetadata = applySongMetadataHeader({
         ...(file.metadata || {}),
         title: file.metadata?.title || cleanDisplayName || '',
         lyricLines: processedLines.length,
         filePath: file.metadata?.filePath || null,
-      };
+      }, headerMetadata, { override: !file.metadata });
       state.currentLyricsSections = sections;
       state.currentLineToSection = lineToSection;
       schedulePersistSessionState();
