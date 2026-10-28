@@ -323,12 +323,12 @@ export default function FileSaveNavigatorModal() {
       <div className="pointer-events-none relative flex h-full items-center justify-center p-4">
         <div
           data-modal-root="true"
-          className={`pointer-events-auto flex h-[min(460px,calc(100vh-72px))] min-h-80 w-[min(640px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all duration-200 ${transitioning
+          className={`pointer-events-auto flex h-[min(460px,calc(100vh-72px))] min-h-80 w-[min(640px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${transitioning
             ? 'translate-y-8 scale-95 opacity-0'
             : 'opacity-100'
             } ${darkMode
-              ? 'border-slate-700/80 bg-slate-950 text-gray-100 ring-white/5'
-              : 'border-slate-200 bg-white text-gray-900 ring-black/5'
+              ? 'border-white/10 bg-slate-950 text-gray-100'
+              : 'border-black/10 bg-white text-gray-900'
             }`}
         >
           <header className={`flex shrink-0 items-start justify-between border-b px-5 py-4 ${darkMode ? 'border-white/7 bg-slate-900/80' : 'border-gray-200 bg-gray-50/90'}`}>
@@ -408,7 +408,7 @@ export default function FileSaveNavigatorModal() {
                   type="button"
                   onClick={() => void handleCreateLyricsFolder()}
                   disabled={creatingLyricsFolder}
-                  className="mt-3 flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                  className="mt-3 flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-500 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60"
                 >
                   {creatingLyricsFolder
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

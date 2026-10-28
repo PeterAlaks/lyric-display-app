@@ -829,7 +829,7 @@ const StageSettingsPanel = ({ settings, applySettings, update, darkMode, showMod
                 <Button
                   size="sm"
                   onClick={handleResumeTimer}
-                  className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                  className={`bg-blue-500 hover:bg-blue-400 text-white`}
                 >
                   Resume
                 </Button>

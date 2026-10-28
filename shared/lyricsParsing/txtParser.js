@@ -3,6 +3,7 @@ import { processRawTextToLines } from './txtProcessor.js';
 import { deriveSectionsFromProcessedLines } from './sections.js';
 import { applyGroupingPlan, createGroupingPlan } from './groupingPlan.js';
 import { extractSongMetadataHeader } from './songMetadata.js';
+import { isLdsongContent, parseLdsongContent } from './ldsong.js';
 
 export const EXPLICIT_GROUPING_DIRECTIVE = '[#:LyricDisplay grouping=explicit]';
 
@@ -27,6 +28,9 @@ export function extractExplicitGroupingDirective(rawText = '') {
  * @returns {{ rawText: string, processedLines: Array<string | object> }}
  */
 export function parseTxtContent(rawText = '', options = {}) {
+  // A structured song keeps its explicit slides wherever it is read, even as a .txt file.
+  if (isLdsongContent(rawText)) return parseLdsongContent(rawText);
+
   const directive = extractExplicitGroupingDirective(rawText);
   if (options.groupingConfig || directive.explicitGrouping) {
     setRuntimeGroupingConfig({

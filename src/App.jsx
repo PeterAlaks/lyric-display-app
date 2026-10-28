@@ -25,7 +25,7 @@ const LyricVideoStudio = React.lazy(() => import('./pages/LyricVideoStudio'));
 const LyricVideoExportFrame = React.lazy(() => import('./pages/LyricVideoExportFrame'));
 const LyricVideoLiveOutput = React.lazy(() => import('./pages/LyricVideoLiveOutput'));
 const Preview = React.lazy(() => import('./pages/Preview'));
-const NewSongCanvas = React.lazy(() => import('./components/NewSongCanvas'));
+const SongEditorRoute = React.lazy(() => import('./components/routes/SongEditorRoute'));
 
 const CUSTOM_OUTPUT_ROUTE_IDS = getCustomOutputRouteIds();
 
@@ -83,7 +83,7 @@ function AppRoutes() {
             )}
           />
           <Route path="/lyric-video-studio" element={<LyricVideoStudio />} />
-          <Route path="/new-song" element={<NewSongCanvas />} />
+          <Route path="/new-song" element={<SongEditorRoute />} />
         </Route>
         <Route path="/output1" element={<OutputPage outputId="output1" />} />
         <Route path="/output2" element={<OutputPage outputId="output2" />} />

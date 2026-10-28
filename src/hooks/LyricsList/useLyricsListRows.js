@@ -144,7 +144,7 @@ export default function useLyricsListRows({
         }
         if (index === selectedLine) {
           return isOutputOn
-            ? `${base}border-red-500 bg-red-600 text-white shadow-sm`
+            ? `${base}border-gray-100 bg-gray-200 text-gray-900 shadow-sm`
             : `${base}border-red-500/70 bg-gray-900/80 text-gray-100 ring-1 ring-inset ring-red-500/50`;
         }
         if (index === highlightedLineIndex && searchQuery) {
@@ -161,10 +161,12 @@ export default function useLyricsListRows({
           ? 'bg-amber-500/20 text-amber-100 ring-2 ring-amber-300/90'
           : 'bg-amber-100 text-amber-950 ring-2 ring-amber-500';
       }
-      // Broadcast tally: solid red while the line is on air, outlined while output is off.
+      // Broadcast tally: high-contrast live row while on air, outlined while output is off.
       else if (index === selectedLine) {
         base += isOutputOn
-          ? 'bg-red-600 text-white shadow-sm shadow-red-950/20'
+          ? darkMode
+            ? 'bg-gray-200 text-gray-900 shadow-sm shadow-gray-950/30'
+            : 'bg-gray-800 text-white shadow-sm shadow-gray-950/20'
           : darkMode
             ? 'bg-gray-800 text-gray-100 ring-2 ring-inset ring-red-500/70'
             : 'bg-white text-gray-900 ring-2 ring-inset ring-red-500/70';

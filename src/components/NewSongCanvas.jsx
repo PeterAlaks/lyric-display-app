@@ -39,6 +39,8 @@ import CanvasFloatingToolbar from './NewSongCanvas/CanvasFloatingToolbar';
 import CanvasMeasurementLayer from './NewSongCanvas/CanvasMeasurementLayer';
 import CanvasSearchPanel from './NewSongCanvas/CanvasSearchPanel';
 import SongCanvasHeader from './NewSongCanvas/SongCanvasHeader';
+import EditorModeSwitcher from './SongEditor/EditorModeSwitcher';
+import { writePreferredSongEditor } from '../utils/songDocumentEditing.js';
 
 const NewSongCanvas = () => {
   const navigate = useNavigate();
@@ -626,12 +628,29 @@ const NewSongCanvas = () => {
 
   useElectronListeners({ canUndo, canRedo, handleUndo, handleRedo });
 
+  // Hand the current lyrics to the structured editor; the original file is left untouched.
+  const handleSwitchEditor = useCallback((kind) => {
+    if (kind !== 'structured') return;
+    if (!editMode) writePreferredSongEditor('structured');
+    navigate('/new-song?mode=convert&editor=structured', {
+      state: {
+        convertText: content,
+        title: isUsableLyricsTitle(title) ? title : '',
+        sourcePath: currentFilePath || '',
+      },
+    });
+  }, [content, currentFilePath, editMode, navigate, title]);
+  const showEditorSwitcher = !composeMode && !isLyricVideoWorkflow;
+
   return (
     <div className={`flex h-full flex-col font-sans ${darkMode
       ? 'dark bg-[radial-gradient(circle_at_top,#1c1c20_0%,#18181b_46%,#0c0c0e_100%)]'
       : 'bg-[radial-gradient(circle_at_top,#ffffff_0%,#fafafa_55%,#eef2ff_100%)]'
       }`}>
       <SongCanvasHeader
+        editorSwitcher={showEditorSwitcher
+          ? <EditorModeSwitcher value="classic" onChange={handleSwitchEditor} darkMode={darkMode} />
+          : null}
         activeLineHasContent={activeLineHasContent}
         activeLineHasTimestamp={activeLineHasTimestamp}
         activeLineIndex={activeLineIndex}

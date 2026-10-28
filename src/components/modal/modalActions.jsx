@@ -61,7 +61,7 @@ export const getModalActionButtonClassName = (tone, isDark = false) => {
         shared,
         isDark
           ? 'border-blue-500 bg-blue-500 text-white hover:border-blue-400 hover:bg-blue-400 hover:text-white'
-          : 'border-blue-600 bg-blue-600 text-white hover:border-blue-700 hover:bg-blue-700 hover:text-white'
+          : 'border-blue-500 bg-blue-500 text-white hover:border-blue-400 hover:bg-blue-400 hover:text-white'
       );
   }
 };

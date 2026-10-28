@@ -26,7 +26,14 @@ import {
   sanitizePersistedStageTimerState,
 } from '../server/realtime/sessionPersistence.js';
 import { buildCurrentState, buildPeriodicState, state } from '../server/realtime/state.js';
-import { setCcliLicenseNumber } from '../server/realtime/broadcast.js';
+import {
+  emitIndividualOutputEvent,
+  emitLyricsLoad,
+  emitSetlistUpdate,
+  emitStageMessagesUpdate,
+  emitStageTimerUpdate,
+  setCcliLicenseNumber,
+} from '../server/realtime/broadcast.js';
 import { findActiveSetlistIndex, getAdjacentSetlistItem } from '../shared/setlistNavigation.js';
 import { getSocketConnectionScope } from '../server/realtime/utils.js';
 import {
@@ -1641,7 +1648,6 @@ test('Preview layout settings reach browser Preview clients and hydrate reconnec
       permissions: ['lyrics:read', 'settings:read'],
     });
     assert.deepEqual(reconnectState.previewSettings, nextSettings);
-    assert.equal(Object.hasOwn(reconnectState, 'lyrics'), false);
 
     const periodicState = buildPeriodicState({
       type: 'output-discovery',
@@ -2037,5 +2043,147 @@ test('the CCLI licence number reaches displays with song credits and updates liv
     state.connectedClients = previousConnectedClients;
     state.ccliLicenseNumber = previousLicence;
     state.currentSongMetadata = previousMetadata;
+  }
+});
+
+test('setlist loads of .ldsong songs use the strict song format and its credits', () => {
+  const previous = {
+    connectedClients: state.connectedClients,
+    setlistFiles: state.setlistFiles,
+    currentLyrics: state.currentLyrics,
+    currentLyricsSource: state.currentLyricsSource,
+    currentRawLyricsContent: state.currentRawLyricsContent,
+    currentLyricsTimestamps: state.currentLyricsTimestamps,
+    currentLyricsEnhancedTimestamps: state.currentLyricsEnhancedTimestamps,
+    currentLyricsFileName: state.currentLyricsFileName,
+    currentSongMetadata: state.currentSongMetadata,
+    currentSelectedLine: state.currentSelectedLine,
+    currentLyricsSections: state.currentLyricsSections,
+    currentLineToSection: state.currentLineToSection,
+    liveSafety: state.liveSafety,
+  };
+  state.connectedClients = new Map();
+  state.liveSafety = { enabled: false };
+  state.setlistFiles = [
+    {
+      id: 'structured-song',
+      displayName: 'Structured Song',
+      originalName: 'Structured Song.ldsong',
+      fileType: 'ldsong',
+      content: '#LDSONG 1\n# Title: Structured Song\n# CCLI Song Number: 98765\n# Arrangement: Chorus, Chorus\n\n[Chorus]\nShort line one\nShort line two',
+      metadata: null,
+    },
+    {
+      id: 'headerless-song',
+      displayName: 'Headerless',
+      originalName: 'Headerless.ldsong',
+      fileType: 'ldsong',
+      content: 'A very long line that the text parser would happily split into two separate slides for you',
+      metadata: null,
+    },
+  ];
+
+  try {
+    const { handlers, io, socket } = createSocketHarness();
+    registerSetlistHandlers({
+      io,
+      socket,
+      hasPermission: () => true,
+      clientType: 'desktop',
+      deviceId: 'device-test',
+      sessionId: 'session-test',
+    });
+
+    handlers.get('setlistLoad')?.('structured-song');
+    assert.deepEqual(state.currentLyrics.map((line) => (typeof line === 'string' ? line : line.lines)), [
+      '[Chorus]',
+      ['Short line one', 'Short line two'],
+      '[Chorus]',
+      ['Short line one', 'Short line two'],
+    ]);
+    assert.equal(state.currentSongMetadata.ccliSongNumber, '98765');
+    assert.equal(state.currentLyricsSource.fileType, 'ldsong');
+    assert.equal(state.currentLyricsSections.length, 2);
+
+    handlers.get('setlistLoad')?.('headerless-song');
+    assert.equal(state.currentLyrics.length, 1);
+  } finally {
+    Object.assign(state, previous);
+  }
+});
+
+test('the preview grid receives display state for every feed it draws, and nothing controller-only', () => {
+  const saved = {
+    connectedClients: state.connectedClients,
+    lyrics: state.currentLyrics,
+    selectedLine: state.currentSelectedLine,
+    rawLyricsContent: state.currentRawLyricsContent,
+    lyricsSource: state.currentLyricsSource,
+    outputSettings: state.outputSettings,
+    outputEnabled: state.outputEnabled,
+    stageSettings: state.currentStageSettings,
+    stageMessages: state.currentStageMessages,
+    setlistFiles: state.setlistFiles,
+  };
+  state.connectedClients = new Map();
+  state.currentLyrics = ['Line one', 'Line two'];
+  state.currentSelectedLine = 1;
+  state.currentRawLyricsContent = 'private raw text';
+  state.currentLyricsSource = { filePath: 'C:/private/song.txt' };
+  state.outputSettings = new Map([['output1', { fontSize: 72 }], ['output3', { fontSize: 40 }]]);
+  state.outputEnabled = new Map([['output1', true], ['output3', false]]);
+  state.currentStageSettings = { liveFontSize: 120 };
+  state.currentStageMessages = [{ text: 'Welcome' }];
+  state.setlistFiles = [{ id: 'next', displayName: 'Next', originalName: 'Next.txt', content: 'private' }];
+
+  try {
+    const previewInfo = { type: 'output-discovery', purpose: 'preview', permissions: ['lyrics:read'] };
+    const current = buildCurrentState(previewInfo);
+    assert.deepEqual(current.lyrics, ['Line one', 'Line two']);
+    assert.equal(current.selectedLine, 1);
+    assert.deepEqual(current.output1Settings, { fontSize: 72 });
+    assert.deepEqual(current.output3Settings, { fontSize: 40 });
+    assert.equal(current.output3Enabled, false);
+    assert.deepEqual(current.stageSettings, { liveFontSize: 120 });
+    assert.deepEqual(current.stageMessages, [{ text: 'Welcome' }]);
+    assert.ok(current.stageTimerState);
+    assert.ok(current.previewSettings);
+    assert.equal(Object.hasOwn(current, 'rawLyricsContent'), false);
+    assert.equal(Object.hasOwn(current, 'lyricsSource'), false);
+    assert.equal(Object.hasOwn(current, 'lyricsSections'), false);
+    assert.equal(JSON.stringify(current).includes('private'), false);
+
+    const periodic = buildPeriodicState(previewInfo);
+    assert.equal(periodic.selectedLine, 1);
+    assert.deepEqual(periodic.output3Settings, { fontSize: 40 });
+    assert.ok(periodic.stageTimerState);
+    assert.ok(periodic.previewSettings);
+    assert.equal(Object.hasOwn(periodic, 'lyrics'), false);
+
+    const preview = createTrackedClient('socket-preview-grid', { type: 'output-discovery', purpose: 'preview' });
+    const discovery = createTrackedClient('socket-plain-discovery', { type: 'output-discovery', purpose: 'output-discovery' });
+
+    emitLyricsLoad(null, { lyrics: ['A'], fileName: 'Song', rawLyricsContent: 'private raw text' });
+    emitIndividualOutputEvent(null, 'styleUpdate', { output: 'output2', settings: { fontSize: 60 } });
+    emitIndividualOutputEvent(null, 'styleUpdate', { output: 'stage', settings: { liveFontSize: 90 } });
+    emitStageTimerUpdate(null, { running: false });
+    emitStageMessagesUpdate(null, [{ text: 'Hello' }]);
+    emitSetlistUpdate(null, state.setlistFiles);
+
+    const received = preview.events.map((event) => event.eventName);
+    assert.deepEqual(received, ['lyricsLoad', 'styleUpdate', 'styleUpdate', 'stageTimerUpdate', 'stageMessagesUpdate', 'setlistUpdate']);
+    assert.equal(JSON.stringify(preview.events).includes('private'), false);
+    assert.equal(discovery.events.length, 0);
+  } finally {
+    state.connectedClients = saved.connectedClients;
+    state.currentLyrics = saved.lyrics;
+    state.currentSelectedLine = saved.selectedLine;
+    state.currentRawLyricsContent = saved.rawLyricsContent;
+    state.currentLyricsSource = saved.lyricsSource;
+    state.outputSettings = saved.outputSettings;
+    state.outputEnabled = saved.outputEnabled;
+    state.currentStageSettings = saved.stageSettings;
+    state.currentStageMessages = saved.stageMessages;
+    state.setlistFiles = saved.setlistFiles;
   }
 });

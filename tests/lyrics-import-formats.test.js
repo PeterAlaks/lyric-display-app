@@ -6,6 +6,7 @@ import {
   getLyricFormatLabel,
   getLyricImportFormatForName,
   isSupportedLyricsImportFile,
+  resolveLyricImportFileName,
   stripLyricImportExtension,
 } from '../shared/lyricImportRegistry.js';
 import {
@@ -124,4 +125,19 @@ test('setlist validation accepts imported document lyric file types', () => {
   });
 
   assert.equal(validation.valid, true);
+});
+
+test('loaded song names keep one extension, including the six-letter .ldsong', () => {
+  // Names with a registered extension are kept, whatever its length.
+  assert.equal(resolveLyricImportFileName('Amazing Grace.ldsong', 'ldsong'), 'Amazing Grace.ldsong');
+  assert.equal(resolveLyricImportFileName('Amazing Grace.txt', 'txt'), 'Amazing Grace.txt');
+  // Bare names get their format's extension once.
+  assert.equal(resolveLyricImportFileName('Amazing Grace', 'ldsong'), 'Amazing Grace.ldsong');
+  assert.equal(resolveLyricImportFileName('Amazing Grace', 'lrc'), 'Amazing Grace.lrc');
+  // Names doubled by earlier reloads are repaired instead of growing again.
+  assert.equal(resolveLyricImportFileName('Amazing Grace.ldsong.ldsong.ldsong', 'ldsong'), 'Amazing Grace.ldsong');
+  // A dot inside a title is not mistaken for an extension.
+  assert.equal(resolveLyricImportFileName('Psalm 23 v.2', 'txt'), 'Psalm 23 v.2.txt');
+  // The name shown in the app never carries the extension.
+  assert.equal(stripLyricImportExtension(resolveLyricImportFileName('Amazing Grace.ldsong.ldsong', 'ldsong')), 'Amazing Grace');
 });

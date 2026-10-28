@@ -1,11 +1,13 @@
 import React from 'react';
-import { LayoutGrid, RefreshCw } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import ProjectionExitHint from '@/components/ProjectionExitHint';
 import useSocket from '@/hooks/useSocket';
 import { useCustomOutputIds, usePreviewSettings } from '@/hooks/useStoreSelectors';
 import { formatOutputLabel } from '@/utils/outputLabels';
-import { createPreviewUrl } from '@/integrations/sourceUrls';
+import { OutputFrame } from './OutputPage';
+import { StageOutputFrame } from './Stage';
+import { TimeOutputFrame } from './TimeDisplay';
 import {
   DEFAULT_PREVIEW_SETTINGS,
   getAvailablePreviewItemIds,
@@ -37,11 +39,17 @@ const createPreviewRows = (itemIds, gridStyle) => {
   ];
 };
 
-const PreviewTile = ({ itemId, refreshKey, resolution, showLabel, showRoutePath }) => {
+// Each feed is drawn here from this window's own store, at the chosen resolution and scaled
+// to its tile, instead of loading the output's page in a frame.
+const PreviewFeed = ({ itemId, resolution }) => {
+  if (itemId === 'stage') return <StageOutputFrame preview viewport={resolution} />;
+  if (itemId === 'time') return <TimeOutputFrame viewport={resolution} />;
+  return <OutputFrame outputId={itemId} preview />;
+};
+
+const PreviewTile = ({ itemId, resolution, showLabel, showRoutePath }) => {
   const containerRef = React.useRef(null);
-  const iframeRef = React.useRef(null);
   const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
-  const [loaded, setLoaded] = React.useState(false);
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -66,15 +74,6 @@ const PreviewTile = ({ itemId, refreshKey, resolution, showLabel, showRoutePath 
       if (frameId) window.cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, []);
-
-  React.useEffect(() => {
-    setLoaded(false);
-  }, [itemId, refreshKey, resolution.height, resolution.width]);
-
-  React.useEffect(() => () => {
-    if (!iframeRef.current) return;
-    try { iframeRef.current.src = 'about:blank'; } catch { }
   }, []);
 
   const scale = dimensions.width && dimensions.height
@@ -102,39 +101,30 @@ const PreviewTile = ({ itemId, refreshKey, resolution, showLabel, showRoutePath 
         </div>
       )}
 
-      {scale > 0 && (
+      {/* Mounted before the tile is measured so the feed hears the first state sync. */}
+      <div
+        className="absolute left-1/2 top-1/2 overflow-hidden"
+        style={{
+          width: `${scaledWidth}px`,
+          height: `${scaledHeight}px`,
+          transform: 'translate(-50%, -50%)',
+          visibility: scale > 0 ? 'visible' : 'hidden',
+        }}
+      >
         <div
-          className="absolute left-1/2 top-1/2 overflow-hidden"
+          role="img"
+          aria-label={`${formatOutputLabel(itemId)} preview`}
           style={{
-            width: `${scaledWidth}px`,
-            height: `${scaledHeight}px`,
-            transform: 'translate(-50%, -50%)',
+            width: `${resolution.width}px`,
+            height: `${resolution.height}px`,
+            pointerEvents: 'none',
+            transform: `scale(${scale})`,
+            transformOrigin: '0 0',
           }}
         >
-          <iframe
-            ref={iframeRef}
-            key={`${itemId}-${refreshKey}-${resolution.width}`}
-            src={createPreviewUrl(itemId) || undefined}
-            title={`${formatOutputLabel(itemId)} preview`}
-            onLoad={() => setLoaded(true)}
-            style={{
-              width: `${resolution.width}px`,
-              height: `${resolution.height}px`,
-              border: 0,
-              display: 'block',
-              pointerEvents: 'none',
-              transform: `scale(${scale})`,
-              transformOrigin: '0 0',
-            }}
-          />
+          <PreviewFeed itemId={itemId} resolution={resolution} />
         </div>
-      )}
-
-      {!loaded && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#05080d]">
-          <RefreshCw className="h-5 w-5 animate-spin text-slate-600" />
-        </div>
-      )}
+      </div>
     </article>
   );
 };
@@ -151,7 +141,6 @@ const Preview = () => {
     () => normalizePreviewSettings(storedSettings || DEFAULT_PREVIEW_SETTINGS),
     [storedSettings]
   );
-  const [refreshKey, setRefreshKey] = React.useState(0);
   const [now, setNow] = React.useState(() => new Date());
 
   const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -212,15 +201,6 @@ const Preview = () => {
                 {now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
             </time>
-            <button
-              type="button"
-              onClick={() => setRefreshKey((current) => current + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Refresh all previews"
-              title="Refresh all previews"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
           </div>
         </header>
       )}
@@ -239,7 +219,6 @@ const Preview = () => {
               <PreviewTile
                 key={itemId}
                 itemId={itemId}
-                refreshKey={refreshKey}
                 resolution={resolution}
                 showLabel={settings.showLabels}
                 showRoutePath={settings.showRoutePaths}

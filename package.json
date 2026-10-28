@@ -166,6 +166,13 @@
       ],
       "fileAssociations": [
         {
+          "ext": "ldsong",
+          "name": "LyricDisplay Song",
+          "description": "LyricDisplay structured song file",
+          "icon": "public/favicon.ico",
+          "role": "Editor"
+        },
+        {
           "ext": "lrc",
           "name": "LRC Lyric File",
           "description": "Lyric file with timestamps",
@@ -277,6 +284,12 @@
       "gatekeeperAssess": false,
       "fileAssociations": [
         {
+          "ext": "ldsong",
+          "name": "LyricDisplay Song",
+          "description": "LyricDisplay structured song file",
+          "role": "Editor"
+        },
+        {
           "ext": "lrc",
           "name": "LRC Lyric File",
           "description": "Lyric file with timestamps",
@@ -355,6 +368,12 @@
       "artifactName": "${productName}-${version}-Linux.${ext}",
       "maintainer": "Peter Alakembi <alakembipeter30@gmail.com>",
       "fileAssociations": [
+        {
+          "ext": "ldsong",
+          "name": "LyricDisplay Song",
+          "description": "LyricDisplay structured song file",
+          "mimeType": "application/x-ldsong"
+        },
         {
           "ext": "lrc",
           "name": "LRC Lyric File",

@@ -1,25 +1,16 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { AppWindowMac, Monitor, MonitorUp, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { AppWindowMac, Monitor, MonitorUp } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Tooltip } from '@/components/ui/tooltip';
 import useLyricsStore from '../context/LyricsStore';
 import useModal from '../hooks/useModal';
-import { createPreviewUrl } from '../integrations/sourceUrls';
-import { formatOutputLabel } from '../utils/outputLabels';
-
-const RESOLUTION_OPTIONS = [
-  { label: '1920x1080 (Full HD)', width: 1920, height: 1080 },
-  { label: '1280x720 (HD)', width: 1280, height: 720 },
-  { label: '1024x768 (XGA)', width: 1024, height: 768 },
-  { label: '1366x768 (WXGA)', width: 1366, height: 768 },
-  { label: '1440x900 (WXGA+)', width: 1440, height: 900 },
-  { label: '1600x900 (HD+)', width: 1600, height: 900 },
-];
+import { formatOutputLabel, OUTPUT_PREVIEW_RESOLUTIONS as RESOLUTION_OPTIONS } from '../utils/outputLabels';
+import { OutputFrame } from '../pages/OutputPage';
+import { StageOutputFrame } from '../pages/Stage';
+import { TimeOutputFrame } from '../pages/TimeDisplay';
 
 const PreviewOutputsModal = ({ darkMode }) => {
-  const [loading, setLoading] = useState(true);
-  const [key, setKey] = useState(0);
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const { showModal } = useModal();
 
@@ -42,7 +33,6 @@ const PreviewOutputsModal = ({ darkMode }) => {
   const stageContainerRef = useRef(null);
   const timeContainerRef = useRef(null);
   const customContainerRef = useRef(null);
-  const iframeRefs = useRef(new Set());
   const [output1Dimensions, setOutput1Dimensions] = useState({ width: 0, height: 0 });
   const [output2Dimensions, setOutput2Dimensions] = useState({ width: 0, height: 0 });
   const [stageDimensions, setStageDimensions] = useState({ width: 0, height: 0 });
@@ -103,37 +93,11 @@ const PreviewOutputsModal = ({ darkMode }) => {
     };
   }, []);
 
-  useEffect(() => () => {
-    iframeRefs.current.forEach((iframe) => {
-      try {
-        iframe.src = 'about:blank';
-      } catch { }
-    });
-    iframeRefs.current.clear();
-  }, []);
-
-  const registerPreviewIframe = useCallback((iframe) => {
-    if (iframe) {
-      iframeRefs.current.add(iframe);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
   useEffect(() => {
     if (previewCustomOutputId && !customOutputIds.includes(previewCustomOutputId)) {
       setPreviewCustomOutputId(null);
     }
   }, [customOutputIds, previewCustomOutputId, setPreviewCustomOutputId]);
-
-  const handleRefresh = () => {
-    setLoading(true);
-    setKey((prev) => prev + 1);
-    setTimeout(() => setLoading(false), 1000);
-  };
 
   const handleOpenOutput = async (outputKey) => {
     if (!outputKey) return;
@@ -169,7 +133,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
     : 'text-gray-500 hover:text-gray-100 hover:bg-gray-700'
     }`;
 
-  const getIframeTransform = (resolution, containerDimensions) => {
+  const getPreviewTransform = (resolution, containerDimensions) => {
     const containerWidth = containerDimensions.width;
     const containerHeight = containerDimensions.height;
 
@@ -187,7 +151,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
         width: `${scaledWidth}px`,
         height: `${scaledHeight}px`,
       },
-      iframe: {
+      frame: {
         width: `${resolution.width}px`,
         height: `${resolution.height}px`,
         transform: `scale(${scale})`,
@@ -269,21 +233,6 @@ const PreviewOutputsModal = ({ darkMode }) => {
               <MonitorUp className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
-          <Tooltip content="Refresh all previews" side="bottom">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={loading}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-medium transition-colors ${darkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 disabled:opacity-50'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50'
-                }`}
-              aria-label="Refresh all previews"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </Tooltip>
         </div>
       </div>
 
@@ -352,7 +301,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             style={{ aspectRatio: '16 / 9' }}
           >
             {(() => {
-              const transform = getIframeTransform(output1Resolution, output1Dimensions);
+              const transform = getPreviewTransform(output1Resolution, output1Dimensions);
               if (!transform) return null;
               return (
                 <>
@@ -367,28 +316,14 @@ const PreviewOutputsModal = ({ darkMode }) => {
                       }}
                     />
                   )}
-                  <div className="z-10" style={transform.wrapper}>
-                    <iframe
-                      ref={registerPreviewIframe}
-                      key={`output1-${key}`}
-                      src={createPreviewUrl('output1') || null}
-                      title="Output 1 Preview"
-                      style={{
-                        ...transform.iframe,
-                        border: 'none',
-                        display: 'block',
-                        pointerEvents: 'none',
-                      }}
-                    />
+                  <div className="relative z-10 overflow-hidden" style={transform.wrapper}>
+                    <div role="img" aria-label="Output 1 Preview" style={{ ...transform.frame, pointerEvents: 'none' }}>
+                      <OutputFrame outputId="output1" preview />
+                    </div>
                   </div>
                 </>
               );
             })()}
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center z-20">
-                <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-              </div>
-            )}
           </div>
         </div>
 
@@ -456,7 +391,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             style={{ aspectRatio: '16 / 9' }}
           >
             {(() => {
-              const transform = getIframeTransform(output2Resolution, output2Dimensions);
+              const transform = getPreviewTransform(output2Resolution, output2Dimensions);
               if (!transform) return null;
               return (
                 <>
@@ -471,28 +406,14 @@ const PreviewOutputsModal = ({ darkMode }) => {
                       }}
                     />
                   )}
-                  <div className="z-10" style={transform.wrapper}>
-                    <iframe
-                      ref={registerPreviewIframe}
-                      key={`output2-${key}`}
-                      src={createPreviewUrl('output2') || null}
-                      title="Output 2 Preview"
-                      style={{
-                        ...transform.iframe,
-                        border: 'none',
-                        display: 'block',
-                        pointerEvents: 'none',
-                      }}
-                    />
+                  <div className="relative z-10 overflow-hidden" style={transform.wrapper}>
+                    <div role="img" aria-label="Output 2 Preview" style={{ ...transform.frame, pointerEvents: 'none' }}>
+                      <OutputFrame outputId="output2" preview />
+                    </div>
                   </div>
                 </>
               );
             })()}
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center z-20">
-                <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-              </div>
-            )}
           </div>
         </div>
 
@@ -543,30 +464,16 @@ const PreviewOutputsModal = ({ darkMode }) => {
             style={{ aspectRatio: '16 / 9' }}
           >
             {(() => {
-              const transform = getIframeTransform(stageResolution, stageDimensions);
+              const transform = getPreviewTransform(stageResolution, stageDimensions);
               if (!transform) return null;
               return (
-                <div className="z-10" style={transform.wrapper}>
-                  <iframe
-                    ref={registerPreviewIframe}
-                    key={`stage-${key}`}
-                    src={createPreviewUrl('stage') || null}
-                    title="Stage Preview"
-                    style={{
-                      ...transform.iframe,
-                      border: 'none',
-                      display: 'block',
-                      pointerEvents: 'none',
-                    }}
-                  />
+                <div className="relative z-10 overflow-hidden" style={transform.wrapper}>
+                  <div role="img" aria-label="Stage Preview" style={{ ...transform.frame, pointerEvents: 'none' }}>
+                    <StageOutputFrame preview readControlState viewport={stageResolution} />
+                  </div>
                 </div>
               );
             })()}
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center z-20">
-                <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-              </div>
-            )}
           </div>
         </div>
 
@@ -617,30 +524,16 @@ const PreviewOutputsModal = ({ darkMode }) => {
             style={{ aspectRatio: '16 / 9' }}
           >
             {(() => {
-              const transform = getIframeTransform(timeResolution, timeDimensions);
+              const transform = getPreviewTransform(timeResolution, timeDimensions);
               if (!transform) return null;
               return (
-                <div className="z-10" style={transform.wrapper}>
-                  <iframe
-                    ref={registerPreviewIframe}
-                    key={`time-${key}`}
-                    src={createPreviewUrl('time') || null}
-                    title="Time Preview"
-                    style={{
-                      ...transform.iframe,
-                      border: 'none',
-                      display: 'block',
-                      pointerEvents: 'none',
-                    }}
-                  />
+                <div className="relative z-10 overflow-hidden" style={transform.wrapper}>
+                  <div role="img" aria-label="Time Preview" style={{ ...transform.frame, pointerEvents: 'none' }}>
+                    <TimeOutputFrame viewport={timeResolution} />
+                  </div>
                 </div>
               );
             })()}
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center z-20">
-                <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-              </div>
-            )}
           </div>
         </div>
 
@@ -729,7 +622,7 @@ const PreviewOutputsModal = ({ darkMode }) => {
             style={{ aspectRatio: '16 / 9' }}
           >
             {(() => {
-              const transform = getIframeTransform(customResolution, customDimensions);
+              const transform = getPreviewTransform(customResolution, customDimensions);
               if (!transform) return null;
               return (
                 <>
@@ -744,20 +637,17 @@ const PreviewOutputsModal = ({ darkMode }) => {
                       }}
                     />
                   )}
-                  <div className="z-10 relative" style={transform.wrapper}>
+                  <div className="z-10 relative overflow-hidden" style={transform.wrapper}>
                     {previewCustomOutputId ? (
-                      <iframe
-                        ref={registerPreviewIframe}
-                        key={`custom-${previewCustomOutputId}-${key}`}
-                        src={createPreviewUrl(previewCustomOutputId) || null}
-                        title={`${formatOutputLabel(previewCustomOutputId)} Preview`}
-                        style={{
-                          ...transform.iframe,
-                          border: 'none',
-                          display: 'block',
-                          pointerEvents: 'none',
-                        }}
-                      />
+                      <div
+                        key={previewCustomOutputId}
+                        role="img"
+                        aria-label={`${formatOutputLabel(previewCustomOutputId)} Preview`}
+                        className="overflow-hidden"
+                        style={{ ...transform.frame, pointerEvents: 'none' }}
+                      >
+                        <OutputFrame outputId={previewCustomOutputId} preview />
+                      </div>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center px-4">
                         <Popover open={customPickerOpen} onOpenChange={setCustomPickerOpen}>
@@ -785,12 +675,6 @@ const PreviewOutputsModal = ({ darkMode }) => {
                 </>
               );
             })()}
-
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center z-20">
-                <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -798,10 +682,9 @@ const PreviewOutputsModal = ({ darkMode }) => {
       <div className={`rounded-lg p-3 text-xs ${darkMode ? 'bg-blue-900/20 border border-blue-700/30 text-blue-300' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
         <p className="font-medium mb-1">Preview Tips:</p>
         <ul className="space-y-1 ml-4 list-disc">
-          <li>Live previews update in real-time as you make changes</li>
+          <li>Previews are drawn at the selected resolution exactly as each output draws them, and update instantly</li>
           <li>Click the <AppWindowMac className="w-3 h-3 inline" /> icon to open full window</li>
           <li>Use the <MonitorUp className="w-3 h-3 inline" /> button to project the full Preview grid</li>
-          <li>Use the refresh button if previews do not update</li>
           <li>Custom preview selection is remembered across app restarts</li>
         </ul>
       </div>

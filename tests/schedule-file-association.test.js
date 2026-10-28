@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
@@ -48,5 +48,19 @@ test('opening an associated schedule validates it and sends it to the renderer',
     assert.equal(sent[0].payload.schedule.items[0].durationMs, 4 * 60_000);
   } finally {
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('structured songs are routed from the OS and associated on every platform installer', async () => {
+  assert.equal(isSupportedFile('C:\Songs\Amazing Grace.LDSONG'), true);
+  assert.equal(
+    extractFilePathFromArgs(['LyricDisplay', 'C:\Songs\Amazing Grace.ldsong']),
+    'C:\Songs\Amazing Grace.ldsong'
+  );
+
+  const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  for (const platform of ['win', 'mac', 'linux']) {
+    const associations = manifest.build[platform].fileAssociations || [];
+    assert.equal(associations.some((entry) => entry.ext === 'ldsong'), true, platform);
   }
 });

@@ -628,9 +628,9 @@ export default function LyricVisualFrame({
         style={{
           ...styles,
           zIndex: 5,
-          width: `${scale}vw`,
-          maxWidth: `calc(100vw - ${safePaddingX * 2}px)`,
-          maxHeight: `calc(100vh - ${safePaddingY * 2}px)`,
+          width: `${scale}%`,
+          maxWidth: `calc(100% - ${safePaddingX * 2}px)`,
+          maxHeight: `calc(100% - ${safePaddingY * 2}px)`,
           objectFit: 'contain',
           opacity,
           filter: blur > 0 ? `blur(${blur}px)` : undefined,

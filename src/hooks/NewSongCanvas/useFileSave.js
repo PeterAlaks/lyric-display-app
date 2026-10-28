@@ -1,7 +1,8 @@
 import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
+import { getLyricFormatLabel, stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
 import { extractExplicitGroupingDirective, parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
+import { ldsongDocumentToPlainText, parseLdsongDocument } from '../../../shared/lyricsParsing/ldsong.js';
 import useLyricsStore from '../../context/LyricsStore.js';
 import {
   canUseFileNavigator,
@@ -35,14 +36,31 @@ const useFileSave = ({
   updateSetlistItem,
   editMode = false,
   saveAndLoadDestination = 'control',
+  // 'text' saves the canvas as .txt/.lrc; 'ldsong' saves structured songs (with a .txt export).
+  documentFormat = 'text',
 }) => {
   const navigate = useNavigate();
   const baseContentRef = externalBaseContentRef || useRef('');
   const baseTitleRef = externalBaseTitleRef || useRef('');
 
-  const serializePayload = useCallback((editorContent, extension) => (
-    extension === 'txt' ? extractExplicitGroupingDirective(editorContent).content : editorContent
-  ), []);
+  const serializePayload = useCallback((editorContent, extension) => {
+    if (documentFormat === 'ldsong') {
+      if (extension === 'ldsong') return editorContent;
+      const { document } = parseLdsongDocument(editorContent);
+      return document ? ldsongDocumentToPlainText(document) : editorContent;
+    }
+    return extension === 'txt' ? extractExplicitGroupingDirective(editorContent).content : editorContent;
+  }, [documentFormat]);
+
+  const resolveSaveExtensions = useCallback((preferredExtension) => {
+    if (documentFormat === 'ldsong') {
+      return { extension: 'ldsong', availableExtensions: ['ldsong', 'txt'] };
+    }
+    return {
+      extension: preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt',
+      availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+    };
+  }, [documentFormat, lrcEligibility.eligible]);
 
   const createEditorGroupingPlan = useCallback((editorContent, extension) => {
     if (extension !== 'txt') return null;
@@ -66,9 +84,8 @@ const useFileSave = ({
     if (!editMode) return null;
     const normalizedPath = (existingFilePath || '').trim();
     if (!normalizedPath) return null;
-    const lowerPath = normalizedPath.toLowerCase();
-    if (!lowerPath.endsWith('.txt') && !lowerPath.endsWith('.lrc')) return null;
-    const extension = lowerPath.endsWith('.lrc') ? 'lrc' : 'txt';
+    const extension = normalizedPath.toLowerCase().match(/\.(ldsong|txt|lrc)$/)?.[1];
+    if (!extension) return null;
     return { path: normalizedPath, extension };
   }, [editMode, existingFilePath]);
 
@@ -141,7 +158,7 @@ const useFileSave = ({
       : 'Saving will automatically replace the lyrics file at this location:';
 
     const body = titleChanged
-      ? `Existing file: ${targetPath}\n\nNew file name: ${suggestedName || 'lyrics'}.${targetPath?.toLowerCase().endsWith('.lrc') ? 'lrc' : 'txt'}`
+      ? `Existing file: ${targetPath}\n\nNew file name: ${suggestedName || 'lyrics'}.${targetPath?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase() || 'txt'}`
       : targetPath;
 
     const choice = await showModal({
@@ -297,7 +314,7 @@ const useFileSave = ({
 
       if (result?.unavailable) return null;
       if (result?.canceled) return { canceled: true };
-      const selectedExtension = result?.extension === 'lrc' ? 'lrc' : 'txt';
+      const selectedExtension = availableExtensions.includes(result?.extension) ? result.extension : extension;
       if (result?.nativeDialog) {
         usedNativeDialog = true;
         if (!window.electronAPI?.showSaveDialog) return { canceled: true };
@@ -310,7 +327,7 @@ const useFileSave = ({
         result = await window.electronAPI.showSaveDialog({
           defaultPath,
           filters: [{
-            name: selectedExtension === 'lrc' ? 'LRC Files' : 'Text Files',
+            name: `${getLyricFormatLabel(selectedExtension)} Files`,
             extensions: [selectedExtension],
           }],
         });
@@ -323,7 +340,7 @@ const useFileSave = ({
         collisionPolicy: usedNativeDialog || result.replaced ? 'replace' : 'create',
       });
       const savedBaseName = result.baseName
-        || result.filePath.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
+        || stripLyricImportExtension(result.filePath.split(/[\\/]/).pop());
 
       if (alsoLoad && saveAndLoadDestination !== 'lyric-video-studio') {
         const blob = new Blob([filePayload], { type: 'text/plain' });
@@ -394,6 +411,8 @@ const useFileSave = ({
     const hasLoadedBaseContent = Boolean((baseContentRef.current || '').trim());
     if (!hasLoadedBaseContent) return null;
     if (target.extension === 'lrc' && !lrcEligibility.eligible) return null;
+    // A structured song never overwrites a plain-text original; it is saved beside it instead.
+    if (documentFormat === 'ldsong' && target.extension !== 'ldsong') return null;
     if (!window?.electronAPI?.writeFile) return null;
 
     const initialTitle = (baseTitleRef.current || '').trim();
@@ -418,14 +437,13 @@ const useFileSave = ({
     if (action === 'cancel') return { canceled: true };
     if (action === 'save-new') {
       if (!canUseFileNavigator()) return null;
-      const preferredExtension = target.extension;
-      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
+      const { extension, availableExtensions } = resolveSaveExtensions(target.extension);
       const dir = getDirectoryFromPath(target.path);
       const baseName = resolveBaseName();
       const res = await saveWithNavigator({
         payload,
         extension,
-        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+        availableExtensions,
         baseName,
         defaultDir: dir,
         notifyPendingReload: !alsoLoad,
@@ -440,7 +458,7 @@ const useFileSave = ({
       const writeResult = await writeLyricsFile(target.path, filePayload, {
         collisionPolicy: 'replace',
       });
-      const savedBaseName = target.path.split(/[\\/]/).pop().replace(/\.(txt|lrc)$/i, '');
+      const savedBaseName = stripLyricImportExtension(target.path.split(/[\\/]/).pop());
 
       if (alsoLoad && saveAndLoadDestination !== 'lyric-video-studio') {
         const blob = new Blob([filePayload], { type: 'text/plain' });
@@ -501,7 +519,7 @@ const useFileSave = ({
       });
       return null;
     }
-  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigateAfterSaveAndLoad, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
+  }, [confirmOverwrite, editMode, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, documentFormat, lrcEligibility.eligible, markSaved, resolveSaveExtensions, navigateAfterSaveAndLoad, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, showToast, syncActiveSetlistItem, title, verifyExistingPath, writeLyricsFile]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim() || !isUsableLyricsTitle(title)) {
@@ -524,11 +542,11 @@ const useFileSave = ({
     const preferredExtension = getExistingTarget()?.extension;
     const baseName = resolveBaseName();
     if (canUseFileNavigator()) {
-      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
+      const { extension, availableExtensions } = resolveSaveExtensions(preferredExtension);
       await saveWithNavigator({
         payload,
         extension,
-        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+        availableExtensions,
         baseName,
         defaultDir: getDirectoryFromPath(getExistingTarget()?.path),
         notifyPendingReload: editMode,
@@ -537,11 +555,11 @@ const useFileSave = ({
       return;
     }
 
-    const format = await promptForFileFormat(preferredExtension);
+    const format = documentFormat === 'ldsong' ? 'ldsong' : await promptForFileFormat(preferredExtension);
     if (!format) return;
     if (format === 'lrc' && !lrcEligibility.eligible) return;
 
-    const extension = format === 'lrc' ? 'lrc' : 'txt';
+    const extension = format;
     const filePayload = serializePayload(payload, extension);
 
     try {
@@ -580,7 +598,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, editMode, getDirectoryFromPath, getExistingTarget, lrcEligibility.eligible, markSaved, promptForFileFormat, resolveBaseName, saveWithNavigator, serializePayload, showModal, showToast, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
+  }, [content, editMode, getDirectoryFromPath, getExistingTarget, documentFormat, lrcEligibility.eligible, markSaved, resolveSaveExtensions, promptForFileFormat, resolveBaseName, saveWithNavigator, serializePayload, showModal, showToast, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   const handleSaveAndLoad = useCallback(async () => {
     if (!content.trim() || !isUsableLyricsTitle(title)) {
@@ -603,11 +621,11 @@ const useFileSave = ({
     const preferredExtension = getExistingTarget()?.extension;
     const baseName = resolveBaseName();
     if (canUseFileNavigator()) {
-      const extension = preferredExtension === 'lrc' && lrcEligibility.eligible ? 'lrc' : 'txt';
+      const { extension, availableExtensions } = resolveSaveExtensions(preferredExtension);
       await saveWithNavigator({
         payload,
         extension,
-        availableExtensions: lrcEligibility.eligible ? ['txt', 'lrc'] : ['txt'],
+        availableExtensions,
         baseName,
         defaultDir: getDirectoryFromPath(getExistingTarget()?.path),
         notifyPendingReload: false,
@@ -616,11 +634,11 @@ const useFileSave = ({
       return;
     }
 
-    const format = await promptForFileFormat(preferredExtension);
+    const format = documentFormat === 'ldsong' ? 'ldsong' : await promptForFileFormat(preferredExtension);
     if (!format) return;
     if (format === 'lrc' && !lrcEligibility.eligible) return;
 
-    const extension = format === 'lrc' ? 'lrc' : 'txt';
+    const extension = format;
     const filePayload = serializePayload(payload, extension);
 
     try {
@@ -660,7 +678,7 @@ const useFileSave = ({
         dismissLabel: 'Close',
       });
     }
-  }, [content, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, lrcEligibility.eligible, markSaved, navigateAfterSaveAndLoad, promptForFileFormat, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, setRawLyricsContent, showModal, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
+  }, [content, getDirectoryFromPath, getExistingTarget, getReloadOptions, handleFileUpload, documentFormat, lrcEligibility.eligible, markSaved, resolveSaveExtensions, navigateAfterSaveAndLoad, promptForFileFormat, resolveBaseName, saveAndLoadDestination, saveWithNavigator, serializePayload, setRawLyricsContent, showModal, syncActiveSetlistItem, title, tryDirectSaveToExistingPath]);
 
   return {
     handleSave,

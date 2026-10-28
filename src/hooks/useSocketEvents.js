@@ -108,6 +108,9 @@ const useSocketEvents = (role, clientPurpose = role) => {
   const desktopBootstrapSocketRef = useRef(null);
 
   const setupApplicationEventHandlers = useCallback((socket, clientType, isDesktopApp) => {
+    // The preview grid draws every output and the stage itself, so it takes their updates too.
+    const isPreviewGrid = role === 'output-discovery' && clientPurpose === 'preview';
+    const receivesStageDisplayEvents = role === 'stage' || isPreviewGrid;
     if (role === 'timer-control') {
       const applyTimerSnapshot = (state, source) => {
         if (!isPlainObject(state)) {
@@ -316,7 +319,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
         setPreviewSettings(state.previewSettings);
       }
 
-      if (role === 'stage') {
+      if (receivesStageDisplayEvents) {
         if (state.stageMessages) {
           window.dispatchEvent(new CustomEvent('stage-messages-update', {
             detail: state.stageMessages,
@@ -475,6 +478,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
       role === 'control' ||
       role === 'stage' ||
       (typeof role === 'string' && role.startsWith('output') && role !== 'output-discovery');
+    const shouldHandleStyleUpdates = shouldHandleOutputMetrics || isPreviewGrid;
 
     socket.on('styleUpdate', (payload) => {
       if (!isPlainObject(payload) || !isPlainObject(payload.settings)) return;
@@ -485,10 +489,10 @@ const useSocketEvents = (role, clientPurpose = role) => {
         return;
       }
 
-      if (!shouldHandleOutputMetrics || !isRoutableOutput(output)) return;
+      if (!shouldHandleStyleUpdates || !isRoutableOutput(output)) return;
       logDebug('Received style update for', output, ':', settings);
 
-      if (output === 'stage' && role === 'stage') {
+      if (output === 'stage' && receivesStageDisplayEvents) {
 
         updateOutputSettings(output, settings);
       } else if (output !== 'stage') {
@@ -535,7 +539,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     });
     socket.on('stageTimerRejected', dispatchTimerRejection);
 
-    if (role === 'stage') {
+    if (receivesStageDisplayEvents) {
       socket.on('stageMessagesUpdate', (messages) => {
         logDebug('Received stage messages update:', messages);
         window.dispatchEvent(new CustomEvent('stage-messages-update', {
@@ -725,7 +729,7 @@ const useSocketEvents = (role, clientPurpose = role) => {
     socket.on('periodicStateSync', (state) => {
       applySnapshot(state, 'periodicStateSync');
     });
-  }, [role, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata, setLyricsParsingOptions, setPreviewSettings]);
+  }, [role, clientPurpose, setLyrics, setLyricsSections, setLineToSection, setLyricsTimestamps, setLyricsEnhancedTimestamps, selectLine, updateOutputSettings, setSetlistFiles, setIsDesktopApp, setLyricsFileName, setRawLyricsContent, setLyricsSource, setSongMetadata, setLyricsParsingOptions, setPreviewSettings]);
 
   const registerAuthenticatedHandlers = useCallback(({
     socket,

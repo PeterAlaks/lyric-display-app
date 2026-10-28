@@ -109,7 +109,8 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
           const platform = window.electronAPI.getPlatform();
           const separator = platform === 'win32' ? '\\' : '/';
           const documentsPath = result.documentsPath || `${result.homedir}${separator}Documents`;
-          setDestinationPath(`${documentsPath}${separator}LyricDisplay${separator}Imported Lyrics from Presentations`);
+          // New imports land in the song library so they are indexed and searchable immediately.
+          setDestinationPath(`${documentsPath}${separator}LyricDisplay${separator}Lyrics${separator}Imported from Presentations`);
         }
       }).catch((err) => {
         console.error('Failed to get user home directory:', err);
@@ -465,7 +466,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Select Presentations to Import</h3>
                 <p className={cn('text-xs', darkMode ? 'text-gray-400' : 'text-gray-600')}>
-                  Choose one or more presentation files to convert into lyric text files.
+                  Choose one or more presentation files to convert into LyricDisplay Songs (.ldsong). Each PowerPoint slide becomes one lyric slide.
                 </p>
               </div>
 
@@ -543,7 +544,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Choose Destination</h3>
                 <p className={cn('text-sm', darkMode ? 'text-gray-400' : 'text-gray-600')}>
-                  Select where to save the converted text files.
+                  Select where to save the converted songs.
                 </p>
               </div>
 
@@ -703,7 +704,7 @@ export default function PresentationImportModal({ isOpen, onClose, darkMode }) {
                     <li>• Open File → Load Lyrics and search by presentation title; the destination is indexed automatically</li>
                     <li>• If the folder is not listed there, use Add folders to index it manually</li>
                     <li>• Review the extracted text before presenting; complex slide layouts may need cleanup</li>
-                    <li>• Use "Open Folder" below to view or manage the generated .txt files</li>
+                    <li>• Use "Open Folder" below to view or manage the generated .ldsong files</li>
                     {importResults.failed > 0 && (
                       <li>• Retry failed presentations after resolving the errors shown above</li>
                     )}

@@ -251,7 +251,7 @@ function DockSongEditor({
           type="button"
           onClick={handleSaveAndLoad}
           disabled={!canSave || saving}
-          className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-600 text-xs font-semibold text-white ${!canSave || saving ? 'cursor-not-allowed opacity-45' : 'hover:bg-blue-700'}`}
+          className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-500 text-xs font-semibold text-white ${!canSave || saving ? 'cursor-not-allowed opacity-45' : 'hover:bg-blue-400'}`}
         >
           <FolderOpen className="h-3.5 w-3.5" />
           <span>{saving ? 'Loading...' : 'Save & Load'}</span>
@@ -334,7 +334,7 @@ export default function ObsDockLayout() {
     ? 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-blue-500/10 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35'
     : 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35';
   const dockIconDisabledClass = 'cursor-not-allowed opacity-45';
-  const dockPrimaryButtonClass = 'flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-blue-600 px-3 text-xs font-semibold text-white transition-all duration-200 hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40';
+  const dockPrimaryButtonClass = 'flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-blue-500 px-3 text-xs font-semibold text-white transition-all duration-200 hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40';
   const currentLineText = hasLyrics && typeof selectedLine === 'number'
     ? `${selectedLine + 1}/${lyrics.length}`
     : hasLyrics ? `${lyrics.length} lines` : 'No lyrics';

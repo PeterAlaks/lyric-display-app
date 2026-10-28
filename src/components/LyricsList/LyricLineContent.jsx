@@ -40,7 +40,7 @@ export default function LyricLineContent({
   // Secondary lines are softened versions of the row's own text colour, so they stay
   // legible on the solid live tally and the amber preview row as well as plain rows.
   const secondaryTextClass = tone === 'live'
-    ? 'text-white/80'
+    ? darkMode ? 'text-gray-700' : 'text-white/80'
     : isActiveSearchMatch
       ? ''
       : tone === 'preview'

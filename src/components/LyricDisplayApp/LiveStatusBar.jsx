@@ -50,14 +50,18 @@ export default function LiveStatusBar({ darkMode }) {
       aria-label="Live output status"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span
-          className={`${labelClass} ${onAir
-            ? 'bg-red-600 text-white'
-            : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'
-            }`}
-        >
-          {onAir ? 'Live' : isOutputOn ? 'Ready' : 'Off air'}
-        </span>
+        {onAir ? (
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500"
+            role="img"
+            aria-label="Live"
+            title="Live"
+          />
+        ) : (
+          <span className={`${labelClass} ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+            {isOutputOn ? 'Ready' : 'Off air'}
+          </span>
+        )}
         <span className={`truncate font-medium ${liveText ? '' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
           {liveText || 'No line selected'}
         </span>

@@ -2,10 +2,39 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Info, View, X } from 'lucide-react';
 // Modal bodies load on first use so the control panel does not parse every dialog at startup.
-const lazyNamed = (loader, name) => React.lazy(() => loader().then((module) => ({ default: module[name] })));
+// showModal loads a body before revealing its modal, and a loaded body renders directly instead
+// of suspending, so a dialog opens at its full size rather than growing out of a spinner.
+const preloadableLazy = (loader) => {
+  let Loaded = null;
+  let pending = null;
+  const preload = () => {
+    if (!pending) {
+      pending = loader()
+        .then((module) => {
+          Loaded = module.default;
+          return Loaded;
+        })
+        .catch((error) => {
+          pending = null;
+          throw error;
+        });
+    }
+    return pending;
+  };
+  const LazyBody = React.lazy(() => preload().then((Component) => ({ default: Component })));
+  const ModalBody = (props) => {
+    // Chosen once per mount so a chunk finishing mid-render never remounts the body.
+    const [ready] = useState(() => Boolean(Loaded));
+    return ready ? <Loaded {...props} /> : <LazyBody {...props} />;
+  };
+  ModalBody.preload = preload;
+  ModalBody.isLoaded = () => Boolean(Loaded);
+  return ModalBody;
+};
+const lazyNamed = (loader, name) => preloadableLazy(() => loader().then((module) => ({ default: module[name] })));
 const loadHelpContent = () => import('../HelpContent');
-const ConnectionDiagnosticsModal = React.lazy(() => import('../ConnectionDiagnosticsModal'));
-const PreviewOutputsModal = React.lazy(() => import('../PreviewOutputsModal'));
+const ConnectionDiagnosticsModal = preloadableLazy(() => import('../ConnectionDiagnosticsModal'));
+const PreviewOutputsModal = preloadableLazy(() => import('../PreviewOutputsModal'));
 const ControlPanelHelp = lazyNamed(loadHelpContent, 'ControlPanelHelp');
 const OutputSettingsHelp = lazyNamed(loadHelpContent, 'OutputSettingsHelp');
 const SongCanvasHelp = lazyNamed(loadHelpContent, 'SongCanvasHelp');
@@ -14,27 +43,66 @@ const StageDisplayHelp = lazyNamed(loadHelpContent, 'StageDisplayHelp');
 const MobileControllerHelp = lazyNamed(loadHelpContent, 'MobileControllerHelp');
 const ObsWebSocketHelp = lazyNamed(loadHelpContent, 'ObsWebSocketHelp');
 const IntegrationInstructions = lazyNamed(() => import('../IntegrationInstructions'), 'IntegrationInstructions');
-const SongInfoModal = React.lazy(() => import('../SongInfoModal'));
-const ProjectOutputModal = React.lazy(() => import('../ProjectOutputModal'));
-const AutoplaySettings = React.lazy(() => import('../AutoplaySettings'));
-const IntelligentAutoplayInfo = React.lazy(() => import('../IntelligentAutoplayInfo'));
-const OutputTemplatesModal = React.lazy(() => import('../OutputTemplatesModal'));
-const StageTemplatesModal = React.lazy(() => import('../StageTemplatesModal'));
-const SaveTemplateModal = React.lazy(() => import('../SaveTemplateModal'));
-const AboutAppModal = React.lazy(() => import('../AboutAppModal'));
-const SetlistExportModal = React.lazy(() => import('../SetlistExportModal'));
-const UserPreferencesModal = React.lazy(() => import('../UserPreferencesModal'));
-const NdiOutputSettingsModal = React.lazy(() => import('../NdiOutputSettingsModal'));
-const UserMediaModal = React.lazy(() => import('../UserMediaModal'));
-const PreServiceHealthModal = React.lazy(() => import('../PreServiceHealthModal'));
-const OperatorActionLogModal = React.lazy(() => import('../OperatorActionLogModal'));
-const ObsDockInfoModal = React.lazy(() => import('../ObsDockInfoModal'));
-const TelemetryConsentModal = React.lazy(() => import('../TelemetryConsentModal'));
-const ScheduleCreatorWizard = React.lazy(() => import('../ScheduleCreatorWizard'));
-const ScheduleStartReconciliationWizard = React.lazy(() => import('../ScheduleStartReconciliationWizard'));
-const TimerDisplaySettingsModal = React.lazy(() => import('../TimerDisplaySettingsModal'));
-const NetworkAddressChangedModal = React.lazy(() => import('../NetworkAddressChangedModal'));
-const AppAnnouncementModal = React.lazy(() => import('../AppAnnouncementModal'));
+const SongInfoModal = preloadableLazy(() => import('../SongInfoModal'));
+const ProjectOutputModal = preloadableLazy(() => import('../ProjectOutputModal'));
+const AutoplaySettings = preloadableLazy(() => import('../AutoplaySettings'));
+const IntelligentAutoplayInfo = preloadableLazy(() => import('../IntelligentAutoplayInfo'));
+const OutputTemplatesModal = preloadableLazy(() => import('../OutputTemplatesModal'));
+const StageTemplatesModal = preloadableLazy(() => import('../StageTemplatesModal'));
+const SaveTemplateModal = preloadableLazy(() => import('../SaveTemplateModal'));
+const AboutAppModal = preloadableLazy(() => import('../AboutAppModal'));
+const SetlistExportModal = preloadableLazy(() => import('../SetlistExportModal'));
+const UserPreferencesModal = preloadableLazy(() => import('../UserPreferencesModal'));
+const NdiOutputSettingsModal = preloadableLazy(() => import('../NdiOutputSettingsModal'));
+const UserMediaModal = preloadableLazy(() => import('../UserMediaModal'));
+const PreServiceHealthModal = preloadableLazy(() => import('../PreServiceHealthModal'));
+const OperatorActionLogModal = preloadableLazy(() => import('../OperatorActionLogModal'));
+const ObsDockInfoModal = preloadableLazy(() => import('../ObsDockInfoModal'));
+const TelemetryConsentModal = preloadableLazy(() => import('../TelemetryConsentModal'));
+const ScheduleCreatorWizard = preloadableLazy(() => import('../ScheduleCreatorWizard'));
+const ScheduleStartReconciliationWizard = preloadableLazy(() => import('../ScheduleStartReconciliationWizard'));
+const TimerDisplaySettingsModal = preloadableLazy(() => import('../TimerDisplaySettingsModal'));
+const NetworkAddressChangedModal = preloadableLazy(() => import('../NetworkAddressChangedModal'));
+const AppAnnouncementModal = preloadableLazy(() => import('../AppAnnouncementModal'));
+
+const MODAL_BODIES = {
+  ConnectionDiagnostics: ConnectionDiagnosticsModal,
+  PreviewOutputs: PreviewOutputsModal,
+  ControlPanelHelp,
+  OutputSettingsHelp,
+  SongCanvasHelp,
+  LyricVideoStudioHelp,
+  StageDisplayHelp,
+  MobileControllerHelp,
+  ObsWebSocketHelp,
+  IntegrationInstructions,
+  SongInfoModal,
+  ProjectOutput: ProjectOutputModal,
+  AutoplaySettings,
+  IntelligentAutoplayInfo,
+  OutputTemplates: OutputTemplatesModal,
+  StageTemplates: StageTemplatesModal,
+  SaveTemplate: SaveTemplateModal,
+  AboutApp: AboutAppModal,
+  SetlistExport: SetlistExportModal,
+  UserPreferences: UserPreferencesModal,
+  NdiOutputSettings: NdiOutputSettingsModal,
+  UserMedia: UserMediaModal,
+  PreServiceHealth: PreServiceHealthModal,
+  OperatorActionLog: OperatorActionLogModal,
+  ObsDockInfo: ObsDockInfoModal,
+  TelemetryConsent: TelemetryConsentModal,
+  ScheduleCreator: ScheduleCreatorWizard,
+  ScheduleStartReconciliation: ScheduleStartReconciliationWizard,
+  TimerDisplaySettings: TimerDisplaySettingsModal,
+  NetworkAddressChanged: NetworkAddressChangedModal,
+  AppAnnouncement: AppAnnouncementModal,
+};
+
+const getUnloadedModalBody = (component) => {
+  const body = typeof component === 'string' ? MODAL_BODIES[component] : null;
+  return body && !body.isLoaded() ? body : null;
+};
 
 const ModalContentFallback = () => (
   <div className="flex min-h-24 items-center justify-center" aria-busy="true">
@@ -220,14 +288,12 @@ const variantPalette = (variant, isDark) => {
       return {
         accent: isDark ? 'text-emerald-300' : 'text-emerald-600',
         badge: isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-500/10 text-emerald-600',
-        ring: isDark ? 'ring-emerald-500/40' : 'ring-emerald-500/20',
       };
     case 'warn':
     case 'warning':
       return {
         accent: isDark ? 'text-amber-300' : 'text-amber-600',
         badge: isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-500/10 text-amber-600',
-        ring: isDark ? 'ring-amber-500/40' : 'ring-amber-500/20',
       };
     case 'error':
     case 'danger':
@@ -235,13 +301,11 @@ const variantPalette = (variant, isDark) => {
       return {
         accent: isDark ? 'text-rose-300' : 'text-rose-600',
         badge: isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-500/10 text-rose-600',
-        ring: isDark ? 'ring-rose-500/50' : 'ring-rose-500/20',
       };
     default:
       return {
         accent: isDark ? 'text-blue-300' : 'text-blue-600',
         badge: isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-500/10 text-blue-600',
-        ring: isDark ? 'ring-blue-500/35' : 'ring-blue-500/20',
       };
   }
 };
@@ -289,6 +353,18 @@ export function ModalProvider({ children, isDark = false }) {
     });
   }, [setModalStack]);
 
+  const revealModal = useCallback((id, body) => {
+    if (!body) {
+      scheduleEnterAnimation(id);
+      return;
+    }
+    body.preload().catch(() => { }).finally(() => {
+      if (!modalsRef.current.some((m) => m.id === id)) return;
+      setModalStack(modalsRef.current.map((m) => (m.id === id ? { ...m, awaitingContent: false } : m)));
+      scheduleEnterAnimation(id);
+    });
+  }, [scheduleEnterAnimation, setModalStack]);
+
   const promoteQueuedModals = useCallback(() => {
     const availableSlots = MAX_OPEN_GLOBAL_MODALS - modalsRef.current.length;
     if (availableSlots <= 0 || queuedModals.current.length === 0) return;
@@ -298,11 +374,12 @@ export function ModalProvider({ children, isDark = false }) {
       ...entry.modal,
       entering: true,
       exiting: false,
+      awaitingContent: Boolean(getUnloadedModalBody(entry.modal.component)),
     }));
 
     setModalStack([...modalsRef.current, ...promotedModals]);
-    promotedModals.forEach((modal) => scheduleEnterAnimation(modal.id));
-  }, [scheduleEnterAnimation, setModalStack]);
+    promotedModals.forEach((modal) => revealModal(modal.id, getUnloadedModalBody(modal.component)));
+  }, [revealModal, setModalStack]);
 
   const updateDuplicateModal = useCallback((dedupeKey, config) => {
     const activeModal = modalsRef.current.find((modal) => (
@@ -346,15 +423,18 @@ export function ModalProvider({ children, isDark = false }) {
     resolverMap.current.set(id, resolveModal);
     modalPromises.current.set(id, promise);
 
+    const unloadedBody = getUnloadedModalBody(modal.component);
+    unloadedBody?.preload().catch(() => { });
+
     if (modalsRef.current.length >= MAX_OPEN_GLOBAL_MODALS) {
       queuedModals.current.push({ modal });
       return promise;
     }
 
-    setModalStack([...modalsRef.current, modal]);
-    scheduleEnterAnimation(id);
+    setModalStack([...modalsRef.current, { ...modal, awaitingContent: Boolean(unloadedBody) }]);
+    revealModal(id, unloadedBody);
     return promise;
-  }, [scheduleEnterAnimation, setModalStack, updateDuplicateModal]);
+  }, [revealModal, setModalStack, updateDuplicateModal]);
 
   const finalizeRemoval = useCallback((id) => {
     setModalStack(modalsRef.current.filter((m) => m.id !== id));
@@ -469,6 +549,8 @@ export function ModalProvider({ children, isDark = false }) {
     <div
       className="pointer-events-none fixed inset-0 z-1300 flex flex-col">
       {modals.map((modal, index) => {
+        // Not drawn until its body has loaded, so it never opens small and then grows.
+        if (modal.awaitingContent) return null;
         const palette = variantPalette(modal.variant, isDark);
         const IconComponent = modal.component === 'PreviewOutputs'
           ? View
@@ -539,9 +621,8 @@ export function ModalProvider({ children, isDark = false }) {
               className="pointer-events-none relative flex h-full items-center justify-center px-3 py-3 sm:px-4">
               <div
                 className={cn(
-                  'pointer-events-auto rounded-2xl border ring-1 transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
-                  isDark ? 'bg-gray-900 text-gray-50 border-slate-800/80' : 'bg-white text-gray-900 border-slate-200/80',
-                  palette.ring,
+                  'pointer-events-auto rounded-2xl border transition-all duration-200 flex min-h-0 flex-col overflow-hidden',
+                  isDark ? 'bg-gray-900 text-gray-50 border-white/10' : 'bg-white text-gray-900 border-black/10',
                   isTopModal ? 'shadow-2xl' : 'shadow-xl',
                   widthClass,
                   panelStateClass,

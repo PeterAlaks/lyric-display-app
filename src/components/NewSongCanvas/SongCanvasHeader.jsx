@@ -71,7 +71,7 @@ const SaveActions = ({
   toolbarGhostClass,
 }) => {
   const disabled = isContentEmpty || isTitleEmpty || (editMode && !hasUnsavedChanges);
-  const gradientActionClass = 'flex h-10 items-center gap-1.5 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-500 disabled:bg-gray-400 disabled:text-white disabled:opacity-55';
+  const gradientActionClass = 'flex h-10 items-center gap-1.5 rounded-full bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-400 disabled:bg-gray-400 disabled:text-white disabled:opacity-55';
 
   if (composeMode) {
     return (
@@ -257,6 +257,7 @@ const SongCanvasHeader = ({
   handleAddDefaultTags,
   handleAddTranslationAtActiveLine,
   handleBack,
+  editorSwitcher = null,
   handleCleanup,
   handleChangeSelectionCase,
   handleCopy,
@@ -290,6 +291,8 @@ const SongCanvasHeader = ({
   searchBarVisible,
   showModal,
   songSections = [],
+  // The structured editor shares this header; text-only tools stay in place but disabled.
+  structured = false,
   title,
   toolbarGhostClass,
 }) => {
@@ -426,6 +429,7 @@ const SongCanvasHeader = ({
         </div>
 
         <div className="flex items-center justify-self-end gap-1.5">
+          {editorSwitcher}
           <HelpButton darkMode={darkMode} showModal={showModal} />
           {editMode && (
             <Tooltip content="Start a new lyrics file" side="left">
@@ -450,7 +454,7 @@ const SongCanvasHeader = ({
               <IconAction onClick={handleRedo} disabled={!canRedo} title="Redo last change — Ctrl+Shift+Z" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
                 <Redo className="h-4 w-4" />
               </IconAction>
-              <IconAction onClick={handleSearchButtonClick} active={searchBarVisible} title="Search and replace — Ctrl+F" toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
+              <IconAction onClick={handleSearchButtonClick} disabled={structured} active={searchBarVisible} title={structured ? 'Search and replace is available in the Classic editor' : 'Search and replace — Ctrl+F'} toolbarGhostClass={toolbarGhostClass} darkMode={darkMode}>
                 <Search className="h-4 w-4" />
               </IconAction>
             </ActionGroup>
@@ -472,11 +476,11 @@ const SongCanvasHeader = ({
               <ToolbarDropdown
                 align="right"
                 darkMode={darkMode}
-                disabled={!hasActiveLine}
+                disabled={structured || !hasActiveLine}
                 icon={Timer}
                 id="timestamp"
                 items={timestampItems}
-                label="Timestamp actions"
+                label={structured ? 'Timestamps are available in the Classic editor' : 'Timestamp actions'}
                 openMenu={openMenu}
                 setOpenMenu={setOpenMenu}
                 toolbarGhostClass={toolbarGhostClass}
@@ -522,17 +526,18 @@ const SongCanvasHeader = ({
                 icon={ListOrdered}
                 id="section"
                 items={sectionItems}
-                label="Add song section"
+                label={structured ? 'Add a song section at the current slide' : 'Add song section'}
                 openMenu={openMenu}
                 setOpenMenu={setOpenMenu}
                 toolbarGhostClass={toolbarGhostClass}
               />
               <ToolbarDropdown
                 darkMode={darkMode}
+                disabled={structured}
                 icon={Tags}
                 id="metadata"
                 items={metadataItems}
-                label="Add lyrics metadata"
+                label={structured ? 'Song details are in the side panel' : 'Add lyrics metadata'}
                 openMenu={openMenu}
                 setOpenMenu={setOpenMenu}
                 toolbarGhostClass={toolbarGhostClass}
@@ -544,7 +549,7 @@ const SongCanvasHeader = ({
                 icon={CaseSensitive}
                 id="casing"
                 items={casingItems}
-                label="Change casing"
+                label={structured ? 'Change casing of the selection or current line' : 'Change casing'}
                 openMenu={openMenu}
                 setOpenMenu={setOpenMenu}
                 toolbarGhostClass={toolbarGhostClass}

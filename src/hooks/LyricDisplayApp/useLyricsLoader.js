@@ -6,9 +6,9 @@ import { applySongMetadataHeader } from '../../../shared/lyricsParsing/songMetad
 import { detectArtistFromFilename } from '../../utils/artistDetection';
 import {
   getLyricFormatLabel,
-  getLyricImportFormatForType,
   getLyricOriginLabel,
   normalizeLyricFileType,
+  resolveLyricImportFileName,
   stripLyricImportExtension,
 } from '../../../shared/lyricImportRegistry.js';
 
@@ -48,11 +48,8 @@ export const useLyricsLoader = ({
       const providedName = sanitize(fileName);
       const fallbackName = sanitize(context.fallbackFileName);
       const baseName = providedName || fallbackName || 'Imported Lyrics';
-      const hasExtension = /\.[a-z0-9]{2,5}$/i.test(providedName);
       const finalType = normalizeLyricFileType({ fileType, fileName: providedName, fallback: 'txt' });
-      const primaryExtension = getLyricImportFormatForType(finalType)?.extensions?.[0] || 'txt';
-      const extension = `.${primaryExtension}`;
-      const finalFileName = hasExtension ? providedName : `${baseName}${extension}`;
+      const finalFileName = resolveLyricImportFileName(providedName || baseName, finalType);
 
       const hasExplicitSplitting = Object.prototype.hasOwnProperty.call(context, 'enableOnlineLyricsSplitting')
         || Object.prototype.hasOwnProperty.call(context, 'enableIntelligentSplitting')

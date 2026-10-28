@@ -90,7 +90,8 @@ test('time display fits each keyed display state separately during state transit
     'utf8',
   );
   const frameStart = timeDisplaySource.indexOf('const TimeDisplayFrame');
-  const pageStart = timeDisplaySource.indexOf('const TimeDisplay = ');
+  // The output frame holds the keyed states; the /time page and previews both render it.
+  const pageStart = timeDisplaySource.indexOf('export function TimeOutputFrame');
 
   // AnimatePresence can re-enter an exiting display without re-running refs, so a single
   // page-level measurement can end up sizing a display that is no longer on screen.

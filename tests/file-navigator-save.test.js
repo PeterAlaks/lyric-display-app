@@ -28,3 +28,15 @@ test('navigator save suggestions clean unsafe title characters without losing Un
   assert.equal(normalizeNavigatorSaveExtension('docx'), null);
 });
 
+
+test('structured songs can be saved through the navigator', () => {
+  assert.equal(normalizeNavigatorSaveExtension('.LDSONG'), 'ldsong');
+  assert.deepEqual(validateNavigatorSaveName('Amazing Grace.ldsong', 'ldsong'), {
+    valid: true,
+    baseName: 'Amazing Grace',
+    extension: 'ldsong',
+    fileName: 'Amazing Grace.ldsong',
+  });
+  assert.equal(validateNavigatorSaveName('Amazing Grace.ldsong', 'txt').fileName, 'Amazing Grace.txt');
+  assert.equal(createPortableNavigatorSaveName('Ọlọrun.ldsong'), 'Ọlọrun');
+});

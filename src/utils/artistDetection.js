@@ -1,4 +1,5 @@
 import knownArtistsData from '../../shared/data/knownArtists.json';
+import { stripLyricImportExtension } from '../../shared/lyricImportRegistry.js';
 
 /**
  * Detects artist name from filename using known artists list
@@ -10,7 +11,7 @@ export const detectArtistFromFilename = (fileName) => {
     return { artist: null, title: '' };
   }
 
-  const nameWithoutExt = fileName.replace(/\.(txt|lrc|md|markdown|rtf|docx)$/i, '');
+  const nameWithoutExt = stripLyricImportExtension(fileName);
   const normalized = nameWithoutExt.toLowerCase();
 
   for (const artist of knownArtistsData) {

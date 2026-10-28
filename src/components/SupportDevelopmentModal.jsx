@@ -92,11 +92,11 @@ export function SupportDevelopmentModal({ isOpen, onClose, isDark = false }) {
       {/* Modal Panel */}
       <div
         className={cn(
-          'relative transform rounded-2xl border shadow-2xl ring-1 transition-all duration-200 overflow-hidden',
+          'relative transform rounded-2xl border shadow-2xl transition-all duration-200 overflow-hidden',
           'w-full max-w-4xl',
           isDark
-            ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35'
-            : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20',
+            ? 'bg-gray-900 text-gray-50 border-white/10'
+            : 'bg-white text-gray-900 border-black/10',
           panelStateClass
         )}
         style={{ maxHeight: 'calc(100vh - 80px)' }}

@@ -12,8 +12,10 @@ import { logDebug } from '../utils/logger';
 import { ChevronRight } from 'lucide-react';
 import { normalizeStageMessages } from '../../shared/stageMessages.js';
 import { getAdjacentSetlistItem } from '../../shared/setlistNavigation.js';
-import { getTimerDisplay, isTimerVisiblyActive } from '../utils/timerUtils';
+import { TIMER_STORAGE_KEY, getTimerDisplay, isTimerVisiblyActive, normalizeTimerState } from '../utils/timerUtils';
 import { paintToCss } from '../utils/paint';
+import { toViewportLength } from '../utils/outputLabels';
+import { readPersistentStorageItem } from '../utils/persistentStorage';
 import { hasSelectedStageLyricLine, shouldClearStageIdleScreen } from '../context/lyricsStore/stageSlice';
 import ProjectionExitHint from '../components/ProjectionExitHint';
 import useLyricsStore from '../context/LyricsStore';
@@ -135,17 +137,45 @@ const useAutoFitText = (text, options = {}) => {
   return { containerRef, textRef };
 };
 
-const Stage = () => {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isPreviewMode = searchParams.get('preview') === 'true';
-  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
-  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
+const IDLE_STAGE_TIMER = { running: false, paused: false, endTime: null, remaining: null };
 
-  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
-    preview: isPreviewMode,
-    purpose: 'stage-display',
-  });
+const getStageScaleFactor = (width) => {
+  if (width < 640) return 0.5;
+  if (width < 1024) return 0.7;
+  return 1;
+};
+
+// The control window already holds the timer and messages the stage window is sent, so a
+// preview drawn there starts from them instead of waiting for a socket update.
+const readControlTimerState = () => {
+  try {
+    const raw = readPersistentStorageItem(TIMER_STORAGE_KEY);
+    return raw ? normalizeTimerState(JSON.parse(raw)) : IDLE_STAGE_TIMER;
+  } catch {
+    return IDLE_STAGE_TIMER;
+  }
+};
+
+const readControlStageMessages = () => {
+  try {
+    return normalizeStageMessages(JSON.parse(sessionStorage.getItem('stage_custom_messages') || '[]'));
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Everything the stage display draws, driven by the store and stage events. The /stage window
+ * wraps it with its socket; previews render it directly and pass the screen size they draw.
+ */
+export function StageOutputFrame({
+  preview = false,
+  viewport = null,
+  readControlState = false,
+  isProjectionMode = false,
+  showProjectionExitHint = false,
+  className = 'relative h-full w-full overflow-hidden flex flex-col',
+}) {
   const { lyrics, selectedLine, lyricsFileName, lyricsSource } = useLyricsState();
   const activeSetlistItemId = lyricsSource?.setlistItemId || null;
   const { isOutputOn } = useOutputState();
@@ -154,30 +184,14 @@ const Stage = () => {
   const { stageEnabled } = useIndividualOutputState();
   const { skipSectionTitlesOnKeyboard } = useKeyboardNavigationPreferences();
 
-  const publishStageMetrics = useCallback(() => {
-    if (isPreviewMode || !isConnected || !isAuthenticated) return;
-    emitOutputMetrics('stage', {
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      timestamp: Date.now(),
-    });
-  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
-
-  useEffect(() => {
-    publishStageMetrics();
-    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
-    const interval = window.setInterval(publishStageMetrics, 5000);
-    return () => window.clearInterval(interval);
-  }, [isAuthenticated, isConnected, isPreviewMode, publishStageMetrics]);
-
   const sectionTagPhrases = useLyricsStore(
     (state) => state.lyricsParsingOptions.groupingConfig.sectionTagPhrases,
   );
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [customMessages, setCustomMessages] = useState([]);
-  const [timerState, setTimerState] = useState({ running: false, paused: false, endTime: null, remaining: null });
+  const [customMessages, setCustomMessages] = useState(() => (readControlState ? readControlStageMessages() : []));
+  const [timerState, setTimerState] = useState(() => (readControlState ? readControlTimerState() : IDLE_STAGE_TIMER));
   const [upcomingSongUpdateTrigger, setUpcomingSongUpdateTrigger] = useState(0);
 
   useEffect(() => {
@@ -436,27 +450,17 @@ const Stage = () => {
     return displayText;
   };
 
-  const [scaleFactor, setScaleFactor] = useState(1);
+  const [windowScaleFactor, setWindowScaleFactor] = useState(1);
 
   useEffect(() => {
-    const updateScale = () => {
-      const width = window.innerWidth;
-      if (width < 640) {
-
-        setScaleFactor(0.5);
-      } else if (width < 1024) {
-
-        setScaleFactor(0.7);
-      } else {
-
-        setScaleFactor(1);
-      }
-    };
-
+    if (viewport) return undefined;
+    const updateScale = () => setWindowScaleFactor(getStageScaleFactor(window.innerWidth));
     updateScale();
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
-  }, []);
+  }, [viewport]);
+
+  const scaleFactor = viewport ? getStageScaleFactor(viewport.width) : windowScaleFactor;
 
   const responsiveLiveFontSize = liveFontSize * scaleFactor;
   const responsiveNextFontSize = nextFontSize * scaleFactor;
@@ -480,7 +484,7 @@ const Stage = () => {
     ? findNavigableLyricLineIndex(lyrics, effectiveCurrentLine + 1, 1, { skipSectionTitles: skipSectionTitlesOnKeyboard, sectionTagPhrases })
     : null;
   const hasSelectedLyricLine = hasSelectedStageLyricLine(effectiveCurrentLine, lyrics.length);
-  const isVisible = Boolean((isPreviewMode || (isOutputOn && stageEnabled)) && hasSelectedLyricLine);
+  const isVisible = Boolean((preview || (isOutputOn && stageEnabled)) && hasSelectedLyricLine);
   const shouldClearIdleScreen = shouldClearStageIdleScreen(
     clearEmptyLyricsScreen,
     effectiveCurrentLine,
@@ -527,7 +531,7 @@ const Stage = () => {
   const shouldShowTimerFullScreen = Boolean(timerFullScreen) && (hasTimerCountdown || shouldShowTimerFallbackTime);
   const fullScreenTimerLabel = hasTimerCountdown ? (timerState.label || timerState.display?.label || 'Time Left:') : 'Current Time';
   const fullScreenTimerValue = hasTimerCountdown ? timerDisplay : formatTime(currentTime);
-  const fullScreenTimerLabelFontSize = 'clamp(1.5rem, 3.2vh, 3.5rem)';
+  const fullScreenTimerLabelFontSize = `clamp(1.5rem, ${toViewportLength(viewport, 'vh', 3.2)}, 3.5rem)`;
   const hasFullScreenStageContent = Boolean(
     upcomingSongFullScreen
     || shouldShowTimerFullScreen
@@ -657,7 +661,7 @@ const Stage = () => {
 
   return (
     <div
-      className="relative w-screen h-screen overflow-hidden flex flex-col"
+      className={className}
       style={{
         background: paintToCss(backgroundPaint, backgroundColor),
         fontFamily: fontStyle,
@@ -987,6 +991,44 @@ const Stage = () => {
         </div>
       </div>}
     </div>
+  );
+}
+
+const Stage = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
+  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
+
+  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
+    preview: isPreviewMode,
+    purpose: 'stage-display',
+  });
+
+  const publishStageMetrics = useCallback(() => {
+    if (isPreviewMode || !isConnected || !isAuthenticated) return;
+    emitOutputMetrics('stage', {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      timestamp: Date.now(),
+    });
+  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
+
+  useEffect(() => {
+    publishStageMetrics();
+    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
+    const interval = window.setInterval(publishStageMetrics, 5000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, isConnected, isPreviewMode, publishStageMetrics]);
+
+  return (
+    <StageOutputFrame
+      preview={isPreviewMode}
+      isProjectionMode={isProjectionMode}
+      showProjectionExitHint={showProjectionExitHint}
+      className="relative w-screen h-screen overflow-hidden flex flex-col"
+    />
   );
 };
 

@@ -68,8 +68,8 @@ const BackgroundBandSettingsSection = ({
               className={`p-1 rounded transition-all ${maxLinesEnabled
                 ? `cursor-pointer ${backgroundBandLockedToMaxLines
                   ? darkMode
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-blue-500 hover:bg-blue-600'
+                    ? 'bg-blue-500 hover:bg-blue-400'
+                    : 'bg-blue-500 hover:bg-blue-400'
                   : darkMode
                     ? 'hover:bg-gray-700'
                     : 'hover:bg-gray-200'

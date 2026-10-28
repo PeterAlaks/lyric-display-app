@@ -2,6 +2,7 @@ import { dialog } from 'electron';
 import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
+import { createLdsongFromSlides } from '../shared/lyricsParsing/ldsong.js';
 
 const SUPPORTED_EXTENSIONS = new Set(['.pptx']);
 
@@ -67,7 +68,7 @@ function extractSlideLinesFromXml(xmlContent) {
     return fallbackRuns;
 }
 
-async function extractTextFromPptx(filePath) {
+async function extractSlidesFromPptx(filePath) {
     const fileBuffer = await fs.readFile(filePath);
     const zip = await JSZip.loadAsync(fileBuffer);
 
@@ -98,15 +99,14 @@ async function extractTextFromPptx(filePath) {
             continue;
         }
 
-        slideBlocks.push(slideLines.join('\n'));
+        slideBlocks.push(slideLines);
     }
 
-    const text = slideBlocks.join('\n\n').trim();
-    if (!text) {
+    if (!slideBlocks.some((lines) => lines.some((line) => String(line).trim()))) {
         throw new Error('No readable slide text was found in .pptx file');
     }
 
-    return text;
+    return slideBlocks;
 }
 
 function sanitizeFilename(filename) {
@@ -122,7 +122,7 @@ function sanitizeFilename(filename) {
 }
 
 async function getUniqueFilename(destPath, baseName, handling) {
-    const filename = `${baseName}.txt`;
+    const filename = `${baseName}.ldsong`;
     const fullPath = path.join(destPath, filename);
 
     try {
@@ -138,7 +138,7 @@ async function getUniqueFilename(destPath, baseName, handling) {
 
         let counter = 1;
         while (counter < 1000) {
-            const nextFilename = `${baseName} (${counter}).txt`;
+            const nextFilename = `${baseName} (${counter}).ldsong`;
             const nextPath = path.join(destPath, nextFilename);
             try {
                 await fs.access(nextPath);
@@ -157,14 +157,14 @@ async function getUniqueFilename(destPath, baseName, handling) {
     }
 }
 
-async function extractPresentationText(filePath) {
+async function extractPresentationSlides(filePath) {
     const extension = path.extname(filePath || '').toLowerCase();
 
     if (extension !== '.pptx') {
         throw new Error('Only .pptx files are supported');
     }
 
-    return extractTextFromPptx(filePath);
+    return extractSlidesFromPptx(filePath);
 }
 
 export async function validatePresentationPath(inputPath) {
@@ -219,8 +219,8 @@ export async function importPresentation({ presentation, destinationPath, duplic
 
         await fs.mkdir(destinationPath, { recursive: true });
 
-        const extractedText = await extractPresentationText(presentation.filePath);
-        if (!extractedText || !extractedText.trim()) {
+        const slides = await extractPresentationSlides(presentation.filePath);
+        if (!slides.length) {
             return { success: false, error: 'No slide text found in presentation' };
         }
 
@@ -232,16 +232,14 @@ export async function importPresentation({ presentation, destinationPath, duplic
             return { success: true, skipped: true, filePath: path.join(destinationPath, filename) };
         }
 
-        const importedDate = new Date().toISOString().split('T')[0];
-        const fileContent = [
-            sourceName ? `# Title: ${sourceName}` : null,
-            presentation.fileName ? `# Source File: ${presentation.fileName}` : null,
-            `# Imported from PowerPoint (.pptx): ${importedDate}`,
-            '',
-            extractedText
-        ]
-            .filter((line) => line !== null)
-            .join('\n');
+        // Each PowerPoint slide becomes exactly one song slide, so nothing is guessed.
+        const fileContent = createLdsongFromSlides(slides, {
+            songMetadata: sourceName ? { title: sourceName } : null,
+            provenance: {
+                key: 'Imported from PowerPoint',
+                value: `${presentation.fileName || 'presentation'} (${new Date().toISOString().split('T')[0]})`,
+            },
+        });
 
         const outputPath = path.join(destinationPath, filename);
         await fs.writeFile(outputPath, fileContent, 'utf8');

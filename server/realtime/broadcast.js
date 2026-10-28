@@ -19,6 +19,14 @@ export const isOutputDisplayClient = (client) => (
 
 export const isOutputDiscoveryClient = (client) => isOutputDiscoveryClientType(client?.type);
 
+// The preview grid draws every output, the stage, and the time display itself, so it receives
+// the same read-only display data those windows do (never controller-only payloads).
+export const isPreviewGridClient = (client) => isOutputDiscoveryClient(client) && client?.purpose === 'preview';
+
+const isDisplayClient = (client) => (
+  isOutputDisplayClient(client) || isStageDisplayClient(client) || isPreviewGridClient(client)
+);
+
 export const isStageDisplayClient = (client) => (
   client?.type === 'stage' && client?.purpose !== 'time-display'
 );
@@ -63,11 +71,7 @@ export const emitLyricsLoad = (io, payload = {}) => {
   const displayPayload = renderLyricsPayload(payload);
   return emitToClients(io, 'lyricsLoad', (client) => (
     isControllerClient(client) ? payload : displayPayload
-  ), (client) => (
-    isControllerClient(client) ||
-    isOutputDisplayClient(client) ||
-    isStageDisplayClient(client)
-  ));
+  ), (client) => isControllerClient(client) || isDisplayClient(client));
 };
 
 export const emitLyricsRenderEvent = (io, eventName, payload) => (
@@ -76,16 +80,14 @@ export const emitLyricsRenderEvent = (io, eventName, payload) => (
     (
       eventName !== 'lyricsTimestampsUpdate' &&
       eventName !== 'lyricsSectionsUpdate' &&
-      (isOutputDisplayClient(client) || isStageDisplayClient(client))
+      isDisplayClient(client)
     )
   ))
 );
 
 export const setCcliLicenseNumber = (io, value) => {
   state.ccliLicenseNumber = normalizeCcliNumber(value);
-  return emitToClients(io, REALTIME_EVENTS.songCreditsUpdate, getDisplaySongCredits(), (client) => (
-    isOutputDisplayClient(client) || isStageDisplayClient(client)
-  ));
+  return emitToClients(io, REALTIME_EVENTS.songCreditsUpdate, getDisplaySongCredits(), isDisplayClient);
 };
 
 export const emitControllerEvent = (io, eventName, payload) => (
@@ -102,7 +104,7 @@ export const emitSetlistUpdate = (io, files) => {
   return emitToClients(io, 'setlistUpdate', (client) => (
     isControllerClient(client) ? files : displayFiles
   ), (client) => (
-    isControllerClient(client) || isStageDisplayClient(client)
+    isControllerClient(client) || isStageDisplayClient(client) || isPreviewGridClient(client)
   ));
 };
 
@@ -110,31 +112,26 @@ export const emitStageTimerUpdate = (io, timerState) => (
   emitToClients(io, 'stageTimerUpdate', timerState, (client) => (
     isControllerClient(client) ||
     isStageDisplayClient(client) ||
-    isTimerDisplayClient(client)
+    isTimerDisplayClient(client) ||
+    isPreviewGridClient(client)
   ))
 );
 
 export const emitStageMessagesUpdate = (io, messages) => (
   emitToClients(io, 'stageMessagesUpdate', messages, (client) => (
-    isControllerClient(client) || isStageDisplayClient(client)
+    isControllerClient(client) || isStageDisplayClient(client) || isPreviewGridClient(client)
   ))
 );
 
 export const emitOutputVisibilityEvent = (io, eventName, payload) => (
-  emitToClients(io, eventName, payload, (client) => (
-    isControllerClient(client) ||
-    isOutputDisplayClient(client) ||
-    isStageDisplayClient(client)
-  ))
+  emitToClients(io, eventName, payload, (client) => isControllerClient(client) || isDisplayClient(client))
 );
 
 export const emitIndividualOutputEvent = (io, eventName, payload = {}, { excludeSocket = null } = {}) => (
   emitToClients(io, eventName, payload, (client) => {
     if (excludeSocket && client?.socket === excludeSocket) return false;
-    if (payload.output === 'preview') {
-      return isOutputDiscoveryClient(client) && client?.purpose === 'preview';
-    }
-    if (isControllerClient(client)) return true;
+    if (payload.output === 'preview') return isPreviewGridClient(client);
+    if (isControllerClient(client) || isPreviewGridClient(client)) return true;
     if (payload.output === 'stage') return isStageDisplayClient(client);
     return isOutputDisplayClient(client) && client.type === payload.output;
   })

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
+import useLyricsStore from '../../context/LyricsStore';
 
 export default function QuickParserPopover({
   clampGroupSize,
@@ -19,6 +20,8 @@ export default function QuickParserPopover({
   updateQuickParserSetting,
   presentation = 'popover',
 }) {
+  // A LyricDisplay Song stores its sections and slides, so parser settings never reshape it.
+  const isStructuredSong = useLyricsStore((state) => state.lyricsSource?.fileType === 'ldsong');
   const renderTriggerButton = (triggerProps = {}) => (
     <button
       type="button"
@@ -77,7 +80,11 @@ export default function QuickParserPopover({
     </div>
   );
 
-  const reloadButton = (
+  const reloadButton = isStructuredSong ? (
+    <p className={`rounded-lg px-3 py-2 text-xs leading-snug ${darkMode ? 'bg-gray-900/70 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+      This LyricDisplay Song keeps the sections and slides saved in it, so parser settings don&apos;t change it. They apply to text files you load. To change its layout, edit the song.
+    </p>
+  ) : (
     <button
       type="button"
       onClick={handleReloadWithQuickParser}

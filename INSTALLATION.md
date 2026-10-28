@@ -254,6 +254,7 @@ Supported lyric inputs:
 
 | Format | Extension |
 | --- | --- |
+| LyricDisplay Song (structured) | `.ldsong` |
 | Plain text | `.txt` |
 | Timestamped LRC | `.lrc` |
 | Markdown | `.md`, `.markdown` |
@@ -262,11 +263,31 @@ Supported lyric inputs:
 | LyricDisplay setlist | `.ldset` |
 | LyricDisplay schedule | `.ldsch` |
 
-Open the built-in file navigator with **File > Load Lyrics** or `Ctrl/Cmd + O`. Add one or more source folders once, then search filenames, paths, and TXT/LRC lyric contents without leaving LyricDisplay. The navigator starts on recent files, supports Up/Down and Enter, previews TXT/LRC files, and watches indexed folders for changes. Drag and drop remains available. Create a song with **File > New Lyrics File** or `Ctrl/Cmd + N`.
+Open the built-in file navigator with **File > Load Lyrics** or `Ctrl/Cmd + O`. Search filenames, paths, and LDSONG/TXT/LRC lyric contents without leaving LyricDisplay. The navigator starts on recent files, supports Up/Down and Enter, previews LDSONG/TXT/LRC files, and watches indexed folders for changes. Drag and drop remains available. Create a song with **File > New Lyrics File** or `Ctrl/Cmd + N`.
 
-Saving a song opens a smaller in-app destination picker. It lists the current indexed song folder first when available, followed by indexed lyrics folders; use Up/Down and Enter for a fast save. Choose **Save in different folder…** only when you want the operating system's Save As dialog.
+**Song library.** LyricDisplay keeps your songs in a library at `Documents\LyricDisplay\Lyrics` (`~/Documents/LyricDisplay/Lyrics` on macOS). It is created and indexed automatically on first launch, appears as **Library** in the navigator, and is the default home for new songs and for EasyWorship and PowerPoint imports. It lives in Documents so it survives **Reset app** and uninstalling, and is included in your normal Documents backups. You can still index up to 10 more folders of your own; the library does not count toward that limit and cannot be removed.
 
-Lines wrapped in `[ ]`, `( )`, `< >`, or `{ }` can be recognized as translation/alternate lines and grouped with the preceding lyric line. Parsing, cleanup, capitalization, splitting, and grouping behavior can be adjusted in Preferences.
+Saving a song opens a smaller in-app destination picker. It lists the current indexed song folder first when available, then the library and your other indexed folders; use Up/Down and Enter for a fast save. Choose **Save in different folder…** only when you want the operating system's Save As dialog.
+
+### Creating and editing songs
+
+**File > New Lyrics File** (`Ctrl/Cmd + N`) opens the **Structured** editor. Type the song section by section:
+
+- **Enter** adds a line and **Shift + Enter** starts a new slide.
+- **Ctrl/Cmd + T** adds a translation line and **Ctrl/Cmd + /** marks a stage-only note.
+- Each line's role chip (Lyric, Translation, Stage only) can be clicked to change it.
+
+To bring in lyrics copied from a website, press **Ctrl/Cmd + V** outside a field or use **Paste lyrics**. LyricDisplay lays them out once, using your parsing settings, so you can check and fix the sections, slides, and translations before saving. Pasting a few lines into a line field inserts them as written.
+
+The side panel holds the song details used by Song Credits (writers, copyright, CCLI song number). It also sets the **Play order**, so a chorus written once can play several times, and shows a preview in Output 1's font. The **Song check** panel flags slides that may not fit on screen.
+
+Structured songs are saved as **LyricDisplay Songs (.ldsong)**: plain text with the sections and slides written out, so they display identically on every computer. The format is documented in [docs/LDSONG_FORMAT.md](docs/LDSONG_FORMAT.md). Save can also export a plain `.txt`.
+
+The **Structured / Classic** switch in the editor header moves your lyrics to the **Classic** text canvas, which saves `.txt` and `.lrc` files and is needed for LRC timing. LyricDisplay remembers which editor you prefer for new songs. **Edit Lyrics** opens a `.ldsong` song in the Structured editor and other files in the Classic canvas, so saving keeps their format. Switching a text song to Structured creates a new `.ldsong` beside the original, which is left unchanged.
+
+EasyWorship and PowerPoint imports create `.ldsong` songs. EasyWorship songs keep their title, writers, copyright, administrator, and CCLI number. Each PowerPoint slide becomes one lyric slide.
+
+In text files (.txt, .md, .rtf, .docx), lines wrapped in `[ ]`, `( )`, `< >`, or `{ }` can be recognized as translation/alternate lines and grouped with the preceding lyric line. Parsing, cleanup, capitalization, splitting, and grouping behavior can be adjusted in Preferences.
 
 A song part written once can be repeated with a bare marker. After `[Chorus]`, `[Bridge]`, `[Pre-Chorus]`, `[Tag]`, `[Hook]`, or a numbered verse such as `[Verse 1]` has been written out, a later line containing only that marker repeats its words. `[Chorus 2]` and `[Chorus]` are kept separate when both are written out; a bare `[Chorus 2]` with no words of its own repeats the chorus.
 

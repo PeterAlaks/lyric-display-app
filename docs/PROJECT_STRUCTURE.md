@@ -114,6 +114,7 @@ The source of truth is [`src/App.jsx`](../src/App.jsx). Custom output routes are
 | `/output3` ... `/output6` | `pages/OutputPage.jsx` | Custom socket-driven lyric outputs |
 | `/stage` | `pages/Stage.jsx` | Stage display: current/next/previous lyrics, timer, messages, upcoming song |
 | `/time` | `pages/TimeDisplay.jsx` | Dedicated timer/clock projection |
+| `/preview` | `pages/Preview.jsx` | Projected preview grid; one `output-discovery` socket with purpose `preview` receives read-only display state for every feed, which it draws with the output, stage, and time frames |
 | `/timer-control` | `components/TimerControlModule.jsx` | Dedicated authoritative timer controller |
 | `/obs-setup` | `pages/ObsSetup.jsx` | OBS WebSocket/source creation UI |
 | `/lyric-video-live-output` | `pages/LyricVideoLiveOutput.jsx` | Live visual output from the video studio state |
@@ -309,8 +310,10 @@ src/
 
 - [`components/LyricDisplayApp.jsx`](../src/components/LyricDisplayApp.jsx) is the control-panel feature coordinator. Its extracted view pieces are in `components/LyricDisplayApp/` (including `LiveStatusBar.jsx`, the live/next/clock readout under the lyric list); orchestration behavior belongs in `hooks/LyricDisplayApp/`.
 - [`components/LyricsList.jsx`](../src/components/LyricsList.jsx), `components/LyricsList/`, and `hooks/LyricsList/` own virtualized lyric rows, selection, grouping, history, context menus, and section navigation.
-- [`components/NewSongCanvas.jsx`](../src/components/NewSongCanvas.jsx), `components/NewSongCanvas/`, and `hooks/NewSongCanvas/` own authoring, clipboard/history, search, measurements, timestamps, drafts, and saving.
-- [`components/OutputSettingsPanel.jsx`](../src/components/OutputSettingsPanel.jsx), its directory, and `hooks/OutputSettingsPanel/` own output styling controls. Shared output rendering belongs in [`components/output/LyricVisualFrame.jsx`](../src/components/output/LyricVisualFrame.jsx).
+- `/new-song` hosts two editors, chosen by [`components/routes/SongEditorRoute.jsx`](../src/components/routes/SongEditorRoute.jsx): new songs follow the remembered preference, `.ldsong` songs open structured, and other files, mobile drafts, and the lyric-video flow open classic.
+- [`components/SongEditor.jsx`](../src/components/SongEditor.jsx) and `components/SongEditor/` are the structured editor; its document operations, paste layout, fit checks, and editor choice live in [`utils/songDocumentEditing.js`](../src/utils/songDocumentEditing.js).
+- [`components/NewSongCanvas.jsx`](../src/components/NewSongCanvas.jsx), `components/NewSongCanvas/`, and `hooks/NewSongCanvas/` own the classic text canvas: authoring, clipboard/history, search, measurements, timestamps, drafts, and saving. `hooks/NewSongCanvas/useFileSave.js` saves for both editors (`documentFormat: 'ldsong'` for structured songs).
+- [`components/OutputSettingsPanel.jsx`](../src/components/OutputSettingsPanel.jsx), its directory, and `hooks/OutputSettingsPanel/` own output styling controls. Shared output rendering belongs in [`components/output/LyricVisualFrame.jsx`](../src/components/output/LyricVisualFrame.jsx). `OutputFrame` in [`pages/OutputPage.jsx`](../src/pages/OutputPage.jsx) is the store-driven lyric output; output windows wrap it with their socket, while Preview Outputs renders it directly in a box scaled from the chosen resolution (the song editor and Lyric Video Studio do the same with `LyricVisualFrame`), so renderer layout must size against its frame rather than the window (no `vw`/`vh`). `StageOutputFrame` (`pages/Stage.jsx`) and `TimeOutputFrame` (`pages/TimeDisplay.jsx`) follow the same split: their window pages pass no viewport and keep real `vw`/`vh`, while previews pass the drawn resolution and `toViewportLength` in `utils/outputLabels.js` resolves the same layout in pixels.
 - `components/LyricVideoStudio/` plus the lyric-video pages/utilities own preview, transport, timeline, styling, and export UX.
 - `components/UserPreferencesModal/` and its hooks own preference editing; its indexed-folder page manages navigator sources through the file-navigator IPC, while ordinary preference persistence crosses preload IPC into `main/userPreferences.js`.
 - `components/routes/` decides which routes get the control socket provider and desktop shell.
@@ -353,6 +356,7 @@ This store is both UI state and a local persistence cache. The backend remains a
 | File or directory | Responsibility |
 | --- | --- |
 | `lyricsParsing/` | Text/LRC parsing, cleanup, grouping, translation, structure tags, sections and section hotkeys, reusable section markers, line splitting, runtime config |
+| `lyricsParsing/ldsong.js` | LyricDisplay Song (`.ldsong`) reader, canonical writer, strict runtime conversion, document-from-parse conversion, and import helpers; specified in [`LDSONG_FORMAT.md`](LDSONG_FORMAT.md) |
 | `lyricsParsing/songMetadata.js` | `# Key: value` header and LRC tag metadata, loader metadata merging, display-safe song credits, CCLI number normalization, credit footer text |
 | `documentTextExtraction.js` | Markdown/RTF/DOCX extraction and unified import parsing |
 | `lyricImportRegistry.js` | Supported extensions, parser types, labels, accept strings, dialog filters |
@@ -453,6 +457,7 @@ Desktop credentials cross from backend child to Electron over process IPC and ar
 
 | Feature | Start here | Usually inspect/update too |
 | --- | --- | --- |
+| Change the song format or editor | `shared/lyricsParsing/ldsong.js`, `src/utils/songDocumentEditing.js` | `docs/LDSONG_FORMAT.md`, `tests/ldsong-format.test.js`, structured editor components, importers in `main/easyWorship.js` and `main/presentation.js` |
 | Add an import format | `shared/lyricImportRegistry.js`, `shared/documentTextExtraction.js` | import limits, `main/ipc/files.js`, async parser, file associations in `package.json`, tests |
 | Change lyric parsing/grouping | `shared/lyricsParsing/` | worker/async parser, user parsing preferences, parsing/import tests |
 | Change lyric selection/cueing | `LyricsList` hooks/components | control emitters, `lyricsHandlers.js`, output/stage readers, command safety |

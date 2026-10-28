@@ -10,7 +10,7 @@ import {
   getConfiguredLyricImportByteLimit,
 } from '../shared/lyricImportLimits.js';
 
-const ALLOWED_WRITE_EXTENSIONS = new Set(['.txt', '.lrc', '.ldsch']);
+const ALLOWED_WRITE_EXTENSIONS = new Set(['.ldsong', '.txt', '.lrc', '.ldsch']);
 const MAX_WRITE_CONTENT_BYTES = 10 * 1024 * 1024;
 const writeGrantPaths = new Map();
 
@@ -61,7 +61,7 @@ export function validateLyricWrite(filePath, content, { collisionPolicy = 'repla
 
   const extension = path.extname(normalized).toLowerCase();
   if (!ALLOWED_WRITE_EXTENSIONS.has(extension)) {
-    return { valid: false, error: 'Only .txt, .lrc, and .ldsch files can be written here' };
+    return { valid: false, error: 'Only .ldsong, .txt, .lrc, and .ldsch files can be written here' };
   }
   const normalizedPolicy = collisionPolicy === 'create' ? 'create' : 'replace';
   if (!writeGrantPaths.get(normalized)?.has(normalizedPolicy)) {

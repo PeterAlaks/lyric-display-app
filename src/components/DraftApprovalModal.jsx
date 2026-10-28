@@ -249,8 +249,8 @@ const DraftApprovalModal = ({ darkMode }) => {
 
             {/* Modal */}
             <div className={`
-        relative w-full max-w-2xl mx-4 max-h-[90vh] rounded-2xl border shadow-2xl ring-1 overflow-hidden
-        ${darkMode ? 'bg-gray-900 text-gray-50 border-slate-800/80 ring-blue-500/35' : 'bg-white text-gray-900 border-slate-200/80 ring-blue-500/20'}
+        relative w-full max-w-2xl mx-4 max-h-[90vh] rounded-2xl border shadow-2xl overflow-hidden
+        ${darkMode ? 'bg-gray-900 text-gray-50 border-white/10' : 'bg-white text-gray-900 border-black/10'}
         transition-all duration-200 ease-out
         ${(exiting || entering) ? 'opacity-0 translate-y-8 scale-95' : 'opacity-100 translate-y-0 scale-100'}
       `}>

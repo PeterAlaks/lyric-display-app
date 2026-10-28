@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createNavigatorMatchSnippet,
   createNavigatorPreview,
+  hasNavigatorTextContent,
   parseFileNavigatorQuery,
   prepareNavigatorSearchRecord,
   scoreNavigatorSearchRecord,
@@ -63,4 +64,17 @@ test('LRC previews remove timing and metadata while snippets center lyric matche
   assert.equal(preview.includes('[ar:'), false);
   assert.match(preview, /Amazing grace/);
   assert.match(snippet, /How sweet the sound/);
+});
+
+test('structured songs are indexed, filterable, and previewed as readable lyrics', () => {
+  assert.equal(hasNavigatorTextContent('ldsong'), true);
+  assert.equal(hasNavigatorTextContent('txt'), true);
+  assert.equal(hasNavigatorTextContent('docx'), false);
+  assert.deepEqual(parseFileNavigatorQuery('grace type:song ext:ldsong').fileTypes, ['ldsong']);
+
+  const content = '#LDSONG 1\n# Title: Amazing Grace\n\n[Verse 1]\nAmazing grace\n> Gracia admirable\n\[Hallelujah]';
+  const preview = createNavigatorPreview(content, 'ldsong');
+  assert.equal(preview.includes('#LDSONG'), false);
+  assert.match(preview, /^# Title: Amazing Grace/);
+  assert.match(preview, /\[Verse 1\]\nAmazing grace\n> Gracia admirable\n\[Hallelujah\]/);
 });

@@ -54,7 +54,7 @@ const useFileUpload = () => {
       let sourceContent = typeof additionalOptions.rawText === 'string'
         ? additionalOptions.rawText
         : (parsed.rawText || '');
-      if ((isLrc || fileType === 'txt') && typeof additionalOptions.rawText !== 'string' && file && typeof file.text === 'function') {
+      if ((isLrc || fileType === 'txt' || fileType === 'ldsong') && typeof additionalOptions.rawText !== 'string' && file && typeof file.text === 'function') {
         try {
           sourceContent = await file.text();
         } catch {

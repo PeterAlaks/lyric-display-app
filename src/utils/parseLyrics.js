@@ -2,6 +2,11 @@
 // File: src/utils/parseLyrics.js
 
 import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
+import {
+  isStageOnlyLine,
+  STAGE_ONLY_PREFIX_REGEX,
+  stripStageOnlyPrefix,
+} from '../../shared/lyricsParsing/lineClassification.js';
 import { parseTxtContent } from '../../shared/lyricsParsing/txtParser.js';
 import { processRawTextToLines } from '../../shared/lyricsParsing/txtProcessor.js';
 
@@ -35,17 +40,7 @@ export const parseLyrics = (file, options = {}) => {
 
 export { processRawTextToLines, parseTxtContent };
 
-const STAGE_ONLY_LINE_REGEX = /^\s*\/\//;
-const STAGE_ONLY_PREFIX_REGEX = /^(\s*)\/\/\s*/;
-
-export const isStageOnlyLine = (lineText) => (
-  typeof lineText === 'string' && STAGE_ONLY_LINE_REGEX.test(lineText)
-);
-
-export const stripStageOnlyPrefix = (lineText) => {
-  if (typeof lineText !== 'string') return '';
-  return lineText.replace(STAGE_ONLY_PREFIX_REGEX, '');
-};
+export { isStageOnlyLine, stripStageOnlyPrefix };
 
 export const toggleStageOnlyPrefix = (lineText) => {
   if (typeof lineText !== 'string') return '';

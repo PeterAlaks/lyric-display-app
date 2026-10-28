@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, ArrowLeft, Folder, FolderPlus, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Folder, FolderPlus, LibraryBig, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FILE_NAVIGATOR_LIMITS } from '../../../shared/fileNavigatorLimits.js';
 import {
@@ -283,7 +283,9 @@ const IndexedLyricsFoldersPreferencesPage = ({
             {roots.map((root) => (
               <div key={root.path} className="flex min-h-12 items-center justify-between gap-3 px-3 py-2">
                 <div className="flex min-w-0 items-center gap-3">
-                  <Folder className={`h-4 w-4 shrink-0 ${root.available && !root.issue ? 'text-amber-500' : 'text-gray-400'}`} />
+                  {root.library
+                    ? <LibraryBig className={`h-4 w-4 shrink-0 ${root.available && !root.issue ? 'text-blue-500' : 'text-gray-400'}`} />
+                    : <Folder className={`h-4 w-4 shrink-0 ${root.available && !root.issue ? 'text-amber-500' : 'text-gray-400'}`} />}
                   <div className="min-w-0">
                     <p className={`truncate text-xs font-medium ${labelClass}`}>{root.name || root.path}</p>
                     <p className={`truncate text-[10px] ${root.available && !root.issue ? mutedClass : 'text-red-500'}`} title={root.issue || root.path}>
@@ -291,7 +293,9 @@ const IndexedLyricsFoldersPreferencesPage = ({
                     </p>
                   </div>
                 </div>
-                <Button
+                {root.library ? (
+                  <span className={`shrink-0 text-[11px] ${mutedClass}`}>Always indexed</span>
+                ) : <Button
                   type="button"
                   size="sm"
                   variant="ghost"
@@ -306,7 +310,7 @@ const IndexedLyricsFoldersPreferencesPage = ({
                     ? <Loader2 className="h-3 w-3 animate-spin" />
                     : <Trash2 className="h-3 w-3" />}
                   Remove
-                </Button>
+                </Button>}
               </div>
             ))}
           </div>

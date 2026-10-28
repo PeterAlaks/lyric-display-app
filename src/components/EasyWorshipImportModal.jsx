@@ -76,7 +76,8 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                         const platform = window.electronAPI.getPlatform();
                         const separator = platform === 'win32' ? '\\' : '/';
                         const documentsPath = result.documentsPath || `${result.homedir}${separator}Documents`;
-                        const docsPath = `${documentsPath}${separator}LyricDisplay${separator}Imported Lyrics from EW`;
+                        // New imports land in the song library so they are indexed and searchable immediately.
+                        const docsPath = `${documentsPath}${separator}LyricDisplay${separator}Lyrics${separator}Imported from EasyWorship`;
                         setDestinationPath(docsPath);
                     }
                 }).catch(err => {
@@ -363,7 +364,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                             <div>
                                 <h3 className="text-lg font-semibold mb-2">Welcome to EasyWorship Song Import</h3>
                                 <p className={cn('text-sm', darkMode ? 'text-gray-400' : 'text-gray-600')}>
-                                    This wizard will help you import songs from your EasyWorship library. We'll convert them to plain text files that work perfectly with LyricDisplay.
+                                    This wizard will help you import songs from your EasyWorship library. Each song is saved as a LyricDisplay Song (.ldsong) with its sections, slides, writers, copyright, and CCLI number, so it shows the same way on every computer.
                                 </p>
                             </div>
 
@@ -726,7 +727,7 @@ export default function EasyWorshipImportModal({ isOpen, onClose, darkMode }) {
                                     <ul className={cn('text-xs space-y-1', darkMode ? 'text-blue-300/80' : 'text-blue-600')}>
                                         <li>• Open File → Load Lyrics and search by song title; the destination is indexed automatically</li>
                                         <li>• If the folder is not listed there, use Add folders to index it manually</li>
-                                        <li>• Use "Open Folder" below to view or manage the generated .txt files</li>
+                                        <li>• Use "Open Folder" below to view or manage the generated .ldsong files</li>
                                         {importResults.failed > 0 && (
                                             <li>• Retry failed songs after resolving the errors shown above</li>
                                         )}

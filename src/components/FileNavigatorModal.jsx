@@ -7,8 +7,10 @@ import {
   Check,
   ChevronRight,
   FileCode2,
+  FileMusic,
   FileText,
   Folder,
+  LibraryBig,
   FolderPlus,
   History,
   Loader2,
@@ -32,6 +34,12 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tooltip } from './ui/tooltip';
 import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
 import { FILE_NAVIGATOR_LIMITS } from '../../shared/fileNavigatorLimits.js';
+import { stripLyricImportExtension } from '../../shared/lyricImportRegistry.js';
+
+// Songs are listed by name; the icon and type badge already show the format.
+const getEntryDisplayName = (entry) => (
+  entry.kind === 'folder' ? entry.fileName : (stripLyricImportExtension(entry.fileName) || entry.fileName)
+);
 
 const MODAL_ANIMATION_DURATION = 220;
 
@@ -105,6 +113,7 @@ const formatModified = (value) => {
 
 const FileTypeIcon = ({ entry, className = 'h-4 w-4' }) => {
   if (entry.kind === 'folder') return <Folder className={`${className} text-amber-500`} aria-hidden />;
+  if (entry.fileType === 'ldsong') return <FileMusic className={`${className} text-rose-500`} aria-hidden />;
   if (entry.fileType === 'lrc') return <Music2 className={`${className} text-violet-500`} aria-hidden />;
   if (entry.fileType === 'txt') return <FileText className={`${className} text-blue-500`} aria-hidden />;
   return <FileCode2 className={`${className} text-emerald-500`} aria-hidden />;
@@ -144,7 +153,7 @@ const ResultRow = React.memo(function ResultRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="truncate text-[13px] font-semibold">{entry.fileName}</span>
+          <span className="truncate text-[13px] font-semibold">{getEntryDisplayName(entry)}</span>
           {entry.matchedField === 'content' && (
             <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${darkMode ? 'bg-violet-500/20 text-violet-200' : 'bg-violet-50 text-violet-700'}`}>
               lyric match
@@ -956,12 +965,12 @@ export default function FileNavigatorModal() {
       <div className="pointer-events-none relative flex h-full items-center justify-center p-3 sm:p-4">
         <div
           data-modal-root="true"
-          className={`pointer-events-auto flex h-[min(680px,calc(100vh-72px))] w-[min(1040px,calc(100vw-32px))] min-h-115 flex-col overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all duration-200 ${transitioning
+          className={`pointer-events-auto flex h-[min(680px,calc(100vh-72px))] w-[min(1040px,calc(100vw-32px))] min-h-115 flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${transitioning
             ? 'translate-y-8 scale-95 opacity-0'
             : 'opacity-100'
             } ${darkMode
-              ? 'border-slate-700/80 bg-slate-950 text-gray-100 ring-white/5'
-              : 'border-slate-200 bg-white text-gray-900 ring-black/5'
+              ? 'border-white/10 bg-slate-950 text-gray-100'
+              : 'border-black/10 bg-white text-gray-900'
             }`}
         >
         <div className={`shrink-0 border-b px-4 py-3 ${darkMode ? 'border-white/7 bg-slate-900/80' : 'border-gray-200 bg-gray-50/90'}`}>
@@ -1087,13 +1096,15 @@ export default function FileNavigatorModal() {
                         className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left disabled:cursor-wait"
                         title={root.issue || root.path}
                       >
-                        <Folder className="h-4 w-4 shrink-0 text-amber-500" />
+                        {root.library
+                          ? <LibraryBig className="h-4 w-4 shrink-0 text-blue-500" />
+                          : <Folder className="h-4 w-4 shrink-0 text-amber-500" />}
                         <span className="min-w-0 flex-1">
                           <span className="block truncate">{root.name}</span>
                           {root.issue && <span className="block truncate text-[9px] text-amber-500">Index limit exceeded</span>}
                         </span>
                       </button>
-                      <button
+                      {!root.library && <button
                         type="button"
                         onClick={(event) => void handleRemoveRoot(event, root)}
                         disabled={indexing}
@@ -1101,7 +1112,7 @@ export default function FileNavigatorModal() {
                         aria-label={`Remove ${root.name} from indexed folders`}
                       >
                         <X className="h-3 w-3" />
-                      </button>
+                      </button>}
                     </div>
                   );
                 })}
@@ -1265,7 +1276,7 @@ export default function FileNavigatorModal() {
                       type="button"
                       onClick={() => void handleCreateLyricsFolder()}
                       disabled={creatingLyricsFolder}
-                      className="mt-4 flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                      className="mt-4 flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-500 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60"
                     >
                       {creatingLyricsFolder
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -1300,7 +1311,7 @@ export default function FileNavigatorModal() {
                       <FileTypeIcon entry={selectedEntry} className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="wrap-break-word text-[13px] font-semibold leading-5">{selectedEntry.fileName}</h3>
+                      <h3 className="wrap-break-word text-[13px] font-semibold leading-5">{getEntryDisplayName(selectedEntry)}</h3>
                       <p className={`mt-0.5 break-all text-[10px] leading-4 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{selectedEntry.parentPath || selectedEntry.filePath}</p>
                     </div>
                   </div>
@@ -1392,7 +1403,7 @@ export default function FileNavigatorModal() {
               type="button"
               onClick={() => void completeSetlistSelection()}
               disabled={indexing || selectedPaths.size === 0 || opening}
-              className="flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-[11px] font-semibold text-white hover:bg-blue-700 disabled:opacity-45"
+              className="flex h-8 items-center justify-center gap-2 rounded-lg bg-blue-500 px-3 text-[11px] font-semibold text-white hover:bg-blue-400 disabled:opacity-45"
             >
               {opening && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Add {selectedPaths.size || ''} {selectedPaths.size === 1 ? 'song' : 'songs'}

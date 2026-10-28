@@ -219,6 +219,12 @@ const appendOutputState = (target, outputId) => {
   return target;
 };
 
+// The preview grid draws every output, the stage, and the time display in one window.
+const appendAllOutputState = (target) => {
+  for (const outputId of state.outputSettings.keys()) appendOutputState(target, outputId);
+  return target;
+};
+
 export const getDisplaySongCredits = (metadata = state.currentSongMetadata) => (
   toDisplaySongCredits(metadata, { ccliLicenseNumber: state.ccliLicenseNumber })
 );
@@ -260,10 +266,21 @@ export function buildCurrentState(clientInfo) {
   }
 
   if (clientPurpose === 'preview') {
-    return {
+    return appendAllOutputState({
       ...baseState,
       previewSettings: normalizePreviewSettings(state.currentPreviewSettings),
-    };
+      lyrics: state.currentLyrics,
+      selectedLine: state.currentSelectedLine,
+      isOutputOn: state.currentIsOutputOn,
+      lyricsFileName: state.currentLyricsFileName || '',
+      songCredits: getDisplaySongCredits(),
+      stageSettings: state.currentStageSettings,
+      stageEnabled: state.currentStageEnabled,
+      setlistFiles: summarizeSetlistForDisplay(state.setlistFiles),
+      setlistItemId: getActiveSetlistItemId(),
+      stageTimerState: getStageTimerSnapshot(timestamp),
+      stageMessages: state.currentStageMessages,
+    });
   }
 
   if (isOutputClientType(clientType)) {
@@ -344,10 +361,14 @@ export function buildPeriodicState(clientInfo) {
   }
 
   if (clientPurpose === 'preview') {
-    return {
+    return appendAllOutputState({
       ...baseState,
       previewSettings: normalizePreviewSettings(state.currentPreviewSettings),
-    };
+      selectedLine: state.currentSelectedLine,
+      isOutputOn: state.currentIsOutputOn,
+      stageEnabled: state.currentStageEnabled,
+      stageTimerState: getStageTimerSnapshot(timestamp),
+    });
   }
 
   if (isOutputClientType(clientType)) {

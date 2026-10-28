@@ -121,7 +121,7 @@ const CanvasSearchPanel = ({
                   size="sm"
                   onClick={handleReplaceAll}
                   disabled={!searchQuery || totalMatches === 0}
-                  className="rounded-full bg-blue-600 text-xs text-white hover:bg-blue-700"
+                  className="rounded-full bg-blue-500 text-xs text-white hover:bg-blue-400"
                 >
                   Replace All
                 </Button>

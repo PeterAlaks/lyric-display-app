@@ -8,7 +8,7 @@ const useSetlistActions = (emitSetlistAdd) => {
   const isDesktopApp = useIsDesktopApp();
   const lyricsFileName = useLyricsFileName();
   const { setlistFiles, isSetlistFull } = useSetlistState();
-  const { songMetadata } = useLyricsState();
+  const { songMetadata, lyricsSource } = useLyricsState();
 
   const hasLyrics = useLyricsStore((state) => state.lyrics && state.lyrics.length > 0);
   const rawLyricsContent = useLyricsStore((state) => state.rawLyricsContent);
@@ -52,7 +52,8 @@ const useSetlistActions = (emitSetlistAdd) => {
     }
 
     const hasLrcTimestamps = lyricsTimestamps && lyricsTimestamps.length > 0;
-    const extension = hasLrcTimestamps ? '.lrc' : '.txt';
+    const isStructuredSong = lyricsSource?.fileType === 'ldsong';
+    const extension = isStructuredSong ? '.ldsong' : hasLrcTimestamps ? '.lrc' : '.txt';
 
     const fileData = [{
       name: `${lyricsFileName}${extension}`,
@@ -60,7 +61,7 @@ const useSetlistActions = (emitSetlistAdd) => {
       lastModified: Date.now(),
       metadata: {
         ...(songMetadata || {}),
-        groupingPlan: hasLrcTimestamps ? null : createGroupingPlan(lyrics),
+        groupingPlan: hasLrcTimestamps || isStructuredSong ? null : createGroupingPlan(lyrics),
       },
     }];
     const isRepeat = isFileAlreadyInSetlist();
@@ -70,7 +71,7 @@ const useSetlistActions = (emitSetlistAdd) => {
       message: `${lyricsFileName}`,
       variant: 'success',
     });
-  }, [disabled, emitSetlistAdd, lyrics, lyricsFileName, rawLyricsContent, lyricsTimestamps, songMetadata, isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, hasLyrics, showToast]);
+  }, [disabled, emitSetlistAdd, lyrics, lyricsFileName, lyricsSource?.fileType, rawLyricsContent, lyricsTimestamps, songMetadata, isDesktopApp, isSetlistFull, isFileAlreadyInSetlist, hasLyrics, showToast]);
 
   return { isFileAlreadyInSetlist, handleAddToSetlist, disabled, title };
 };

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { reconstructEditableText } from '../../utils/lyricsFormat';
 import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
 import { extractExplicitGroupingDirective } from '../../../shared/lyricsParsing/txtParser.js';
+import { isLdsongContent } from '../../../shared/lyricsParsing/ldsong.js';
 import { UNTITLED_LYRICS_TITLE } from '../../utils/titlePrefill.js';
 
 const resetCanvasState = ({ baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setFileName, setTitle }) => {
@@ -58,6 +59,13 @@ export const useCanvasLoadLifecycle = ({
 
       if (!content) return;
 
+      // Structured songs open in the structured editor rather than as raw source text.
+      if (isLdsongContent(content)) {
+        window.__pendingStructuredSongLoad = event.detail;
+        navigate('/new-song?mode=new&editor=structured');
+        return;
+      }
+
       const baseName = fileName ? stripLyricImportExtension(fileName) : UNTITLED_LYRICS_TITLE;
       const editableContent = extractExplicitGroupingDirective(content).content;
 
@@ -91,7 +99,7 @@ export const useCanvasLoadLifecycle = ({
       if (pendingLoadTimer !== null) window.clearTimeout(pendingLoadTimer);
       window.removeEventListener('load-into-canvas', handleLoadIntoCanvas);
     };
-  }, [baseContentRef, baseTitleRef, loadSignatureRef, resetHistory, setCurrentFilePath, setFileName, setTitle, showToast]);
+  }, [baseContentRef, baseTitleRef, loadSignatureRef, navigate, resetHistory, setCurrentFilePath, setFileName, setTitle, showToast]);
 
   useEffect(() => {
     if (textareaRef.current) {

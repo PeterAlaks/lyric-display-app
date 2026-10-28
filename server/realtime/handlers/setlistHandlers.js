@@ -1,5 +1,6 @@
 import { parseLrcContent } from '../../../shared/lyricsParsing/lrcParser.js';
 import { parseTxtContent } from '../../../shared/lyricsParsing/txtParser.js';
+import { parseLdsongContent } from '../../../shared/lyricsParsing/ldsong.js';
 import { applySongMetadataHeader } from '../../../shared/lyricsParsing/songMetadata.js';
 import {
   normalizeLyricFileType,
@@ -243,10 +244,12 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         lineToSection = parsed.lineToSection || {};
         headerMetadata = parsed.songMetadata || null;
       } else {
-        const parsed = parseTxtContent(file.content, {
-          ...parsingOptions,
-          groupingPlan: file.metadata?.groupingPlan || null,
-        });
+        const parsed = finalFileType === 'ldsong'
+          ? parseLdsongContent(file.content)
+          : parseTxtContent(file.content, {
+            ...parsingOptions,
+            groupingPlan: file.metadata?.groupingPlan || null,
+          });
         processedLines = parsed.processedLines;
         timestamps = [];
         sections = parsed.sections || [];
@@ -268,7 +271,7 @@ export function registerSetlistHandlers({ io, socket, hasPermission, clientType,
         filePath: file.metadata?.filePath || null,
         fileName: file.originalName || cleanDisplayName || '',
         setlistItemId: file.id,
-        ...(isLrc ? {} : { groupingPlan: file.metadata?.groupingPlan || null }),
+        ...(isLrc || finalFileType === 'ldsong' ? {} : { groupingPlan: file.metadata?.groupingPlan || null }),
       };
       state.currentSongMetadata = applySongMetadataHeader({
         ...(file.metadata || {}),

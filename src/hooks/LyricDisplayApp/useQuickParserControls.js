@@ -112,6 +112,15 @@ export const useQuickParserControls = ({
       });
     })();
 
+    if (inferredType === 'ldsong') {
+      showToast({
+        title: 'Saved layout kept',
+        message: 'LyricDisplay Songs keep their saved sections and slides. Edit the song to change its layout.',
+        variant: 'info',
+      });
+      return;
+    }
+
     const sourceContent = lyricsSource?.content || rawLyricsContent || '';
     const sourcePath = lyricsSource?.filePath || songFilePath || null;
     const sourceFileName = lyricsSource?.fileName

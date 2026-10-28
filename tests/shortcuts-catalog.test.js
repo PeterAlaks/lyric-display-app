@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
   getLiveNavigationKeyAction,
   getSectionJumpHotkey,
@@ -117,4 +118,20 @@ test('keyboard shortcut catalog documents clicker and section controls', () => {
   ]) {
     assert.equal(hasEntry(label, combo), true, `${label}: ${combo}`);
   }
+});
+
+test('desktop shortcuts never run underneath the browser controller', () => {
+  const appSource = readFileSync(new URL('../src/components/LyricDisplayApp.jsx', import.meta.url), 'utf8');
+  const menuSource = readFileSync(new URL('../src/hooks/LyricDisplayApp/useMenuShortcuts.js', import.meta.url), 'utf8');
+
+  // The browser controller renders its own layout without mounting the desktop panel's hooks,
+  // so Ctrl+I, Ctrl+O, and similar desktop commands are not bound there.
+  assert.match(appSource, /const LyricDisplayApp = \(\) => \(useIsDesktopApp\(\) \? <DesktopControlPanel \/> : <MobileLayout \/>\);/);
+  const desktopPanel = appSource.slice(appSource.indexOf('const DesktopControlPanel = () =>'), appSource.indexOf('const LyricDisplayApp = () =>'));
+  assert.match(desktopPanel, /useMenuShortcuts\(/);
+  assert.match(desktopPanel, /useKeyboardShortcuts\(/);
+  assert.doesNotMatch(desktopPanel, /<MobileLayout/);
+
+  // Window-menu keys (reload, DevTools, zoom, full screen) belong to the browser outside the app.
+  assert.match(menuSource, /if \(!window\.electronAPI\) return;\s*const handleKeyDown = \(event\) =>/);
 });

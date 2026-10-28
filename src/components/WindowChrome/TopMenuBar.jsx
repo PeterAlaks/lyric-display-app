@@ -7,6 +7,7 @@ import useTopMenuState from '@/hooks/WindowChrome/useTopMenuState';
 import useSubMenuListNav from '@/hooks/WindowChrome/useSubmenuListNav';
 import useMenuHandlers from '@/hooks/WindowChrome/useMenuHandlers';
 import { START_FIRST_RUN_TOUR_EVENT } from '@/utils/firstRunTour';
+import { stripLyricImportExtension } from '../../../shared/lyricImportRegistry.js';
 
 const dragRegion = { WebkitAppRegion: 'drag' };
 const noDrag = { WebkitAppRegion: 'no-drag' };
@@ -470,7 +471,7 @@ const TopMenuBar = () => {
                           <MenuItem
                             key={r}
                             ref={registerRecentItemRef(idx)}
-                            label={r.split(/[\\/]/).pop()}
+                            label={stripLyricImportExtension(r.split(/[\\/]/).pop())}
                             active={openMenu === 'file:recent' && recentsIndex === idx}
                             onClick={() => menuHandlers.handleOpenRecent(r)}
                           />

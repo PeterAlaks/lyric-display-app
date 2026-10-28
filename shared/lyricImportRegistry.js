@@ -1,5 +1,11 @@
 export const LYRIC_IMPORT_FORMATS = [
   {
+    fileType: 'ldsong',
+    parserType: 'ldsong',
+    label: 'LyricDisplay Song',
+    extensions: ['ldsong'],
+  },
+  {
     fileType: 'txt',
     parserType: 'txt',
     label: 'Text',
@@ -81,6 +87,25 @@ export function stripLyricImportExtension(fileName = '') {
   return String(fileName || '').replace(LYRIC_IMPORT_EXTENSION_PATTERN, '');
 }
 
+/**
+ * A loaded song's file name with exactly one lyric extension: kept when the name already has a
+ * registered one (whatever its length), added from the format otherwise. Names doubled by
+ * earlier reloads, such as "Song.ldsong.ldsong", are collapsed back to one extension.
+ */
+export function resolveLyricImportFileName(fileName = '', fileType = 'txt') {
+  let name = String(fileName || '').trim();
+  if (!name) return '';
+  if (!getLyricImportFormatForName(name)) {
+    const extension = getLyricImportFormatForType(fileType)?.extensions?.[0] || 'txt';
+    return `${name}.${extension}`;
+  }
+  const extension = name.slice(name.lastIndexOf('.'));
+  while (name.toLowerCase().endsWith(`${extension}${extension}`.toLowerCase())) {
+    name = name.slice(0, -extension.length);
+  }
+  return name;
+}
+
 export function getLyricParserType(fileType) {
   return getLyricImportFormatForType(fileType)?.parserType || 'txt';
 }
@@ -101,6 +126,7 @@ export function getLyricsAcceptAttribute({ includeSetlist = false } = {}) {
 export function getLyricOpenDialogFilters() {
   return [
     { name: 'Lyric Files', extensions: LYRIC_IMPORT_EXTENSIONS },
+    { name: 'LyricDisplay Songs', extensions: ['ldsong'] },
     { name: 'Text and LRC', extensions: ['txt', 'lrc'] },
     { name: 'Documents', extensions: ['docx', 'rtf', 'md', 'markdown'] },
   ];

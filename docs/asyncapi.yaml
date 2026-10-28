@@ -413,7 +413,7 @@ components:
           type: integer
         fileType:
           type: string
-          enum: ['lrc', 'txt', 'md', 'rtf', 'docx']
+          enum: ['ldsong', 'lrc', 'txt', 'md', 'rtf', 'docx']
         metadata:
           type: object
           nullable: true

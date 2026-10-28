@@ -1,4 +1,5 @@
-const SAVE_EXTENSIONS = new Set(['txt', 'lrc']);
+const SAVE_EXTENSIONS = new Set(['ldsong', 'txt', 'lrc']);
+const SAVE_EXTENSION_SUFFIX_REGEX = /\.(?:ldsong|txt|lrc)$/i;
 const INVALID_PORTABLE_NAME_PATTERN = /[<>:"/\\|?*\u0000-\u001f]/;
 const WINDOWS_RESERVED_NAME_PATTERN = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 const MAX_PORTABLE_BASE_NAME_LENGTH = 200;
@@ -10,10 +11,10 @@ export function normalizeNavigatorSaveExtension(value) {
 
 export function validateNavigatorSaveName(value, requestedExtension) {
   const extension = normalizeNavigatorSaveExtension(requestedExtension);
-  if (!extension) return { valid: false, error: 'Only TXT and LRC lyric files can be saved here.' };
+  if (!extension) return { valid: false, error: 'Only LDSONG, TXT, and LRC lyric files can be saved here.' };
 
   let baseName = String(value || '').normalize('NFC').trim();
-  baseName = baseName.replace(/\.(?:txt|lrc)$/i, '').trim();
+  baseName = baseName.replace(SAVE_EXTENSION_SUFFIX_REGEX, '').trim();
 
   if (!baseName) return { valid: false, error: 'Enter a file name.' };
   if (baseName === '.' || baseName === '..') {
@@ -41,7 +42,7 @@ export function validateNavigatorSaveName(value, requestedExtension) {
 }
 
 export function createPortableNavigatorSaveName(value, fallback = 'lyrics') {
-  let baseName = String(value || '').normalize('NFC').trim().replace(/\.(?:txt|lrc)$/i, '');
+  let baseName = String(value || '').normalize('NFC').trim().replace(SAVE_EXTENSION_SUFFIX_REGEX, '');
   baseName = baseName
     .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-')
     .replace(/[. ]+$/g, '')

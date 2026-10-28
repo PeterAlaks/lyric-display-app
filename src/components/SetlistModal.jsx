@@ -590,8 +590,8 @@ const SetlistModal = () => {
 
       {/* Modal */}
       <div className={`
-        relative flex min-h-0 w-full max-w-4xl flex-col mx-4 max-h-[90vh] rounded-2xl border shadow-2xl ring-1 overflow-hidden
-        ${darkMode ? 'bg-gray-900 text-gray-50 border-gray-800 ring-blue-500/35' : 'bg-white text-gray-900 border-gray-200 ring-blue-500/20'}
+        relative flex min-h-0 w-full max-w-4xl flex-col mx-4 max-h-[90vh] rounded-2xl border shadow-2xl overflow-hidden
+        ${darkMode ? 'bg-gray-900 text-gray-50 border-white/10' : 'bg-white text-gray-900 border-black/10'}
         md:mx-auto md:w-full md:max-w-3xl md:max-h-[80vh] md:rounded-2xl
         sm:mx-2 sm:max-w-full sm:h-full sm:max-h-full sm:rounded-none
         transition-all duration-200 ease-out

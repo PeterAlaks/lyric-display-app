@@ -14,6 +14,18 @@ export function isVisuallyBlankLine(line) {
   return VISUALLY_BLANK_LINE_REGEX.test(String(line));
 }
 
+// Lines starting with // are cues for the stage display only; outputs never show them.
+export const STAGE_ONLY_PREFIX_REGEX = /^(\s*)\/\/\s*/;
+
+export function isStageOnlyLine(lineText) {
+  return typeof lineText === 'string' && /^\s*\/\//.test(lineText);
+}
+
+export function stripStageOnlyPrefix(lineText) {
+  if (typeof lineText !== 'string') return '';
+  return lineText.replace(STAGE_ONLY_PREFIX_REGEX, '');
+}
+
 function isPlaceholderLine(line) {
   if (!line || typeof line !== 'string') return false;
   const trimmed = line.trim();

@@ -56,7 +56,8 @@ export default function LyricRow({
   const isLive = index === selectedLine;
   const isPreview = index === previewLine && !isLive;
   const tallyLabel = isPreview ? 'Preview' : isLive ? (isOutputOn ? 'Live' : 'Cued') : null;
-  const showTally = Boolean(tallyLabel) && !(isDesktopApp && currentLine?.type === 'normal-group' && hoveredLineIndex === index);
+  const isUngroupHovered = isDesktopApp && currentLine?.type === 'normal-group' && hoveredLineIndex === index;
+  const showTally = Boolean(tallyLabel) && (!isUngroupHovered || tallyLabel === 'Live');
   const hasTimestamp = typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp >= 0;
 
   if (typeof currentLine === 'string' && isStructureTagLine(currentLine)) {
@@ -125,16 +126,23 @@ export default function LyricRow({
         </div>
 
         {showTally && (
-          <span
-            className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 ${compact ? 'text-[8px]' : 'text-[9px]'} font-bold uppercase tracking-[0.12em] ${isPreview
-              ? darkMode ? 'bg-amber-400/20 text-amber-200' : 'bg-amber-500/15 text-amber-800'
-              : isOutputOn
-                ? 'bg-white/20 text-white'
+          tallyLabel === 'Live' ? (
+            <span
+              className="pointer-events-none absolute right-2.5 top-2.5 z-10 h-1.5 w-1.5 rounded-full bg-red-500"
+              role="img"
+              aria-label="Live"
+              title="Live"
+            />
+          ) : (
+            <span
+              className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 ${compact ? 'text-[8px]' : 'text-[9px]'} font-bold uppercase tracking-[0.12em] ${isPreview
+                ? darkMode ? 'bg-amber-400/20 text-amber-200' : 'bg-amber-500/15 text-amber-800'
                 : 'bg-red-500/15 text-red-500'
-              }`}
-          >
-            {tallyLabel}
-          </span>
+                }`}
+            >
+              {tallyLabel}
+            </span>
+          )
         )}
 
         {isDesktopApp && currentLine?.type === 'normal-group' && hoveredLineIndex === index && (
@@ -143,12 +151,10 @@ export default function LyricRow({
               onClick={(e) => handleSplitGroup(e, index)}
               onMouseEnter={() => setHoveredButtonIndex(index)}
               onMouseLeave={() => setHoveredButtonIndex(null)}
-              className={`absolute top-1.5 right-1.5 h-7 min-w-7 rounded-full px-[7.5px] shadow-sm flex items-center justify-center transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'gap-1.5' : 'gap-0'
-                } ${index === selectedLine
-                  ? 'bg-red-700 hover:bg-red-800 text-white border border-red-400'
-                  : darkMode
-                    ? 'bg-gray-800 hover:bg-gray-900 text-gray-100 border border-gray-600'
-                    : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
+              className={`absolute right-2 top-1/2 flex h-7 min-w-7 -translate-y-1/2 items-center justify-center rounded-full px-[7.5px] shadow-sm transition-all duration-200 ease-in-out ${hoveredButtonIndex === index ? 'gap-1.5' : 'gap-0'
+                } ${darkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 border border-gray-500'
+                  : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
                 }`}
             >
               <Ungroup className="h-3.25 w-3.25 shrink-0" />

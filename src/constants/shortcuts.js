@@ -117,6 +117,21 @@ export const SHORTCUTS = [
     ],
   },
   {
+    category: 'Song Editor — Structured',
+    items: [
+      { label: 'Add a line below', combo: 'Enter' },
+      { label: 'Start a new slide after this line', combo: 'Shift + Enter' },
+      { label: 'Add a translation line below', combo: 'Ctrl/Cmd + T' },
+      { label: 'Mark a line as a stage-only note', combo: 'Ctrl/Cmd + /' },
+      { label: 'Remove an empty line', combo: 'Backspace' },
+      { label: 'Move between lines', combo: '↑ / ↓' },
+      { label: 'Paste lyrics and lay them out into sections and slides', combo: 'Ctrl/Cmd + V' },
+      { label: 'Undo / redo', combo: 'Ctrl/Cmd + Z / Ctrl/Cmd + Shift + Z' },
+      { label: 'Save song', combo: 'Ctrl/Cmd + S' },
+      { label: 'Save and load into Control Panel', combo: 'Ctrl/Cmd + Shift + L' },
+    ],
+  },
+  {
     category: 'Song Canvas — Line Editing',
     items: [
       { label: 'Add translation line', combo: 'Ctrl/Cmd + T' },

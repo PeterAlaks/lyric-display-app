@@ -44,6 +44,8 @@ const useMenuShortcuts = (navigate, fileInputRef) => {
   }, [navigate, fileInputRef]);
 
   useEffect(() => {
+    // Reload, DevTools, zoom, and full screen keys belong to the browser outside the desktop app.
+    if (!window.electronAPI) return;
     const handleKeyDown = (event) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdOrCtrl = isMac ? event.metaKey : event.ctrlKey;

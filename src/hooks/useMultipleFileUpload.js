@@ -109,7 +109,7 @@ const useMultipleFileUpload = () => {
           };
 
           let rawContent;
-          if (isLrc || fileType === 'txt') {
+          if (isLrc || fileType === 'txt' || fileType === 'ldsong') {
             try {
               rawContent = await file.text();
             } catch {

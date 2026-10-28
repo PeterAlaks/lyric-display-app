@@ -1,5 +1,10 @@
 import { parseLrcContent } from './lyricsParsing/lrcParser.js';
 import { parseTxtContent } from './lyricsParsing/txtParser.js';
+import {
+  documentFromProcessedLines,
+  parseLdsongContent,
+  serializeLdsongDocument,
+} from './lyricsParsing/ldsong.js';
 import { getLyricParserType, normalizeLyricFileType } from './lyricImportRegistry.js';
 import {
   MAX_DOCX_ARCHIVE_ENTRIES,
@@ -341,7 +346,26 @@ export async function parseLyricImportContent({
     readFile,
   });
 
-  return getLyricParserType(normalizedType) === 'lrc'
+  const parserType = getLyricParserType(normalizedType);
+  // Structured songs never go through the guessing parsers (parseTxtContent also detects them).
+  if (parserType === 'ldsong') {
+    return parseLdsongContent(extractedText);
+  }
+  return parserType === 'lrc'
     ? parseLrcContent(extractedText, parsingOptions)
     : parseTxtContent(extractedText, parsingOptions);
+}
+
+/**
+ * Convert imported song text (for example EasyWorship lyrics) into .ldsong text. The
+ * structure is guessed once with the user's parsing settings, then stored explicitly.
+ */
+export function createLdsongFromImportedText(text, { songMetadata = null, provenance = null, parsingOptions = {} } = {}) {
+  const parsed = parseTxtContent(String(text ?? ''), parsingOptions);
+  const document = documentFromProcessedLines(parsed.processedLines, {
+    songMetadata: { ...(parsed.songMetadata || {}), ...(songMetadata || {}) },
+    sectionTagPhrases: parsingOptions?.groupingConfig?.sectionTagPhrases,
+  });
+  if (provenance?.key && provenance?.value) document.extraHeaders.push(provenance);
+  return serializeLdsongDocument(document);
 }

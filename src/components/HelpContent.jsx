@@ -51,7 +51,7 @@ export const ControlPanelHelp = ({ darkMode }) => (
         <HelpSection
             icon={FolderOpen}
             title="Load Lyrics"
-            description="Search indexed folders for .txt, .lrc, Markdown, RTF, or DOCX files. TXT and LRC files support lyric-content search and previews; document formats are converted when loaded."
+            description="Search your song library (Documents/LyricDisplay/Lyrics, indexed automatically) and any folders you add for LyricDisplay Songs (.ldsong), .txt, .lrc, Markdown, RTF, or DOCX files. LDSONG, TXT, and LRC files support lyric-content search and previews; document formats are converted when loaded."
             darkMode={darkMode}
         />
 
@@ -145,6 +145,13 @@ export const OutputSettingsHelp = ({ darkMode }) => (
 
 export const SongCanvasHelp = ({ darkMode }) => (
     <div className="space-y-3">
+        <HelpSection
+            icon={FileText}
+            title="Structured and Classic Editors"
+            description="New songs open in the Structured editor, which saves a LyricDisplay Song (.ldsong) with explicit sections, slides, translations, and stage notes, so every computer shows it the same way. The Classic canvas edits free-form text saved as .txt or .lrc. Switch between them with the Structured / Classic control in the header; your lyrics come with you, and LyricDisplay remembers which one you prefer for new songs."
+            darkMode={darkMode}
+        />
+
         <HelpSection
             icon={Scissors}
             title="Cut, Copy & Paste"

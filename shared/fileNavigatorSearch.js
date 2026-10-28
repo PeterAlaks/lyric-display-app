@@ -1,6 +1,8 @@
 const QUERY_PART_PATTERN = /"([^"]+)"|(\S+)/g;
 
 const TYPE_ALIASES = new Map([
+  ['ldsong', 'ldsong'],
+  ['song', 'ldsong'],
   ['text', 'txt'],
   ['txt', 'txt'],
   ['lrc', 'lrc'],
@@ -10,6 +12,13 @@ const TYPE_ALIASES = new Map([
   ['doc', 'docx'],
   ['docx', 'docx'],
 ]);
+
+// File types whose plain text the navigator indexes for content search and previews.
+const TEXT_CONTENT_FILE_TYPES = new Set(['ldsong', 'txt', 'lrc']);
+
+export function hasNavigatorTextContent(fileType) {
+  return TEXT_CONTENT_FILE_TYPES.has(String(fileType || '').toLowerCase());
+}
 
 export function normalizeNavigatorSearchText(value = '') {
   return String(value || '')
@@ -168,12 +177,23 @@ function stripLrcDecorations(value) {
     .replace(/<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>/g, '');
 }
 
+function stripLdsongDecorations(value) {
+  return value
+    .replace(/^\s*#LDSONG\s+\d+\s*$/im, '')
+    .replace(/^\s*# Arrangement:.*$/im, '')
+    .replace(/^(\s*)\\/gm, '$1');
+}
+
 export function createNavigatorPreview(content = '', fileType = 'txt', maxCharacters = 20_000) {
   const normalized = String(content || '')
     .replace(/^\uFEFF/, '')
     .replace(/\0/g, '')
     .replace(/\r\n?/g, '\n');
-  const readable = fileType === 'lrc' ? stripLrcDecorations(normalized) : normalized;
+  const readable = fileType === 'lrc'
+    ? stripLrcDecorations(normalized)
+    : fileType === 'ldsong'
+      ? stripLdsongDecorations(normalized)
+      : normalized;
   return readable
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{4,}/g, '\n\n\n')

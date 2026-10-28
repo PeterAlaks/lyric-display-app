@@ -181,7 +181,7 @@ const NdiPreferencesSection = ({
             size="sm"
             onClick={handleNdiUpdate}
             disabled={ndiUpdating || isDownloading}
-            className={`shrink-0 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+            className={`shrink-0 bg-blue-500 hover:bg-blue-400 text-white`}
           >
             {ndiUpdating ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -232,7 +232,7 @@ const NdiPreferencesSection = ({
             <Button
               onClick={handleNdiDownload}
               disabled={isDownloading}
-              className={`w-full ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+              className={`w-full bg-blue-500 hover:bg-blue-400 text-white`}
             >
               {isDownloading ? (
                 <>

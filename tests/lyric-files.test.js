@@ -37,3 +37,19 @@ test('canonical lyric loader rejects unsupported local file types', async () => 
     /Unsupported lyric file type/
   );
 });
+
+test('structured song files are readable and writable through granted workflows', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'lyricdisplay-ldsong-'));
+  const filePath = path.join(directory, 'Amazing Grace.ldsong');
+  const content = '#LDSONG 1\n# Title: Amazing Grace\n\n[Verse 1]\nAmazing grace';
+
+  try {
+    await writeFile(filePath, content, 'utf8');
+    const payload = await readLyricsFileFromPath(filePath, { remember: false });
+    assert.equal(payload.fileType, 'ldsong');
+    assert.equal(payload.content, content);
+    assert.equal(validateLyricWrite(filePath, content).valid, true);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

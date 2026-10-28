@@ -13,6 +13,7 @@ import {
 } from '../utils/timerUtils';
 import { useTimerDisplaySettings } from '../hooks/useStoreSelectors';
 import { paintToCss } from '../utils/paint';
+import { toViewportLength } from '../utils/outputLabels';
 import ProjectionExitHint from '../components/ProjectionExitHint';
 import useAutoFitText, { getTextFitShape } from '../hooks/useAutoFitText';
 import { calculateScheduleProjection } from '../../shared/scheduleUtils.js';
@@ -78,7 +79,10 @@ const TimeDisplayFrame = ({
   stateTransitionDuration,
   otherItemsFontFamily,
   alignItems,
+  viewport,
 }) => {
+  const vh = (amount) => toViewportLength(viewport, 'vh', amount);
+  const vw = (amount) => toViewportLength(viewport, 'vw', amount);
   const timerFontSizeMode = display.timerFontSizeMode || 'auto';
   const autoFitEnabled = timerFontSizeMode !== 'manual';
   const autoFitKey = React.useMemo(() => [
@@ -105,7 +109,7 @@ const TimeDisplayFrame = ({
       transition={{ duration: stateTransitionVariants ? stateTransitionDuration : 0, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       {label && (
-      <div className="absolute inset-x-0 top-[7vh] flex justify-center px-[1vw]">
+      <div className="absolute inset-x-0 flex justify-center" style={{ top: vh(7), paddingInline: vw(1) }}>
         <div
           className="font-bold leading-none text-center"
           style={{
@@ -124,13 +128,13 @@ const TimeDisplayFrame = ({
       </div>
       )}
 
-      <div className="w-full px-[1vw] pt-[3vh]">
+      <div className="w-full" style={{ paddingInline: vw(1), paddingTop: vh(3) }}>
         <div
           ref={containerRef}
           className="w-full flex flex-col justify-center overflow-hidden"
           style={{
             alignItems,
-            height: showActiveSecondaryGlobalClock ? '70vh' : '86vh',
+            height: showActiveSecondaryGlobalClock ? vh(70) : vh(86),
             contain: 'layout paint',
           }}
         >
@@ -181,8 +185,8 @@ const TimeDisplayFrame = ({
           <div
             className="mx-auto mt-4 rounded-full overflow-hidden"
             style={{
-              width: 'min(82vw, 1400px)',
-              height: 'clamp(8px, 1.2vh, 18px)',
+              width: `min(${vw(82)}, 1400px)`,
+              height: `clamp(8px, ${vh(1.2)}, 18px)`,
               backgroundColor: 'rgba(255,255,255,0.16)',
             }}
           >
@@ -236,36 +240,17 @@ const TimeDisplayFrame = ({
   );
 };
 
-const TimeDisplay = () => {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isPreviewMode = searchParams.get('preview') === 'true';
-  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
-  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
-
-  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
-    preview: isPreviewMode,
-    purpose: 'time-display',
-  });
-
-  const publishTimeMetrics = React.useCallback(() => {
-    if (isPreviewMode || !isConnected || !isAuthenticated) return;
-    emitOutputMetrics('time', {
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      timestamp: Date.now(),
-    });
-  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
-
-  React.useEffect(() => {
-    publishTimeMetrics();
-    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
-    const interval = window.setInterval(publishTimeMetrics, 5000);
-    return () => window.clearInterval(interval);
-  }, [isAuthenticated, isConnected, isPreviewMode, publishTimeMetrics]);
-
+/**
+ * Everything the Time display draws, driven by the shared timer and store. The /time window
+ * wraps it with its socket; previews render it directly and pass the screen size they draw.
+ */
+export function TimeOutputFrame({
+  viewport = null,
+  isProjectionMode = false,
+  showProjectionExitHint = false,
+  className = 'relative h-full w-full overflow-hidden flex items-center justify-center',
+}) {
   const { timerState, displayValue, intensity, now, progress } = useSharedTimer({
-    controller: false,
     renderTickIntervalMs: 1000,
   });
   const { settings: timerDisplaySettings } = useTimerDisplaySettings();
@@ -350,7 +335,7 @@ const TimeDisplay = () => {
 
   return (
     <div
-      className="relative w-screen h-screen overflow-hidden flex items-center justify-center"
+      className={className}
       style={{
         background: paintToCss(display.backgroundPaint, display.backgroundColor || '#000000'),
         fontFamily: otherItemsFontFamily,
@@ -384,6 +369,7 @@ const TimeDisplay = () => {
           stateTransitionDuration={stateTransitionDuration}
           otherItemsFontFamily={otherItemsFontFamily}
           alignItems={alignItems}
+          viewport={viewport}
         />
       </AnimatePresence>
 
@@ -394,6 +380,43 @@ const TimeDisplay = () => {
         }
       `}</style>
     </div>
+  );
+}
+
+const TimeDisplay = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
+  const isProjectionMode = ['1', 'true'].includes((searchParams.get('projection') || '').toLowerCase());
+  const showProjectionExitHint = ['1', 'true'].includes((searchParams.get('escapeHint') || '').toLowerCase());
+
+  const { isConnected, isAuthenticated, emitOutputMetrics } = useSocket('stage', {
+    preview: isPreviewMode,
+    purpose: 'time-display',
+  });
+
+  const publishTimeMetrics = React.useCallback(() => {
+    if (isPreviewMode || !isConnected || !isAuthenticated) return;
+    emitOutputMetrics('time', {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      timestamp: Date.now(),
+    });
+  }, [emitOutputMetrics, isAuthenticated, isConnected, isPreviewMode]);
+
+  React.useEffect(() => {
+    publishTimeMetrics();
+    if (isPreviewMode || !isConnected || !isAuthenticated) return undefined;
+    const interval = window.setInterval(publishTimeMetrics, 5000);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, isConnected, isPreviewMode, publishTimeMetrics]);
+
+  return (
+    <TimeOutputFrame
+      isProjectionMode={isProjectionMode}
+      showProjectionExitHint={showProjectionExitHint}
+      className="relative w-screen h-screen overflow-hidden flex items-center justify-center"
+    />
   );
 };
 

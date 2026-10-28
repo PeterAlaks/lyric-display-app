@@ -47,7 +47,7 @@ export function splitSongCredits(value) {
     .slice(0, 12);
 }
 
-function assignField(metadata, field, rawValue) {
+export function assignSongMetadataField(metadata, field, rawValue) {
   const value = String(rawValue || '').trim().slice(0, MAX_FIELD_LENGTH);
   if (!value) return;
 
@@ -71,6 +71,48 @@ function assignField(metadata, field, rawValue) {
 }
 
 /**
+ * Read one `# Key: value` header line.
+ * @returns {{ key: string, label: string, value: string, field: string|null, provenance: boolean } | null}
+ */
+export function readSongMetadataHeaderLine(line) {
+  const match = String(line ?? '').match(HEADER_LINE_REGEX);
+  if (!match) return null;
+  const key = normalizeKey(match[1]);
+  return {
+    key,
+    label: match[1].trim(),
+    value: match[2],
+    field: HEADER_FIELD_BY_KEY.get(key) || null,
+    provenance: PROVENANCE_KEY_REGEX.test(key),
+  };
+}
+
+const HEADER_LABEL_BY_FIELD = [
+  ['title', 'Title'],
+  ['artists', 'Author'],
+  ['copyright', 'Copyright'],
+  ['administrator', 'Administrator'],
+  ['ccliSongNumber', 'CCLI Song Number'],
+  ['album', 'Album'],
+  ['year', 'Year'],
+];
+
+/**
+ * Canonical `# Key: value` lines for song metadata, in a fixed order.
+ * @returns {string[]}
+ */
+export function formatSongMetadataHeaderLines(metadata) {
+  if (!metadata || typeof metadata !== 'object') return [];
+  const lines = [];
+  for (const [field, label] of HEADER_LABEL_BY_FIELD) {
+    const raw = metadata[field];
+    const value = Array.isArray(raw) ? raw.filter(Boolean).join(', ') : String(raw ?? '').trim();
+    if (value) lines.push(`# ${label}: ${value.replace(/\s+/g, ' ')}`);
+  }
+  return lines;
+}
+
+/**
  * Split a leading `# Key: value` header block from lyric text. Only a block at the very top
  * of the file is recognized, and only when every line in it uses a known key, so lyric lines
  * that happen to start with "#" are never removed.
@@ -89,12 +131,9 @@ export function extractSongMetadataHeader(text) {
   let recognized = 0;
 
   while (index < lines.length) {
-    const match = lines[index].match(HEADER_LINE_REGEX);
-    if (!match) break;
-    const key = normalizeKey(match[1]);
-    const field = HEADER_FIELD_BY_KEY.get(key);
-    if (!field && !PROVENANCE_KEY_REGEX.test(key)) break;
-    if (field) assignField(metadata, field, match[2]);
+    const header = readSongMetadataHeaderLine(lines[index]);
+    if (!header || (!header.field && !header.provenance)) break;
+    if (header.field) assignSongMetadataField(metadata, header.field, header.value);
     recognized += 1;
     index += 1;
   }
@@ -123,7 +162,7 @@ export function extractLrcSongMetadata(text) {
   const metadata = {};
   for (const line of text.split(/\r?\n/)) {
     const match = line.match(LRC_TAG_REGEX);
-    if (match) assignField(metadata, LRC_FIELD_BY_TAG[match[1].toLowerCase()], match[2]);
+    if (match) assignSongMetadataField(metadata, LRC_FIELD_BY_TAG[match[1].toLowerCase()], match[2]);
   }
   return Object.keys(metadata).length > 0 ? metadata : null;
 }

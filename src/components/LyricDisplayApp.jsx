@@ -51,7 +51,7 @@ import LyricsWorkspace from './LyricDisplayApp/LyricsWorkspace';
 import ConnectedOutputsStrip from './LyricDisplayApp/ConnectedOutputsStrip';
 import useLyricsStore from '../context/LyricsStore';
 
-const LyricDisplayApp = () => {
+const DesktopControlPanel = () => {
   const navigate = useNavigate();
 
   const { isOutputOn, setIsOutputOn } = useOutputState();
@@ -459,10 +459,6 @@ const LyricDisplayApp = () => {
     return `${base} ${darkMode ? 'bg-transparent text-gray-300 hover:bg-blue-500/10 hover:text-blue-300 focus-visible:bg-blue-500/10 focus-visible:text-blue-300' : 'bg-transparent text-gray-600 hover:bg-blue-50 hover:text-blue-600 focus-visible:bg-blue-50 focus-visible:text-blue-600'}`;
   };
 
-  if (!isDesktopApp) {
-    return <MobileLayout />;
-  }
-
   return (
     <>
       <ConnectionBackoffBanner darkMode={darkMode} />
@@ -491,23 +487,25 @@ const LyricDisplayApp = () => {
             />
 
             {/* Load and Create Buttons */}
+            {/* Load and Create Buttons */}
             <div data-tour="load-lyrics" className={`flex gap-3 ${hasLyrics ? 'mb-3' : 'mb-6'}`}>
               <Tooltip content={<span>Search indexed lyric folders - <strong>Ctrl+O</strong></span>} side="right">
                 <button
-                  className="control-squircle flex-1 py-3 px-4 bg-blue-600 text-white rounded-2xl text-sm font-medium hover:bg-blue-500 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="control-squircle flex-1 py-3 px-4 bg-blue-500 text-white rounded-2xl text-sm font-medium hover:bg-blue-400 transition-all duration-200 flex items-center justify-center gap-2"
                   onClick={openFileDialog}
                 >
                   <FolderOpen className="w-4 h-4" />
                   Load lyrics
                 </button>
               </Tooltip>
-              <Tooltip content={<span>Open the song canvas to create new lyrics from scratch - <strong>Ctrl+N</strong></span>} side="right">
+              <Tooltip content={<span>Open the song editor to create a new song - <strong>Ctrl+N</strong></span>} side="right">
                 <button
                   className={`control-squircle h-13 w-13 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center ${darkMode
                     ? 'bg-gray-700 hover:bg-blue-500/10 hover:text-blue-300 text-gray-200'
                     : 'bg-muted hover:bg-blue-50 hover:text-blue-600 text-gray-700'
                     }`}
                   onClick={handleCreateNewSong}
+                  aria-label="Create a new song"
                 >
                   <FilePlusCorner className="w-4 h-4" />
                 </button>
@@ -721,5 +719,9 @@ const LyricDisplayApp = () => {
     </>
   );
 };
+
+// The browser controller has its own layout. The desktop panel's shortcuts, file handling, and
+// Electron listeners must never run underneath it, so it is only mounted in the desktop app.
+const LyricDisplayApp = () => (useIsDesktopApp() ? <DesktopControlPanel /> : <MobileLayout />);
 
 export default LyricDisplayApp;

@@ -154,3 +154,24 @@ test('save navigator requests resolve with the selected indexed destination', as
     else globalThis.window = previousWindow;
   }
 });
+
+test('the song library is set up on first launch, always indexed, and the default home for new songs', async () => {
+  const [engineSource, navigatorSource, preferencesSource, easyWorshipSource, presentationSource] = await Promise.all([
+    readFile(new URL('../main/fileNavigator.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/FileNavigatorModal.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/UserPreferencesModal/IndexedLyricsFoldersPreferencesPage.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/EasyWorshipImportModal.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/PresentationImportModal.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  // Indexed before anything else so the navigator knows where songs are without setup.
+  assert.match(engineSource, /await loadConfig\(\);\s*await ensureSongLibraryRoot\(\);/);
+  assert.match(engineSource, /path\.join\(app\.getPath\('documents'\), APP_NAME, 'Lyrics'\)/);
+  assert.match(engineSource, /if \(isLibraryRoot\(rootPath\)\) \{\s*throw new Error/);
+  assert.match(engineSource, /countUserRoots\(retainedRoots, libraryPath\) >= FILE_NAVIGATOR_LIMITS\.maxRoots/);
+  for (const source of [navigatorSource, preferencesSource]) {
+    assert.match(source, /root\.library/);
+  }
+  assert.match(easyWorshipSource, /LyricDisplay\$\{separator\}Lyrics\$\{separator\}Imported from EasyWorship/);
+  assert.match(presentationSource, /LyricDisplay\$\{separator\}Lyrics\$\{separator\}Imported from Presentations/);
+});

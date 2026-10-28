@@ -320,7 +320,7 @@ const MobileLayout = () => {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() => navigate('/new-song?mode=compose')}
-                className="flex h-11 min-w-0 w-full items-center justify-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 md:max-w-md"
+                className="flex h-11 min-w-0 w-full items-center justify-center gap-2 rounded-full bg-blue-500 px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 md:max-w-md"
               >
                 <FileText className="h-4 w-4 shrink-0" />
                 <span className="truncate">Create Lyrics</span>
@@ -616,7 +616,7 @@ const MobileLayout = () => {
                 onClick={() => handleStep(1)}
                 disabled={!canStep}
                 aria-label="Next line"
-                className="flex h-14 w-20 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors active:scale-[0.98] active:bg-blue-700 disabled:opacity-40"
+                className="flex h-14 w-20 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white transition-colors active:scale-[0.98] active:bg-blue-600 disabled:opacity-40"
               >
                 <ChevronRight className="h-8 w-8" />
               </button>
