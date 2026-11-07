@@ -12,7 +12,7 @@ import {
   serializeLdsongDocument,
 } from '../shared/lyricsParsing/ldsong.js';
 import { parseTxtContent } from '../shared/lyricsParsing/txtParser.js';
-import { createLdsongFromImportedText, parseLyricImportContent } from '../shared/documentTextExtraction.js';
+import { createLdsongFromImportedText, parseLyricImportContent, prepareLyricTextImport } from '../shared/documentTextExtraction.js';
 import {
   addEditorLine,
   addEditorSection,
@@ -494,4 +494,37 @@ test('slide preview cues match what outputs show for a slide', () => {
 
   assert.deepEqual(getEditorSlideCues({ id: 's', lines: [{ id: 'a', role: 'stage', text: 'Band only' }] }), []);
   assert.deepEqual(getEditorSlideCues(null), []);
+});
+
+test('imported song text keeps its sections even when the user strips structure tags for display', () => {
+  const source = createLdsongFromImportedText('[Verse 1]\nAmazing grace\n\n[Chorus]\nMy chains are gone\n\n[Verse 2]\nTwas grace\n\n[Chorus]\nMy chains are gone', {
+    parsingOptions: { enableSplitting: false, groupingConfig: { structureTagMode: 'strip' } },
+  });
+  const { document } = parseLdsongDocument(source);
+
+  assert.deepEqual(document.sections.map((section) => section.label), ['Verse 1', 'Chorus', 'Verse 2']);
+  assert.deepEqual(document.arrangement, ['Verse 1', 'Chorus', 'Verse 2', 'Chorus']);
+});
+
+test('online provider lyrics load as structured songs, while timed LRC lyrics stay LRC', () => {
+  const imported = prepareLyricTextImport({
+    title: 'Amazing Grace',
+    artist: 'John Newton',
+    year: 1779,
+    content: '[Verse 1]\nAmazing grace how sweet the sound\n\n[Chorus]\nMy chains are gone',
+  }, { providerName: 'Open Hymnal', parsingOptions: { enableSplitting: false }, importedOn: '2026-11-07' });
+
+  assert.equal(imported.fileType, 'ldsong');
+  assert.equal(isLdsongContent(imported.content), true);
+  assert.match(imported.content, /^# Title: Amazing Grace\n# Author: John Newton\n# Year: 1779\n/m);
+  assert.match(imported.content, /^# Imported from Open Hymnal: 2026-11-07$/m);
+  assert.deepEqual(parseLdsongDocument(imported.content).document.sections.map((section) => section.label), ['Verse 1', 'Chorus']);
+
+  const timed = prepareLyricTextImport({ title: 'Song', content: '[00:01.00]First line\n[00:04.00]Second line' }, { providerName: 'LRCLIB' });
+  assert.equal(timed.fileType, 'lrc');
+  assert.equal(timed.content, '[00:01.00]First line\n[00:04.00]Second line');
+
+  const structured = prepareLyricTextImport({ title: 'Song', content: SAMPLE }, { providerName: 'Anywhere' });
+  assert.equal(structured.fileType, 'ldsong');
+  assert.equal(structured.content, SAMPLE);
 });

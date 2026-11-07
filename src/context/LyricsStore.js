@@ -7,6 +7,7 @@ import { normalizeAppearanceTransitions } from '../../shared/transitionSettings.
 import { normalizePreviewSettings } from '../../shared/previewSettings.js';
 import { normalizeTimerControlSettings, normalizeTimerDisplaySettings } from '../utils/timerUtils';
 import { createSolidPaint } from '../utils/paint';
+import { setToastSoundOutputDevice } from '../utils/toastSounds';
 import { createAppShellSlice } from './lyricsStore/appShellSlice.js';
 import { createAutoplaySlice } from './lyricsStore/autoplaySlice.js';
 import { createLyricsSessionSlice } from './lyricsStore/lyricsSessionSlice.js';
@@ -124,6 +125,13 @@ export async function loadPreferencesIntoStore(store) {
       const result = await window.electronAPI.preferences.get('general.toastSoundsMuted');
       if (result.success && typeof result.value === 'boolean') {
         store.getState().setToastSoundsMuted(result.value);
+      }
+    }
+
+    if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('general.toastSoundDeviceId');
+      if (result.success) {
+        setToastSoundOutputDevice(typeof result.value === 'string' ? result.value : '');
       }
     }
 

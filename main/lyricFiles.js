@@ -1,6 +1,8 @@
 import path from 'path';
-import { readFile, stat } from 'fs/promises';
-import { extractLyricTextFromSource } from '../shared/documentTextExtraction.js';
+import { readFile, stat, writeFile } from 'fs/promises';
+import { createLdsongFromImportedText, extractLyricTextFromSource } from '../shared/documentTextExtraction.js';
+import { isLdsongContent } from '../shared/lyricsParsing/ldsong.js';
+import { extractSongMetadataHeader } from '../shared/lyricsParsing/songMetadata.js';
 import {
   getLyricImportFormatForName,
   normalizeLyricFileType,
@@ -114,4 +116,42 @@ export async function readLyricsFileFromPath(filePath, {
     filePath: validated.normalized,
     fileType,
   };
+}
+
+/**
+ * Write a structured .ldsong copy of a plain-text song beside it. The original is never
+ * changed, and an existing .ldsong of the same name is never overwritten.
+ * @returns {Promise<{ status: 'converted' | 'skipped', reason?: string, sourcePath: string, targetPath?: string }>}
+ */
+export async function convertTextSongFileToLdsong(filePath, {
+  parsingOptions = {},
+  groupingPlan = null,
+  convertedOn = null,
+} = {}) {
+  const sourcePath = normalizeLyricPath(filePath);
+  if (!sourcePath || path.extname(sourcePath).toLowerCase() !== '.txt') {
+    return { status: 'skipped', reason: 'unsupported', sourcePath: sourcePath || String(filePath || '') };
+  }
+
+  const targetPath = path.join(path.dirname(sourcePath), `${path.basename(sourcePath, path.extname(sourcePath))}.ldsong`);
+  const fileStat = await stat(sourcePath);
+  assertLyricImportSize(fileStat.size, await getActiveLyricImportByteLimit());
+  const text = await readFile(sourcePath, 'utf8');
+  if (isLdsongContent(text)) return { status: 'skipped', reason: 'structured', sourcePath };
+  if (!text.trim()) return { status: 'skipped', reason: 'empty', sourcePath };
+
+  const header = extractSongMetadataHeader(text).songMetadata || {};
+  const content = createLdsongFromImportedText(text, {
+    songMetadata: header.title ? {} : { title: path.basename(sourcePath, path.extname(sourcePath)) },
+    provenance: { key: 'Converted from TXT', value: convertedOn || new Date().toISOString().split('T')[0] },
+    parsingOptions: groupingPlan ? { ...parsingOptions, groupingPlan } : parsingOptions,
+  });
+
+  try {
+    await writeFile(targetPath, content, { encoding: 'utf8', flag: 'wx' });
+  } catch (error) {
+    if (error?.code === 'EEXIST') return { status: 'skipped', reason: 'exists', sourcePath, targetPath };
+    throw error;
+  }
+  return { status: 'converted', sourcePath, targetPath };
 }

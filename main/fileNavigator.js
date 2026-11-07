@@ -19,6 +19,7 @@ import {
   getFileNavigatorRootLimitError,
 } from '../shared/fileNavigatorLimits.js';
 import {
+  convertTextSongFileToLdsong,
   getActiveLyricImportByteLimit,
   grantLyricWritePath,
   normalizeLyricPath,
@@ -1049,6 +1050,49 @@ export async function rebuildFileNavigatorIndex() {
   await ensureInitialized();
   await queueRebuild();
   return getFileNavigatorState();
+}
+
+/**
+ * Write a structured .ldsong beside every indexed .txt song. Originals stay in place,
+ * existing .ldsong files are never overwritten, and .lrc files are left alone because
+ * .ldsong cannot hold their timestamps.
+ */
+export async function convertLibraryTextSongsToLdsong() {
+  await ensureInitialized();
+  if (rebuildPromise) await rebuildPromise.catch(() => { });
+
+  const [{ getParsingConfig }, { buildLyricsParsingOptions }, { getRememberedLyricsGrouping }] = await Promise.all([
+    import('./userPreferences.js'),
+    import('../shared/lyricsParsing/preferenceOptions.js'),
+    import('./lyricsGroupingMetadata.js'),
+  ]);
+  const parsingOptions = buildLyricsParsingOptions(getParsingConfig());
+  const convertedOn = new Date().toISOString().split('T')[0];
+  const sourcePaths = [...records.values()]
+    .filter((record) => record.fileType === 'txt' && rootForPath(record.filePath))
+    .map((record) => record.filePath)
+    .sort((a, b) => naturalCollator.compare(a, b));
+
+  const summary = { total: sourcePaths.length, converted: 0, skipped: 0, failed: 0, failures: [] };
+  for (const sourcePath of sourcePaths) {
+    try {
+      let groupingPlan = null;
+      try {
+        groupingPlan = getRememberedLyricsGrouping(sourcePath, await fs.readFile(sourcePath, 'utf8'));
+      } catch { }
+      const result = await convertTextSongFileToLdsong(sourcePath, { parsingOptions, groupingPlan, convertedOn });
+      if (result.status === 'converted') summary.converted += 1;
+      else summary.skipped += 1;
+    } catch (error) {
+      summary.failed += 1;
+      if (summary.failures.length < 20) {
+        summary.failures.push({ fileName: path.basename(sourcePath), error: error?.message || 'Conversion failed' });
+      }
+    }
+  }
+
+  if (summary.converted > 0) await queueRebuild();
+  return summary;
 }
 
 export async function searchFileNavigator({ query = '', fileTypes = [], limit = 80 } = {}) {

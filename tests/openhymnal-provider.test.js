@@ -86,3 +86,17 @@ test('Open Hymnal lyrics preserve verse and refrain structure for parsing', asyn
   assert.equal(parsed.processedLines[0], '[Verse 1]');
   assert.equal(parsed.processedLines[2], '[Refrain]');
 });
+
+test('Open Hymnal imports become structured songs that play the refrain after every verse', async () => {
+  const { prepareLyricTextImport } = await import('../shared/documentTextExtraction.js');
+  const { parseLdsongDocument } = await import('../shared/lyricsParsing/ldsong.js');
+  const lyric = await getLyrics({ payload: { entryId: 'openhymnal:great-is-thy-faithfulness' } });
+  const imported = prepareLyricTextImport(lyric, { providerName: 'Open Hymnal', importedOn: '2026-11-07' });
+  const { document, error } = parseLdsongDocument(imported.content);
+
+  assert.equal(imported.fileType, 'ldsong');
+  assert.equal(error, null);
+  assert.equal(document.metadata.title, 'Great Is Thy Faithfulness');
+  assert.deepEqual(document.sections.map((section) => section.label), ['Verse 1', 'Refrain', 'Verse 2', 'Verse 3']);
+  assert.deepEqual(document.arrangement, ['Verse 1', 'Refrain', 'Verse 2', 'Refrain', 'Verse 3', 'Refrain']);
+});

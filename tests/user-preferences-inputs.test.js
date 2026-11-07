@@ -134,3 +134,44 @@ test('the production server port is an autosaved advanced preference with pendin
   assert.match(persistenceSource, /restartApp/);
   assert.match(appIpcSource, /backendPort/);
 });
+
+test('toast sounds play on the chosen output device so stream capture of the default device stays clean', async () => {
+  const { playToastSound, setToastSoundOutputDevice } = await import('../src/utils/toastSounds.js');
+  const calls = [];
+  class FakeAudio {
+    constructor(src) { this.src = src; this.sinkId = ''; }
+    addEventListener() {}
+    async setSinkId(id) { calls.push(['sink', id]); this.sinkId = id; }
+    play() { calls.push(['play', this.sinkId]); return Promise.resolve(); }
+  }
+  const originalAudio = globalThis.Audio;
+  globalThis.Audio = FakeAudio;
+
+  try {
+    setToastSoundOutputDevice('headphones-1');
+    playToastSound('success');
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(calls, [['sink', 'headphones-1'], ['play', 'headphones-1']]);
+
+    calls.length = 0;
+    setToastSoundOutputDevice('');
+    await new Promise((resolve) => setImmediate(resolve));
+    playToastSound('success');
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(calls.at(-1), ['play', '']);
+  } finally {
+    setToastSoundOutputDevice('');
+    if (originalAudio === undefined) delete globalThis.Audio;
+    else globalThis.Audio = originalAudio;
+  }
+});
+
+test('the LyricDisplay Dock never plays toast sounds because it runs inside OBS', async () => {
+  const [providersSource, toastProviderSource] = await Promise.all([
+    readFile(new URL('../src/components/AppProviders.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/toast/ToastProvider.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(providersSource, /<ToastProvider[\s\S]*?sounds=\{!isDockRuntime\}/);
+  assert.match(toastProviderSource, /if \(sounds && typeof playSound === 'function' && !muted/);
+});

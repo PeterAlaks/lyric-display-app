@@ -19,6 +19,7 @@ import {
   resetActiveTimerRuntime,
   shouldShowGlobalClockDuringPause,
   shouldShowGlobalTimeForManualScheduleItem,
+  shouldFlashTimerDisplay,
 } from '../src/utils/timerUtils.js';
 
 function createTimerStoreHarness() {
@@ -471,4 +472,51 @@ test('active timer runtime is reset when hydrating a new app session', () => {
   assert.equal(state.remaining, null);
   assert.equal(state.durationMs, 0);
   assert.equal(state.display.label, 'Service Timer');
+});
+
+test('timer flash modes: off, critical only (default), critical and after zero, and always', () => {
+  const startTime = 1_000_000;
+  const durationMs = 120_000;
+  const running = {
+    status: 'running',
+    running: true,
+    paused: false,
+    mode: 'countdown',
+    phase: 'timer',
+    durationMs,
+    startTime,
+    endTime: startTime + durationMs,
+    warningMs: 60_000,
+    criticalMs: 30_000,
+    sets: [],
+  };
+  const early = startTime + 10_000;
+  const critical = startTime + durationMs - 10_000;
+  const pastZero = startTime + durationMs + 5_000;
+  const finished = { ...running, status: 'finished', running: false, finished: true };
+  const idle = { ...running, status: 'idle', running: false, endTime: null, startTime: null };
+  const flash = (state, now, flashMode) => shouldFlashTimerDisplay(state, { flashMode }, now);
+
+  assert.equal(normalizeTimerDisplaySettings({}).flashMode, 'critical');
+  assert.equal(normalizeTimerDisplaySettings({ flashMode: 'sometimes' }).flashMode, 'critical');
+  assert.equal(normalizeTimerDisplaySettings({ flashMode: 'afterZero' }).flashMode, 'afterZero');
+
+  for (const now of [early, critical, pastZero]) assert.equal(flash(running, now, 'off'), false);
+
+  assert.equal(flash(running, early, undefined), false);
+  assert.equal(flash(running, critical, undefined), true);
+  assert.equal(flash(running, pastZero, 'critical'), false);
+  assert.equal(flash(finished, pastZero, 'critical'), false);
+
+  assert.equal(flash(running, early, 'afterZero'), false);
+  assert.equal(flash(running, critical, 'afterZero'), true);
+  assert.equal(flash(running, pastZero, 'afterZero'), true);
+  assert.equal(flash({ ...running, overrunMode: true }, pastZero, 'afterZero'), true);
+  assert.equal(flash(finished, pastZero, 'afterZero'), true);
+  assert.equal(flash(idle, pastZero, 'afterZero'), false);
+
+  assert.equal(flash(running, early, 'always'), true);
+  assert.equal(flash({ ...running, mode: 'countup', endTime: null }, early, 'always'), true);
+  assert.equal(flash({ ...running, paused: true, status: 'paused', pausedRemainingMs: 60_000 }, early, 'always'), false);
+  assert.equal(flash(idle, early, 'always'), false);
 });

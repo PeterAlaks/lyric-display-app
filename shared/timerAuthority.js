@@ -59,7 +59,13 @@ export function localizeAuthoritativeTimerState(timerState, localNow = Date.now(
   return localized;
 }
 
-export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, now = Date.now()) {
+/**
+ * @param {object} [options]
+ * @param {number|null} [options.ownRunBaseRevision] When every revision after this one was
+ *   written by the same controller that sent `incomingState`, an update based on any revision
+ *   from here on is that controller's own unconfirmed change, not a conflict.
+ */
+export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, now = Date.now(), { ownRunBaseRevision = null } = {}) {
   if (!isPlainObject(incomingState)) return { accepted: false, error: 'Invalid timer update payload' };
   try {
     const serialized = JSON.stringify(incomingState);
@@ -69,7 +75,10 @@ export function applyAuthoritativeTimerUpdate(currentState = {}, incomingState, 
 
     const currentRevision = Math.max(0, Number(currentState?.revision) || 0);
     const suppliedRevision = Number(incomingState.baseRevision ?? incomingState.revision);
-    if (Number.isFinite(suppliedRevision) && suppliedRevision < currentRevision) {
+    const ownRunFloor = Number.isFinite(Number(ownRunBaseRevision)) && ownRunBaseRevision !== null
+      ? Number(ownRunBaseRevision)
+      : currentRevision;
+    if (Number.isFinite(suppliedRevision) && suppliedRevision < Math.min(currentRevision, ownRunFloor)) {
       return { accepted: false, stale: true, error: 'Timer state changed on another controller' };
     }
 

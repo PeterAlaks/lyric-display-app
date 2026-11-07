@@ -247,18 +247,18 @@ const MobileLayout = () => {
     <>
       <ConnectionBackoffBanner darkMode={darkMode} />
       <div
-        className={`flex flex-col h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'
+        className={`flex flex-col h-dvh overflow-y-auto overscroll-contain font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'
           }`}
       >
         {/* Fixed Header */}
         <div
-          className={`border-b px-4 py-4 shrink-0 ${darkMode
+          className={`border-b px-4 py-4 short-screen:py-2.5 shrink-0 ${darkMode
             ? 'bg-gray-900 border-gray-800'
             : 'bg-white/95 border-gray-200'
             }`}
         >
           {/* Top Row - Title and Controls */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-5 short-screen:mb-3">
             <div className="flex items-center gap-3">
               <img
                 src="/LyricDisplay-icon.png"
@@ -315,12 +315,12 @@ const MobileLayout = () => {
           </div>
 
           {/* Compose New Lyrics Button and Toggle Row */}
-          <div className="mb-5 space-y-3">
+          <div className="mb-5 short-screen:mb-0 space-y-3">
             {/* Compose Button and Toggle */}
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() => navigate('/new-song?mode=compose')}
-                className="flex h-11 min-w-0 w-full items-center justify-center gap-2 rounded-full bg-blue-500 px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 md:max-w-md"
+                className="flex h-11 short-screen:h-10 min-w-0 w-full items-center justify-center gap-2 rounded-full bg-blue-500 px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 md:max-w-md"
               >
                 <FileText className="h-4 w-4 shrink-0" />
                 <span className="truncate">Create Lyrics</span>
@@ -347,7 +347,7 @@ const MobileLayout = () => {
           {/* Current File Indicator */}
           {hasLyrics && (
             <div
-              className={`px-4 py-3 text-sm font-semibold border-t mt-4 ${darkMode
+              className={`truncate px-4 py-3 short-screen:py-2 text-sm font-semibold border-t mt-4 short-screen:mt-2 ${darkMode
                 ? 'text-gray-300 border-gray-800'
                 : 'text-gray-600 border-gray-200'
                 }`}
@@ -358,7 +358,7 @@ const MobileLayout = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 p-4 flex flex-col min-h-0">
+        <div className="flex-1 p-4 short-screen:p-2 flex flex-col min-h-0 short-screen:min-h-56">
           <div
             className={`rounded-2xl border flex-1 flex flex-col overflow-hidden ${darkMode
               ? 'bg-gray-900/70 border-gray-800'
@@ -368,13 +368,13 @@ const MobileLayout = () => {
             {hasLyrics ? (
               <>
                 {/* Fixed Search Bar and Autoplay */}
-                <div className={`border-b px-3 py-3 shrink-0 ${darkMode
+                <div className={`border-b px-3 py-3 short-screen:py-2 shrink-0 ${darkMode
                   ? 'border-gray-800 bg-gray-900/70'
                   : 'border-gray-200 bg-white/80'
                   }`}>
 
                   {/* Search Bar and Autoplay Controls */}
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                  <div className="flex flex-col gap-4 short-screen:gap-2 md:flex-row md:items-center">
                     {/* Search Bar */}
                     <div className="flex-1">
                       <SearchBar
@@ -575,7 +575,7 @@ const MobileLayout = () => {
         {/* Fixed Footer: live transport while lyrics are loaded */}
         {hasLyrics ? (
           <div
-            className={`shrink-0 border-t px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${darkMode
+            className={`sticky bottom-0 z-10 shrink-0 border-t px-3 pt-3 short-screen:pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] short-screen:pb-[max(0.5rem,env(safe-area-inset-bottom))] ${darkMode
               ? 'bg-gray-900 border-gray-800'
               : 'bg-white border-gray-200'
               }`}
@@ -586,7 +586,7 @@ const MobileLayout = () => {
                 onClick={() => handleStep(-1)}
                 disabled={!canStep}
                 aria-label="Previous line"
-                className={`flex h-14 w-16 shrink-0 items-center justify-center rounded-xl border transition-colors active:scale-[0.98] disabled:opacity-40 ${darkMode
+                className={`flex h-14 short-screen:h-12 w-16 shrink-0 items-center justify-center rounded-xl border transition-colors active:scale-[0.98] disabled:opacity-40 ${darkMode
                   ? 'border-gray-700 bg-gray-800 text-gray-100 active:bg-gray-700'
                   : 'border-gray-200 bg-gray-50 text-gray-800 active:bg-gray-100'
                   }`}
@@ -616,7 +616,7 @@ const MobileLayout = () => {
                 onClick={() => handleStep(1)}
                 disabled={!canStep}
                 aria-label="Next line"
-                className="flex h-14 w-20 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white transition-colors active:scale-[0.98] active:bg-blue-600 disabled:opacity-40"
+                className="flex h-14 short-screen:h-12 w-20 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white transition-colors active:scale-[0.98] active:bg-blue-600 disabled:opacity-40"
               >
                 <ChevronRight className="h-8 w-8" />
               </button>

@@ -29,10 +29,17 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
       return;
     }
 
+    // A controller dragging a slider or colour picker sends updates faster than the echoes
+    // return, so they carry a revision it already superseded itself. Only treat an old
+    // revision as a conflict when another controller or a timer boundary wrote since then.
+    const currentRevision = Math.max(0, Number(state.currentStageTimerState?.revision) || 0);
+    const writer = state.stageTimerWriter;
+    const ownRun = writer && socket.id && writer.socketId === socket.id && writer.revision === currentRevision;
     const authoritative = applyAuthoritativeTimerUpdate(
       state.currentStageTimerState,
       timerData,
-      Date.now()
+      Date.now(),
+      { ownRunBaseRevision: ownRun ? writer.baseRevision : null }
     );
     if (!authoritative.accepted) {
       socket.emit('stageTimerRejected', {
@@ -44,6 +51,11 @@ export function registerStageHandlers({ io, socket, hasPermission, clientType, d
       return;
     }
     state.currentStageTimerState = authoritative.state;
+    state.stageTimerWriter = {
+      socketId: socket.id,
+      baseRevision: ownRun ? writer.baseRevision : currentRevision,
+      revision: authoritative.state.revision,
+    };
     schedulePersistSessionState();
     scheduleStageTimerBoundary(io);
     console.log(`Stage timer updated by ${clientType} client:`, state.currentStageTimerState);

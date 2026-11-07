@@ -5,6 +5,9 @@
 @source "../index.html";
 @source "./**/*.{js,jsx}";
 
+/* Phones with little vertical room (iPhone with Safari toolbars, landscape). */
+@custom-variant short-screen (@media (max-height: 760px));
+
 /* ==== Graphite neutrals ====
    Gray and slate share one neutral graphite scale so every surface reads like a
    production console instead of a blue-tinted web page. Accents stay in colour. */

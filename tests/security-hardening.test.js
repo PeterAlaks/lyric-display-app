@@ -233,6 +233,20 @@ test('desktop draft approval requires a pending valid draft and updates persiste
     assert.equal(state.currentLyricsSource.content, 'First line\nSecond line');
     assert.equal(state.currentSongMetadata.origin, 'draft');
     assert.equal(state.pendingDrafts.has('draft-valid'), false);
+    assert.equal(state.currentLyricsSource.fileType, 'txt');
+
+    state.pendingDrafts.set('draft-structured', { submitterSessionId: 'submitter-session', title: 'Structured song' });
+    const structuredText = '#LDSONG 1\n# Title: Structured song\n\n[Verse 1]\nFirst line\n';
+    handlers.get('lyricsDraftApprove')?.({
+      draftId: 'draft-structured',
+      title: 'Structured song',
+      rawText: structuredText,
+      processedLines: ['[Verse 1]', 'First line'],
+    });
+
+    assert.equal(state.currentLyricsSource.fileType, 'ldsong');
+    assert.equal(state.currentLyricsSource.fileName, 'Structured song.ldsong');
+    assert.equal(state.currentLyricsSource.content, structuredText);
   } finally {
     Object.assign(state, previousState);
   }
@@ -709,6 +723,62 @@ test('stage message updates are bounded and normalized before they are stored or
     assert.deepEqual(broadcast?.payload, state.currentStageMessages);
   } finally {
     state.currentStageMessages = previousMessages;
+    state.liveSafety = previousLiveSafety;
+    state.connectedClients = previousConnectedClients;
+  }
+});
+
+test('rapid timer updates from one controller are not rejected as another controller\'s change', () => {
+  const previousTimer = state.currentStageTimerState;
+  const previousLiveSafety = state.liveSafety;
+  const previousConnectedClients = state.connectedClients;
+  state.liveSafety = { enabled: false };
+  state.connectedClients = new Map();
+  state.currentStageTimerState = { version: 2, revision: 0, status: 'idle', running: false, clockBasis: 'server' };
+
+  const register = (id) => {
+    const handlers = new Map();
+    const emitted = [];
+    registerStageHandlers({
+      io: { emit() {} },
+      socket: {
+        id,
+        on(eventName, handler) { handlers.set(eventName, handler); },
+        emit(eventName, payload) { emitted.push({ eventName, payload }); },
+      },
+      hasPermission: () => true,
+      clientType: 'desktop',
+      deviceId: `${id}-device`,
+      sessionId: `${id}-session`,
+    });
+    return { update: handlers.get('stageTimerUpdate'), emitted };
+  };
+
+  try {
+    const panel = register('panel');
+    const phone = register('phone');
+    const rejections = (client) => client.emitted.filter((event) => event.eventName === 'stageTimerRejected');
+
+    // Dragging a colour picker sends several updates before the first echo returns,
+    // so each one still carries the revision the panel last heard about.
+    for (const color of ['#111111', '#222222', '#333333']) {
+      panel.update({ running: false, baseRevision: 0, clientSentAt: Date.now(), display: { textColor: color } });
+    }
+    assert.equal(rejections(panel).length, 0);
+    assert.equal(state.currentStageTimerState.revision, 3);
+    assert.equal(state.currentStageTimerState.display.textColor, '#333333');
+
+    // A different controller working from the same old revision is still a real conflict.
+    phone.update({ running: false, baseRevision: 0, clientSentAt: Date.now(), display: { textColor: '#ff0000' } });
+    assert.equal(rejections(phone).length, 1);
+
+    // Once the phone writes, the panel's old revision is no longer safe either.
+    phone.update({ running: false, baseRevision: 3, clientSentAt: Date.now(), display: { textColor: '#00ff00' } });
+    panel.update({ running: false, baseRevision: 0, clientSentAt: Date.now(), display: { textColor: '#444444' } });
+    assert.equal(rejections(panel).length, 1);
+    assert.equal(state.currentStageTimerState.display.textColor, '#00ff00');
+  } finally {
+    state.currentStageTimerState = previousTimer;
     state.liveSafety = previousLiveSafety;
     state.connectedClients = previousConnectedClients;
   }

@@ -33,6 +33,7 @@ const preferencesStore = new Store({
       liveSafetyMode: false,
       previewLines: false,
       toastSoundsMuted: false,
+      toastSoundDeviceId: '',
       skipSectionTitlesOnKeyboard: true,
       ccliLicenseNumber: '',
       startMinimized: false,

@@ -6,7 +6,8 @@ import { useControlSocket } from '../context/ControlSocketProvider';
 import { useLyricsState } from '../hooks/useStoreSelectors';
 import useToast from '../hooks/useToast';
 import { parseLrcContent } from '../../shared/lyricsParsing/lrcParser.js';
-import { parseTxtContent } from '../../shared/lyricsParsing/txtParser.js';
+import { parseLdsongContent } from '../../shared/lyricsParsing/ldsong.js';
+import { prepareLyricTextImport } from '../../shared/documentTextExtraction.js';
 import useLyricsStore from '../context/LyricsStore.js';
 import { REQUEST_MODAL_CLOSE_EVENT } from '@/constants/modalEvents';
 import { ModalActionButton, ModalFooter } from '@/components/modal/modalActions';
@@ -31,15 +32,17 @@ const DraftApprovalModal = ({ darkMode }) => {
     const { showToast } = useToast();
     const lyricsParsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
 
-    const parseDraft = useCallback((rawText = '') => {
+    // Approved drafts load as structured songs: the layout is worked out once, here,
+    // with the desktop's parsing settings. Timed drafts stay LRC to keep their timing.
+    const parseDraft = useCallback((rawText = '', title = '') => {
         const hasLrcTimestamps = /[\[<]\d{1,2}:\d{2}(?:\.\d{1,3})?[\]>]/.test(String(rawText).trim());
-        return hasLrcTimestamps
-            ? parseLrcContent(rawText, lyricsParsingOptions)
-            : parseTxtContent(rawText, lyricsParsingOptions);
+        if (hasLrcTimestamps) return { ...parseLrcContent(rawText, lyricsParsingOptions), rawText };
+        const { content } = prepareLyricTextImport({ title, content: rawText }, { parsingOptions: lyricsParsingOptions });
+        return { ...parseLdsongContent(content), rawText: content };
     }, [lyricsParsingOptions]);
 
     const resolveDraftParsing = useCallback((draft) => {
-        if (typeof draft?.rawText === 'string') return parseDraft(draft.rawText);
+        if (typeof draft?.rawText === 'string') return parseDraft(draft.rawText, draft.title);
         return {
             processedLines: Array.isArray(draft?.processedLines) ? draft.processedLines : [],
             timestamps: [],
@@ -115,7 +118,8 @@ const DraftApprovalModal = ({ darkMode }) => {
             const enhancedTimestamps = parsed.enhancedTimestamps || [];
 
             setLyrics(processedLines);
-            setRawLyricsContent(currentDraft.rawText);
+            const rawText = typeof parsed.rawText === 'string' ? parsed.rawText : currentDraft.rawText;
+            setRawLyricsContent(rawText);
             setLyricsFileName(currentDraft.title);
             setLyricsTimestamps(timestamps);
             setLyricsEnhancedTimestamps(enhancedTimestamps);
@@ -124,7 +128,7 @@ const DraftApprovalModal = ({ darkMode }) => {
             const success = emitLyricsDraftApprove({
                 draftId: currentDraft.draftId,
                 title: currentDraft.title,
-                rawText: currentDraft.rawText,
+                rawText,
                 processedLines
             });
 

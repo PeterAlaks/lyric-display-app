@@ -7,7 +7,7 @@ export const globalToastRef = { current: null };
 
 let idSeq = 1;
 
-export function ToastProvider({ children, position = 'bottom-right', offset = 20, max = 3, isDark = false, density = 'default' }) {
+export function ToastProvider({ children, position = 'bottom-right', offset = 20, max = 3, isDark = false, density = 'default', sounds = true }) {
   const muted = useLyricsStore((state) => state.toastSoundsMuted);
   const compact = density === 'dock' || density === 'compact';
 
@@ -64,7 +64,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
     });
 
     const now = Date.now();
-    if (typeof playSound === 'function' && !muted && (now - lastToneAt.current > TONE_GAP_MS)) {
+    if (sounds && typeof playSound === 'function' && !muted && (now - lastToneAt.current > TONE_GAP_MS)) {
       try { playSound(variant); } catch { }
       lastToneAt.current = now;
     }
@@ -78,7 +78,7 @@ export function ToastProvider({ children, position = 'bottom-right', offset = 20
       removeTimer.current.set(id, t);
     }
     return id;
-  }, [remove, muted]);
+  }, [remove, muted, sounds]);
 
   useEffect(() => () => {
     removeTimer.current.forEach((t) => clearTimeout(t));

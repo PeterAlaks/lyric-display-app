@@ -135,3 +135,27 @@ test('desktop shortcuts never run underneath the browser controller', () => {
   // Window-menu keys (reload, DevTools, zoom, full screen) belong to the browser outside the app.
   assert.match(menuSource, /if \(!window\.electronAPI\) return;\s*const handleKeyDown = \(event\) =>/);
 });
+
+test('the LyricDisplay Dock shares the control panel keyboard shortcuts and lists them in the catalog', () => {
+  const dockSource = readFileSync(new URL('../src/components/ObsDockLayout.jsx', import.meta.url), 'utf8');
+
+  assert.match(dockSource, /import \{ useKeyboardShortcuts \} from '\.\.\/hooks\/LyricDisplayApp\/useKeyboardShortcuts';/);
+  assert.match(dockSource, /useKeyboardShortcuts\(\{[\s\S]*handleLineSelect,[\s\S]*handleToggle: handleToggleOutput,[\s\S]*handleNavigateSetlistNext: whenDockFocused\(handleNavigateSetlistNext\),/);
+  // Shortcuts pause while a dock overlay (editor, setlist, output settings) owns the keyboard.
+  assert.match(dockSource, /const dockOverlayOpen = Boolean\(editorState\) \|\| setlistOpen \|\| settingsOpen;/);
+
+  for (const [label, combo] of [
+    ['Previous / next lyric line', '↑ / ↓ or ← / →'],
+    ['Toggle output visibility', 'Space'],
+    ['Clear output outside text fields', 'Ctrl/Cmd + C'],
+    ['Jump to next Chorus / Verse / Bridge / Pre-Chorus', 'Shift + C / V / B / P'],
+    ['Previous / next setlist song', 'Ctrl/Cmd + Shift + ← / →'],
+    ['Open setlist', 'Ctrl/Cmd + Shift + S'],
+  ]) {
+    assert.equal(
+      entries.some((entry) => entry.category === 'LyricDisplay Dock' && entry.label === label && entry.combo === combo),
+      true,
+      `${label}: ${combo}`,
+    );
+  }
+});

@@ -217,6 +217,8 @@ export default function AppProviders({ children, effectiveDarkMode, isDockRuntim
         density={isDockRuntime ? 'dock' : 'default'}
         position={isDockRuntime ? 'top-right' : 'bottom-right'}
         offset={isDockRuntime ? 8 : 32}
+        // The dock runs inside OBS, where its audio is mixed into the stream.
+        sounds={!isDockRuntime}
       >
         <React.Suspense fallback={null}>
           <ScheduleFileOpenBridge />

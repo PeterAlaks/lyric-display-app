@@ -1,3 +1,4 @@
+import { isLdsongContent } from '../../../shared/lyricsParsing/ldsong.js';
 import { deriveSectionsFromProcessedLines } from '../../../shared/lyricsParsing/sections.js';
 import { appendActionLog } from '../actionLog.js';
 import { emitControllerEvent, emitLyricsLoad, emitLyricsRenderEvent } from '../broadcast.js';
@@ -131,6 +132,10 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
     }
 
     const { draftId, title, rawText, processedLines } = draft;
+    // Desktop approval converts drafts into structured songs; keep that format on record.
+    const isStructuredSong = isLdsongContent(rawText);
+    const sourceFileType = isStructuredSong ? 'ldsong' : 'txt';
+    const sourceFileName = isStructuredSong ? `${title}.ldsong` : title;
 
     state.currentLyrics = processedLines;
     state.currentLyricsTimestamps = [];
@@ -140,9 +145,9 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
     state.currentRawLyricsContent = rawText;
     state.currentLyricsSource = {
       content: rawText,
-      fileType: 'txt',
+      fileType: sourceFileType,
       filePath: null,
-      fileName: title,
+      fileName: sourceFileName,
     };
     state.currentSongMetadata = {
       title,
@@ -174,9 +179,9 @@ export function registerDraftHandlers({ io, socket, hasPermission, clientType, d
       rawLyricsContent: rawText || '',
       lyricsSource: {
         content: rawText || '',
-        fileType: 'txt',
+        fileType: sourceFileType,
         filePath: null,
-        fileName: title || '',
+        fileName: sourceFileName || '',
       },
       songMetadata: {
         title: title || '',

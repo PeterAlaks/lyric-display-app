@@ -4,6 +4,7 @@ import useLyricsStore from '../../context/LyricsStore.js';
 import { mergeLyricsParsingOptions } from '../../../shared/lyricsParsing/preferenceOptions.js';
 import { applySongMetadataHeader } from '../../../shared/lyricsParsing/songMetadata.js';
 import { detectArtistFromFilename } from '../../utils/artistDetection';
+import { prepareLyricTextImport } from '../../../shared/documentTextExtraction.js';
 import {
   getLyricFormatLabel,
   getLyricOriginLabel,
@@ -198,8 +199,24 @@ export const useLyricsLoader = ({
     const baseNamePieces = [lyric.title || 'Untitled Song', lyric.artist || providerName || providerId];
     const fallbackFileName = baseNamePieces.filter(Boolean).join(' - ');
 
-    const hasLrcTimestamps = /^\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(lyric.content.trim());
-    const fileType = hasLrcTimestamps ? 'lrc' : 'txt';
+    // Provider song text is stored as a structured song from the start (online line
+    // splitting applies once, here); timed LRC lyrics keep their timestamps as LRC.
+    let prepared;
+    try {
+      prepared = prepareLyricTextImport(lyric, {
+        providerName: providerName || providerId,
+        parsingOptions: mergeLyricsParsingOptions(lyricsParsingOptions, { enableSplitting: true }),
+      });
+    } catch (error) {
+      console.error('Failed to structure provider lyrics:', error);
+      showToast({
+        title: 'Import failed',
+        message: 'The lyrics could not be converted into a song.',
+        variant: 'error',
+      });
+      return false;
+    }
+    const { content, fileType } = prepared;
     const album = lyric.album || lyric.albumName || null;
     const metadata = {
       title: lyric.title || 'Untitled Song',
@@ -213,7 +230,7 @@ export const useLyricsLoader = ({
 
     const success = await processLoadedLyrics(
       {
-        content: lyric.content,
+        content,
         fileName: lyric.title || fallbackFileName,
         fileType,
       },
@@ -223,7 +240,6 @@ export const useLyricsLoader = ({
         toastMessage: `Loaded from ${providerName || providerId}.`,
         providerId,
         songMetadata: metadata,
-        enableOnlineLyricsSplitting: !hasLrcTimestamps,
       }
     );
 
@@ -232,7 +248,7 @@ export const useLyricsLoader = ({
     }
 
     return success;
-  }, [processLoadedLyrics, showToast, setSongMetadata]);
+  }, [lyricsParsingOptions, processLoadedLyrics, showToast, setSongMetadata]);
 
   return {
     processLoadedLyrics,

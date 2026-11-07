@@ -68,7 +68,14 @@ export const DEFAULT_TIMER_DISPLAY = {
   clockShowPeriod: true,
   stateTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.timerStateTransitionAnimation,
   stateTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.timerStateTransitionDuration,
+  flashMode: 'critical',
 };
+
+export const TIMER_FLASH_MODES = ['off', 'critical', 'afterZero', 'always'];
+
+const normalizeTimerFlashMode = (value) => (
+  TIMER_FLASH_MODES.includes(value) ? value : DEFAULT_TIMER_DISPLAY.flashMode
+);
 
 const LEGACY_DEFAULT_OTHER_ITEMS_SCALE = 0.15;
 
@@ -102,6 +109,7 @@ export const normalizeTimerDisplaySettings = (raw) => {
       settings.stateTransitionDuration,
       DEFAULT_TIMER_DISPLAY.stateTransitionDuration
     ),
+    flashMode: normalizeTimerFlashMode(settings.flashMode),
   };
 };
 
@@ -433,6 +441,27 @@ export const getTimerIntensity = (timerState, now = Date.now()) => {
   if (remainingMs <= state.criticalMs) return 'critical';
   if (remainingMs <= state.warningMs) return 'warning';
   return 'normal';
+};
+
+/**
+ * Whether the time display should pulse. 'critical' (the default) pulses inside the
+ * critical window, 'afterZero' also keeps pulsing once time has run out until the timer
+ * is reset, and 'always' pulses for as long as a timer runs.
+ */
+export const shouldFlashTimerDisplay = (timerState, display = {}, now = Date.now()) => {
+  const flashMode = normalizeTimerFlashMode(display?.flashMode);
+  if (flashMode === 'off') return false;
+  const state = normalizeTimerState(timerState);
+
+  if (flashMode === 'always') return state.running && !state.paused;
+
+  const inCriticalWindow = state.running && getTimerIntensity(state, now) === 'critical';
+  if (flashMode === 'critical') return inCriticalWindow;
+
+  if (inCriticalWindow || state.finished) return true;
+  if (!state.running || state.mode === 'countup') return false;
+  const remainingMs = getRemainingMs(state, now);
+  return Number.isFinite(remainingMs) && remainingMs <= 0;
 };
 
 export const getTimerProgress = (timerState, now = Date.now()) => {

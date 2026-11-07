@@ -6,6 +6,9 @@ const SOUND_URLS = {
 };
 
 const players = new Map();
+// Empty means the system default device. Streaming setups usually capture that device,
+// so operators can send chimes to headphones instead.
+let outputDeviceId = '';
 
 function normalizeVariant(variant) {
   const normalized = typeof variant === 'string' ? variant.trim().toLowerCase() : '';
@@ -29,15 +32,52 @@ function getPlayer(variant) {
   }
 }
 
+async function routePlayer(player) {
+  if (typeof player?.setSinkId !== 'function' || (player.sinkId || '') === outputDeviceId) return;
+  try {
+    await player.setSinkId(outputDeviceId);
+  } catch {
+    // The device was unplugged or is unavailable; fall back to the default device.
+    try { await player.setSinkId(''); } catch { /* keep the current device */ }
+  }
+}
+
+export function setToastSoundOutputDevice(deviceId) {
+  outputDeviceId = typeof deviceId === 'string' ? deviceId.trim() : '';
+  players.forEach((player) => { routePlayer(player); });
+}
+
+export async function listToastSoundOutputDevices() {
+  try {
+    const devices = await globalThis.navigator?.mediaDevices?.enumerateDevices?.();
+    return (Array.isArray(devices) ? devices : [])
+      .filter((device) => device.kind === 'audiooutput' && device.deviceId && device.deviceId !== 'default')
+      .map((device, index) => ({
+        deviceId: device.deviceId,
+        label: device.label || `Audio output ${index + 1}`,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export function playToastSound(variant = 'info') {
   const player = getPlayer(normalizeVariant(variant));
   if (!player) return;
 
-  try {
-    player.currentTime = 0;
-    const playPromise = player.play();
-    playPromise?.catch?.(() => {});
-  } catch {
-    // Toasts must remain usable if audio playback is unavailable or blocked.
+  const play = () => {
+    try {
+      player.currentTime = 0;
+      const playPromise = player.play();
+      playPromise?.catch?.(() => {});
+    } catch {
+      // Toasts must remain usable if audio playback is unavailable or blocked.
+    }
+  };
+
+  if (typeof player.setSinkId === 'function' && (player.sinkId || '') !== outputDeviceId) {
+    routePlayer(player).then(play, play);
+    return;
   }
+  play();
 }

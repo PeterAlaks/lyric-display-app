@@ -3,6 +3,7 @@ import { stat } from 'fs/promises';
 import {
   addFileNavigatorRoots,
   browseFileNavigator,
+  convertLibraryTextSongsToLdsong,
   createFileNavigatorLyricsFolder,
   getFileNavigatorPreview,
   getFileNavigatorSaveDestinations,
@@ -86,6 +87,14 @@ export function registerFileNavigatorHandlers({ getMainWindow }) {
       return { success: true, ...(await rebuildFileNavigatorIndex()) };
     } catch (error) {
       return errorResult(error, 'Could not refresh the file index');
+    }
+  });
+
+  ipcMain.handle('file-navigator:convert-text-songs', async () => {
+    try {
+      return { success: true, ...(await convertLibraryTextSongsToLdsong()) };
+    } catch (error) {
+      return errorResult(error, 'Could not convert library songs');
     }
   });
 

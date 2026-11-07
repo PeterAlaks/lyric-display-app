@@ -64,6 +64,21 @@ const TimerDisplaySettingsModal = ({ displaySettings, onDraftChange, darkMode = 
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2 py-3">
+            <label className="text-xs font-medium">Flash timer</label>
+            <Select value={settings.flashMode || 'critical'} onValueChange={(value) => update({ flashMode: value })}>
+              <SelectTrigger className={selectTriggerClass}><SelectValue /></SelectTrigger>
+              <SelectContent className={selectContentClass}>
+                <SelectItem value="off">Off</SelectItem>
+                <SelectItem value="critical">In the critical window</SelectItem>
+                <SelectItem value="afterZero">In the critical window and after time runs out</SelectItem>
+                <SelectItem value="always">Always while a timer runs</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className={`text-[10px] ${mutedText}`}>
+              After time runs out, the display keeps flashing until the timer is reset.
+            </p>
+          </div>
           <SettingRow title="Progress bar" description="Show elapsed progress beneath the timer." mutedText={mutedText}>
             <Switch checked={Boolean(settings.showProgress)} onCheckedChange={(checked) => update({ showProgress: checked })} size="small" variant="control" />
           </SettingRow>

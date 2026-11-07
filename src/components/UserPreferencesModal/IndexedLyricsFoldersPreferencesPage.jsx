@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, ArrowLeft, Folder, FolderPlus, LibraryBig, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, FileMusic, Folder, FolderPlus, LibraryBig, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FILE_NAVIGATOR_LIMITS } from '../../../shared/fileNavigatorLimits.js';
 import {
@@ -25,6 +25,7 @@ const IndexedLyricsFoldersPreferencesPage = ({
   const [adding, setAdding] = useState(false);
   const [creatingLyricsFolder, setCreatingLyricsFolder] = useState(false);
   const [removingPath, setRemovingPath] = useState('');
+  const [convertingSongs, setConvertingSongs] = useState(false);
   const [error, setError] = useState('');
 
   const applyResult = useCallback((result) => {
@@ -189,6 +190,46 @@ const IndexedLyricsFoldersPreferencesPage = ({
     }
   };
 
+  const handleConvertTextSongs = async () => {
+    if (convertingSongs || navigatorState.status.scanning) return;
+    const confirmation = await showModal({
+      title: 'Convert TXT songs to .ldsong?',
+      description: 'LyricDisplay will lay out every .txt song in your indexed folders once, using your current parsing settings, and save it as a structured .ldsong beside the original. Your .txt files stay where they are, existing .ldsong files are not overwritten, and .lrc files are skipped so their timing is kept.',
+      variant: 'info',
+      size: 'sm',
+      actions: [
+        { label: 'Cancel', value: 'cancel', variant: 'outline' },
+        { label: 'Convert songs', value: 'convert', autoFocus: true },
+      ],
+    });
+    if (confirmation !== 'convert') return;
+
+    setConvertingSongs(true);
+    try {
+      const result = await window.electronAPI?.fileNavigator?.convertTextSongs?.();
+      if (!result?.success) throw new Error(result?.error || 'Could not convert library songs');
+      const parts = [`${result.converted} converted`];
+      if (result.skipped) parts.push(`${result.skipped} skipped (already structured or an .ldsong already exists)`);
+      if (result.failed) parts.push(`${result.failed} failed`);
+      showToast?.({
+        title: result.total === 0 ? 'No TXT songs found' : 'Library conversion finished',
+        message: result.total === 0
+          ? 'There are no .txt songs in your indexed folders.'
+          : `${parts.join(', ')}.${result.failures?.[0] ? ` First failure: ${result.failures[0].fileName}.` : ''}`,
+        variant: result.failed ? 'warning' : 'success',
+        duration: 7000,
+      });
+    } catch (nextError) {
+      showToast?.({
+        title: 'Songs not converted',
+        message: nextError?.message || 'Could not convert library songs.',
+        variant: 'error',
+      });
+    } finally {
+      setConvertingSongs(false);
+    }
+  };
+
   const { roots, status } = navigatorState;
   const maxRoots = FILE_NAVIGATOR_LIMITS.maxRoots;
   const maxRootSizeMb = Math.round(FILE_NAVIGATOR_LIMITS.maxSourceBytesPerRoot / (1024 * 1024));
@@ -316,6 +357,31 @@ const IndexedLyricsFoldersPreferencesPage = ({
           </div>
         )}
       </div>
+
+      {roots.length > 0 && (
+        <div className={`mt-4 flex items-start justify-between gap-3 rounded-lg border px-3 py-3 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex min-w-0 items-start gap-3">
+            <FileMusic className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" aria-hidden />
+            <div className="min-w-0">
+              <p className={`text-xs font-medium ${labelClass}`}>Convert TXT songs to .ldsong</p>
+              <p className={`mt-0.5 text-[11px] ${mutedClass}`}>
+                Save a structured copy of every .txt song so it shows the same slides on every computer. Originals are kept.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void handleConvertTextSongs()}
+            disabled={loading || convertingSongs || status.scanning}
+            className="shrink-0 gap-1.5"
+          >
+            {convertingSongs && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+            {convertingSongs ? 'Converting…' : 'Convert'}
+          </Button>
+        </div>
+      )}
 
       {status.scanning && (
         <p className={`mt-3 flex items-center gap-2 text-[11px] ${mutedClass}`}>

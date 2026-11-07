@@ -8,6 +8,7 @@ import {
   getRemainingMs,
   isTimerVisiblyActive,
   shouldShowGlobalClockDuringPause,
+  shouldFlashTimerDisplay,
   shouldShowGlobalTimeForManualScheduleItem,
   splitClockPeriod,
 } from '../utils/timerUtils';
@@ -63,6 +64,7 @@ const TimeDisplayFrame = ({
   accentColor,
   textColor,
   intensity,
+  flashing,
   timerState,
   progress,
   clockParts,
@@ -120,7 +122,7 @@ const TimeDisplayFrame = ({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            animation: intensity === 'critical' && timerState.running ? 'timerPulse 1s infinite' : 'none',
+            animation: flashing ? 'timerPulse 1s infinite' : 'none',
           }}
         >
           {label}
@@ -156,7 +158,7 @@ const TimeDisplayFrame = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               opacity: isWaitingForTime ? 0.45 : 1,
-              animation: intensity === 'critical' && timerState.running ? 'timerPulse 1s infinite' : 'none',
+              animation: flashing ? 'timerPulse 1s infinite' : 'none',
               contain: 'layout paint',
             }}
           >
@@ -353,6 +355,7 @@ export function TimeOutputFrame({
           accentColor={accentColor}
           textColor={textColor}
           intensity={intensity}
+          flashing={shouldFlashTimerDisplay(timerState, display, now)}
           timerState={timerState}
           progress={progress}
           clockParts={clockParts}
