@@ -44,6 +44,7 @@ import SectionTagPhrasesPreferencesPage from './UserPreferencesModal/SectionTagP
 import UserPreferencesLayout from './UserPreferencesModal/UserPreferencesLayout';
 import { normalizeLineSplittingConfig } from '../../shared/lyricsParsing/preferenceOptions.js';
 import { normalizeCcliNumber } from '../../shared/lyricsParsing/songMetadata.js';
+import { DEFAULT_PASTE_LINES_PER_SLIDE, MAX_PASTE_LINES_PER_SLIDE } from '../utils/songDocumentEditing.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,
@@ -910,6 +911,28 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
                 size="medium"
                 variant="control"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className={preferenceFieldLabelClass}>Lines per Slide When Pasting</label>
+              <Input
+                type="number"
+                min="1"
+                max={String(MAX_PASTE_LINES_PER_SLIDE)}
+                {...getNumberPreferenceInputProps('formatting', 'pasteLinesPerSlide', {
+                  min: 1,
+                  max: MAX_PASTE_LINES_PER_SLIDE,
+                  fallbackValue: DEFAULT_PASTE_LINES_PER_SLIDE,
+                  parse: 'int',
+                }, (value) => {
+                  updatePreference('formatting', 'pasteLinesPerSlide', value);
+                  useLyricsStore.getState().setPasteLinesPerSlide(value);
+                })}
+                className={inputClass}
+              />
+              <p className={`text-xs ${mutedClass}`}>
+                In the structured song editor, pasted lyrics fill each slide with up to this many lines. A blank line always starts a new slide.
+              </p>
             </div>
 
             <div className={preferenceToggleRowClass}>

@@ -32,6 +32,12 @@ import { sanitizeIntegerInput, sanitizeNumberInput } from '../utils/numberInput'
 import { outputTemplates } from '../utils/outputTemplates';
 import { SlidingTabIndicator } from './ui/sliding-tab-indicator';
 import { resolveBackendUrl } from '../utils/network';
+import { LYRIC_TRANSITION_ANIMATION_OPTIONS } from '../../shared/transitionSettings.js';
+import {
+  KINETIC_INTENSITY_OPTIONS,
+  KINETIC_TRANSITION,
+  normalizeKineticSettings,
+} from '../../shared/kineticTypography.js';
 
 // These wrappers intentionally live at module scope. Dock settings receive live
 // updates while their portal-based pickers are open, so changing a wrapper's
@@ -1152,26 +1158,42 @@ const OutputSettingsPanel = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent {...compactSelectContentProps}>
-                  <SelectItem value="none" className={compactItemClass}>None</SelectItem>
-                  <SelectItem value="fade" className={compactItemClass}>Fade</SelectItem>
-                  <SelectItem value="scale" className={compactItemClass}>Scale</SelectItem>
-                  <SelectItem value="slide" className={compactItemClass}>Slide</SelectItem>
-                  <SelectItem value="blur" className={compactItemClass}>Blur</SelectItem>
+                  {LYRIC_TRANSITION_ANIMATION_OPTIONS.map(({ value, label }) => (
+                    <SelectItem key={value} value={value} className={compactItemClass}>{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </CompactField>
-            <CompactField label="Speed">
-              <Input
-                type="number"
-                min="100"
-                max="2000"
-                step="50"
-                disabled={(settings.transitionAnimation ?? 'none') === 'none'}
-                value={settings.transitionSpeed ?? 150}
-                onChange={(e) => update('transitionSpeed', sanitizeIntegerInput(e.target.value, settings.transitionSpeed ?? 150, { min: 100, max: 2000, clampMin: false }))}
-                className={`${compactInputClass} ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
-              />
-            </CompactField>
+            {settings.transitionAnimation === KINETIC_TRANSITION ? (
+              <CompactField label="Intensity">
+                <Select
+                  value={normalizeKineticSettings(settings).intensity}
+                  onValueChange={(val) => update('kineticIntensity', val)}
+                >
+                  <SelectTrigger className={compactSelectClass}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent {...compactSelectContentProps}>
+                    {KINETIC_INTENSITY_OPTIONS.map(({ value, label }) => (
+                      <SelectItem key={value} value={value} className={compactItemClass}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CompactField>
+            ) : (
+              <CompactField label="Speed">
+                <Input
+                  type="number"
+                  min="100"
+                  max="2000"
+                  step="50"
+                  disabled={(settings.transitionAnimation ?? 'none') === 'none'}
+                  value={settings.transitionSpeed ?? 150}
+                  onChange={(e) => update('transitionSpeed', sanitizeIntegerInput(e.target.value, settings.transitionSpeed ?? 150, { min: 100, max: 2000, clampMin: false }))}
+                  className={`${compactInputClass} ${(settings.transitionAnimation ?? 'none') === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                />
+              </CompactField>
+            )}
           </CompactGrid>
         </CompactSection>
 

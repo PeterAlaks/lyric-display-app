@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -17,6 +17,7 @@ import {
   getTransitionVariants,
   normalizeTransitionDuration,
 } from '../../shared/transitionSettings.js';
+import { KINETIC_TRANSITION, resolveKineticSection } from '../../shared/kineticTypography.js';
 
 const SONG_CREDITS_POSITION_CLASSES = {
   'bottom-left': 'bottom-0 left-0 text-left',
@@ -73,8 +74,21 @@ export function OutputFrame({
   const label = outputId.charAt(0).toUpperCase() + outputId.slice(1);
   const { settings: outputSettings } = useOutputSettings(outputId);
   const outputEnabled = useOutputEnabled(outputId);
-  const { lyrics, selectedLine, songMetadata } = useLyricsState();
+  const {
+    lyrics,
+    selectedLine,
+    songMetadata,
+    lyricsFileName,
+    lyricsSections,
+    lineToSection,
+  } = useLyricsState();
   const { isOutputOn } = useOutputState();
+  const isKinetic = outputSettings?.transitionAnimation === KINETIC_TRANSITION;
+  const kineticSection = useMemo(() => (
+    isKinetic
+      ? resolveKineticSection({ sections: lyricsSections, lineToSection, lineIndex: selectedLine })
+      : null
+  ), [isKinetic, lineToSection, lyricsSections, selectedLine]);
 
   const currentLine = lyrics[selectedLine];
   const line = getLineOutputText(currentLine) || '';
@@ -146,6 +160,8 @@ export function OutputFrame({
           renderBackgroundLayer={!keepFullScreenBackgroundVisible}
           retainBackgroundLayerWhenInactive
           retainContentWhenInactive
+          kineticSongKey={lyricsFileName || songMetadata?.title || ''}
+          kineticSection={kineticSection}
         />
         {songCreditLines.length > 0 && (
           <SongCreditsOverlay lines={songCreditLines} settings={outputSettings} />

@@ -11,6 +11,10 @@ import {
   DEFAULT_PREVIEW_SETTINGS,
   normalizePreviewSettings,
 } from '../../../shared/previewSettings.js';
+import {
+  DEFAULT_PASTE_LINES_PER_SLIDE,
+  normalizePasteLinesPerSlide,
+} from '../../utils/songDocumentEditing.js';
 
 let maxFileSizeLimit = 2;
 
@@ -22,6 +26,7 @@ export const createPreferencesSlice = (set) => ({
   skipSectionTitlesOnKeyboard: true,
   previewLinesEnabled: false,
   canvasCleanupOnPaste: true,
+  pasteLinesPerSlide: DEFAULT_PASTE_LINES_PER_SLIDE,
   formattingCapitalizeFirstLetter: true,
   formattingCapitalizeReligiousTerms: true,
   formattingCapitalizedWords: [...DEFAULT_CAPITALIZED_WORDS],
@@ -38,6 +43,7 @@ export const createPreferencesSlice = (set) => ({
   setSkipSectionTitlesOnKeyboard: (enabled) => set({ skipSectionTitlesOnKeyboard: enabled }),
   setPreviewLinesEnabled: (enabled) => set({ previewLinesEnabled: enabled }),
   setCanvasCleanupOnPaste: (enabled) => set({ canvasCleanupOnPaste: enabled }),
+  setPasteLinesPerSlide: (count) => set({ pasteLinesPerSlide: normalizePasteLinesPerSlide(count) }),
   setFormattingCapitalizeFirstLetter: (enabled) => set({ formattingCapitalizeFirstLetter: enabled }),
   setFormattingCapitalizeReligiousTerms: (enabled) => set({ formattingCapitalizeReligiousTerms: enabled }),
   setFormattingCapitalizedWords: (words) => set({

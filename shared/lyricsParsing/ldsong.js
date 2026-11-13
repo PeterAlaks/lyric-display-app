@@ -364,7 +364,9 @@ export function documentFromProcessedLines(processedLines, { songMetadata = null
         ].filter((line) => line.text),
       });
     } else if (item?.type === 'normal-group') {
-      const lines = groupLines(item).map((text) => ({ role: 'lyric', text: text.trim() }));
+      const lines = groupLines(item).map((text) => (isStageOnlyLine(text)
+        ? { role: 'stage', text: stripStageOnlyPrefix(text).trim() }
+        : { role: 'lyric', text: text.trim() }));
       if (lines.length > 0) currentSection().slides.push({ lines });
     }
   }

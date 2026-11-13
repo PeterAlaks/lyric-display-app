@@ -157,6 +157,12 @@ export async function loadPreferencesIntoStore(store) {
       }
     }
     if (window.electronAPI?.preferences?.get) {
+      const result = await window.electronAPI.preferences.get('formatting.pasteLinesPerSlide');
+      if (result.success && result.value != null) {
+        store.getState().setPasteLinesPerSlide(result.value);
+      }
+    }
+    if (window.electronAPI?.preferences?.get) {
       const result = await window.electronAPI.preferences.get('formatting.capitalizeFirstLetter');
       if (result.success && typeof result.value === 'boolean') {
         store.getState().setFormattingCapitalizeFirstLetter(result.value);

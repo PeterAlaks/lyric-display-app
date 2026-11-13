@@ -410,6 +410,85 @@ test('pasted songs are laid out by the parser while short pastes stay literal', 
   ]);
 });
 
+const slideTexts = (doc) => doc.sections.map((section) => [
+  section.label,
+  section.slides.map((slide) => slide.lines.map((line) => (line.role === 'lyric' ? line.text : `${line.role}: ${line.text}`))),
+]);
+
+test('pasted songs fill slides with the chosen number of lines, never across a blank line', () => {
+  const song = [
+    'Amazing grace how sweet the sound that saved a wretch like me',
+    'I once was lost but now am found, was blind but now I see, and I will sing of grace',
+    'Through many dangers, toils and snares I have already come',
+    '',
+    'When we have been there ten thousand years',
+    '',
+    'Bright shining as the sun',
+  ].join('\n');
+  // The classic list's grouping limits and long-line splitting must not reshape a paste.
+  const parsingOptions = { enableSplitting: true, groupingConfig: { enableAutoLineGrouping: false, enableCrossBlankLineGrouping: true } };
+
+  assert.deepEqual(slideTexts(importLyricsIntoEditor(createEditorDocument(), song, { parsingOptions, linesPerSlide: 2 })), [
+    ['', [
+      ['Amazing grace how sweet the sound that saved a wretch like me', 'I once was lost but now am found, was blind but now I see, and I will sing of grace'],
+      ['Through many dangers, toils and snares I have already come'],
+      ['When we have been there ten thousand years'],
+      ['Bright shining as the sun'],
+    ]],
+  ]);
+
+  assert.deepEqual(
+    slideTexts(importLyricsIntoEditor(createEditorDocument(), song, { parsingOptions, linesPerSlide: 3 }))[0][1].map((slide) => slide.length),
+    [3, 1, 1],
+  );
+  assert.deepEqual(
+    slideTexts(importLyricsIntoEditor(createEditorDocument(), song, { parsingOptions, linesPerSlide: 1 }))[0][1].map((slide) => slide.length),
+    [1, 1, 1, 1, 1],
+  );
+});
+
+test('pasted slide layout keeps sections, translations, and stage notes', () => {
+  const song = [
+    'Chorus',
+    'Hosanna in the highest',
+    '(Hosanna en las alturas)',
+    'Let our praises rise to You',
+    'Hosanna, hosanna',
+    'Glory to the King',
+    '',
+    '// Band: hold the last chord',
+    'Hosanna',
+  ].join('\n');
+  assert.deepEqual(slideTexts(importLyricsIntoEditor(createEditorDocument(), song, { parsingOptions: {}, linesPerSlide: 2 })), [
+    ['Chorus', [
+      ['Hosanna in the highest', 'translation: Hosanna en las alturas'],
+      ['Let our praises rise to You', 'Hosanna, hosanna'],
+      ['Glory to the King'],
+      ['stage: Band: hold the last chord', 'Hosanna'],
+    ]],
+  ]);
+});
+
+test('short pastes into a line start a new slide once the slide holds the chosen number of lines', () => {
+  let { document: doc, lineId } = addEditorSection(createEditorDocument(), { label: 'Verse 1' });
+  doc = insertLiteralLinesIntoEditor(doc, lineId, 'One\nTwo\nThree\n\nFour', { linesPerSlide: 2 });
+  assert.deepEqual(slideTexts(doc)[0][1], [['One', 'Two'], ['Three'], ['Four']]);
+
+  // Lines already on the slide count toward the limit.
+  ({ document: doc, lineId } = addEditorSection(createEditorDocument(), { label: 'Verse 1' }));
+  doc = updateEditorLine(doc, lineId, { text: 'Existing' });
+  doc = insertLiteralLinesIntoEditor(doc, lineId, 'One\nTwo\nThree', { linesPerSlide: 2 });
+  assert.deepEqual(slideTexts(doc)[0][1], [['Existing', 'One'], ['Two', 'Three']]);
+
+  // An empty line on a full slide moves to the next slide instead of overfilling it.
+  ({ document: doc, lineId } = addEditorSection(createEditorDocument(), { label: 'Verse 1' }));
+  doc = updateEditorLine(doc, lineId, { text: 'A' });
+  doc = addEditorLine(doc, { afterLineId: lineId, text: 'B' }).document;
+  const added = addEditorLine(doc, { afterLineId: doc.sections[0].slides[0].lines[1].id });
+  doc = insertLiteralLinesIntoEditor(added.document, added.lineId, 'C\nD', { linesPerSlide: 2 });
+  assert.deepEqual(slideTexts(doc)[0][1], [['A', 'B'], ['C', 'D']]);
+});
+
 test('song editor fit checks flag slides that may not display well', () => {
   const issues = getEditorSlideIssues({
     lines: [

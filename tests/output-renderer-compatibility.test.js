@@ -86,6 +86,19 @@ test('control-window previews draw lyric outputs directly from the shared output
   assert.match(previewModalSource, /<TimeOutputFrame viewport=\{timeResolution\} \/>/);
 });
 
+test('kinetic lyric transitions animate live but fall back to static text when animations are disabled', () => {
+  assert.match(rendererSource, /const useKineticText = !disableAnimations && transitionAnimation === KINETIC_TRANSITION/);
+  assert.match(rendererSource, /if \(useKineticText\) \{\s*return renderKineticText\(\);/);
+  assert.match(rendererSource, /const renderKineticText = \(\) => \{[\s\S]*?<KineticLyricText/);
+  assert.match(rendererSource, /<KineticLyricText[\s\S]*?containerRef=\{textContainerRef\}/);
+});
+
+test('lyric outputs give kinetic typography the song part so repeated sections share a look', () => {
+  assert.match(outputPageSource, /resolveKineticSection\(\{[\s\S]*?lineToSection[\s\S]*?lineIndex: selectedLine/);
+  assert.match(outputPageSource, /kineticSection=\{kineticSection\}/);
+  assert.match(outputPageSource, /kineticSongKey=/);
+});
+
 test('the projected preview grid draws its feeds directly instead of embedding output pages', () => {
   const previewPageSource = fs.readFileSync(new URL('../src/pages/Preview.jsx', import.meta.url), 'utf8');
   assert.doesNotMatch(previewPageSource, /<iframe|createPreviewUrl/);

@@ -171,6 +171,7 @@ const SongEditor = () => {
   const handleFileUpload = useFileUpload();
   const parsingOptions = useLyricsStore((state) => state.lyricsParsingOptions);
   const sectionTagPhrases = parsingOptions.groupingConfig.sectionTagPhrases;
+  const pasteLinesPerSlide = useLyricsStore((state) => state.pasteLinesPerSlide);
   const { settings: output1Settings } = useOutputSettings('output1');
 
   const initial = useMemo(() => startingDocument(), []);
@@ -323,14 +324,15 @@ const SongEditor = () => {
       const nextDocument = importLyricsIntoEditor(document, value, {
         parsingOptions,
         afterSectionId: sectionId,
+        linesPerSlide: pasteLinesPerSlide,
       });
       commit(nextDocument);
       if (replacesStarter) prefillTitle(nextDocument);
       return;
     }
 
-    commit(insertLiteralLinesIntoEditor(document, lineId, value));
-  }, [commit, document, parsingOptions, prefillTitle]);
+    commit(insertLiteralLinesIntoEditor(document, lineId, value, { linesPerSlide: pasteLinesPerSlide }));
+  }, [commit, document, parsingOptions, pasteLinesPerSlide, prefillTitle]);
 
   // Pasting outside a field lays a whole song out; fields handle their own pastes.
   useEffect(() => {

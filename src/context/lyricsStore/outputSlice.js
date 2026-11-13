@@ -5,6 +5,7 @@ import {
   normalizeCustomOutputRouteIds,
 } from '../../../shared/outputRegistry.js';
 import { DEFAULT_APPEARANCE_TRANSITIONS } from '../../../shared/transitionSettings.js';
+import { DEFAULT_KINETIC_SETTINGS } from '../../../shared/kineticTypography.js';
 import {
   DEFAULT_LYRIC_VIDEO_VISUALIZER,
   LYRIC_VIDEO_BACKGROUND_SOURCES,
@@ -161,6 +162,7 @@ export const defaultOutput1Settings = {
   outputVisibilityTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.outputVisibilityTransitionAnimation,
   outputVisibilityTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.outputVisibilityTransitionDuration,
   ...DEFAULT_SONG_CREDITS_SETTINGS,
+  ...DEFAULT_KINETIC_SETTINGS,
 };
 
 /** Default settings factory for any new output */
@@ -252,6 +254,7 @@ export const createDefaultOutputSettings = (overrides = {}) => ({
   outputVisibilityTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.outputVisibilityTransitionAnimation,
   outputVisibilityTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.outputVisibilityTransitionDuration,
   ...DEFAULT_SONG_CREDITS_SETTINGS,
+  ...DEFAULT_KINETIC_SETTINGS,
   ...overrides,
 });
 
@@ -343,6 +346,7 @@ export const defaultOutput2Settings = {
   outputVisibilityTransitionAnimation: DEFAULT_APPEARANCE_TRANSITIONS.outputVisibilityTransitionAnimation,
   outputVisibilityTransitionDuration: DEFAULT_APPEARANCE_TRANSITIONS.outputVisibilityTransitionDuration,
   ...DEFAULT_SONG_CREDITS_SETTINGS,
+  ...DEFAULT_KINETIC_SETTINGS,
 };
 
 export const createOutputSlice = (set, get, normalizePaintSettingUpdates) => ({

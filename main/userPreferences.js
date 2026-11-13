@@ -54,6 +54,7 @@ const preferencesStore = new Store({
     // Lyrics Formatting Settings
     formatting: {
       enableCleanupOnPaste: true,
+      pasteLinesPerSlide: 2,
       capitalizeFirstLetter: true,
       capitalizeReligiousTerms: true,
       capitalizedWords: [...DEFAULT_CAPITALIZED_WORDS],

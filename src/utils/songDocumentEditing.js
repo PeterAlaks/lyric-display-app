@@ -264,12 +264,40 @@ export function isSongSizedPaste(text) {
   return nonEmptyLines >= 6 || (blocks >= 2 && nonEmptyLines >= 4);
 }
 
+export const DEFAULT_PASTE_LINES_PER_SLIDE = 2;
+export const MAX_PASTE_LINES_PER_SLIDE = 12;
+
+export function normalizePasteLinesPerSlide(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return DEFAULT_PASTE_LINES_PER_SLIDE;
+  return Math.max(1, Math.min(MAX_PASTE_LINES_PER_SLIDE, parsed));
+}
+
+// Pasted lyrics fill each slide with up to N lines of a stanza; a blank line always ends a slide.
+// Lines are kept whole, since the editor flags lines that may wrap on screen.
+const pasteLayoutOptions = (parsingOptions = {}, linesPerSlide) => {
+  const limit = normalizePasteLinesPerSlide(linesPerSlide);
+  return {
+    ...parsingOptions,
+    enableSplitting: false,
+    groupingConfig: {
+      ...(parsingOptions.groupingConfig || {}),
+      enableAutoLineGrouping: limit > 1,
+      maxLineLength: Number.POSITIVE_INFINITY,
+      maxLinesPerGroup: limit,
+      enableCrossBlankLineGrouping: false,
+    },
+  };
+};
+
 /**
- * Lay pasted lyrics out with the user's parsing settings, so they can be reviewed before
- * saving. Replaces an empty song, or is added after the given section.
+ * Lay pasted lyrics out for review before saving: with `linesPerSlide`, each stanza fills
+ * slides of that many lines; otherwise the user's parsing settings decide. Replaces an empty
+ * song, or is added after the given section.
  */
-export function importLyricsIntoEditor(document, text, { parsingOptions = {}, afterSectionId = null } = {}) {
-  const parsed = parseTxtContent(String(text || ''), parsingOptions);
+export function importLyricsIntoEditor(document, text, { parsingOptions = {}, afterSectionId = null, linesPerSlide = null } = {}) {
+  const options = linesPerSlide == null ? parsingOptions : pasteLayoutOptions(parsingOptions, linesPerSlide);
+  const parsed = parseTxtContent(String(text || ''), options);
   const imported = createEditorDocument(parsed.document || documentFromProcessedLines(parsed.processedLines, {
     songMetadata: parsed.songMetadata,
     sectionTagPhrases: parsingOptions?.groupingConfig?.sectionTagPhrases,
@@ -290,36 +318,49 @@ export function importLyricsIntoEditor(document, text, { parsingOptions = {}, af
   return { ...document, sections };
 }
 
-/** Insert pasted lines as typed: lines join the current slide, blank lines start new slides. */
-export function insertLiteralLinesIntoEditor(document, lineId, text) {
+/**
+ * Insert pasted lines as typed: lines join the current slide and blank lines start new slides.
+ * With `linesPerSlide`, a new slide also starts once the slide holds that many lines.
+ */
+export function insertLiteralLinesIntoEditor(document, lineId, text, { linesPerSlide = null } = {}) {
   const blocks = String(text || '')
     .split(/\r?\n\s*\r?\n/)
     .map((block) => block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))
     .filter((block) => block.length > 0);
-  if (blocks.length === 0 || !findLine(document, lineId)) return document;
+  const location = findLine(document, lineId);
+  if (blocks.length === 0 || !location) return document;
 
+  const limit = linesPerSlide == null ? Number.POSITIVE_INFINITY : normalizePasteLinesPerSlide(linesPerSlide);
+  const slide = document.sections[location.sectionIndex].slides[location.slideIndex];
+  const targetIsEmpty = !String(slide.lines[location.lineIndex].text || '').trim();
   let next = document;
   let cursor = lineId;
-  const target = (() => {
-    const { sectionIndex, slideIndex, lineIndex } = findLine(document, lineId);
-    return document.sections[sectionIndex].slides[slideIndex].lines[lineIndex];
-  })();
+  let filled = location.lineIndex + (targetIsEmpty ? 0 : 1);
+
+  // An empty line on an already full slide moves to a new slide before it is filled.
+  if (targetIsEmpty && filled >= limit) {
+    next = splitEditorSlide(next, slide.lines[location.lineIndex - 1].id).document;
+    filled = 0;
+  }
 
   blocks.forEach((block, blockIndex) => {
     block.forEach((lineText, lineIndex) => {
-      if (blockIndex === 0 && lineIndex === 0 && !String(target.text || '').trim()) {
+      if (blockIndex === 0 && lineIndex === 0 && targetIsEmpty) {
         next = updateEditorLine(next, cursor, { text: lineText });
+        filled += 1;
         return;
       }
-      if (blockIndex > 0 && lineIndex === 0) {
+      if ((blockIndex > 0 && lineIndex === 0) || filled >= limit) {
         const split = splitEditorSlide(next, cursor);
         next = updateEditorLine(split.document, split.lineId, { text: lineText });
         cursor = split.lineId;
+        filled = 1;
         return;
       }
       const added = addEditorLine(next, { afterLineId: cursor, text: lineText });
       next = added.document;
       cursor = added.lineId;
+      filled += 1;
     });
   });
   return next;

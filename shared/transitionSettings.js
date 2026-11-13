@@ -1,3 +1,5 @@
+import { KINETIC_TRANSITION } from './kineticTypography.js';
+
 export const TRANSITION_ANIMATION_OPTIONS = [
   { value: 'none', label: 'None' },
   { value: 'fade', label: 'Fade' },
@@ -7,6 +9,13 @@ export const TRANSITION_ANIMATION_OPTIONS = [
 ];
 
 export const TRANSITION_ANIMATION_VALUES = TRANSITION_ANIMATION_OPTIONS.map(({ value }) => value);
+
+// Kinetic typography animates words and letters, so it is offered for lyric lines only and never
+// for the timer, background media or output visibility transitions that share the list above.
+export const LYRIC_TRANSITION_ANIMATION_OPTIONS = [
+  ...TRANSITION_ANIMATION_OPTIONS,
+  { value: KINETIC_TRANSITION, label: 'Kinetic' },
+];
 
 export const MIN_TRANSITION_DURATION_MS = 100;
 export const MAX_TRANSITION_DURATION_MS = 2000;

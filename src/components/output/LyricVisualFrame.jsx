@@ -7,10 +7,12 @@ import { paintToCss } from '../../utils/paint';
 import { logError } from '../../utils/logger';
 import ProjectionExitHint from '../ProjectionExitHint';
 import ButterchurnBackground from '../LyricVideoStudio/ButterchurnBackground';
+import KineticLyricText from './KineticLyricText';
 import {
   getTransitionVariants,
   normalizeTransitionDuration,
 } from '../../../shared/transitionSettings.js';
+import { KINETIC_TRANSITION } from '../../../shared/kineticTypography.js';
 import {
   LYRIC_VIDEO_BACKGROUND_SOURCES,
   normalizeLyricVideoVisualizer,
@@ -256,6 +258,8 @@ export default function LyricVisualFrame({
   renderFullScreenElementLayer = true,
   retainBackgroundLayerWhenInactive = false,
   retainContentWhenInactive = false,
+  kineticSongKey = '',
+  kineticSection = null,
 }) {
   const [adjustedFontSize, setAdjustedFontSize] = useState(null);
   const textContainerRef = useRef(null);
@@ -320,6 +324,8 @@ export default function LyricVisualFrame({
 
   const animationVariants = getTransitionVariants(transitionAnimation);
   const shouldAnimate = !disableAnimations && transitionAnimation !== 'none' && animationVariants !== null;
+  // Video export seeks frames and disables animations; kinetic text then renders statically.
+  const useKineticText = !disableAnimations && transitionAnimation === KINETIC_TRANSITION;
   const backgroundTransitionVariants = useMemo(
     () => (disableAnimations ? null : getTransitionVariants(backgroundMediaTransitionAnimation)),
     [backgroundMediaTransitionAnimation, disableAnimations]
@@ -707,42 +713,64 @@ export default function LyricVisualFrame({
     onAutosizeChange,
   ]);
 
+  // Stacked lines (translations and grouped lines) with the styling each one is drawn with.
+  const getStackedContentLines = (processedText) => {
+    const lines = processedText.split('\n');
+    const isTranslationGroup = currentLine?.type === 'group' && lines.length === 2;
+    const effectiveTranslationSize = translationFontSizeMode === 'custom'
+      ? translationFontSize
+      : (adjustedFontSize ?? fontSize);
+
+    return lines.map((lineText, index) => {
+      const isTranslationLine = isTranslationGroup && index > 0;
+      return {
+        text: isTranslationLine
+          ? lineText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim()
+          : lineText,
+        style: {
+          ...textStrokeStyles,
+          color: isTranslationLine ? translationLineColor : 'inherit',
+          fontSize: isTranslationLine ? `${effectiveTranslationSize}px` : 'inherit',
+          fontWeight: bold ? 'bold' : 'normal',
+        },
+      };
+    });
+  };
+
   const renderContent = () => {
     const processedText = processDisplayText(displayLine);
 
     if (processedText.includes('\n')) {
-      const lines = processedText.split('\n');
-      const isTranslationGroup = currentLine?.type === 'group' && lines.length === 2;
-      const effectiveTranslationSize = translationFontSizeMode === 'custom'
-        ? translationFontSize
-        : (adjustedFontSize ?? fontSize);
-
       return (
         <div className="space-y-1">
-          {lines.map((lineText, index) => {
-            const lineDisplayText = (isTranslationGroup && index > 0)
-              ? lineText.replace(/^[\[({<]|[\])}>\s]*$/g, '').trim()
-              : lineText;
-
-            return (
-              <div
-                key={index}
-                style={{
-                  ...textStrokeStyles,
-                  color: (isTranslationGroup && index > 0) ? translationLineColor : 'inherit',
-                  fontSize: (isTranslationGroup && index > 0) ? `${effectiveTranslationSize}px` : 'inherit',
-                  fontWeight: bold ? 'bold' : 'normal',
-                }}
-              >
-                {lineDisplayText}
-              </div>
-            );
-          })}
+          {getStackedContentLines(processedText).map((contentLine, index) => (
+            <div key={index} style={contentLine.style}>
+              {contentLine.text}
+            </div>
+          ))}
         </div>
       );
     }
 
     return processedText;
+  };
+
+  const renderKineticText = () => {
+    const processedText = isVisible ? processDisplayText(displayLine) : '';
+    const stackedLines = processedText.includes('\n') ? getStackedContentLines(processedText) : null;
+
+    return (
+      <KineticLyricText
+        text={stackedLines ? stackedLines.map((contentLine) => contentLine.text).join('\n') : processedText}
+        lineStyles={stackedLines ? stackedLines.map((contentLine) => contentLine.style) : []}
+        lineKey={frameKey}
+        songKey={kineticSongKey}
+        section={kineticSection}
+        settings={safeSettings}
+        containerRef={textContainerRef}
+        style={textStyles}
+      />
+    );
   };
 
   const textStyles = {
@@ -772,6 +800,10 @@ export default function LyricVisualFrame({
   };
 
   const renderTextBlock = (keyPrefix) => {
+    if (useKineticText) {
+      return renderKineticText();
+    }
+
     if (shouldAnimate) {
       return (
         <AnimatePresence mode="wait">
