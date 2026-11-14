@@ -71,7 +71,7 @@ const AutoplaySettings = ({ settings, onSave, darkMode, close }) => {
             Start from first line
           </label>
           <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Begin autoplay from the first line
+            Begin autoplay and intelligent autoplay from the first line instead of the selected line
           </p>
         </div>
         <button

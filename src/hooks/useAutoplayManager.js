@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getLineDisplayText } from '../utils/parseLyrics';
-import { getNextIntelligentAutoplayStep, hasValidTimestamps } from '../utils/timestampHelpers';
+import { getAutoplayStartIndex, getNextIntelligentAutoplayStep, hasValidTimestamps } from '../utils/timestampHelpers';
 import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
 import useLyricsStore from '../context/LyricsStore';
 
@@ -33,6 +33,8 @@ export const useAutoplayManager = ({
 
   const autoplayIntervalRef = useRef(null);
   const intelligentAutoplayTimeoutRef = useRef(null);
+  const intelligentAnchorIndexRef = useRef(null);
+  const rescheduleIntelligentAutoplayRef = useRef(null);
 
   const lyricsRef = useRef(lyrics);
   const lyricsTimestampsRef = useRef(lyricsTimestamps);
@@ -148,6 +150,8 @@ export const useAutoplayManager = ({
       const currentEmitLineUpdate = emitLineUpdateRef.current;
       const currentShowToast = showToastRef.current;
 
+      intelligentAnchorIndexRef.current = displayedIndex;
+
       const step = getNextIntelligentAutoplayStep({
         lyrics: currentLyrics,
         timestamps: currentTimestamps,
@@ -182,15 +186,33 @@ export const useAutoplayManager = ({
       }, step.delayMs);
     };
 
+    rescheduleIntelligentAutoplayRef.current = (index) => {
+      if (intelligentAutoplayTimeoutRef.current) {
+        clearTimeout(intelligentAutoplayTimeoutRef.current);
+        intelligentAutoplayTimeoutRef.current = null;
+      }
+      scheduleNextLine(index);
+    };
+
     scheduleNextLine(selectedLineRef.current ?? -1);
 
     return () => {
+      rescheduleIntelligentAutoplayRef.current = null;
+      intelligentAnchorIndexRef.current = null;
       if (intelligentAutoplayTimeoutRef.current) {
         clearTimeout(intelligentAutoplayTimeoutRef.current);
         intelligentAutoplayTimeoutRef.current = null;
       }
     };
   }, [intelligentAutoplayActive, hasLyrics, isLineBlank]);
+
+  // When the operator manually selects a line while intelligent autoplay runs,
+  // re-anchor the timeline on that line instead of jumping to the pre-scheduled one.
+  useEffect(() => {
+    if (!intelligentAutoplayActive || !Number.isInteger(selectedLine)) return;
+    if (selectedLine === intelligentAnchorIndexRef.current) return;
+    rescheduleIntelligentAutoplayRef.current?.(selectedLine);
+  }, [selectedLine, intelligentAutoplayActive]);
 
   useEffect(() => {
     setAutoplayActive(false);
@@ -226,13 +248,13 @@ export const useAutoplayManager = ({
       return;
     }
 
-    let startIndex = 0;
-    if (autoplaySettings.skipBlankLines) {
-      while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
-        startIndex++;
-      }
-    }
-    if (startIndex >= lyrics.length) {
+    const startIndex = getAutoplayStartIndex({
+      lyrics,
+      selectedLine,
+      settings: autoplaySettings,
+      isLineBlank
+    });
+    if (startIndex === null) {
       showToast({
         title: 'Cannot Start Intelligent Autoplay',
         message: 'No non-blank lines found.',
@@ -253,7 +275,7 @@ export const useAutoplayManager = ({
       message: 'Advancing based on lyric timestamps.',
       variant: 'success'
     });
-  }, [autoplaySettings, lyrics, lyricsTimestamps, isLineBlank, selectLine, emitLineUpdate, showToast]);
+  }, [autoplaySettings, lyrics, lyricsTimestamps, selectedLine, isLineBlank, selectLine, emitLineUpdate, showToast]);
 
   const stopIntelligentAutoplay = useCallback(() => {
     setIntelligentAutoplayActive(false);

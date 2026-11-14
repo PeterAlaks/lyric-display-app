@@ -55,6 +55,40 @@ export function calculateTimestampDelay(timestamps, currentIndex, nextIndex) {
 }
 
 /**
+ * Resolve the line autoplay should start from.
+ * Uses the selected line unless settings.startFromFirst is enabled or the selection is unusable,
+ * in which case it falls back to the first (non-blank, when skipping blanks) line.
+ * @param {Object} options
+ * @param {Array} options.lyrics - Current lyric lines
+ * @param {number | null} options.selectedLine - Currently selected line index
+ * @param {Object} options.settings - Autoplay settings
+ * @param {Function} options.isLineBlank - Blank-line predicate
+ * @returns {number | null} - Start index, or null when no usable line exists
+ */
+export function getAutoplayStartIndex({ lyrics, selectedLine, settings, isLineBlank }) {
+  if (!Array.isArray(lyrics) || lyrics.length === 0) {
+    return null;
+  }
+
+  const hasUsableSelection = Number.isInteger(selectedLine)
+    && selectedLine >= 0
+    && selectedLine < lyrics.length;
+
+  if (!settings?.startFromFirst && hasUsableSelection) {
+    return selectedLine;
+  }
+
+  let startIndex = 0;
+  if (settings?.skipBlankLines) {
+    while (startIndex < lyrics.length && isLineBlank(lyrics[startIndex])) {
+      startIndex++;
+    }
+  }
+
+  return startIndex < lyrics.length ? startIndex : null;
+}
+
+/**
  * Get the next intelligent autoplay step from a displayed lyric index.
  * @param {Object} options
  * @param {Array} options.lyrics - Current lyric lines

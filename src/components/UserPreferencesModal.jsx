@@ -1299,7 +1299,7 @@ const UserPreferencesModal = ({ darkMode, onClose, initialCategory }) => {
             <div className="flex items-center justify-between">
               <div>
                 <label className={`text-sm font-medium ${labelClass}`}>Start from First Line</label>
-                <p className={`text-xs ${mutedClass}`}>Begin autoplay from the first line</p>
+                <p className={`text-xs ${mutedClass}`}>Begin autoplay and intelligent autoplay from the first line instead of the selected line</p>
               </div>
               <Switch
                 checked={preferences.autoplay?.defaultStartFromFirst ?? true}

@@ -388,7 +388,7 @@ export const MobileControllerHelp = ({ darkMode }) => (
         <HelpSection
             icon={Type}
             title="Start Autoplay"
-            description="Automatically advance through lyrics at a set interval. Configure autoplay settings including interval timing, loop behavior, skip blank lines, and whether to start from the first line. Perfect for rehearsals or automated presentations."
+            description="Automatically advance through lyrics at a set interval. Configure autoplay settings including interval timing, loop behavior, skip blank lines, and whether to start from the first line or the selected line. Intelligent autoplay (for timestamped lyrics) follows the same start and skip-blank-lines settings, and re-syncs to any line you select while it is running. Perfect for rehearsals or automated presentations."
             darkMode={darkMode}
         />
 
