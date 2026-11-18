@@ -11,6 +11,19 @@
   StrCpy $FirewallSelection ${BST_CHECKED}
 !macroend
 
+; In-app updates must replace the existing installation in place. electron-builder
+; already skips the directory page when updating; also skip the per-user/per-machine
+; page by forcing the scope detected from the existing installation's registry entry.
+!macro customInstallMode
+  ${If} ${isUpdated}
+    ${If} $installMode == "all"
+      StrCpy $isForceMachineInstall "1"
+    ${Else}
+      StrCpy $isForceCurrentInstall "1"
+    ${EndIf}
+  ${EndIf}
+!macroend
+
 ; Emit functions after electron-builder has registered its NSIS plugins.
 !macro customPageAfterChangeDir
   Function FirewallPage

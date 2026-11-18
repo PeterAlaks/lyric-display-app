@@ -13,7 +13,7 @@ const credentialScript = fs.readFileSync(
 );
 
 test('Windows user-data deletion is opt-in and confined to the uninstaller', () => {
-  const customInstallMacro = installerScript.match(/!macro customInstall[\s\S]*?!macroend/)?.[0];
+  const customInstallMacro = installerScript.match(/!macro customInstall\b[\s\S]*?!macroend/)?.[0];
 
   assert.match(installerScript, /!ifdef BUILD_UNINSTALLER[\s\S]*Function un\.UserDataPage/);
   assert.match(installerScript, /StrCpy \$DeleteUserDataSelection \$\{BST_UNCHECKED\}/);
@@ -29,12 +29,22 @@ test('Windows upgrades retain electron-builder atomic replacement of the install
   assert.doesNotMatch(installerScript, /!macro\s+customRemoveFiles\b/);
 });
 
+test('Windows updates reuse the existing install scope instead of offering the install mode page', () => {
+  const installMode = installerScript.match(/!macro customInstallMode[\s\S]*?!macroend/)?.[0];
+
+  assert.ok(installMode, 'customInstallMode must be defined to skip the per-user/per-machine page');
+  assert.match(
+    installMode,
+    /\$\{If\} \$\{isUpdated\}[\s\S]*\$installMode == "all"[\s\S]*StrCpy \$isForceMachineInstall "1"[\s\S]*StrCpy \$isForceCurrentInstall "1"/
+  );
+});
+
 test('Windows firewall consent defaults on, preserves navigation state, and skips unattended updates', () => {
   assert.match(installerScript, /Allow LyricDisplay through Windows Firewall \(recommended\)/);
   assert.match(installerScript, /!macro customInit\s+StrCpy \$FirewallSelection \$\{BST_CHECKED\}/);
   assert.match(installerScript, /\$\{NSD_SetState\} \$FirewallCheckbox \$FirewallSelection/);
   assert.match(installerScript, /\$\{NSD_GetState\} \$FirewallCheckbox \$FirewallSelection/);
-  const install = installerScript.match(/!macro customInstall[\s\S]*?!macroend/)?.[0];
+  const install = installerScript.match(/!macro customInstall\b[\s\S]*?!macroend/)?.[0];
   assert.match(install, /\$\{IfNot\} \$\{Silent\}[\s\S]*\$\{IfNot\} \$\{isUpdated\}[\s\S]*\$\{If\} \$FirewallSelection == \$\{BST_CHECKED\}/);
   assert.match(install, /!insertmacro ConfigureFirewall "Add"/);
   const uninstall = installerScript.match(/!macro customUnInstall[\s\S]*?!macroend/)?.[0];
