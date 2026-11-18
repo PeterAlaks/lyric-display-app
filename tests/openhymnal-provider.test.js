@@ -84,7 +84,55 @@ test('Open Hymnal lyrics preserve verse and refrain structure for parsing', asyn
     'Refrain',
   ]);
   assert.equal(parsed.processedLines[0], '[Verse 1]');
-  assert.equal(parsed.processedLines[2], '[Refrain]');
+  assert.equal(parsed.processedLines.indexOf('[Refrain]'), parsed.sections[1].startLine - 1);
+});
+
+const sectionText = (content, label) => content.split('\n\n').find((block) => block.startsWith(`[${label}]\n`));
+
+test('Open Hymnal stanzas load with the hymn’s own line breaks', async () => {
+  const lyricsOf = async (entryId) => (await getLyrics({ payload: { entryId } })).content;
+
+  assert.equal(sectionText(await lyricsOf('openhymnal:take-up-thy-cross-the-savior-said'), 'Verse 2'), [
+    '[Verse 2]',
+    'Take up thy cross, let not its weight',
+    'Fill thy weak spirit with alarm;',
+    'His strength shall bear thy spirit up,',
+    'And brace thy heart and nerve thine arm.',
+  ].join('\n'));
+
+  // Capitalized words such as "Lord" and "Friend" do not start a line by themselves.
+  const holy = await lyricsOf('openhymnal:holy-holy-holy');
+  assert.equal(sectionText(holy, 'Verse 1'), [
+    '[Verse 1]',
+    'Holy, holy, holy! Lord God Almighty!',
+    'Early in the morning our song shall rise to Thee;',
+    'Holy, holy, holy, merciful and mighty!',
+    'God in three Persons, blessed Trinity!',
+  ].join('\n'));
+  const beStill = await lyricsOf('openhymnal:be-still-my-soul');
+  assert.match(beStill, /\nBe still, my soul: thy best, thy heav'nly Friend\nThrough thorny ways leads to a joyful end\.\n/);
+
+  // Hymns that do not capitalize line starts break at their punctuation.
+  assert.equal(sectionText(await lyricsOf('openhymnal:great-is-thy-faithfulness'), 'Verse 1'), [
+    '[Verse 1]',
+    'Great is thy faithfulness, O God my Father;',
+    'there is no shadow of turning with thee;',
+    'thou changest not, thy compassions, they fail not;',
+    'as thou hast been, thou forever wilt be.',
+  ].join('\n'));
+});
+
+test('Open Hymnal search still matches phrases that cross a restored line break', async () => {
+  const response = await search('the Savior said, If thou wouldst My disciple be', { limit: 5 });
+  assert.equal(response.results[0]?.title, "'Take Up Thy Cross', the Savior Said");
+});
+
+test('Open Hymnal lyrics contain no editorial notes about the hymn', async () => {
+  const dataset = await loadDataset();
+  const notes = dataset.flatMap((entry) => entry.lyrics
+    .filter((stanza) => /^(This hymn|These lyrics)\b|\b(Gen|Rom|Mt|Jn|Eph)\s\d+:\d+/.test(stanza))
+    .map(() => entry.title));
+  assert.deepEqual(notes, []);
 });
 
 test('Open Hymnal imports become structured songs that play the refrain after every verse', async () => {

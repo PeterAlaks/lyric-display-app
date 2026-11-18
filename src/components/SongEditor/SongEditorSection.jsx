@@ -139,6 +139,7 @@ export default function SongEditorSection({
   section,
   index,
   total,
+  repeatsEarlierSection = false,
   darkMode,
   sectionOptions,
   openNameRequested,
@@ -211,12 +212,17 @@ export default function SongEditorSection({
       )}
 
       <div className="space-y-2 p-3">
-        {section.repeat && section.slides.length === 0 && (
+        {section.repeat && section.slides.length === 0 && (repeatsEarlierSection ? (
           <div className={`flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-xs ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'}`}>
-            <Repeat className="h-3.5 w-3.5" />
-            Repeats the earlier “{label}” section.
+            <Repeat className="h-3.5 w-3.5 shrink-0" />
+            Repeats the earlier “{label}” section. Edit that one to change both.
           </div>
-        )}
+        ) : (
+          <div className={`flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-xs ${darkMode ? 'border-amber-400/40 text-amber-200' : 'border-amber-300 text-amber-800'}`}>
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            There’s no earlier “{label}” to repeat. Add a slide to write its lyrics here.
+          </div>
+        ))}
 
         {section.slides.map((slide, slideIndex) => {
           const issues = getSlideIssues(slide);

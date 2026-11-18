@@ -16,6 +16,7 @@ import {
   extractStructureTags,
   isStructureTag,
 } from '../../shared/lyricsParsing/structureTags.js';
+import { normalizePastedLyrics, prependSongCreditsHeader } from '../../shared/lyricsParsing/pastedLyrics.js';
 import {
   DEFAULT_CAPITALIZED_WORDS,
   normalizeCapitalizedWords,
@@ -661,4 +662,18 @@ export const reconstructEditableText = (lyrics) => {
     }
     return '';
   }).join('\n\n');
+};
+
+/**
+ * Format lyrics pasted into the classic canvas: hymnal verse numbers, end-of-stanza repeat
+ * calls, chord lines, and song credits are sorted out before the usual cleanup. Credits only
+ * become a `# Key: value` header when it will be the top of the file (`includeCredits`).
+ */
+export const formatPastedLyrics = (text, options = {}, { includeCredits = false } = {}) => {
+  const { text: structured, metadata } = normalizePastedLyrics(text, {
+    sectionTagPhrases: options.groupingConfig?.sectionTagPhrases,
+    credits: 'drop',
+  });
+  const formatted = formatLyrics(structured, options);
+  return includeCredits && formatted ? prependSongCreditsHeader(formatted, metadata) : formatted;
 };

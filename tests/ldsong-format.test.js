@@ -28,9 +28,12 @@ import {
   insertLiteralLinesIntoEditor,
   isEditorDocumentEmpty,
   isSongSizedPaste,
+  layOutPastedLyrics,
+  mergeEditorLineWithPrevious,
   mergeEditorSlideWithPrevious,
   removeEditorLine,
   resolveSongEditorKind,
+  splitEditorLine,
   splitEditorSlide,
   toLdsongDocument,
   updateEditorLine,
@@ -487,6 +490,186 @@ test('short pastes into a line start a new slide once the slide holds the chosen
   const added = addEditorLine(doc, { afterLineId: doc.sections[0].slides[0].lines[1].id });
   doc = insertLiteralLinesIntoEditor(added.document, added.lineId, 'C\nD', { linesPerSlide: 2 });
   assert.deepEqual(slideTexts(doc)[0][1], [['A', 'B'], ['C', 'D']]);
+});
+
+const HYMNARY_COUNT_YOUR_BLESSINGS = [
+  "1 When upon life's billows you are tempest tossed,",
+  'When you are discouraged, thinking all is lost,',
+  'Count your many blessings, name them one by one,',
+  'And it will surprise you what the Lord hath done.',
+  'Refrain:',
+  'Count your blessings, name them one by one;',
+  'Count your blessings, see what God hath done;',
+  'Count your blessings, name them one by one;',
+  'Count your many blessings, see what God hath done.',
+  '2 Are you ever burdened with a load of care?',
+  'Does the cross seem heavy you are called to bear?',
+  "Count your many blessings, ev'ry doubt will fly,",
+  'And you will be singing as the days go by. [Refrain]',
+  '3 When you look at others with their lands and gold,',
+  'Think that Christ has promised you His wealth untold;',
+  'Count your many blessings, money cannot buy',
+  'Your reward in heaven, nor your home on high. [Refrain]',
+  '4 So, amid the conflict, whether great or small,',
+  'Do not be discouraged, God is over all;',
+  'Count your many blessings, angels will attend,',
+  "Help and comfort give you to your journey's end. [Refrain]",
+].join('\r\n');
+
+const sectionShape = (doc) => doc.sections.map((section) => [
+  section.label,
+  section.repeat ? 'repeat' : section.slides.map((slide) => slide.lines.length).join('+'),
+]);
+
+test('hymnal pastes become numbered verses with one refrain that repeats', () => {
+  const doc = importLyricsIntoEditor(createEditorDocument(), HYMNARY_COUNT_YOUR_BLESSINGS, { parsingOptions: {}, linesPerSlide: 2 });
+
+  assert.deepEqual(sectionShape(doc), [
+    ['Verse 1', '2+2'],
+    ['Refrain', '2+2'],
+    ['Verse 2', '2+2'],
+    ['Refrain', 'repeat'],
+    ['Verse 3', '2+2'],
+    ['Refrain', 'repeat'],
+    ['Verse 4', '2+2'],
+    ['Refrain', 'repeat'],
+  ]);
+  // Stanza numbers and inline repeat markers are structure, not lyrics.
+  assert.equal(doc.sections[0].slides[0].lines[0].text, "When upon life's billows you are tempest tossed,");
+  assert.equal(doc.sections[2].slides[1].lines[1].text, 'And you will be singing as the days go by.');
+  assert.equal(doc.sections[6].slides[1].lines[1].text, "Help and comfort give you to your journey's end.");
+
+  const lyrics = ldsongDocumentToLyrics(toLdsongDocument(doc));
+  assert.deepEqual(lyrics.warnings, []);
+  assert.deepEqual(lyrics.sections.map((section) => section.label), getEditorPlayOrder(doc));
+  assert.equal(lyrics.sections.filter((section) => section.label === 'Refrain').length, 4);
+});
+
+test('pasted stanza numbers are read as verses only when they count up from 1', () => {
+  const numbered = importLyricsIntoEditor(createEditorDocument(), [
+    '1.',
+    'Amazing grace how sweet the sound',
+    '',
+    '2)',
+    "'Twas grace that taught my heart to fear",
+    '',
+    '3. Through many dangers, toils and snares',
+  ].join('\n'), { parsingOptions: {}, linesPerSlide: 2 });
+  assert.deepEqual(slideTexts(numbered), [
+    ['Verse 1', [['Amazing grace how sweet the sound']]],
+    ['Verse 2', [["'Twas grace that taught my heart to fear"]]],
+    ['Verse 3', [['Through many dangers, toils and snares']]],
+  ]);
+
+  const lyricNumbers = importLyricsIntoEditor(createEditorDocument(), [
+    'Verse 1',
+    '7 days without You',
+    'Is a week too long',
+    '10,000 reasons for my heart to find',
+    '2 hands lifted high',
+  ].join('\n'), { parsingOptions: {}, linesPerSlide: 4 });
+  assert.deepEqual(slideTexts(lyricNumbers), [
+    ['Verse 1', [['7 days without You', 'Is a week too long', '10,000 reasons for my heart to find', '2 hands lifted high']]],
+  ]);
+});
+
+test('a stanza that calls the chorus is never swallowed into the chorus', () => {
+  const doc = importLyricsIntoEditor(createEditorDocument(), [
+    'Mine eyes have seen the glory of the coming of the Lord',
+    'He is trampling out the vintage where the grapes of wrath are stored',
+    'Chorus:',
+    'Glory, glory, hallelujah',
+    'His truth is marching on',
+    '',
+    'I have seen Him in the watch-fires of a hundred circling camps',
+    'They have builded Him an altar in the evening dews and damps (Chorus)',
+    '',
+    'He has sounded forth the trumpet that shall never call retreat',
+    'He is sifting out the hearts of men before His judgment seat (Chorus)',
+  ].join('\n'), { parsingOptions: {}, linesPerSlide: 2 });
+
+  assert.deepEqual(sectionShape(doc), [
+    ['Verse 1', '2'],
+    ['Chorus', '2'],
+    ['Verse 2', '2'],
+    ['Chorus', 'repeat'],
+    ['Verse 3', '2'],
+    ['Chorus', 'repeat'],
+  ]);
+});
+
+test('chord sheets and SongSelect footers paste as clean lyrics with song credits', () => {
+  const doc = importLyricsIntoEditor(createEditorDocument(), [
+    'Amazing Grace (My Chains Are Gone)',
+    '',
+    'Verse 1',
+    'G           C/G        G',
+    'Amazing grace how sweet the sound',
+    '         D7      Em  D',
+    'That saved a wretch like me',
+    '',
+    'Chorus',
+    'C        G',
+    'My chains are gone',
+    '',
+    'CCLI Song # 4768151',
+    'Chris Tomlin | Louie Giglio',
+    '© 2006 sixsteps Music (Admin. by Capitol CMG Publishing)',
+    'For use solely with the SongSelect® Terms of Use. All rights reserved. www.ccli.com',
+    'CCLI License # 123456',
+  ].join('\n'), { parsingOptions: {}, linesPerSlide: 2 });
+
+  assert.deepEqual(slideTexts(doc), [
+    ['Verse 1', [['Amazing grace how sweet the sound', 'That saved a wretch like me']]],
+    ['Chorus', [['My chains are gone']]],
+  ]);
+  assert.equal(doc.metadata.title, 'Amazing Grace (My Chains Are Gone)');
+  assert.deepEqual(doc.metadata.artists, ['Chris Tomlin', 'Louie Giglio']);
+  assert.equal(doc.metadata.copyright, '2006 sixsteps Music (Admin. by Capitol CMG Publishing)');
+  assert.equal(doc.metadata.ccliSongNumber, '4768151');
+});
+
+test('pasted section names survive when the user strips section tags for display', () => {
+  const doc = importLyricsIntoEditor(createEditorDocument(), 'Verse 1\nAmazing grace\n\nChorus\nMy chains are gone', {
+    parsingOptions: { groupingConfig: { structureTagMode: 'strip' } },
+    linesPerSlide: 2,
+  });
+  assert.deepEqual(doc.sections.map((section) => section.label), ['Verse 1', 'Chorus']);
+});
+
+test('short pastes that name a section are laid out instead of typed in literally', () => {
+  assert.equal(isSongSizedPaste('Chorus\nMy chains are gone'), true);
+  assert.equal(isSongSizedPaste('1 Amazing grace\n2 Twas grace'), true);
+  assert.equal(isSongSizedPaste('Line one\rLine two'), false);
+});
+
+test('pasting reports what was recognized so the operator can check it', () => {
+  const { document: doc, summary } = layOutPastedLyrics(createEditorDocument(), HYMNARY_COUNT_YOUR_BLESSINGS, { parsingOptions: {}, linesPerSlide: 2 });
+  assert.equal(doc.sections.length, 8);
+  assert.equal(summary.sections, 8);
+  assert.equal(summary.slides, 10);
+  assert.deepEqual(summary.notes, ['verses numbered', 'Refrain repeats linked']);
+});
+
+test('lines split at the caret and join back with Backspace', () => {
+  let { document: doc, lineId } = addEditorSection(createEditorDocument(), { label: 'Verse 1' });
+  doc = updateEditorLine(doc, lineId, { text: 'Amazing grace how sweet the sound' });
+
+  const split = splitEditorLine(doc, lineId, 'Amazing grace '.length);
+  assert.deepEqual(slideTexts(split.document)[0][1], [['Amazing grace', 'how sweet the sound']]);
+  assert.equal(split.document.sections[0].slides[0].lines[1].id, split.lineId);
+
+  const merged = mergeEditorLineWithPrevious(split.document, split.lineId);
+  assert.deepEqual(slideTexts(merged.document)[0][1], [['Amazing grace how sweet the sound']]);
+  assert.equal(merged.lineId, lineId);
+  assert.equal(merged.caret, 'Amazing grace '.length);
+
+  // The first line of a slide joins the slide above; the first line of a section stays put.
+  const slides = splitEditorSlide(split.document, lineId);
+  const joined = mergeEditorLineWithPrevious(slides.document, slides.lineId);
+  assert.deepEqual(slideTexts(joined.document)[0][1], [['Amazing grace', 'how sweet the sound']]);
+  assert.equal(joined.caret, 0);
+  assert.equal(mergeEditorLineWithPrevious(doc, lineId).lineId, null);
 });
 
 test('song editor fit checks flag slides that may not display well', () => {

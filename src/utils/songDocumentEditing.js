@@ -3,6 +3,8 @@
 
 import { createEmptyLdsongDocument, documentFromProcessedLines, ldsongDocumentToLyrics } from '../../shared/lyricsParsing/ldsong.js';
 import { isStageOnlyLine } from '../../shared/lyricsParsing/lineClassification.js';
+import { normalizePastedLyrics } from '../../shared/lyricsParsing/pastedLyrics.js';
+import { isStructureTag } from '../../shared/lyricsParsing/structureTags.js';
 import { parseTxtContent } from '../../shared/lyricsParsing/txtParser.js';
 import { readPersistentStorageItem, writePersistentStorageItem } from './persistentStorage.js';
 
@@ -238,6 +240,40 @@ export function splitEditorSlide(document, lineId) {
   };
 }
 
+/** Split a line at the caret (replacing any selection); the text after it moves to a new line below. */
+export function splitEditorLine(document, lineId, start, end = start) {
+  const location = findLine(document, lineId);
+  if (!location) return { document, lineId: null };
+  const line = document.sections[location.sectionIndex].slides[location.slideIndex].lines[location.lineIndex];
+  const text = String(line.text || '');
+  const from = Math.max(0, Math.min(text.length, start));
+  const to = Math.max(from, Math.min(text.length, end));
+  const updated = updateEditorLine(document, lineId, { text: text.slice(0, from).trimEnd() });
+  return addEditorLine(updated, { afterLineId: lineId, role: line.role, text: text.slice(to).trimStart() });
+}
+
+/**
+ * Join a line onto the end of the line above it. On a slide's first line the slide joins the
+ * slide above instead; a section's first line stays put (lineId null).
+ * @returns {{ document: object, lineId: string|null, caret: number }} Where the caret belongs.
+ */
+export function mergeEditorLineWithPrevious(document, lineId) {
+  const location = findLine(document, lineId);
+  if (!location) return { document, lineId: null, caret: 0 };
+  const { sectionIndex, slideIndex, lineIndex } = location;
+  const slide = document.sections[sectionIndex].slides[slideIndex];
+  if (lineIndex === 0) {
+    if (slideIndex === 0) return { document, lineId: null, caret: 0 };
+    return { document: mergeEditorSlideWithPrevious(document, slide.id), lineId, caret: 0 };
+  }
+  const previous = slide.lines[lineIndex - 1];
+  const head = String(previous.text || '').trimEnd();
+  const tail = String(slide.lines[lineIndex].text || '').trimStart();
+  const joiner = head && tail ? ' ' : '';
+  const merged = updateEditorLine(document, previous.id, { text: `${head}${joiner}${tail}` });
+  return { document: removeEditorLine(merged, lineId), lineId: previous.id, caret: head.length + joiner.length };
+}
+
 export function mergeEditorSlideWithPrevious(document, slideId) {
   const location = findSlide(document, slideId);
   if (!location || location.slideIndex === 0) return document;
@@ -256,12 +292,18 @@ export function removeEditorSlide(document, slideId) {
   return replaceSlides(document, location.sectionIndex, (slides) => slides.filter((slide) => slide.id !== slideId));
 }
 
-/** A paste big enough to be a whole song (several stanzas), rather than a line or two. */
-export function isSongSizedPaste(text) {
-  const value = String(text || '');
-  const nonEmptyLines = value.split(/\r?\n/).filter((line) => line.trim()).length;
-  const blocks = value.split(/\r?\n\s*\r?\n/).filter((block) => block.trim()).length;
-  return nonEmptyLines >= 6 || (blocks >= 2 && nonEmptyLines >= 4);
+/**
+ * A paste to lay out as song structure rather than type in literally: several stanzas, or
+ * a few lines that name a section or number their stanzas.
+ */
+export function isSongSizedPaste(text, { sectionTagPhrases } = {}) {
+  const lines = String(text || '').split(/\r\n?|\n/).map((line) => line.trim());
+  const nonEmpty = lines.filter(Boolean);
+  const blocks = String(text || '').split(/(?:\r\n?|\n)\s*(?:\r\n?|\n)/).filter((block) => block.trim()).length;
+  if (nonEmpty.length >= 6 || (blocks >= 2 && nonEmpty.length >= 4)) return true;
+  if (nonEmpty.length < 2) return false;
+  if (nonEmpty.some((line) => isStructureTag(line, sectionTagPhrases))) return true;
+  return normalizePastedLyrics(text, { sectionTagPhrases }).report.verseNumbers > 0;
 }
 
 export const DEFAULT_PASTE_LINES_PER_SLIDE = 2;
@@ -290,32 +332,73 @@ const pasteLayoutOptions = (parsingOptions = {}, linesPerSlide) => {
   };
 };
 
+/** Whether a section with no lines has an earlier section of the same name to repeat. */
+export function hasEarlierEditorSection(document, sectionId) {
+  const index = document.sections.findIndex((section) => section.id === sectionId);
+  const label = String(document.sections[index]?.label || '').trim().toLowerCase();
+  return index > 0 && Boolean(label) && document.sections.slice(0, index).some((section) => (
+    section.slides.length > 0 && String(section.label || '').trim().toLowerCase() === label
+  ));
+}
+
+const listLabels = (labels) => labels.join(' and ');
+
+const summarizeImport = (imported, report) => {
+  const slides = imported.sections.reduce((count, section) => count + section.slides.length, 0);
+  const repeats = imported.sections.filter((section) => section.repeat);
+  const linked = [...new Set(repeats.filter((section) => hasEarlierEditorSection(imported, section.id)).map((section) => section.label))];
+  const missing = [...new Set(repeats.filter((section) => !hasEarlierEditorSection(imported, section.id)).map((section) => section.label))];
+  const notes = [];
+  if (report.verseNumbers > 0 || report.namedStanzas > 0) notes.push('verses numbered');
+  if (linked.length > 0) notes.push(`${listLabels(linked)} repeats linked`);
+  if (missing.length > 0) notes.push(`${listLabels(missing)} missing`);
+  if (report.chordLines > 0) notes.push('chords removed');
+  if (report.credits.length > 0) notes.push('credits saved');
+  return { sections: imported.sections.length, slides, notes };
+};
+
 /**
- * Lay pasted lyrics out for review before saving: with `linesPerSlide`, each stanza fills
- * slides of that many lines; otherwise the user's parsing settings decide. Replaces an empty
- * song, or is added after the given section.
+ * Lay pasted lyrics out for review before saving, and describe what was recognized. With
+ * `linesPerSlide`, each stanza fills slides of that many lines; otherwise the user's parsing
+ * settings decide. Replaces an empty song, or is added after the given section.
  */
-export function importLyricsIntoEditor(document, text, { parsingOptions = {}, afterSectionId = null, linesPerSlide = null } = {}) {
-  const options = linesPerSlide == null ? parsingOptions : pasteLayoutOptions(parsingOptions, linesPerSlide);
-  const parsed = parseTxtContent(String(text || ''), options);
+export function layOutPastedLyrics(document, text, { parsingOptions = {}, afterSectionId = null, linesPerSlide = null } = {}) {
+  const sectionTagPhrases = parsingOptions?.groupingConfig?.sectionTagPhrases;
+  const normalized = normalizePastedLyrics(String(text || ''), { sectionTagPhrases });
+  const layout = linesPerSlide == null ? parsingOptions : pasteLayoutOptions(parsingOptions, linesPerSlide);
+  // Section names are the structure being built, so they are kept even when the user strips
+  // tags for plain-text display.
+  const parsed = parseTxtContent(normalized.text, {
+    ...layout,
+    groupingConfig: { ...(layout.groupingConfig || {}), structureTagMode: 'isolate' },
+  });
   const imported = createEditorDocument(parsed.document || documentFromProcessedLines(parsed.processedLines, {
     songMetadata: parsed.songMetadata,
-    sectionTagPhrases: parsingOptions?.groupingConfig?.sectionTagPhrases,
+    sectionTagPhrases,
+    repeats: 'sections',
   }));
+  const summary = summarizeImport(imported, normalized.report);
 
   if (isEditorDocumentEmpty(document)) {
     return {
-      ...imported,
-      metadata: { ...imported.metadata, ...Object.fromEntries(Object.entries(document.metadata || {}).filter(([, value]) => (
-        Array.isArray(value) ? value.length > 0 : Boolean(value)
-      ))) },
+      document: {
+        ...imported,
+        metadata: { ...imported.metadata, ...Object.fromEntries(Object.entries(document.metadata || {}).filter(([, value]) => (
+          Array.isArray(value) ? value.length > 0 : Boolean(value)
+        ))) },
+      },
+      summary,
     };
   }
 
   const index = afterSectionId ? document.sections.findIndex((section) => section.id === afterSectionId) : -1;
   const sections = [...document.sections];
   sections.splice(index === -1 ? sections.length : index + 1, 0, ...imported.sections);
-  return { ...document, sections };
+  return { document: { ...document, sections }, summary };
+}
+
+export function importLyricsIntoEditor(document, text, options = {}) {
+  return layOutPastedLyrics(document, text, options).document;
 }
 
 /**

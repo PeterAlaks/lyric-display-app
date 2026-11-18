@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { formatLyrics, formatLyricsWithStats } from '../../utils/lyricsFormat';
+import { formatLyricsWithStats, formatPastedLyrics } from '../../utils/lyricsFormat';
 import useLyricsStore from '../../context/LyricsStore';
 
 const getFormattingOptions = () => {
@@ -14,6 +14,10 @@ const getFormattingOptions = () => {
     groupingConfig: state.lyricsParsingOptions.groupingConfig,
   };
 };
+
+// Pasted song credits become a header only when the paste replaces everything in the canvas,
+// since `# Key: value` lines are read at the top of a file and nowhere else.
+const pastesWholeSong = (content, start, end) => !`${content.substring(0, start)}${content.substring(end)}`.trim();
 
 const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => {
   const handleCut = useCallback(async () => {
@@ -60,7 +64,7 @@ const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => 
       const start = textareaRef.current.selectionStart;
       const end = textareaRef.current.selectionEnd;
       const cleanupOnPaste = useLyricsStore.getState().canvasCleanupOnPaste;
-      const pasteText = cleanupOnPaste ? formatLyrics(clipboardText, getFormattingOptions()) : clipboardText;
+      const pasteText = cleanupOnPaste ? formatPastedLyrics(clipboardText, getFormattingOptions(), { includeCredits: pastesWholeSong(content, start, end) }) : clipboardText;
       const newContent = content.substring(0, start) + pasteText + content.substring(end);
       const nextCursor = start + pasteText.length;
       const scrollTop = textareaRef.current.scrollTop || 0;
@@ -88,7 +92,7 @@ const useEditorClipboard = ({ content, setContent, textareaRef, showToast }) => 
     if (!textareaRef.current) return;
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
-    const formattedText = formatLyrics(clipboardText, getFormattingOptions());
+    const formattedText = formatPastedLyrics(clipboardText, getFormattingOptions(), { includeCredits: pastesWholeSong(content, start, end) });
     const newContent = content.substring(0, start) + formattedText + content.substring(end);
     const nextCursor = start + formattedText.length;
     const scrollTop = textareaRef.current.scrollTop || 0;

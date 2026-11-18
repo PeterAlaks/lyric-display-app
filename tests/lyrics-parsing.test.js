@@ -20,7 +20,7 @@ import {
   buildEnhancedTimestampPlaceholder,
   buildStandardTimestampInsertion,
 } from '../src/hooks/NewSongCanvas/useTimestampOperations.js';
-import { formatLyrics, formatLyricsWithStats, reconstructEditableText } from '../src/utils/lyricsFormat.js';
+import { formatLyrics, formatLyricsWithStats, formatPastedLyrics, reconstructEditableText } from '../src/utils/lyricsFormat.js';
 import {
   getLineOutputText,
   isStageOnlyLine,
@@ -904,4 +904,66 @@ test('song credits show on the first and last lyric lines according to the outpu
   assert.equal(shouldShowSongCredits({ mode: 'first-last', lyrics, selectedLine: 2 }), false);
   assert.equal(shouldShowSongCredits({ mode: 'always', lyrics, selectedLine: null }), false);
   assert.equal(shouldShowSongCredits({ mode: 'always', lyrics, selectedLine: 5 }), false);
+});
+
+test('classic canvas pastes from hymnals keep verses and refrain repeats in plain text', () => {
+  const hymnary = [
+    "1 When upon life's billows you are tempest tossed,",
+    'When you are discouraged, thinking all is lost,',
+    'Refrain:',
+    'Count your blessings, name them one by one;',
+    '2 Are you ever burdened with a load of care?',
+    'And you will be singing as the days go by. [Refrain]',
+    '3 When you look at others with their lands and gold,',
+    'Your reward in heaven, nor your home on high. [Refrain]',
+  ].join('\r\n');
+  // Lines longer than the grouping limit get their own stanza; this limit fits the hymn's lines.
+  const pasted = formatPastedLyrics(hymnary, { groupingConfig: { maxLineLength: 60 } });
+  assert.equal(pasted, [
+    '[Verse 1]',
+    "When upon life's billows you are tempest tossed,",
+    'When you are discouraged, thinking all is lost,',
+    '',
+    'Refrain:',
+    'Count your blessings, name them one by one;',
+    '',
+    '[Verse 2]',
+    'Are you ever burdened with a load of care?',
+    'And you will be singing as the days go by.',
+    '',
+    '[Refrain]',
+    '',
+    '[Verse 3]',
+    'When you look at others with their lands and gold,',
+    'Your reward in heaven, nor your home on high.',
+    '',
+    '[Refrain]',
+  ].join('\n'));
+
+  // The classic parser plays each bare [Refrain] as the one written earlier.
+  const { processedLines } = parseTxtContent(pasted, { enableSplitting: false, groupingConfig: { enableAutoLineGrouping: false } });
+  assert.equal(processedLines.filter((line) => line === 'Count your blessings, name them one by one;').length, 3);
+});
+
+test('classic canvas pastes drop chord lines, and keep song credits only as a header for an empty canvas', () => {
+  const songSelect = [
+    'Verse 1',
+    'G           C/G        G',
+    'Amazing grace how sweet the sound',
+    '',
+    'CCLI Song # 4768151',
+    'Chris Tomlin | Louie Giglio',
+    '© 2006 sixsteps Music',
+    'CCLI License # 123456',
+  ].join('\n');
+
+  assert.equal(formatPastedLyrics(songSelect, {}, { includeCredits: true }), [
+    '# Author: Chris Tomlin, Louie Giglio',
+    '# Copyright: 2006 sixsteps Music',
+    '# CCLI Song Number: 4768151',
+    '',
+    'Verse 1',
+    'Amazing grace how sweet the sound',
+  ].join('\n'));
+  assert.equal(formatPastedLyrics(songSelect, {}), 'Verse 1\nAmazing grace how sweet the sound');
 });

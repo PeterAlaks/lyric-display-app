@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Fuse from 'fuse.js';
+import { restoreVerseLineBreaks } from '../../../shared/lyricsParsing/lineSplitting.js';
 import { isStructureTag } from '../../../shared/lyricsParsing/structureTags.js';
 
 export const definition = {
@@ -234,6 +235,24 @@ const normalizeEntry = (entry, match = null) => {
   };
 };
 
+// The bundle stores each stanza as one run of text. A loaded hymn gets its line breaks back,
+// working over all its stanzas at once since they share a meter. Search keeps the flat text.
+const withRestoredLineBreaks = (entry) => {
+  const keys = Object.keys(entry).filter((key) => (
+    key === 'lyrics' || (!STRUCTURED_METADATA_KEYS.has(key) && getStructuredSectionLabel(key))
+  ));
+  const blocksByKey = keys.map((key) => (Array.isArray(entry[key]) ? entry[key] : [entry[key]]));
+  const runs = blocksByKey.flat().filter((block) => typeof block === 'string' && block.trim() && !block.includes('\n'));
+  const restored = restoreVerseLineBreaks(runs);
+  const linesByRun = new Map(runs.map((run, index) => [run, restored[index]]));
+
+  const copy = { ...entry };
+  keys.forEach((key, index) => {
+    copy[key] = blocksByKey[index].map((block) => linesByRun.get(block) || block);
+  });
+  return copy;
+};
+
 const collectText = (entry) => {
   const structured = formatTaggedSections(collectStructuredSections(entry));
   if (structured) return structured;
@@ -355,7 +374,7 @@ export async function getLyrics({ payload }) {
     throw new Error('Open Hymnal entry not found.');
   }
 
-  const content = collectText(target);
+  const content = collectText(withRestoredLineBreaks(target));
   if (!content) {
     throw new Error('Open Hymnal entry has no lyric text.');
   }

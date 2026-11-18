@@ -33,17 +33,21 @@ import {
   duplicateEditorLine,
   getEditorPlayOrder,
   getEditorSlideIssues,
+  hasEarlierEditorSection,
   importLyricsIntoEditor,
   insertLiteralLinesIntoEditor,
   isEditorDocumentEmpty,
   isSongSizedPaste,
+  layOutPastedLyrics,
   mapEditorLines,
+  mergeEditorLineWithPrevious,
   mergeEditorSlideWithPrevious,
   moveEditorLine,
   moveEditorSection,
   removeEditorLine,
   removeEditorSection,
   removeEditorSlide,
+  splitEditorLine,
   splitEditorSectionAtSlide,
   splitEditorSlide,
   toLdsongDocument,
@@ -155,6 +159,9 @@ const findLineContext = (document, lineId) => {
 
 const startingDocument = () => addEditorSection(createEditorDocument(), { label: 'Verse 1' });
 
+const MULTILINE_REGEX = /[\r\n]/;
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
 const SongEditor = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -176,6 +183,9 @@ const SongEditor = () => {
 
   const initial = useMemo(() => startingDocument(), []);
   const { document, commit, reset, undo, redo, canUndo, canRedo } = useDocumentHistory(initial.document);
+  // The latest document, so a toast's Undo only reverts the paste it describes.
+  const documentRef = useRef(document);
+  documentRef.current = document;
   const [title, setTitle] = useState(UNTITLED_LYRICS_TITLE);
   const [fileName, setFileName] = useState('');
   const [currentFilePath, setCurrentFilePath] = useState('');
@@ -291,13 +301,15 @@ const SongEditor = () => {
     return () => window.removeEventListener('load-into-canvas', handleLoadIntoCanvas);
   }, [loadSongFile]);
 
+  // Focus a line id at its end, or { lineId, caret } at a position.
   useEffect(() => {
     if (!pendingFocus) return;
-    const input = inputRefs.current.get(pendingFocus);
+    const target = typeof pendingFocus === 'string' ? { lineId: pendingFocus } : pendingFocus;
+    const input = inputRefs.current.get(target.lineId);
     if (input) {
       input.focus();
-      const end = input.value.length;
-      input.setSelectionRange(end, end);
+      const caret = Math.min(target.caret ?? input.value.length, input.value.length);
+      input.setSelectionRange(caret, caret);
       setPendingFocus(null);
     }
   }, [document, pendingFocus]);
@@ -319,20 +331,43 @@ const SongEditor = () => {
       ? document.sections.find((section) => section.slides.some((slide) => slide.lines.some((line) => line.id === lineId)))?.id
       : null;
 
-    if (forceLayout || isSongSizedPaste(value) || !lineId) {
+    if (forceLayout || isSongSizedPaste(value, { sectionTagPhrases }) || !lineId) {
       const replacesStarter = isEditorDocumentEmpty(document);
-      const nextDocument = importLyricsIntoEditor(document, value, {
+      const { document: nextDocument, summary } = layOutPastedLyrics(document, value, {
         parsingOptions,
         afterSectionId: sectionId,
         linesPerSlide: pasteLinesPerSlide,
       });
       commit(nextDocument);
       if (replacesStarter) prefillTitle(nextDocument);
+
+      // Keep typing where the pasted lyrics begin.
+      const previousIds = new Set(document.sections.map((section) => section.id));
+      const firstSlide = nextDocument.sections.find((section) => !previousIds.has(section.id) && section.slides.length > 0)?.slides[0];
+      if (firstSlide) {
+        setSelectedSlideId(firstSlide.id);
+        setPendingFocus({ lineId: firstSlide.lines[0].id, caret: 0 });
+      }
+
+      showToast({
+        title: replacesStarter ? 'Song laid out' : 'Lyrics added',
+        message: [`${plural(summary.sections, 'section')}, ${plural(summary.slides, 'slide')}`, ...summary.notes].join(' · '),
+        variant: 'success',
+        duration: 8000,
+        dedupeKey: 'song-editor-paste',
+        actions: [{
+          label: 'Undo paste',
+          onClick: () => {
+            if (documentRef.current === nextDocument) undo();
+            else showToast({ title: 'Song has changed since', message: 'Press Ctrl+Z to step back through your edits.', variant: 'info' });
+          },
+        }],
+      });
       return;
     }
 
     commit(insertLiteralLinesIntoEditor(document, lineId, value, { linesPerSlide: pasteLinesPerSlide }));
-  }, [commit, document, parsingOptions, pasteLinesPerSlide, prefillTitle]);
+  }, [commit, document, parsingOptions, pasteLinesPerSlide, prefillTitle, sectionTagPhrases, showToast, undo]);
 
   // Pasting outside a field lays a whole song out; fields handle their own pastes.
   useEffect(() => {
@@ -362,7 +397,7 @@ const SongEditor = () => {
 
   const handleLinePaste = useCallback((event, line) => {
     const text = event.clipboardData?.getData('text/plain') || '';
-    if (!/\r?\n/.test(text)) return;
+    if (!MULTILINE_REGEX.test(text.trim())) return;
     event.preventDefault();
     applyPastedText(text, { lineId: line.id });
   }, [applyPastedText]);
@@ -380,25 +415,56 @@ const SongEditor = () => {
   const handleLineKeyDown = useCallback((event, line) => {
     const modifier = event.ctrlKey || event.metaKey;
     const index = orderedLineIds.indexOf(line.id);
+    const start = event.currentTarget.selectionStart ?? line.text.length;
+    const end = event.currentTarget.selectionEnd ?? start;
+    const caretAtStart = start === 0 && end === 0;
+    const caretAtEnd = start === end && end === line.text.length;
 
     if (event.key === 'Enter' && (event.shiftKey || modifier)) {
       event.preventDefault();
-      const result = splitEditorSlide(document, line.id);
+      // Text after the caret moves to the new slide; at a line's start, the whole line does.
+      const lineIndex = findLineContext(document, line.id)?.lineIndex ?? 0;
+      if (caretAtStart && line.text && lineIndex > 0) {
+        const previousLineId = findLineContext(document, line.id).slide.lines[lineIndex - 1].id;
+        commit(splitEditorSlide(document, previousLineId).document);
+        setPendingFocus({ lineId: line.id, caret: 0 });
+        return;
+      }
+      const split = caretAtEnd ? null : splitEditorLine(document, line.id, start, end);
+      const result = splitEditorSlide(split ? split.document : document, line.id);
       commit(result.document);
-      setPendingFocus(result.lineId);
+      setPendingFocus({ lineId: result.lineId, caret: 0 });
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      handleAddLine(line.id, 'lyric');
+      if (caretAtEnd) {
+        handleAddLine(line.id, 'lyric');
+        return;
+      }
+      const result = splitEditorLine(document, line.id, start, end);
+      commit(result.document);
+      setPendingFocus({ lineId: result.lineId, caret: 0 });
     } else if (event.key === 'Backspace' && !line.text && !modifier) {
       event.preventDefault();
       commit(removeEditorLine(document, line.id));
       setPendingFocus(orderedLineIds[index - 1] || orderedLineIds[index + 1] || null);
+    } else if (event.key === 'Backspace' && caretAtStart && !modifier) {
+      const result = mergeEditorLineWithPrevious(document, line.id);
+      if (!result.lineId) return;
+      event.preventDefault();
+      commit(result.document);
+      setPendingFocus({ lineId: result.lineId, caret: result.caret });
+    } else if (event.key === 'Delete' && caretAtEnd && !modifier && index < orderedLineIds.length - 1) {
+      const result = mergeEditorLineWithPrevious(document, orderedLineIds[index + 1]);
+      if (!result.lineId) return;
+      event.preventDefault();
+      commit(result.document);
+      setPendingFocus({ lineId: line.id, caret: line.text.trimEnd().length });
     } else if (event.key === 'ArrowUp' && index > 0) {
       event.preventDefault();
-      setPendingFocus(orderedLineIds[index - 1]);
+      setPendingFocus({ lineId: orderedLineIds[index - 1], caret: start });
     } else if (event.key === 'ArrowDown' && index < orderedLineIds.length - 1) {
       event.preventDefault();
-      setPendingFocus(orderedLineIds[index + 1]);
+      setPendingFocus({ lineId: orderedLineIds[index + 1], caret: start });
     } else if (modifier && !event.shiftKey && (event.key === 't' || event.key === 'T')) {
       event.preventDefault();
       handleAddLine(line.id, 'translation');
@@ -552,7 +618,7 @@ const SongEditor = () => {
       return;
     }
     const input = getActiveInput();
-    if (activeLine && input && !/\r?\n/.test(text.trim())) {
+    if (activeLine && input && !MULTILINE_REGEX.test(text.trim())) {
       const start = input.selectionStart ?? activeLine.text.length;
       const end = input.selectionEnd ?? start;
       commit(updateEditorLine(document, activeLine.id, {
@@ -770,6 +836,7 @@ const SongEditor = () => {
               section={section}
               index={index}
               total={document.sections.length}
+              repeatsEarlierSection={section.repeat && hasEarlierEditorSection(document, section.id)}
               darkMode={darkMode}
               sectionOptions={sectionLabelOptions}
               openNameRequested={nameRequestSectionId === section.id}
@@ -824,7 +891,7 @@ const SongEditor = () => {
           </div>
 
           <p className={`pb-4 text-[11px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            Enter adds a line · Shift+Enter starts a new slide · Ctrl+T adds a translation · Ctrl+/ marks a stage-only note · Backspace on an empty line removes it
+            Enter adds a line, or splits it at the cursor · Shift+Enter starts a new slide · Backspace at the start of a line joins it to the line above · Ctrl+T adds a translation · Ctrl+/ marks a stage-only note
           </p>
         </main>
 

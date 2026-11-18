@@ -155,7 +155,7 @@ export const SongCanvasHelp = ({ darkMode }) => (
         <HelpSection
             icon={Scissors}
             title="Cut, Copy & Paste"
-            description="Standard clipboard operations with automatic formatting. Paste lyrics from any source and they'll be cleaned up automatically. Works with keyboard shortcuts (Ctrl/Cmd+X, C, V) or toolbar buttons."
+            description="Standard clipboard operations with automatic formatting. Paste lyrics from any source and they'll be cleaned up automatically: hymnal verse numbers, Refrain and Chorus repeats, chord lines, and SongSelect credits are recognized. The Structured editor also lays the song out into sections and slides. Works with keyboard shortcuts (Ctrl/Cmd+X, C, V) or toolbar buttons."
             darkMode={darkMode}
         />
 

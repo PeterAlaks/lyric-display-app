@@ -331,9 +331,10 @@ const groupLines = (item) => (Array.isArray(item.lines) && item.lines.length > 0
 
 /**
  * Build a document from already-parsed lyrics (for example a guessed TXT parse) so it can be
- * reviewed and saved as .ldsong. Identical repeated sections become an arrangement.
+ * reviewed and saved as .ldsong. Identical repeated sections become an arrangement, or with
+ * `repeats: 'sections'`, empty sections in place that repeat the first one.
  */
-export function documentFromProcessedLines(processedLines, { songMetadata = null, sectionTagPhrases } = {}) {
+export function documentFromProcessedLines(processedLines, { songMetadata = null, sectionTagPhrases, repeats = 'arrangement' } = {}) {
   const document = createEmptyLdsongDocument(songMetadata || {});
   let section = null;
   const currentSection = () => {
@@ -373,26 +374,32 @@ export function documentFromProcessedLines(processedLines, { songMetadata = null
 
   const signature = (entry) => JSON.stringify(entry.slides);
   const unique = [];
+  const inPlace = [];
   const order = [];
   let repeated = false;
   for (const entry of document.sections) {
     if (!entry.label) {
       unique.push(entry);
+      inPlace.push(entry);
       continue;
     }
     const existing = unique.find((candidate) => candidate.label && normalizeLabel(candidate.label) === normalizeLabel(entry.label));
     if (!existing) {
       unique.push(entry);
+      inPlace.push(entry);
       order.push(entry.label);
     } else if (signature(existing) === signature(entry)) {
       repeated = true;
+      inPlace.push({ label: existing.label, slides: [] });
       order.push(existing.label);
     } else {
       return document;
     }
   }
 
-  if (repeated) {
+  if (repeated && repeats === 'sections') {
+    document.sections = inPlace;
+  } else if (repeated) {
     document.sections = unique;
     document.arrangement = order;
   }

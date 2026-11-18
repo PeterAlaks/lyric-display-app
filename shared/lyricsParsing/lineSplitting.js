@@ -279,3 +279,136 @@ export function validateProcessing(original, processed) {
 
     return similarity > 0.95;
 }
+
+// --- Restoring the line breaks of hymn stanzas stored as one run of text ---
+//
+// Hymn texts copied without their line breaks still show where lines began: most hymns
+// capitalize every line start, the rest end lines at punctuation, and every stanza of a
+// hymn shares one meter, so its lines run to a similar length and count.
+
+// Words hymns capitalize wherever they fall, so a capital alone does not start a line.
+const REVERENT_WORDS = new Set([
+  'i', 'o', 'oh', 'god', 'lord', 'christ', 'jesus', 'he', 'his', 'him', 'thee', 'thou', 'thy', 'thine',
+  'me', 'my', 'mine', 'you', 'your', 'yours', 'father', 'son', 'spirit', 'holy', 'ghost', 'savior',
+  'saviour', 'king', 'lamb', 'word', 'heaven', "heav'n", 'almighty', 'jehovah', 'emmanuel', 'immanuel',
+  'israel', 'zion', 'jerusalem', 'bethlehem', 'mary', 'david', 'jordan', 'calvary', 'trinity',
+  'redeemer', 'shepherd', 'master', 'prince', 'creator', 'friend', 'hosanna', 'alleluia', 'hallelujah', 'amen',
+]);
+const LEADING_WORDS = new Set([
+  'the', 'a', 'an', 'of', 'to', 'in', 'on', 'at', 'by', 'for', 'with', 'from', 'into', 'upon',
+  'thy', 'my', 'our', 'your', 'their', 'its', 'and', 'or', 'nor',
+]);
+const MAX_RESTORED_LINE_LENGTH = 120;
+
+const bareWord = (word) => word.replace(/^[^A-Za-z]+/, '').replace(/[^A-Za-z']+$/, '').replace(/'s$/, '').toLowerCase();
+const startsCapitalized = (word) => /^["'“‘(\[]*[A-Z]/.test(word);
+const endsSentence = (word) => /[.!?]["”’')\]]*$/.test(word);
+const endsClause = (word) => /[;:.!?]["”’')\]]*$/.test(word);
+const endsPhrase = (word) => /[,—–-]["”’')\]]*$/.test(word);
+
+function describeHymnStyle(stanzas) {
+  const words = stanzas.flatMap((stanza) => stanza.split(/\s+/).filter(Boolean));
+  // Hymns that capitalize every line start have ordinary words capitalized mid-sentence.
+  const midSentenceCapitals = words.filter((word, index) => (
+    index > 0 && startsCapitalized(word) && !REVERENT_WORDS.has(bareWord(word)) && !endsSentence(words[index - 1])
+  )).length;
+  return {
+    capitalizedLines: midSentenceCapitals / Math.max(1, words.join(' ').length / 40) >= 0.25,
+    lowercaseWords: new Set(words.filter((word) => /^["'“‘(\[]*[a-z]/.test(word)).map(bareWord)),
+  };
+}
+
+// How likely a line starts at `word`; negative scores are breaks to avoid.
+function lineStartScore(previous, word, style) {
+  let score = endsClause(previous) ? 2 : endsPhrase(previous) ? 0.8 : 0;
+  // A line never ends on a vocative "O" or a word that leads into the next one ("the", "of", "thy"),
+  // and often starts with an "O" after a clause ends.
+  if (/^(o|oh)$/i.test(previous) || LEADING_WORDS.has(previous.toLowerCase())) return -8;
+  if (endsClause(previous) && /^["'“‘(]*(O|Oh)[,!]?$/.test(word)) return score + 1.5;
+  if (!style.capitalizedLines) return score > 0 ? score : -8;
+  // Some texts lowercase a few line starts, so punctuation still counts for a little.
+  if (!startsCapitalized(word)) return score > 0 ? score - 2.5 : -8;
+  const bare = bareWord(word);
+  if (REVERENT_WORDS.has(bare)) return score + (score > 0 ? -0.5 : -1);
+  // A word written in lowercase elsewhere in the hymn is capitalized here only to start a line.
+  return score + (style.lowercaseWords.has(bare) ? 2.5 : 1.2);
+}
+
+function lineLengthCost(length, target) {
+  if (!target) return length < 12 ? 6 : length < 18 ? 2 : length > 42 ? (length - 42) / 5 : 0;
+  const deviation = (length - target) / target;
+  return 7 * deviation * deviation + (length < 10 ? 4 : 0);
+}
+
+// Best split of one stanza, optionally into exactly `lineCount` lines.
+function splitStanzaIntoLines(stanza, style, target, lineCount = null) {
+  const words = stanza.split(/\s+/).filter(Boolean);
+  const best = Array.from({ length: words.length + 1 }, () => new Map());
+  best[0].set(0, { score: 0, from: null });
+
+  for (let end = 1; end <= words.length; end += 1) {
+    const startScore = end === words.length ? 0 : lineStartScore(words[end - 1], words[end], style);
+    let length = -1;
+    for (let start = end - 1; start >= 0; start -= 1) {
+      length += words[start].length + 1;
+      if (length > MAX_RESTORED_LINE_LENGTH && start < end - 1) break;
+      for (const [count, entry] of best[start]) {
+        const nextCount = lineCount ? count + 1 : 0;
+        if (lineCount && nextCount > lineCount) continue;
+        const score = entry.score + startScore - lineLengthCost(length, target);
+        const current = best[end].get(nextCount);
+        if (!current || score > current.score) best[end].set(nextCount, { score, from: [start, count] });
+      }
+    }
+  }
+
+  let node = best[words.length].get(lineCount || 0);
+  if (!node) return null;
+  const score = node.score;
+  const lines = [];
+  let end = words.length;
+  while (node.from) {
+    const [start, count] = node.from;
+    lines.unshift(words.slice(start, end).join(' '));
+    end = start;
+    node = best[start].get(count);
+  }
+  return { lines, score };
+}
+
+const middleValue = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+const mostCommon = (values) => {
+  const counts = new Map();
+  values.forEach((value) => counts.set(value, (counts.get(value) || 0) + 1));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+};
+
+/**
+ * Restore the line breaks of hymn stanzas that were stored as one run of text each. Pass
+ * every stanza of one hymn together, since they share a meter.
+ * @param {string[]} stanzas
+ * @returns {string[][]} The lines of each stanza.
+ */
+export function restoreVerseLineBreaks(stanzas) {
+  const texts = (Array.isArray(stanzas) ? stanzas : []).map((stanza) => String(stanza ?? '').replace(/\s+/g, ' ').trim());
+  const present = texts.filter(Boolean);
+  if (present.length === 0) return texts.map(() => []);
+
+  const style = describeHymnStyle(present);
+  // A first pass finds the hymn's usual line length; the second aims every line at it.
+  const firstPass = present.map((text) => splitStanzaIntoLines(text, style, null).lines);
+  const target = Math.min(48, Math.max(18, middleValue(firstPass.flat().map((line) => line.length))));
+  const splits = present.map((text) => splitStanzaIntoLines(text, style, target));
+  const usualLineCount = mostCommon(splits.map((split) => split.lines.length));
+
+  let index = 0;
+  return texts.map((text) => {
+    if (!text) return [];
+    const split = splits[index];
+    index += 1;
+    if (split.lines.length === usualLineCount) return split.lines;
+    // Prefer the hymn's usual line count when it fits this stanza almost as well.
+    const matched = splitStanzaIntoLines(text, style, target, usualLineCount);
+    return matched && matched.score >= split.score - 3 ? matched.lines : split.lines;
+  });
+}
